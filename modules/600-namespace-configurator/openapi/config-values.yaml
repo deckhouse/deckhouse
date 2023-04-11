@@ -13,7 +13,7 @@ properties:
           description: |
             A list of annotations in the `key: "value"` format.
           x-examples:
-            extended-monitoring.flant.com/enabled: "true"
+            example: "true"
           additionalProperties:
             type: string
             nullable: true

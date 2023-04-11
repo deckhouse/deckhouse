@@ -29,6 +29,7 @@ rules:
 - apiGroups: [""]
   resources:
   - serviceaccounts
+  - namespaces
   verbs:
   - get
   - list

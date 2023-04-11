@@ -2,7 +2,7 @@ positive:
   configValues:
   - configurations:
     - annotations:
-        extended-monitoring.flant.com/enabled: "true"
+        test: "true"
       labels:
         foo: bar
       includeNames:
@@ -12,7 +12,7 @@ positive:
       - "infra-test"
   - configurations:
     - annotations:
-        extended-monitoring.flant.com/enabled: null
+        test: null
       labels:
         foo: null
       includeNames:
@@ -23,10 +23,10 @@ negative:
     - []
   - configurations:
     - annotations:
-      - "extended-monitoring.flant.com/enabled=true"
+      - "test=true"
       includeNames:
       - "abc"
   - configurations:
     - annotations:
-      - "extended-monitoring.flant.com/enabled": "true"
+      - "test": "true"
       includeNames: []

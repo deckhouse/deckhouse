@@ -56,12 +56,12 @@ spec:
     metadata:
       labels:
         app: grafana
+        threshold.extended-monitoring.deckhouse.io/container-throttling-warning: "40"
       annotations:
         checksum/datasources: {{ include (print $.Template.BasePath "/grafana/secret-datasources-list.yaml") . | sha256sum }}
         checksum/dashboards-list-custom: {{ include (print $.Template.BasePath "/grafana/cm-dashboards-list-custom.yaml") . | sha256sum }}
         checksum/alerts-channels: {{ include (print $.Template.BasePath "/grafana/grafana-alerts-channels.yaml") . | sha256sum }}
         checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
-        threshold.extended-monitoring.flant.com/container-throttling-warning: "40"
     spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}

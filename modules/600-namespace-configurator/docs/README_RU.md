@@ -4,7 +4,7 @@ title: "Модуль namespace-configurator"
 
 Позволяет автоматически управлять аннотациями и label'ами на Namespace'ах.
 
-Модуль полезен тем, что помогает автоматически включать новые Namespace'ы в мониторинг, посредством добавления аннотации `extended-monitoring.flant.com/enabled=true`.
+Модуль полезен тем, что помогает автоматически включать новые Namespace'ы в мониторинг, посредством добавления лейбла `extended-monitoring.deckhouse.io/enabled=true`.
 
 ### Как работает
 

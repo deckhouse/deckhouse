@@ -4,7 +4,7 @@ title: "The namespace-configurator module"
 
 This module allows to assign annotations and labels to namespaces automatically.
 
-It facilitates to enable new namespaces to monitoring system by adding `extended-monitoring.flant.com/enabled=true` annotation.
+It facilitates to enable new namespaces to monitoring system by adding `extended-monitoring.deckhouse.io/enabled=true` label.
 
 ### How does it work?
 
