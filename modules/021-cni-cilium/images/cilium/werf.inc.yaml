@@ -10,8 +10,6 @@ shell:
   - mkdir /tmp/cilium-repo
   - curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v{{ $ciliumVersion }}.tar.gz | tar xvz -C /tmp/cilium-repo
   install:
-  - /tmp/download-hubble.sh
-  - /out/amd64/bin/hubble completion bash > /out/linux/bash_completion
   - cd /tmp/cilium-repo/cilium-{{ $ciliumVersion }}
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
