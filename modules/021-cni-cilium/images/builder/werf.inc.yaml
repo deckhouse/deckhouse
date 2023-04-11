@@ -90,8 +90,8 @@ shell:
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
   install:
   - cd /go/src/github.com/cilium/cilium/images/runtime
-  - bash build_gops.sh
-  - bash download-cni.sh
+  - ./build-gops.sh
+  - ./download-cni.sh
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
