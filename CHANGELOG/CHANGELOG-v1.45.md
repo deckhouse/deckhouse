@@ -4,7 +4,7 @@
 
 
  - All system components will restart.
- - Kubernetes `1.26` is no longer supported.
+ - Kubernetes `1.21` is no longer supported.
  - The `operator-trivy` module will no longer be available in Deckhouse CE.
 
 ## Features
@@ -16,7 +16,7 @@
  - **[candi]** Upgraded patch versions of Kubernetes images: `v1.23.17`, `v1.24.11`, `v1.25.7`, `v1.26.2` [#4012](https://github.com/deckhouse/deckhouse/pull/4012)
     "Kubernetes control-plane components will restart, kubelet will restart"
  - **[candi]** Add support for Kubernetes `1.26`. Remove support for Kubernetes `1.21`. [#3760](https://github.com/deckhouse/deckhouse/pull/3760)
-    Kubernetes `1.26` is no longer supported.
+    Kubernetes `1.21` is no longer supported.
  - **[candi]** Add ALT Linux support. [#3555](https://github.com/deckhouse/deckhouse/pull/3555)
  - **[candi]** Switch from pulling container images by tag to pulling by sha256 checksum. [#3318](https://github.com/deckhouse/deckhouse/pull/3318)
     All system components will restart.
