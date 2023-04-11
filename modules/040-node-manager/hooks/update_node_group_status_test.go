@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -693,7 +694,7 @@ status:
 	})
 
 	Context("Node group conditions", func() {
-		assertCondition := func(f *HookExecutionConfig, t ngv1.NodeGroupConditionType, s ngv1.ConditionStatus, time, m string) {
+		assertCondition := func(f *HookExecutionConfig, t ngv1.NodeGroupConditionType, s ngv1.ConditionStatus, tt, m string) {
 			conditions := f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status.conditions").Array()
 			hasCondition := false
 			for _, c := range conditions {
@@ -701,7 +702,14 @@ status:
 					hasCondition = true
 					Expect(c.Get("status").String()).To(Equal(string(s)))
 					Expect(c.Get("message").String()).To(Equal(m))
-					Expect(c.Get("lastTransitionTime").String()).To(Equal(time))
+
+					toExpectTime, err := time.Parse(time.RFC3339, c.Get("lastTransitionTime").String())
+					Expect(err).ToNot(HaveOccurred())
+					expectedTime, err := time.Parse(time.RFC3339, tt)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(toExpectTime.Equal(expectedTime)).To(BeTrue())
+
 					break
 				}
 			}
@@ -1604,7 +1612,7 @@ status:
   conditions:
   - status: "True"
     type: Error
-    lastTransitionTime: "2023-03-03T19:47:40+03:00"
+    lastTransitionTime: "2023-03-03T19:47:40Z"
     message: "Some error"
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
@@ -1639,7 +1647,7 @@ status:
 				})
 
 				It("Sets to True and sets message from machine deployment error", func() {
-					assertCondition(f, ngv1.NodeGroupConditionTypeError, ngv1.ConditionTrue, "2023-03-03T19:47:40+03:00", "Some error")
+					assertCondition(f, ngv1.NodeGroupConditionTypeError, ngv1.ConditionTrue, "2023-03-03T19:47:40Z", "Some error")
 				})
 			})
 
