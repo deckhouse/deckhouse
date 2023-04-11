@@ -27,7 +27,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
 from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
+fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/llvm-objcopy
@@ -46,7 +46,6 @@ git:
   stageDependencies:
     install:
     - '**/*'
-
 shell:
   beforeInstall:
   - apt-get update
