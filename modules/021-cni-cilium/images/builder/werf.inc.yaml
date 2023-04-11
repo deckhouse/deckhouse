@@ -1,19 +1,20 @@
+https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L8-L11
 ---
-# https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L8
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
 from: quay.io/cilium/cilium-llvm:3408daa17f6490a464dfc746961e28ae31964c66@sha256:ff13a1a9f973d102c6ac907d2bc38a524c8e1d26c6c1b16ed809a98925206a79
 ---
-# https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L9
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-bpftool-artifact
 from: quay.io/cilium/cilium-bpftool:d3093f6aeefef8270306011109be623a7e80ad1b@sha256:2c28c64195dee20ab596d70a59a4597a11058333c6b35a99da32c339dcd7df56
 ---
-# https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L10
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iproute2-artifact
 from: quay.io/cilium/cilium-iproute2:f882e3fd516184703eea5ee9b3b915748b5d4ee8@sha256:f22b8aaf01952cf4b2ec959f0b8f4d242b95ce279480fbd73fded606ce0c3fa4
 ---
-# https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L11
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
 from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
+---
+# https://github.com/cilium/cilium/blob/v1.12.8/images/cilium/Dockerfile#L11
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
+from: quay.io/cilium/cilium-envoy:04413917ff99e4f6ab51d1c6eb424d4a055f4462@sha256:af076f80818bc8d894f2f4f3104d5f4288112a67be5fb6e1b9a9c78370c7c9c8
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
 from: {{ $.Images.BASE_ALPINE }}
@@ -32,7 +33,7 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/*
+- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/builder/*
   to: /go/src/github.com/cilium/cilium/images/builder
   stageDependencies:
     install:
@@ -43,6 +44,11 @@ shell:
   - apt-get upgrade -y --no-install-recommends
   - |
     apt-get install -y --no-install-recommends \
+    # Install cross tools for both arm64 on amd64
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    libc6-dev-arm64-cross \
+    binutils-aarch64-linux-gnu \
     gcc-x86-64-linux-gnu \
     g++-x86-64-linux-gnu \
     libc6-dev-amd64-cross \
@@ -61,5 +67,27 @@ shell:
   - apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   install:
+  - cd /go/src/github.com/cilium/cilium/images/builder
   - bash install-protoc.sh
   - bash install-protoplugins.sh
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+git:
+  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/gops/*
+    to: /go/src/github.com/cilium/cilium/images/runtime
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu
+  - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
+  install:
+  - cd /go/src/github.com/cilium/cilium/images/runtime
+  - bash build_gops.sh
+  - bash download-cni.sh

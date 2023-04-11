@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# https://github.com/cilium/cilium/blob/v1.12.8/images/builder/install-protoplugins.sh
 # Copyright Authors of Cilium
 # SPDX-License-Identifier: Apache-2.0
 
