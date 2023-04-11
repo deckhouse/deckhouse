@@ -30,12 +30,15 @@ import (
 const (
 	// We consider that the node is ready in the first five minutes after the bootstrap
 	nodeNotReadyGracePeriod = 5 * time.Minute
+	machineGeneralError     = "Started Machine creation process"
 )
 
 type NodeGroup struct {
 	Type      ngv1.NodeType
 	Instances int32
 	Desired   int32
+
+	HasFrozenMachineDeployment bool
 }
 
 type Node struct {
@@ -133,6 +136,50 @@ func fillTransitionTime(currentConditions []ngv1.NodeGroupCondition, newConditio
 	return res
 }
 
+func calcErrorCondition(ng *NodeGroup, currentConditions []ngv1.NodeGroupCondition, errors []string) *ngv1.NodeGroupCondition {
+	var lastError *ngv1.NodeGroupCondition
+	for _, c := range currentConditions {
+		if c.Type == ngv1.NodeGroupConditionTypeError {
+			lastError = c.DeepCopy()
+			break
+		}
+	}
+
+	errMsg := strings.TrimSpace(strings.Join(errors, "|"))
+	isError := len(errors) > 0
+
+	curError := &ngv1.NodeGroupCondition{
+		Type:    ngv1.NodeGroupConditionTypeError,
+		Status:  boolToConditionStatus(isError),
+		Message: errMsg,
+	}
+
+	if lastError == nil {
+		lastError = curError
+	}
+
+	// Machine deployment can be in 2 state
+	// 1. Machine deployment has last operation with "Started Machine creation process"
+	//    This message is ugly, and it doesn't make sense. We need to use previous message
+	// 2. After some retries mcm freeze machine deployment for a short time and
+	//    clear status machine deployment from failed machines. But ng is in incorrect state, and we need to continue
+	//    set Error status on "True"
+
+	if len(errors) == 0 && ng.HasFrozenMachineDeployment {
+		return lastError
+	}
+
+	if len(errors) == 1 && errors[0] == machineGeneralError {
+		if lastError.Status == ngv1.ConditionFalse || lastError.Message == "" {
+			return curError
+		}
+
+		return lastError
+	}
+
+	return curError
+}
+
 func CalculateNodeGroupConditions(ng NodeGroup, nodes []*Node, currentConditions []ngv1.NodeGroupCondition, errors []string) []ngv1.NodeGroupCondition {
 	var inDownScale, isWaitingDisruptiveApproval, isUpdating bool
 
@@ -172,8 +219,7 @@ func CalculateNodeGroupConditions(ng NodeGroup, nodes []*Node, currentConditions
 		isReady = float64(readySchedulableNodes)/float64(schedulableNodes) > 0.9
 	}
 
-	errMsg := strings.Join(errors, "|")
-	isError := len(errors) > 0
+	errorCondition := calcErrorCondition(&ng, currentConditions, errors)
 
 	newConditions := []ngv1.NodeGroupCondition{
 		{
@@ -191,11 +237,7 @@ func CalculateNodeGroupConditions(ng NodeGroup, nodes []*Node, currentConditions
 			Status: boolToConditionStatus(isWaitingDisruptiveApproval),
 		},
 
-		{
-			Type:    ngv1.NodeGroupConditionTypeError,
-			Status:  boolToConditionStatus(isError),
-			Message: errMsg,
-		},
+		*errorCondition,
 	}
 
 	if ng.Type == ngv1.NodeTypeCloudEphemeral {
