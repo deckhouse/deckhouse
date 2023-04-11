@@ -5,12 +5,6 @@ fromImage: {{ $.ModuleName }}/builder-artifact
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
-git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/cilium/scripts
-  to: /tmp
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
   beforeInstall:
   - mkdir /tmp/cilium-repo
