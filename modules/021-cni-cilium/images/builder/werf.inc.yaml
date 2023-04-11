@@ -23,7 +23,7 @@ shell:
     - apk add --no-cache ca-certificates
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/llvm-objcopy
