@@ -62,6 +62,7 @@ shell:
     gcc \
     git \
     libc6-dev \
+    patch \
     make
   - apt-get purge --auto-remove
   - apt-get clean
@@ -127,11 +128,11 @@ import:
   to: /usr/local
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
-  add: /out/x86_64/bin/loopback
+  add: /out/amd64/bin/loopback
   to: /cni/loopback
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
-  add: /out/x86_64/bin/gops
+  add: /out/amd64/bin/gops
   to: /bin/gops
   before: install
 shell:
@@ -145,4 +146,16 @@ shell:
     - dpkg -i /iptables/*.deb
     - rm -rf /iptables
     - ./iptables-wrapper-installer.sh --no-sanity-check
-
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
+from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+git:
+- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/hubble/*
+  to: /tmp
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - /tmp/download-hubble.sh
+  - /out/amd64/bin/hubble completion bash > /out/linux/bash_completion
