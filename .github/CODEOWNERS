@@ -32,5 +32,7 @@ cloud-controller-manager/   @zuzzas
 csi/                        @zuzzas @kvaps
 deckhouse-controller/       @diafour
 dhctl/                      @name212
-docs/                       @z9r5
+docs/                       @z9r5 @nabokihms @konstantin-axenov
 helm_lib/                   @name212
+crds/                       @nabokihms @konstantin-axenov
+openapi/                    @nabokihms @konstantin-axenov
