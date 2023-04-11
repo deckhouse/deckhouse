@@ -1,4 +1,4 @@
-https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L8-L11
+# https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L8-L11
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
 from: quay.io/cilium/cilium-llvm:3408daa17f6490a464dfc746961e28ae31964c66@sha256:ff13a1a9f973d102c6ac907d2bc38a524c8e1d26c6c1b16ed809a98925206a79
