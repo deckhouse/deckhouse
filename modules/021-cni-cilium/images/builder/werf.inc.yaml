@@ -22,20 +22,12 @@ shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
 ---
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
+from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/llvm-objcopy
   to: /bin
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
-  add: /usr/local/go
-  to: /usr/local/go
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
@@ -72,9 +64,6 @@ shell:
   - apt-get purge --auto-remove
   - apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-  - export GOROOT=/usr/local/go
-  - export GOPATH=/go
-  - export PATH="${GOROOT}/bin:${GOPATH}/bin:${PATH}"
   install:
   - cd /go/src/github.com/cilium/cilium/images/builder
   - ./install-protoc.sh
@@ -122,8 +111,8 @@ import:
   - clang
   - llc
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-bpftool-artifact
-  add: /usr/local/bin
-  to: /usr/local/bin
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iproute2-artifact
   add: /usr/lib
@@ -132,9 +121,13 @@ import:
   includePaths:
   - libbpf*
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iproute2-artifact
-  add: /usr/local
-  to: /usr/local
+  add: /usr/local/bin
+  to: /usr/local/bin
   before: install
+  includePaths:
+  - ip
+  - tc
+  - ss
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback

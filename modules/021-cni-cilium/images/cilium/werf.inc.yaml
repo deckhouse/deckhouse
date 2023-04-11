@@ -39,6 +39,7 @@ shell:
   install:
   - groupadd -f cilium
   - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
+  - rm -rf /go
 docker:
   ENV:
     HUBBLE_SERVER: "unix:///var/run/cilium/hubble:sock"
