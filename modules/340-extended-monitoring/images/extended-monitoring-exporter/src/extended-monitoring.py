@@ -49,7 +49,7 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
 def is_monitoring_enabled(labels, annotations):
     if annotations and annotations.get(DEPRECATED_EXTENDED_MONITORING_ENABLED_ANNOTATION, "false") != "false":
         return True
-    if labels or labels.get(EXTENDED_MONITORING_ENABLED_LABEL, "false") != "false":
+    if labels and labels.get(EXTENDED_MONITORING_ENABLED_LABEL, "false") != "false":
         return True
 
     return False
@@ -57,17 +57,16 @@ def is_monitoring_enabled(labels, annotations):
 
 def parse_thresholds(labels, annotations, default_thresholds):
     thresholds = copy.deepcopy(default_thresholds)
-    if not labels:
-        return thresholds
-    for name, value in labels.items():
-        if name.startswith(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX):
-            unprefixed_name = name.replace(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX, "")
-            thresholds[unprefixed_name] = value
-
-    for name, value in annotations.items():
-        if name.startswith(DEPRECATED_EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX):
-            unprefixed_name = name.replace(DEPRECATED_EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX, "")
-            thresholds[unprefixed_name] = value
+    if annotations:
+        for name, value in annotations.items():
+            if name.startswith(DEPRECATED_EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX):
+                unprefixed_name = name.replace(DEPRECATED_EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX, "")
+                thresholds[unprefixed_name] = value
+    if labels:
+        for name, value in labels.items():
+            if name.startswith(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX):
+                unprefixed_name = name.replace(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX, "")
+                thresholds[unprefixed_name] = value
 
     return thresholds
 
