@@ -22,7 +22,7 @@ shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
@@ -93,7 +93,7 @@ shell:
   - bash build_gops.sh
   - bash download-cni.sh
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
 git:
   - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/runtime
@@ -148,7 +148,7 @@ shell:
     - ./iptables-wrapper-installer.sh --no-sanity-check
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
-fromArtifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 git:
 - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/hubble
   to: /tmp

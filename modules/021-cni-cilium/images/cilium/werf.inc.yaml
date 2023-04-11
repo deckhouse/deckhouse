@@ -1,7 +1,7 @@
 {{- $ciliumVersion := "1.12.8" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
-fromArtifact: {{ $.ModuleName }}/builder-artifact
+fromImage: {{ $.ModuleName }}/builder-artifact
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
@@ -25,7 +25,7 @@ shell:
   - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/cni-install.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromArtifact: {{ $.ModuleName }}/builder-runtime-artifact
+fromImage: {{ $.ModuleName }}/builder-runtime-artifact
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
   add: /tmp/install
