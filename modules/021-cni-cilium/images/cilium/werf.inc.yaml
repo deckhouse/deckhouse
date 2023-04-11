@@ -22,7 +22,9 @@ shell:
   - curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v{{ $ciliumVersion }}.tar.gz | tar xvz -C /tmp/cilium-repo
   install:
   - cd /tmp/cilium-repo/cilium-{{ $ciliumVersion }}
+  {{- if eq $type "virtualization" }}
   - find /patches -name '*.patch' -exec git apply {} \;
+  {{- end }}
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
