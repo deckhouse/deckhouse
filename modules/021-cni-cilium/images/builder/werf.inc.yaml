@@ -33,7 +33,7 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/builder/*
+- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/builder
   to: /go/src/github.com/cilium/cilium/images/builder
   stageDependencies:
     install:
@@ -78,7 +78,7 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 git:
-  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/gops/*
+  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/gops
     to: /go/src/github.com/cilium/cilium/images/runtime
     stageDependencies:
       install:
@@ -96,7 +96,7 @@ shell:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
 git:
-  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/runtime/*
+  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/runtime
     to: /go/src/github.com/cilium/cilium/images/runtime
     stageDependencies:
       install:
@@ -150,7 +150,7 @@ shell:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
 fromArtifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/hubble/*
+- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/hubble
   to: /tmp
   stageDependencies:
     install:
