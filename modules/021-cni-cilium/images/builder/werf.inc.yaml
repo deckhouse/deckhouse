@@ -125,11 +125,11 @@ import:
   to: /usr/local
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
-  add: /out/amd64/bin/loopback
+  add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
-  add: /out/amd64/bin/gops
+  add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
 shell:
@@ -155,4 +155,4 @@ git:
 shell:
   install:
   - /tmp/download-hubble.sh
-  - /out/amd64/bin/hubble completion bash > /out/linux/bash_completion
+  - /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
