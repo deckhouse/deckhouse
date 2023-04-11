@@ -63,8 +63,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			NamespaceSelector:            internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "controller",
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "app",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"controller"},
+					},
+					{
+						Key:      "ingress.deckhouse.io/block-deleting",
+						Operator: metav1.LabelSelectorOpDoesNotExist,
+					},
+					{
+						Key:      "lifecycle.apps.kruise.io/state",
+						Operator: metav1.LabelSelectorOpDoesNotExist,
+					},
 				},
 			},
 			FilterFunc: applyIngressPodFilter,
