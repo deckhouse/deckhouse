@@ -266,7 +266,7 @@ def _get_metrics():
         if
         (ns.metadata.labels and EXTENDED_MONITORING_ENABLED_LABEL in ns.metadata.labels)
         or
-        (ns.metadata.labels and DEPRECATED_EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations)
+        (ns.metadata.annotations and DEPRECATED_EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations)
     )
 
     response = """# HELP extended_monitoring_annotations Extended monitoring annotations
