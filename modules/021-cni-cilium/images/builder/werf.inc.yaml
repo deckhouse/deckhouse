@@ -44,11 +44,6 @@ shell:
   - apt-get upgrade -y --no-install-recommends
   - |
     apt-get install -y --no-install-recommends \
-    # Install cross tools for both arm64 on amd64
-    gcc-aarch64-linux-gnu \
-    g++-aarch64-linux-gnu \
-    libc6-dev-arm64-cross \
-    binutils-aarch64-linux-gnu \
     gcc-x86-64-linux-gnu \
     g++-x86-64-linux-gnu \
     libc6-dev-amd64-cross \
@@ -86,7 +81,7 @@ git:
 shell:
   beforeInstall:
   - apt-get update
-  - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu
+  - apt-get install -y binutils-x86-64-linux-gnu
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
   install:
   - cd /go/src/github.com/cilium/cilium/images/runtime
