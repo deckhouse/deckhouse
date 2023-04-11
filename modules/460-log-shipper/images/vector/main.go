@@ -109,15 +109,17 @@ func reloadVectorConfig() error {
 		return err
 	}
 	for _, p := range processes {
-		executable, err := p.Exe()
+		cmdline, err := p.Cmdline()
 		if err != nil {
 			return err
 		}
-		if executable == vectorBinaryPath {
+
+		if strings.Contains(cmdline, vectorBinaryPath) {
 			err := p.SendSignal(unix.SIGHUP)
 			if err != nil {
 				return err
 			}
+			break
 		}
 	}
 
