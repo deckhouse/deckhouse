@@ -22,12 +22,20 @@ shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
 from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/llvm-objcopy
   to: /bin
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
+  add: /usr/local/go
+  to: /usr/local/go
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
@@ -38,6 +46,7 @@ git:
   stageDependencies:
     install:
     - '**/*'
+
 shell:
   beforeInstall:
   - apt-get update
@@ -64,6 +73,9 @@ shell:
   - apt-get purge --auto-remove
   - apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  - export GOROOT=/usr/local/go
+  - export GOPATH=/go
+  - export PATH="${GOROOT}/bin:${GOPATH}/bin:${PATH}"
   install:
   - cd /go/src/github.com/cilium/cilium/images/builder
   - ./install-protoc.sh
