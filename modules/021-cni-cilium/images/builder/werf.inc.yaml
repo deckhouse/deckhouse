@@ -148,7 +148,7 @@ shell:
     - ./iptables-wrapper-installer.sh --no-sanity-check
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
-from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromArtifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 git:
 - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/hubble/*
   to: /tmp
