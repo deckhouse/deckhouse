@@ -142,7 +142,7 @@ func checkKubernetesVersion(kubernetesVersion string) error {
 	if minimalConstraint.Check(v) && maximalConstraint.Check(v) {
 		return nil
 	}
-	return fmt.Errorf("kubernetes version %s is not allowed", kubernetesVersion)
+	return fmt.Errorf("kubernetes version %s is not supported", kubernetesVersion)
 }
 
 func (c *Config) calculateConfigurationChecksum() error {
