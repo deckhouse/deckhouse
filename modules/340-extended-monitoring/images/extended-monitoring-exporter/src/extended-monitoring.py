@@ -47,11 +47,12 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
 
 
 def is_monitoring_enabled(labels, annotations):
-    if not labels and not annotations:
-        return False
-    # The absense of the label and "false" value mean the same
-    return labels.get(EXTENDED_MONITORING_ENABLED_LABEL, "false") == "" or annotations.get(DEPRECATED_EXTENDED_MONITORING_ENABLED_ANNOTATION,
-                                                                                      "false") == ""
+    if annotations and annotations.get(DEPRECATED_EXTENDED_MONITORING_ENABLED_ANNOTATION, "false") != "false":
+        return True
+    if labels or labels.get(EXTENDED_MONITORING_ENABLED_LABEL, "false") != "false":
+        return True
+
+    return False
 
 
 def parse_thresholds(labels, annotations, default_thresholds):
