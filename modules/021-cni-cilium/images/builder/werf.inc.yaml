@@ -68,8 +68,8 @@ shell:
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   install:
   - cd /go/src/github.com/cilium/cilium/images/builder
-  - bash install-protoc.sh
-  - bash install-protoplugins.sh
+  - ./install-protoc.sh
+  - ./install-protoplugins.sh
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
 from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
@@ -91,3 +91,58 @@ shell:
   - cd /go/src/github.com/cilium/cilium/images/runtime
   - bash build_gops.sh
   - bash download-cni.sh
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+git:
+  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/builder/scripts/runtime/*
+    to: /go/src/github.com/cilium/cilium/images/runtime
+    stageDependencies:
+      install:
+        - '**/*'
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
+  add: /iptables
+  to: /iptables
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
+  add: /usr/local/bin/
+  to: /bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-bpftool-artifact
+  add: /usr/local/bin
+  to: /usr/local/bin
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iproute2-artifact
+  add: /usr/lib
+  to: /usr/lib
+  before: install
+  includePaths:
+  - libbpf*
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iproute2-artifact
+  add: /usr/local
+  to: /usr/local
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+  add: /out/x86_64/bin/loopback
+  to: /cni/loopback
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+  add: /out/x86_64/bin/gops
+  to: /bin/gops
+  before: install
+shell:
+  beforeInstall:
+    - apt-get update
+    - apt-get upgrade -y
+    - apt-get install -y jq
+  install:
+    - cd /go/src/github.com/cilium/cilium/images/runtime
+    - ./install-runtime-deps.sh
+    - dpkg -i /iptables/*.deb
+    - rm -rf /iptables
+    - ./iptables-wrapper-installer.sh --no-sanity-check
+
