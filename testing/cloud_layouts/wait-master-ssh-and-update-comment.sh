@@ -17,7 +17,7 @@
 log_file="$1"
 comment_url="$2"
 connection_str_out_file="$3"
-wait_bastion_ip="$4"
+bastion_out_file="$4"
 
 if [ -z "$log_file" ]; then
   echo "Log file is required"
@@ -36,11 +36,6 @@ fi
 
 if [ -z "$connection_str_out_file" ]; then
   echo "Connection string output file is required"
-  exit 1
-fi
-
-if [ -z "$wait_bastion_ip" ]; then
-  echo "Wait bastion ip is required"
   exit 1
 fi
 
@@ -211,7 +206,7 @@ if [[ "$master_ip" == "" || "$master_user" == "" ]]; then
   exit 1
 fi
 
-if [[ "$wait_bastion_ip" == "true" ]]; then
+if [ -n "$bastion_out_file" ]; then
   # wait bastion ip and user. 10 minutes 60 cycles wit 10 second sleep
   sleep_second=0
   for (( i=1; i<=60; i++ )); do
@@ -228,6 +223,9 @@ if [[ "$wait_bastion_ip" == "true" ]]; then
     echo "Timeout waiting bastion ip and bastion user"
     exit 1
   fi
+
+  bastion_connection_str="${bastion_ip}@${bastion_user}"
+  echo -n "$bastion_connection_str" > "$bastion_out_file"
 fi
 
 connection_str="${master_user}@${master_ip}"
