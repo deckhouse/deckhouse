@@ -320,7 +320,7 @@ rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
-{{- if hasKey .nodeGroup "calculateSystemReserved" }}
+{{- if dig "kubelet" "reserveSystemResources" false .nodeGroup }}
 systemReserved:
   cpu: "$(dynamic_cpu_sizing)"
   memory: "$(dynamic_memory_sizing)"
