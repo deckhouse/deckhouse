@@ -69,11 +69,11 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	var (
-		isDraining     bool
 		drainingSource string
+		drainedSource  string
 	)
 	if source, ok := node.Annotations["update.node.deckhouse.io/draining"]; ok {
-		isDraining = true
+		// keep backward compatibility
 		if source == "" {
 			drainingSource = "bashible"
 		} else {
@@ -81,10 +81,19 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		}
 	}
 
+	if source, ok := node.Annotations["update.node.deckhouse.io/drained"]; ok {
+		// keep backward compatibility
+		if source == "" {
+			drainedSource = "bashible"
+		} else {
+			drainedSource = source
+		}
+	}
+
 	return drainingNode{
 		Name:           node.Name,
-		IsDraining:     isDraining,
 		DrainingSource: drainingSource,
+		DrainedSource:  drainedSource,
 		Unschedulable:  node.Spec.Unschedulable,
 	}, nil
 }
@@ -114,9 +123,19 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	snap := input.Snapshots["nodes_for_draining"]
 	for _, s := range snap {
 		dNode := s.(drainingNode)
-		if !dNode.IsDraining {
+		if !dNode.isDraining() {
+			// if node has drained annotation (`user` source) and .spec.unscheduled == false - remove the annotation
+			if !dNode.Unschedulable && dNode.DrainedSource == "user" {
+				input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+			}
 			continue
 		}
+
+		// if node has drained annotation (`user` source) and new draining annotation - remove the 'drained' annotation
+		if dNode.DrainedSource == "user" {
+			input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+		}
+
 		cordonNode := &corev1.Node{
 			TypeMeta: v1.TypeMeta{
 				Kind:       "Node",
@@ -168,11 +187,29 @@ func newDrainAnnotationPatch(source string) map[string]interface{} {
 	}
 }
 
+var (
+	removeDrainedAnnotation = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/drained": nil,
+			},
+		},
+	}
+)
+
 type drainingNode struct {
 	Name           string
-	IsDraining     bool
 	DrainingSource string
+	DrainedSource  string
 	Unschedulable  bool
+}
+
+func (dn drainingNode) isDraining() bool {
+	return dn.DrainingSource != ""
+}
+
+func (dn drainingNode) isDrained() bool {
+	return dn.DrainedSource != ""
 }
 
 type drainedNodeRes struct {
