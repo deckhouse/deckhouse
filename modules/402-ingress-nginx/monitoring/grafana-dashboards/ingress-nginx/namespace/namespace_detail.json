@@ -10167,14 +10167,36 @@
         "useTags": false
       },
       {
-        "description": null,
-        "error": null,
-        "hide": 2,
+        "current": {
+          "selected": true,
+          "text": "without default backend",
+          "value": "[^_]*"
+        },
+        "hide": 0,
+        "includeAll": false,
         "label": "VHost",
+        "multi": false,
         "name": "vhost",
-        "query": ".*",
+        "options": [
+          {
+            "selected": true,
+            "text": "without default backend",
+            "value": "[^_]*"
+          },
+          {
+            "selected": false,
+            "text": "all",
+            "value": ".*"
+          },
+          {
+            "selected": false,
+            "text": "default backend",
+            "value": "_"
+          }
+        ],
+        "query": "[^_]*,.*,_",
         "skipUrlSync": false,
-        "type": "constant"
+        "type": "custom"
       },
       {
         "description": null,

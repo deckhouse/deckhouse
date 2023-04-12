@@ -1008,7 +1008,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1016,7 +1016,7 @@
           "step": 10
         },
         {
-          "expr": "sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4])) $by",
+          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__interval_sx4])) $by",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -1120,7 +1120,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4])) $by\n/ scalar(sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4])))",
+          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__interval_sx4])) $by\n/ scalar(sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__interval_sx4])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
