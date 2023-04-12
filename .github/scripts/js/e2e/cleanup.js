@@ -64,7 +64,7 @@ function buildFailedE2eTestAdditionalInfo({ needsContext, core, context }){
         argv.push(connectStr)
 
         let bastionPart = ''
-        if(!bastionStr){
+        if(bastionStr){
           bastionPart = `-J ${bastionStr}`
         }
 

@@ -224,7 +224,7 @@ if [ -n "$bastion_out_file" ]; then
     exit 1
   fi
 
-  bastion_connection_str="${bastion_ip}@${bastion_user}"
+  bastion_connection_str="${bastion_user}@${bastion_ip}"
   echo -n "$bastion_connection_str" > "$bastion_out_file"
 fi
 
