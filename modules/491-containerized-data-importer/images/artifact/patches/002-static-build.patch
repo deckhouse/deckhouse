@@ -1,15 +1,3 @@
-diff --git a/cmd/cdi-apiserver/BUILD.bazel b/cmd/cdi-apiserver/BUILD.bazel
-index 4ac2f795e..6e78ba7ce 100644
---- a/cmd/cdi-apiserver/BUILD.bazel
-+++ b/cmd/cdi-apiserver/BUILD.bazel
-@@ -26,6 +26,7 @@ go_library(
- go_binary(
-     name = "cdi-apiserver",
-     embed = [":go_default_library"],
-+    static = "on",
-     visibility = ["//visibility:public"],
- )
- 
 diff --git a/cmd/cdi-cloner/BUILD.bazel b/cmd/cdi-cloner/BUILD.bazel
 index 098bff0a1..e6eb5839a 100644
 --- a/cmd/cdi-cloner/BUILD.bazel
