@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
@@ -63,6 +64,7 @@ var (
 	config                     *Config
 	controlPlaneManagerIsReady bool
 	server                     *http.Server
+	nowTime                    = time.Now()
 )
 
 func NewConfig() (*Config, error) {
@@ -91,7 +93,7 @@ func (c *Config) readEnvs() error {
 	}
 
 	c.MyIP, ok = os.LookupEnv("MY_IP")
-	if 	c.MyIP, ok = os.LookupEnv("MY_IP"); !ok {
+	if c.MyIP, ok = os.LookupEnv("MY_IP"); !ok {
 		return errors.New("MY_IP env should be set")
 	}
 

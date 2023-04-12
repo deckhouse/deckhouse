@@ -138,7 +138,7 @@ func renewCertificate(componentName, f string) error {
 	if err := prepareCerts(componentName, false); err != nil {
 		return err
 	}
-	if err := os.Chmod(path, 0600); err !=nil {
+	if err := os.Chmod(path, 0600); err != nil {
 		return err
 	}
 	return os.Chmod(keyPath, 0600)
@@ -201,6 +201,7 @@ func certificateExpiresSoon(c *x509.Certificate, durationLeft time.Duration) boo
 }
 
 func prepareCerts(componentName string, isTemp bool) error {
+	// kubeadm init phase certs apiserver --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
 	args := []string{"init", "phase", "certs", componentName, "--config", deckhousePath + "/kubeadm/config.yaml"}
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)

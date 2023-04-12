@@ -18,6 +18,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -68,7 +69,7 @@ func backupFile(src string) error {
 		return err
 	}
 
-	backupDir := filepath.Join(deckhousePath, "backup", config.ConfigurationChecksum)
+	backupDir := filepath.Join(deckhousePath, "backup", fmt.Sprintf("%d-%d-%d_%s", nowTime.Year(), nowTime.Month(), nowTime.Day(), config.ConfigurationChecksum))
 
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		return err

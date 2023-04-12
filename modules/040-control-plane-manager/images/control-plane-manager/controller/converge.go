@@ -136,8 +136,10 @@ func convergeComponent(componentName string) error {
 func prepareConverge(componentName string, isTemp bool) error {
 	args := []string{"init", "phase"}
 	if componentName == "etcd" {
+		// kubeadm init phase etcd local --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
 		args = append(args, "etcd", "local", "--config", deckhousePath+"/kubeadm/config.yaml")
 	} else {
+		// kubeadm init phase control-plane apiserver --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
 		args = append(args, "control-plane", strings.TrimPrefix(componentName, "kube-"), "--config", deckhousePath+"/kubeadm/config.yaml")
 	}
 	if isTemp {
@@ -152,8 +154,13 @@ func prepareConverge(componentName string, isTemp bool) error {
 }
 
 func calculateChecksum(componentName string) (string, error) {
+	h := sha256.New()
 	manifest, err := os.ReadFile(filepath.Join(config.TmpPath, manifestsPath, componentName+".yaml"))
 	if err != nil {
+		return "", err
+	}
+
+	if _, err := h.Write(manifest); err != nil {
 		return "", err
 	}
 
@@ -173,36 +180,18 @@ func calculateChecksum(componentName string) (string, error) {
 		i++
 	}
 
-	sha256sumSlice := make([]string, 0, len(filesMap))
-	i = 0
+	sort.Strings(filesSlice)
+
 	for _, file := range filesSlice {
 		content, err := os.ReadFile(file)
 		if err != nil {
 			return "", err
 		}
-		sha256sum, err := calculateSha256(content)
-		if err != nil {
+		if _, err := h.Write(content); err != nil {
 			return "", err
 		}
-		sha256sumSlice = append(sha256sumSlice, sha256sum)
-		i++
 	}
 
-	sort.Strings(sha256sumSlice)
-	for _, v := range sha256sumSlice {
-		manifest = append(manifest, []byte(v)...)
-	}
-
-	sha256sum, err := calculateSha256(manifest)
-
-	return sha256sum, nil
-}
-
-func calculateSha256(content []byte) (string, error) {
-	h := sha256.New()
-	if _, err := h.Write(content); err != nil {
-		return "", err
-	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
@@ -229,6 +218,7 @@ metadata:
 }
 
 func etcdJoinConverge() error {
+	// kubeadm -v=5 join phase control-plane-join etcd --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
 	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
 	c := exec.Command(kubeadm(), args...)
 	out, err := c.CombinedOutput()

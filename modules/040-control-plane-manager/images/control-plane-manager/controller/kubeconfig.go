@@ -49,6 +49,7 @@ func renewKubeconfig(componentName string) error {
 	log.Infof("generate or renew %s kubeconfig", path)
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
 		var remove bool
+		tmpPath := filepath.Join(config.TmpPath, path)
 		log.Infof("configuration has changed since last kubeconfig generation (last applied checksum %s, configuration checksum %s), verifying kubeconfig", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum)
 		if err := prepareKubeconfig(componentName, true); err != nil {
 			return err
@@ -58,14 +59,26 @@ func renewKubeconfig(componentName string) error {
 		if err != nil {
 			return err
 		}
-		tmpKubeconfig, err := loadKubeconfig(filepath.Join(config.TmpPath, path))
+		tmpKubeconfig, err := loadKubeconfig(tmpPath)
 		if err != nil {
 			return err
+		}
+
+		if len(currentKubeconfig.Clusters) == 0 {
+			return fmt.Errorf("clusters field of kubeconfig %s is empty", path)
+		}
+
+		if len(tmpKubeconfig.Clusters) == 0 {
+			return fmt.Errorf("clusters field of kubeconfig %s is empty", tmpPath)
 		}
 
 		if currentKubeconfig.Clusters[0].Cluster.Server != tmpKubeconfig.Clusters[0].Cluster.Server {
 			log.Infof("kubeconfig %s address field changed", path)
 			remove = true
+		}
+
+		if len(currentKubeconfig.AuthInfos) == 0 {
+			return fmt.Errorf("users field of kubeconfig %s is empty", path)
 		}
 
 		certData := currentKubeconfig.AuthInfos[0].AuthInfo.ClientCertificateData
@@ -105,6 +118,7 @@ func renewKubeconfig(componentName string) error {
 }
 
 func prepareKubeconfig(componentName string, isTemp bool) error {
+	// kubeadm init phase kubeconfig apiserver --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
 	args := []string{"init", "phase", "kubeconfig", componentName, "--config", deckhousePath + "/kubeadm/config.yaml"}
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
@@ -232,52 +246,40 @@ func checkEtcdManifest() error {
 		return err
 	}
 
-	found := false
+	foundAdvertiseParam := false
+	foundNameParam := false
+	foundDatadirParam := false
 	for _, arg := range pod.Spec.Containers[0].Command {
-		if !strings.HasPrefix(arg, "--advertise-client-urls=https://") {
-			continue
+		switch {
+		case strings.HasPrefix(arg, "--advertise-client-urls=https://"):
+			ip := strings.TrimPrefix(arg, "--advertise-client-urls=https://")
+			ip = strings.TrimSuffix(strings.TrimPrefix(arg, "--advertise-client-urls=https://"), ":2379")
+			if ip != config.MyIP {
+				return fmt.Errorf("etcd is not supposed to change advertise address from %s to %s, please verify node's InternalIP", ip, config.MyIP)
+			}
+			foundAdvertiseParam = true
+		case strings.HasPrefix(arg, "--name="):
+			if name := strings.TrimPrefix(arg, "--name="); name != config.NodeName {
+				return fmt.Errorf("etcd is not supposed to change its name from %s to %s, please verify node's hostname", name, config.NodeName)
+			}
+			foundNameParam = true
+		case strings.HasPrefix(arg, "--data-dir="):
+			if name := strings.TrimPrefix(arg, "--data-dir="); name != "/var/lib/etcd" {
+				return fmt.Errorf("etcd is not supposed to change data-dir from %s to /var/lib/etcd, please verify current --data-dir", name)
+			}
+			foundDatadirParam = true
 		}
-		ip := strings.TrimPrefix(arg, "--advertise-client-urls=https://")
-		ip = strings.TrimSuffix(strings.TrimPrefix(arg, "--advertise-client-urls=https://"), ":2379")
-		if ip != config.MyIP {
-			return fmt.Errorf("etcd is not supposed to change advertise address from %s to %s, please verify node's InternalIP", ip, config.MyIP)
-		}
-		found = true
-		break
 	}
 
-	if !found {
+	if !foundAdvertiseParam {
 		return fmt.Errorf("cannot find --advertise-client-urls submatch in etcd manifest %s", etcdManifestPath)
 	}
 
-	found = false
-	for _, arg := range pod.Spec.Containers[0].Command {
-		if !strings.HasPrefix(arg, "--name=") {
-			continue
-		}
-		if name := strings.TrimPrefix(arg, "--name="); name != config.NodeName {
-			return fmt.Errorf("etcd is not supposed to change its name from %s to %s, please verify node's hostname", name, config.NodeName)
-		}
-		found = true
-		break
-	}
-
-	if !found {
+	if !foundNameParam {
 		return fmt.Errorf("cannot find --name submatch in etcd manifest %s", etcdManifestPath)
 	}
 
-	found = false
-	for _, arg := range pod.Spec.Containers[0].Command {
-		if !strings.HasPrefix(arg, "--data-dir=") {
-			continue
-		}
-		if name := strings.TrimPrefix(arg, "--data-dir="); name != "/var/lib/etcd" {
-			return fmt.Errorf("etcd is not supposed to change data-dir from %s to /var/lib/etcd, please verify current --data-dir", name)
-		}
-		found = true
-		break
-	}
-	if !found {
+	if !foundDatadirParam {
 		return fmt.Errorf("cannot find --data-dir submatch in etcd manifest %s", etcdManifestPath)
 	}
 
