@@ -195,7 +195,7 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 				return
 			}
 
-			cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
 			_, err = c.k8sClient.Resource(v1alpha1.GVR).Create(cctx, o, metav1.CreateOptions{})
 			cancel()
 
@@ -212,7 +212,7 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 				return
 			}
 
-			cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
 			_, err = c.k8sClient.Resource(v1alpha1.GVR).Update(cctx, o, metav1.UpdateOptions{})
 			cancel()
 
