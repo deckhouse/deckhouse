@@ -456,7 +456,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
@@ -897,7 +897,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
@@ -1338,7 +1338,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
@@ -1779,7 +1779,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
@@ -2220,7 +2220,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
@@ -2661,7 +2661,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
@@ -3102,7 +3102,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
@@ -3543,7 +3543,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
@@ -3984,7 +3984,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
@@ -4425,7 +4425,7 @@ jobs:
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
-          echo "ssh_bastion_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
