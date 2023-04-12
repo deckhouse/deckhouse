@@ -1474,7 +1474,7 @@ metadata:
 
 		if draining {
 			state += `
-    update.node.deckhouse.io/draining: ""
+    update.node.deckhouse.io/draining: "bashible"
 `
 		}
 		if unschedulable {

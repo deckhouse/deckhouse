@@ -30,14 +30,13 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: nodeManager :: hooks :: update_approval_draining ::", func() {
+var _ = Describe("Modules :: nodeManager :: hooks :: update_approval_draining ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(``)
-			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
 
@@ -48,7 +47,7 @@ var _ = FDescribe("Modules :: nodeManager :: hooks :: update_approval_draining :
 
 	Context("Cluster node is draining", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(`
+			st := f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Node
@@ -68,7 +67,7 @@ metadata:
   annotations:
     update.node.deckhouse.io/draining: "user"
 `)
-			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.BindingContexts.Set(st)
 			testMoveNodesToStaticClient(f)
 			f.RunHook()
 		})
@@ -88,7 +87,7 @@ metadata:
 		})
 	})
 
-	FContext("draining_nodes", func() {
+	Context("draining_nodes", func() {
 		var initialState = `
 ---
 apiVersion: deckhouse.io/v1
@@ -129,8 +128,8 @@ data:
 					draining := gDraining
 					unschedulable := gUnschedulable
 					BeforeEach(func() {
-						f.KubeStateSet(initialState + generateStateToTestDrainingNodes(nodeNames, draining, unschedulable))
-						f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+						st := f.KubeStateSet(initialState + generateStateToTestDrainingNodes(nodeNames, draining, unschedulable))
+						f.BindingContexts.Set(st)
 						testMoveNodesToStaticClient(f)
 						f.RunHook()
 					})
