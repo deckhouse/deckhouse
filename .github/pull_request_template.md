@@ -16,6 +16,16 @@
   If it fixes an obvious bug, please tell users about the impact and effect of the problem.
 -->
 
+## Why do we need it in the patch release (if we do)?
+
+<!---
+Describe why the changes need to be backported into the patch release.
+
+If it doesn't matter whether the changes will be backported into the patch release or not, specify "Not necessarily".
+
+Delete the section if the PR is for release, and not for the patch release.
+-->
+
 ## What is the expected result?
 <!---
   How can one check these changes after applying?  
