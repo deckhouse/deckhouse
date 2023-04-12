@@ -10,6 +10,8 @@ linstor:
       pull_request: https://github.com/deckhouse/deckhouse/pull/4343
 node-manager:
   fixes:
-    - summary: The solution proposed in
+    - summary: >-
+        Revert removing `early-oom` (the [#3821](https://github.com/deckhouse/deckhouse/pull/3821)
+        PR).
       pull_request: https://github.com/deckhouse/deckhouse/pull/4376
 

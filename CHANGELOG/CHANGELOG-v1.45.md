@@ -81,11 +81,12 @@
     `log-shipper` Pods will restart.
  - **[log-shipper]** Make vector retrying request on startup with backoff. [#4270](https://github.com/deckhouse/deckhouse/pull/4270)
  - **[log-shipper]** Fix using hyphens in the `extraLabels` keys field of the `ClusterLogDestination` spec. [#4112](https://github.com/deckhouse/deckhouse/pull/4112)
+ - **[node-manager]** Revert removing `early-oom` (the [#3821](https://github.com/deckhouse/deckhouse/pull/3821) PR). [#4376](https://github.com/deckhouse/deckhouse/pull/4376)
  - **[node-manager]** Restrict changing `nodeType` for NodeGroups and remove stale status fields from static NodeGroups. [#4257](https://github.com/deckhouse/deckhouse/pull/4257)
  - **[node-manager]** Fix `WaitingForDisruptiveApproval` status calculating. [#4250](https://github.com/deckhouse/deckhouse/pull/4250)
  - **[node-manager]** Prevent changing bashible checksum if scale/downscale NodeGroup. [#4243](https://github.com/deckhouse/deckhouse/pull/4243)
  - **[node-manager]** Hours and minutes can be used simultaneously in the `spec.chaos.period` field of the NodeGroup CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
- - **[node-manager]** Removed early-oom. Added kubelet memory reservation option. [#3821](https://github.com/deckhouse/deckhouse/pull/3821)
+ - **[node-manager]** (Reverted in 1.45.3!) Removed early-oom. Added kubelet memory reservation option. [#3821](https://github.com/deckhouse/deckhouse/pull/3821)
  - **[user-authn]** Hours and minutes can be used simultaneously in the `spec.tls` field of the User CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
  - **[user-authn]** The `discover_dex_ca` hook subscribes secret according to the used mode. [#3842](https://github.com/deckhouse/deckhouse/pull/3842)
  - **[user-authz]** Disabled `NetworkPolicy` editing for Editors. [#4217](https://github.com/deckhouse/deckhouse/pull/4217)
