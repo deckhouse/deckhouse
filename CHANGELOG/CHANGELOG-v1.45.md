@@ -72,8 +72,11 @@
  - **[extended-monitoring]** Fix RBAC rules for `image-availability-exporter`. [#4346](https://github.com/deckhouse/deckhouse/pull/4346)
  - **[extended-monitoring]** Fix `image-availability-exporter` for Kubernetes 1.25+. [#4331](https://github.com/deckhouse/deckhouse/pull/4331)
  - **[global-hooks]** Deploy PDB as a normal helm resource, not a helm hook. [#4016](https://github.com/deckhouse/deckhouse/pull/4016)
+ - **[ingress-nginx]** Set `imagePullSecrets` for `kruise-controller`. [#4369](https://github.com/deckhouse/deckhouse/pull/4369)
+ - **[ingress-nginx]** Improve controller migration hook. [#4363](https://github.com/deckhouse/deckhouse/pull/4363)
  - **[ingress-nginx]** Fix RBAC rules for `kruise-controller`. [#4353](https://github.com/deckhouse/deckhouse/pull/4353)
  - **[istio]** Add registry secret for `d8-ingress-istio` namespace. [#4244](https://github.com/deckhouse/deckhouse/pull/4244)
+ - **[linstor]** Update `linstor-scheduler-admission` to fix admission review. [#4343](https://github.com/deckhouse/deckhouse/pull/4343)
  - **[log-shipper]** Add multiline custom parser for `PodLoggingConfig` and add validation for multiline custom parser when `startsWhen` and `endsWhen` params  are both provided [#4307](https://github.com/deckhouse/deckhouse/pull/4307)
     `log-shipper` Pods will restart.
  - **[log-shipper]** Make vector retrying request on startup with backoff. [#4270](https://github.com/deckhouse/deckhouse/pull/4270)
