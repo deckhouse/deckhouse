@@ -608,6 +608,11 @@ spec:
                   description: |
                     Kubelet settings for nodes.
                   properties:
+                    reserveSystemResources:
+                      type: boolean
+                      description: |
+                        Whether to reserve system resources.
+                      default: true
                     maxPods:
                       type: integer
                       description: |
@@ -1219,6 +1224,11 @@ spec:
                   description: |
                     Kubelet settings for nodes.
                   properties:
+                    reserveSystemResources:
+                      type: boolean
+                      description: |
+                        Whether to reserve system resources.
+                      default: true
                     maxPods:
                       type: integer
                       description: |
