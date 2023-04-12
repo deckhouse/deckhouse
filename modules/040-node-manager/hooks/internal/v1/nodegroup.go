@@ -269,6 +269,10 @@ func (r RollingUpdateDisruptions) IsEmpty() bool {
 }
 
 type Kubelet struct {
+	// Enabled system resource reservation
+	// Default: 'true'
+	ReserveSystemResources bool `json:"reserveSystemResources"`
+
 	// Set the max count of pods per node. Default: 110
 	MaxPods *int32 `json:"maxPods,omitempty"`
 
