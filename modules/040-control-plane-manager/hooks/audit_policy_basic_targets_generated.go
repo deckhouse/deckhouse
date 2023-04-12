@@ -70,6 +70,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"deckhouse-config-webhook",
 	"descheduler",
 	"dex",
+	"early-oom",
 	"ebpf-exporter",
 	"events-exporter",
 	"extended-monitoring-exporter",
