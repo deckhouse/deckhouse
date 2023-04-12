@@ -452,7 +452,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -886,7 +891,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -1320,7 +1330,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -1754,7 +1769,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -2188,7 +2208,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -2622,7 +2647,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -3056,7 +3086,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -3490,7 +3525,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -3924,7 +3964,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -4358,7 +4403,12 @@ jobs:
           echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
           echo '::echo::off'
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          wait_bastion_ip="false"
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            wait_bastion_ip="true"
+          fi
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$wait_bastion_ip" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
