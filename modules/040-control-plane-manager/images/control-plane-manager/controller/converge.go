@@ -130,7 +130,7 @@ func convergeComponent(componentName string) error {
 		log.Infof("skip manifest generation for component %s because checksum in manifest is up to date", componentName)
 	}
 
-	return waitPoidIsReady(componentName, checksum)
+	return waitPodIsReady(componentName, checksum)
 }
 
 func prepareConverge(componentName string, isTemp bool) error {
@@ -173,7 +173,7 @@ func calculateChecksum(componentName string) (string, error) {
 		i++
 	}
 
-	sha256sumSlice := make([]string, len(filesSlice))
+	sha256sumSlice := make([]string, 0, len(filesMap))
 	i = 0
 	for _, file := range filesSlice {
 		content, err := os.ReadFile(file)
@@ -184,7 +184,7 @@ func calculateChecksum(componentName string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		sha256sumSlice[i] = sha256sum
+		sha256sumSlice = append(sha256sumSlice, sha256sum)
 		i++
 	}
 
@@ -238,7 +238,7 @@ func etcdJoinConverge() error {
 	return err
 }
 
-func waitPoidIsReady(componentName string, checksum string) error {
+func waitPodIsReady(componentName string, checksum string) error {
 	tries := 0
 	log.Infof("waiting for the %s pod component to be ready with the new manifest in apiserver", componentName)
 	for {

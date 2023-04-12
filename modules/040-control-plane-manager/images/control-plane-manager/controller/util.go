@@ -44,7 +44,7 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 
 	srcBytes = []byte(os.ExpandEnv(string(srcBytes)))
 
-	if bytes.Compare(srcBytes, dstBytes) == 0 {
+	if bytes.Equal(srcBytes, dstBytes) {
 		log.Infof("file %s is not changed, skipping", dst)
 		return nil
 	}
