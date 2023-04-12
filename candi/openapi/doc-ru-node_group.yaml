@@ -206,6 +206,9 @@ spec:
                   description: |
                     Параметры настройки kubelet.
                   properties:
+                    reserveSystemResources:
+                      description: |
+                        Включить резервирование системных ресурсов.
                     maxPods:
                       description: |
                         Максимальное количество Pod'ов на узлах данной `NodeGroup`.

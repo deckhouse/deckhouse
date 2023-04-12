@@ -186,7 +186,7 @@ function dynamic_memory_sizing {
     if (($total_memory >= 0)); then # 2% of any memory above 128GB
         recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.02 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
     fi
-    recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory | awk '{printf("%d\n",$1 / 4 + 0.5)}') # Scale by 4 and round off so we avoid float conversions
+    recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory | awk '{printf("%.2f\n",$1 / 4)}') # Scale by 4
     echo -n "${recommended_systemreserved_memory}Gi"
 }
 
@@ -320,9 +320,11 @@ rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
+{{- if hasKey .nodeGroup "calculateSystemReserved" }}
 systemReserved:
   cpu: "$(dynamic_cpu_sizing)"
   memory: "$(dynamic_memory_sizing)"
+{{- end }}
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248
