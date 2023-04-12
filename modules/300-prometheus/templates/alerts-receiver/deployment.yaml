@@ -31,7 +31,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: alerts_receiver
+  name: alerts-receiver
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list $ (dict "app" "alerts-receiver")) | nindent 2 }}
 spec:
@@ -66,7 +66,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list $ "alertsReceiver") }}
         env:
         - name: PORT
-          value: 8080
+          value: "8080"
         ports:
         - containerPort: 8080
           name: http
