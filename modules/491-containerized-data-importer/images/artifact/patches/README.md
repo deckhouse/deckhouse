@@ -11,6 +11,12 @@ Internal patch which adds deckhouse ImagePullSecrets to kubevirt VMs
 - https://github.com/kubevirt/containerized-data-importer/issues/2395
 - https://kubernetes.slack.com/archives/C0163DT0R8X/p1660319072512309
 
+#### `002-static-build.patch`
+
+Enable static build to avoid glibc error on old CPUs
+
+- https://github.com/kubevirt/containerized-data-importer/issues/2652
+
 #### `003-apiserver-node-selector-and-tolerations.patch`
 
 Allow to override nodeSelector and tolerations for cdi-apiserver
