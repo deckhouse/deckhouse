@@ -142,6 +142,7 @@
       "labels": {
         "container": "{{ container }}",
         "foo": "bar",
+        "host": "{{ host }}",
         "image": "{{ image }}",
         "namespace": "{{ namespace }}",
         "node": "{{ node }}",

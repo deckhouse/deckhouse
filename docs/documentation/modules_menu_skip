@@ -9,6 +9,4 @@
 200-operator-prometheus
 340-monitoring-applications
 340-prometheus-madison-integration
-400-nginx-ingress
 500-basic-auth
-999-helm
