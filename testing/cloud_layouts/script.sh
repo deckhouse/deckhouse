@@ -104,6 +104,9 @@ master_ip=
 # bootstrap log
 bootstrap_log="${DHCTL_LOG_FILE}"
 terraform_state_file="/tmp/static-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.tfstate"
+# Logs dir
+logs=/tmp/logs
+mkdir $logs
 
 # function generates temp ssh parameters file
 function set_common_ssh_parameters() {
@@ -725,7 +728,7 @@ END_SCRIPT
     fi
   done
   >&2 echo -n "Fetch Deckhouse logs if error test ..."
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$cwd/deckhouse.json.log" <<<"${testLog}"
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
   return 1
 }
 
@@ -768,7 +771,7 @@ END_SCRIPT
   done
 
   >&2 echo -n "Fetch Deckhouse logs after test ..."
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$cwd/deckhouse.json.log" <<<"${testLog}"
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
 
   if [[ $test_failed == "true" ]] ; then
     return 1
