@@ -17,6 +17,7 @@
 log_file="$1"
 comment_url="$2"
 connection_str_out_file="$3"
+wait_bastion_ip="$4"
 
 if [ -z "$log_file" ]; then
   echo "Log file is required"
@@ -38,7 +39,14 @@ if [ -z "$connection_str_out_file" ]; then
   exit 1
 fi
 
+if [ -z "$wait_bastion_ip" ]; then
+  echo "Wait bastion ip is required"
+  exit 1
+fi
+
 master_ip=""
+bastion_ip=""
+bastion_user=""
 master_user=""
 result_body=""
 
@@ -68,8 +76,13 @@ function get_comment(){
     return 1
   fi
 
+  local bastion_part=""
+  if [ -n "$bastion_ip" ]; then
+    bastion_part="-J ${bastion_user}@${bastion_ip}"
+  fi
+
   local connection_str="${master_user}@${master_ip}"
-  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${connection_str}\`"
+  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${bastion_part} ${connection_str}\`"
   local bbody
   if ! bbody="$(cat "$response_file" | jq -crM --arg a "$connection_str_body" '{body: (.body + "\r\n\r\n" + $a + "\r\n")}')"; then
     return 1
@@ -146,6 +159,41 @@ function wait_master_host_connection_string() {
   return 0
 }
 
+function wait_bastion_host_connection_string() {
+  local ip
+  if ! ip="$(grep -Po '(?<=bastion_ip_address_for_ssh = ).+$' "$log_file")"; then
+    echo "Bastion ip not found"
+    return 1
+  fi
+
+  # IP validation regex from https://stackoverflow.com/posts/36760050/revisions
+  # IP should be verified because streaming log can contains partial string.
+  if ! echo "$ip" | grep -Po '((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}'; then
+    echo "$ip is not ip"
+    return 1
+  fi
+
+  bastion_ip=$ip
+  echo "IP found $bastion_ip"
+
+  local user
+  if ! user="$(grep -Po '(?<=bastion_user_name_for_ssh = ).+$' "$log_file")"; then
+    echo "Bastion user not found"
+    return 1
+  fi
+
+  if [ -z "$user" ]; then
+    echo "Bastion user is empty"
+    return 1
+  fi
+
+  bastion_user="$user"
+  echo "Bastion user was found: $bastion_user"
+
+  # got ip and user
+  return 0
+}
+
 # wait master ip and user. 10 minutes 60 cycles wit 10 second sleep
 sleep_second=0
 for (( i=1; i<=60; i++ )); do
@@ -163,10 +211,33 @@ if [[ "$master_ip" == "" || "$master_user" == "" ]]; then
   exit 1
 fi
 
+if [[ "$wait_bastion_ip" == "true" ]]; then
+  # wait bastion ip and user. 10 minutes 60 cycles wit 10 second sleep
+  sleep_second=0
+  for (( i=1; i<=60; i++ )); do
+    # yep sleep before
+    sleep $sleep_second
+    sleep_second=10
+
+    if wait_bastion_host_connection_string; then
+      break
+    fi
+  done
+
+  if [[ "$bastion_ip" == "" || "$bastion_user" == "" ]]; then
+    echo "Timeout waiting bastion ip and bastion user"
+    exit 1
+  fi
+fi
+
 connection_str="${master_user}@${master_ip}"
 echo -n "$connection_str" > "$connection_str_out_file"
 
 echo "Connection str $connection_str has been written to file $connection_str_out_file"
+
+# waiting for 1..10 random seconds before update comment for prevent overwrite comment
+# whe we run multiple e2e tests
+sleep $((1 + $RANDOM % 10))
 
 # update comment
 sleep_second_upd=0
