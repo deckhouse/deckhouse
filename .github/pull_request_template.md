@@ -21,7 +21,7 @@
 <!---
 Describe why the changes need to be backported into the patch release.
 
-If it doesn't matter whether the changes will be backported into the patch release or not, specify "Not necessarily".
+If it doesn't matter whether the changes will be backported into the patch release, specify "Not necessarily".
 
 Delete the section if the PR is for release, and not for the patch release.
 -->
