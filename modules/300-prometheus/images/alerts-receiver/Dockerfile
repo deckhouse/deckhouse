@@ -9,4 +9,4 @@ RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o alerts-re
 
 FROM $BASE_SCRATCH
 COPY --from=artifact /app/alerts-receiver /alerts-receiver
-CMD /alerts-receiver
+ENTRYPOINT [ "/alerts-receiver" ]
