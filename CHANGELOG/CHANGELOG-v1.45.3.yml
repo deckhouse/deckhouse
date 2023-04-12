@@ -1,2 +1,15 @@
-{}
+ingress-nginx:
+  fixes:
+    - summary: Set `imagePullSecrets` for `kruise-controller`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4369
+    - summary: Improve controller migration hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4363
+linstor:
+  fixes:
+    - summary: Update `linstor-scheduler-admission` to fix admission review.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4343
+node-manager:
+  fixes:
+    - summary: The solution proposed in
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4376
 
