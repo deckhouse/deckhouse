@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -64,6 +63,8 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		input.LogEntry.Warn("EXTERNAL_MODULE_DIR is not set")
 		return nil
 	}
+	// directory for symlinks will actual versions to all external-modules
+	symlinksDir := filepath.Join(externalModulesDir, "modules")
 
 	moduleReleases := make(map[string][]enqueueRelease, 0)
 
@@ -94,7 +95,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 		pred.calculateRelease()
 
-		symlinkName := path.Join(externalModulesDir, "modules", "900-"+module)
+		symlinkName := path.Join(symlinksDir, "900-"+module)
 
 		if pred.currentReleaseIndex == len(pred.releases)-1 {
 			// latest release deployed
@@ -103,7 +104,8 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 			// check symlink exists on FS, relative symlink
 			modulePath := generateModulePath(module, deployedRelease.Version.String())
-			if !isModuleExistsOnFS(symlinkName, modulePath) {
+			if !isModuleExistsOnFS(symlinksDir, symlinkName, modulePath) {
+				input.LogEntry.Debugf("Module %q is not exists on the filesystem. Restoring", module)
 				err := enableModule(symlinkName, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
@@ -174,27 +176,18 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	return nil
 }
 
-func isModuleExistsOnFS(symlinkPath, modulePath string) bool {
-	fmt.Println("MODULE EXISTS?")
-	fmt.Println(os.Getwd())
-	fmt.Println("SSS", symlinkPath, modulePath)
+func isModuleExistsOnFS(symlinksDir, symlinkPath, modulePath string) bool {
 	targetPath, err := filepath.EvalSymlinks(symlinkPath)
 	if err != nil {
 		return false
 	}
 
-	fmt.Println("AFTER1", targetPath)
-
-	targetPath, err = filepath.Rel(path.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"), targetPath)
-	if err != nil {
-		return false
+	if filepath.IsAbs(targetPath) {
+		targetPath, err = filepath.Rel(symlinksDir, targetPath)
+		if err != nil {
+			return false
+		}
 	}
-
-	fmt.Println("AFTER2", targetPath)
-
-	//if _, err := os.Stat(targetPath); os.IsNotExist(err) {
-	//	return false
-	//}
 
 	return targetPath == modulePath
 }
