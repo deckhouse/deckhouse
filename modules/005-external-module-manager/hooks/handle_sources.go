@@ -360,7 +360,7 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0755); err != nil {
+			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0700); err != nil {
 				return err
 			}
 		case tar.TypeReg:

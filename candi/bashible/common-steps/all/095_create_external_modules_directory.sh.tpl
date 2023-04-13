@@ -14,4 +14,5 @@
 
 mkdir -p /var/lib/deckhouse/external-modules/modules
 chown -hR 65534 /var/lib/deckhouse/external-modules
-chmod -R 0700 /var/lib/deckhouse/external-modules
+# remove 'group' and 'other' permissions, left 'user' permissions equal to an upstream
+chmod -R g-rwx,o-rwx /var/lib/deckhouse/external-modules
