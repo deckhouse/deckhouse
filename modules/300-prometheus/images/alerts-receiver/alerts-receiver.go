@@ -65,7 +65,7 @@ func main() {
 	}()
 
 	http.HandleFunc("/healthz", readyHandler)
-	http.HandleFunc("/webhook", webhookHandler)
+	http.HandleFunc("/", webhookHandler)
 
 	srv := &http.Server{
 		Addr: net.JoinHostPort(cfg.ListenHost, cfg.ListenPort),
