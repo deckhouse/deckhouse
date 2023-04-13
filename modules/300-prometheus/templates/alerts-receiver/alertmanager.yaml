@@ -13,7 +13,7 @@ spec:
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
-  serviceAccountName: alertmanager-internal
+  serviceAccountName: alertmanager-alerts-receiver
   volumes:
   - name: kube-rbac-proxy-ca
     configMap:
@@ -73,9 +73,9 @@ spec:
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: AlertmanagerConfig
 metadata:
-  name: alertmanager-alerts-receiver
+  name: alerts-receiver
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "alertmanager" "alertmanagerConfig" "alertmanager-alerts-receiver" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "alertmanager" "alertmanagerConfig" "alerts-receiver" )) | nindent 2 }}
 spec:
   route:
     groupBy: [ 'job' ]
