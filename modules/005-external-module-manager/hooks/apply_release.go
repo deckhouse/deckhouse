@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -170,10 +171,14 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 }
 
 func isModuleExistsOnFS(symlinkPath, modulePath string) bool {
+	fmt.Println("MODULE EXISTS?")
+	fmt.Println("SSS", symlinkPath, modulePath)
 	targetPath, err := filepath.EvalSymlinks(symlinkPath)
 	if err != nil {
 		return false
 	}
+
+	fmt.Println("TARGET", targetPath)
 
 	return targetPath == modulePath
 }
