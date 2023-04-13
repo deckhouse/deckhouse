@@ -57,15 +57,6 @@ gitWorktree:
       dest: /usr/local/bin/kubectl
       mode: +x
 
-  - name: "Install helm 3"
-    unarchive:
-      extra_opts:
-        - linux-amd64/helm
-        - --strip-components=1
-      src: https://get.helm.sh/helm-v3.2.4-linux-amd64.tar.gz
-      remote_src: yes
-      dest: /usr/local/bin
-
   # TODO: checksum
   - name: "Install semver"
     unarchive:
