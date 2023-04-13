@@ -2,12 +2,12 @@
 apiVersion: monitoring.coreos.com/v1
 kind: Alertmanager
 metadata:
-  name: alertmanager-alerts-receiver
+  name: alerts-receiver
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list $ (dict "app" "alertmanager")) | nindent 2 }}
 spec:
   alertmanagerConfiguration:
-    name: alertmanager-alerts-receiver
+    name: alerts-receiver
   replicas: 1
   image: {{ include "helm_lib_module_image" (list $ "alertmanager") }}
   imagePullSecrets:
@@ -91,7 +91,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: alertmanager-alerts-receiver
+  name: alerts-receiver
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list $ (dict "app" "alertmanager-alerts-receiver")) | nindent 2 }}
 spec:

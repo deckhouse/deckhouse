@@ -21,7 +21,7 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: alertmanager-alerts-receiver
+    - containerName: alertmanager
       minAllowed:
         {{- include "alertmanager_resources" $ | nindent 8 }}
       maxAllowed:
