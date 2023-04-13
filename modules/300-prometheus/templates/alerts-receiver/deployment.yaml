@@ -1,4 +1,4 @@
-{{- define "alerts_receiver_resources" }}
+{{- define "alerts_receiver_webhook_resources" }}
 cpu: 25m
 memory: 50Mi
 {{- end }}
@@ -8,21 +8,21 @@ memory: 50Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: alerts-receiver
+  name: alerts-receiver-webhook
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "alerts-receiver")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "alerts-receiver-webhook")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: alerts-receiver
+    name: alerts-receiver-webhook
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: alerts-receiver
+    - containerName: alerts-receiver-webhook
       minAllowed:
-        {{- include "alerts_receiver_resources" $ | nindent 8 }}
+        {{- include "alerts_receiver_webhook_resources" $ | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 100Mi
@@ -31,9 +31,9 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: alerts-receiver
+  name: alerts-receiver-webhook
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "alerts-receiver")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "alerts-receiver-webhook")) | nindent 2 }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -41,20 +41,20 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: alerts-receiver
+      app: alerts-receiver-webhook
   template:
     metadata:
       labels:
-        app: alerts-receiver
+        app: alerts-receiver-webhook
     spec:
       {{- include "helm_lib_node_selector" (tuple $ "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $ "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ | nindent 6 }}
       containers:
-      - name: alerts-receiver
+      - name: alerts-receiver-webhook
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list $ "alertsReceiver") }}
+        image: {{ include "helm_lib_module_image" (list $ "alertsReceiverWebhook") }}
         env:
         - name: PORT
           value: "8080"
@@ -82,11 +82,10 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
   {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "alerts_receiver_resources" . | nindent 12 }}
+            {{- include "alerts_receiver_webhook_resources" . | nindent 12 }}
   {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
       imagePullSecrets:
       - name: deckhouse-registry
-

@@ -10,8 +10,8 @@ spec:
       groupWait: 30s
       groupInterval: 5m
       repeatInterval: 4h
-      receiver: 'webhook'
+      receiver: 'alerts-receiver-webhook'
     receivers:
-      - name: 'webhook'
+      - name: 'alerts-receiver-webhook'
         webhookConfigs:
-          - url: 'http://alerts-receiver.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}:8080/'
+          - url: 'http://alerts-receiver-webhook.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}:8080/'
