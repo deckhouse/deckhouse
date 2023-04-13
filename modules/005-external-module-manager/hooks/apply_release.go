@@ -65,17 +65,6 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	fmt.Println(1)
-	fmt.Println(os.Getwd())
-
-	err := os.Chdir(path.Join(externalModulesDir, "modules"))
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(2)
-	fmt.Println(os.Getwd())
-
 	moduleReleases := make(map[string][]enqueueRelease, 0)
 
 	for _, sn := range snap {
@@ -113,7 +102,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			deckhouse_config.Service().AddExternalModuleName(deployedRelease.ModuleName, deployedRelease.ModuleSource)
 
 			// check symlink exists on FS, relative symlink
-			modulePath := path.Join("../", module, "v"+deployedRelease.Version.String())
+			modulePath := generateModulePath(module, deployedRelease.Version.String())
 			if !isModuleExistsOnFS(symlinkName, modulePath) {
 				err := enableModule(symlinkName, modulePath)
 				if err != nil {
@@ -154,7 +143,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		if pred.desiredReleaseIndex >= 0 {
 			release := pred.releases[pred.desiredReleaseIndex]
 
-			modulePath := path.Join(externalModulesDir, module, "v"+release.Version.String())
+			modulePath := generateModulePath(module, release.Version.String())
 
 			err := enableModule(symlinkName, modulePath)
 			if err != nil {
@@ -194,7 +183,18 @@ func isModuleExistsOnFS(symlinkPath, modulePath string) bool {
 		return false
 	}
 
-	fmt.Println("TARGET", targetPath)
+	fmt.Println("AFTER1", targetPath)
+
+	targetPath, err = filepath.Rel(os.Getenv("EXTERNAL_MODULES_DIR"), targetPath)
+	if err != nil {
+		return false
+	}
+
+	fmt.Println("AFTER2", targetPath)
+
+	//if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+	//	return false
+	//}
 
 	return targetPath == modulePath
 }
@@ -208,6 +208,10 @@ func enableModule(symlinkPath, modulePath string) error {
 	}
 
 	return os.Symlink(modulePath, symlinkPath)
+}
+
+func generateModulePath(moduleName, version string) string {
+	return path.Join("../", moduleName, "v"+version)
 }
 
 func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
