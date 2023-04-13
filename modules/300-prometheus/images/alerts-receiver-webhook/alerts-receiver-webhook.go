@@ -29,30 +29,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Config struct {
-	ListenHost string
-	ListenPort string
-}
-
-func NewConfig() *Config {
-	c := &Config{}
-	c.ListenHost = os.Getenv("LISTEN_HOST")
-	if c.ListenHost == "" {
-		c.ListenHost = "0.0.0.0"
-	}
-
-	c.ListenPort = os.Getenv("LISTEN_PORT")
-	if c.ListenPort == "" {
-		c.ListenPort = "8080"
-	}
-	return c
-}
+var (
+	config     *Config
+	alertStore *AlertStore
+)
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	cfg := NewConfig()
+	config = NewConfig()
 
+	log.SetLevel(config.LogLevel)
+
+	alertStore = NewStore()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -68,7 +57,7 @@ func main() {
 	http.HandleFunc("/", webhookHandler)
 
 	srv := &http.Server{
-		Addr: net.JoinHostPort(cfg.ListenHost, cfg.ListenPort),
+		Addr: net.JoinHostPort(config.ListenHost, config.ListenPort),
 	}
 
 	go func() {
@@ -97,10 +86,17 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	data := template.Data{}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		log.Error(err)
+		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
 	for _, alert := range data.Alerts {
-		log.Infof("received alert: %v", alert)
+		log.Debugf("received alert: %v", alert)
+		if len(alertStore.Alerts) == config.AlertsQueueLen {
+			log.Error("cannot add alert to queue, queue is full")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		alertStore.Add(alert)
 	}
 	w.WriteHeader(http.StatusOK)
 }
