@@ -87,6 +87,7 @@
  - **[node-manager]** Prevent changing bashible checksum if scale/downscale NodeGroup. [#4243](https://github.com/deckhouse/deckhouse/pull/4243)
  - **[node-manager]** Hours and minutes can be used simultaneously in the `spec.chaos.period` field of the NodeGroup CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
  - **[node-manager]** (Reverted in 1.45.3!) Removed early-oom. Added kubelet memory reservation option. [#3821](https://github.com/deckhouse/deckhouse/pull/3821)
+ - **[user-authn]** Fix the job image path. [#4385](https://github.com/deckhouse/deckhouse/pull/4385)
  - **[user-authn]** Hours and minutes can be used simultaneously in the `spec.tls` field of the User CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
  - **[user-authn]** The `discover_dex_ca` hook subscribes secret according to the used mode. [#3842](https://github.com/deckhouse/deckhouse/pull/3842)
  - **[user-authz]** Disabled `NetworkPolicy` editing for Editors. [#4217](https://github.com/deckhouse/deckhouse/pull/4217)
