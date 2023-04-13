@@ -26,6 +26,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	. "github.com/deckhouse/deckhouse/testing/helm"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -47,6 +48,7 @@ var _ = Describe("User Authn hooks :: generate crowd auth proxy ::", func() {
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.KubeStateSet(``)
 			testCreateJobPod()
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -55,6 +57,15 @@ var _ = Describe("User Authn hooks :: generate crowd auth proxy ::", func() {
 
 		It("Certificate should be generated", func() {
 			Expect(f.ValuesGet("userAuthn.internal.crowdProxyCert").String()).To(BeEquivalentTo(testingCert))
+		})
+
+		It("Should generate job with valid image", func() {
+			registry := f.ValuesGet("global.modulesImages.registry.base").String()
+			digest := f.ValuesGet("global.modulesImages.digests.userAuthn.cfssl").String()
+			job := generateJob(registry, digest, "dGVzdAo=")
+			Expect(job.Spec.Template.Spec.Containers).To(HaveLen(1))
+			Expect(job.Spec.Template.Spec.Containers[0].Image).To(ContainSubstring("@"))
+			Expect(job.Spec.Template.Spec.Containers[0].Image).To(Equal(registry + "@" + digest))
 		})
 	})
 
