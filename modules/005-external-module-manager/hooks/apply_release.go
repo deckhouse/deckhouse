@@ -185,7 +185,7 @@ func isModuleExistsOnFS(symlinkPath, modulePath string) bool {
 
 	fmt.Println("AFTER1", targetPath)
 
-	targetPath, err = filepath.Rel(os.Getenv("EXTERNAL_MODULES_DIR"), targetPath)
+	targetPath, err = filepath.Rel(path.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"), targetPath)
 	if err != nil {
 		return false
 	}
