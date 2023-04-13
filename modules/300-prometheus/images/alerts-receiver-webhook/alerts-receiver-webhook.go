@@ -41,7 +41,7 @@ func main() {
 
 	log.SetLevel(config.LogLevel)
 
-	alertStore = NewStore()
+	alertStore = NewStore(config.AlertsQueueLen)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

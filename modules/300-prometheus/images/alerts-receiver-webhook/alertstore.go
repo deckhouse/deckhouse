@@ -31,8 +31,8 @@ type AlertStore struct {
 	Alerts map[string]*AlertItem
 }
 
-func NewStore() *AlertStore {
-	a := make(map[string]*AlertItem)
+func NewStore(length int) *AlertStore {
+	a := make(map[string]*AlertItem, length)
 	return &AlertStore{Alerts: a}
 }
 
