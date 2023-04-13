@@ -148,6 +148,9 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		for _, moduleName := range tags {
+			if moduleName == "modules" {
+				input.LogEntry.Warn("'modules' name for module is forbidden. Skip module.")
+			}
 			moduleVersion, err := fetchModuleVersion(input.LogEntry, dc, ex, moduleName, mChecksum, opts)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
@@ -360,7 +363,7 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0755); err != nil {
+			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0700); err != nil {
 				return err
 			}
 		case tar.TypeReg:
@@ -374,7 +377,7 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 			}
 			outFile.Close()
 
-			err = os.Chmod(outFile.Name(), os.FileMode(hdr.Mode))
+			err = os.Chmod(outFile.Name(), os.FileMode(hdr.Mode)&0700) // remove only 'user' permission bit, E.x.: 644 => 600, 755 => 700
 			if err != nil {
 				return err
 			}

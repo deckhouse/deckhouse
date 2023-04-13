@@ -59,6 +59,12 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	snap := input.Snapshots["releases"]
 
 	externalModulesDir := os.Getenv("EXTERNAL_MODULES_DIR")
+	if externalModulesDir == "" {
+		input.LogEntry.Warn("EXTERNAL_MODULE_DIR is not set")
+		return nil
+	}
+	// directory for symlinks will actual versions to all external-modules
+	symlinksDir := filepath.Join(externalModulesDir, "modules")
 
 	moduleReleases := make(map[string][]enqueueRelease, 0)
 
@@ -89,16 +95,17 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 		pred.calculateRelease()
 
-		symlinkName := path.Join(externalModulesDir, "modules", "900-"+module)
+		symlinkName := path.Join(symlinksDir, "900-"+module)
 
 		if pred.currentReleaseIndex == len(pred.releases)-1 {
 			// latest release deployed
 			deployedRelease := pred.releases[pred.currentReleaseIndex]
 			deckhouse_config.Service().AddExternalModuleName(deployedRelease.ModuleName, deployedRelease.ModuleSource)
 
-			// check symlink exists on FS
-			modulePath := path.Join(externalModulesDir, module, "v"+deployedRelease.Version.String())
-			if !isModuleExistsOnFS(symlinkName, modulePath) {
+			// check symlink exists on FS, relative symlink
+			modulePath := generateModulePath(module, deployedRelease.Version.String())
+			if !isModuleExistsOnFS(symlinksDir, symlinkName, modulePath) {
+				input.LogEntry.Debugf("Module %q is not exists on the filesystem. Restoring", module)
 				err := enableModule(symlinkName, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
@@ -138,7 +145,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		if pred.desiredReleaseIndex >= 0 {
 			release := pred.releases[pred.desiredReleaseIndex]
 
-			modulePath := path.Join(externalModulesDir, module, "v"+release.Version.String())
+			modulePath := generateModulePath(module, release.Version.String())
 
 			err := enableModule(symlinkName, modulePath)
 			if err != nil {
@@ -169,10 +176,17 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	return nil
 }
 
-func isModuleExistsOnFS(symlinkPath, modulePath string) bool {
+func isModuleExistsOnFS(symlinksDir, symlinkPath, modulePath string) bool {
 	targetPath, err := filepath.EvalSymlinks(symlinkPath)
 	if err != nil {
 		return false
+	}
+
+	if filepath.IsAbs(targetPath) {
+		targetPath, err = filepath.Rel(symlinksDir, targetPath)
+		if err != nil {
+			return false
+		}
 	}
 
 	return targetPath == modulePath
@@ -187,6 +201,10 @@ func enableModule(symlinkPath, modulePath string) error {
 	}
 
 	return os.Symlink(modulePath, symlinkPath)
+}
+
+func generateModulePath(moduleName, version string) string {
+	return path.Join("../", moduleName, "v"+version)
 }
 
 func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
