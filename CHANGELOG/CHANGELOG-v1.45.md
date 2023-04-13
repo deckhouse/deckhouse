@@ -71,6 +71,7 @@
  - **[dhctl]** Fix `kube-proxy` does not restart. [#4274](https://github.com/deckhouse/deckhouse/pull/4274)
  - **[extended-monitoring]** Fix RBAC rules for `image-availability-exporter`. [#4346](https://github.com/deckhouse/deckhouse/pull/4346)
  - **[extended-monitoring]** Fix `image-availability-exporter` for Kubernetes 1.25+. [#4331](https://github.com/deckhouse/deckhouse/pull/4331)
+ - **[external-module-manager]** Fix chmod permissions for external modules. [#4388](https://github.com/deckhouse/deckhouse/pull/4388)
  - **[global-hooks]** Deploy PDB as a normal helm resource, not a helm hook. [#4016](https://github.com/deckhouse/deckhouse/pull/4016)
  - **[ingress-nginx]** Set `imagePullSecrets` for `kruise-controller`. [#4369](https://github.com/deckhouse/deckhouse/pull/4369)
  - **[ingress-nginx]** Improve controller migration hook. [#4363](https://github.com/deckhouse/deckhouse/pull/4363)
