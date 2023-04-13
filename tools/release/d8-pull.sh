@@ -160,7 +160,7 @@ pull_image() {
     return 0
   fi
   #using tarball, because dhctl bootstrap doesn't support oci format
-  crane pull "$registry_full_path:$1" --format tarball "$IMAGE"
+  crane pull "$registry_full_path@$1" --format tarball "$IMAGE"
 }
 
 pull_trivy_db() {
