@@ -113,6 +113,14 @@ After a custom metric is registered, you can refer to it. For the HPA, custom me
 {% raw %}
 
 ```yaml
+apiVersion: deckhouse.io/v1beta1
+kind: IngressMetric
+metadata:
+  name: mymetric
+  namespace: mynamespace
+spec:
+  query: sum(rate(ingress_nginx_detail_requests_total{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>) OR on() vector(0)
+---
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2beta2
 metadata:
@@ -132,17 +140,18 @@ spec:
     object:
       # Some object that has metrics in Prometheus.
       describedObject:
-        apiVersion: extensions/v1beta1
+        apiVersion: networking.k8s.io/v1
         kind: Ingress
         name: myingress
       metric:
         # The metric registered using IngressMetric or ClusterIngressMetric CRs.
+        # Can be used rps_1m, rps_5m or rps_15m which come with the prometheus-metrics-adapter module.
         name: mymetric
       target:
-        # Only `type: Value` can be used for metrics of the Object type.
-        type: Value
-        # Scale up if the value of our custom metric is greater than 10.
-        value: 10
+        # `Value` or `AverageValue` can be used for metrics of the Object type.
+        type: AverageValue
+        # Scaling occurs if the average value of the custom metric is very different from 10.
+        averageValue: 10
 ```
 
 {% endraw %}
@@ -461,6 +470,8 @@ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/
 
 ```shell
 kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
+kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/rps_1m
+kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/mymetric
 ```
 
 ### How do I get the value of a metric created via `NamespaceMetric`?
@@ -472,5 +483,6 @@ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/me
 ### How do I get external metrics?
 
 ```shell
-kubectl get --raw "/apis/external.metrics.k8s.io/v1beta1"
+kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
+kubectl get --raw /apis/external.metrics.k8s.io/v1beta1/namespaces/d8-ingress-nginx/d8_ingress_nginx_ds_cpu_utilization
 ```
