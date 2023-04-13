@@ -1,5 +1,6 @@
 {{- if (hasKey .Values.prometheus.internal.alertmanagers "internal") }}
   {{- range .Values.prometheus.internal.alertmanagers.internal }}
+---
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: AlertmanagerConfig
 metadata:
