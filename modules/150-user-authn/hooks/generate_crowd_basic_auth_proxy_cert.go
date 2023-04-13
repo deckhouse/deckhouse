@@ -161,8 +161,8 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	}
 
 	registry := input.Values.Get("global.modulesImages.registry.base").String()
-	tag := input.Values.Get("global.modulesImages.digests.userAuthn.cfssl").String()
-	job := generateJob(registry, tag, base64.StdEncoding.EncodeToString(gcsr))
+	digest := input.Values.Get("global.modulesImages.digests.userAuthn.cfssl").String()
+	job := generateJob(registry, digest, base64.StdEncoding.EncodeToString(gcsr))
 
 	foreground := v1.DeletePropagationForeground
 	_ = kubeClient.BatchV1().Jobs(proxyJobNS).Delete(context.Background(), proxyJobName, v1.DeleteOptions{PropagationPolicy: &foreground})
@@ -256,7 +256,7 @@ func waitForJob(kubeClient k8s.Client) (*batchv1.Job, error) {
 	}
 }
 
-func generateJob(registry, tag, csrb64 string) *batchv1.Job {
+func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 	return &batchv1.Job{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "Job",
@@ -279,7 +279,7 @@ func generateJob(registry, tag, csrb64 string) *batchv1.Job {
 					Containers: []corev1.Container{
 						{
 							Name:    "generator",
-							Image:   fmt.Sprintf("%s:%s", registry, tag),
+							Image:   fmt.Sprintf("%s@%s", registry, digest),
 							Command: []string{"bash", "-c"},
 							Args:    []string{script},
 							Env: []corev1.EnvVar{
