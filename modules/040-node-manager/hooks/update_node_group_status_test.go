@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -693,7 +694,7 @@ status:
 	})
 
 	Context("Node group conditions", func() {
-		assertCondition := func(f *HookExecutionConfig, t ngv1.NodeGroupConditionType, s ngv1.ConditionStatus, time, m string) {
+		assertCondition := func(f *HookExecutionConfig, t ngv1.NodeGroupConditionType, s ngv1.ConditionStatus, tt, m string) {
 			conditions := f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status.conditions").Array()
 			hasCondition := false
 			for _, c := range conditions {
@@ -701,7 +702,14 @@ status:
 					hasCondition = true
 					Expect(c.Get("status").String()).To(Equal(string(s)))
 					Expect(c.Get("message").String()).To(Equal(m))
-					Expect(c.Get("lastTransitionTime").String()).To(Equal(time))
+
+					toExpectTime, err := time.Parse(time.RFC3339, c.Get("lastTransitionTime").String())
+					Expect(err).ToNot(HaveOccurred())
+					expectedTime, err := time.Parse(time.RFC3339, tt)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(toExpectTime.Equal(expectedTime)).To(BeTrue())
+
 					break
 				}
 			}
@@ -1402,6 +1410,24 @@ status:
 		})
 
 		Context("Error condition", func() {
+			const machines = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: machine-ng1-aaa
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: machine-ng1-bbb
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1
+`
 			const ngWithError = `
 ---
 apiVersion: deckhouse.io/v1
@@ -1458,31 +1484,218 @@ status:
       type: Create
     name: machine-ng-2-bbb
     ownerRef: korker-3e52ee98-8649499f7
----
-apiVersion: machine.sapcloud.io/v1alpha1
-kind: Machine
-metadata:
-  name: machine-ng1-aaa
-  namespace: d8-cloud-instance-manager
-  labels:
-    instance-group: ng1
----
-apiVersion: machine.sapcloud.io/v1alpha1
-kind: Machine
-metadata:
-  name: machine-ng1-bbb
-  namespace: d8-cloud-instance-manager
-  labels:
-    instance-group: ng1
 `
 				BeforeEach(func() {
 					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
-						ngWithError+machineDeploymentErr+stateCloudProviderSecret+configurationChecksums, 2))
+						ngWithError+machineDeploymentErr+machines+stateCloudProviderSecret+configurationChecksums, 2))
 					f.RunHook()
 				})
 
 				It("Sets to True and sets message from ng error and machine deployment error", func() {
 					assertCondition(f, ngv1.NodeGroupConditionTypeError, ngv1.ConditionTrue, nowTime, "Node group error|Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.")
+				})
+			})
+
+			Context("Machine deployment has `Started Machine creation process` error but ng is not in error condition", func() {
+				const machineDeploymentErr = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "False"
+    type: Error
+    lastTransitionTime: "2023-03-03T16:47:40Z"
+    message: ""
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: md-failed-ng
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: ng1
+spec:
+  replicas: 2
+status:
+  failedMachines:
+  - lastOperation:
+      description: 'Started Machine creation process'
+      lastUpdateTime: "2020-05-15T15:01:13Z"
+      state: Failed
+      type: Create
+    name: machine-ng-2-bbb
+    ownerRef: korker-3e52ee98-8649499f7
+
+`
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+						machineDeploymentErr+machines+stateCloudProviderSecret+configurationChecksums, 2))
+					f.RunHook()
+				})
+
+				It("Sets to True and sets message from machine deployment error", func() {
+					assertCondition(f, ngv1.NodeGroupConditionTypeError, ngv1.ConditionTrue, nowTime, "Started Machine creation process")
+				})
+			})
+
+			Context("Machine deployment has `Started Machine creation process` error and ng is in error condition", func() {
+				const machineDeploymentErr = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "True"
+    type: Error
+    lastTransitionTime: "2023-03-03T19:47:40+03:00"
+    message: "Some error"
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: md-failed-ng
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: ng1
+spec:
+  replicas: 2
+status:
+  failedMachines:
+  - lastOperation:
+      description: 'Started Machine creation process'
+      lastUpdateTime: "2020-05-15T15:01:13Z"
+      state: Failed
+      type: Create
+    name: machine-ng-2-bbb
+    ownerRef: korker-3e52ee98-8649499f7
+
+`
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+						machineDeploymentErr+machines+stateCloudProviderSecret+configurationChecksums, 2))
+					f.RunHook()
+				})
+
+				It("Sets to True and sets message from machine deployment error", func() {
+					assertCondition(f, ngv1.NodeGroupConditionTypeError, ngv1.ConditionTrue, "2023-03-03T19:47:40+03:00", "Some error")
+				})
+			})
+
+			Context("Machine deployment is in the frozen state ng is in error condition", func() {
+				const machineDeploymentErr = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "True"
+    type: Error
+    lastTransitionTime: "2023-03-03T19:47:40Z"
+    message: "Some error"
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: md-failed-ng
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: ng1
+spec:
+  replicas: 2
+status:
+  conditions:
+  - lastTransitionTime: "2023-04-06T15:15:07Z"
+    lastUpdateTime: "2023-04-06T15:15:07Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2023-04-11T12:03:02Z"
+    lastUpdateTime: "2023-04-11T12:03:02Z"
+    message: 'The number of machines backing MachineSet: sandbox-stage-8ef4a622-5f76f
+      is 4 >= 4 which is the Max-ScaleUp-Limit'
+    reason: OverShootingReplicaCount
+    status: "True"
+    type: Frozen
+`
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+						machineDeploymentErr+machines+stateCloudProviderSecret+configurationChecksums, 2))
+					f.RunHook()
+				})
+
+				It("Sets to True and sets message from machine deployment error", func() {
+					assertCondition(f, ngv1.NodeGroupConditionTypeError, ngv1.ConditionTrue, "2023-03-03T19:47:40Z", "Some error")
+				})
+			})
+
+			Context("Machine deployment unfroze and has not error, ng is in error condition", func() {
+				const machineDeploymentErr = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "True"
+    type: Error
+    lastTransitionTime: "2023-03-03T19:47:40+03:00"
+    message: "Some error"
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: md-failed-ng
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: ng1
+spec:
+  replicas: 2
+status:
+  conditions:
+  - lastTransitionTime: "2023-04-06T15:15:07Z"
+    lastUpdateTime: "2023-04-06T15:15:07Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+`
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+						machineDeploymentErr+machines+stateCloudProviderSecret+configurationChecksums, 2))
+					f.RunHook()
+				})
+
+				It("Sets to False and clear error message", func() {
+					assertCondition(f, ngv1.NodeGroupConditionTypeError, ngv1.ConditionFalse, nowTime, "")
 				})
 			})
 

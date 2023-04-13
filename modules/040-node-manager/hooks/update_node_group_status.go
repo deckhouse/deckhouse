@@ -131,9 +131,18 @@ func updStatusFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 		return nil, err
 	}
 
+	var frozen bool
+	for _, c := range md.Status.Conditions {
+		if c.Type == v1alpha1.MachineDeploymentFrozen {
+			frozen = c.Status == v1alpha1.ConditionTrue
+			break
+		}
+	}
+
 	return statusMachineDeployment{
 		Name:                md.Name,
 		Replicas:            md.Spec.Replicas,
+		IsFrozen:            frozen,
 		NodeGroup:           md.Labels["node-group"],
 		LastMachineFailures: md.Status.FailedMachines,
 	}, nil
@@ -333,9 +342,13 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 		var lastMachineFailures []*v1alpha1.MachineSummary
 
 		mds := mdMap[ngName]
+		hasFrozenMd := false
 		for _, md := range mds {
 			desiredMax += md.Replicas
 			lastMachineFailures = append(lastMachineFailures, md.LastMachineFailures...)
+			if !hasFrozenMd {
+				hasFrozenMd = md.IsFrozen
+			}
 		}
 
 		if minPerZone > desiredMax {
@@ -379,6 +392,8 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 			Type:      nodeGroup.NodeType,
 			Desired:   desiredMax,
 			Instances: instancesCount,
+
+			HasFrozenMachineDeployment: hasFrozenMd,
 		}
 		errors := make([]string, 0, 2)
 		if len(nodeGroup.Error) > 0 {
@@ -474,6 +489,7 @@ type statusNode struct {
 
 type statusMachineDeployment struct {
 	Name                string
+	IsFrozen            bool
 	Replicas            int32
 	NodeGroup           string
 	LastMachineFailures []*v1alpha1.MachineSummary
