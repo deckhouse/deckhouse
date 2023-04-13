@@ -59,7 +59,7 @@ var _ = Describe("User Authn hooks :: generate crowd auth proxy ::", func() {
 			Expect(f.ValuesGet("userAuthn.internal.crowdProxyCert").String()).To(BeEquivalentTo(testingCert))
 		})
 
-		It("Should generate job with valid image", func() {
+		It("Should generate job with a valid image", func() {
 			registry := f.ValuesGet("global.modulesImages.registry.base").String()
 			digest := f.ValuesGet("global.modulesImages.digests.userAuthn.cfssl").String()
 			job := generateJob(registry, digest, "dGVzdAo=")
