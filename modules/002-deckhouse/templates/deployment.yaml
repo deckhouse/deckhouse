@@ -95,7 +95,7 @@ spec:
         - name: init-external-modules
           image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
           imagePullPolicy: Always
-          command: ['sh', '-c', 'mkdir -p /deckhouse/external-modules/modules && chown -hR 65534 /deckhouse/external-modules && chmod -R 0700 /deckhouse/external-modules']
+          command: ['sh', '-c', 'mkdir -p /deckhouse/external-modules/modules && chown -h 65534 /deckhouse/external-modules /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules /deckhouse/external-modules/modules']
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
