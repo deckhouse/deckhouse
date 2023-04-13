@@ -374,7 +374,7 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 			}
 			outFile.Close()
 
-			err = os.Chmod(outFile.Name(), os.FileMode(hdr.Mode))
+			err = os.Chmod(outFile.Name(), os.FileMode(hdr.Mode)&0700) // remove only 'user' permission bit, E.x.: 644 => 600, 755 => 700
 			if err != nil {
 				return err
 			}

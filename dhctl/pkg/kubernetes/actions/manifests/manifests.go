@@ -306,7 +306,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", "mkdir -p /deckhouse/external-modules/modules && chown -hR 65534 /deckhouse/external-modules && chmod -R g-rwx,o-rwx /deckhouse/external-modules",
+			"sh", "-c", "mkdir -p /deckhouse/external-modules/modules && chown -h 65534 /deckhouse/external-modules && chown -h 65534 /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules && chmod 0700 /deckhouse/external-modules/modules",
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
