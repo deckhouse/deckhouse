@@ -96,8 +96,8 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			deployedRelease := pred.releases[pred.currentReleaseIndex]
 			deckhouse_config.Service().AddExternalModuleName(deployedRelease.ModuleName, deployedRelease.ModuleSource)
 
-			// check symlink exists on FS
-			modulePath := path.Join(externalModulesDir, module, "v"+deployedRelease.Version.String())
+			// check symlink exists on FS, relative symlink
+			modulePath := path.Join("../", module, "v"+deployedRelease.Version.String())
 			if !isModuleExistsOnFS(symlinkName, modulePath) {
 				err := enableModule(symlinkName, modulePath)
 				if err != nil {
