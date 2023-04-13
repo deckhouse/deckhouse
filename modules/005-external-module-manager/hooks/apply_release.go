@@ -60,6 +60,21 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	snap := input.Snapshots["releases"]
 
 	externalModulesDir := os.Getenv("EXTERNAL_MODULES_DIR")
+	if externalModulesDir == "" {
+		input.LogEntry.Warn("EXTERNAL_MODULE_DIR is not set")
+		return nil
+	}
+
+	fmt.Println(1)
+	fmt.Println(os.Getwd())
+
+	err := os.Chdir(path.Join(externalModulesDir, "modules"))
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(2)
+	fmt.Println(os.Getwd())
 
 	moduleReleases := make(map[string][]enqueueRelease, 0)
 
@@ -172,6 +187,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 func isModuleExistsOnFS(symlinkPath, modulePath string) bool {
 	fmt.Println("MODULE EXISTS?")
+	fmt.Println(os.Getwd())
 	fmt.Println("SSS", symlinkPath, modulePath)
 	targetPath, err := filepath.EvalSymlinks(symlinkPath)
 	if err != nil {
