@@ -19,6 +19,7 @@ package main
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/Masterminds/semver/v3"
 	"io"
 	"net/http"
 	"os"
@@ -26,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -65,6 +65,8 @@ var (
 	controlPlaneManagerIsReady bool
 	server                     *http.Server
 	nowTime                    = time.Now()
+	// sets on the build time from candi/version_map.yml
+	allowedKubernetesVersions string
 )
 
 func NewConfig() (*Config, error) {
@@ -129,7 +131,7 @@ func (c *Config) newClient() error {
 }
 
 func checkKubernetesVersion(kubernetesVersion string) error {
-	log.Infof("check desired kubernetes version %s", kubernetesVersion)
+	log.Infof("check desired kubernetes version %s against allowed kubernetes version list: %s", kubernetesVersion, allowedKubernetesVersions)
 	minimalConstraint, err := semver.NewConstraint(minimalKubernetesVersionConstraint)
 	if err != nil {
 		log.Fatal(err)
