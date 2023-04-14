@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"syscall"
 	"time"
 
@@ -177,6 +178,10 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 		return
 	}
 	c.cloudRequestErrorMetric.WithLabelValues("instance_types").Set(0.0)
+
+	sort.SliceStable(instanceTypes, func(i, j int) bool {
+		return instanceTypes[i].Name < instanceTypes[j].Name
+	})
 
 	for i := 1; i <= 3; i++ {
 		if i > 1 {

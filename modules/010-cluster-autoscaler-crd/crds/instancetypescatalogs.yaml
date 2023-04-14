@@ -30,28 +30,29 @@ spec:
               type: array
               items:
                 type: object
+                required: ["cpu", "memory"]
                 properties:
                   name:
                     type: string
                     description: Instance type name.
                   memory:
-                    oneOf:
+                    anyOf:
+                      - type: integer
                       - type: string
-                        pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                      - type: number
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                    description: The amount of RAM a instance type has, in MiB.
+                    description: The amount of RAM a instance type has.
                   cpu:
-                    oneOf:
+                    anyOf:
+                      - type: integer
                       - type: string
-                        pattern: "^[0-9]+m?$"
-                      - type: number
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                     description: The number of CPUs for the instance type.
                   rootDisk:
-                    oneOf:
+                    anyOf:
+                      - type: integer
                       - type: string
-                        pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                      - type: number
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                    description: Root disk size in GB.
+                    description: Root disk size.
