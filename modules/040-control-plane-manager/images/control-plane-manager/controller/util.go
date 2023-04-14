@@ -69,7 +69,7 @@ func backupFile(src string) error {
 		return err
 	}
 
-	backupDir := filepath.Join(deckhousePath, "backup", fmt.Sprintf("%d-%d-%d_%s", nowTime.Year(), nowTime.Month(), nowTime.Day(), config.ConfigurationChecksum))
+	backupDir := filepath.Join(deckhousePath, "backup", fmt.Sprintf("%d-%02d-%02d_%s", nowTime.Year(), nowTime.Month(), nowTime.Day(), config.ConfigurationChecksum))
 
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		return err
