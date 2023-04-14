@@ -19,7 +19,6 @@ package main
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
 	"io"
 	"net/http"
 	"os"
@@ -34,18 +33,16 @@ import (
 )
 
 const (
-	waitingApprovalAnnotation          = `control-plane-manager.deckhouse.io/waiting-for-approval`
-	approvedAnnotation                 = `control-plane-manager.deckhouse.io/approved`
-	maxRetries                         = 42
-	namespace                          = `kube-system`
-	minimalKubernetesVersionConstraint = `>= 1.22`
-	maximalKubernetesVersionConstraint = `< 1.27`
-	kubernetesConfigPath               = `/etc/kubernetes`
-	manifestsPath                      = kubernetesConfigPath + `/manifests`
-	deckhousePath                      = kubernetesConfigPath + `/deckhouse`
-	configPath                         = `/config`
-	pkiPath                            = `/pki`
-	kubernetesPkiPath                  = kubernetesConfigPath + `/pki`
+	waitingApprovalAnnotation = `control-plane-manager.deckhouse.io/waiting-for-approval`
+	approvedAnnotation        = `control-plane-manager.deckhouse.io/approved`
+	maxRetries                = 42
+	namespace                 = `kube-system`
+	kubernetesConfigPath      = `/etc/kubernetes`
+	manifestsPath             = kubernetesConfigPath + `/manifests`
+	deckhousePath             = kubernetesConfigPath + `/deckhouse`
+	configPath                = `/config`
+	pkiPath                   = `/pki`
+	kubernetesPkiPath         = kubernetesConfigPath + `/pki`
 )
 
 type Config struct {
@@ -58,6 +55,7 @@ type Config struct {
 	ConfigurationChecksum            string
 	LastAppliedConfigurationChecksum string
 	TmpPath                          string
+	AllowedKubernetesVersions        string
 }
 
 var (
@@ -65,8 +63,6 @@ var (
 	controlPlaneManagerIsReady bool
 	server                     *http.Server
 	nowTime                    = time.Now()
-	// sets on the build time from candi/version_map.yml
-	allowedKubernetesVersions string
 )
 
 func NewConfig() (*Config, error) {
@@ -89,33 +85,37 @@ func NewConfig() (*Config, error) {
 }
 
 func (c *Config) readEnvs() error {
-	var ok bool
-	if c.MyPodName, ok = os.LookupEnv("MY_POD_NAME"); !ok {
+	var (
+		ok  bool
+		err error
+	)
+	if c.MyPodName, ok = os.LookupEnv("MY_POD_NAME"); !ok || len(c.MyPodName) == 0 {
 		return errors.New("MY_POD_NAME env should be set")
 	}
 
-	c.MyIP, ok = os.LookupEnv("MY_IP")
-	if c.MyIP, ok = os.LookupEnv("MY_IP"); !ok {
+	if c.MyIP, ok = os.LookupEnv("MY_IP"); !ok || len(c.MyIP) == 0 {
 		return errors.New("MY_IP env should be set")
 	}
 
-	if c.KubernetesVersion, ok = os.LookupEnv("KUBERNETES_VERSION"); !ok {
+	if c.KubernetesVersion, ok = os.LookupEnv("KUBERNETES_VERSION"); !ok || len(c.KubernetesVersion) == 0 {
 		return errors.New("KUBERNETES_VERSION env should be set")
 	}
 
-	if err := checkKubernetesVersion(c.KubernetesVersion); err != nil {
+	if c.AllowedKubernetesVersions, ok = os.LookupEnv("ALLOWED_KUBERNETES_VERSIONS"); !ok || len(c.AllowedKubernetesVersions) == 0 {
+		return errors.New("ALLOWED_KUBERNETES_VERSIONS env should be set")
+	}
+
+	if err := c.checkKubernetesVersion(); err != nil {
 		return err
 	}
 
-	// get hostname
-	h, err := os.Hostname()
+	c.NodeName, err = os.Hostname()
 	if err != nil {
 		return err
 	}
-	if h == "" {
+	if c.NodeName == "" {
 		return errors.New("node name should be set")
 	}
-	c.NodeName = h
 	return nil
 }
 
@@ -130,23 +130,15 @@ func (c *Config) newClient() error {
 	return err
 }
 
-func checkKubernetesVersion(kubernetesVersion string) error {
-	log.Infof("check desired kubernetes version %s against allowed kubernetes version list: %s", kubernetesVersion, allowedKubernetesVersions)
-	minimalConstraint, err := semver.NewConstraint(minimalKubernetesVersionConstraint)
-	if err != nil {
-		log.Fatal(err)
-	}
+func (c *Config) checkKubernetesVersion() error {
+	log.Infof("check desired kubernetes version %s against allowed kubernetes version list: %s", c.KubernetesVersion, c.AllowedKubernetesVersions)
 
-	maximalConstraint, err := semver.NewConstraint(maximalKubernetesVersionConstraint)
-	if err != nil {
-		log.Fatal(err)
+	for _, v := range strings.Split(c.AllowedKubernetesVersions, ",") {
+		if c.KubernetesVersion == v {
+			return nil
+		}
 	}
-
-	v := semver.MustParse(kubernetesVersion)
-	if minimalConstraint.Check(v) && maximalConstraint.Check(v) {
-		return nil
-	}
-	return fmt.Errorf("kubernetes version %s is not supported", kubernetesVersion)
+	return fmt.Errorf("kubernetes version %s is not supported", c.KubernetesVersion)
 }
 
 func (c *Config) calculateConfigurationChecksum() error {

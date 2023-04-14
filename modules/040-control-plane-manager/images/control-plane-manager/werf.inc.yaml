@@ -1,8 +1,3 @@
-{{- $allowedKubernetesVersions := list }}
-{{- range $key, $_ := .CandiVersionMap.k8s }}
-  {{- $allowedKubernetesVersions = append $allowedKubernetesVersions (toString $key) }}
-{{- end }}
-
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
@@ -68,5 +63,5 @@ mount:
     to: /go/pkg
 shell:
   install:
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags='-s -w -X main.allowedKubernetesVersions={{ $allowedKubernetesVersions | sortAlpha | join " " | quote }}' -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go
     - chmod +x /controller
