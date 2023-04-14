@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -24,17 +25,17 @@ const CloudDiscoveryDataResourceName = "for-cluster-autoscaler"
 var GVR = schema.GroupVersionResource{
 	Group:    "deckhouse.io",
 	Version:  "v1alpha1",
-	Resource: "machinetypescatalogs",
+	Resource: "instancetypescatalogs",
 }
 
 type InstanceType struct {
-	Name     string `json:"name"`
-	CPU      int64  `json:"cpu"`
-	Memory   int64  `json:"memory"`
-	RootDisk int64  `json:"rootDisk"`
+	Name     string            `json:"name"`
+	CPU      resource.Quantity `json:"cpu"`
+	Memory   resource.Quantity `json:"memory"`
+	RootDisk resource.Quantity `json:"rootDisk"`
 }
 
-type MachineTypesCatalog struct {
+type InstanceTypesCatalog struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 

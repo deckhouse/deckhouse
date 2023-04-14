@@ -9,11 +9,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
@@ -74,9 +76,9 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 		}
 		res = append(res, v1alpha1.InstanceType{
 			Name:     f.Name,
-			CPU:      int64(f.VCPUs),
-			Memory:   int64(f.RAM),
-			RootDisk: int64(diskSize),
+			CPU:      resource.MustParse(strconv.FormatInt(int64(f.VCPUs), 10)),
+			Memory:   resource.MustParse(strconv.FormatInt(int64(f.RAM), 10) + "Mi"),
+			RootDisk: resource.MustParse(strconv.FormatInt(int64(diskSize), 10) + "Gi"),
 		})
 	}
 

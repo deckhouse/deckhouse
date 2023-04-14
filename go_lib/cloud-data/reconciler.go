@@ -236,12 +236,12 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 }
 
 func (c *Reconciler) cloudDiscoveryUnstructured(o *unstructured.Unstructured, instanceTypes []v1alpha1.InstanceType) (*unstructured.Unstructured, error) {
-	data := v1alpha1.MachineTypesCatalog{
+	data := v1alpha1.InstanceTypesCatalog{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: v1alpha1.CloudDiscoveryDataResourceName,
 		},
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "MachineTypesCatalog",
+			Kind:       "InstanceTypesCatalog",
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 	}
