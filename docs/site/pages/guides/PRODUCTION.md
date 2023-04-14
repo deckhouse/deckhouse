@@ -121,7 +121,7 @@ Dedicate two system nodes.
 
 System nodes are used to run Deckhouse modules. Their [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
 
-Set two nodes to be system nodes. This way, Deckhouse modules will run on them without interfering with user applications in the cluster. Read more about [allocating nodes to specific load typeы...](/documentation/v1/#advanced-scheduling).
+Set two nodes to be system nodes. This way, Deckhouse modules will run on them without interfering with user applications in the cluster. Read more about [allocating nodes to specific load types...](/documentation/v1/#advanced-scheduling).
 
 It is recommended to provide the Deckhouse components with fast disks (the [storageClass](/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) global parameter).
 
