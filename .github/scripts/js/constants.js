@@ -28,6 +28,7 @@ const labels = {
   // E2E
   'e2e/run/aws': { type: 'e2e-run', provider: 'aws' },
   'e2e/run/azure': { type: 'e2e-run', provider: 'azure' },
+  'e2e/run/eks': { type: 'e2e-run', provider: 'eks' },
   'e2e/run/gcp': { type: 'e2e-run', provider: 'gcp' },
   'e2e/run/openstack': { type: 'e2e-run', provider: 'openstack' },
   'e2e/run/vsphere': { type: 'e2e-run', provider: 'vsphere' },
