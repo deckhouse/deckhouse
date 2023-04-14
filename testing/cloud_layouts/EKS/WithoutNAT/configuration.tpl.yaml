@@ -1,0 +1,24 @@
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
+  registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
+  devBranch: '${DEV_BRANCH}'
+  bundle: Minimal
+  configOverrides:
+    global:
+      modules:
+        # Template that will be used for system apps domains within the cluster.
+        # E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+        # You can change it to your own or follow the steps in the guide and change it after installation.
+        publicDomainTemplate: "%s.k8s.smoke.flant.com"
+      storageClass: localpath-all
+    certManagerEnabled: true
+    deckhouseWebEnabled: true
+    upmeterEnabled: true
+    prometheusCrdEnabled: true
+    operatorPrometheusCrdEnabled: true
+    operatorPrometheusEnabled: true
+    prometheusEnabled: true
+    localPathProvisionerEnabled: true
