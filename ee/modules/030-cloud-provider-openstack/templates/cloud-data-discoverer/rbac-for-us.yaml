@@ -15,7 +15,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - machinetypescatalogs
+  - instancetypescatalogs
   verbs:
   - create
   - get
