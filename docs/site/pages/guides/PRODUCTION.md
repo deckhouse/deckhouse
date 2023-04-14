@@ -3,169 +3,173 @@ title: Going to Production
 permalink: en/guides/production.html
 ---
 
-Ниже приведены рекомендации, которые могут быть не важны в тестовом кластере или кластере разработки, но могут иметь важное значение в production-кластере.
+The following recommendations may be of less importance for a test or development cluster, but they may be critical for a production one.
 
-## Канал и режим обновлений
+## Release channel and update mode
 
 {% alert class="guides__alert" level="info" %}
-Используйте канал обновлений `Early Access` или `Stable`. Установите [окно автоматических обновлений](/documentation/v1/modules/002-deckhouse/usage.html#update-windows-configuration) или [ручной режим](/documentation/v1/modules/002-deckhouse/usage.html#manual-update-confirmation).
+Use `Early Access` or `Stable` release channel. Configure [auto-update window](/documentation/v1/modules/002-deckhouse/usage.html#update-windows-configuration) or select [manual mode](/documentation/v1/modules/002-deckhouse/usage.html#manual-update-confirmation).
 {% endalert %}
 
-Выберите [канал обновлений](/documentation/v1/deckhouse-release-channels.html) и [режим обновлений](/documentation/v1/modules/002-deckhouse/configuration.html#parameters-releasechannel), который соответствует вашим ожиданиям. Чем стабильнее канал обновлений, тем позже вы получаете новый функционал.
+Select the [release channel](/documentation/v1/deckhouse-release-channels.html) and [update mode](/documentation/v1/modules/002-deckhouse/configuration.html#parameters-releasechannel) that suit your needs. The more stable the release channel is, the later you will have the chance to use the new features.
 
-По возможности используйте разные каналы обновлений для кластеров. Для кластера разработки используйте менее стабильный канал обновлений, чем для кластера тестирования или stage-кластера (предпродуктивный кластер), если это возможно. Аналогично, кластер тест кластера или продуктивного  
+If possible, use different release channels for clusters. For a development cluster, consider using a less stable release channel than for a test cluster or stage (pre-production) cluster. The same is true for test and prduction cluster.  
 
-Мы рекомендуем использовать канал обновлений `Early Access` или `Stable` для production-кластеров. Если у вас более одного кластера в production-окружении, то лучше использовать для них разные каналы обновлений. Например, `Early Access` для одного, а `Stable` для другого. Если кластеры все-таки на одном канале обновлений, то используйте разные окна обновлений.
+We recommend using the `Early Access` or `Stable` release channel for production clusters. If you have more than one cluster in a production environment, consider using different release channels for them. For example, `Early Access` for one, and `Stable` for another. If the clusters use the same release channel, we recommend setting update windows so that they do not overlap.
 
 {% alert class="guides__alert" level="warning" %}
-Даже в очень нагруженных и критичных кластерах не стоит отключать канал обновлений. Лучшая стратегия — плановое обновление. Если вы используете в кластере релиз Deckhouse который не обновлялся уже более полугода, то вам сложно будет быстро получить помощь по вашей проблеме.
+Even in very busy and critical clusters, it is not a good idea to disable the release channel. The best strategy is a scheduled update. If you are using a Deckhouse release in your cluster that has not received an update in over six months, you will have a hard time getting help quickly should a problem arise.
 {% endalert %}
 
-Управление [окнами обновлений](/documentation/v1/modules/002-deckhouse/configuration.html#parameters-update-windows) даст возможность планово обновлять релизы Deckhouse в автоматическом режиме, когда ваш кластер не обслуживает пиковую нагрузку.
+The [update windows](/documentation/v1/modules/002-deckhouse/configuration.html#parameters-update-windows) management allows you to schedule automatic Deckhouse release updates when your cluster is not experiencing peak load.
 
-## Версия Kubernetes
+## Kubernetes version
 
 {% alert class="guides__alert" level="info" %}
-Используйте автоматический [выбор версии Kubernetes](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion), либо установите версию явно.
+Use the automatic [Kubernetes version selection](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) or set the version explicitly.
 {% endalert %}
 
-В большинстве случаев лучше использовать автоматический выбор версии Kubernetes. В Deckhouse такое поведение установлено по умолчанию, но его можно изменить с помощью параметра [kubernetesVersion](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion). Обновление версии Kubernetes в кластере не оказывает влияния на приложения и проходит [последовательно и безопасно](/documentation/v1/modules/040-control-plane-manager/#version-control).
+In most cases, we recommend opting for the automatic selection of the Kubernetes version. In Deckhouse, this behavior is set by default, but it can be changed with the [kubernetesVersion](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter.
 
-Если указан автоматический выбор версии Kubernetes, то Deckhouse может обновить версию Kubernetes в кластере при обновлении релиза Deckhouse (при обновлении минорной версии). Если версия Kubernetes в параметре [kubernetesVersion](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) указана явно, то Deckhouse в какой-то момент может не обновиться до свежей версии, если используемая в кластере версия Kubernetes перестанет поддерживаться.
+Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](/documentation/v1/modules/040-control-plane-manager/#version-control).
 
-Решите, стоит ли вам использовать автоматический выбор версии или указать конкретную версию и периодически обновлять ее вручную.
+If the automatic Kubernetes version selection is enabled, Deckhouse can upgrade the Kubernetes version in the cluster together with the Deckhouse update (when upgrading a minor version). If the Kubernetes version in the [kubernetesVersion](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter is set explicitly, Deckhouse may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
 
-Если ваше приложение использует устаревшие версии ресурсов или требует конкретной версии Kubernetes по какой-то другой причине, то проверьте что она [поддерживается](/documentation/v1/supported_versions.html), и [установите ее явно](/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).  
+You must decide for yourself whether to use automatic version selection or set a specific version and update it manually every now and then.
 
-## Требования к ресурсам
+If your application uses outdated versions of resources or depends on a particular version of Kubernetes for some other reason, check whether it is [supported](/documentation/v1/supported_versions.html) and [set it explicitly](/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).  
+
+## Resource requirements
 
 {% alert class="guides__alert" level="info" %}
-Используйте от 4 CPU / 8GB RAM на инфраструктурные узлы. Для мастер-узлов и узлов мониторинга — быстрые диски .
+Use at least 4 CPUs / 8GB RAM for infrastructure nodes. For master and monitoring nodes, fast disks are recommended.
 {% endalert %}
 
-Мы рекомендуем следующие минимальные ресурсы для инфраструктурных узлов, в зависимости от их роли в кластере:
-- **Мастер-узел** — 4 CPU, 8GB RAM; быстрый диск с не менее чем 400 IOPS.  
-- **Frontend-узел** — 2 CPU, 4GB RAM;
-- **Узел мониторинга** (для нагруженных кластеров) — 4 CPU, 8GB RAM; быстрый диск.
-- **Системный узел**:
-  - 2 CPU, 4 RAM — если в кластере есть выделенные узлы мониторинга;
-  - 4 CPU, 8 RAM, быстрый диск — если в кластере нет выделенных узлов мониторинга.
+The following resource minimums are recommended for infrastructure nodes, depending on their role in the cluster:
+- **Master node** — 4 CPU, 8GB RAM; fast disk with at least 400 IOPS.  
+- **Frontend node** — 2 CPU, 4GB RAM;
+- **Monitoring node** (for high-load clusters) — 4 CPU, 8GB RAM; fast disk.
+- **System node**:
+  - 2 CPU, 4 RAM — if there are dedicated monitoring nodes in the cluster;
+  - 4 CPU, 8 RAM, fast disk — if there are no dedicated monitoring nodes in the cluster.
 
-Примерный расчет ресурсов, необходимых для кластера:
-- **Типовой кластер**: 3 мастер-узла, 2 frontend-узла, 2 системных узла. Такая конфигурация потребует **от 24 CPU и 48GB RAM**, плюс быстрые диски с 400+ IOPS для мастер-узлов.
-- **Кластер с повышенной нагрузкой** (с выделенными узлами мониторинга): 3 мастер-узла, 2 frontend-узла, 2 системных узла, 2 узла мониторинга. Такая конфигурация потребует **от 28 CPU и 64GB RAM**, плюс быстрые диски с 400+ IOPS для мастер-узлов и узлов мониторинга.
-- Желательно выделить отдельный [storageClass](/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) на быстрых дисках для компонентов Deckhouse.
-- Добавьте к этому ресурсы, необходимые для запуска полезной нагрузки.
+Estimates of the resources required for the clusters to run:
+- **Regular cluster**: 3 master nodes, 2 frontend nodes, 2 system nodes. Such a configuration requires **at least 24 CPUs and 48GB RAM** along with fast 400+ IOPS disks for the master nodes.
+- **High-load cluster** (with dedicated monitoring nodes): 3 master nodes, 2 frontend nodes, 2 system nodes, 2 monitoring nodes. Such a configuration requires **at least 28 CPUs and 64GB RAM** along with fast 400+ IOPS disks for the master and monitoring nodes.
+- We recommend setting up a dedicated [storageClass](/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) on the fast disks for Deckhouse components.
+- Add to this estimate the resources needed to run the workloads.
 
-## Особенности конфигурации
+## Things to consider when configuring
 
-### Мастер-узлы
+### Master nodes
 
 {% alert class="guides__alert" level="info" %}
-В кластере должно быть три мастер-узла с быстрыми дисками 400+ IOPS.
+Three master nodes with fast 400+ IOPS disks are highly recommended for a cluster.
 {% endalert %}
 
-Всегда используйте три мастер-узла, так как их достаточно для отказоустойчивости. Также это дает возможность безопасно обновлять control plane кластера и сами мастер-узлы. В большем количестве мастер-узлов нет необходимости, а 2 узла (как и любое четное количество) не дают кворума.
+Use three master nodes in all cases, as they are sufficient for fault tolerance. Also, with three nodes, you can safely update the cluster's control plane as well as the master nodes. Extra master nodes are not needed, while 2 nodes (or any even number) do not make a quorum.
 
-Конфигурация мастер-узлов для облачных кластеров настраивается в параметре [masterNodeGroup](/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup).
+The master node configuration for cloud clusters can be configured using the [masterNodeGroup](/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup) parameter.
 
-Может быть полезно:
-- [Как добавить мастер-узлы в облачном кластере...](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
-- [Как добавить статичный узел в кластер...](/documentation/v1/modules/040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster)
+Reference:
+- [How do I a master node to a cluster...](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+- [How do I add a static node to a cluster...](/documentation/v1/modules/040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster)
 
-### Frontend-узлы
+### Frontend nodes
 
 {% alert class="guides__alert" level="info" %}
-Выделите два или более frontend-узла.
+Use two or more frontend nodes.
 
-inlet `LoadBalancer` для AWS/GCP/Azure, inlet `HostPort` с внешним балансировщиком для bare metal или vSphere/OpenStack.
+inlet `LoadBalancer` for AWS/GCP/Azure, inlet `HostPort` with an external load balancer for bare metal or vSphere/OpenStack.
 {% endalert %}
 
-Frontend-узлы — узлы балансировки входящего трафика. Такие узлы выделены для работы Ingress-контроллеров. У [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) frontend-узлов установлен label `node-role.deckhouse.io/frontend`. Читайте подробнее про [выделение узлов под определенный вид нагрузки...](/documentation/v1/#advanced-scheduling)
+Frontend nodes are used for balancing incoming traffic. Such nodes are allocated for Ingress controllers. For the [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) of the frontend nodes has a `node-role.deckhouse.io/frontend` label. Read more about [allocating nodes for specific load types...](/documentation/v1/#advanced-scheduling)
 
-Используйте более одного frontend-узла. Frontend-узлы должны выдерживать трафик при отказе как минимум одного frontend-узла.
+Use more than one frontend node. Frontend nodes must be able to still handle traffic even if one of the frontend nodes fails.
 
-Например, если в кластере два frontend-узла, то каждый frontend-узел должен справляться со всей нагрузкой на кластер, на случай отказа второго frontend-узла. Если в кластере три frontend-узла, то каждый frontend-узел должен выдерживать как минимум увеличение нагрузки в полтора раза.
+For example, if the cluster has two frontend nodes, each frontend node must be able to handle the entire cluster load in case the second frontend node fails. If the cluster has three frontend nodes, each frontend node must be able to handle a load that is at least one and a half times higher.
 
-Выберите [тип inlet'а](/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) (он определяет способ поступления трафика).  
+Select the [inlet type](/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) (it defines the way the traffic comes in).  
 
-При развертывании кластера с помощью Deckhouse в облачной инфраструктуре, где поддерживается заказ балансировщиков (например — AWS, GCP, Azure и т.п.), используйте inlet `LoadBalancer` или `LoadBalancerWithProxyProtocol`. В средах, где автоматический заказ балансировщика недоступен (кластер bare metal, в vSphere или OpenStack), используйте inlet `HostPort` или `HostPortWithProxyProtocol`. В этом случае вы можете либо добавить несколько A-записей в DNS для соответствующего домена, либо использовать внешний сервис балансировки нагрузки (например, решения от Cloudflare, Qrator, или настроить metallb).
+When deploying a cluster using Deckhouse in a cloud infrastructure where provisioning of load balancers is supported (e.g., AWS, GCP, Azure, etc.), use the `LoadBalancer` or `LoadBalancerWithProxyProtocol` inlet. In environments where automatic load balancer provisioning is not supported (bare metal clusters, vSphere, OpenStack), use the `HostPort` or `HostPortWithProxyProtocol` inlet. In this case, you can either add some A-records to DNS for the corresponding domain or use an external load-balancing service (e.g., Cloudflare, Qrator solutions, or configure metallb).
 
 {% alert class="guides__alert" level="warning" %}
-Inlet `HostWithFailover` подходит для кластеров с одним frontend-узлом. Он позволяет сократить время недоступности Ingress-контроллера при его обновлении. Такой тип inlet подойдет, например, для важных сред разработки, но **не рекомендуется для production**.
+The `HostWithFailover` inlet is suitable for clusters with a single frontend node. It reduces the time that the Ingress controller is unavailable during updates. This type of inlet is suitable for important development environments, but **not recommended for production**.
 {% endalert %}
 
-Алгоритм выбора inlet'а:
+The algorithm for choosing an inlet:
 
-![Алгоритм выбора inlet'а]({{ assets["guides/going_to_production/ingress-inlet-ru.svg"].digest_path }})
+![The algorithm for choosing an inlet]({{ assets["guides/going_to_production/ingress-inlet-ru.svg"].digest_path }})
 
-### Узлы мониторинга
+### Monitoring nodes
 
 {% alert class="guides__alert" level="info" %}
-Для нагруженных кластеров выделите два узла мониторинга с быстрыми дисками.
+For high-load clusters, use two monitoring nodes equipped with fast disks.
 {% endalert %}
 
-Узлы мониторинга — узлы, выделенные для запуска Grafana, Prometheus и других компонентов мониторинга. У [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) узлов мониторинга установлен label `node-role.deckhouse.io/monitoring`.
+Monitoring nodes are used to run Grafana, Prometheus, and other monitoring components. The [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label attached.
 
-В нагруженных кластерах, где генерируется много алертов и собирается много метрик, под мониторинг рекомендуется выделить отдельные узлы. Если этого не сделать, то компоненты мониторинга будут размещены на [системных узлах](#system-nodes).
+In high-load clusters, where many alerts are generated and many metrics are collected, we recommend allocating dedicated nodes for monitoring. If not, monitoring components will be deployed to [system nodes](#system-nodes).
 
-При выделении узлов мониторинга важно выделить им быстрые диски. Это можно сделать выделив `storageClass` на быстрых дисках для всех компонентов Deckhouse (глобальный параметр [storageClass](/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)), или выделить отдельный `storageClass` только компонентам мониторинга (параметры [storageClass](/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) и [longtermStorageClass](/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) модуля `prometheus`).
+You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)) or allocate a dedicated `storageClass` to monitoring components only ([storageClass](/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
 
 ### System nodes
 
 {% alert class="guides__alert" level="info" %}
-Выделите два системных узла.
+Dedicate two system nodes.
 {% endalert %}
 
-Системные узлы — узлы, выделенные для запуска модулей Deckhouse. У [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) системных узлов установлен label `node-role.deckhouse.io/system`.
+System nodes are used to run Deckhouse modules. Their [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
 
-Выделите 2 системных узла. В этом случае модули Deckhousе будут запускаться на них не пересекаясь с пользовательскими приложениями кластера. Читайте подробнее про [выделение узлов под определенный вид нагрузки...](/documentation/v1/#advanced-scheduling).
+Set two nodes to be system nodes. This way, Deckhouse modules will run on them without interfering with user applications in the cluster. Read more about [allocating nodes to specific load typeы...](/documentation/v1/#advanced-scheduling).
 
-Компонентам Deckhouse желательно выделить быстрые диски (глобальный параметр [storageClass](/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)).
+It is recommended to provide the Deckhouse components with fast disks (the [storageClass](/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) global parameter).
 
-## Уведомление о событиях мониторинга
+## Configuring alerts
 
 {% alert class="guides__alert" level="info" %}
-Настройте отправку алертов через [внутренний](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Alertmanager или подключите [внешний](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager).
+You can send alerts using the [internal](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Alertmanager or connect the [external](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) one.
 {% endalert %}
 
-Мониторинг будет работать сразу после установки Deckhouse, но при работе в Production этого недостаточно. Настройте [встроенный](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) в Deckhouse Alertmanager или [подключите свой](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) Alertmanager, чтобы получать уведомления об инцидентах.
+Monitoring will work out of the box once Deckhouse is installed, however, it is not enough for production clusters. Configure the Alertmanager [built in](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse  or [connect your](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) own Alertmanager to receive incident notifications.
 
-С помощью custom resource [CustomAlertmanager](/documentation/v1.44/modules/300-prometheus/cr.html#customalertmanager) вы сможете быстро настроить отправку уведомлений например на [e-mail](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), в [Slack](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/documentation/v1/modules/300-prometheus/usage.html#sending-alerts-to-telegram), через [webhook](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), а также другими способами.
 
-## Сбор логов
+
+Using the [CustomAlertmanager](/documentation/v1.44/modules/300-prometheus/cr.html#customalertmanager) custom resource, you can configure sending alerts to an [e-mail](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/documentation/v1/modules/300-prometheus/usage.html#sending-alerts-to-telegram), via the [webhook](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
+
+## Collecting logs
 
 {% alert class="guides__alert" level="info" %}
-[Настройте](/documentation/v1/modules/460-log-shipper/) централизованный сбор логов.
+[Configure](/documentation/v1/modules/460-log-shipper/) centralized log collection.
 {% endalert %}
 
-Настройте централизованную сборку журналов с системных и пользовательских приложений с помощью модуля [log-shipper](/documentation/v1/modules/460-log-shipper/).
+Set up centralized log collection from system and user applications using the [log-shipper](/documentation/v1/modules/460-log-shipper/) module.
 
-Вам достаточно создать custom resource описывающий *что собирать* — [ClusterLoggingConfig](/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig) или [PodLoggingConfig](/documentation/v1/modules/460-log-shipper/cr.html#podloggingconfig); и создать custom resource определяющий место *куда отправлять* собранные логи — [ClusterLogDestination](/documentation/v1/modules/460-log-shipper/cr.html#clusterlogdestination).
+All you have to do is to create a custom resource specifying *what to collect*: [ClusterLoggingConfig](/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig) or [PodLoggingConfig](/documentation/v1/modules/460-log-shipper/cr. html#podloggingconfig); and create a custom resource that specifies where to *send* the collected logs: [ClusterLogDestination](/documentation/v1/modules/460-log-shipper/cr.html#clusterlogdestination).
 
-Может быть полезно:
-- [Пример для Grafana Loki](/documentation/v1/modules/460-log-shipper/examples.html#getting-logs-from-all-cluster-pods-and-sending-them-to-loki)
-- [Пример для Logstash](/documentation/v1/modules/460-log-shipper/examples.html#simple-logstash-example)
-- [Пример для Splunk](/documentation/v1/modules/460-log-shipper/examples.html#splunk-integration)
+Reference:
+- [Grafana Loki example](/documentation/v1/modules/460-log-shipper/examples.html#getting-logs-from-all-cluster-pods-and-sending-them-to-loki)
+- [Logstash example](/documentation/v1/modules/460-log-shipper/examples.html#simple-logstash-example)
+- [Splunk example](/documentation/v1/modules/460-log-shipper/examples.html#splunk-integration)
 
-## Резервное копирование
+## Backups
 
 {% alert class="guides__alert" level="info" %}
-Настройте [резервное копирование etcd](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-make-etcd-backup). Напишите план восстановления.
+Set up [etcd backups](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-make-etcd-backup). Have a backup plan ready at all times.
 {% endalert %}
 
-Как минимум настройте [резервное копирование данных etcd](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-make-etcd-backup). Это будет ваш последний шанс на восстановление кластера в случае самых неожиданных событий. Храните эти резервные копии как можно *дальше* от вашего кластера.  
+We strongly advise you to set up [etcd backups](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-make-etcd-backup) as a bare minimum. This will be your last chance to restore the cluster should things go awry. Keep these backups as *away* from your cluster as possible.
 
-Если резервные копии не работают или вы не знаете как из них восстановиться — они не помогут. Лучшей практикой будет составить [Disaster Recovery Plan](https://www.google.com/search?q=Disaster+Recovery+Plan), содержащий конкретные шаги и команды по развертыванию кластера из резервной копии.
+The backups won't help if they don't work or if you don't know how to use them to recover the cluster. The best practice is to compile a [Disaster Recovery Plan](https://www.google.com/search?q=Disaster+Recovery+Plan) with specific steps and commands to restore the cluster from a backup.
 
-Конечно, этот план должен периодически актуализироваться и проверяться учебными тревогами.
+This plan should be periodically updated and tested in drills.
 
-## Сообщество
+## Community
 
 {% alert class="guides__alert" level="info" %}
-Следите за новостями проекта в [Telegram](https://t.me/deckhouse).
+Follow the project channel on [Telegram](https://t.me/deckhouse) for news and updates.
 {% endalert %}
 
-Вступите в [сообщество](https://deckhouse.io/community/about.html), чтобы быть в курсе важных изменений и новостей. Вы сможете общаться с людьми, которые делают то же самое что и вы. Это может помочь избежать типовых проблем.
+Join the [community](https://deckhouse.io/community/about.html) to keep up with important news and developments. This will help you to share experiences with people who are doing the same thing as you are and avoid typical problems.
 
-Команда Deckhouse знает, каких усилий требует выход в Production с Kubernetes. Мы будем рады, если вы достигнете успеха с Deckhouse. Поделитесь вашим успехом и вдохновите кого-нибудь на переход к Kubernetes.
+The Deckhouse team knows what it takes to do production in Kubernetes. We'd love to see you succeed with Deckhouse. Share your success stories and inspire others to switch to Kubernetes.
