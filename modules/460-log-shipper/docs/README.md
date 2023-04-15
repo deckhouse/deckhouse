@@ -47,7 +47,7 @@ Complicated mappings are applied on the aggregator's side.
 The main goal of this architecture is to send messages to the queue system as quickly as possible, then other workers will read them and deliver them to the long-term storage for later analysis.
 
 ![log-shipper stream](../../images/460-log-shipper/log_shipper_stream.svg)
-<!-- Исходник картинок: https://docs.google.com/drawings/d/1R7vbJPl93DZPdrkSWNGfUOh0sWEAKnCfGkXOvRvK3mQ/edit -->
+<!-- Source: https://docs.google.com/drawings/d/1R7vbJPl93DZPdrkSWNGfUOh0sWEAKnCfGkXOvRvK3mQ/edit -->
 
 * The same pros and cons as for centralized architecture, yet one more middle layer storage is added.
 * Increased durability, suites for all infrastructures where logs delivery is crucial.
