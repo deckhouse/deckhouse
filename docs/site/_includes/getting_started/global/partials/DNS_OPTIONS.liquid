@@ -12,7 +12,7 @@
         {%- endif -%}
       </li>
       <li>
-        If your cluster DNS name template is <strong>NOT</strong> a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (e.g., <code>%s-kube.company.my</code>), then add
+        If your cluster DNS name template is <strong>NOT</strong> a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS template</a> (e.g., <code>%s-kube.company.my</code>), then add
          {%- if page.platform_code == 'aws' %} A records
          {%- else %} A or CNAME records
          {%- endif -%} containing the IP of {% if page.platform_code == 'vsphere' %}the master node{% else %}the load balancer{% endif %}, for the following DNS names according to the Deckhouse DNS templates:
