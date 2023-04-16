@@ -13,12 +13,12 @@ Use `Early Access` or `Stable` release channel. Configure [auto-update window](/
 
 Select the [release channel](/documentation/v1/deckhouse-release-channels.html) and [update mode](/documentation/v1/modules/002-deckhouse/configuration.html#parameters-releasechannel) that suit your needs. The more stable the release channel is, the later you will have the chance to use the new features.
 
-If possible, use different release channels for clusters. For a development cluster, consider using a less stable release channel than for a test cluster or stage (pre-production) cluster. The same is true for test and prduction cluster.  
+If possible, use different release channels for clusters. Use a less stable update channel for a development cluster than for a testing cluster or stage (pre-production) cluster.  
 
 We recommend using the `Early Access` or `Stable` release channel for production clusters. If you have more than one cluster in a production environment, consider using different release channels for them. For example, `Early Access` for one, and `Stable` for another. If the clusters use the same release channel, we recommend setting update windows so that they do not overlap.
 
 {% alert class="guides__alert" level="warning" %}
-Even in very busy and critical clusters, it is not a good idea to disable the release channel. The best strategy is a scheduled update. If you are using a Deckhouse release in your cluster that has not received an update in over six months, you will have a hard time getting help quickly should a problem arise.
+Even in very busy and critical clusters, it is not a good idea to disable the use of the release channel. The best strategy is a scheduled update. If you are using a Deckhouse release in your cluster that has not received an update in over six months, you will have a hard time getting help quickly should a problem arise.
 {% endalert %}
 
 The [update windows](/documentation/v1/modules/002-deckhouse/configuration.html#parameters-update-windows) management allows you to schedule automatic Deckhouse release updates when your cluster is not experiencing peak load.
@@ -29,9 +29,7 @@ The [update windows](/documentation/v1/modules/002-deckhouse/configuration.html#
 Use the automatic [Kubernetes version selection](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) or set the version explicitly.
 {% endalert %}
 
-In most cases, we recommend opting for the automatic selection of the Kubernetes version. In Deckhouse, this behavior is set by default, but it can be changed with the [kubernetesVersion](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter.
-
-Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](/documentation/v1/modules/040-control-plane-manager/#version-control).
+In most cases, we recommend opting for the automatic selection of the Kubernetes version. In Deckhouse, this behavior is set by default, but it can be changed with the [kubernetesVersion](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter. Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](/documentation/v1/modules/040-control-plane-manager/#version-control).
 
 If the automatic Kubernetes version selection is enabled, Deckhouse can upgrade the Kubernetes version in the cluster together with the Deckhouse update (when upgrading a minor version). If the Kubernetes version in the [kubernetesVersion](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter is set explicitly, Deckhouse may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
 
@@ -72,7 +70,7 @@ Use three master nodes in all cases, as they are sufficient for fault tolerance.
 The master node configuration for cloud clusters can be configured using the [masterNodeGroup](/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup) parameter.
 
 Reference:
-- [How do I a master node to a cluster...](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+- [How do I add a master node to a cluster...](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
 - [How do I add a static node to a cluster...](/documentation/v1/modules/040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster)
 
 ### Frontend nodes
@@ -80,10 +78,10 @@ Reference:
 {% alert class="guides__alert" level="info" %}
 Use two or more frontend nodes.
 
-inlet `LoadBalancer` for AWS/GCP/Azure, inlet `HostPort` with an external load balancer for bare metal or vSphere/OpenStack.
+Use inlet `LoadBalancer` for AWS/GCP/Azure, inlet `HostPort` with an external load balancer for bare metal or vSphere/OpenStack.
 {% endalert %}
 
-Frontend nodes are used for balancing incoming traffic. Such nodes are allocated for Ingress controllers. For the [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) of the frontend nodes has a `node-role.deckhouse.io/frontend` label. Read more about [allocating nodes for specific load types...](/documentation/v1/#advanced-scheduling)
+Frontend nodes are used for balancing incoming traffic. Such nodes are allocated for Ingress controllers. The [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) of the frontend nodes has a `node-role.deckhouse.io/frontend` label. Read more about [allocating nodes for specific load types...](/documentation/v1/#advanced-scheduling)
 
 Use more than one frontend node. Frontend nodes must be able to still handle traffic even if one of the frontend nodes fails.
 
@@ -99,7 +97,7 @@ The `HostWithFailover` inlet is suitable for clusters with a single frontend nod
 
 The algorithm for choosing an inlet:
 
-![The algorithm for choosing an inlet]({{ assets["guides/going_to_production/ingress-inlet-ru.svg"].digest_path }})
+![The algorithm for choosing an inlet]({{ assets["guides/going_to_production/ingress-inlet.svg"].digest_path }})
 
 ### Monitoring nodes
 
@@ -111,7 +109,7 @@ Monitoring nodes are used to run Grafana, Prometheus, and other monitoring compo
 
 In high-load clusters, where many alerts are generated and many metrics are collected, we recommend allocating dedicated nodes for monitoring. If not, monitoring components will be deployed to [system nodes](#system-nodes).
 
-You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)) or allocate a dedicated `storageClass` to monitoring components only ([storageClass](/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
+When allocating monitoring nodes, it is important to allocate fast disks to them. You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)) or allocate a dedicated `storageClass` to monitoring components only ([storageClass](/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
 
 ### System nodes
 
@@ -132,8 +130,6 @@ You can send alerts using the [internal](/documentation/v1.44/modules/300-promet
 {% endalert %}
 
 Monitoring will work out of the box once Deckhouse is installed, however, it is not enough for production clusters. Configure the Alertmanager [built in](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse  or [connect your](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) own Alertmanager to receive incident notifications.
-
-
 
 Using the [CustomAlertmanager](/documentation/v1.44/modules/300-prometheus/cr.html#customalertmanager) custom resource, you can configure sending alerts to an [e-mail](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/documentation/v1/modules/300-prometheus/usage.html#sending-alerts-to-telegram), via the [webhook](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
 

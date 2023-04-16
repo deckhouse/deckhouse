@@ -82,6 +82,12 @@ defaults:
       sitemap_include: false
       layout: none
   - scope:
+      path: "pages/guides"
+      type: "pages"
+    values:
+      toc_in_sidebar: true
+      toc: false
+  - scope:
       path: "modules_ru"
       type: "pages"
     values:
