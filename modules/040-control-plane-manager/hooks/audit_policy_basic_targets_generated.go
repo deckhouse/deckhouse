@@ -46,6 +46,7 @@ var auditPolicyBasicNamespaces = []string{
 var auditPolicyBasicServiceAccounts = []string{
 	"agent",
 	"alertmanager-internal",
+	"alerts-receiver",
 	"alliance-ingressgateway",
 	"alliance-metadata-exporter",
 	"cainjector",
