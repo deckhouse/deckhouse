@@ -6,6 +6,7 @@
  - All system components will restart.
  - Kubernetes `1.21` is no longer supported.
  - The `operator-trivy` module will no longer be available in Deckhouse CE.
+ - There are new requirements for the [deckhouse IAM user](https://deckhouse.io/documentation/v1.45/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS. It is necessary to allow the following actions: `ec2:DescribeInstanceTypes`, `ec2:DescribeSecurityGroupRules`.
 
 ## Features
 
@@ -63,32 +64,24 @@
 
  - **[admission-policy-engine]** Fix `requiredLabels` OperationPolicy. [#4264](https://github.com/deckhouse/deckhouse/pull/4264)
     `requiredLabel` unmarshalling leads to an error.
- - **[candi]** Upgrade AWS terraform provider to `4.50.0`. [#4256](https://github.com/deckhouse/deckhouse/pull/4256)
  - **[candi]** Remove the `node-role.kubernetes.io/master` taint from the first control-plane node during bootstrap. [#4159](https://github.com/deckhouse/deckhouse/pull/4159)
- - **[cloud-provider-gcp]** Disabled Node IPAM in GCP CCM that conflicted with kube-controller-manager's IPAM controller. [#4110](https://github.com/deckhouse/deckhouse/pull/4110)
+ - **[cloud-provider-aws]** The terraform provider was bumped to `4.50.0`, therefore there are new requirements for deckhouse IAM user. It is necessary to allow the following actions: `ec2:DescribeInstanceTypes`, `ec2:DescribeSecurityGroupRules`. [#4256](https://github.com/deckhouse/deckhouse/pull/4256)
+    There are new requirements for the [deckhouse IAM user](https://deckhouse.io/documentation/v1.45/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS. It is necessary to allow the following actions: `ec2:DescribeInstanceTypes`, `ec2:DescribeSecurityGroupRules`.
  - **[cloud-provider-yandex]** Set `network_acceleration_type` to software accelerated, update netfilter parameters for new Yandex nat instances. [#4196](https://github.com/deckhouse/deckhouse/pull/4196)
  - **[deckhouse]** Hours and minutes can be used simultaneously for the `minimalNotificationTime` field in ModuleConfig CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
  - **[dhctl]** Fix `kube-proxy` does not restart. [#4274](https://github.com/deckhouse/deckhouse/pull/4274)
- - **[extended-monitoring]** Fix RBAC rules for `image-availability-exporter`. [#4346](https://github.com/deckhouse/deckhouse/pull/4346)
  - **[extended-monitoring]** Fix `image-availability-exporter` for Kubernetes 1.25+. [#4331](https://github.com/deckhouse/deckhouse/pull/4331)
- - **[external-module-manager]** Fix chmod permissions for external modules. [#4388](https://github.com/deckhouse/deckhouse/pull/4388)
  - **[global-hooks]** Deploy PDB as a normal helm resource, not a helm hook. [#4016](https://github.com/deckhouse/deckhouse/pull/4016)
- - **[ingress-nginx]** Set `imagePullSecrets` for `kruise-controller`. [#4369](https://github.com/deckhouse/deckhouse/pull/4369)
- - **[ingress-nginx]** Improve controller migration hook. [#4363](https://github.com/deckhouse/deckhouse/pull/4363)
- - **[ingress-nginx]** Fix RBAC rules for `kruise-controller`. [#4353](https://github.com/deckhouse/deckhouse/pull/4353)
  - **[istio]** Add registry secret for `d8-ingress-istio` namespace. [#4244](https://github.com/deckhouse/deckhouse/pull/4244)
- - **[linstor]** Update `linstor-scheduler-admission` to fix admission review. [#4343](https://github.com/deckhouse/deckhouse/pull/4343)
  - **[log-shipper]** Add multiline custom parser for `PodLoggingConfig` and add validation for multiline custom parser when `startsWhen` and `endsWhen` params  are both provided [#4307](https://github.com/deckhouse/deckhouse/pull/4307)
     `log-shipper` Pods will restart.
  - **[log-shipper]** Make vector retrying request on startup with backoff. [#4270](https://github.com/deckhouse/deckhouse/pull/4270)
  - **[log-shipper]** Fix using hyphens in the `extraLabels` keys field of the `ClusterLogDestination` spec. [#4112](https://github.com/deckhouse/deckhouse/pull/4112)
- - **[node-manager]** Revert removing `early-oom` (the [#3821](https://github.com/deckhouse/deckhouse/pull/3821) PR). [#4376](https://github.com/deckhouse/deckhouse/pull/4376)
  - **[node-manager]** Restrict changing `nodeType` for NodeGroups and remove stale status fields from static NodeGroups. [#4257](https://github.com/deckhouse/deckhouse/pull/4257)
  - **[node-manager]** Fix `WaitingForDisruptiveApproval` status calculating. [#4250](https://github.com/deckhouse/deckhouse/pull/4250)
  - **[node-manager]** Prevent changing bashible checksum if scale/downscale NodeGroup. [#4243](https://github.com/deckhouse/deckhouse/pull/4243)
  - **[node-manager]** Hours and minutes can be used simultaneously in the `spec.chaos.period` field of the NodeGroup CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
  - **[node-manager]** (Reverted in 1.45.3!) Removed early-oom. Added kubelet memory reservation option. [#3821](https://github.com/deckhouse/deckhouse/pull/3821)
- - **[user-authn]** Fix the job image path. [#4385](https://github.com/deckhouse/deckhouse/pull/4385)
  - **[user-authn]** Hours and minutes can be used simultaneously in the `spec.tls` field of the User CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
  - **[user-authn]** The `discover_dex_ca` hook subscribes secret according to the used mode. [#3842](https://github.com/deckhouse/deckhouse/pull/3842)
  - **[user-authz]** Disabled `NetworkPolicy` editing for Editors. [#4217](https://github.com/deckhouse/deckhouse/pull/4217)
