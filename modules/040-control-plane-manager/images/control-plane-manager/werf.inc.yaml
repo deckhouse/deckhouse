@@ -3,36 +3,21 @@
   {{- $patch := $value.patch | toString }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
-- image: common/pause
-  add: /pause
-  to: /pause
-  before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /usr/local/bin
-  to: /usr/local/bin
+  to: /
   includePaths:
-  - kubeadm-*
-  before: setup
-- artifact: {{ $.ModuleName }}/etcd-artifact
-  add: /usr/local/bin/etcdctl
-  before: setup
-git:
-- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/control-plane-manager
-  to: /control-plane-manager
-- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/readiness-check
-  to: /usr/local/bin/readiness-check
+  - kubeadm-{{ $version }}
+  before: install
+- artifact: {{ $.ModuleName }}/controller-artifact
+  add: /controller
+  to: /controller
+  before: install
 shell:
-  beforeInstall:
-  - apk add --no-cache jq curl bash gettext grep findutils
-  install:
-  - curl -L https://dl.k8s.io/release/v{{ $version }}.{{ index $.CandiVersionMap "k8s" $version "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
-  - curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl-certinfo_1.4.1_linux_amd64 -o /usr/local/bin/cfssl-certinfo
-  - curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1.4.1_linux_amd64 -o /usr/local/bin/cfssl
-  - chmod +x /usr/local/bin/kubectl /usr/local/bin/cfssl-certinfo /usr/local/bin/cfssl
 docker:
-  ENTRYPOINT: ["/control-plane-manager"]
+  ENTRYPOINT: ["/controller"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.25" $version }}
@@ -64,3 +49,19 @@ shell:
   - make all WHAT=cmd/kubeadm
   - mv _output/bin/kubeadm /usr/local/bin/kubeadm-{{ $version }}
 {{- end }}
+---
+artifact: {{ $.ModuleName }}/controller-artifact
+from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+git:
+  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
+    to: /
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go
+    - chmod +x /controller

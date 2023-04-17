@@ -55,11 +55,11 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: update_approval :
 			approvedCount := 0
 			waitingForApprovalCount := 0
 			for i := 1; i <= len(nodeNames); i++ {
-				if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/approved`).Exists() {
+				if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/approved`).Exists() {
 					approvedCount++
 					approvedNodeIndex = i
 				}
-				if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/waiting-for-approval`).Exists() {
+				if f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/waiting-for-approval`).Exists() {
 					waitingForApprovalCount++
 				}
 			}
@@ -68,15 +68,15 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: update_approval :
 			Expect(approvedCount).To(Equal(1))
 			Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
 
-			Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/approved`).Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", approvedNodeIndex)).Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
 
 			for i := 1; i <= len(nodeNames); i++ {
 				if i == approvedNodeIndex {
 					continue
 				}
-				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
-				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/approved`).Exists()).To(BeFalse())
 			}
 		})
 	})
@@ -89,12 +89,12 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: update_approval :
 		It("approved annotation should be removed from worker-1 when the pod is ready", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.KubernetesGlobalResource("Node", "worker-1").Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/approved`).Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("Node", "worker-1").Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Node", "worker-1").Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Node", "worker-1").Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
 
 			for i := 2; i <= len(nodeNames); i++ {
-				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
-				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manger\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Node", fmt.Sprintf("worker-%d", i)).Field(`metadata.annotations.control-plane-manager\.deckhouse\.io/approved`).Exists()).To(BeFalse())
 			}
 		})
 	})
@@ -121,7 +121,7 @@ kind: Node
 metadata:
   name: worker-2
   annotations:
-    control-plane-manger.deckhouse.io/waiting-for-approval: ""
+    control-plane-manager.deckhouse.io/waiting-for-approval: ""
   labels:
       node-role.kubernetes.io/control-plane: ""
 status:
@@ -134,7 +134,7 @@ kind: Node
 metadata:
   name: worker-3
   annotations:
-    control-plane-manger.deckhouse.io/waiting-for-approval: ""
+    control-plane-manager.deckhouse.io/waiting-for-approval: ""
   labels:
       node-role.kubernetes.io/control-plane: ""
 status:
@@ -187,12 +187,12 @@ status:
 `
 
 	initialState = fmt.Sprintf(stateTmpl,
-		"control-plane-manger.deckhouse.io/waiting-for-approval: \"\"",
+		"control-plane-manager.deckhouse.io/waiting-for-approval: \"\"",
 		"NotReady",
 	)
 
 	approvedState = fmt.Sprintf(stateTmpl,
-		"control-plane-manger.deckhouse.io/approved: \"\"",
+		"control-plane-manager.deckhouse.io/approved: \"\"",
 		"Ready",
 	)
 )

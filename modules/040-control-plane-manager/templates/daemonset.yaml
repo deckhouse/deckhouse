@@ -35,6 +35,11 @@ memory: 10Mi
 {{- $_ := set $tpl_context "resourcesRequestsMilliCpuControlPlane" .Values.global.internal.modules.resourcesRequests.milliCpuControlPlane }}
 {{- $_ := set $tpl_context "resourcesRequestsMemoryControlPlane" .Values.global.internal.modules.resourcesRequests.memoryControlPlane }}
 
+{{- $allowedKubernetesVersions := list }}
+{{- range $key, $_ := $tpl_context.k8s }}
+  {{- $allowedKubernetesVersions = append $allowedKubernetesVersions (toString $key) }}
+{{- end }}
+
 {{- if hasKey .Values.controlPlaneManager.internal "etcdServers" }}
   {{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}
 {{- end }}
@@ -237,10 +242,18 @@ spec:
               fieldPath: metadata.name
         - name: KUBERNETES_VERSION
           value: {{ .Values.global.clusterConfiguration.kubernetesVersion | quote }}
+        - name: ALLOWED_KUBERNETES_VERSIONS
+          value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
+        livenessProbe:
+          httpGet:
+            host: 127.0.0.1
+            path: /healthz
+            port: 8095
         readinessProbe:
-          exec:
-            command:
-            - readiness-check
+          httpGet:
+            host: 127.0.0.1
+            path: /readyz
+            port: 8095
           initialDelaySeconds: 10
           periodSeconds: 3
           timeoutSeconds: 8
