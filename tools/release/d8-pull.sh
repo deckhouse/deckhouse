@@ -161,7 +161,7 @@ pull_image() {
   fi
 
   delim="@"
-  if [[ $# -ne $2 ]] && [[ "$3" == "use_tag" ]]; then
+  if [[ $# -ne 2 ]] && [[ "$3" == "use_tag" ]]; then
     delim=":"
   fi
   #using tarball, because dhctl bootstrap doesn't support oci format
