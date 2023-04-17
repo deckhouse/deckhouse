@@ -90,13 +90,12 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, alert := range data.Alerts {
-		log.Debugf("received alert: %v", alert)
-		if len(alertStore.Alerts) == config.AlertsQueueLen {
-			log.Error("cannot add alert to queue, queue is full")
+		log.Debugf("received alert: %q", alert)
+
+		if err := alertStore.Add(alert); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
-		alertStore.Add(alert)
 	}
 	w.WriteHeader(http.StatusOK)
 }

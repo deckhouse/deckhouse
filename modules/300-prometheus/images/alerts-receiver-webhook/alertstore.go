@@ -17,10 +17,14 @@ limitations under the License.
 package main
 
 import (
+	"context"
+	"fmt"
 	"sync"
 
 	"github.com/prometheus/alertmanager/template"
 	log "github.com/sirupsen/logrus"
+	eventsv1 "k8s.io/api/events/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type AlertItem struct {
@@ -29,19 +33,36 @@ type AlertItem struct {
 
 type AlertStore struct {
 	m      sync.RWMutex
+	length int
 	Alerts map[string]*AlertItem
+	Events map[string]*eventsv1.Event
 }
 
-func NewStore(length int) *AlertStore {
-	a := make(map[string]*AlertItem, length)
-	return &AlertStore{Alerts: a}
+func NewStore(l int) *AlertStore {
+	a := make(map[string]*AlertItem, l)
+	e := make(map[string]*eventsv1.Event, l)
+	return &AlertStore{Alerts: a, Events: e, length: l}
 }
 
-func (a *AlertStore) Add(alert template.Alert) {
+func (a *AlertStore) Add(alert template.Alert) error {
+	if len(a.Alerts) == a.length {
+		return fmt.Errorf("cannot add alert to queue (max length = %d), queue is full", a.length)
+	}
 	a.m.Lock()
 	defer a.m.Unlock()
 	log.Infof("alert with fingerprint %s added to queue", alert.Fingerprint)
 	a.Alerts[alert.Fingerprint] = &AlertItem{
 		Alert: alert,
 	}
+	return nil
+}
+
+func (a *AlertStore) CreateEvent(fingerprint string) error {
+	ev := &eventsv1.Event{}
+	e, err := config.K8sClient.EventsV1().Events(NameSpace).Create(context.TODO(), ev, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	a.Events[fingerprint] = e
+	return nil
 }

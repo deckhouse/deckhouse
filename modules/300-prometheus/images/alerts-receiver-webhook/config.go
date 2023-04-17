@@ -17,16 +17,22 @@ limitations under the License.
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
 	"os"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
+
+const NameSpace = "d8-monitoring"
 
 type Config struct {
 	ListenHost     string
 	ListenPort     string
 	AlertsQueueLen int
 	LogLevel       log.Level
+	K8sClient      *kubernetes.Clientset
 }
 
 func NewConfig() *Config {
@@ -56,6 +62,16 @@ func NewConfig() *Config {
 	c.LogLevel = log.InfoLevel
 	if d := os.Getenv("DEBUG"); d == "YES" {
 		c.LogLevel = log.DebugLevel
+	}
+
+	k8sConfig, err := rest.InClusterConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.K8sClient, err = kubernetes.NewForConfig(k8sConfig)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	return c
