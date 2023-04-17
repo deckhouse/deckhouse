@@ -93,3 +93,4 @@ spec:
           emptyDir: {}
       imagePullSecrets:
       - name: deckhouse-registry
+      serviceAccountName: d8-alerts-receiver
