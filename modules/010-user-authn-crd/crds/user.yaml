@@ -16,7 +16,7 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
       schema: &schema
         openAPIV3Schema:
           type: object
@@ -54,7 +54,11 @@ spec:
                   example: '08a8684b-db88-4b73-90a9-3cd1661f5466'
                 groups:
                   type: array
-                  description: 'Static user groups.'
+                  x-doc-deprecated: true
+                  description: |
+                    Static user groups.
+
+                    Deprecated. Use the [Group](#group) resource.
                   items:
                     type: string
                 ttl:
@@ -75,13 +79,19 @@ spec:
                     * It is shown only of the `.spec.ttl` field is set.
                     * The user account will be deleted at the specified date.
                     * This parameter is synchronized every 5 minutes. There may be a time lag between the moment specified in this field and the moment of actual deletion of the user account.
+                groups:
+                  type: array
+                  description: |
+                    Static user groups.
+                  items:
+                    type: string
       subresources: &subresources
         status: {}
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.email
           name: Email
           type: string
-        - jsonPath: .spec.groups
+        - jsonPath: .status.groups
           name: Groups
           type: string
         - jsonPath: .status.expireAt
@@ -90,7 +100,7 @@ spec:
           format: date-time
     - name: v1
       served: true
-      storage: false
+      storage: true
       schema: *schema
       subresources: *subresources
       additionalPrinterColumns: *additionalPrinterColumns

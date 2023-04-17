@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import (
 var _ = Describe("User Authn hooks :: get dex user crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "User", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Group", false)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -54,6 +55,34 @@ spec:
   - Everyone
   password: password
   ttl: 30m
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: gods
+spec:
+  name: Gods
+  members:
+  - kind: User
+    name: Athena
+  - kind: User
+    name: Minerva
+  - kind: User
+    name: Freya
+  - kind: User
+    name: admin
+  - kind: Group
+    name: greek
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: greek
+spec:
+  name: Gods
+  members:
+  - kind: User
+    name: Aphrodite
 `))
 				f.RunHook()
 			})
@@ -66,11 +95,12 @@ spec:
     "name": "admin",
     "spec": {
       "email": "admin@example.com",
-      "groups": ["Admins", "Everyone"],
+      "groups": ["Admins", "Everyone", "Gods"],
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf"
+    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "status": {}
 }]`))
 
 				Expect(
@@ -156,7 +186,8 @@ spec:
     "password": "password",
     "userID": "admin"
   },
-  "encodedName": "mfsg22lonzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji"
+  "encodedName": "mfsg22lonzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji",
+  "status": {}
 }]`))
 				})
 			})
@@ -204,7 +235,8 @@ spec:
       "password": "password",
       "userID": "admin"
     },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf"
+    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "status": {}
   },
   {
     "name": "user",
@@ -216,9 +248,79 @@ spec:
       "password": "passwordNext",
       "userID": "user"
     },
-    "encodedName": "ovzwk4samv4gc3lqnrss4y3pnxf7fhheqqrcgji"
+    "encodedName": "ovzwk4samv4gc3lqnrss4y3pnxf7fhheqqrcgji",
+    "status": {}
   }
 ]`))
+		})
+	})
+
+	Context("Cluster with User and Group objects", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@example.com
+  password: password
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: group-1
+spec:
+  name: group-1
+  members:
+  - kind: User
+    name: admin
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: group-2
+spec:
+  name: group-2
+  members:
+  - kind: Group
+    name: group-1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: group-3
+spec:
+  name: group-3
+  members:
+  - kind: User
+    name: admin
+`))
+			f.RunHook()
+		})
+		It("Should synchronize objects and fill internal values and status", func() {
+			Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchUnorderedJSON(`
+[
+  {
+    "name": "admin",
+    "spec": {
+      "email": "admin@example.com",
+      "groups": [
+        "group-1",
+        "group-2",
+        "group-3"
+      ],
+      "password": "password",
+      "userID": "admin"
+    },
+    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "status": {}
+  }
+]`))
+			Expect(f.KubernetesGlobalResource("User", "admin").Field("status.groups").String()).To(MatchUnorderedJSON(`["group-1", "group-2", "group-3"]`))
+			Expect(f.KubernetesGlobalResource("User", "admin").Field("status.expireAt").Exists()).To(BeFalse())
+
 		})
 	})
 })
