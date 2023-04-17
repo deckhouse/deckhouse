@@ -1089,9 +1089,9 @@ status:
 				"update.node.deckhouse.io/approved",
 				"update.node.deckhouse.io/waiting-for-approval",
 				"update.node.deckhouse.io/disruption-required",
-				"update.node.deckhouse.io/draining",
+				drainingAnnotationKey,
 				"update.node.deckhouse.io/disruption-approved",
-				"update.node.deckhouse.io/drained",
+				drainedAnnotationKey,
 			}
 
 			for _, a := range annotations {

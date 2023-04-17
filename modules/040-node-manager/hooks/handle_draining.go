@@ -34,6 +34,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 )
 
+const (
+	drainingAnnotationKey = "update.node.deckhouse.io/draining"
+	drainedAnnotationKey  = "update.node.deckhouse.io/drained"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/draining",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -72,7 +77,7 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		drainingSource string
 		drainedSource  string
 	)
-	if source, ok := node.Annotations["update.node.deckhouse.io/draining"]; ok {
+	if source, ok := node.Annotations[drainingAnnotationKey]; ok {
 		// keep backward compatibility
 		if source == "" {
 			drainingSource = "bashible"
@@ -81,7 +86,7 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		}
 	}
 
-	if source, ok := node.Annotations["update.node.deckhouse.io/drained"]; ok {
+	if source, ok := node.Annotations[drainedAnnotationKey]; ok {
 		// keep backward compatibility
 		if source == "" {
 			drainedSource = "bashible"
@@ -170,7 +175,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 			input.LogEntry.Errorf("node drain failed: %s", drainedNode.Err)
 			continue
 		}
-		input.PatchCollector.MergePatch(newDrainAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
+		input.PatchCollector.MergePatch(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
 	}
 
 	return nil
@@ -180,8 +185,8 @@ func newDrainedAnnotationPatch(source string) map[string]interface{} {
 	return map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/draining": nil,
-				"update.node.deckhouse.io/drained":  source,
+				drainingAnnotationKey: nil,
+				drainedAnnotationKey:  source,
 			},
 		},
 	}
@@ -191,7 +196,7 @@ var (
 	removeDrainedAnnotation = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/drained": nil,
+				drainedAnnotationKey: nil,
 			},
 		},
 	}
