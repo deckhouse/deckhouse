@@ -19,6 +19,7 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -26,17 +27,30 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, enableExtendedMonitoring)
 
 func enableExtendedMonitoring(input *go_hook.HookInput) error {
-	annotationsPatch := map[string]interface{}{
+	labelsPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"annotations": map[string]string{
-				"extended-monitoring.flant.com/enabled": "",
+			"labels": map[string]string{
+				"extended-monitoring.deckhouse.io/enabled": "",
 			},
 		},
 	}
 
-	input.PatchCollector.MergePatch(annotationsPatch, "v1", "Namespace", "", "d8-system")
+	input.PatchCollector.MergePatch(labelsPatch, "v1", "Namespace", "", "d8-system")
+	input.PatchCollector.MergePatch(labelsPatch, "v1", "Namespace", "", "kube-system")
 
-	input.PatchCollector.MergePatch(annotationsPatch, "v1", "Namespace", "", "kube-system")
+	input.PatchCollector.Filter(removeDeprecatedAnnotation, "v1", "Namespace", "", "d8-system")
+	input.PatchCollector.Filter(removeDeprecatedAnnotation, "v1", "Namespace", "", "kube-system")
 
 	return nil
+}
+
+func removeDeprecatedAnnotation(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	objCopy := obj.DeepCopy()
+
+	objCopyAnnotations := objCopy.GetAnnotations()
+	delete(objCopyAnnotations, "extended-monitoring.flant.com/enabled")
+
+	objCopy.SetAnnotations(objCopyAnnotations)
+
+	return objCopy, nil
 }
