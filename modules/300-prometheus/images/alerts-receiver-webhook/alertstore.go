@@ -23,23 +23,20 @@ import (
 
 	"github.com/prometheus/alertmanager/template"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type AlertItem struct {
-	Alert template.Alert
-}
-
 type AlertStore struct {
 	m      sync.RWMutex
 	length int
-	Alerts map[string]*AlertItem
+	Alerts map[string]*template.Alert
 	Events map[string]*eventsv1.Event
 }
 
 func NewStore(l int) *AlertStore {
-	a := make(map[string]*AlertItem, l)
+	a := make(map[string]*template.Alert, l)
 	e := make(map[string]*eventsv1.Event, l)
 	return &AlertStore{Alerts: a, Events: e, length: l}
 }
@@ -51,15 +48,22 @@ func (a *AlertStore) Add(alert template.Alert) error {
 	a.m.Lock()
 	defer a.m.Unlock()
 	log.Infof("alert with fingerprint %s added to queue", alert.Fingerprint)
-	a.Alerts[alert.Fingerprint] = &AlertItem{
-		Alert: alert,
-	}
+	a.Alerts[alert.Fingerprint] = &alert
 	return nil
 }
 
 func (a *AlertStore) CreateEvent(fingerprint string) error {
-	ev := &eventsv1.Event{}
-	e, err := config.K8sClient.EventsV1().Events(NameSpace).Create(context.TODO(), ev, metav1.CreateOptions{})
+	alert, ok := a.Alerts[fingerprint]
+	if !ok {
+		return fmt.Errorf("cannot find alert with fingerprint: %s", fingerprint)
+	}
+
+	ev := &eventsv1.Event{
+		EventTime: metav1.NowMicro(),
+		Action:    alert.Status,
+		Type:      v1.EventTypeWarning,
+	}
+	e, err := config.K8sClient.EventsV1().Events(nameSpace).Create(context.TODO(), ev, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}

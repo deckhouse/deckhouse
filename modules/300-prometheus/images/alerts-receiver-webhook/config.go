@@ -19,13 +19,17 @@ package main
 import (
 	"os"
 	"strconv"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-const NameSpace = "d8-monitoring"
+const (
+	reconcileTime = 5 * time.Minute
+	nameSpace     = "d8-monitoring"
+)
 
 type Config struct {
 	ListenHost     string

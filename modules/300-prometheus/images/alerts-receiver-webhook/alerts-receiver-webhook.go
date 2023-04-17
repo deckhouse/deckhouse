@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/prometheus/alertmanager/template"
 	log "github.com/sirupsen/logrus"
@@ -69,6 +70,8 @@ func main() {
 		log.Error(err)
 	}()
 
+	go reconcileLoop(ctx)
+
 	<-ctx.Done()
 
 	err := srv.Shutdown(context.Background())
@@ -98,4 +101,27 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func reconcileLoop(ctx context.Context) {
+	ticker := time.NewTicker(reconcileTime)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			reconcile()
+		}
+	}
+}
+
+func reconcile() {
+	alertStore.m.RLock()
+	defer alertStore.m.RUnlock()
+	for _, v := range(alertStore.Alerts) {
+		err := alertStore.CreateEvent(v.Fingerprint)
+		if err != nil {
+			log.Error(err)
+		}
+	}
 }
