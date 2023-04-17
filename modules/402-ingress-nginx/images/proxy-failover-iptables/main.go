@@ -18,7 +18,6 @@ package main
 
 import (
 	"errors"
-	"io"
 	"log"
 	"net"
 	"net/http"
