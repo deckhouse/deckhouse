@@ -159,8 +159,13 @@ pull_image() {
   if [[ -s "$IMAGE" ]]; then
     return 0
   fi
+
+  delim="@"
+  if [[ $# -ne $2 ]] && [[ "$3" == "by_tag" ]]; then
+    delim=":"
+  fi
   #using tarball, because dhctl bootstrap doesn't support oci format
-  crane pull "$registry_full_path@$1" --format tarball "$IMAGE"
+  crane pull "$registry_full_path${delim}${1}" --format tarball "$IMAGE"
 }
 
 pull_trivy_db() {
@@ -180,7 +185,7 @@ REGISTRY_PATH="$REGISTRY/$EDITION"
 IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
 trap pull_image_clean_up ERR SIGINT SIGTERM SIGHUP SIGQUIT
 #saving Deckhouse image
-pull_image "$RELEASE"
+pull_image "$RELEASE" "" "by_tag"
 #saving Deckhouse install image
 pull_image "$RELEASE" "install"
 #saving uniq images from images_digests.json
