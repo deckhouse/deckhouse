@@ -18,7 +18,7 @@ candi:
       impact: '"Kubernetes control-plane components will restart, kubelet will restart"'
     - summary: Add support for Kubernetes `1.26`. Remove support for Kubernetes `1.21`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/3760
-      impact: Kubernetes `1.26` is no longer supported.
+      impact: Kubernetes `1.21` is no longer supported.
     - summary: Add ALT Linux support.
       pull_request: https://github.com/deckhouse/deckhouse/pull/3555
     - summary: Switch from pulling container images by tag to pulling by sha256 checksum.
@@ -31,8 +31,6 @@ candi:
       pull_request: https://github.com/deckhouse/deckhouse/pull/4295
     - summary: fix auhtn webhook config generation
       pull_request: https://github.com/deckhouse/deckhouse/pull/4289
-    - summary: Upgrade AWS terraform provider to `4.50.0`.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/4256
     - summary: Update of selinux-policy and selinux-policy-targeted packages for Centos 9.
       pull_request: https://github.com/deckhouse/deckhouse/pull/4227
     - summary: fix bootstrap in air-gapped envs
@@ -56,6 +54,18 @@ ci:
   fixes:
     - summary: Fix build-and-test_pre-release.yml, cve-daily.yml and e2e-daily.yml workflow name rendering
       pull_request: https://github.com/deckhouse/deckhouse/pull/4145
+cloud-provider-aws:
+  fixes:
+    - summary: >-
+        The terraform provider was bumped to `4.50.0`, therefore there are new requirements for
+        deckhouse IAM user. It is necessary to allow the following actions:
+        `ec2:DescribeInstanceTypes`, `ec2:DescribeSecurityGroupRules`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4256
+      impact: >-
+        There are new requirements for the [deckhouse IAM
+        user](https://deckhouse.io/documentation/v1.45/modules/030-cloud-provider-aws/environment.html#json-policy)
+        in AWS. It is necessary to allow the following actions: `ec2:DescribeInstanceTypes`,
+        `ec2:DescribeSecurityGroupRules`.
 cloud-provider-vsphere:
   features:
     - summary: Add zones list to cloud discovery data.
@@ -259,7 +269,7 @@ node-manager:
         Add in `NodeRequiresDisruptionApprovalForUpdate` rules Prometheus 'No need to drain the
         master'.
       pull_request: https://github.com/deckhouse/deckhouse/pull/3975
-    - summary: Removed early-oom. Added kubelet memory reservation option.
+    - summary: (Reverted in 1.45.3!) Removed early-oom. Added kubelet memory reservation option.
       pull_request: https://github.com/deckhouse/deckhouse/pull/3821
 openvpn:
   fixes:
