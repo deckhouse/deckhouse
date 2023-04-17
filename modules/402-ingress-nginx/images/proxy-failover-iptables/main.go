@@ -134,9 +134,7 @@ func main() {
 
 func loop(iptablesMgr *iptables.IPTables) error {
 	resp, err := http.Get("http://127.0.0.1:10254/healthz")
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
