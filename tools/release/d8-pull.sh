@@ -200,11 +200,11 @@ done
 if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
   echo "Pull metadata images"
   #saving metadata about release channel
-  pull_image "alpha" "release-channel"
-  pull_image "beta" "release-channel"
-  pull_image "early-access" "release-channel"
-  pull_image "stable" "release-channel"
-  pull_image "rock-solid" "release-channel"
+  pull_image "alpha" "release-channel" "use_tag"
+  pull_image "beta" "release-channel" "use_tag"
+  pull_image "early-access" "release-channel" "use_tag"
+  pull_image "stable" "release-channel" "use_tag"
+  pull_image "rock-solid" "release-channel" "use_tag"
 fi
 
 #pull trivy CVE database
