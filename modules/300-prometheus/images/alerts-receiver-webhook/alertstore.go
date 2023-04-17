@@ -17,9 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"sync"
+
 	"github.com/prometheus/alertmanager/template"
 	log "github.com/sirupsen/logrus"
-	"sync"
 )
 
 type AlertItem struct {
