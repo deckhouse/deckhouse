@@ -124,14 +124,14 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	for _, s := range snap {
 		dNode := s.(drainingNode)
 		if !dNode.isDraining() {
-			// if node has drained annotation (`user` source) and .spec.unscheduled == false - remove the annotation
+			// If the node became schedulable, but 'drained' annotation is still on it, remove the obsolete annotation
 			if !dNode.Unschedulable && dNode.DrainedSource == "user" {
 				input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
 			}
 			continue
 		}
 
-		// if node has drained annotation (`user` source) and new draining annotation - remove the 'drained' annotation
+		// If the node is marked for draining while is has been drained, remove the 'drained' annotation
 		if dNode.DrainedSource == "user" {
 			input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
 		}
@@ -176,7 +176,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-func newDrainAnnotationPatch(source string) map[string]interface{} {
+func newDrainedAnnotationPatch(source string) map[string]interface{} {
 	return map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
