@@ -23,9 +23,6 @@ require {
   type var_lock_t;
   type setfiles_t;
   type unreserved_port_t;
-  type spc_t;
-  type container_runtime_t;
-  class bpf prog_run;
   class tcp_socket name_connect;
   class capability sys_resource;
   class process setrlimit;
@@ -59,8 +56,21 @@ allow load_policy_t var_lock_t:file write;
 
 #============= setfiles_t ==============
 allow setfiles_t var_lib_t:file read;
+EOF
+
+if crictl ps | grep -q "cilium-agent"; then
+  bb-sync-file /var/lib/bashible/policies/cilium.te - << "EOF"
+module cilium 1.0;
+
+require {
+  type init_t;
+  type spc_t;
+  type container_runtime_t;
+  class bpf prog_run;
+}
 
 #============= spc_t ==============
 allow spc_t container_runtime_t:bpf prog_run;
 allow spc_t init_t:bpf prog_run;
 EOF
+fi
