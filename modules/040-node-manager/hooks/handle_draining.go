@@ -20,6 +20,7 @@ import (
 	"context"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -33,14 +34,19 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 )
 
+const (
+	drainingAnnotationKey = "update.node.deckhouse.io/draining"
+	drainedAnnotationKey  = "update.node.deckhouse.io/drained"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/draining",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "nodes_for_draining",
-			WaitForSynchronization:       pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			WaitForSynchronization:       pointer.Bool(true),
+			ExecuteHookOnSynchronization: pointer.Bool(true),
+			ExecuteHookOnEvents:          pointer.Bool(true),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -54,11 +60,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: drainFilter,
 		},
 	},
-	Schedule: []go_hook.ScheduleConfig{
-		{
-			Name:    "draining_schedule",
-			Crontab: "* * * * *",
-		},
+	Settings: &go_hook.HookConfigSettings{
+		ExecutionMinInterval: 30 * time.Second,
 	},
 }, dependency.WithExternalDependencies(handleDraining))
 
@@ -70,15 +73,33 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, err
 	}
 
-	var isDraining bool
-	if _, ok := node.Annotations["update.node.deckhouse.io/draining"]; ok {
-		isDraining = true
+	var (
+		drainingSource string
+		drainedSource  string
+	)
+	if source, ok := node.Annotations[drainingAnnotationKey]; ok {
+		// keep backward compatibility
+		if source == "" {
+			drainingSource = "bashible"
+		} else {
+			drainingSource = source
+		}
+	}
+
+	if source, ok := node.Annotations[drainedAnnotationKey]; ok {
+		// keep backward compatibility
+		if source == "" {
+			drainedSource = "bashible"
+		} else {
+			drainedSource = source
+		}
 	}
 
 	return drainingNode{
-		Name:          node.Name,
-		IsDraining:    isDraining,
-		Unschedulable: node.Spec.Unschedulable,
+		Name:           node.Name,
+		DrainingSource: drainingSource,
+		DrainedSource:  drainedSource,
+		Unschedulable:  node.Spec.Unschedulable,
 	}, nil
 }
 
@@ -107,9 +128,19 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	snap := input.Snapshots["nodes_for_draining"]
 	for _, s := range snap {
 		dNode := s.(drainingNode)
-		if !dNode.IsDraining {
+		if !dNode.isDraining() {
+			// If the node became schedulable, but 'drained' annotation is still on it, remove the obsolete annotation
+			if !dNode.Unschedulable && dNode.DrainedSource == "user" {
+				input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+			}
 			continue
 		}
+
+		// If the node is marked for draining while is has been drained, remove the 'drained' annotation
+		if dNode.DrainedSource == "user" {
+			input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+		}
+
 		cordonNode := &corev1.Node{
 			TypeMeta: v1.TypeMeta{
 				Kind:       "Node",
@@ -127,11 +158,11 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		wg.Add(1)
-		go func(nodeName string) {
+		go func(nodeName, drainingSource string) {
 			defer wg.Done()
 			err = drain.RunNodeDrain(drainHelper, nodeName)
-			drainingNodesC <- drainedNodeRes{NodeName: nodeName, Err: err}
-		}(dNode.Name)
+			drainingNodesC <- drainedNodeRes{NodeName: nodeName, DrainingSource: drainingSource, Err: err}
+		}(dNode.Name, dNode.DrainingSource)
 	}
 
 	go func() {
@@ -144,30 +175,50 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 			input.LogEntry.Errorf("node drain failed: %s", drainedNode.Err)
 			continue
 		}
-		input.PatchCollector.MergePatch(drainAnnotationsPatch, "v1", "Node", "", drainedNode.NodeName)
+		input.PatchCollector.MergePatch(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
 	}
 
 	return nil
 }
 
-var (
-	drainAnnotationsPatch = map[string]interface{}{
+func newDrainedAnnotationPatch(source string) map[string]interface{} {
+	return map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/draining": nil,
-				"update.node.deckhouse.io/drained":  "",
+				drainingAnnotationKey: nil,
+				drainedAnnotationKey:  source,
+			},
+		},
+	}
+}
+
+var (
+	removeDrainedAnnotation = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				drainedAnnotationKey: nil,
 			},
 		},
 	}
 )
 
 type drainingNode struct {
-	Name          string
-	IsDraining    bool
-	Unschedulable bool
+	Name           string
+	DrainingSource string
+	DrainedSource  string
+	Unschedulable  bool
+}
+
+func (dn drainingNode) isDraining() bool {
+	return dn.DrainingSource != ""
+}
+
+func (dn drainingNode) isDrained() bool {
+	return dn.DrainedSource != ""
 }
 
 type drainedNodeRes struct {
-	NodeName string
-	Err      error
+	NodeName       string
+	DrainingSource string
+	Err            error
 }
