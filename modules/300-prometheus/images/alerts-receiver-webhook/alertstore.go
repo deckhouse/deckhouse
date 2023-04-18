@@ -35,16 +35,21 @@ type AlertItem struct {
 	LastReceivedTime time.Time
 }
 
+type EventItem struct {
+	Name string
+	LastUpdateTime time.Time
+}
+
 type AlertStore struct {
 	m      sync.RWMutex
 	length int
 	Alerts map[string]*AlertItem
-	Events map[string]*eventsv1.Event
+	Events map[string]*EventItem
 }
 
 func NewStore(l int) *AlertStore {
 	a := make(map[string]*AlertItem, l)
-	e := make(map[string]*eventsv1.Event, l)
+	e := make(map[string]*EventItem, l)
 	return &AlertStore{Alerts: a, Events: e, length: l}
 }
 
@@ -83,11 +88,11 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 
 	log.Infof("create event with fingerprint %s", fingerprint)
 
-	msg, err :=  alertMessage(alert)
+	msg, err := alertMessage(alert)
 	if err != nil {
 		return err
 	}
-	ev := &eventsv1.Event{
+	newEvent := &eventsv1.Event{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Event",
 			APIVersion: "events.k8s.io/v1",
@@ -107,11 +112,15 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 		ReportingInstance:   "prometheus",
 		Action:              alert.Status,
 	}
-	e, err := config.K8sClient.EventsV1().Events(nameSpace).Create(context.TODO(), ev, metav1.CreateOptions{})
+	e, err := config.K8sClient.EventsV1().Events(nameSpace).Create(context.TODO(), newEvent, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
-	a.Events[fingerprint] = e
+	log.Infof("event with fingerprint %s and name %s created", fingerprint, e.Name)
+	a.Events[fingerprint] = &EventItem{
+		Name: e.Name,
+		LastUpdateTime: time.Now(),
+	}
 	return nil
 }
 
@@ -122,21 +131,24 @@ func (a *AlertStore) UpdateEvent(fingerprint string) error {
 	}
 
 	// Update events one time per half-hour
-	if time.Until(a.Alerts[fingerprint].LastReceivedTime) < 30*time.Minute {
-		log.Infof("event with fingerprint %s does not need updating", fingerprint)
+	if time.Until(ev.LastUpdateTime) < 30*time.Minute {
+		log.Infof("event with fingerprint %s and name %s does not need updating", fingerprint, ev.Name)
 		return nil
 	}
 
-	log.Infof("update event with fingerprint %s", fingerprint)
+	log.Infof("update event with fingerprint %s and name %s", fingerprint, ev.Name)
 
-	ev.Series.Count++
-	ev.Series.LastObservedTime = metav1.NowMicro()
-
-	res, err := config.K8sClient.EventsV1().Events(nameSpace).Update(context.TODO(), ev, metav1.UpdateOptions{})
+	e, err := config.K8sClient.EventsV1().Events(nameSpace).Get(context.TODO(), ev.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	a.Events[fingerprint] = res
+
+	ev.LastUpdateTime = time.Now()
+	e.Labels["lastUpdated"] = ev.LastUpdateTime.String()
+	_, err = config.K8sClient.EventsV1().Events(nameSpace).Update(context.TODO(), e, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -146,24 +158,24 @@ func (a *AlertStore) RemoveEvent(fingerprint string) error {
 		return fmt.Errorf("cannot find event with fingerprint: %s", fingerprint)
 	}
 
-	log.Infof("remove event with fingerprint %s", fingerprint)
+	log.Infof("remove event with fingerprint %s and name %s", fingerprint, ev.Name)
 
 	return config.K8sClient.EventsV1().Events(nameSpace).Delete(context.TODO(), ev.Name, metav1.DeleteOptions{})
 }
 
-func alertMessage(a *template.Alert) (string,error) {
+func alertMessage(a *template.Alert) (string, error) {
 	type PrintAlert struct {
-		Labels template.KV `json:"labels,omitempty" yaml:"labels,omitempty"`
-		Summary string `json:"summary,omitempty" yaml:"summary,omitempty"`
-		Description string `json:"description,omitempty" yaml:"description,omitempty"`
-		URI string `json:"URI,omitempty" yaml:"URI,omitempty"`
+		Labels      template.KV `json:"labels,omitempty" yaml:"labels,omitempty"`
+		Summary     string      `json:"summary,omitempty" yaml:"summary,omitempty"`
+		Description string      `json:"description,omitempty" yaml:"description,omitempty"`
+		URI         string      `json:"URI,omitempty" yaml:"URI,omitempty"`
 	}
 
 	p := &PrintAlert{
-		Labels: a.Labels,
-		Summary: a.Annotations["summary"],
+		Labels:      a.Labels,
+		Summary:     a.Annotations["summary"],
 		Description: a.Annotations["description"],
-		URI: a.Annotations["generatorURL"],
+		URI:         a.Annotations["generatorURL"],
 	}
 
 	var b []byte
