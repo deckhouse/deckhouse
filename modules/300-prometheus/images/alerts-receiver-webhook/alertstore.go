@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/prometheus/alertmanager/template"
 	log "github.com/sirupsen/logrus"
@@ -28,39 +29,52 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type AlertItem struct {
+	Alert            *template.Alert
+	LastReceivedTime time.Time
+}
+
 type AlertStore struct {
 	m      sync.RWMutex
 	length int
-	Alerts map[string]*template.Alert
+	Alerts map[string]*AlertItem
 	Events map[string]*eventsv1.Event
 }
 
 func NewStore(l int) *AlertStore {
-	a := make(map[string]*template.Alert, l)
+	a := make(map[string]*AlertItem, l)
 	e := make(map[string]*eventsv1.Event, l)
 	return &AlertStore{Alerts: a, Events: e, length: l}
 }
 
-func (a *AlertStore) Add(alert template.Alert) error {
-	if len(a.Alerts) == a.length {
-		return fmt.Errorf("cannot add alert to queue (max length = %d), queue is full", a.length)
-	}
-
-	if alert.Labels["alertname"] == "DeadMansSwitch" {
-		log.Debug("skip DeadMansSwitch alert")
-		return nil
-	}
-
+func (a *AlertStore) Add(alert *template.Alert) {
 	a.m.Lock()
 	defer a.m.Unlock()
 	log.Infof("alert with fingerprint %s added to queue", alert.Fingerprint)
-	a.Alerts[alert.Fingerprint] = &alert
-	return nil
+	a.Alerts[alert.Fingerprint].Alert = alert
+	a.Alerts[alert.Fingerprint].LastReceivedTime = time.Now()
+	return
+}
+
+func (a *AlertStore) Update(alert *template.Alert) {
+	a.m.Lock()
+	defer a.m.Unlock()
+	log.Infof("alert with fingerprint %s updated in queue", alert.Fingerprint)
+	a.Alerts[alert.Fingerprint].LastReceivedTime = time.Now()
+}
+
+func (a *AlertStore) Remove(alert *template.Alert) {
+	a.m.Lock()
+	defer a.m.Unlock()
+	log.Infof("alert with fingerprint %s removed from queue", alert.Fingerprint)
+	delete(a.Alerts, alert.Fingerprint)
 }
 
 func (a *AlertStore) CreateEvent(fingerprint string) error {
-	alert, ok := a.Alerts[fingerprint]
-	if !ok {
+	var alert *template.Alert
+	if al, ok := a.Alerts[fingerprint]; ok {
+		alert = al.Alert
+	} else {
 		return fmt.Errorf("cannot find alert with fingerprint: %s", fingerprint)
 	}
 
@@ -70,8 +84,8 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 			APIVersion: "events.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nameSpace,
-			Name:      fingerprint,
+			Namespace:    nameSpace,
+			GenerateName: "prometheus-alert-",
 		},
 		Regarding: v1.ObjectReference{
 			Namespace: nameSpace,
@@ -90,6 +104,38 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 	}
 	a.Events[fingerprint] = e
 	return nil
+}
+
+func (a *AlertStore) UpdateEvent(fingerprint string) error {
+	ev, ok := a.Events[fingerprint]
+	if !ok {
+		return fmt.Errorf("cannot find event with fingerprint: %s", fingerprint)
+	}
+
+	// Update events one time per half-hour
+	if time.Until(a.Alerts[fingerprint].LastReceivedTime) < 30*time.Minute {
+		log.Infof("event with fingerprint %s does not need updating", fingerprint)
+		return nil
+	}
+
+	ev.Series.Count++
+	ev.Series.LastObservedTime = metav1.NowMicro()
+
+	res, err := config.K8sClient.EventsV1().Events(nameSpace).Update(context.TODO(), ev, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	a.Events[fingerprint] = res
+	return nil
+}
+
+func (a *AlertStore) RemoveEvent(fingerprint string) error {
+	ev, ok := a.Events[fingerprint]
+	if !ok {
+		return fmt.Errorf("cannot find event with fingerprint: %s", fingerprint)
+	}
+
+	return config.K8sClient.EventsV1().Events(nameSpace).Delete(context.TODO(), ev.Name, metav1.DeleteOptions{})
 }
 
 func alertMessage(a *template.Alert) string {
