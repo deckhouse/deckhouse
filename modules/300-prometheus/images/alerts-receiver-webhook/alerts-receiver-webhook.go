@@ -170,4 +170,14 @@ func reconcile() {
 			log.Error(err)
 		}
 	}
+
+	// remove events which do not have corresponding alert entries
+	for k := range alertStore.Events {
+		if _, ok := alertStore.Alerts[k]; ok {
+			continue
+		}
+		if err := alertStore.RemoveEvent(k); err != nil {
+			log.Error(err)
+		}
+	}
 }
