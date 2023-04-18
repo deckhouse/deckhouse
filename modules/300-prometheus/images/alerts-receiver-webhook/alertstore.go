@@ -51,8 +51,10 @@ func (a *AlertStore) Add(alert *template.Alert) {
 	a.m.Lock()
 	defer a.m.Unlock()
 	log.Infof("alert with fingerprint %s added to queue", alert.Fingerprint)
-	a.Alerts[alert.Fingerprint].Alert = alert
-	a.Alerts[alert.Fingerprint].LastReceivedTime = time.Now()
+	a.Alerts[alert.Fingerprint] = &AlertItem{
+		Alert: alert,
+		LastReceivedTime: time.Now(),
+	}
 	return
 }
 
