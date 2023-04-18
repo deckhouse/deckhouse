@@ -71,7 +71,7 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    nameSpace,
-			GenerateName: "prometheusAlert-",
+			GenerateName: "prometheus-alert-",
 		},
 		Regarding: v1.ObjectReference{
 			Namespace: nameSpace,
