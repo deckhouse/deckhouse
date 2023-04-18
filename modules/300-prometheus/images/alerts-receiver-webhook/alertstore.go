@@ -70,8 +70,8 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 			APIVersion: "events.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    nameSpace,
-			GenerateName: "prometheus-alert-",
+			Namespace: nameSpace,
+			Name:      fingerprint,
 		},
 		Regarding: v1.ObjectReference{
 			Namespace: nameSpace,
