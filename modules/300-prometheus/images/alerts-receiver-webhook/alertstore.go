@@ -63,17 +63,26 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 	if err != nil {
 		return err
 	}
+
 	ev := &eventsv1.Event{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: alert.Labels["alertname"],
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Event",
+			APIVersion: "events.k8s.io/v1",
 		},
-		EventTime: metav1.NowMicro(),
-		Note: msg,
-		Reason: alert.Status,
-		Type:      v1.EventTypeWarning,
-		ReportingController: "alerts-receiver-webhook",
-		ReportingInstance: "alerts-receiver-webhook",
-		Action:    alert.Status,
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    nameSpace,
+			GenerateName: "prometheusAlert-",
+		},
+		Regarding: v1.ObjectReference{
+			Namespace: nameSpace,
+		},
+		EventTime:           metav1.NowMicro(),
+		Note:                msg,
+		Reason:              alert.Labels["alertname"],
+		Type:                v1.EventTypeWarning,
+		ReportingController: "prometheus",
+		ReportingInstance:   "prometheus",
+		Action:              alert.Status,
 	}
 	e, err := config.K8sClient.EventsV1().Events(nameSpace).Create(context.TODO(), ev, metav1.CreateOptions{})
 	if err != nil {
@@ -85,7 +94,7 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 
 func alertMessage(a *template.Alert) (string, error) {
 	var (
-		b []byte
+		b   []byte
 		res string
 		err error
 	)
