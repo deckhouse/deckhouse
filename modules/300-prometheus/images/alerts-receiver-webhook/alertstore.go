@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -58,10 +59,21 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 		return fmt.Errorf("cannot find alert with fingerprint: %s", fingerprint)
 	}
 
+	msg, err := alertMessage(alert)
+	if err != nil {
+		return err
+	}
 	ev := &eventsv1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: alert.Labels["alertname"]
+		},
 		EventTime: metav1.NowMicro(),
-		Action:    alert.Status,
+		Note: msg,
+		Reason: alert.Status
 		Type:      v1.EventTypeWarning,
+		ReportingController: "alerts-receiver-webhook",
+		ReportingInstance: "alerts-receiver-webhook",
+		Action:    alert.Status,
 	}
 	e, err := config.K8sClient.EventsV1().Events(nameSpace).Create(context.TODO(), ev, metav1.CreateOptions{})
 	if err != nil {
@@ -69,4 +81,23 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 	}
 	a.Events[fingerprint] = e
 	return nil
+}
+
+func alertMessage(a *template.Alert) (string, error) {
+	var (
+		b []byte
+		res string
+		err error
+	)
+
+	if b, err = json.Marshal(a.Annotations); err != nil {
+		return res, err
+	}
+	res = fmt.Sprintf("%s\n%s", res, b)
+
+	if b, err = json.Marshal(a.Labels); err != nil {
+		return res, err
+	}
+	res = fmt.Sprintf("%s\n%s\n%s", res, b, a.Status)
+	return res, nil
 }
