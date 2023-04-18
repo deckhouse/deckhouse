@@ -52,7 +52,7 @@ func (a *AlertStore) Add(alert *template.Alert) {
 	defer a.m.Unlock()
 	log.Infof("alert with fingerprint %s added to queue", alert.Fingerprint)
 	a.Alerts[alert.Fingerprint] = &AlertItem{
-		Alert: alert,
+		Alert:            alert,
 		LastReceivedTime: time.Now(),
 	}
 	return
@@ -79,6 +79,8 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 	} else {
 		return fmt.Errorf("cannot find alert with fingerprint: %s", fingerprint)
 	}
+
+	log.Infof("create event with fingerprint %s", fingerprint)
 
 	ev := &eventsv1.Event{
 		TypeMeta: metav1.TypeMeta{
@@ -120,6 +122,8 @@ func (a *AlertStore) UpdateEvent(fingerprint string) error {
 		return nil
 	}
 
+	log.Infof("update event with fingerprint %s", fingerprint)
+
 	ev.Series.Count++
 	ev.Series.LastObservedTime = metav1.NowMicro()
 
@@ -136,6 +140,8 @@ func (a *AlertStore) RemoveEvent(fingerprint string) error {
 	if !ok {
 		return fmt.Errorf("cannot find event with fingerprint: %s", fingerprint)
 	}
+
+	log.Infof("remove event with fingerprint %s", fingerprint)
 
 	return config.K8sClient.EventsV1().Events(nameSpace).Delete(context.TODO(), ev.Name, metav1.DeleteOptions{})
 }
