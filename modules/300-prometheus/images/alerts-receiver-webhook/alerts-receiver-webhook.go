@@ -93,8 +93,15 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, alert := range data.Alerts {
-		log.Debugf("received alert: %q", alert)
-
+		if config.LogLevel == log.DebugLevel {
+			a, err := json.Marshal(alert)
+			if err != nil {
+				log.Error(err)
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+			log.Debugf("received alert: %s", a)
+		}
 		if err := alertStore.Add(alert); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return

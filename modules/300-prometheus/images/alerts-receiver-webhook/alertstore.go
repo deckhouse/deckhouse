@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -27,6 +26,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 type AlertStore struct {
@@ -95,17 +95,16 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 func alertMessage(a *template.Alert) (string, error) {
 	var (
 		b   []byte
-		res string
 		err error
 	)
 
-	if b, err = json.Marshal(a.Annotations); err != nil {
-		return res, err
+	if b, err = yaml.Marshal(a.Annotations); err != nil {
+		return "", err
 	}
-	res = fmt.Sprintf("%s\n%s", res, b)
+	res := fmt.Sprintf("%s", b)
 
-	if b, err = json.Marshal(a.Labels); err != nil {
-		return res, err
+	if b, err = yaml.Marshal(a.Labels); err != nil {
+		return "", err
 	}
 	res = fmt.Sprintf("%s\n%s\n%s", res, b, a.Status)
 	return res, nil
