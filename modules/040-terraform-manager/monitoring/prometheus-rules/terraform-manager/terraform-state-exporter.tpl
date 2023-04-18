@@ -128,7 +128,7 @@
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
-        Real Kubernetes cluster state is `{{ $labels.status }}` comparing to Terraform state.
+        Real Kubernetes cluster state is `{{`{{ $labels.status }}`}}` comparing to Terraform state.
 
         It's important to make them equal.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
@@ -149,7 +149,7 @@
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
-        Real Node "{{ $labels.node_group }}/{{ $labels.name }}" state is `{{ $labels.status }}` comparing to Terraform state.
+        Real Node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` state is `{{`{{ $labels.status }}`}}` comparing to Terraform state.
 
         It's important to make them equal.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
@@ -196,7 +196,7 @@
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
-        Terraform-state-exporter can't check difference between Node "{{ $labels.node_group }}/{{ $labels.name }}" state and Terraform state.
+        Terraform-state-exporter can't check difference between Node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` state and Terraform state.
 
         Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
@@ -222,8 +222,8 @@
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
-        Terraform-state-exporter found difference between node template from cluster provider configuration and from NodeGroup {{ $labels.name }}.
-        Node template is `{{ $labels.status }}`.
+        Terraform-state-exporter found difference between node template from cluster provider configuration and from NodeGroup `{{`{{ $labels.name }}`}}`.
+        Node template is `{{`{{ $labels.status }}`}}`.
 
         Use `dhctl converge` command or manually adjust NodeGroup settings to fix the issue.
       summary: Terraform-state-exporter node template changed
