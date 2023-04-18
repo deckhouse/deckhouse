@@ -45,6 +45,12 @@ func (a *AlertStore) Add(alert template.Alert) error {
 	if len(a.Alerts) == a.length {
 		return fmt.Errorf("cannot add alert to queue (max length = %d), queue is full", a.length)
 	}
+
+	if alert.Labels["alertname"] == "DeadMansSwitch" {
+		log.Debug("skip DeadMansSwitch alert")
+		return nil
+	}
+
 	a.m.Lock()
 	defer a.m.Unlock()
 	log.Infof("alert with fingerprint %s added to queue", alert.Fingerprint)
