@@ -65,11 +65,11 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 	}
 	ev := &eventsv1.Event{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: alert.Labels["alertname"]
+			Name: alert.Labels["alertname"],
 		},
 		EventTime: metav1.NowMicro(),
 		Note: msg,
-		Reason: alert.Status
+		Reason: alert.Status,
 		Type:      v1.EventTypeWarning,
 		ReportingController: "alerts-receiver-webhook",
 		ReportingInstance: "alerts-receiver-webhook",
