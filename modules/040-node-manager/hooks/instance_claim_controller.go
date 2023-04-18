@@ -152,7 +152,7 @@ func instanceClaimController(input *go_hook.HookInput) error {
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
-					input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "", machine.Name, object_patch.InBackground())
+					input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", machine.Name, object_patch.InBackground())
 				}
 			}
 		} else {

@@ -60,7 +60,11 @@ spec:
 		})
 	})
 
-	Context("Removing instance claims", func() {
+	Context("Adding instance claims (not have instance classes but have machines)", func() {
+
+	})
+
+	Context("Deleting instance claims (have instance claims but do not have machines)", func() {
 		const (
 			ic1 = `
 ---
@@ -124,7 +128,8 @@ status: {}
 		})
 
 		Context("start deletion instance claim (with deletion timestamp)", func() {
-			const ic2 = `
+			Context("does not have machine for deleted instance claim", func() {
+				const ic2 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: InstanceClaim
@@ -135,26 +140,86 @@ metadata:
   deletionTimestamp: "1970-01-01T00:00:00Z"
 status: {}
 `
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(ng + ic1 + ic2 + machine))
-				f.RunHook()
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(ng + ic1 + ic2 + machine))
+					f.RunHook()
+				})
+
+				It("Should keep instance claim with machine", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
+					Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h"))
+					assertFinalizersExists(f, "worker-ac32h")
+				})
+
+				It("Should remove finalizers from instance claim without machine", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					ic := f.KubernetesGlobalResource("InstanceClaim", "worker-bg11u")
+					Expect(ic.Exists()).To(BeTrue())
+					Expect(ic.Field("metadata.finalizers").Array()).To(BeEmpty())
+				})
 			})
 
-			It("Should keep instance claim with machine", func() {
-				Expect(f).To(ExecuteSuccessfully())
+			Context("have machine for deleted instance claim", func() {
+				const (
+					ic2 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InstanceClaim
+metadata:
+  name: worker-bg11u
+  finalizers:
+  - hooks.deckhouse.io/node-manager/instance_claim_controller
+  deletionTimestamp: "1970-01-01T00:00:00Z"
+status: {}
+`
+					machine2 = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-bg11u
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1-nova
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: CloudEphemeral
+`
+				)
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(ng + ic1 + ic2 + machine + machine2))
+					f.RunHook()
+				})
 
-				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
-				Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h"))
-				assertFinalizersExists(f, "worker-ac32h")
-			})
+				It("Should keep another instance claims", func() {
+					Expect(f).To(ExecuteSuccessfully())
 
-			It("Should remove finalizers from instance claim without machine", func() {
-				Expect(f).To(ExecuteSuccessfully())
+					Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
+					Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h"))
+					assertFinalizersExists(f, "worker-ac32h")
+				})
 
-				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-bg11u")
-				Expect(ic.Exists()).To(BeTrue())
-				Expect(ic.Field("metadata.finalizers").Array()).To(BeEmpty())
+				It("Should remove machine", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-bg11u").Exists()).To(BeFalse())
+				})
+
+				It("Should keep instance claim with finalizers", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-bg11u").Exists()).To(BeTrue())
+					assertFinalizersExists(f, "worker-bg11u")
+				})
 			})
 		})
 	})
