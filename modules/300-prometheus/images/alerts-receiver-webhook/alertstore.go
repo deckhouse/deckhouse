@@ -178,7 +178,6 @@ func alertMessage(a *template.Alert) (string, error) {
 		URI:         a.Annotations["generatorURL"],
 	}
 
-	var b []byte
-	err := yaml.Unmarshal(b, p)
+	b, err := yaml.Marshal(p)
 	return string(b), err
 }
