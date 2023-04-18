@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 type AlertItem struct {
@@ -82,6 +83,10 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 
 	log.Infof("create event with fingerprint %s", fingerprint)
 
+	msg, err :=  alertMessage(alert)
+	if err != nil {
+		return err
+	}
 	ev := &eventsv1.Event{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Event",
@@ -95,7 +100,7 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 			Namespace: nameSpace,
 		},
 		EventTime:           metav1.NowMicro(),
-		Note:                alertMessage(alert),
+		Note:                msg,
 		Reason:              alert.Labels["alertname"],
 		Type:                v1.EventTypeWarning,
 		ReportingController: "prometheus",
@@ -146,18 +151,22 @@ func (a *AlertStore) RemoveEvent(fingerprint string) error {
 	return config.K8sClient.EventsV1().Events(nameSpace).Delete(context.TODO(), ev.Name, metav1.DeleteOptions{})
 }
 
-func alertMessage(a *template.Alert) string {
-	const format = `Labels:
-%s
-Summary: %s
-Description: %s
-Url: %s
-`
-	var labels string
-
-	for k, v := range a.Labels {
-		labels = fmt.Sprintf("\t%s: %s\n", k, v)
+func alertMessage(a *template.Alert) (string,error) {
+	type PrintAlert struct {
+		Labels template.KV `json:"labels,omitempty" yaml:"labels,omitempty"`
+		Summary string `json:"summary,omitempty" yaml:"summary,omitempty"`
+		Description string `json:"description,omitempty" yaml:"description,omitempty"`
+		URI string `json:"URI,omitempty" yaml:"URI,omitempty"`
 	}
 
-	return fmt.Sprintf(format, labels, a.Annotations["summary"], a.Annotations["description"], a.Annotations["generatorURL"])
+	p := &PrintAlert{
+		Labels: a.Labels,
+		Summary: a.Annotations["summary"],
+		Description: a.Annotations["description"],
+		URI: a.Annotations["generatorURL"],
+	}
+
+	var b []byte
+	err := yaml.Unmarshal(b, p)
+	return string(b), err
 }
