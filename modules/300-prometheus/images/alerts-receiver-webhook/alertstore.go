@@ -26,7 +26,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 )
 
 type AlertStore struct {
@@ -59,11 +58,6 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 		return fmt.Errorf("cannot find alert with fingerprint: %s", fingerprint)
 	}
 
-	msg, err := alertMessage(alert)
-	if err != nil {
-		return err
-	}
-
 	ev := &eventsv1.Event{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Event",
@@ -77,7 +71,7 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 			Namespace: nameSpace,
 		},
 		EventTime:           metav1.NowMicro(),
-		Note:                msg,
+		Note:                alertMessage(alert),
 		Reason:              alert.Labels["alertname"],
 		Type:                v1.EventTypeWarning,
 		ReportingController: "prometheus",
@@ -92,20 +86,18 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 	return nil
 }
 
-func alertMessage(a *template.Alert) (string, error) {
-	var (
-		b   []byte
-		err error
-	)
+func alertMessage(a *template.Alert) string {
+	const format = `Labels:
+%s
+Summary: %s
+Description: %s
+Url: %s
+`
+	var labels string
 
-	if b, err = yaml.Marshal(a.Annotations); err != nil {
-		return "", err
+	for k, v := range a.Labels {
+		labels = fmt.Sprintf("\t%s: %s\n", k, v)
 	}
-	res := fmt.Sprintf("%s", b)
 
-	if b, err = yaml.Marshal(a.Labels); err != nil {
-		return "", err
-	}
-	res = fmt.Sprintf("%s\n%s\n%s", res, b, a.Status)
-	return res, nil
+	return fmt.Sprintf(format, labels, a.Annotations["summary"], a.Annotations["description"], a.Annotations["generatorURL"])
 }
