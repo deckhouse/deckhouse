@@ -205,6 +205,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_docker_1_22 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -450,11 +451,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -490,6 +496,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |
@@ -647,6 +654,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_docker_1_23 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -892,11 +900,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -932,6 +945,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |
@@ -1089,6 +1103,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_docker_1_24 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -1334,11 +1349,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -1374,6 +1394,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |
@@ -1531,6 +1552,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_docker_1_25 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -1776,11 +1798,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -1816,6 +1843,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |
@@ -1973,6 +2001,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_docker_1_26 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -2218,11 +2247,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -2258,6 +2292,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |
@@ -2415,6 +2450,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_containerd_1_22 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -2660,11 +2696,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -2700,6 +2741,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |
@@ -2857,6 +2899,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_containerd_1_23 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -3102,11 +3145,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -3142,6 +3190,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |
@@ -3299,6 +3348,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_containerd_1_24 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -3544,11 +3594,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -3584,6 +3639,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |
@@ -3741,6 +3797,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_containerd_1_25 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -3986,11 +4043,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -4026,6 +4088,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |
@@ -4183,6 +4246,7 @@ jobs:
     if: needs.check_e2e_labels.outputs.run_containerd_1_26 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
@@ -4428,11 +4492,16 @@ jobs:
           echo "Full comment url for updating ${comment_url}"
 
           ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo '::echo::on'
-          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
-          echo '::echo::off'
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+          bastion_ip_file=""
+          if [[ "${PROVIDER}" == "Static" ]] ; then
+            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          fi
+
+          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
           docker run --rm \
@@ -4468,6 +4537,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
         with:
           # it sets `should_run` output var if e2e/failed/stay label
           script: |

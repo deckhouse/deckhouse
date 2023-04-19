@@ -36,6 +36,7 @@ function buildFailedE2eTestAdditionalInfo({ needsContext, core, context }){
 
         // ci_commit_branch
         const connectStr = outputs['ssh_master_connection_string'] || '';
+        const bastionStr = outputs['ssh_bastion_connection_string'] || '';
         const ranFor = outputs['ran_for'] || '';
         const runId = outputs['run_id'] || '';
         const clusterPrefix = needsContext[key].outputs['cluster_prefix'] || '';
@@ -62,8 +63,13 @@ function buildFailedE2eTestAdditionalInfo({ needsContext, core, context }){
         // connection string is not required
         argv.push(connectStr)
 
+        let bastionPart = ''
+        if(bastionStr){
+          bastionPart = `-J ${bastionStr}`
+        }
+
         const splitRunFor = ranFor.replace(';', ' ');
-        const outConnectStr = connectStr ? `\`ssh -i ~/.ssh/e2e-id-rsa ${connectStr}\` - connect for debugging;` : '';
+        const outConnectStr = connectStr ? `\`ssh -i ~/.ssh/e2e-id-rsa ${bastionPart} ${connectStr}\` - connect for debugging;` : '';
 
         return `
 <!--- failed_clusters_start ${ranFor} -->
@@ -91,6 +97,7 @@ E2e for ${splitRunFor} was failed. Use:
 
 async function readConnectionScript({core, github, context}){
   core.debug(`SSH_CONNECT_STR_FILE ${process.env.SSH_CONNECT_STR_FILE}`);
+  core.debug(`SSH_BASTION_STR_FILE ${process.env.SSH_BASTION_STR_FILE}`);
 
   try {
     const data = fs.readFileSync(process.env.SSH_CONNECT_STR_FILE, 'utf8');
@@ -98,6 +105,19 @@ async function readConnectionScript({core, github, context}){
   } catch (err) {
     // this file can be not created
     core.warning(`Cannot read ssh connection file ${err.name}: ${err.message}`);
+  }
+
+  if(process.env.SSH_BASTION_STR_FILE) {
+    try {
+      const data = fs.readFileSync(process.env.SSH_BASTION_STR_FILE, 'utf8');
+      core.setOutput('ssh_bastion_connection_string', data);
+    } catch (err) {
+      // this file can be not created
+      core.warning(`Cannot read ssh connection file ${err.name}: ${err.message}`);
+      core.setOutput('ssh_bastion_connection_string', '');
+    }
+  } else {
+    core.setOutput('ssh_bastion_connection_string', '');
   }
 
   core.setOutput('failed_cluster_stayed', 'true');
