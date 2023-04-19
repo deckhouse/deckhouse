@@ -208,7 +208,7 @@ func newInstanceClaim(machine *machineForInstanceClaim, ng *nodeGroupForInstance
 					APIVersion:         "deckhouse.io/v1",
 					BlockOwnerDeletion: pointer.Bool(false),
 					Controller:         pointer.Bool(false),
-					Kind:               "VirtualMachineDisk",
+					Kind:               "NodeGroup",
 					Name:               ng.Name,
 					UID:                ng.UID,
 				},

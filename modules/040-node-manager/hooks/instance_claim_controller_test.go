@@ -209,6 +209,13 @@ status:
 				assertCurrentStatus(f, "worker-fac21")
 				assertLastOperation(f, "worker-fac21")
 				assertMachineRef(f, "worker-fac21")
+
+				Expect(ic.Field("metadata.ownerReferences").IsArray()).To(BeTrue())
+				Expect(ic.Field("metadata.ownerReferences").Array()).To(HaveLen(1))
+
+				Expect(ic.Field("metadata.ownerReferences.0.kind").String()).To(Equal("NodeGroup"))
+				Expect(ic.Field("metadata.ownerReferences.0.name").String()).To(Equal("ng1"))
+				Expect(ic.Field("metadata.ownerReferences.0.uid").String()).To(Equal("87233806-25b3-41b4-8c15-46b7212326b4"))
 			})
 		})
 	})
