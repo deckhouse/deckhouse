@@ -17,13 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: node-manager :: hooks :: instance_claim_controller ::", func() {
+var _ = Describe("Modules :: node-manager :: hooks :: instance_claim_controller ::", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.23.1"}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "InstanceClaim", false)
@@ -54,9 +56,15 @@ spec:
 		machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", claimName)
 
 		Expect(ic.Field("status.currentStatus.lastUpdateTime").Exists()).To(BeTrue())
-		Expect(ic.Field("status.currentStatus.lastUpdateTime").Time()).To(Equal(machine.Field("status.currentStatus.lastUpdateTime").Time()))
+		Expect(machine.Field("status.currentStatus.lastUpdateTime").Exists()).To(BeTrue())
+		icTime, err := time.Parse(time.RFC3339, ic.Field("status.currentStatus.lastUpdateTime").String())
+		Expect(err).ToNot(HaveOccurred())
+		machineTime, err := time.Parse(time.RFC3339, machine.Field("status.currentStatus.lastUpdateTime").String())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(icTime.Equal(machineTime)).To(BeTrue())
 
 		Expect(ic.Field("status.currentStatus.phase").Exists()).To(BeTrue())
+		Expect(machine.Field("status.currentStatus.phase").Exists()).To(BeTrue())
 		Expect(ic.Field("status.currentStatus.phase").String()).To(Equal(machine.Field("status.currentStatus.phase").String()))
 	}
 
@@ -65,7 +73,12 @@ spec:
 		machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", claimName)
 
 		Expect(ic.Field("status.lastOperation.lastUpdateTime").Exists()).To(BeTrue())
-		Expect(ic.Field("status.lastOperation.lastUpdateTime").Time()).To(Equal(machine.Field("status.lastOperation.lastUpdateTime").Time()))
+		Expect(machine.Field("status.lastOperation.lastUpdateTime").Exists()).To(BeTrue())
+		icTime, err := time.Parse(time.RFC3339, ic.Field("status.lastOperation.lastUpdateTime").String())
+		Expect(err).ToNot(HaveOccurred())
+		machineTime, err := time.Parse(time.RFC3339, machine.Field("status.lastOperation.lastUpdateTime").String())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(icTime.Equal(machineTime)).To(BeTrue())
 
 		Expect(ic.Field("status.lastOperation.description").Exists()).To(BeTrue())
 		Expect(ic.Field("status.lastOperation.description").String()).To(Equal(machine.Field("status.lastOperation.description").String()))
@@ -75,6 +88,22 @@ spec:
 
 		Expect(ic.Field("status.lastOperation.type").Exists()).To(BeTrue())
 		Expect(ic.Field("status.lastOperation.type").String()).To(Equal(machine.Field("status.lastOperation.type").String()))
+	}
+
+	assertMachineRef := func(f *HookExecutionConfig, claimName string) {
+		ic := f.KubernetesGlobalResource("InstanceClaim", claimName)
+
+		Expect(ic.Field("status.machineRef.kind").Exists()).To(BeTrue())
+		Expect(ic.Field("status.machineRef.kind").String()).To(Equal("Machine"))
+
+		Expect(ic.Field("status.machineRef.apiVersion").Exists()).To(BeTrue())
+		Expect(ic.Field("status.machineRef.apiVersion").String()).To(Equal("machine.sapcloud.io/v1alpha1"))
+
+		Expect(ic.Field("status.machineRef.namespace").Exists()).To(BeTrue())
+		Expect(ic.Field("status.machineRef.namespace").String()).To(Equal("d8-cloud-instance-manager"))
+
+		Expect(ic.Field("status.machineRef.name").Exists()).To(BeTrue())
+		Expect(ic.Field("status.machineRef.name").String()).To(Equal(claimName))
 	}
 
 	Context("Empty cluster", func() {
@@ -179,7 +208,90 @@ status:
 				Expect(ic.Field(`metadata.labels.node\.deckhouse\.io/group`).String()).To(Equal("ng1"))
 				assertCurrentStatus(f, "worker-fac21")
 				assertLastOperation(f, "worker-fac21")
+				assertMachineRef(f, "worker-fac21")
 			})
+		})
+	})
+
+	Context("Updating instance claims status", func() {
+		const (
+			ic = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InstanceClaim
+metadata:
+  labels:
+    node.deckhouse.io/group: "ng1"
+  name: worker-ac32h
+  finalizers:
+  - hooks.deckhouse.io/node-manager/instance_claim_controller
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    phase: Pending
+  lastOperation:
+    description: Create machine in the cloud provider
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    state: Processing
+    type: Create
+  machineRef:
+    kind: Machine
+    apiVersion: machine.sapcloud.io/v1alpha1
+    namespace: d8-cloud-instance-manager
+    name: worker-ac32h
+`
+			machine = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-ac32h
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1-nova
+    node: worker-ac32h
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: CloudEphemeral
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-19T15:54:55Z"
+    phase: Running
+  lastOperation:
+    description: Machine sandbox-stage-8ef4a622-6655b-wbsfg successfully re-joined the cluster
+    lastUpdateTime: "2023-04-18T16:54:55Z"
+    state: Successful
+    type: HealthCheck
+`
+		)
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(ng + ic + machine))
+			f.RunHook()
+		})
+
+		It("Should update instance claim status from machine status", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
+			ic := f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h")
+			machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h")
+
+			Expect(ic.Exists()).To(BeTrue())
+			Expect(machine.Exists()).To(BeTrue())
+
+			Expect(ic.Field(`metadata.labels.node\.deckhouse\.io/group`).String()).To(Equal("ng1"))
+
+			Expect(ic.Field(`status.nodeRef.name`).Exists()).To(BeTrue())
+			Expect(ic.Field(`status.nodeRef.name`).String()).To(Equal("worker-ac32h"))
+
+			assertMachineRef(f, "worker-ac32h")
+			assertCurrentStatus(f, "worker-ac32h")
+			assertLastOperation(f, "worker-ac32h")
 		})
 	})
 
