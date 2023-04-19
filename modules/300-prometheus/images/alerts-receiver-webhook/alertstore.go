@@ -131,7 +131,7 @@ func (a *AlertStore) UpdateEvent(fingerprint string) error {
 	}
 
 	// Update events one time per half-hour
-	if time.Until(ev.LastUpdateTime) < 30*time.Minute {
+	if time.Since(ev.LastUpdateTime) < 30*time.Minute {
 		log.Infof("event with fingerprint %s and name %s does not need updating", fingerprint, ev.Name)
 		return nil
 	}
