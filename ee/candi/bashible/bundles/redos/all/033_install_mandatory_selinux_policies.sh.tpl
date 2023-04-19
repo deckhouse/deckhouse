@@ -58,6 +58,14 @@ allow load_policy_t var_lock_t:file write;
 allow setfiles_t var_lib_t:file read;
 EOF
 
+{{- if eq .cri "Containerd" }}
+bb-event-on 'bb-sync-file-changed' '_on_selinux_cilium_policy_changed'
+_on_selinux_cilium_policy_changed() {
+  checkmodule -M -m -o /var/lib/bashible/policies/cilium.mod /var/lib/bashible/policies/cilium.te
+  semodule_package -o /var/lib/bashible/policies/cilium.pp -m /var/lib/bashible/policies/cilium.mod
+  semodule -i /var/lib/bashible/policies/cilium.pp
+}
+
 if crictl ps | grep -q "cilium-agent"; then
   bb-sync-file /var/lib/bashible/policies/cilium.te - << "EOF"
 module cilium 1.0;
@@ -74,3 +82,4 @@ allow spc_t container_runtime_t:bpf prog_run;
 allow spc_t init_t:bpf prog_run;
 EOF
 fi
+{{- end }}
