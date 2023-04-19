@@ -218,5 +218,3 @@ replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
-
-replace github.com/flant/addon-operator => /Users/losev/projects/github.com/flant/addon-operator
