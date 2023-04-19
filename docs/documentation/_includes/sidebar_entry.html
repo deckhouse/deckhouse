@@ -1,3 +1,5 @@
+{%- unless jekyll.environment == "development" %}
+
 {%- assign entry = include.entry %}
 {%- assign folder_entry_class = include.folder_entry_class %}
 {%- assign item_entry_class = include.item_entry_class %}
@@ -67,3 +69,6 @@
 {%- endif %}
 
 {% endunless %}
+
+{% endunless %}
+

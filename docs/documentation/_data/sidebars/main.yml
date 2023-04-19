@@ -1239,3 +1239,7 @@ entries:
         en: Used software
         ru: Используемое ПО
       url: /oss_info.html
+    - title:
+        en: Kubernetes Documentation
+        ru: Документация Kubernetes
+      folders:

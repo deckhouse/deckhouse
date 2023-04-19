@@ -1,0 +1,5 @@
+{{ if not .page.Params.notitle }}
+  {{ $desc := .page.Description }}
+  {{ with .page.Params.description }}<div>{{ $desc | markdownify }}</div>{{ end }}
+{{ end }}
+{{ .page.Content }}
