@@ -68,6 +68,9 @@ spec:
                     logsEndpoint:
                       type: string
                       description: IP адрес для получения логов начальной настройки узла.
+                    description:
+                      type: string
+                      description: Описание процесса получения логов начальной настройки узла.
       additionalPrinterColumns:
         - name: Status
           type: string

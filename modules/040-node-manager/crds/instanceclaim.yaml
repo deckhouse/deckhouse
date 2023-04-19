@@ -85,6 +85,9 @@ spec:
                     logsEndpoint:
                       type: string
                       description: IP address for getting bootstrap logs.
+                    description:
+                      type: string
+                      description: Description about getting logs.
       additionalPrinterColumns:
         - name: Status
           type: string
