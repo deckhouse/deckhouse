@@ -83,6 +83,7 @@ data:
   bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
   bpf-lb-algorithm: "random"
   bpf-lb-map-max: "512000"
+  bpf-lb-external-clusterip: "true"
   enable-service-topology: "true"
   netfilter-compatible-mode: "true"
 
