@@ -34,6 +34,7 @@ EOF
 function __main__() {
   message="error:"
 
+  IFS=$'\n'
   for subject in $(context::jq -rc '.review.request.object.spec.subjects // [] | .[]'); do
     # ServiceAccount name must be a valid domain name
     domain_failed=$(jq -rc '
@@ -73,6 +74,7 @@ function __main__() {
       message="$message Namespace for the $namespace_failed must not be provided ;"
     fi
   done
+  unset IFS
 
   if [[ "$message" == "error:" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
