@@ -36,7 +36,7 @@ type AlertItem struct {
 }
 
 type EventItem struct {
-	Name string
+	Name           string
 	LastUpdateTime time.Time
 }
 
@@ -88,6 +88,7 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 
 	log.Infof("create event with fingerprint %s", fingerprint)
 
+	createTime := time.Now()
 	msg, err := alertMessage(alert)
 	if err != nil {
 		return err
@@ -100,6 +101,7 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    nameSpace,
 			GenerateName: "prometheus-alert-",
+			Labels:       map[string]string{"lastUpdated": createTime.String()},
 		},
 		Regarding: v1.ObjectReference{
 			Namespace: nameSpace,
@@ -118,8 +120,8 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 	}
 	log.Infof("event with fingerprint %s and name %s created", fingerprint, e.Name)
 	a.Events[fingerprint] = &EventItem{
-		Name: e.Name,
-		LastUpdateTime: time.Now(),
+		Name:           e.Name,
+		LastUpdateTime: createTime,
 	}
 	return nil
 }
@@ -144,7 +146,11 @@ func (a *AlertStore) UpdateEvent(fingerprint string) error {
 	}
 
 	ev.LastUpdateTime = time.Now()
-	e.Labels["lastUpdated"] = ev.LastUpdateTime.String()
+	if e.Labels != nil {
+		e.Labels["lastUpdated"] = ev.LastUpdateTime.String()
+	} else {
+		e.Labels = map[string]string{"lastUpdated": ev.LastUpdateTime.String()}
+	}
 	_, err = config.K8sClient.EventsV1().Events(nameSpace).Update(context.TODO(), e, metav1.UpdateOptions{})
 	if err != nil {
 		return err
