@@ -175,7 +175,7 @@
         Probably, it occurred because Terraform-state-exporter had failed to run terraform with current state and config.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
 {{ if and (.Values.global.enabledModules | has "cloud-provider-aws") (semverCompare ">=1.45" .Values.global.deckhouseVersion) }}
-        Also, it can occur because of missing permissions for the following actions in configured AWS IAM policy that were first used in Deckhouse v1.45:
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
 {{ end -}}
@@ -201,7 +201,7 @@
         Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
 {{ if and (.Values.global.enabledModules | has "cloud-provider-aws") (semverCompare ">=1.45" .Values.global.deckhouseVersion) }}
-        Also, it can occur because of missing permissions for the following actions in configured AWS IAM policy that were first used in Deckhouse v1.45:
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
 {{ end -}}
