@@ -133,7 +133,7 @@ shell:
   - apt-get upgrade -y
   - apt-get install -y jq curl
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
-  - curl -sSfL https://github.com/cilium/cilium/blob/17a78a2325a18793388428402daf063de7d72100/images/runtime/install-runtime-deps.sh -o /go/src/github.com/cilium/cilium/images/runtime/install-runtime-deps.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/17a78a2325a18793388428402daf063de7d72100/images/runtime/install-runtime-deps.sh -o /go/src/github.com/cilium/cilium/images/runtime/install-runtime-deps.sh
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/369f3f917ec9f2d9bb46dde2e4aaba64934d60a4/images/runtime/iptables-wrapper-installer.sh -o /go/src/github.com/cilium/cilium/images/runtime/iptables-wrapper-installer.sh
   - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   install:
