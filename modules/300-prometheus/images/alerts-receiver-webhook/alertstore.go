@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"sync"
 	"time"
 
@@ -30,7 +31,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-const lastUpdatedAnnotationName = "lastUpdated"
+const lastUpdatedAnnotationName = "last-updated-timestamp"
 
 type AlertItem struct {
 	Alert            *template.Alert
@@ -91,10 +92,12 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 	log.Infof("create event with fingerprint %s", fingerprint)
 
 	createTime := time.Now()
+
 	msg, err := alertMessage(alert)
 	if err != nil {
 		return err
 	}
+
 	newEvent := &eventsv1.Event{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Event",
@@ -104,7 +107,7 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 			Namespace:    nameSpace,
 			GenerateName: "prometheus-alert-",
 			Annotations:  map[string]string{lastUpdatedAnnotationName: createTime.Format(time.RFC3339)},
-			Labels: map[string]string{"alertSource": "deckhouse"},
+			Labels:       map[string]string{"alert-source": "deckhouse"},
 		},
 		Regarding: v1.ObjectReference{
 			Namespace: nameSpace,
@@ -117,15 +120,19 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 		ReportingInstance:   "prometheus",
 		Action:              alert.Status,
 	}
+
 	e, err := config.K8sClient.EventsV1().Events(nameSpace).Create(context.TODO(), newEvent, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
+
 	log.Infof("event with fingerprint %s and name %s created", fingerprint, e.Name)
+
 	a.Events[fingerprint] = &EventItem{
 		Name:           e.Name,
 		LastUpdateTime: createTime,
 	}
+
 	return nil
 }
 
@@ -145,6 +152,10 @@ func (a *AlertStore) UpdateEvent(fingerprint string) error {
 
 	e, err := config.K8sClient.EventsV1().Events(nameSpace).Get(context.TODO(), ev.Name, metav1.GetOptions{})
 	if err != nil {
+		if errors.IsNotFound(err) {
+			// event not found, create new
+			return a.CreateEvent(fingerprint)
+		}
 		return err
 	}
 
@@ -154,11 +165,10 @@ func (a *AlertStore) UpdateEvent(fingerprint string) error {
 	} else {
 		e.Annotations = map[string]string{lastUpdatedAnnotationName: ev.LastUpdateTime.Format(time.RFC3339)}
 	}
+
 	_, err = config.K8sClient.EventsV1().Events(nameSpace).Update(context.TODO(), e, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return err
 }
 
 func (a *AlertStore) RemoveEvent(fingerprint string) error {
@@ -169,7 +179,13 @@ func (a *AlertStore) RemoveEvent(fingerprint string) error {
 
 	log.Infof("remove event with fingerprint %s and name %s", fingerprint, ev.Name)
 
-	return config.K8sClient.EventsV1().Events(nameSpace).Delete(context.TODO(), ev.Name, metav1.DeleteOptions{})
+	err := config.K8sClient.EventsV1().Events(nameSpace).Delete(context.TODO(), ev.Name, metav1.DeleteOptions{})
+	if errors.IsNotFound(err) {
+		// event already deleted
+		return nil
+	}
+
+	return err
 }
 
 func alertMessage(a *template.Alert) (string, error) {
