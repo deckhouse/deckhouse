@@ -76,7 +76,7 @@ mount:
 shell:
   beforeInstall:
   - apt-get update
-  - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu
+  - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu curl
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/2a518bb669db2de4677acb952a7eef4f269fcb48/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/17a78a2325a18793388428402daf063de7d72100/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
@@ -131,7 +131,7 @@ shell:
   beforeInstall:
   - apt-get update
   - apt-get upgrade -y
-  - apt-get install -y jq
+  - apt-get install -y jq curl
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
   - curl -sSfL https://github.com/cilium/cilium/blob/17a78a2325a18793388428402daf063de7d72100/images/runtime/install-runtime-deps.sh -o /go/src/github.com/cilium/cilium/images/runtime/install-runtime-deps.sh
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/369f3f917ec9f2d9bb46dde2e4aaba64934d60a4/images/runtime/iptables-wrapper-installer.sh -o /go/src/github.com/cilium/cilium/images/runtime/iptables-wrapper-installer.sh
@@ -147,6 +147,9 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 shell:
   beforeInstall:
+  - apt-get update
+  - apt-get upgrade -y
+  - apt-get install curl
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/cilium/download-hubble.sh -o /tmp/download-hubble.sh
   - chmod +x /tmp/*.sh
   install:
