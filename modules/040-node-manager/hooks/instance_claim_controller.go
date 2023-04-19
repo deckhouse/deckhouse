@@ -200,7 +200,7 @@ func newInstanceClaim(machine *machineForInstanceClaim, ng *nodeGroupForInstance
 		ObjectMeta: metav1.ObjectMeta{
 			Name: machine.Name,
 			Labels: map[string]string{
-				fmt.Sprintf("node-group.deckhouse.io/%s", machine.NodeGroup): "",
+				"node.deckhouse.io/group": machine.NodeGroup,
 			},
 
 			OwnerReferences: []metav1.OwnerReference{

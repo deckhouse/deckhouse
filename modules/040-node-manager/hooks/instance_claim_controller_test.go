@@ -49,6 +49,34 @@ spec:
 		Expect(finalizers.AsStringSlice()).To(Equal([]string{"hooks.deckhouse.io/node-manager/instance_claim_controller"}))
 	}
 
+	assertCurrentStatus := func(f *HookExecutionConfig, claimName string) {
+		ic := f.KubernetesGlobalResource("InstanceClaim", claimName)
+		machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", claimName)
+
+		Expect(ic.Field("status.currentStatus.lastUpdateTime").Exists()).To(BeTrue())
+		Expect(ic.Field("status.currentStatus.lastUpdateTime").Time()).To(Equal(machine.Field("status.currentStatus.lastUpdateTime").Time()))
+
+		Expect(ic.Field("status.currentStatus.phase").Exists()).To(BeTrue())
+		Expect(ic.Field("status.currentStatus.phase").String()).To(Equal(machine.Field("status.currentStatus.phase").String()))
+	}
+
+	assertLastOperation := func(f *HookExecutionConfig, claimName string) {
+		ic := f.KubernetesGlobalResource("InstanceClaim", claimName)
+		machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", claimName)
+
+		Expect(ic.Field("status.lastOperation.lastUpdateTime").Exists()).To(BeTrue())
+		Expect(ic.Field("status.lastOperation.lastUpdateTime").Time()).To(Equal(machine.Field("status.lastOperation.lastUpdateTime").Time()))
+
+		Expect(ic.Field("status.lastOperation.description").Exists()).To(BeTrue())
+		Expect(ic.Field("status.lastOperation.description").String()).To(Equal(machine.Field("status.lastOperation.description").String()))
+
+		Expect(ic.Field("status.lastOperation.state").Exists()).To(BeTrue())
+		Expect(ic.Field("status.lastOperation.state").String()).To(Equal(machine.Field("status.lastOperation.state").String()))
+
+		Expect(ic.Field("status.lastOperation.type").Exists()).To(BeTrue())
+		Expect(ic.Field("status.lastOperation.type").String()).To(Equal(machine.Field("status.lastOperation.type").String()))
+	}
+
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -60,8 +88,99 @@ spec:
 		})
 	})
 
-	Context("Adding instance claims (not have instance classes but have machines)", func() {
+	Context("Adding instance claims", func() {
+		const (
+			ic1 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InstanceClaim
+metadata:
+  name: worker-ac32h
+  finalizers:
+  - hooks.deckhouse.io/node-manager/instance_claim_controller
+status: {}
+`
+			machine1 = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-ac32h
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1-nova
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: CloudEphemeral
+status: {}
+`
 
+			machine2 = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-fac21
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1-nova
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: CloudEphemeral
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    phase: Pending
+  lastOperation:
+    description: Create machine in the cloud provider
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    state: Processing
+    type: Create
+`
+		)
+
+		Context("does not have instance classes but have machine", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(ng + ic1 + machine1 + machine2))
+				f.RunHook()
+			})
+
+			It("Should keep 'as is' instance claim with machine", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
+				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h")
+				machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h")
+
+				Expect(ic.Exists()).To(BeTrue())
+				Expect(machine.Exists()).To(BeTrue())
+
+				Expect(ic.ToYaml()).To(MatchYAML(ic1))
+				Expect(machine.ToYaml()).To(MatchYAML(machine1))
+			})
+
+			It("Should create instance claim for machine", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-fac21")
+				machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-fac21")
+
+				Expect(ic.Exists()).To(BeTrue())
+				Expect(machine.Exists()).To(BeTrue())
+
+				Expect(ic.Field(`metadata.labels.node\.deckhouse\.io/group`).String()).To(Equal("ng1"))
+				assertCurrentStatus(f, "worker-fac21")
+				assertLastOperation(f, "worker-fac21")
+			})
+		})
 	})
 
 	Context("Deleting instance claims (have instance claims but do not have machines)", func() {
@@ -116,7 +235,7 @@ status: {}
 
 				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
 				Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h"))
+				Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h").Exists()).To(BeTrue())
 				assertFinalizersExists(f, "worker-ac32h")
 			})
 
@@ -150,7 +269,7 @@ status: {}
 
 					Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
 					Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h").Exists()).To(BeTrue())
-					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h"))
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h").Exists()).To(BeTrue())
 					assertFinalizersExists(f, "worker-ac32h")
 				})
 
@@ -204,7 +323,7 @@ spec:
 
 					Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
 					Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h").Exists()).To(BeTrue())
-					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h"))
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h").Exists()).To(BeTrue())
 					assertFinalizersExists(f, "worker-ac32h")
 				})
 
