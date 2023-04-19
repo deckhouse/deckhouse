@@ -1,3 +1,4 @@
+{{- $ciliumVersion := "1.12.8" }}
 # https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L8-L11
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
@@ -32,12 +33,6 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts/builder
-  to: /go/src/github.com/cilium/cilium/images/builder
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
   beforeInstall:
   - apt-get update
@@ -64,6 +59,10 @@ shell:
   - apt-get purge --auto-remove
   - apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  - mkdir -p chmod +x /go/src/github.com/cilium/cilium/images/builder
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/builder/install-protoc.sh -o /go/src/github.com/cilium/cilium/images/builder/install-protoc.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/builder/install-protoplugins.sh -o /go/src/github.com/cilium/cilium/images/builder/install-protoplugins.sh
+  - chmod +x /go/src/github.com/cilium/cilium/images/builder/*.sh
   install:
   - cd /go/src/github.com/cilium/cilium/images/builder
   - ./install-protoc.sh
@@ -72,19 +71,17 @@ shell:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
 from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-git:
-  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts/gops
-    to: /go/src/github.com/cilium/cilium/images/runtime
-    stageDependencies:
-      install:
-        - '**/*'
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   beforeInstall:
   - apt-get update
   - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/2a518bb669db2de4677acb952a7eef4f269fcb48/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/17a78a2325a18793388428402daf063de7d72100/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/a1046bcc10b75c7130f0579d40d0529c85e1fe56/images/runtime/cni-version.sh -o /go/src/github.com/cilium/cilium/images/runtime/cni-version.sh
+  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   install:
   - cd /go/src/github.com/cilium/cilium/images/runtime
   - ./build-gops.sh
@@ -92,12 +89,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
-git:
-  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts/runtime
-    to: /go/src/github.com/cilium/cilium/images/runtime
-    stageDependencies:
-      install:
-        - '**/*'
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
   add: /iptables
@@ -138,25 +129,26 @@ import:
   before: install
 shell:
   beforeInstall:
-    - apt-get update
-    - apt-get upgrade -y
-    - apt-get install -y jq
+  - apt-get update
+  - apt-get upgrade -y
+  - apt-get install -y jq
+  - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
+  - curl -sSfL https://github.com/cilium/cilium/blob/17a78a2325a18793388428402daf063de7d72100/images/runtime/install-runtime-deps.sh -o /go/src/github.com/cilium/cilium/images/runtime/install-runtime-deps.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/369f3f917ec9f2d9bb46dde2e4aaba64934d60a4/images/runtime/iptables-wrapper-installer.sh -o /go/src/github.com/cilium/cilium/images/runtime/iptables-wrapper-installer.sh
+  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   install:
-    - cd /go/src/github.com/cilium/cilium/images/runtime
-    - ./install-runtime-deps.sh
-    - dpkg -i /iptables/*.deb
-    - rm -rf /iptables
-    - ./iptables-wrapper-installer.sh --no-sanity-check
+  - cd /go/src/github.com/cilium/cilium/images/runtime
+  - ./install-runtime-deps.sh
+  - dpkg -i /iptables/*.deb
+  - rm -rf /iptables
+  - ./iptables-wrapper-installer.sh --no-sanity-check
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts/hubble
-  to: /tmp
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
+  beforeInstall:
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/cilium/download-hubble.sh -o /tmp/download-hubble.sh
+  - chmod +x /tmp/*.sh
   install:
   - /tmp/download-hubble.sh
   - /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion

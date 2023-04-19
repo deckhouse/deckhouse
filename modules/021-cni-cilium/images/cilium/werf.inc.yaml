@@ -1,4 +1,4 @@
-{{- $ciliumVersion := "1.12.8" }}
+{{- $ciliumVersion := "v1.12.8" }}
 {{- range $type := list "standard" "virtualization" }}
 ---
   {{- if eq $type "virtualization" }}
@@ -14,8 +14,8 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
   {{- end }}
 fromImage: {{ $.ModuleName }}/builder-artifact
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   beforeInstall:
   - mkdir /tmp/cilium-repo
