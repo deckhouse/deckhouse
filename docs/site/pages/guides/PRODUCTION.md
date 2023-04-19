@@ -7,7 +7,7 @@ The following recommendations may be of less importance for a test or developmen
 
 ## Release channel and update mode
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 Use `Early Access` or `Stable` release channel. Configure [auto-update window](/documentation/v1/modules/002-deckhouse/usage.html#update-windows-configuration) or select [manual mode](/documentation/v1/modules/002-deckhouse/usage.html#manual-update-confirmation).
 {% endalert %}
 
@@ -17,7 +17,7 @@ If possible, use different release channels for clusters. Use a less stable upda
 
 We recommend using the `Early Access` or `Stable` release channel for production clusters. If you have more than one cluster in a production environment, consider using different release channels for them. For example, `Early Access` for one, and `Stable` for another. If the clusters use the same release channel, we recommend setting update windows so that they do not overlap.
 
-{% alert class="guides__alert" level="warning" %}
+{% alert level="warning" %}
 Even in very busy and critical clusters, it is not a good idea to disable the use of the release channel. The best strategy is a scheduled update. If you are using a Deckhouse release in your cluster that has not received an update in over six months, you will have a hard time getting help quickly should a problem arise.
 {% endalert %}
 
@@ -25,7 +25,7 @@ The [update windows](/documentation/v1/modules/002-deckhouse/configuration.html#
 
 ## Kubernetes version
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 Use the automatic [Kubernetes version selection](/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) or set the version explicitly.
 {% endalert %}
 
@@ -39,7 +39,7 @@ If your application uses outdated versions of resources or depends on a particul
 
 ## Resource requirements
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 Use at least 4 CPUs / 8GB RAM for infrastructure nodes. For master and monitoring nodes, fast disks are recommended.
 {% endalert %}
 
@@ -61,7 +61,7 @@ Estimates of the resources required for the clusters to run:
 
 ### Master nodes
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 Three master nodes with fast 400+ IOPS disks are highly recommended for a cluster.
 {% endalert %}
 
@@ -75,7 +75,7 @@ Reference:
 
 ### Frontend nodes
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 Use two or more frontend nodes.
 
 Use inlet `LoadBalancer` for AWS/GCP/Azure, inlet `HostPort` with an external load balancer for bare metal or vSphere/OpenStack.
@@ -91,7 +91,7 @@ Select the [inlet type](/documentation/v1/modules/402-ingress-nginx/cr.html#ingr
 
 When deploying a cluster using Deckhouse in a cloud infrastructure where provisioning of load balancers is supported (e.g., AWS, GCP, Azure, etc.), use the `LoadBalancer` or `LoadBalancerWithProxyProtocol` inlet. In environments where automatic load balancer provisioning is not supported (bare metal clusters, vSphere, OpenStack), use the `HostPort` or `HostPortWithProxyProtocol` inlet. In this case, you can either add some A-records to DNS for the corresponding domain or use an external load-balancing service (e.g., Cloudflare, Qrator solutions, or configure metallb).
 
-{% alert class="guides__alert" level="warning" %}
+{% alert level="warning" %}
 The `HostWithFailover` inlet is suitable for clusters with a single frontend node. It reduces the time that the Ingress controller is unavailable during updates. This type of inlet is suitable for important development environments, but **not recommended for production**.
 {% endalert %}
 
@@ -101,7 +101,7 @@ The algorithm for choosing an inlet:
 
 ### Monitoring nodes
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 For high-load clusters, use two monitoring nodes equipped with fast disks.
 {% endalert %}
 
@@ -113,7 +113,7 @@ When allocating monitoring nodes, it is important to allocate fast disks to them
 
 ### System nodes
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 Dedicate two system nodes.
 {% endalert %}
 
@@ -125,7 +125,7 @@ It is recommended to provide the Deckhouse components with fast disks (the [stor
 
 ## Configuring alerts
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 You can send alerts using the [internal](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Alertmanager or connect the [external](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) one.
 {% endalert %}
 
@@ -135,7 +135,7 @@ Using the [CustomAlertmanager](/documentation/v1.44/modules/300-prometheus/cr.ht
 
 ## Collecting logs
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 [Configure](/documentation/v1/modules/460-log-shipper/) centralized log collection.
 {% endalert %}
 
@@ -150,7 +150,7 @@ Reference:
 
 ## Backups
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 Set up [etcd backups](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-make-etcd-backup). Have a backup plan ready at all times.
 {% endalert %}
 
@@ -162,7 +162,7 @@ This plan should be periodically updated and tested in drills.
 
 ## Community
 
-{% alert class="guides__alert" level="info" %}
+{% alert %}
 Follow the project channel on [Telegram](https://t.me/deckhouse) for news and updates.
 {% endalert %}
 

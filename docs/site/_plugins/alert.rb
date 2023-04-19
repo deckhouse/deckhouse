@@ -3,7 +3,8 @@ module Jekyll
     class AlertTag < Liquid::Block
       @@DEFAULTS = {
           :level => 'info',
-          :class => 'docs__information',
+          :tag => 'div',
+          :class => 'alert__wrap',
           :active => true,
       }
 
@@ -37,7 +38,12 @@ module Jekyll
         rendered_content = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration()).convert(content)
 
         id = @config[:id] ? %Q(id="#{@config[:id]}") : ""
-        %Q(<div markdown="0" #{id} class="#{@config[:class]} #{"active" if @config[:active]} #{@config[:level]}">#{rendered_content}</div>)
+        %Q(<#{@config[:tag]} markdown="0" #{id} class="#{@config[:level]} #{@config[:class]}">
+          <svg class="alert__icon icon--#{@config[:level]}">
+            <use xlink:href="../images/sprite.svg##{@config[:level]}-icon"></use>
+          </svg>
+          <div>#{rendered_content}</div>
+        </#{@config[:tag]}>)
 
       end
 

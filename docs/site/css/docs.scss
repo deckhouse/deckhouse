@@ -291,6 +291,10 @@
     justify-content: flex-start;
 }
 
+.layout-sidebar__wrap {
+  margin-top: 25px;
+}
+
 .layout-sidebar__sidebar {
     width: 260px;
     margin-right: 40px;
@@ -1301,7 +1305,6 @@ ul .resources__prop_title {
 }
 
 #toc-sidebar {
-    position: fixed;
     width: inherit;
     display: flex;
     flex-direction: column;

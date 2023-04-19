@@ -1,44 +1,51 @@
 @import "components/common/_variables.scss";
 
-.guides {
+div.alert__wrap {
+  display: flex;
+  padding: 0 15px;
+  margin-bottom: 15px;
+  font-size: 16px;
+  line-height: 24px;
+  border-radius: .5em;
+  border: 2px solid;
 
-    &__alert {
-        display: none;
-        padding: 15px;
-        margin-bottom: 15px;
-        font-size: 16px;
-        line-height: 24px;
-        border-radius: 1em;
-        border: 1px solid;
-        border-style: solid;
-        border-left-width: 0.5em;
+  & a {
+    color: $color-alt;
+  }
 
+  & p {
+    color: $color-main;
+  }
 
-        &.active {
-            display: block;
-        }
+  & .alert__icon {
+    min-width: 24px;
+    width: 24px;
+    height: 24px;
+    margin-right: 24px;
+    padding: 16px 0;
+  }
 
-        &.info {
-            border-color: $color-alt;
+  &.info {
+    border-color: $color-alt;
 
-            a {
-                color: $color-alt;
-            }
-
-            p {
-                color: $color-main;
-            }
-        }
-
-        &.warning {
-            border-color: #fff3cd;;
-            a {
-                color: $color-alt;
-            }
-
-            p {
-                color: $color-main;
-            }
-        }
+    & .icon--info {
+      fill: $color-alt;
     }
+  }
+
+  &.warning {
+    border-color: $color-warning;
+
+    & .icon--warning {
+      fill: $color-warning;
+    }
+  }
+
+  &.danger {
+    border-color: $color-danger;
+
+    & .icon--danger {
+      fill: $color-danger;
+    }
+  }
 }
