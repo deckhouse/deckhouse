@@ -48,7 +48,7 @@ spec:
 
 	assertFinalizersExists := func(f *HookExecutionConfig, claimName string) {
 		finalizers := f.KubernetesGlobalResource("InstanceClaim", claimName).Field("metadata.finalizers")
-		Expect(finalizers.AsStringSlice()).To(Equal([]string{"hooks.deckhouse.io/node-manager/instance_claim_controller"}))
+		Expect(finalizers.AsStringSlice()).To(Equal([]string{"node-manager.hooks.deckhouse.io/instance-claim-controller"}))
 	}
 
 	assertCurrentStatus := func(f *HookExecutionConfig, claimName string) {
@@ -126,7 +126,7 @@ kind: InstanceClaim
 metadata:
   name: worker-ac32h
   finalizers:
-  - hooks.deckhouse.io/node-manager/instance_claim_controller
+  - node-manager.hooks.deckhouse.io/instance-claim-controller
 status: {}
 `
 			machine1 = `
@@ -224,7 +224,7 @@ metadata:
     node.deckhouse.io/group: "ng1"
   name: worker-ac32h
   finalizers:
-  - hooks.deckhouse.io/node-manager/instance_claim_controller
+  - node-manager.hooks.deckhouse.io/instance-claim-controller
 status:
   currentStatus:
     lastUpdateTime: "2023-04-18T15:54:55Z"
@@ -304,7 +304,7 @@ kind: InstanceClaim
 metadata:
   name: worker-ac32h
   finalizers:
-  - hooks.deckhouse.io/node-manager/instance_claim_controller
+  - node-manager.hooks.deckhouse.io/instance-claim-controller
 status: {}
 `
 			machine = `
@@ -334,7 +334,7 @@ kind: InstanceClaim
 metadata:
   name: worker-bg11u
   finalizers:
-  - hooks.deckhouse.io/node-manager/instance_claim_controller
+  - node-manager.hooks.deckhouse.io/instance-claim-controller
 status: {}
 `
 			BeforeEach(func() {
@@ -367,7 +367,7 @@ kind: InstanceClaim
 metadata:
   name: worker-bg11u
   finalizers:
-  - hooks.deckhouse.io/node-manager/instance_claim_controller
+  - node-manager.hooks.deckhouse.io/instance-claim-controller
   deletionTimestamp: "1970-01-01T00:00:00Z"
 status: {}
 `
@@ -403,7 +403,7 @@ kind: InstanceClaim
 metadata:
   name: worker-bg11u
   finalizers:
-  - hooks.deckhouse.io/node-manager/instance_claim_controller
+  - node-manager.hooks.deckhouse.io/instance-claim-controller
   deletionTimestamp: "1970-01-01T00:00:00Z"
 status: {}
 `

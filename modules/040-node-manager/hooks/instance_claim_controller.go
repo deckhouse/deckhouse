@@ -215,7 +215,7 @@ func newInstanceClaim(machine *machineForInstanceClaim, ng *nodeGroupForInstance
 			},
 
 			Finalizers: []string{
-				"hooks.deckhouse.io/node-manager/instance_claim_controller",
+				"node-manager.hooks.deckhouse.io/instance-claim-controller",
 			},
 		},
 
