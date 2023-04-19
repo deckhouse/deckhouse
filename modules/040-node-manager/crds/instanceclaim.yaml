@@ -23,72 +23,72 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the claim for cloud instance
+            Defines the claim for cloud instance.
           properties:
             status:
               type: object
               properties:
                 nodeRef:
                   type: object
-                  description: Reference to the kubernetes node object
+                  description: Reference to the kubernetes node object.
                   properties:
                     name:
                       type: string
                       description: Node name
                 machineRef:
                   type: object
-                  description: Reference to instance in the cloud
+                  description: Reference to instance in the cloud.
                   properties:
                     apiVersion:
                       type: string
-                      description: APIVersion defines the versioned schema of this representation of an reference object
+                      description: APIVersion defines the versioned schema of this representation of an reference object.
                     kind:
                       type: string
-                      description: Kind is a string value representing the REST resource referenced object represents
+                      description: Kind is a string value representing the REST resource referenced object represents.
                     name:
                       type: string
-                      description: Name of referenced object
+                      description: Name of referenced object.
                     namespace:
                       type: string
-                      description: Namespace of referenced object
+                      description: Namespace of referenced object.
                 currentStatus:
-                  description: Current status of the machine object
+                  description: Current status of the instance claim object.
                   properties:
                     lastUpdateTime:
-                      description: Last update time of current status
+                      description: Last update time of current status.
                       format: date-time
                       type: string
                     phase:
-                      description: InstancePhase is a label for the condition of a machines at the current time.
+                      description: InstancePhase is a label for the condition of a instance claim at the current time.
                       type: string
                 lastOperation:
-                  description: Last operation refers to the status of the last operation performed
+                  description: Last operation refers to the status of the last operation performed.
                   properties:
                     description:
-                      description: Description of the current operation
+                      description: Description of the current operation.
                       type: string
                     lastUpdateTime:
-                      description: Last update time of current operation
+                      description: Last update time of current operation.
                       format: date-time
                       type: string
                     state:
-                      description: State of operation
+                      description: State of operation.
                       type: string
                     type:
-                      description: Type of operation
+                      description: Type of operation.
                       type: string
                   type: object
                 bootstrapStatus:
                   type: object
-                  description: Information about instance bootstrapping process
+                  description: Information about instance bootstrapping process.
                   properties:
                     logsEndpoint:
                       type: string
-                      description: Endpoint for getting bootstrap logs
+                      description: IP address for getting bootstrap logs.
       additionalPrinterColumns:
         - name: Status
           type: string
-          description: Current status of the machine.
+          description: Current status of the instance claim.
           jsonPath: .status.currentStatus.phase
         - name: Age
           type: date
