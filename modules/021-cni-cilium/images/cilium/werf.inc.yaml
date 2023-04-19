@@ -1,4 +1,4 @@
-{{- $ciliumVersion := "v1.12.8" }}
+{{- $ciliumVersion := "1.12.8" }}
 {{- range $type := list "standard" "virtualization" }}
 ---
   {{- if eq $type "virtualization" }}
