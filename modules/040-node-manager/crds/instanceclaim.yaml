@@ -52,6 +52,7 @@ spec:
                       type: string
                       description: Namespace of referenced object.
                 currentStatus:
+                  type: object
                   description: Current status of the instance claim object.
                   properties:
                     lastUpdateTime:
