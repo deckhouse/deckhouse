@@ -174,11 +174,12 @@
 
         Probably, it occurred because Terraform-state-exporter had failed to run terraform with current state and config.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
-{{ if and (.Values.global.enabledModules | has "cloud-provider-aws") (semverCompare ">=1.45" .Values.global.deckhouseVersion) }}
+
+{{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
         Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
-{{ end -}}
+{{- end }}
       summary: Terraform-state-exporter cluster state error
 
   - alert: D8TerraformStateExporterNodeStateError
@@ -200,11 +201,12 @@
 
         Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
-{{ if and (.Values.global.enabledModules | has "cloud-provider-aws") (semverCompare ">=1.45" .Values.global.deckhouseVersion) }}
+
+{{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
         Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
-{{ end -}}
+{{- end }}
       summary: Terraform-state-exporter node state error
 
   - alert: D8TerraformStateExporterNodeTemplateChanged
