@@ -101,7 +101,7 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    nameSpace,
 			GenerateName: "prometheus-alert-",
-			Labels:       map[string]string{"lastUpdated": createTime.String()},
+			Annotations: map[string]string{"lastUpdated": createTime.Format(time.RFC3339) },
 		},
 		Regarding: v1.ObjectReference{
 			Namespace: nameSpace,
@@ -146,10 +146,10 @@ func (a *AlertStore) UpdateEvent(fingerprint string) error {
 	}
 
 	ev.LastUpdateTime = time.Now()
-	if e.Labels != nil {
-		e.Labels["lastUpdated"] = ev.LastUpdateTime.String()
+	if e.Annotations != nil {
+		e.Annotations["lastUpdated"] = ev.LastUpdateTime.Format(time.RFC3339)
 	} else {
-		e.Labels = map[string]string{"lastUpdated": ev.LastUpdateTime.String()}
+		e.Annotations = map[string]string{"lastUpdated": ev.LastUpdateTime.Format(time.RFC3339)}
 	}
 	_, err = config.K8sClient.EventsV1().Events(nameSpace).Update(context.TODO(), e, metav1.UpdateOptions{})
 	if err != nil {
