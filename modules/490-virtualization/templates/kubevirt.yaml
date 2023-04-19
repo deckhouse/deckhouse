@@ -18,6 +18,7 @@ spec:
       - Macvtap
       - HotplugVolumes
       - GPU
+      - Snapshot
       - ExpandDisks
       - Root
   customizeComponents:
