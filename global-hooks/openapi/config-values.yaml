@@ -9,6 +9,7 @@ properties:
       The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
         * If not defined, components use `cluster.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `cluster.defaultStorageClass` isn't defined).
         * Use this parameter only in exceptional circumstances.
+        * This parameter is applied during module activation.
   highAvailability:
     type: boolean
     description: |
