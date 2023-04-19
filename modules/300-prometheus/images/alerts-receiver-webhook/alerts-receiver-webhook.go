@@ -151,7 +151,7 @@ func reconcile() {
 	for _, v := range alertStore.Alerts {
 		f := v.Alert.Fingerprint
 		// remove outdated alerts
-		if time.Until(v.LastReceivedTime) > 2*reconcileTime {
+		if time.Since(v.LastReceivedTime) > 2*reconcileTime {
 			alertStore.Remove(v.Alert)
 			if err := alertStore.RemoveEvent(f); err != nil {
 				log.Error(err)
