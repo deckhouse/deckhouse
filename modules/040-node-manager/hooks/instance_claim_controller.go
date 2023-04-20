@@ -36,11 +36,10 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Settings: &go_hook.HookConfigSettings{
-		ExecutionMinInterval: 5 * time.Second,
-		ExecutionBurst:       3,
+		ExecutionMinInterval: 1 * time.Second,
+		ExecutionBurst:       2,
 	},
-	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:       "/modules/node-manager/instance_claim_controller",
+	Queue: "/modules/node-manager/instance_claim_controller",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "instances",
