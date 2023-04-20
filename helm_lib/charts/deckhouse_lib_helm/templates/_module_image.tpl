@@ -13,10 +13,11 @@
   {{- fail $error }}
   {{- end }}
   {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
+  {{- /*  handle external modules registry */}}
   {{- if index $context.Values $moduleName }}
     {{- if index $context.Values $moduleName "registry" }}
       {{- if index $context.Values $moduleName "registry" "base" }}
-        {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $moduleName) }}
+        {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $context.Chart.Name) }}
       {{- end }}
     {{- end }}
   {{- end }}
@@ -38,7 +39,7 @@
     {{- if index $context.Values $moduleName }}
       {{- if index $context.Values $moduleName "registry" }}
         {{- if index $context.Values $moduleName "registry" "base" }}
-          {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $moduleName) }}
+          {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $context.Chart.Name) }}
         {{- end }}
       {{- end }}
     {{- end }}
