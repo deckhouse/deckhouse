@@ -33,63 +33,59 @@ import (
 
 const lastUpdatedAnnotationName = "last-updated-timestamp"
 
-type AlertItem struct {
-	Alert            *template.Alert
-	LastReceivedTime time.Time
+type alertItem struct {
+	alert                *template.Alert
+	lastReceivedTime     time.Time
+	eventLastUpdatedTime time.Time
 }
 
-type EventItem struct {
-	Name           string
-	LastUpdateTime time.Time
-}
+type alertStoreStruct struct {
+	capacity int
 
-type AlertStore struct {
 	m      sync.RWMutex
-	length int
-	Alerts map[string]*AlertItem
-	Events map[string]*EventItem
+	alerts map[string]*alertItem
 }
 
-func NewStore(l int) *AlertStore {
-	a := make(map[string]*AlertItem, l)
-	e := make(map[string]*EventItem, l)
-	return &AlertStore{Alerts: a, Events: e, length: l}
+func newStore(l int) *alertStoreStruct {
+	a := make(map[string]*alertItem, l)
+	return &alertStoreStruct{alerts: a, capacity: l}
 }
 
-func (a *AlertStore) Add(alert *template.Alert) {
+func (a *alertStoreStruct) add(alert *template.Alert) {
 	a.m.Lock()
 	defer a.m.Unlock()
 	log.Infof("alert with fingerprint %s added to queue", alert.Fingerprint)
-	a.Alerts[alert.Fingerprint] = &AlertItem{
-		Alert:            alert,
-		LastReceivedTime: time.Now(),
+	a.alerts[alert.Fingerprint] = &alertItem{
+		alert:            alert,
+		lastReceivedTime: time.Now(),
 	}
 	return
 }
 
-func (a *AlertStore) Update(alert *template.Alert) {
+func (a *alertStoreStruct) update(alert *template.Alert) {
 	a.m.Lock()
 	defer a.m.Unlock()
 	log.Infof("alert with fingerprint %s updated in queue", alert.Fingerprint)
-	a.Alerts[alert.Fingerprint].LastReceivedTime = time.Now()
+	a.alerts[alert.Fingerprint].alert.Status = alert.Status
+	a.alerts[alert.Fingerprint].lastReceivedTime = time.Now()
 }
 
-func (a *AlertStore) Remove(alert *template.Alert) {
+func (a *alertStoreStruct) remove(alert *template.Alert) {
 	a.m.Lock()
 	defer a.m.Unlock()
 	log.Infof("alert with fingerprint %s removed from queue", alert.Fingerprint)
-	delete(a.Alerts, alert.Fingerprint)
+	delete(a.alerts, alert.Fingerprint)
 }
 
-func (a *AlertStore) CreateEvent(fingerprint string) error {
+func (a *alertStoreStruct) createEvent(fingerprint string) error {
 	var alert *template.Alert
-	if al, ok := a.Alerts[fingerprint]; ok {
-		alert = al.Alert
+	if al, ok := a.alerts[fingerprint]; ok {
+		alert = al.alert
 	} else {
 		return fmt.Errorf("cannot find alert with fingerprint: %s", fingerprint)
 	}
 
-	log.Infof("create event with fingerprint %s", fingerprint)
+	log.Infof("create event with name %s", fingerprint)
 
 	createTime := time.Now()
 
@@ -104,10 +100,10 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 			APIVersion: "events.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    nameSpace,
-			GenerateName: "prometheus-alert-",
-			Annotations:  map[string]string{lastUpdatedAnnotationName: createTime.Format(time.RFC3339)},
-			Labels:       map[string]string{"alert-source": "deckhouse"},
+			Namespace:   nameSpace,
+			Name:        fingerprint,
+			Annotations: map[string]string{lastUpdatedAnnotationName: createTime.Format(time.RFC3339)},
+			Labels:      map[string]string{"alert-source": "deckhouse"},
 		},
 		Regarding: v1.ObjectReference{
 			Namespace: nameSpace,
@@ -115,75 +111,56 @@ func (a *AlertStore) CreateEvent(fingerprint string) error {
 		EventTime:           metav1.NowMicro(),
 		Note:                msg,
 		Reason:              alert.Labels["alertname"],
-		Type:                v1.EventTypeWarning,
+		Type:                alert.Status,
 		ReportingController: "prometheus",
 		ReportingInstance:   "prometheus",
 		Action:              alert.Status,
 	}
 
-	e, err := config.K8sClient.EventsV1().Events(nameSpace).Create(context.TODO(), newEvent, metav1.CreateOptions{})
+	_, err = config.k8sClient.EventsV1().Events(nameSpace).Create(context.TODO(), newEvent, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
 
-	log.Infof("event with fingerprint %s and name %s created", fingerprint, e.Name)
+	log.Infof("event with name %s created", fingerprint)
 
-	a.Events[fingerprint] = &EventItem{
-		Name:           e.Name,
-		LastUpdateTime: createTime,
-	}
+	a.alerts[fingerprint].eventLastUpdatedTime = createTime
 
 	return nil
 }
 
-func (a *AlertStore) UpdateEvent(fingerprint string) error {
-	ev, ok := a.Events[fingerprint]
+func (a *alertStoreStruct) updateEvent(fingerprint string) error {
+	al, ok := a.alerts[fingerprint]
 	if !ok {
-		return fmt.Errorf("cannot find event with fingerprint: %s", fingerprint)
+		return fmt.Errorf("cannot find alert with fingerprint: %s", fingerprint)
 	}
 
 	// Update events one time per half-hour
-	if time.Since(ev.LastUpdateTime) < 30*time.Minute {
-		log.Infof("event with fingerprint %s and name %s does not need updating", fingerprint, ev.Name)
+	if time.Since(al.eventLastUpdatedTime) < 6*reconcileTime {
+		log.Infof("event with name %s does not need updating", fingerprint)
 		return nil
 	}
 
-	log.Infof("update event with fingerprint %s and name %s", fingerprint, ev.Name)
-
-	e, err := config.K8sClient.EventsV1().Events(nameSpace).Get(context.TODO(), ev.Name, metav1.GetOptions{})
+	e, err := config.k8sClient.EventsV1().Events(nameSpace).Get(context.TODO(), fingerprint, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// event not found, create new
-			return a.CreateEvent(fingerprint)
+			return a.createEvent(fingerprint)
 		}
 		return err
 	}
 
-	ev.LastUpdateTime = time.Now()
+	log.Infof("update event with name %s", fingerprint)
+
+	al.eventLastUpdatedTime = time.Now()
 	if e.Annotations != nil {
-		e.Annotations[lastUpdatedAnnotationName] = ev.LastUpdateTime.Format(time.RFC3339)
+		e.Annotations[lastUpdatedAnnotationName] = al.eventLastUpdatedTime.Format(time.RFC3339)
 	} else {
-		e.Annotations = map[string]string{lastUpdatedAnnotationName: ev.LastUpdateTime.Format(time.RFC3339)}
+		e.Annotations = map[string]string{lastUpdatedAnnotationName: al.eventLastUpdatedTime.Format(time.RFC3339)}
 	}
 
-	_, err = config.K8sClient.EventsV1().Events(nameSpace).Update(context.TODO(), e, metav1.UpdateOptions{})
-
-	return err
-}
-
-func (a *AlertStore) RemoveEvent(fingerprint string) error {
-	ev, ok := a.Events[fingerprint]
-	if !ok {
-		return fmt.Errorf("cannot find event with fingerprint: %s", fingerprint)
-	}
-
-	log.Infof("remove event with fingerprint %s and name %s", fingerprint, ev.Name)
-
-	err := config.K8sClient.EventsV1().Events(nameSpace).Delete(context.TODO(), ev.Name, metav1.DeleteOptions{})
-	if errors.IsNotFound(err) {
-		// event already deleted
-		return nil
-	}
+	e.Type = al.alert.Status
+	_, err = config.k8sClient.EventsV1().Events(nameSpace).Update(context.TODO(), e, metav1.UpdateOptions{})
 
 	return err
 }

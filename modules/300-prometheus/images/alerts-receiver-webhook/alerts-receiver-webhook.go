@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"github.com/prometheus/common/model"
 	"net"
 	"net/http"
 	"os"
@@ -27,23 +28,22 @@ import (
 	"time"
 
 	"github.com/prometheus/alertmanager/template"
-	"github.com/prometheus/common/model"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	config     *Config
-	alertStore *AlertStore
+	config     *configStruct
+	alertStore *alertStoreStruct
 )
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	config = NewConfig()
+	config = newConfig()
 
-	log.SetLevel(config.LogLevel)
+	log.SetLevel(config.logLevel)
 
-	alertStore = NewStore(config.AlertsQueueLen)
+	alertStore = newStore(config.alertsQueueCapacity)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -59,7 +59,7 @@ func main() {
 	http.HandleFunc("/", webhookHandler)
 
 	srv := &http.Server{
-		Addr: net.JoinHostPort(config.ListenHost, config.ListenPort),
+		Addr: net.JoinHostPort(config.listenHost, config.listenPort),
 	}
 
 	go func() {
@@ -94,19 +94,13 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, alert := range data.Alerts {
-		if config.LogLevel == log.DebugLevel {
+		if config.logLevel == log.DebugLevel {
 			a, err := json.Marshal(alert)
 			if err != nil {
 				log.Error(err)
 				continue
 			}
 			log.Debugf("received alert: %s", a)
-		}
-
-		// remove resolved alerts
-		if alert.Status == string(model.AlertResolved) {
-			alertStore.Remove(&alert)
-			continue
 		}
 
 		// skip DeadMansSwitch alerts
@@ -116,19 +110,19 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// skip adding alerts if alerts queue is full
-		if len(alertStore.Alerts) == alertStore.length {
-			log.Infof("cannot add alert to queue (max length = %d), queue is full", alertStore.length)
+		if len(alertStore.alerts) == alertStore.capacity {
+			log.Infof("cannot add alert to queue (capacity = %d), queue is full", alertStore.capacity)
 			continue
 		}
 
 		// update alert
-		if _, ok := alertStore.Alerts[alert.Fingerprint]; ok {
-			alertStore.Update(&alert)
+		if _, ok := alertStore.alerts[alert.Fingerprint]; ok {
+			alertStore.update(&alert)
 			continue
 		}
 
 		// add alert
-		alertStore.Add(&alert)
+		alertStore.add(&alert)
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -148,36 +142,16 @@ func reconcileLoop(ctx context.Context) {
 func reconcile() {
 	alertStore.m.RLock()
 	defer alertStore.m.RUnlock()
-	for _, v := range alertStore.Alerts {
-		f := v.Alert.Fingerprint
-		// remove outdated alerts
-		if time.Since(v.LastReceivedTime) > 2*reconcileTime {
-			alertStore.Remove(v.Alert)
-			if err := alertStore.RemoveEvent(f); err != nil {
-				log.Error(err)
-			}
-			continue
-		}
+	for _, v := range alertStore.alerts {
+		f := v.alert.Fingerprint
 
-		if _, ok := alertStore.Events[f]; ok {
-			if err := alertStore.UpdateEvent(f); err != nil {
-				log.Error(err)
-			}
-			continue
-		}
-
-		if err := alertStore.CreateEvent(f); err != nil {
+		if err := alertStore.updateEvent(f); err != nil {
 			log.Error(err)
 		}
-	}
 
-	// remove events which do not have corresponding alert entries
-	for k := range alertStore.Events {
-		if _, ok := alertStore.Alerts[k]; ok {
-			continue
-		}
-		if err := alertStore.RemoveEvent(k); err != nil {
-			log.Error(err)
+		// remove resolved and outdated alerts
+		if v.alert.Status == string(model.AlertResolved) || time.Since(v.lastReceivedTime) > 2*reconcileTime {
+			alertStore.remove(v.alert)
 		}
 	}
 }

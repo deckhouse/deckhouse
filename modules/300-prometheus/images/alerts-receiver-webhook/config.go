@@ -31,41 +31,41 @@ const (
 	nameSpace     = "d8-monitoring"
 )
 
-type Config struct {
-	ListenHost     string
-	ListenPort     string
-	AlertsQueueLen int
-	LogLevel       log.Level
-	K8sClient      *kubernetes.Clientset
+type configStruct struct {
+	listenHost          string
+	listenPort          string
+	alertsQueueCapacity int
+	logLevel            log.Level
+	k8sClient           *kubernetes.Clientset
 }
 
-func NewConfig() *Config {
-	c := &Config{}
-	c.ListenHost = os.Getenv("LISTEN_HOST")
-	if c.ListenHost == "" {
-		c.ListenHost = "0.0.0.0"
+func newConfig() *configStruct {
+	c := &configStruct{}
+	c.listenHost = os.Getenv("LISTEN_HOST")
+	if c.listenHost == "" {
+		c.listenHost = "0.0.0.0"
 	}
 
-	c.ListenPort = os.Getenv("LISTEN_PORT")
-	if c.ListenPort == "" {
-		c.ListenPort = "8080"
+	c.listenPort = os.Getenv("LISTEN_PORT")
+	if c.listenPort == "" {
+		c.listenPort = "8080"
 	}
 
 	q := os.Getenv("ALERTS_QUEUE_LENGTH")
 	if q == "" {
-		c.AlertsQueueLen = 100
+		c.alertsQueueCapacity = 100
 	} else {
 		l, err := strconv.Atoi(q)
 		if err != nil {
 			log.Error(err)
 			os.Exit(1)
 		}
-		c.AlertsQueueLen = l
+		c.alertsQueueCapacity = l
 	}
 
-	c.LogLevel = log.InfoLevel
+	c.logLevel = log.InfoLevel
 	if d := os.Getenv("DEBUG"); d == "YES" {
-		c.LogLevel = log.DebugLevel
+		c.logLevel = log.DebugLevel
 	}
 
 	k8sConfig, err := rest.InClusterConfig()
@@ -73,7 +73,7 @@ func NewConfig() *Config {
 		log.Fatal(err)
 	}
 
-	c.K8sClient, err = kubernetes.NewForConfig(k8sConfig)
+	c.k8sClient, err = kubernetes.NewForConfig(k8sConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
