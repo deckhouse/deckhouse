@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/common/model"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sync"
 	"time"
@@ -111,7 +112,7 @@ func (a *alertStoreStruct) createEvent(fingerprint string) error {
 		EventTime:           metav1.NowMicro(),
 		Note:                msg,
 		Reason:              alert.Labels["alertname"],
-		Type:                alert.Status,
+		Type:                alertType(alert.Status),
 		ReportingController: "prometheus",
 		ReportingInstance:   "prometheus",
 		Action:              alert.Status,
@@ -121,8 +122,6 @@ func (a *alertStoreStruct) createEvent(fingerprint string) error {
 	if err != nil {
 		return err
 	}
-
-	log.Infof("event with name %s created", fingerprint)
 
 	a.alerts[fingerprint].eventLastUpdatedTime = createTime
 
@@ -159,7 +158,7 @@ func (a *alertStoreStruct) updateEvent(fingerprint string) error {
 		e.Annotations = map[string]string{lastUpdatedAnnotationName: al.eventLastUpdatedTime.Format(time.RFC3339)}
 	}
 
-	e.Type = al.alert.Status
+	e.Type = alertType(al.alert.Status)
 	_, err = config.k8sClient.EventsV1().Events(nameSpace).Update(context.TODO(), e, metav1.UpdateOptions{})
 
 	return err
@@ -182,4 +181,14 @@ func alertMessage(a *template.Alert) (string, error) {
 
 	b, err := yaml.Marshal(p)
 	return string(b), err
+}
+
+func alertType(status string) string {
+	switch status {
+	case string(model.AlertFiring):
+		return v1.EventTypeWarning
+	case string(model.AlertResolved):
+		return v1.EventTypeNormal
+	}
+	return ""
 }
