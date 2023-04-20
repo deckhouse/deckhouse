@@ -112,7 +112,7 @@ func (a *alertStoreStruct) createEvent(fingerprint string) error {
 		EventTime:           metav1.NowMicro(),
 		Note:                msg,
 		Reason:              alert.Labels["alertname"],
-		Type:                alertType(alert.Status),
+		Type:                "Firing",
 		ReportingController: "prometheus",
 		ReportingInstance:   "prometheus",
 		Action:              alert.Status,

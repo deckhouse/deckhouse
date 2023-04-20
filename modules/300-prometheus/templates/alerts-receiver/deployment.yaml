@@ -60,8 +60,6 @@ spec:
           value: "8080"
         - name: ALERTS_QUEUE_LENGTH
           value: "100"
-        - name: DEBUG
-          value: "YES"
         ports:
         - containerPort: 8080
           name: http
