@@ -159,8 +159,13 @@ pull_image() {
   if [[ -s "$IMAGE" ]]; then
     return 0
   fi
+
+  delim="@"
+  if [[ $# -gt 2 ]] && [[ "$3" == "use_tag" ]]; then
+    delim=":"
+  fi
   #using tarball, because dhctl bootstrap doesn't support oci format
-  crane pull "$registry_full_path@$1" --format tarball "$IMAGE"
+  crane pull "$registry_full_path${delim}${1}" --format tarball "$IMAGE"
 }
 
 pull_trivy_db() {
@@ -180,9 +185,9 @@ REGISTRY_PATH="$REGISTRY/$EDITION"
 IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
 trap pull_image_clean_up ERR SIGINT SIGTERM SIGHUP SIGQUIT
 #saving Deckhouse image
-pull_image "$RELEASE"
+pull_image "$RELEASE" "" "use_tag"
 #saving Deckhouse install image
-pull_image "$RELEASE" "install"
+pull_image "$RELEASE" "install" "use_tag"
 #saving uniq images from images_digests.json
 l=$(echo "$IMAGES" | wc -l)
 count=1
@@ -195,11 +200,11 @@ done
 if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
   echo "Pull metadata images"
   #saving metadata about release channel
-  pull_image "alpha" "release-channel"
-  pull_image "beta" "release-channel"
-  pull_image "early-access" "release-channel"
-  pull_image "stable" "release-channel"
-  pull_image "rock-solid" "release-channel"
+  pull_image "alpha" "release-channel" "use_tag"
+  pull_image "beta" "release-channel" "use_tag"
+  pull_image "early-access" "release-channel" "use_tag"
+  pull_image "stable" "release-channel" "use_tag"
+  pull_image "rock-solid" "release-channel" "use_tag"
 fi
 
 #pull trivy CVE database
