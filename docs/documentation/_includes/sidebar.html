@@ -7,6 +7,13 @@
         {%- for entry in sidebar.folders %}
         {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
         {%- endfor %}
+        {%- if site.mode == 'local' %}
+          {%- if site.data.sidebars.k8s-docs %}
+          {%- for entry in site.data.sidebars.k8s-docs[page.lang] %}
+          {%- include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
+          {%- endfor %}
+          {%- endif %}
+        {%- endif %}
       </ul>
 
     </nav>

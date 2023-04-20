@@ -93,6 +93,16 @@ defaults:
     values:
       lang: ru
   - scope:
+      path: "ru"
+      type: "pages"
+    values:
+      lang: ru
+  - scope:
+      path: "*/k8s"
+      type: "pages"
+    values:
+      sidebarPageTitle: true
+  - scope:
       path: "*/030-cloud-provider-openstack"
       type: "pages"
     values:

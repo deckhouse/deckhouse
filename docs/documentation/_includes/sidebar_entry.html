@@ -59,7 +59,12 @@
 {%- elsif entry.external_url %}
 <li class="{{ item_entry_class }}"><a href="{{ entry.external_url }}" target="_blank">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
 {%- elsif page_url == entry.url or page_url == entry_with_lang %}
-<li class="{{ item_entry_class }} active"><a href="{{ entry.url | true_relative_url }}">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
+<li class="{{ item_entry_class }} active"><a href="{{ entry.url | true_relative_url }}">
+{%- if page.sidebarPageTitle %}{{ page.title }}
+{%- else %}
+  {%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}
+{% endif -%}
+</a></li>
 {%- else %}
     {%- if page.name == '404.md' %}
     <li class="{{ item_entry_class }}"><a data-proofer-ignore href="{{ site.canonical_url_prefix }}{{ entry.url | relative_url }}">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
