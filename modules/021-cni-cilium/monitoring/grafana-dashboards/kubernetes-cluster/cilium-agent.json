@@ -21,13 +21,12 @@
       }
     ]
   },
-  "description": "Dashboard for Cilium v1.11 (https://cilium.io/) Agent metrics",
+  "description": "Dashboard for Cilium (https://cilium.io/) metrics",
   "editable": true,
-  "fiscalYearStartMonth": 0,
   "gnetId": 15513,
   "graphTooltip": 1,
   "id": 36,
-  "iteration": 1677567212623,
+  "iteration": 1606309591568,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -45,7 +44,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -73,11 +72,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -104,7 +103,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Errors & Warnings",
       "tooltip": {
         "shared": true,
@@ -113,24 +114,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -146,7 +156,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -174,11 +184,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -232,7 +242,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "CPU Usage per node",
       "tooltip": {
         "shared": true,
@@ -241,24 +253,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "percent",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -294,7 +315,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -322,11 +343,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -368,7 +389,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Virtual Memory Bytes",
       "tooltip": {
         "shared": true,
@@ -377,24 +400,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "bytes",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -410,7 +442,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -440,11 +472,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -478,7 +510,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Resident memory status",
       "tooltip": {
         "shared": true,
@@ -487,24 +521,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "bytes",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -520,7 +563,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -548,11 +591,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -596,7 +639,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Open file descriptors",
       "tooltip": {
         "shared": true,
@@ -605,24 +650,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -639,7 +693,7 @@
       "description": "BPF memory usage in the entire system including components not managed by Cilium.",
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -669,11 +723,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -724,7 +778,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "System-wide BPF memory usage",
       "tooltip": {
         "shared": true,
@@ -733,7 +789,9 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
@@ -741,18 +799,25 @@
         {
           "$$hashKey": "object:136",
           "format": "bytes",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:137",
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -767,7 +832,7 @@
       "description": "Fill percentage of BPF maps, tagged by map name",
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -794,10 +859,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -814,7 +879,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "BPF map pressure",
       "tooltip": {
         "shared": true,
@@ -823,7 +890,9 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
@@ -831,19 +900,25 @@
         {
           "$$hashKey": "object:230",
           "format": "percentunit",
+          "label": null,
           "logBase": 1,
           "max": "1.0",
+          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:231",
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -874,7 +949,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -906,11 +981,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -928,7 +1003,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "API call latency (average node)",
       "tooltip": {
         "shared": true,
@@ -937,24 +1014,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -968,7 +1054,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1000,11 +1086,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1022,7 +1108,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "API call latency (max node)",
       "tooltip": {
         "shared": true,
@@ -1031,24 +1119,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1062,7 +1159,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1094,11 +1191,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1116,7 +1213,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "# API calls (average node)",
       "tooltip": {
         "shared": true,
@@ -1125,24 +1224,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1156,7 +1264,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1188,11 +1296,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1210,7 +1318,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "# API calls (max node)",
       "tooltip": {
         "shared": true,
@@ -1219,24 +1329,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1250,7 +1369,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1282,11 +1401,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1304,7 +1423,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "API return codes (average node)",
       "tooltip": {
         "shared": true,
@@ -1313,24 +1434,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1344,7 +1474,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1376,11 +1506,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1398,7 +1528,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "API return codes (sum all nodes)",
       "tooltip": {
         "shared": true,
@@ -1407,24 +1539,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1449,6 +1590,13 @@
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
       },
+      "content": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1457,11 +1605,7 @@
       },
       "id": 144,
       "links": [],
-      "options": {
-        "content": "",
-        "mode": "markdown"
-      },
-      "pluginVersion": "8.5.13",
+      "mode": "markdown",
       "title": "BPF",
       "type": "text"
     },
@@ -1476,7 +1620,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1508,11 +1652,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1530,7 +1674,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "# system calls (average node)",
       "tooltip": {
         "shared": true,
@@ -1539,24 +1685,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1571,7 +1726,7 @@
       "decimals": 2,
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1603,11 +1758,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1617,7 +1772,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (pod, operation)",
+          "expr": "max(rate(cilium_bpf_syscall_duration_seconds_count{k8s_app=\"cilium\", pod=~\"$pod\"}[1m])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{operation}}",
@@ -1625,7 +1780,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "# system calls (max node)",
       "tooltip": {
         "shared": true,
@@ -1634,7 +1791,9 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
@@ -1642,17 +1801,24 @@
         {
           "decimals": 0,
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1666,7 +1832,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1698,11 +1864,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1720,7 +1886,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "system call latency (avg node)",
       "tooltip": {
         "shared": true,
@@ -1729,24 +1897,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1760,7 +1937,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1790,11 +1967,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1812,7 +1989,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "system call latency (max node)",
       "tooltip": {
         "shared": true,
@@ -1821,24 +2000,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1852,7 +2040,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1884,11 +2072,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1906,7 +2094,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "map ops (average node)",
       "tooltip": {
         "shared": true,
@@ -1915,24 +2105,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1946,7 +2145,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -1978,11 +2177,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2000,7 +2199,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "map ops (max node)",
       "tooltip": {
         "shared": true,
@@ -2009,24 +2210,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -2040,7 +2250,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -2072,11 +2282,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2094,7 +2304,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "map ops (sum failures)",
       "tooltip": {
         "shared": true,
@@ -2103,30 +2315,46 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
+      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 1,
@@ -2134,13 +2362,555 @@
         "x": 0,
         "y": 58
       },
+      "id": 182,
+      "links": [],
+      "mode": "markdown",
+      "title": "kvstore",
+      "type": "text"
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "decimals": 2,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 59
+      },
+      "hiddenSeries": false,
+      "id": 184,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(kvstore_operations_total{pod=~\"$pod\"}[1m])) by (pod, scope, action)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{scope}} {{action}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "# operations (sum all nodes)",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "decimals": 2,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 59
+      },
+      "hiddenSeries": false,
+      "id": 186,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "max(rate(kvstore_operations_total{pod=~\"$pod\"}[1m])) by (pod, scope, action)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{scope}} {{action}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "# operations (max node)",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 64
+      },
+      "hiddenSeries": false,
+      "id": 188,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "topk(5, avg(rate(cilium_kvstore_operations_duration_seconds_sum{pod=~\"$pod\"}[1m])) by (pod, action, scope) / avg(rate(cilium_kvstore_operations_duration_seconds_count{pod=~\"$pod\"}[1m])) by (pod, action, scope))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{action}} {{scope}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "latency (average node)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 64
+      },
+      "hiddenSeries": false,
+      "id": 190,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "topk(5, max(rate(cilium_kvstore_operations_duration_seconds_sum{pod=~\"$pod\"}[1m])) by (pod, action, scope) / avg(rate(cilium_kvstore_operations_duration_seconds_count{pod=~\"$pod\"}[1m])) by (pod, action, scope))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{action}} {{scope}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "latency (max node)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 69
+      },
+      "hiddenSeries": false,
+      "id": 192,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg(rate(cilium_kvstore_events_queue_seconds_count{pod=~\"$pod\"}[1m])) by (pod, scope, action)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{action}} {{scope}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Events received (average node)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "content": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
       "id": 47,
       "links": [],
-      "options": {
-        "content": "",
-        "mode": "markdown"
-      },
-      "pluginVersion": "8.5.13",
+      "mode": "markdown",
       "title": "Cilium network information",
       "type": "text"
     },
@@ -2155,7 +2925,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -2165,7 +2935,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 59
+        "y": 76
       },
       "hiddenSeries": false,
       "id": 81,
@@ -2183,11 +2953,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2205,7 +2975,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Forwarded Packets",
       "tooltip": {
         "shared": true,
@@ -2214,24 +2986,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "pps",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -2245,7 +3026,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -2255,7 +3036,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 59
+        "y": 76
       },
       "hiddenSeries": false,
       "id": 111,
@@ -2273,11 +3054,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2300,7 +3081,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Forwarded Traffic",
       "tooltip": {
         "shared": true,
@@ -2309,24 +3092,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "bps",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -2358,7 +3150,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -2368,7 +3160,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 82
       },
       "hiddenSeries": false,
       "id": 56,
@@ -2386,11 +3178,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2459,7 +3251,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "IPv4 Conntrack TCP",
       "tooltip": {
         "shared": true,
@@ -2468,117 +3262,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {
-        "dump_interrupts conntrack ipv4": "#ea6460",
-        "dump_interrupts conntrack ipv6": "#58140c"
-      },
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 65
-      },
-      "hiddenSeries": false,
-      "id": 79,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "paceLength": 10,
-      "percentage": false,
-      "pluginVersion": "8.5.13",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(cilium_datapath_conntrack_dump_resets_total{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod, area, family, name)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{name}} {{area}} {{family}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Datapath Conntrack Dump Resets",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -2610,7 +3320,177 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 82
+      },
+      "hiddenSeries": false,
+      "id": 128,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true,
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "deleted",
+          "yaxis": 2
+        },
+        {
+          "alias": "max",
+          "fillBelowTo": "min",
+          "lines": false
+        },
+        {
+          "alias": "min",
+          "lines": false
+        },
+        {
+          "alias": "deleted max",
+          "yaxis": 2
+        },
+        {
+          "alias": "deleted min",
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "min",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "avg",
+          "refId": "B"
+        },
+        {
+          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "max",
+          "refId": "C"
+        },
+        {
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "deleted",
+          "refId": "D"
+        },
+        {
+          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "deleted max",
+          "refId": "E"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "IPv6 Conntrack TCP",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "Alive  ipv4": "#0a50a1",
+        "Alive  ipv4 non-TCP": "#f9d9f9",
+        "Alive  ipv6": "#614d93",
+        "Alive  ipv6 TCP": "#806eb7",
+        "Alive  ipv6 non-TCP": "#614d93",
+        "Alive CT entries ipv6": "#badff4",
+        "Deleted CT entries ipv4": "#bf1b00",
+        "Deleted ipv4": "#890f02",
+        "Deleted ipv4 non-TCP": "#890f02",
+        "Deleted ipv6": "#bf1b00",
+        "L7 denied request": "#890f02",
+        "L7 forwarded request": "#7eb26d",
+        "avg": "#e0f9d7",
+        "deleted": "#6ed0e0",
+        "deleted max": "#447ebc",
+        "max": "#629e51",
+        "min": "#629e51"
+      },
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
         },
         "overrides": []
       },
@@ -2620,7 +3500,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 71
+        "y": 88
       },
       "hiddenSeries": false,
       "id": 129,
@@ -2638,11 +3518,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2711,7 +3591,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "IPv4 Conntrack Non-TCP",
       "tooltip": {
         "shared": true,
@@ -2720,28 +3602,55 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
-      "aliasColors": {},
+      "aliasColors": {
+        "Alive  ipv4": "#0a50a1",
+        "Alive  ipv4 non-TCP": "#f9d9f9",
+        "Alive  ipv6": "#614d93",
+        "Alive  ipv6 TCP": "#806eb7",
+        "Alive  ipv6 non-TCP": "#614d93",
+        "Alive CT entries ipv6": "#badff4",
+        "Deleted CT entries ipv4": "#bf1b00",
+        "Deleted ipv4": "#890f02",
+        "Deleted ipv4 non-TCP": "#890f02",
+        "Deleted ipv6": "#bf1b00",
+        "L7 denied request": "#890f02",
+        "L7 forwarded request": "#7eb26d",
+        "avg": "#e0f9d7",
+        "deleted": "#6ed0e0",
+        "deleted max": "#447ebc",
+        "max": "#629e51",
+        "min": "#629e51"
+      },
       "bars": false,
       "dashLength": 10,
       "dashes": false,
@@ -2751,7 +3660,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -2761,10 +3670,10 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 71
+        "y": 88
       },
       "hiddenSeries": false,
-      "id": 89,
+      "id": 130,
       "legend": {
         "avg": false,
         "current": false,
@@ -2779,21 +3688,33 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "avg(cilium_unreachable_health_endpoints) by (pod)",
+          "alias": "deleted",
           "yaxis": 2
         },
         {
-          "alias": "average unreachable health endpoints",
+          "alias": "max",
+          "fillBelowTo": "min",
+          "lines": false
+        },
+        {
+          "alias": "min",
+          "lines": false
+        },
+        {
+          "alias": "deleted max",
+          "yaxis": 2
+        },
+        {
+          "alias": "deleted min",
           "yaxis": 2
         }
       ],
@@ -2802,23 +3723,47 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(cilium_unreachable_nodes{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "unreachable nodes",
+          "legendFormat": "min",
           "refId": "A"
         },
         {
-          "expr": "sum(cilium_unreachable_health_endpoints{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "unreachable health endpoints",
+          "legendFormat": "avg",
           "refId": "B"
+        },
+        {
+          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "max",
+          "refId": "C"
+        },
+        {
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "deleted",
+          "refId": "D"
+        },
+        {
+          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "deleted max",
+          "refId": "E"
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
-      "title": "Connectivity Health",
+      "timeShift": null,
+      "title": "IPv6 Conntrack Non-TCP",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2826,24 +3771,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -2858,9 +3812,10 @@
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
       },
+      "decimals": null,
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -2870,7 +3825,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 77
+        "y": 94
       },
       "hiddenSeries": false,
       "id": 87,
@@ -2890,11 +3845,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2908,7 +3862,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(cilium_ip_addresses{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod, family)\n",
+          "expr": "sum(cilium_ip_addresses{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod, family)\n",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{family}}",
@@ -2916,7 +3870,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Allocated Addresses",
       "tooltip": {
         "shared": true,
@@ -2925,24 +3881,452 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "dump_interrupts conntrack ipv4": "#ea6460",
+        "dump_interrupts conntrack ipv6": "#58140c"
+      },
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 94
+      },
+      "hiddenSeries": false,
+      "id": 79,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(cilium_datapath_conntrack_dump_resets_total{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod, area, family, name)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{name}} {{area}} {{family}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Datapath Conntrack Dump Resets",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 99
+      },
+      "hiddenSeries": false,
+      "id": 106,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "avg(rate(cilium_services_events_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (pod, action)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{action}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Service Updates",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 99
+      },
+      "hiddenSeries": false,
+      "id": 89,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "avg(cilium_unreachable_health_endpoints) by (pod)",
+          "yaxis": 2
+        },
+        {
+          "alias": "average unreachable health endpoints",
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(cilium_unreachable_nodes{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "unreachable nodes",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(cilium_unreachable_health_endpoints{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "unreachable health endpoints",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Connectivity Health",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 104
+      },
+      "hiddenSeries": false,
+      "id": 39,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "paceLength": 10,
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(cilium_drop_count_total{direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (reason)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Dropped Egress Packets",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -2959,7 +4343,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -2969,7 +4353,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 77
+        "y": 104
       },
       "hiddenSeries": false,
       "id": 93,
@@ -2987,11 +4371,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3027,7 +4410,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_nodes_all_events_received_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (pod, event_type, source) * 60",
+          "expr": "avg(rate(cilium_nodes_all_events_received_total{job=\"cilium-agent\", pod=~\"$pod\"}[1m])) by (pod, event_type, source) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{eventType}} {{source}}",
@@ -3035,7 +4418,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Node Events",
       "tooltip": {
         "shared": true,
@@ -3044,24 +4429,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -3075,7 +4469,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -3085,10 +4479,10 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 82
+        "y": 109
       },
       "hiddenSeries": false,
-      "id": 106,
+      "id": 113,
       "legend": {
         "avg": false,
         "current": false,
@@ -3103,11 +4497,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3117,16 +4510,18 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_services_events_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (pod, action)",
+          "expr": "sum(rate(cilium_drop_bytes_total{direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (reason) * 8",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{action}}",
+          "legendFormat": "{{reason}}",
           "refId": "A"
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
-      "title": "Service Updates",
+      "timeShift": null,
+      "title": "Dropped Egress Traffic",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -3134,24 +4529,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
-          "format": "ops",
+          "format": "bps",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -3168,7 +4572,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -3178,7 +4582,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 82
+        "y": 109
       },
       "hiddenSeries": false,
       "id": 91,
@@ -3198,11 +4602,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3222,21 +4625,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(cilium_nodes_all_num{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "avg(cilium_nodes_all_num{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Average Nodes",
           "refId": "A"
         },
         {
-          "expr": "min(cilium_nodes_all_num{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "min(cilium_nodes_all_num{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Min Nodes",
           "refId": "B"
         },
         {
-          "expr": "max(cilium_nodes_all_num{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "max(cilium_nodes_all_num{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Max Nodes",
@@ -3244,7 +4647,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Nodes",
       "tooltip": {
         "shared": true,
@@ -3253,224 +4658,56 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
+      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 0,
-        "y": 87
-      },
-      "hiddenSeries": false,
-      "id": 39,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "paceLength": 10,
-      "percentage": false,
-      "pluginVersion": "8.5.13",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(rate(cilium_drop_count_total{direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (reason)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{reason}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Dropped Egress Packets",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ops",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 87
-      },
-      "hiddenSeries": false,
-      "id": 113,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "paceLength": 10,
-      "percentage": false,
-      "pluginVersion": "8.5.13",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(rate(cilium_drop_bytes_total{direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (reason) * 8",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{reason}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Dropped Egress Traffic",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "bps",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
       },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 92
+        "y": 114
       },
       "id": 28,
       "links": [],
-      "options": {
-        "content": "",
-        "mode": "markdown"
-      },
-      "pluginVersion": "8.5.13",
+      "mode": "markdown",
       "title": "Policy",
       "type": "text"
     },
@@ -3489,7 +4726,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -3499,7 +4736,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 93
+        "y": 115
       },
       "hiddenSeries": false,
       "id": 53,
@@ -3517,11 +4754,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3562,7 +4798,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "L7 forwarded request",
       "tooltip": {
         "shared": true,
@@ -3571,24 +4809,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "reqps",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "reqps",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -3602,7 +4849,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -3612,7 +4859,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 93
+        "y": 115
       },
       "hiddenSeries": false,
       "id": 37,
@@ -3630,11 +4877,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3652,7 +4899,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Cilium drops Ingress",
       "tooltip": {
         "shared": true,
@@ -3661,31 +4910,40 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
       "aliasColors": {
         "Max per node processingTime": "#e24d42",
         "Max per node upstreamTime": "#58140c",
-        "avg(cilium_policy_l7_parse_errors_total{kubernetes_pod_name=~\"cilium.*\"})": "#bf1b00",
+        "avg(cilium_policy_l7_parse_errors_total{pod=~\"cilium.*\"})": "#bf1b00",
         "parse errors": "#bf1b00"
       },
       "bars": true,
@@ -3697,7 +4955,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -3707,7 +4965,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 98
+        "y": 120
       },
       "hiddenSeries": false,
       "id": 94,
@@ -3727,11 +4985,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3745,7 +5002,7 @@
           "yaxis": 2
         },
         {
-          "alias": "avg(cilium_policy_l7_parse_errors_total{kubernetes_pod_name=~\"cilium.*\"})",
+          "alias": "avg(cilium_policy_l7_parse_errors_total{pod=~\"cilium.*\"})",
           "yaxis": 2
         },
         {
@@ -3758,7 +5015,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_proxy_upstream_reply_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (pod, scope) / sum(rate(cilium_proxy_upstream_reply_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__interval_sx4])) by (pod, scope)",
+          "expr": "avg(rate(cilium_proxy_upstream_reply_seconds_sum{job=\"cilium-agent\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, scope) / sum(rate(cilium_proxy_upstream_reply_seconds_count{job=\"cilium-agent\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, scope)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -3766,7 +5023,7 @@
           "refId": "A"
         },
         {
-          "expr": "avg(cilium_policy_l7_parse_errors_total{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "avg(cilium_policy_l7_parse_errors_total{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "parse errors",
@@ -3774,7 +5031,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Proxy response time (Avg)",
       "tooltip": {
         "shared": true,
@@ -3783,24 +5042,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -3814,7 +5082,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -3824,7 +5092,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 98
+        "y": 120
       },
       "hiddenSeries": false,
       "id": 114,
@@ -3842,11 +5110,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3864,7 +5132,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Dropped Ingress Traffic",
       "tooltip": {
         "shared": true,
@@ -3873,24 +5143,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "bps",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -3909,7 +5188,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -3919,7 +5198,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 103
+        "y": 125
       },
       "hiddenSeries": false,
       "id": 104,
@@ -3937,11 +5216,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3994,7 +5272,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Policy Trigger Duration",
       "tooltip": {
         "shared": true,
@@ -4003,24 +5283,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -4038,7 +5327,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -4048,7 +5337,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 103
+        "y": 125
       },
       "hiddenSeries": false,
       "id": 66,
@@ -4068,11 +5357,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4102,7 +5390,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Proxy response time (Max)",
       "tooltip": {
         "shared": true,
@@ -4111,24 +5401,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -4147,7 +5446,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -4157,7 +5456,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 108
+        "y": 130
       },
       "hiddenSeries": false,
       "id": 33,
@@ -4169,6 +5468,7 @@
         "min": false,
         "rightSide": true,
         "show": true,
+        "sideWidth": null,
         "total": false,
         "values": true
       },
@@ -4177,11 +5477,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4202,7 +5502,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Endpoints policy enforcement status",
       "tooltip": {
         "shared": false,
@@ -4211,7 +5513,9 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "series",
+        "name": null,
         "show": true,
         "values": [
           "total"
@@ -4220,17 +5524,24 @@
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -4248,7 +5559,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -4258,7 +5569,7 @@
         "h": 5,
         "w": 6,
         "x": 6,
-        "y": 108
+        "y": 130
       },
       "hiddenSeries": false,
       "id": 100,
@@ -4276,11 +5587,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4322,7 +5633,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Proxy Redirects",
       "tooltip": {
         "shared": true,
@@ -4331,24 +5644,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -4369,7 +5691,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -4379,7 +5701,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 108
+        "y": 130
       },
       "hiddenSeries": false,
       "id": 102,
@@ -4397,11 +5719,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4454,7 +5775,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Policy Trigger Runs",
       "tooltip": {
         "shared": true,
@@ -4463,24 +5786,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -4498,7 +5830,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -4508,7 +5840,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 113
+        "y": 135
       },
       "hiddenSeries": false,
       "id": 85,
@@ -4528,11 +5860,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4589,7 +5921,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Policies Per Node",
       "tooltip": {
         "shared": true,
@@ -4598,24 +5932,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -4633,7 +5976,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -4643,7 +5986,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 113
+        "y": 135
       },
       "hiddenSeries": false,
       "id": 123,
@@ -4663,11 +6006,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4690,7 +6033,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "DNS proxy requests",
       "tooltip": {
         "shared": true,
@@ -4699,24 +6044,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -4734,7 +6088,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -4744,7 +6098,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 118
+        "y": 140
       },
       "hiddenSeries": false,
       "id": 117,
@@ -4762,11 +6116,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4808,7 +6162,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Policy Revision",
       "tooltip": {
         "shared": true,
@@ -4817,44 +6173,56 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
+      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 123
+        "y": 145
       },
       "id": 73,
       "links": [],
-      "options": {
-        "content": "",
-        "mode": "markdown"
-      },
-      "pluginVersion": "8.5.13",
+      "mode": "markdown",
       "title": "Endpoints",
       "type": "text"
     },
@@ -4867,9 +6235,10 @@
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
       },
+      "decimals": null,
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -4879,7 +6248,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 124
+        "y": 146
       },
       "hiddenSeries": false,
       "id": 55,
@@ -4899,11 +6268,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4921,7 +6290,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Endpoint regeneration time (90th percentile)",
       "tooltip": {
         "shared": true,
@@ -4930,24 +6301,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -4959,9 +6339,10 @@
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
       },
+      "decimals": null,
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -4971,7 +6352,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 124
+        "y": 146
       },
       "hiddenSeries": false,
       "id": 115,
@@ -4991,11 +6372,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5013,7 +6394,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Endpoint regeneration time (99th percentile)",
       "tooltip": {
         "shared": true,
@@ -5022,24 +6405,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -5058,7 +6450,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5068,7 +6460,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 133
+        "y": 155
       },
       "hiddenSeries": false,
       "id": 49,
@@ -5086,11 +6478,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5117,7 +6509,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Endpoint regenerations",
       "tooltip": {
         "shared": false,
@@ -5126,24 +6520,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -5161,7 +6564,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5171,7 +6574,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 133
+        "y": 155
       },
       "hiddenSeries": false,
       "id": 51,
@@ -5190,11 +6593,11 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5212,7 +6615,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Cilium endpoint state",
       "tooltip": {
         "shared": false,
@@ -5221,44 +6626,56 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
+      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 138
+        "y": 160
       },
       "id": 74,
       "links": [],
-      "options": {
-        "content": "",
-        "mode": "markdown"
-      },
-      "pluginVersion": "8.5.13",
+      "mode": "markdown",
       "title": "Controllers",
       "type": "text"
     },
@@ -5277,7 +6694,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5287,7 +6704,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 139
+        "y": 161
       },
       "hiddenSeries": false,
       "id": 70,
@@ -5306,11 +6723,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5344,7 +6761,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Controllers",
       "tooltip": {
         "shared": true,
@@ -5353,24 +6772,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -5391,7 +6819,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5401,7 +6829,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 139
+        "y": 161
       },
       "hiddenSeries": false,
       "id": 68,
@@ -5422,14 +6850,15 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
+      "repeat": null,
       "repeatDirection": "h",
       "seriesOverrides": [
         {
@@ -5454,7 +6883,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Controller Durations",
       "tooltip": {
         "shared": true,
@@ -5463,7 +6894,9 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
@@ -5472,37 +6905,45 @@
           "format": "s",
           "label": "",
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "s",
           "label": "",
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
+      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 144
+        "y": 166
       },
       "id": 60,
       "links": [],
-      "options": {
-        "content": "",
-        "mode": "markdown"
-      },
-      "pluginVersion": "8.5.13",
+      "mode": "markdown",
       "title": "Kubernetes integration",
       "type": "text"
     },
@@ -5517,7 +6958,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5527,7 +6968,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 145
+        "y": 167
       },
       "hiddenSeries": false,
       "id": 163,
@@ -5549,11 +6990,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5571,7 +7012,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "apiserver latency (average node)",
       "tooltip": {
         "shared": true,
@@ -5580,24 +7023,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -5611,7 +7063,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5621,7 +7073,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 145
+        "y": 167
       },
       "hiddenSeries": false,
       "id": 165,
@@ -5643,11 +7095,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5665,7 +7117,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "apiserver latency (max node)",
       "tooltip": {
         "shared": true,
@@ -5674,24 +7128,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -5705,7 +7168,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5715,7 +7178,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 152
+        "y": 174
       },
       "hiddenSeries": false,
       "id": 168,
@@ -5737,11 +7200,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5759,7 +7222,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "apiserver #calls (sum all nodes)",
       "tooltip": {
         "shared": true,
@@ -5768,24 +7233,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -5799,7 +7273,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5809,7 +7283,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 152
+        "y": 174
       },
       "hiddenSeries": false,
       "id": 166,
@@ -5831,11 +7305,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5853,7 +7327,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "apiserver calls (sum all nodes)",
       "tooltip": {
         "shared": true,
@@ -5862,24 +7338,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -5893,7 +7378,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5903,7 +7388,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 160
+        "y": 182
       },
       "hiddenSeries": false,
       "id": 172,
@@ -5924,11 +7409,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -5946,7 +7431,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Valid, Unnecessary K8s Events Received",
       "tooltip": {
         "shared": true,
@@ -5955,24 +7442,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -5986,7 +7482,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -5996,7 +7492,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 160
+        "y": 182
       },
       "hiddenSeries": false,
       "id": 174,
@@ -6016,11 +7512,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -6038,7 +7534,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Invalid, Unnecessary K8s Events Received",
       "tooltip": {
         "shared": true,
@@ -6047,24 +7545,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -6078,7 +7585,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -6088,7 +7595,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 166
+        "y": 188
       },
       "hiddenSeries": false,
       "id": 175,
@@ -6108,11 +7615,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -6130,7 +7637,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Valid, Necessary K8s Events Received",
       "tooltip": {
         "shared": true,
@@ -6139,24 +7648,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -6170,7 +7688,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -6180,7 +7698,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 166
+        "y": 188
       },
       "hiddenSeries": false,
       "id": 173,
@@ -6200,11 +7718,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -6222,7 +7739,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Invalid, Necessary K8s Events Received",
       "tooltip": {
         "shared": true,
@@ -6231,24 +7750,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -6262,7 +7790,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -6272,7 +7800,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 174
+        "y": 196
       },
       "hiddenSeries": false,
       "id": 108,
@@ -6292,11 +7820,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6314,7 +7842,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "CiliumNetworkPolicy Events",
       "tooltip": {
         "shared": true,
@@ -6323,24 +7853,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -6358,7 +7897,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -6368,7 +7907,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 174
+        "y": 196
       },
       "hiddenSeries": false,
       "id": 119,
@@ -6388,11 +7927,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6410,7 +7949,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "NetworkPolicy Events",
       "tooltip": {
         "shared": true,
@@ -6419,24 +7960,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -6454,7 +8004,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -6464,7 +8014,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 181
+        "y": 203
       },
       "hiddenSeries": false,
       "id": 109,
@@ -6484,11 +8034,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6506,7 +8056,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Pod Events",
       "tooltip": {
         "shared": true,
@@ -6515,24 +8067,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -6550,7 +8111,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -6560,7 +8121,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 181
+        "y": 203
       },
       "hiddenSeries": false,
       "id": 122,
@@ -6580,11 +8141,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6602,7 +8163,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Node Events",
       "tooltip": {
         "shared": true,
@@ -6611,24 +8174,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -6642,7 +8214,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -6652,7 +8224,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 188
+        "y": 210
       },
       "hiddenSeries": false,
       "id": 118,
@@ -6672,11 +8244,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6694,7 +8266,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Service Events",
       "tooltip": {
         "shared": true,
@@ -6703,24 +8277,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -6734,7 +8317,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -6744,7 +8327,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 188
+        "y": 210
       },
       "hiddenSeries": false,
       "id": 120,
@@ -6764,11 +8347,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6786,7 +8369,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Endpoints Events",
       "tooltip": {
         "shared": true,
@@ -6795,24 +8380,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -6826,7 +8420,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
@@ -6836,7 +8430,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 195
+        "y": 217
       },
       "hiddenSeries": false,
       "id": 121,
@@ -6856,11 +8450,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "dataLinks": []
       },
       "paceLength": 10,
       "percentage": false,
-      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6878,7 +8472,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Namespace Events",
       "tooltip": {
         "shared": true,
@@ -6887,29 +8483,38 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     }
   ],
   "refresh": false,
-  "schemaVersion": 36,
+  "schemaVersion": 25,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -6928,6 +8533,7 @@
         "definition": "label_values(kube_pod_created{pod=~\"agent.*\",namespace=\"d8-cni-cilium\"},pod)",
         "hide": 0,
         "includeAll": true,
+        "label": null,
         "multi": false,
         "name": "pod",
         "options": [],
@@ -6940,6 +8546,7 @@
         "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
+        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -6975,8 +8582,8 @@
     ]
   },
   "timezone": "browser",
-  "title": "Cilium v1.11 Agent Metrics",
+  "title": "Cilium v1.12 Agent Metrics",
   "uid": "vtuWtdumz",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
 }
