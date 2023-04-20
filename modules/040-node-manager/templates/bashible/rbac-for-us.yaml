@@ -41,7 +41,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: bashible-instance-claim-bootstrapped-nodes
+  name: d8:node-manager:bashible:instance-claim-bootstrapped-nodes
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
 - apiGroups:
@@ -126,12 +126,12 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: bashible-instance-claim-bootstrapped-nodes
+  name: d8:node-manager:bashible:instance-claim-bootstrapped-nodes
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: bashible-instance-claim-bootstrapped-nodes
+  name: d8:node-manager:bashible:instance-claim-bootstrapped-nodes
 subjects:
   - kind: Group
     name: system:bootstrappers:d8-node-manager
