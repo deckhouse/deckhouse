@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-event-on 'bb-sync-file-changed' '_on_selinux_policy_changed'
-_on_selinux_policy_changed() {
+bb-event-on 'selinux_deckhouse_policy_changed' '_on_selinux_deckhouse_policy_changed'
+_on_selinux_deckhouse_policy_changed() {
   checkmodule -M -m -o /var/lib/bashible/policies/deckhouse.mod /var/lib/bashible/policies/deckhouse.te
   semodule_package -o /var/lib/bashible/policies/deckhouse.pp -m /var/lib/bashible/policies/deckhouse.mod
   semodule -i /var/lib/bashible/policies/deckhouse.pp
 }
 
 mkdir -p /var/lib/bashible/policies
-bb-sync-file /var/lib/bashible/policies/deckhouse.te - << "EOF"
+bb-sync-file /var/lib/bashible/policies/deckhouse.te - selinux_deckhouse_policy_changed << "EOF"
 module deckhouse 1.0;
 
 require {
@@ -70,7 +70,7 @@ allow setfiles_t var_lib_t:file read;
 EOF
 
 {{- if eq .cri "Containerd" }}
-bb-event-on 'bb-sync-file-changed' '_on_selinux_cilium_policy_changed'
+bb-event-on 'selinux_cilium_policy_changed' '_on_selinux_cilium_policy_changed'
 _on_selinux_cilium_policy_changed() {
   checkmodule -M -m -o /var/lib/bashible/policies/cilium.mod /var/lib/bashible/policies/cilium.te
   semodule_package -o /var/lib/bashible/policies/cilium.pp -m /var/lib/bashible/policies/cilium.mod
@@ -78,7 +78,7 @@ _on_selinux_cilium_policy_changed() {
 }
 
 if crictl ps | grep -q "cilium-agent"; then
-  bb-sync-file /var/lib/bashible/policies/cilium.te - << "EOF"
+  bb-sync-file /var/lib/bashible/policies/cilium.te - selinux_cilium_policy_changed << "EOF"
 module cilium 1.0;
 
 require {
