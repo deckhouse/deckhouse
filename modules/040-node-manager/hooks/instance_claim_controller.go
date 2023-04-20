@@ -259,6 +259,11 @@ func getInstanceClaimStatusPatch(ic *d8v1alpha1.InstanceClaim, machine *machineF
 		}
 	}
 
+	// if machine is Running we do not need bootstrap info
+	if machine.CurrentStatus.Phase == mcmv1alpha1.MachineRunning && (ic.Status.BootstrapStatus.LogsEndpoint != "" || ic.Status.BootstrapStatus.Description != "") {
+		status["bootstrapStatus"] = nil
+	}
+
 	if string(ic.Status.CurrentStatus.Phase) != string(machine.CurrentStatus.Phase) {
 		status["currentStatus"] = map[string]interface{}{
 			"phase":          string(machine.CurrentStatus.Phase),

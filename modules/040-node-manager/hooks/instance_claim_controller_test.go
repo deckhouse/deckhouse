@@ -221,8 +221,64 @@ status:
 	})
 
 	Context("Updating instance claims status", func() {
-		const (
-			ic = `
+		Context("Phase is Running and bootstrapStatus is not empty", func() {
+			const (
+				ic1 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InstanceClaim
+metadata:
+  labels:
+    node.deckhouse.io/group: "ng1"
+  name: worker-dde21
+  finalizers:
+  - node-manager.hooks.deckhouse.io/instance-claim-controller
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    phase: Pending
+  lastOperation:
+    description: AAAA
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    state: Processing
+    type: Create
+  machineRef:
+    kind: Machine
+    apiVersion: machine.sapcloud.io/v1alpha1
+    namespace: d8-cloud-instance-manager
+    name: worker-dde21
+  bootstrapStatus:
+    logsEndpoint: 127.0.0.0:1111
+    description: Use nc
+`
+				machine1 = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-dde21
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1-nova
+    node: worker-dde21
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: CloudEphemeral
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    phase: Pending
+  lastOperation:
+    description: AAAA
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    state: Processing
+    type: Create
+`
+				ic2 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: InstanceClaim
@@ -246,8 +302,11 @@ status:
     apiVersion: machine.sapcloud.io/v1alpha1
     namespace: d8-cloud-instance-manager
     name: worker-ac32h
+  bootstrapStatus:
+    logsEndpoint: 127.0.0.0:1111
+    description: Use nc
 `
-			machine = `
+				machine2 = `
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -274,31 +333,189 @@ status:
     state: Successful
     type: HealthCheck
 `
-		)
+			)
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(ng + ic1 + machine1 + ic2 + machine2))
+				f.RunHook()
+			})
 
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(ng + ic + machine))
-			f.RunHook()
+			It("Should keep instance claim bootstrapStatus for none running machines", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-dde21")
+
+				Expect(ic.Exists()).To(BeTrue())
+				Expect(ic.Field(`status.bootstrapStatus.logsEndpoint`).String()).To(Equal("127.0.0.0:1111"))
+				Expect(ic.Field(`status.bootstrapStatus.description`).String()).To(Equal("Use nc"))
+			})
+
+			It("Should remove bootstrapStatus for running machines", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h")
+
+				Expect(ic.Exists()).To(BeTrue())
+				Expect(ic.Field(`status.bootstrapStatus.logsEndpoint`).String()).To(BeEmpty())
+				Expect(ic.Field(`status.bootstrapStatus.description`).String()).To(BeEmpty())
+			})
 		})
 
-		It("Should update instance claim status from machine status", func() {
-			Expect(f).To(ExecuteSuccessfully())
+		Context("Another status fields", func() {
+			const (
+				ic1 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InstanceClaim
+metadata:
+  labels:
+    node.deckhouse.io/group: "ng1"
+  name: worker-dde21
+  finalizers:
+  - node-manager.hooks.deckhouse.io/instance-claim-controller
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    phase: Pending
+  lastOperation:
+    description: AAAA
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    state: Processing
+    type: Create
+  machineRef:
+    kind: Machine
+    apiVersion: machine.sapcloud.io/v1alpha1
+    namespace: d8-cloud-instance-manager
+    name: worker-dde21
+`
+				machine1 = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-dde21
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1-nova
+    node: worker-dde21
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: CloudEphemeral
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    phase: Pending
+  lastOperation:
+    description: AAAA
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    state: Processing
+    type: Create
+`
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
-			ic := f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h")
-			machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h")
+				machine2 = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-ac32h
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1-nova
+    node: worker-ac32h
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: CloudEphemeral
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-19T15:54:55Z"
+    phase: Running
+  lastOperation:
+    description: Machine sandbox-stage-8ef4a622-6655b-wbsfg successfully re-joined the cluster
+    lastUpdateTime: "2023-04-18T16:54:55Z"
+    state: Successful
+    type: HealthCheck
+`
+				ic2 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InstanceClaim
+metadata:
+  labels:
+    node.deckhouse.io/group: "ng1"
+  name: worker-ac32h
+  finalizers:
+  - node-manager.hooks.deckhouse.io/instance-claim-controller
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    phase: Pending
+  lastOperation:
+    description: Create machine in the cloud provider
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    state: Processing
+    type: Create
+  machineRef:
+    kind: Machine
+    apiVersion: machine.sapcloud.io/v1alpha1
+    namespace: d8-cloud-instance-manager
+    name: worker-ac32h
+  bootstrapStatus:
+    logsEndpoint: 127.0.0.0:1111
+    description: Use nc
+`
+			)
 
-			Expect(ic.Exists()).To(BeTrue())
-			Expect(machine.Exists()).To(BeTrue())
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(ng + ic1 + machine1 + ic2 + machine2))
+				f.RunHook()
+			})
 
-			Expect(ic.Field(`metadata.labels.node\.deckhouse\.io/group`).String()).To(Equal("ng1"))
+			It("Should keep another instance claims", func() {
+				Expect(f).To(ExecuteSuccessfully())
 
-			Expect(ic.Field(`status.nodeRef.name`).Exists()).To(BeTrue())
-			Expect(ic.Field(`status.nodeRef.name`).String()).To(Equal("worker-ac32h"))
+				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
+				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-dde21")
+				machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-dde21")
 
-			assertMachineRef(f, "worker-ac32h")
-			assertCurrentStatus(f, "worker-ac32h")
-			assertLastOperation(f, "worker-ac32h")
+				Expect(ic.Exists()).To(BeTrue())
+				Expect(machine.Exists()).To(BeTrue())
+
+				Expect(ic.Field(`metadata.labels.node\.deckhouse\.io/group`).String()).To(Equal("ng1"))
+
+				Expect(ic.Field(`status.nodeRef.name`).Exists()).To(BeTrue())
+				Expect(ic.Field(`status.nodeRef.name`).String()).To(Equal("worker-dde21"))
+
+				assertMachineRef(f, "worker-dde21")
+				assertCurrentStatus(f, "worker-dde21")
+				assertLastOperation(f, "worker-dde21")
+			})
+
+			It("Should update instance claim status from machine status", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
+				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h")
+				machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h")
+
+				Expect(ic.Exists()).To(BeTrue())
+				Expect(machine.Exists()).To(BeTrue())
+
+				Expect(ic.Field(`metadata.labels.node\.deckhouse\.io/group`).String()).To(Equal("ng1"))
+
+				Expect(ic.Field(`status.nodeRef.name`).Exists()).To(BeTrue())
+				Expect(ic.Field(`status.nodeRef.name`).String()).To(Equal("worker-ac32h"))
+
+				assertMachineRef(f, "worker-ac32h")
+				assertCurrentStatus(f, "worker-ac32h")
+				assertLastOperation(f, "worker-ac32h")
+			})
 		})
 	})
 

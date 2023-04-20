@@ -26,7 +26,7 @@ while [ "$patch_pending" = true ] ; do
       -H "Accept: application/json" \
       -H "Content-Type: application/json-patch+json" \
       --cacert "$BOOTSTRAP_DIR/ca.crt" \
-      --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"${tcp_endpoint}\"} }]" \
+      --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"${tcp_endpoint}:${output_log_port}\"} }]" \
       "https://$server/apis/deckhouse.io/v1alpha1/instanceclaims/$(hostname -s)/status" ; then
 
       echo "Successfully patched machine $(hostname -s) status."

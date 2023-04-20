@@ -59,6 +59,7 @@ type InstanceClaimStatus struct {
 type BootstrapStatus struct {
 	// Endpoint for getting bootstrap logs
 	LogsEndpoint string `json:"logsEndpoint,omitempty"`
+	Description  string `json:"description,omitempty"`
 }
 
 // State is a current state of the machine.
