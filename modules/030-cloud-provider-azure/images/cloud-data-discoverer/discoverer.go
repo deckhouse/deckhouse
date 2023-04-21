@@ -19,14 +19,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"math"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
@@ -91,11 +90,11 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 				continue
 			}
 
-			cpu := int64(0)
-			memory := int64(0)
+			cpu := ""
+			memory := ""
 
 			for _, cpb := range r.Capabilities {
-				if cpu > 0 && memory > 0 {
+				if cpu != "" && memory != "" {
 					break
 				}
 
@@ -105,33 +104,26 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 
 				switch *cpb.Name {
 				case "MemoryGB":
-					m, err := strconv.ParseFloat(*cpb.Value, 64)
-					if err != nil {
-						return nil, fmt.Errorf("cannot parse memory: %v. %v", err, r)
-					}
-
-					memory = int64(math.Ceil(m * 1024))
+					memory = *cpb.Value
 					continue
 				case "vCPUs":
-					c, err := strconv.Atoi(*cpb.Value)
-					if err != nil {
-						return nil, fmt.Errorf("cannot parse vcpu: %v. %v", err, r)
-					}
-
-					cpu = int64(c)
+					cpu = *cpb.Value
 					continue
 				}
 			}
 
-			if cpu == 0 || memory == 0 {
+			if cpu == "" || memory == "" {
 				return nil, fmt.Errorf("cpu or memory is zero: %v", r)
 			}
 
 			res = append(res, v1alpha1.InstanceType{
-				Name:   *r.Name,
-				CPU:    cpu,
-				Memory: memory,
+				Name:     *r.Name,
+				CPU:      resource.MustParse(cpu),
+				Memory:   resource.MustParse(memory + "Gi"),
+				RootDisk: resource.MustParse("0"),
 			})
+
+			res[0].RootDisk.IsZero()
 		}
 	}
 
