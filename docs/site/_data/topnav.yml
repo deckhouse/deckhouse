@@ -6,7 +6,10 @@ topnav:
       - title: Getting started
         url: /gs/
       - title: Guides
-        url: /guides/production.html
+        url: '#'
+        items:
+        - title: Going to Production
+          url: /guides/production.html
       - title: Documentation
         url: /documentation/v1/deckhouse-overview.html
       - title: Products
@@ -44,7 +47,10 @@ topnav:
       - title: Быстрый старт
         url: /gs/
       - title: Руководства
-        url: /guides/production.html
+        url: '#'
+        items:
+        - title: Подготовка к production
+          url: /guides/production.html
       - title: Документация
         url: /documentation/v1/deckhouse-overview.html
       - title: Продукты
