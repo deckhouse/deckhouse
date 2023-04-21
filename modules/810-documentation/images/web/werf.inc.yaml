@@ -261,10 +261,10 @@ import:
   add: /src/public/en
   to: /srv/jekyll-data/documentation/en/k8s
   before: setup
-  includePaths:
-  - docs/concepts/
-  - docs/tutorials/
-  - docs/tasks/
+#  includePaths:
+#  - docs/concepts/
+#  - docs/tutorials/
+#  - docs/tasks/
 #  - docs
 #  - ru
 #  - en
@@ -274,10 +274,10 @@ import:
   add: /src/public/ru
   to: /srv/jekyll-data/documentation/ru/k8s
   before: setup
-  includePaths:
-  - docs/concepts/
-  - docs/tutorials/
-  - docs/tasks/
+#  includePaths:
+#  - docs/concepts/
+#  - docs/tutorials/
+#  - docs/tasks/
 #  - docs/concepts/
 #  - docs
 #  - ru
