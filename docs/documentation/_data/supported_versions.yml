@@ -1,22 +1,25 @@
 osDistributions:
-  ubuntu:
-    name: Ubuntu
-    url: https://ubuntu.com/download/server
+  altlinux:
+    name: ALT Linux
+    url: https://www.altlinux.org/
+  alteros:
+    name: AlterOS
+    url: https://alter-os.ru/
+  astra:
+    name: Astra Linux Special Edition
+    url: https://astralinux.ru/products/astra-linux-special-edition/
   centos:
     name: CentOS
     url: https://www.centos.org/download/
   debian:
     name: Debian
     url: https://www.debian.org/download
-  astra:
-    name: Astra Linux Special Edition
-    url: https://astralinux.ru/products/astra-linux-special-edition/
   rocky:
     name: Rocky Linux
     url: https://rockylinux.org/download
-  alteros:
-    name: AlterOS
-    url: https://alter-os.ru/
+  ubuntu:
+    name: Ubuntu
+    url: https://ubuntu.com/download/server
   '_redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
