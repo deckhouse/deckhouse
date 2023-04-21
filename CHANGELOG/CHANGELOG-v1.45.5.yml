@@ -6,6 +6,10 @@ candi:
   fixes:
     - summary: Fix SELinux permissions Bashible step in clusters without Cilium.
       pull_request: https://github.com/deckhouse/deckhouse/pull/4418
+operator-trivy:
+  fixes:
+    - summary: Fix operator ConfigMap to properly use digests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4449
 user-authz:
   fixes:
     - summary: >-
