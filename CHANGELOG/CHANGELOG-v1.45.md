@@ -108,6 +108,7 @@
 
  - **[candi]** Changes helm tolerations template functions. [#3959](https://github.com/deckhouse/deckhouse/pull/3959)
     All Pods will restart due to toleration changes.
+ - **[cloud-provider-openstack]** Update gophercloud dependency. [#4454](https://github.com/deckhouse/deckhouse/pull/4454)
  - **[cloud-provider-vsphere]** Clarified implicit defaults in `VsphereInstanceClass` documentation. [#3982](https://github.com/deckhouse/deckhouse/pull/3982)
  - **[cni-cilium]** Run CNI cilium in a non-privileged environment with the maximum permissions restriction. [#4226](https://github.com/deckhouse/deckhouse/pull/4226)
     All cilium Pods will be restarted.
