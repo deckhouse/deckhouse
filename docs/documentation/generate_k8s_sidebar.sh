@@ -9,9 +9,9 @@ function print_item {
     #echo "${DIR},${item}, ${list}"
     local title=$(grep -s 'title:' $DIR$item/index.html | head -n 1 | sed 's/^title: //')
     if [[ -z "${title}" ]] ; then
-      title=$(echo "$item" | sed 's|^.*/||')
+      title=$(echo "$item" | sed "s|^.*/||; s|'|''|g" )
     fi
-    printf "%${INDENT}s%s\n" '' "- title: $title"
+    printf "%${INDENT}s%s\n" '' "- title: '$title'"
 
     if [[ -n "$(find $DIR$item/ -mindepth 1 -maxdepth 1 -type d -print | sed "s|^./||; s|^$DIR||" | sort)"  ]]; then
       printf "%${INDENT}s%s\n" '' "  folders:"
