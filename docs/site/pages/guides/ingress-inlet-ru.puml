@@ -1,0 +1,41 @@
+@startuml
+
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam handwritten false
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam PartitionFontColor grey
+skinparam backgroundColor transparent
+
+
+if (\nПоддерживается\nзаказ\nбалансировщиков?\n) then (да             )
+partition Облака: AWS, GCP, Azure, ... {
+  split
+    :inlet **LoadBalancer**;
+     kill
+  split again
+    :inlet **LoadBalancerWithProxyProtocol**;
+    kill
+  end split
+  }
+else (             нет)
+partition Bare metal;\nОблака: vSpnere, OpenStack {
+  split
+    ->Вариант 1;
+    :Добавьте несколько\nА-записей в DNS;
+  split again
+    ->Вариант 2;
+    :Используйте внешний балансировщик
+    (Cloudflare, Qrator, metallb (для bare metal) ...);
+  end split
+  split
+     :inlet **LoadBalancer**;
+     kill
+  split again
+    :inlet **LoadBalancerWithProxyProtocol**;
+    kill
+  end split
+  }
+endif
+@enduml
