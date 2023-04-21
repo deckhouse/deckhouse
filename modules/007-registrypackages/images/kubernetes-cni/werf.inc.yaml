@@ -1,0 +1,53 @@
+{{- $cni_version := "1.2.0" }}
+{{- $flannel_version := "1.1.2" }}
+{{- $image_version := $cni_version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - bandwidth
+  - bridge
+  - dhcp
+  - dummy
+  - firewall
+  - host-device
+  - host-local
+  - ipvlan
+  - loopback
+  - macvlan
+  - portmap
+  - ptp
+  - sbr
+  - static
+  - tuning
+  - vlan
+  - vrf
+  - flannel
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    kubernetes-cni: {{ $cni_version }}
+    flannel: {{ $flannel_version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE }}
+git:
+- add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - curl -sfL https://github.com/containernetworking/plugins/releases/download/v{{ $cni_version }}/cni-plugins-linux-amd64-v{{ $cni_version }}.tgz | tar -xz
+  - curl -sfL https://github.com/flannel-io/cni-plugin/releases/download/v{{ $flannel_version }}/cni-plugin-flannel-linux-amd64-v{{ $flannel_version }}.tgz | tar -xz ./flannel-amd64 && mv flannel-amd64 flannel

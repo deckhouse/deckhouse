@@ -7,9 +7,6 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.18-1"
-        allowedPattern: ""
     '20.04':
       docker:
         desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-focal"
@@ -17,9 +14,6 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.18-1"
-        allowedPattern: ""
     '22.04':
       docker:
         desiredVersion: "docker-ce=5:20.10.14~3-0~ubuntu-jammy"
@@ -27,9 +21,6 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd.io=1.5.11-1"
           allowedPattern: "containerd.io=1.[56]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.18-1"
-        allowedPattern: ""
   debian:
     '9': &debian9
       docker:
@@ -38,9 +29,6 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd.io=1.4.3-1"
           allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.4.3-1"
-        allowedPattern: ""
     '10':
       docker:
         desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"
@@ -48,9 +36,6 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.18-1"
-        allowedPattern: ""
     '11':
       docker:
         desiredVersion: "docker-ce=5:20.10.12~3-0~debian-bullseye"
@@ -58,9 +43,6 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.18-1"
-        allowedPattern: ""
   centos:
     '7':
       docker:
@@ -69,9 +51,6 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
           allowedPattern: "containerd.io-1.[1234]"
-      containerd:
-        desiredVersion: "containerd.io-1.6.18-3.1.el7.x86_64"
-        allowedPattern: ""
     '8':
       docker:
         desiredVersion: "docker-ce-19.03.15-3.el8.x86_64"
@@ -79,9 +58,6 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
           allowedPattern: "containerd.io-1.[1234]"
-      containerd:
-        desiredVersion: "containerd.io-1.6.18-3.1.el8.x86_64"
-        allowedPattern: ""
     '9':
       docker:
         desiredVersion: "docker-ce-20.10.17-3.el9.x86_64"
@@ -89,9 +65,6 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd.io-1.6.7-3.1.el9.x86_64"
           allowedPattern: "containerd.io-1.6"
-      containerd:
-        desiredVersion: "containerd.io-1.6.18-3.1.el9.x86_64"
-        allowedPattern: ""
   altlinux:
     'p10':
       docker:
@@ -100,14 +73,10 @@ bashible: &bashible
         containerd:
           desiredVersion: "containerd-1.6.19"
           allowedPattern: ""
-      containerd:
-        desiredVersion: "containerd-1.6.19"
-        allowedPattern: ""
 k8s:
   '1.22':
     status: available
     patch: 17
-    cniVersion: 1.1.1
     bashible: &bashible_k8s_ge_1_22
       !!merge <<: *bashible
       ubuntu:
@@ -119,9 +88,6 @@ k8s:
             containerd:
               desiredVersion: "containerd.io=1.4.6-1"
               allowedPattern: "containerd.io=1.[234]"
-          containerd:
-            desiredVersion: "containerd.io=1.6.18-1"
-            allowedPattern: ""
     ccm:
       openstack: v1.22.0
       yandex: v0.22.0
@@ -137,12 +103,6 @@ k8s:
       registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
       snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
       livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:bd7642f0d25996df2daa0b355cf4f1886c72a9573a2f0772c214f32a3441b277
-      kubeProxy: sha256:cfb5210283cd2c1aca30f8f89e64b9ca72a5d3f6bd82810897a1612c6f9c8536
   '1.23':
     status: available
     patch: 17
@@ -163,16 +123,9 @@ k8s:
       registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
       snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
       livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:22a823de026e68b2661b0706efcbed4b026efa7e37a0de400251f8576f352ea5
-      kubeProxy: sha256:9305d3c1859b77c6e4d7b42ac477f7a4f955883459f2656b3543d551d3245c83
   '1.24':
     status: available
     patch: 13
-    cniVersion: 1.2.0
     bashible: *bashible_k8s_ge_1_22
     ccm:
       openstack: v1.24.2
@@ -189,16 +142,9 @@ k8s:
       registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
       snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
       livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:7d8dd41520fae5b6c85a3383d59ae8eb041ae69ac062e0ad2a7c644c1981b194
-      kubeProxy: sha256:3534c0303de68b880a2122825716e69858a150181b5f60f9a0f1c17b74467305
   '1.25':
     status: available
     patch: 9
-    cniVersion: 1.2.0
     bashible: *bashible_k8s_ge_1_22
     ccm:
       openstack: v1.25.3
@@ -215,16 +161,9 @@ k8s:
       registrar: v2.6.2@sha256:a13bff2ed69af0cf4270f0cf47bdedf75a56c095cd95b91195ae6c713a9b1845
       snapshotter: v6.1.0@sha256:291334908ddf71a4661fd7f6d9d97274de8a5378a2b6fdfeb2ce73414a34f82f
       livenessprobe: v2.8.0@sha256:cacee2b5c36dd59d4c7e8469c05c9e4ef53ecb2df9025fa8c10cdaf61bce62f0
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:19712fa46b8277aafd416b75a3a3d90e133f44b8a4dae08e425279085dc29f7e
-      kubeProxy: sha256:42fe09174a5eb6b8bace3036fe253ed7f06be31d9106211dcc4a09f9fa99c79a
   '1.26':
     status: available
     patch: 4
-    cniVersion: 1.2.0
     bashible: *bashible_k8s_ge_1_22
     ccm:
       openstack: v1.26.1
@@ -241,9 +180,3 @@ k8s:
       registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
       snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:fede1e90a07876257f9af9eb2b364f36a780fb9c05946485f5c534e8295a6506
-      kubeProxy: sha256:2f16397743223843e43035b7043333b221f39bb1435bbd33017822e54779d470

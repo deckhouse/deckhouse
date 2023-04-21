@@ -140,8 +140,7 @@ function get_bundle() {
 }
 
 function main() {
-  # IMPORTANT !!! Do not remove this line, because in Centos/Redhat when dhctl bootstraps the cluster /usr/local/bin not in PATH.
-  export PATH="/usr/local/bin:$PATH"
+  export PATH="/opt/deckhouse/bin:$PATH"
   export BOOTSTRAP_DIR="/var/lib/bashible"
   export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
   export BUNDLE="{{ .bundle }}"

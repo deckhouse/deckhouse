@@ -14,13 +14,13 @@
 
 #!/bin/bash
 
-bb-sync-file /usr/local/bin/d8-kubelet-forker - << "EOF"
+bb-sync-file /opt/deckhouse/bin/d8-kubelet-forker - << "EOF"
 #!/bin/bash
 set -e
 
 # Start sysctl-tuner to set appropriate values to system variables before kubelet start
-if [ -x /usr/local/bin/sysctl-tuner ]; then
-  /usr/local/bin/sysctl-tuner
+if [ -x /opt/deckhouse/bin/sysctl-tuner ]; then
+  /opt/deckhouse/bin/sysctl-tuner
 fi
 
 $@ &
@@ -44,4 +44,4 @@ until ss -nltp4 | grep -qE "127.0.0.1:10248.*pid=$CHILDREN_PID" && curl -s -f ht
   sleep 1
 done
 EOF
-chmod +x /usr/local/bin/d8-kubelet-forker
+chmod +x /opt/deckhouse/bin/d8-kubelet-forker

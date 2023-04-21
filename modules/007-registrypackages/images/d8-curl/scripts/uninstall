@@ -14,4 +14,4 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /usr/local/bin/d8-curl
+rm -f /opt/deckhouse/bin/d8-curl

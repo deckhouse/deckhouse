@@ -145,7 +145,7 @@ func prepareConverge(componentName string, isTemp bool) error {
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
-	c := exec.Command(kubeadm(), args...)
+	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
 		log.Infof("%s", s)
@@ -220,7 +220,7 @@ metadata:
 func etcdJoinConverge() error {
 	// kubeadm -v=5 join phase control-plane-join etcd --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
 	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
-	c := exec.Command(kubeadm(), args...)
+	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
 		log.Infof("%s", s)

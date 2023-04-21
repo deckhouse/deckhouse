@@ -18,7 +18,7 @@ function _enable_sysctl_tuner_service() {
   systemctl enable sysctl-tuner.timer
 }
 
-bb-sync-file /usr/local/bin/sysctl-tuner - << "EOF"
+bb-sync-file /opt/deckhouse/bin/sysctl-tuner - << "EOF"
 #!/bin/bash
 
 # After multiplying this value by the number of cores of the node, we get `nf_conntrack_max`,
@@ -80,7 +80,7 @@ echo 0 | tee /sys/kernel/mm/transparent_hugepage/use_zero_page >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag >/dev/null
 echo 0 | tee /proc/sys/net/ipv4/conf/*/rp_filter >/dev/null # disable reverse-path filtering on all interfaces
 EOF
-chmod +x /usr/local/bin/sysctl-tuner
+chmod +x /opt/deckhouse/bin/sysctl-tuner
 
 # Generate sysctl tuner unit
 bb-sync-file /etc/systemd/system/sysctl-tuner.timer - sysctl-tuner-service-changed << EOF
@@ -101,7 +101,7 @@ Description=Sysctl Tuner
 
 [Service]
 EnvironmentFile=/etc/environment
-ExecStart=/usr/local/bin/sysctl-tuner
+ExecStart=/opt/deckhouse/bin/sysctl-tuner
 EOF
 
 systemctl stop sysctl-tuner.timer

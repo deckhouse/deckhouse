@@ -123,7 +123,7 @@ func prepareKubeconfig(componentName string, isTemp bool) error {
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
-	c := exec.Command(kubeadm(), args...)
+	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
 		log.Infof("%s", s)

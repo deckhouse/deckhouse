@@ -32,7 +32,7 @@ fi
 
 bb-yum-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 
-bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl7800 }}"
+bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl801 }}"
 
 if bb-is-centos-version? 8; then
   bb-rp-install "inotify-tools:{{ .images.registrypackages.inotifyToolsCentos831419 }}"
