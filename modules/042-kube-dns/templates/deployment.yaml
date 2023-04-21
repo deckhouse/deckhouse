@@ -82,11 +82,13 @@ spec:
       - name: coredns
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "coredns") }}
-        args: [ "-conf", "/etc/coredns/Corefile", "-dns.port", "5353" ]
+        args: [ "-conf", "/etc/coredns/Corefile", "-dns.port", "5353", "-pidfile", "/tmp/coredns.pid" ]
         volumeMounts:
         - name: config-volume
           mountPath: /etc/coredns
           readOnly: true
+        - name: tmp
+          mountPath: /tmp
         ports:
         - containerPort: 5353
           name: dns
@@ -155,6 +157,8 @@ spec:
           items:
           - key: Corefile
             path: Corefile
+      - name: tmp
+        emptyDir: {}
       affinity:
         nodeAffinity:
 {{- if .Values.kubeDns.internal.specificNodeType }}

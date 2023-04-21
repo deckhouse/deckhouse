@@ -7,4 +7,5 @@ COPY --from=artifact /bin/node_exporter /bin
 
 EXPOSE      9100
 USER        nobody
+
 ENTRYPOINT  [ "/bin/node_exporter" ]
