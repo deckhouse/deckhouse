@@ -3,6 +3,7 @@ admissionPolicyEngineEnabled: true
 certManagerEnabled: true
 chronyEnabled: true
 ciliumHubbleEnabled: false
+clusterAutoscalerCrdEnabled: true
 containerizedDataImporterEnabled: true
 controlPlaneManagerEnabled: true
 dashboardEnabled: true
