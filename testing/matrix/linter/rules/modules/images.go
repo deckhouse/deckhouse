@@ -199,6 +199,10 @@ func isWerfInstructionUnacceptable(from string) (bool, string) {
 }
 
 func isDockerfileInstructionUnacceptable(from string, final bool) (bool, string) {
+	if from == "scratch" {
+		return false, ""
+	}
+
 	if final {
 		if !strings.HasPrefix(from, "$BASE_") {
 			return true, "Last `FROM` instruction should use one of our $BASE_ images"

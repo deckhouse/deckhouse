@@ -1,5 +1,6 @@
 ARG BASE_ALPINE
 ARG BASE_GOLANG_17_ALPINE
+ARG BASE_SCRATCH
 FROM $BASE_GOLANG_17_ALPINE as artifact
 RUN apk add --no-cache make git patch
 
@@ -9,6 +10,6 @@ RUN mkdir -p /src/kube-state-metrics && \
 WORKDIR /src/kube-state-metrics
 RUN make build-local
 
-FROM $BASE_ALPINE
+FROM $BASE_SCRATCH
 COPY --from=artifact /src/kube-state-metrics/kube-state-metrics /bin/kube-state-metrics
 ENTRYPOINT ["/bin/kube-state-metrics"]
