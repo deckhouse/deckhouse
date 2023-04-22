@@ -34,4 +34,9 @@ const (
 	spaasServiceHost = spaasServiceName + "." + linstorNamespace + ".svc"
 	spaasSecretName  = "spaas-certs"
 	spaasCertPath    = "linstor.internal.spaasCert"
+
+	secureBootSecretName     = "secureboot-cert"
+	secureBootKeyPath        = "linstor.internal.secretBootCerts.key"
+	secureBootDerPath        = "linstor.internal.secretBootCerts.der"
+	secureBootPassphrasePath = "linstor.internal.secretBootCerts.passphrase"
 )
