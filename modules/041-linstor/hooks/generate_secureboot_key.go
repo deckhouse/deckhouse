@@ -113,7 +113,7 @@ func generateSecureBootCert(input *go_hook.HookInput) error {
 		derKey, err := x509.MarshalPKIXPublicKey(pub)
 
 		input.Values.Set(secureBootDerPath, string(derKey))
-		input.Values.Set(secureBootKeyPath, string(block.Bytes))
+		input.Values.Set(secureBootKeyPath, string(pem.EncodeToMemory(block)))
 		input.Values.Set(secureBootPassphrasePath, passphrase)
 	}
 
