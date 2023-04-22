@@ -89,13 +89,13 @@ properties:
         - key
         - passphrase
         properties:
-          cert:
+          der:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
           key:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
-          ca:
+          passphrase:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
       spaasCert:
