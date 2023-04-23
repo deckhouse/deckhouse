@@ -4,36 +4,35 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 
-from controller_metrics import main
+from controller_metrics import HookRunner, AbstractMetricCollector, Controller
 from shell_operator import hook
-from typing import List, Dict, Any
-from utils import check_for_generate_mock
-import json
-import os
-import httpretty
 
 
-def _generate_mock_prom_server() -> List[Dict[str, Any]]:
-    expected_metrics = [{'action': 'expire', 'group': 'group_d8_controller_metrics'}]
-    with open(os.path.join(os.path.dirname(__file__), "controller_metrics_mock_data.json"), "r") as f:
-        data = json.load(f)
+class MockMectricCollector(AbstractMetricCollector):
+    __cpu_values = {
+        ("dex", "user-authn", "Deployment", "d8-user-authn"): 1.0,
+        ("controller-nginx", "ingress-nginx", "DaemonSet", "d8-ingress-nginx"): 3.5,
+        ("prometheus-main", "monitoring", "StatefulSet", "d8-monitoring"): 2.0,
+        ("openvpn", "openvpn", "StatefulSet", "d8-openvpn"): 2.5,
+    }
 
-    for d in data:
-        httpretty.register_uri(uri=d["uri"], body=d["data"], method="GET", match_querystring=True)
+    __memory_values = {
+        ("dex", "user-authn", "Deployment", "d8-user-authn"): 100,
+        ("controller-nginx", "ingress-nginx", "DaemonSet", "d8-ingress-nginx"): 500,
+        ("prometheus-main", "monitoring", "StatefulSet", "d8-monitoring"): 10000,
+        ("openvpn", "openvpn", "StatefulSet", "d8-openvpn"): 150,
+    }
 
-        metric_data = d["addtitional_data"]
-        metric_value = float(json.loads(d["data"])["data"]["result"][0]["value"][1])
-        expected_metrics.append(dict(**metric_data, set=metric_value))
-    return expected_metrics
+    def get_cpu_prometheus(self, controller: Controller) -> float:
+        return self.__cpu_values[(controller.name, controller.module, controller.kind, controller.namespace)]
+
+    def get_memory_prometheus(self, controller: Controller) -> float:
+        return self.__memory_values[(controller.name, controller.module, controller.kind, controller.namespace)]
 
 
 def test_controller_metrics():
-    expected_metrics = []
-    if not check_for_generate_mock():
-        httpretty.enable(verbose=True, allow_net_connect=False)
-        expected_metrics = _generate_mock_prom_server()
-
-    out = hook.testrun(main, binding_context)
+    hook_runner = HookRunner(MockMectricCollector())
+    out = hook.testrun(hook_runner.run, binding_context)
 
     assert out.metrics.data == expected_metrics
     assert not out.kube_operations.data
@@ -47,41 +46,126 @@ binding_context = [
             "deploy": [
                 {
                     "filterResult": {
-                        "controller_name": "dex",
-                        "controller_module": "user-authn",
-                        "controller_kind": "Deployment",
-                        "controller_namespace": "d8-user-authn",
+                        "name": "dex",
+                        "module": "user-authn",
+                        "kind": "Deployment",
+                        "namespace": "d8-user-authn",
                     }
                 },
             ],
             "ds": [
                 {
                     "filterResult": {
-                        "controller_name": "controller-nginx",
-                        "controller_module": "ingress-nginx",
-                        "controller_kind": "DaemonSet",
-                        "controller_namespace": "d8-ingress-nginx",
+                        "name": "controller-nginx",
+                        "module": "ingress-nginx",
+                        "kind": "DaemonSet",
+                        "namespace": "d8-ingress-nginx",
                     }
                 },
             ],
             "sts": [
                 {
                     "filterResult": {
-                        "controller_name": "prometheus-main",
-                        "controller_module": "monitoring",
-                        "controller_kind": "StatefulSet",
-                        "controller_namespace": "d8-monitoring",
+                        "name": "prometheus-main",
+                        "module": "monitoring",
+                        "kind": "StatefulSet",
+                        "namespace": "d8-monitoring",
                     }
                 },
                 {
                     "filterResult": {
-                        "controller_name": "openvpn",
-                        "controller_module": "openvpn",
-                        "controller_kind": "StatefulSet",
-                        "controller_namespace": "d8-openvpn",
+                        "name": "openvpn",
+                        "module": "openvpn",
+                        "kind": "StatefulSet",
+                        "namespace": "d8-openvpn",
                     }
                 },
             ],
         },
     }
+]
+
+
+expected_metrics = [
+    {"action": "expire", "group": "group_d8_controller_metrics"},
+    {
+        "name": "flant_pricing_controller_average_cpu_usage_seconds",
+        "group": "group_d8_controller_metrics",
+        "set": 1.0,
+        "labels": {
+            "name": "dex",
+            "module": "user-authn",
+            "kind": "Deployment",
+        },
+    },
+    {
+        "name": "flant_pricing_controller_average_memory_working_set_bytes:without_kmem",
+        "group": "group_d8_controller_metrics",
+        "set": 100,
+        "labels": {
+            "name": "dex",
+            "module": "user-authn",
+            "kind": "Deployment",
+        },
+    },
+    {
+        "name": "flant_pricing_controller_average_cpu_usage_seconds",
+        "group": "group_d8_controller_metrics",
+        "set": 3.5,
+        "labels": {
+            "name": "controller-nginx",
+            "module": "ingress-nginx",
+            "kind": "DaemonSet",
+        },
+    },
+    {
+        "name": "flant_pricing_controller_average_memory_working_set_bytes:without_kmem",
+        "group": "group_d8_controller_metrics",
+        "set": 500,
+        "labels": {
+            "name": "controller-nginx",
+            "module": "ingress-nginx",
+            "kind": "DaemonSet",
+        },
+    },
+    {
+        "name": "flant_pricing_controller_average_cpu_usage_seconds",
+        "group": "group_d8_controller_metrics",
+        "set": 2.0,
+        "labels": {
+            "name": "prometheus-main",
+            "module": "monitoring",
+            "kind": "StatefulSet",
+        },
+    },
+    {
+        "name": "flant_pricing_controller_average_memory_working_set_bytes:without_kmem",
+        "group": "group_d8_controller_metrics",
+        "set": 10000,
+        "labels": {
+            "name": "prometheus-main",
+            "module": "monitoring",
+            "kind": "StatefulSet",
+        },
+    },
+    {
+        "name": "flant_pricing_controller_average_cpu_usage_seconds",
+        "group": "group_d8_controller_metrics",
+        "set": 2.5,
+        "labels": {
+            "name": "openvpn",
+            "module": "openvpn",
+            "kind": "StatefulSet",
+        },
+    },
+    {
+        "name": "flant_pricing_controller_average_memory_working_set_bytes:without_kmem",
+        "group": "group_d8_controller_metrics",
+        "set": 150,
+        "labels": {
+            "name": "openvpn",
+            "module": "openvpn",
+            "kind": "StatefulSet",
+        },
+    },
 ]

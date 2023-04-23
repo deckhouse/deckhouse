@@ -15,10 +15,10 @@ kubernetes:
     keepFullObjectsInMemory: false
     jqFilter: |
       {
-        "controller_name": .metadata.name,
-        "controller_namespace": .metadata.namespace,
-        "controller_kind": .kind,
-        "controller_module": .metadata.labels.module,
+        "name": .metadata.name,
+        "namespace": .metadata.namespace,
+        "kind": .kind,
+        "module": .metadata.labels.module,
       }
     labelSelector:
       matchLabels:
@@ -33,10 +33,10 @@ kubernetes:
     keepFullObjectsInMemory: false
     jqFilter: |
       {
-        "controller_name": .metadata.name,
-        "controller_namespace": .metadata.namespace,
-        "controller_kind": .kind,
-        "controller_module": .metadata.labels.module,
+        "name": .metadata.name,
+        "namespace": .metadata.namespace,
+        "kind": .kind,
+        "module": .metadata.labels.module,
       }
     labelSelector:
       matchLabels:
@@ -51,10 +51,10 @@ kubernetes:
     keepFullObjectsInMemory: false
     jqFilter: |
       {
-        "controller_name": .metadata.name,
-        "controller_namespace": .metadata.namespace,
-        "controller_kind": .kind,
-        "controller_module": .metadata.labels.module,
+        "name": .metadata.name,
+        "namespace": .metadata.namespace,
+        "kind": .kind,
+        "module": .metadata.labels.module,
       }
     labelSelector:
       matchLabels:
