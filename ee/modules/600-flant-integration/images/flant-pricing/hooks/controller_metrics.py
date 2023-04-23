@@ -40,24 +40,24 @@ class AbstractMetricCollector(ABC):
             ctx.metrics.collect({
                 "name": self.cpu_metric_name,
                 "group": self.metric_group,
-                "set": self.get_cpu_prometheus(ctrl),
+                "set": self.get_cpu_controller_consumption(ctrl),
                 "labels": self.controller_metric_labels(ctrl),
             })
 
             ctx.metrics.collect({
                 "name": self.memory_metric_name,
                 "group": self.metric_group,
-                "set": self.get_memory_prometheus(ctrl),
+                "set": self.get_memory_controller_consumption(ctrl),
                 "labels": self.controller_metric_labels(ctrl),
             })
 
     @abstractmethod
-    def get_cpu_prometheus(self, controller: Controller) -> float:
-        raise NotImplementedError('define get_cpu_prometheus to use this base class')
+    def get_cpu_controller_consumption(self, controller: Controller) -> float:
+        raise NotImplementedError('define get_cpu_controller_consumption to use this base class')
 
     @abstractmethod
-    def get_memory_prometheus(self, controller: Controller) -> float:
-        raise NotImplementedError('define get_memory_prometheus to use this base class')
+    def get_memory_controller_consumption(self, controller: Controller) -> float:
+        raise NotImplementedError('define get_memory_controller_consumption to use this base class')
 
     @staticmethod
     def controller_metric_labels(ctrl: Controller) -> Dict[str, str]:
@@ -79,7 +79,7 @@ class MetricCollector(AbstractMetricCollector):
     )
     '''
 
-    def get_cpu_prometheus(self, controller: Controller) -> float:
+    def get_cpu_controller_consumption(self, controller: Controller) -> float:
         '''Query prometheus for controller cpu consumption'''
 
         return prometheus_query_value(
@@ -93,7 +93,7 @@ class MetricCollector(AbstractMetricCollector):
             ),
         )
 
-    def get_memory_prometheus(self, controller: Controller) -> float:
+    def get_memory_controller_consumption(self, controller: Controller) -> float:
         '''Query prometheus for controller memory consumption'''
 
         return prometheus_query_value(

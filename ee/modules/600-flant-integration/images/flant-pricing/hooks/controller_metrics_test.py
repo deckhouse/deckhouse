@@ -23,10 +23,10 @@ class MockMectricCollector(AbstractMetricCollector):
         ("openvpn", "openvpn", "StatefulSet", "d8-openvpn"): 150,
     }
 
-    def get_cpu_prometheus(self, controller: Controller) -> float:
+    def get_cpu_controller_consumption(self, controller: Controller) -> float:
         return self.__cpu_values[(controller.name, controller.module, controller.kind, controller.namespace)]
 
-    def get_memory_prometheus(self, controller: Controller) -> float:
+    def get_memory_controller_consumption(self, controller: Controller) -> float:
         return self.__memory_values[(controller.name, controller.module, controller.kind, controller.namespace)]
 
 
