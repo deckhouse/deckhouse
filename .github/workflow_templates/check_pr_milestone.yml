@@ -30,7 +30,7 @@ jobs:
     name: Check milestone
     runs-on: ubuntu-latest
     steps:
-      - name: check milestone is set
+      - name: milestone is not set
         if: github.event.pull_request.milestone == null
         run: |
           echo 1>&2 "The pull request has no milestone. Set a milestone for the pull request."
