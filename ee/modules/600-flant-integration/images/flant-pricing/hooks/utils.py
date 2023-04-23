@@ -1,14 +1,15 @@
 # Copyright 2023 Flant JSC
-# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license.
+# See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 # util functions for hook.
 
-from requests.adapters import Retry, PoolManager, ResponseError
-from urllib3 import disable_warnings
-from typing import Dict, List, Any
 import ssl
 import json
 import os
+from typing import Dict, List, Any
+from urllib3 import disable_warnings
+from requests.adapters import Retry, PoolManager, ResponseError
 
 disable_warnings()
 
@@ -18,7 +19,7 @@ PROMETHEUS_URL = "https://prometheus.d8-monitoring:9090/api/v1/query"
 
 
 try:
-    with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
+    with open("/var/run/secrets/kubernetes.io/serviceaccount/token", encoding="utf-8") as f:
         SERVICE_ACCOUNT_TOKEN = f.read()
 except FileNotFoundError:
     SERVICE_ACCOUNT_TOKEN = os.getenv("SERVICE_ACCOUNT_TOKEN")
@@ -33,14 +34,14 @@ def prometheus_metric_builder(metric_name: str, labels: Dict[str, str] = None) -
     return f"{metric_name}{{{','.join(metric_labels)}}}"
 
 
-def prometheus_function_builder(f: str, metric: str, interval: str = None) -> str:
+def prometheus_function_builder(func: str, metric: str, interval: str = None) -> str:
     """build prometheus function from func, metric name and internval"""
 
     interval_str = ""
     if interval is not None:
         interval_str = f'[{interval}]'
 
-    return f'{f}({metric}{interval_str})'
+    return f'{func}({metric}{interval_str})'
 
 
 def prometheus_query(query: str) -> List[Dict[str, Any]]:

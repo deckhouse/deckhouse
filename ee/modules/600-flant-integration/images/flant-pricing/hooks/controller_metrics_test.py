@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 #
 # Copyright 2023 Flant JSC
-# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license.
+# See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 
 from controller_metrics import HookRunner, AbstractMetricCollector, Controller
 from shell_operator import hook
 
 
-class MockMectricCollector(AbstractMetricCollector):
+class MockMetricCollector(AbstractMetricCollector):
     __cpu_values = {
         ("dex", "user-authn", "Deployment", "d8-user-authn"): 1.0,
         ("controller-nginx", "ingress-nginx", "DaemonSet", "d8-ingress-nginx"): 3.5,
@@ -24,14 +25,16 @@ class MockMectricCollector(AbstractMetricCollector):
     }
 
     def get_cpu_controller_consumption(self, controller: Controller) -> float:
-        return self.__cpu_values[(controller.name, controller.module, controller.kind, controller.namespace)]
+        return self.__cpu_values[(controller.name, controller.module,
+                                  controller.kind, controller.namespace)]
 
     def get_memory_controller_consumption(self, controller: Controller) -> float:
-        return self.__memory_values[(controller.name, controller.module, controller.kind, controller.namespace)]
+        return self.__memory_values[(controller.name, controller.module,
+                                     controller.kind, controller.namespace)]
 
 
 def test_controller_metrics():
-    hook_runner = HookRunner(MockMectricCollector())
+    hook_runner = HookRunner(MockMetricCollector())
     out = hook.testrun(hook_runner.run, binding_context)
 
     assert out.metrics.data == expected_metrics
