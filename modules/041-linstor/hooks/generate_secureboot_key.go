@@ -91,7 +91,7 @@ func generateSecureBootCert(input *go_hook.HookInput) error {
 		cert = s.Data
 	}
 
-	if cert.Passphrase == "" {
+	if cert.Passphrase == "" || cert.Der == "" || cert.Key == "" {
 		bitSize := 2048 // 4096 bit not supported!
 		passphrase := tools.RandomString("", 16)
 		key, err := rsa.GenerateKey(rand.Reader, bitSize)
