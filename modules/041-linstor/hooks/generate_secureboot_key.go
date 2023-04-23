@@ -109,10 +109,10 @@ func generateSecureBootCert(input *go_hook.HookInput) error {
 			Bytes: keyBytes,
 		}
 
-		block, err = x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes, []byte(passphrase), x509.PEMCipherAES256)
-		if err != nil {
-			return err
-		}
+		//block, err = x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes, []byte(passphrase), x509.PEMCipherAES256)
+		//if err != nil {
+		//	return err
+		//}
 
 		pub := key.Public()
 		derKey, err := x509.MarshalPKIXPublicKey(pub)
