@@ -92,16 +92,21 @@ func generateSecureBootCert(input *go_hook.HookInput) error {
 	}
 
 	if cert.Passphrase == "" {
-		bitSize := 2048
+		bitSize := 2048 // 4096 bit not supported!
 		passphrase := tools.RandomString("", 16)
 		key, err := rsa.GenerateKey(rand.Reader, bitSize)
 		if err != nil {
 			return err
 		}
 
+		keyBytes, err := x509.MarshalPKCS8PrivateKey(key)
+		if err != nil {
+			return err
+		}
+
 		block := &pem.Block{
 			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(key),
+			Bytes: keyBytes,
 		}
 
 		block, err = x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes, []byte(passphrase), x509.PEMCipherAES256)
@@ -111,6 +116,9 @@ func generateSecureBootCert(input *go_hook.HookInput) error {
 
 		pub := key.Public()
 		derKey, err := x509.MarshalPKIXPublicKey(pub)
+		if err != nil {
+			return err
+		}
 
 		input.Values.Set(secureBootDerPath, string(derKey))
 		input.Values.Set(secureBootKeyPath, string(pem.EncodeToMemory(block)))
