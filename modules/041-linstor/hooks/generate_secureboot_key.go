@@ -123,6 +123,10 @@ func generateSecureBootCert(input *go_hook.HookInput) error {
 		input.Values.Set(secureBootDerPath, string(derKey))
 		input.Values.Set(secureBootKeyPath, string(pem.EncodeToMemory(block)))
 		input.Values.Set(secureBootPassphrasePath, passphrase)
+	} else {
+		input.Values.Set(secureBootDerPath, cert.Der)
+		input.Values.Set(secureBootKeyPath, cert.Key)
+		input.Values.Set(secureBootPassphrasePath, cert.Passphrase)
 	}
 
 	return nil
