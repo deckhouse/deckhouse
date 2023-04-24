@@ -12,7 +12,7 @@ RUN apt-get update \
 # Using source code from GitHub repository
 RUN git clone ${DRBD_GITREPO} /drbd \
  && cd /drbd \
- && git checkout test-dkms-sign \
+ && git checkout test-sign \
  && make tarball \
  && mv ./drbd-*.tar.gz /drbd.tar.gz
 
