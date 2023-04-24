@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	_ "net/http/pprof"
 	"os"
@@ -103,9 +104,9 @@ func main() {
 				os.Exit(1)
 			}
 
-			operator := addon_operator.NewAddonOperator()
+			operator := addon_operator.NewAddonOperator(context.Background())
 			operator.InitialKubeConfig = initialKubeConfig
-			err = addon_operator.Bootstrap(operator)
+			err = operator.Bootstrap()
 			if err != nil {
 				os.Exit(1)
 			}
