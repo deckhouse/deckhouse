@@ -78,7 +78,7 @@ spec:
       subPath: ca.crt
       readOnly: true
     - name: secureboot
-      mountPath: /opt/linstor/secureboot/
+      mountPath: /var/lib/shim-signed/mok
       readOnly: true
   additionalEnv:
   - name: SPAAS_URL

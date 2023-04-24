@@ -1,7 +1,7 @@
 ARG BASE_UBUNTU
 
 FROM $BASE_UBUNTU as builder
-ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
+ARG DRBD_GITREPO=https://gitlab.lv426.tech/ext/drbd
 ARG DRBD_VERSION=9.2.2
 
 RUN apt-get update \
@@ -12,7 +12,7 @@ RUN apt-get update \
 # Using source code from GitHub repository
 RUN git clone ${DRBD_GITREPO} /drbd \
  && cd /drbd \
- && git reset --hard drbd-${DRBD_VERSION} \
+ && git reset --hard test-dkms-sign \
  && make tarball \
  && mv ./drbd-*.tar.gz /drbd.tar.gz
 
@@ -26,7 +26,7 @@ RUN tar xvf /drbd.tar.gz --strip-components=2 --wildcards 'drbd-*/docker/entry.s
 FROM $BASE_UBUNTU
 
 RUN apt-get update \
- && apt-get install -y kmod gnupg wget make gcc patch curl libelf-dev \
+ && apt-get install -y kmod gnupg wget make gcc patch curl libelf-dev mokutil \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
