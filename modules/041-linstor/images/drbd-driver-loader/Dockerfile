@@ -16,6 +16,8 @@ RUN git clone ${DRBD_GITREPO} /drbd \
  && make tarball \
  && mv ./drbd-*.tar.gz /drbd.tar.gz
 
+RUN echo 1
+
 # # Using source code provided by LINBIT
 # RUN DRBD_PKG=https://pkg.linbit.com//downloads/drbd/9/drbd-${DRBD_VERSION}.tar.gz \
 #  && wget -O /drbd.tar.gz ${DRBD_PKG}
