@@ -1,7 +1,7 @@
 ARG BASE_UBUNTU
 
 FROM $BASE_UBUNTU as builder
-ARG DRBD_GITREPO=https://gitlab.lv426.tech/ext/drbd
+ARG DRBD_GITREPO=https://github.com/duckhawk/drbd
 ARG DRBD_VERSION=9.2.2
 
 RUN apt-get update \
