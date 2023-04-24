@@ -33,6 +33,7 @@ properties:
       - "redos"
       - "alteros"
       - "astra"
+      - "altlinux"
     x-examples:
       - ["ubuntu-lts"]
     items:
