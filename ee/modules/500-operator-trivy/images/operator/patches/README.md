@@ -10,7 +10,7 @@ Skip some defseq checks for proper reports result for deckhouse installation.
 
 ## 003-support-legacy-dockercfg.patch
 
-Add support for `kubernetes.io/dockercfg`(legacy) secret type for `imagePullSecrets` field in scan jobs.
+Add support for `kubernetes.io/dockercfg` (legacy) secrets in `imagePullSecrets` pods field for scan jobs
 
 PR: https://github.com/aquasecurity/trivy-operator/pull/1183
 
