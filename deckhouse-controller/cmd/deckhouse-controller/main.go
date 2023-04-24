@@ -106,11 +106,11 @@ func main() {
 
 			operator := addon_operator.NewAddonOperator(context.Background())
 			operator.InitialKubeConfig = initialKubeConfig
-			err = operator.Bootstrap()
+
+			err = operator.Start()
 			if err != nil {
 				os.Exit(1)
 			}
-			operator.Start()
 
 			// Init deckhouse-config service with ModuleManager instance.
 			d8config.InitService(operator.ModuleManager)
