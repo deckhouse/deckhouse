@@ -146,7 +146,7 @@ spec:
       prometheus.deckhouse.io/monitor-watcher-enabled: "true"
   ruleNamespaceSelector:
     matchLabels:
-      heritage: deckhouse
+      prometheus.deckhouse.io/rules-watcher-enabled: "true"
   probeNamespaceSelector:
     matchLabels:
       heritage: deckhouse

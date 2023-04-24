@@ -685,6 +685,22 @@ spec:
     - port: web
 ```
 
+## Как настроить PrometheusRules для работы с Prometheus?
+
+Добавьте в namespace, в котором находятся PrometheusRules, лейбл `prometheus.deckhouse.io/rules-watcher-enabled: "true"`.
+
+Пример:
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    prometheus.deckhouse.io/rules-watcher-enabled: "true"
+```
+
 ## Как увеличить размер диска
 
 1. Для увеличения размера отредактируйте PersistentVolumeClaim, указав новый размер в поле `spec.resources.requests.storage`.

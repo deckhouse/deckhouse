@@ -283,6 +283,7 @@ func containerPorts(object storage.StoreObject, containers []v1.Container) error
 
 func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 	l.ErrorsList.Add(objectRecommendedLabels(object))
+	l.ErrorsList.Add(namespaceLabels(object))
 	l.ErrorsList.Add(objectAPIVersion(object))
 	if l.EnabledModules.Has("priority-class") {
 		l.ErrorsList.Add(objectPriorityClass(object))
@@ -322,6 +323,28 @@ func objectRecommendedLabels(object storage.StoreObject) errors.LintRuleError {
 		)
 	}
 	return errors.EmptyRuleError
+}
+
+func namespaceLabels(object storage.StoreObject) errors.LintRuleError {
+	if object.Unstructured.GetKind() != "Namespace" {
+		return errors.EmptyRuleError
+	}
+
+	if !strings.HasPrefix(object.Unstructured.GetName(), "d8-") {
+		return errors.EmptyRuleError
+	}
+
+	labels := object.Unstructured.GetLabels()
+
+	if label := labels["prometheus.deckhouse.io/rules-watcher-enabled"]; label == "true" {
+		return errors.EmptyRuleError
+	}
+
+	return errors.NewLintRuleError(
+		"MANIFEST001",
+		object.Identity(),
+		labels,
+		"Namespace object does not have the label \"prometheus.deckhouse.io/rules-watcher-enabled\"")
 }
 
 func newAPIVersionError(wanted, version, objectID string) errors.LintRuleError {

@@ -688,6 +688,22 @@ spec:
     - port: web
 ```
 
+## How do I set up a PrometheusRules to work with Prometheus?
+
+Add the label `prometheus.deckhouse.io/rules-watcher-enabled: "true"` to the namespace where the PrometheusRules was created.
+
+Example:
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    prometheus.deckhouse.io/rules-watcher-enabled: "true"
+```
+
 ## How to expand disk size
 
 1. To request a larger volume for a PVC, edit the PVC object and specify a larger size in `spec.resources.requests.storage` field.

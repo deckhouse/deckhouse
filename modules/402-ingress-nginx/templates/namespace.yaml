@@ -5,6 +5,6 @@ metadata:
   name: d8-ingress-nginx
   annotations:
     extended-monitoring.flant.com/enabled: ""
-  {{- include "helm_lib_module_labels" (list . (dict "extended-monitoring.flant.com/enabled" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "extended-monitoring.flant.com/enabled" "" "prometheus.deckhouse.io/rules-watcher-enabled" "true")) | nindent 2 }}
 ---
 {{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}
