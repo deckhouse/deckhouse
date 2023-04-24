@@ -22,6 +22,7 @@
 .idea/
 .vscode
 venv/
+out/
 
 # local development deckhouse binary
 /deckhouse/deckhouse

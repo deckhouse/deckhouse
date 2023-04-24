@@ -95,7 +95,7 @@ help:
 
 
 GOLANGCI_VERSION = 1.48.0
-TRIVY_VERSION= 0.28.1
+TRIVY_VERSION= 0.38.3
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 TESTS_TIMEOUT="15m"
@@ -201,7 +201,7 @@ bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 .PHONY: cve-report cve-base-images
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
-	./tools/cve/release.sh
+	./tools/cve/d8-images.sh
 
 cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
