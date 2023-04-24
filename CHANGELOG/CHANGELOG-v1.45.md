@@ -67,6 +67,7 @@
 
  - **[admission-policy-engine]** Fix `requiredLabels` OperationPolicy. [#4264](https://github.com/deckhouse/deckhouse/pull/4264)
     `requiredLabel` unmarshalling leads to an error.
+ - **[candi]** Bump gophercloud/utils version. [#4472](https://github.com/deckhouse/deckhouse/pull/4472)
  - **[candi]** Fix SELinux permissions Bashible step in clusters without Cilium. [#4418](https://github.com/deckhouse/deckhouse/pull/4418)
  - **[candi]** Remove the `node-role.kubernetes.io/master` taint from the first control-plane node during bootstrap. [#4159](https://github.com/deckhouse/deckhouse/pull/4159)
  - **[cloud-provider-aws]** The terraform provider was bumped to `4.50.0`, therefore there are new requirements for deckhouse IAM user. It is necessary to allow the following actions: `ec2:DescribeInstanceTypes`, `ec2:DescribeSecurityGroupRules`. [#4256](https://github.com/deckhouse/deckhouse/pull/4256)
