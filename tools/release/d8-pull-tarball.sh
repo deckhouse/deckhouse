@@ -20,6 +20,7 @@ help() {
 echo "
 Usage: $0
 
+  HINT: Use this script only for image scanning, if you want to push images to another registry - use d8-pull.sh script
   Command pulls all images to a local directory for the selected Deckhouse release.
   Accepted cli arguments are:
     --release
