@@ -237,6 +237,7 @@ for i in $IMAGES; do
 done
 
 if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
+  echo ""
   echo "Pull metadata images"
   #saving metadata about release channel
   pull_image "alpha" "release-channel" "use_tag"
