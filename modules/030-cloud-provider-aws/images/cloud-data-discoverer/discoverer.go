@@ -20,14 +20,14 @@ import (
 	"context"
 	"fmt"
 	"os"
-
-	"k8s.io/utils/pointer"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
@@ -98,9 +98,10 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 			}
 
 			res = append(res, v1alpha1.InstanceType{
-				Name:   name,
-				CPU:    *ins.VCpuInfo.DefaultVCpus,
-				Memory: *ins.MemoryInfo.SizeInMiB,
+				Name:     name,
+				CPU:      resource.MustParse(strconv.FormatInt(*ins.VCpuInfo.DefaultVCpus, 10)),
+				Memory:   resource.MustParse(strconv.FormatInt(*ins.MemoryInfo.SizeInMiB, 10) + "Mi"),
+				RootDisk: resource.MustParse("0"),
 			})
 		}
 
