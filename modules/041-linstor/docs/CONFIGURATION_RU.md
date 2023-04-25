@@ -38,9 +38,9 @@ stringData:
 
    ```shell
    # LVM пулы
-   vgs -o name,tags | awk 'NR==1;$2~/linstor-/'
+   vgs -o+tags | awk 'NR==1;$NF~/linstor-/'
    # LVMThin пулы
-   lvs -o name,vg_name,tags | awk 'NR==1;$3~/linstor-/'
+   lvs -o+tags | awk 'NR==1;$NF~/linstor-/'
    ```
 
 1. Добавьте пулы.
