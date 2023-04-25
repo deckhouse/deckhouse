@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2022 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ help() {
 echo "
 Usage: $0
 
+  HINT: Use this script only for image scanning, if you want to push images to another registry - use d8-pull.sh script
   Command pulls all images to a local directory for the selected Deckhouse release.
   Accepted cli arguments are:
     --release
@@ -45,13 +46,13 @@ Usage: $0
 EDITION="ee"
 HAS_DOCKER="$(type "docker" &> /dev/null && echo true || echo false)"
 HAS_JQ="$(type "jq" &> /dev/null && echo true || echo false)"
-HAS_GNU_READLINK=$(type "readlink" &> /dev/null && readlink --version | grep -qi GNU && echo true || echo false)
+HAS_CRANE="$(type "crane" &> /dev/null && echo true || echo false)"
 LICENSE=""
 OUTPUT_DIR=""
-D8_DOCKER_CONFIG_DIR=~/.docker/deckhouse
 REGISTRY_ROOT="registry.deckhouse.io"
 REGISTRY="${REGISTRY_ROOT}/deckhouse"
 RELEASE=$(curl -fsL https://api.github.com/repos/deckhouse/deckhouse/tags | jq -r ".[0].name")
+IMAGE=""
 PULL_RELEASE_METADATA_IMAGES="yes"
 
 parse_args() {
@@ -63,7 +64,7 @@ parse_args() {
       --release)
         shift
         if [[ $# -ne 0 ]]; then
-          RELEASE="${1}"
+          export RELEASE="${1}"
         else
           echo "Please provide the desired Deckhouse release. Last available releases are:"
           curl -fsL https://api.github.com/repos/deckhouse/deckhouse/tags | jq -r ".[].name"
@@ -73,13 +74,13 @@ parse_args() {
       --edition)
         shift
         if [[ $# -ne 0 ]]; then
-          EDITION="${1}"
+          export EDITION="${1}"
         fi
         ;;
       --output-dir)
         shift
         if [[ $# -ne 0 ]]; then
-          OUTPUT_DIR=$(readlink -f "${1}")
+          export OUTPUT_DIR="${1}"
         else
           echo "Please provide a directory name."
           return 1
@@ -88,7 +89,7 @@ parse_args() {
       --license)
         shift
         if [[ $# -ne 0 ]]; then
-          LICENSE="${1}"
+          export LICENSE="${1}"
         else
           echo "Please provide a license key for registry.deckhouse.io."
           return 1
@@ -117,8 +118,8 @@ check_requirements() {
     exit 1
   fi
 
-  if [[ "${HAS_GNU_READLINK}" != "true" ]]; then
-    echo "GNU readlink is required. If you are on Mac, check: https://formulae.brew.sh/formula/coreutils"
+  if [ "${HAS_CRANE}" != "true" ]; then
+    echo "Crane is required. Please, check https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation."
     exit 1
   fi
 
@@ -137,16 +138,8 @@ check_requirements() {
       echo "License is required to download Deckhouse Enterprise Edition. Please provide it with CLI argument --license."
       return 1
     else
-      # Docker Desktop stores creds in Desktop store, this hack helps to avoid it and save creds to file
-      mkdir -p "$D8_DOCKER_CONFIG_DIR"
-      cat <<EOF > "$D8_DOCKER_CONFIG_DIR/config.json"
-{
-  "auths": {
-    "$REGISTRY_ROOT": {}
-  }
-}
-EOF
-      docker --config "$D8_DOCKER_CONFIG_DIR" login -u license-token -p "$LICENSE" $REGISTRY_ROOT
+      docker login -u license-token -p "$LICENSE" $REGISTRY_ROOT
+      crane auth login $REGISTRY_ROOT -u license-token -p "$LICENSE"
     fi
   fi
 
@@ -155,49 +148,16 @@ EOF
   rm "$OUTPUT_DIR/test"
 }
 
-function cleanup() {
-  rm -rf "$D8_DOCKER_CONFIG_DIR"
-}
-
-trap cleanup ERR SIGINT SIGTERM SIGHUP SIGQUIT
-
-parse_args "$@"
-check_requirements
-
-echo "Saving Deckhouse $EDITION $RELEASE."
-REGISTRY_PATH="$REGISTRY/$EDITION"
-IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
-
-
-docker run \
-  -v /etc/hosts:/etc/hosts \
-  -v /etc/resolv.conf:/etc/resolv.conf \
-  -v "$OUTPUT_DIR:$OUTPUT_DIR" \
-  -v "$D8_DOCKER_CONFIG_DIR:/root/.docker" \
-  -e "IMAGES=$IMAGES" \
-  -e "REGISTRY_PATH=$REGISTRY_PATH" \
-  -e "OUTPUT_DIR=$OUTPUT_DIR" \
-  -e "RELEASE=$RELEASE" \
-  -e "PULL_RELEASE_METADATA_IMAGES=$PULL_RELEASE_METADATA_IMAGES" \
-  -e "RUNNING_USER=$UID" \
-  -e "RUNNING_GROUP=$(id -g $UID)" \
-  --network host -ti --rm \
-  --entrypoint /bin/bash \
-  "quay.io/skopeo/stable:v1.11.2" -c '
-
-set -Eeuo pipefail
-
-IMAGE_PATH=""
 
 pull_image() {
   local registry_full_path="$REGISTRY_PATH"
   if [[ $# -ne 1 ]] && [[ -n $2 ]]; then
     registry_full_path="$registry_full_path/$2"
-    IMAGE_PATH="$OUTPUT_DIR/$2:$1"
+    IMAGE="$OUTPUT_DIR/$2:$1"
   else
-    IMAGE_PATH="$OUTPUT_DIR/$1"
+    IMAGE="$OUTPUT_DIR/$1"
   fi
-  if [[ -s "$IMAGE_PATH" ]]; then
+  if [[ -s "$IMAGE" ]]; then
     return 0
   fi
 
@@ -205,24 +165,26 @@ pull_image() {
   if [[ $# -gt 2 ]] && [[ "$3" == "use_tag" ]]; then
     delim=":"
   fi
-
-  # using dir to save digests of images
-  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$registry_full_path${delim}${1}" "dir:$IMAGE_PATH" >/dev/null
-  chown -R "$RUNNING_USER:$RUNNING_GROUP" "$IMAGE_PATH"
+  #using tarball, because dhctl bootstrap doesn't support oci format
+  crane pull "$registry_full_path${delim}${1}" --format tarball "$IMAGE"
 }
 
-
 pull_trivy_db() {
-  IMAGE_PATH="$OUTPUT_DIR/trivy-db"
-  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$REGISTRY_PATH/security/trivy-db:2" "dir:$IMAGE_PATH" >/dev/null
-  chown -R "$RUNNING_USER:$RUNNING_GROUP" "$IMAGE_PATH"
+  IMAGE="$OUTPUT_DIR/trivy-db"
+  crane pull "$REGISTRY_PATH/security/trivy-db:2" --format tarball "$IMAGE"
 }
 
 function pull_image_clean_up {
-  rm -rf "$IMAGE_PATH"
+  rm -rf "$IMAGE"
 }
-trap pull_image_clean_up ERR SIGINT SIGTERM SIGHUP SIGQUIT
 
+parse_args "$@"
+check_requirements
+
+echo "Saving Deckhouse $EDITION $RELEASE."
+REGISTRY_PATH="$REGISTRY/$EDITION"
+IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
+trap pull_image_clean_up ERR SIGINT SIGTERM SIGHUP SIGQUIT
 #saving Deckhouse image
 pull_image "$RELEASE" "" "use_tag"
 #saving Deckhouse install image
@@ -232,12 +194,11 @@ l=$(echo "$IMAGES" | wc -l)
 count=1
 for i in $IMAGES; do
   pull_image "$i"
-  printf '"'"'\rImages downloaded %s out of %s'"'"' "$count" "$l"
+  printf '\rImages downloaded %s out of %s' "$count" "$l"
   count=$((count + 1))
 done
 
 if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
-  echo ""
   echo "Pull metadata images"
   #saving metadata about release channel
   pull_image "alpha" "release-channel" "use_tag"
@@ -252,6 +213,3 @@ pull_trivy_db
 
 echo ""
 echo "Operation is complete."
-'
-
-cleanup
