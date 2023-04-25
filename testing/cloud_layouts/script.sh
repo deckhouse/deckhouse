@@ -398,9 +398,6 @@ function bootstrap_static() {
   echo -e "\nmaster_ip_address_for_ssh = $master_ip\n" >> "$bootstrap_log"
   echo -e "\nbastion_ip_address_for_ssh = $bastion_ip\n" >> "$bootstrap_log"
 
-  sleep 30
-  exit 1
-
   # Add key to access to hosts thru bastion
   eval "$(ssh-agent -s)"
   ssh-add "$ssh_private_key_path"
