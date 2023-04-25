@@ -304,7 +304,7 @@ spec:
 
                             Подробнее об указании ресурсов:
                             - [количество kubernetes](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
-                            - [единицы ресурсов памяти](https://kubernetes.io/docs/ концепции/конфигурация/управление-ресурсами-контейнерами/#значение-из-памяти)
+                            - [единицы ресурсов памяти](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory)
                     memory:
                       properties:
                         maxEvents:
