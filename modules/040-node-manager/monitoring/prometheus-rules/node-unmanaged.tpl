@@ -24,6 +24,8 @@
           The recommended actions are as follows:
           - Create a `NodeGroup` for the Node or select the existing one;
           - Add a `node.deckhouse.io/group: <nodeGroup_name>`: `kubectl label node {{`{{ $labels.node }}`}} node.deckhouse.io/group=<nodeGroup_name>` label to it;
-          - Get the script for adopting the Node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-<nodeGroup_name> -o json | jq '.data."adopt.sh"' -r`;
-          - Perform `base64` decoding on the {{`{{ $labels.node }}`}} Node: `echo <base64_string> | base64 -d | bash`;
-          - Analyze the execution log: `journalctl -fu bashible`.
+          - Get the script for bootstrapping the Node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-<nodeGroup_name> -o json | jq '.data."bootstrap.sh"' -r`;
+          - SSH to the {{`{{ $labels.node }}`}} Node;
+          - Follow these instructions to clean up the node before adding it to the cluster: https://deckhouse.io/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
+          - Add the Node to the cluster ???: Perform `base64` decoding on the {{`{{ $labels.node }}`}} Node: `echo <base64_string> | base64 -d | bash`;
+          - Analyze the execution log: `journalctl -fu bashible`. ???
