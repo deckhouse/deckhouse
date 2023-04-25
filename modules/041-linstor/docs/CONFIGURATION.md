@@ -38,9 +38,9 @@ LINSTOR in Deckhouse can be configured by assigning special tag `linstor-<pool_n
 
    ```shell
    # LVM pools
-   vgs -o name,tags | awk 'NR==1;$2~/linstor-/'
+   vgs -o+tags | awk 'NR==1;$NF~/linstor-/'
    # LVMThin pools
-   lvs -o name,vg_name,tags | awk 'NR==1;$3~/linstor-/'
+   lvs -o+tags | awk 'NR==1;$NF~/linstor-/'
    ```
 
 1. Add pools.
