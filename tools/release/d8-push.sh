@@ -168,9 +168,9 @@ l=$(echo "$PATHS" | wc -l)
 count=1
 for path in $PATHS; do
   image="$(basename "$path")"
-  if [[ "$image" == *"trivy-db" ]]; then
+  if [[ "$image" == "trivy-db" ]]; then
     push_image "$SOURCE_DIR/trivy-db" "$REGISTRY_PATH/security/trivy-db:2"
-  elif [[ "$image" == *"sha256:"* ]]; then
+  elif [[ "$image" == "sha256:"* ]]; then
     push_image "$path" "$REGISTRY_PATH@$image"
   elif [[ "$image" == *":"* ]]; then
     push_image "$path" "$REGISTRY_PATH/$image"
