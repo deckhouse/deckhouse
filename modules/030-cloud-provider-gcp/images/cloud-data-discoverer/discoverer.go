@@ -19,10 +19,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
@@ -64,9 +66,10 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 
 				instances[iKey] = struct{}{}
 				res = append(res, v1alpha1.InstanceType{
-					Name:   name,
-					CPU:    cpu,
-					Memory: memory,
+					Name:     name,
+					CPU:      resource.MustParse(strconv.FormatInt(cpu, 10)),
+					Memory:   resource.MustParse(strconv.FormatInt(memory, 10) + "Mi"),
+					RootDisk: resource.MustParse("0"),
 				})
 			}
 
