@@ -150,7 +150,6 @@ func (d *Discoverer) continueProcessing(r *armcompute.ResourceSKU) (bool, error)
 
 	for _, restr := range r.Restrictions {
 		if restr.ReasonCode == nil {
-			d.logger.Debugln(". skip")
 			return false, fmt.Errorf("ReasonCode for restriction: %v", restr)
 		}
 
