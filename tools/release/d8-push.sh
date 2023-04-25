@@ -43,6 +43,7 @@ Usage: $0
 }
 
 HAS_DOCKER="$(type "docker" &> /dev/null && echo true || echo false)"
+HAS_GNU_READLINK=$(type "readlink" &> /dev/null && readlink --version | grep -qi GNU && echo true || echo false)
 D8_DOCKER_CONFIG_DIR=~/.docker/deckhouse
 SOURCE_DIR=""
 REGISTRY_PATH=""
@@ -72,7 +73,7 @@ parse_args() {
       --source-dir)
         shift
         if [[ $# -ne 0 ]]; then
-          SOURCE_DIR=$(cd "$(dirname "${1}")" && pwd -P)/$(basename "${1}")
+          SOURCE_DIR=$(readlink -f "${1}")
         else
           echo "Please provide a directory name."
           return 1
@@ -102,6 +103,11 @@ parse_args() {
 check_requirements() {
   if [ "${HAS_DOCKER}" != "true" ]; then
     echo "Docker is required."
+    exit 1
+  fi
+
+  if [[ "${HAS_GNU_READLINK}" != "true" ]]; then
+    echo "GNU readlink is required. If you are on Mac, check: https://formulae.brew.sh/formula/coreutils"
     exit 1
   fi
 

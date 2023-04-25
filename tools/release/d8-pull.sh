@@ -45,6 +45,7 @@ Usage: $0
 EDITION="ee"
 HAS_DOCKER="$(type "docker" &> /dev/null && echo true || echo false)"
 HAS_JQ="$(type "jq" &> /dev/null && echo true || echo false)"
+HAS_GNU_READLINK=$(type "readlink" &> /dev/null && readlink --version | grep -qi GNU && echo true || echo false)
 LICENSE=""
 OUTPUT_DIR=""
 D8_DOCKER_CONFIG_DIR=~/.docker/deckhouse
@@ -78,7 +79,7 @@ parse_args() {
       --output-dir)
         shift
         if [[ $# -ne 0 ]]; then
-          OUTPUT_DIR=$(cd "$(dirname "${1}")" && pwd -P)/$(basename "${1}")
+          OUTPUT_DIR=$(readlink -f "${1}")
         else
           echo "Please provide a directory name."
           return 1
@@ -113,6 +114,11 @@ check_requirements() {
 
   if [ "${HAS_JQ}" != "true" ]; then
     echo "Jq is required. Please, check https://stedolan.github.io/jq/download/."
+    exit 1
+  fi
+
+  if [[ "${HAS_GNU_READLINK}" != "true" ]]; then
+    echo "GNU readlink is required. If you are on Mac, check: https://formulae.brew.sh/formula/coreutils"
     exit 1
   fi
 
