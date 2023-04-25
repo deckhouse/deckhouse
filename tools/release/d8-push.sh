@@ -132,7 +132,7 @@ check_requirements() {
   }
 }
 EOF
-    docker --config "$D8_DOCKER_CONFIG_DIR" login -u license-token -p "$LICENSE" "$REGISTRY"
+    docker --config "$D8_DOCKER_CONFIG_DIR" login -u "$USERNAME" -p "$PASSWORD" "$REGISTRY"
   fi
 }
 
