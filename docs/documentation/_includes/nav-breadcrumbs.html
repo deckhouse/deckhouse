@@ -1,6 +1,11 @@
 <div class="breadcrumbs-container">
    <ol class="breadcrumbs">
+
+      {%- if page.k8sDocs %}
+      <li class="breadcrumbs__item">Kubernetes</li>
+      {%- else %}
       <!--#include virtual="/includes/group-menu.html" -->
+      {%- endif %}
       {%- assign page_url_parts = page.url | split: '/' -%}
       {%- assign max_ind = page_url_parts.size | minus: 1 -%}
       {% if max_ind == 1 %}{%- assign max_ind = 2 -%}{% endif %}

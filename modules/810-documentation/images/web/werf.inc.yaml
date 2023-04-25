@@ -190,7 +190,7 @@ ansible:
         #  jq ' first.contents | walk(if type == "object" and has("contents") and (.contents |length == 0) then del(.contents) else . end) |  ( .. | select(type=="object")) |= with_entries(if .key == "name" then .key = "url" elif .key == "type" then .key = "title" else . end) |  walk(if type == "object" and has("contents") then ( .folders=.contents | del(.contents) ) else . end) | walk(if type == "object" and has("title") then ( .title = (.url | split("/") | last ) ) else . end) ' |
         #  yq -P | sed -E 's/^/        /; s#url: ./#url: /k8s/docs/#; /\ +url:/s#/?$#/#' >> /srv/jekyll-data/documentation/_data/sidebars/main.yml
         cd /srv/jekyll-data/documentation/en/k8s/docs
-        /srv/jekyll-data/documentation/generate_k8s_sidebar.sh "/k8s/docs/" 2 | sed -i '3r /dev/stdin' /srv/jekyll-data/documentation/_data/sidebars/k8s-docs.yml
+        /srv/jekyll-data/documentation/generate_k8s_sidebar.sh "/k8s/docs/" 2 | sed -i '4r /dev/stdin' /srv/jekyll-data/documentation/_data/sidebars/k8s-docs.yml
         cd /srv/jekyll-data/documentation/ru/k8s/docs
         /srv/jekyll-data/documentation/generate_k8s_sidebar.sh "/k8s/docs/" 2 >> /srv/jekyll-data/documentation/_data/sidebars/k8s-docs.yml
       args:
@@ -269,6 +269,7 @@ import:
 #  - ru
 #  - en
 #  - examples
+#  excludePaths:
 #  - images
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/k8s-static
   add: /src/public/ru
@@ -283,6 +284,7 @@ import:
 #  - ru
 #  - en
 #  - examples
+#  excludePaths:
 #  - images
 git:
 - add: /docs

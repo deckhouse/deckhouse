@@ -102,6 +102,8 @@ defaults:
       type: "pages"
     values:
       sidebarPageTitle: true
+      sidebar: k8s-docs
+      k8sDocs: true
   - scope:
       path: "*/030-cloud-provider-openstack"
       type: "pages"

@@ -1239,3 +1239,9 @@ entries:
         en: Used software
         ru: Используемое ПО
       url: /oss_info.html
+entries-local:
+  folders:
+  - title:
+      en: Kubernetes Documentation
+      ru: Документация Kubernetes
+    url: /k8s/docs/
