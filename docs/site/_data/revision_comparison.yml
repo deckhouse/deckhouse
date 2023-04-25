@@ -107,7 +107,7 @@ sections:
       - description:
           en: Security threat detection engine
           ru: Модуль поиска угроз безопасности
-        url: /documentation/v1.44/modules/650-runtime-audit-engine/
+        url: /documentation/v1/modules/650-runtime-audit-engine/
         revision:
           ce: false
           ee: true
