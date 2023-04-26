@@ -36,13 +36,13 @@ const (
 	accessLevelClusterAdmin   = "ClusterAdmin"
 )
 
-type customRole struct {
+type customClusterRole struct {
 	Name string
 	Role string
 }
 
 func applyCustomRoleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	ccr := &customRole{
+	ccr := &customClusterRole{
 		Name: obj.GetName(),
 	}
 
@@ -96,7 +96,7 @@ func snapshotsToInternalValuesCustomClusterRoles(snapshots []go_hook.FilterResul
 		if snapshot == nil {
 			continue
 		}
-		customRole := snapshot.(*customRole)
+		customRole := snapshot.(*customClusterRole)
 		switch customRole.Role {
 		case accessLevelUser:
 			userRoleNames.Add(customRole.Name)
