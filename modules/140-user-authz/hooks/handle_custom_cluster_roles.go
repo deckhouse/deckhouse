@@ -26,21 +26,30 @@ import (
 )
 
 const (
-	ccrSnapshot = "custom_cluster_roles"
+	customClusterRoleSnapshots = "custom_cluster_roles"
+	customRoleSnapshots        = "custom_roles"
+
+	accessLevelUser           = "User"
+	accessLevelPrivilegedUser = "PrivilegedUser"
+	accessLevelEditor         = "Editor"
+	accessLevelAdmin          = "Admin"
+	accessLevelClusterEditor  = "ClusterEditor"
+	accessLevelClusterAdmin   = "ClusterAdmin"
 )
 
-type CustomClusterRole struct {
+type customRole struct {
 	Name string
 	Role string
 }
 
-func applyCustomClusterRoleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	ccr := &CustomClusterRole{}
+func applyCustomRoleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	ccr := &customRole{
+		Name: obj.GetName(),
+	}
 
 	role := obj.GetAnnotations()["user-authz.deckhouse.io/access-level"]
 	switch role {
-	case "User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin":
-		ccr.Name = obj.GetName()
+	case accessLevelUser, accessLevelPrivilegedUser, accessLevelEditor, accessLevelAdmin, accessLevelClusterEditor, accessLevelClusterAdmin:
 		ccr.Role = role
 	default:
 		return nil, nil
@@ -49,27 +58,42 @@ func applyCustomClusterRoleFilter(obj *unstructured.Unstructured) (go_hook.Filte
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue(ccrSnapshot),
+	Queue: internal.Queue("custom_rbac_roles"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       ccrSnapshot,
+			Name:       customClusterRoleSnapshots,
 			ApiVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
-			FilterFunc: applyCustomClusterRoleFilter,
+			FilterFunc: applyCustomRoleFilter,
+		},
+		{
+			Name:       customRoleSnapshots,
+			ApiVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "Role",
+			FilterFunc: applyCustomRoleFilter,
 		},
 	},
 }, customClusterRolesHandler)
 
 func customClusterRolesHandler(input *go_hook.HookInput) error {
-	type internalValuesCustomClusterRoles struct {
-		User           []string `json:"user"`
-		PrivilegedUser []string `json:"privilegedUser"`
-		Editor         []string `json:"editor"`
-		Admin          []string `json:"admin"`
-		ClusterEditor  []string `json:"clusterEditor"`
-		ClusterAdmin   []string `json:"clusterAdmin"`
-	}
+	input.Values.Set("userAuthz.internal.customClusterRoles", snapshotsToInternalValuesCustomClusterRoles(input.Snapshots[customClusterRoleSnapshots]))
 
+	tmpValuesCustomRoles := snapshotsToInternalValuesCustomClusterRoles(input.Snapshots[customRoleSnapshots])
+	input.Values.Set("userAuthz.internal.customRoles", internalValuesCustomClusterToNamespaced(tmpValuesCustomRoles))
+
+	return nil
+}
+
+type internalValuesCustomClusterRoles struct {
+	User           []string `json:"user"`
+	PrivilegedUser []string `json:"privilegedUser"`
+	Editor         []string `json:"editor"`
+	Admin          []string `json:"admin"`
+	ClusterEditor  []string `json:"clusterEditor"`
+	ClusterAdmin   []string `json:"clusterAdmin"`
+}
+
+func snapshotsToInternalValuesCustomClusterRoles(snapshots []go_hook.FilterResult) internalValuesCustomClusterRoles {
 	var (
 		userRoleNames           = set.New()
 		privilegedUserRoleNames = set.New()
@@ -79,42 +103,56 @@ func customClusterRolesHandler(input *go_hook.HookInput) error {
 		clusterAdminRoleNames   = set.New()
 	)
 
-	snapshots := input.Snapshots[ccrSnapshot]
-
 	for _, snapshot := range snapshots {
 		if snapshot == nil {
 			continue
 		}
-		customClusterRole := snapshot.(*CustomClusterRole)
-		switch customClusterRole.Role {
-		case "User":
-			userRoleNames.Add(customClusterRole.Name)
+		customRole := snapshot.(*customRole)
+		switch customRole.Role {
+		case accessLevelUser:
+			userRoleNames.Add(customRole.Name)
 			fallthrough
-		case "PrivilegedUser":
-			privilegedUserRoleNames.Add(customClusterRole.Name)
+		case accessLevelPrivilegedUser:
+			privilegedUserRoleNames.Add(customRole.Name)
 			fallthrough
-		case "Editor":
-			editorRoleNames.Add(customClusterRole.Name)
+		case accessLevelEditor:
+			editorRoleNames.Add(customRole.Name)
 			fallthrough
-		case "Admin":
-			adminRoleNames.Add(customClusterRole.Name)
+		case accessLevelAdmin:
+			adminRoleNames.Add(customRole.Name)
 			fallthrough
-		case "ClusterEditor":
-			clusterEditorRoleNames.Add(customClusterRole.Name)
+		case accessLevelClusterEditor:
+
+			clusterEditorRoleNames.Add(customRole.Name)
 			fallthrough
-		case "ClusterAdmin":
-			clusterAdminRoleNames.Add(customClusterRole.Name)
+		case accessLevelClusterAdmin:
+			clusterAdminRoleNames.Add(customRole.Name)
 		}
 	}
-
-	input.Values.Set("userAuthz.internal.customClusterRoles", internalValuesCustomClusterRoles{
+	values := internalValuesCustomClusterRoles{
 		User:           userRoleNames.Slice(),
 		PrivilegedUser: privilegedUserRoleNames.Slice(),
 		Editor:         editorRoleNames.Slice(),
 		Admin:          adminRoleNames.Slice(),
 		ClusterEditor:  clusterEditorRoleNames.Slice(),
 		ClusterAdmin:   clusterAdminRoleNames.Slice(),
-	})
+	}
 
-	return nil
+	return values
+}
+
+type internalValuesCustomRoles struct {
+	User           []string `json:"user"`
+	PrivilegedUser []string `json:"privilegedUser"`
+	Editor         []string `json:"editor"`
+	Admin          []string `json:"admin"`
+}
+
+func internalValuesCustomClusterToNamespaced(c internalValuesCustomClusterRoles) *internalValuesCustomRoles {
+	return &internalValuesCustomRoles{
+		User:           c.User,
+		PrivilegedUser: c.PrivilegedUser,
+		Editor:         c.Editor,
+		Admin:          c.Admin,
+	}
 }

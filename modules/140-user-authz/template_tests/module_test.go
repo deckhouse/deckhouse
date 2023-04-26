@@ -31,12 +31,18 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-const customClusterRolesFlat = `---
+const (
+	customClusterRolesFlat = `---
 admin:
   - cert-manager:user-authz:user
 `
 
-const testCRDsWithLimitNamespaces = `---
+	customRolesFlat = `---
+editor:
+- test:user-authz:user
+`
+
+	testCLusterRoleCRDsWithLimitNamespaces = `---
 - name: testenev
   spec:
     accessLevel: Admin
@@ -53,7 +59,7 @@ const testCRDsWithLimitNamespaces = `---
       name: cluster-write-all
 `
 
-const testCRDsWithAllowAccessToSystemNamespaces = `---
+	testCLusterRoleCRDsWithAllowAccessToSystemNamespaces = `---
 - name: testenev
   spec:
     accessLevel: Admin
@@ -68,8 +74,8 @@ const testCRDsWithAllowAccessToSystemNamespaces = `---
       name: cluster-write-all
 `
 
-const testCRDsWithCRDsKey = `---
-crds:
+	testCLusterRoleCRDsWithCRDsKey = `---
+clusterAuthRuleCrds:
   - name: testenev
     spec:
       accessLevel: Admin
@@ -86,7 +92,39 @@ crds:
         name: cluster-write-all
 `
 
-var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCRDsWithCRDsKey))
+	testRoleCRDs = `---
+- name: testenev-namespaced
+  namespace: testenv
+  spec:
+    accessLevel: Editor
+    allowScale: true
+    subjects:
+      - kind: User
+        name: Efrem Testenev
+    additionalRoles:
+      - apiGroup: rbac.authorization.k8s.io
+        kind: Role
+        name: write-all
+        namespace: testenv
+`
+
+	testRoleCRDsWithCRDsKey = `---
+authRuleCrds:
+- name: testenev-namespaced
+  spec:
+    accessLevel: Editor
+    allowScale: true
+    subjects:
+      - kind: User
+        name: Efrem Testenev
+    additionalRoles:
+      - apiGroup: rbac.authorization.k8s.io
+        kind: Role
+        name: write-all
+`
+)
+
+var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCLusterRoleCRDsWithCRDsKey))
 
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -110,8 +148,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.crds", testCRDsWithLimitNamespaces)
+			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
+			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
 			f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", customClusterRolesFlat)
+			f.ValuesSetFromYaml("userAuthz.internal.customRoles", customRolesFlat)
 
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
@@ -133,6 +173,16 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 		})
 
+		It("Should create a RoleBinding for each additionalRole", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:additional-role:write-all")
+			Expect(rb.Exists()).To(BeTrue())
+
+			Expect(rb.Field("roleRef.name").String()).To(Equal("write-all"))
+			Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+		})
+
 		It("Should create a ClusterRoleBinding to an appropriate ClusterRole", func() {
 			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin")
 			Expect(crb.Exists()).To(BeTrue())
@@ -141,7 +191,15 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 		})
 
-		It("Should create additional ClusterBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
+		It("Should create a RoleBinding to an appropriate Role", func() {
+			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor")
+			Expect(rb.Exists()).To(BeTrue())
+
+			Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:editor"))
+			Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+		})
+
+		It("Should create additional ClusterRoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
 			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom-cluster-role:cert-manager:user-authz:user")
 			Expect(crb.Exists()).To(BeTrue())
 
@@ -149,13 +207,21 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 		})
 
+		It("Should create additional RoleBinding for each Role with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
+			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-role:test:user-authz:user")
+			Expect(rb.Exists()).To(BeTrue())
+
+			Expect(rb.Field("roleRef.name").String()).To(Equal("test:user-authz:user"))
+			Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+		})
+
 		Context("portForwarding option is set in a CAR", func() {
 			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.crds.0.spec.portForwarding", true)
+				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.portForwarding", true)
 				f.HelmRender()
 			})
 
-			It("Should create a port-forward RoleBinding", func() {
+			It("Should create a port-forward ClusterRoleBinding", func() {
 				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:port-forward")
 				Expect(crb.Exists()).To(BeTrue())
 
@@ -164,9 +230,24 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			})
 		})
 
+		Context("portForwarding option is set in a AR", func() {
+			BeforeEach(func() {
+				f.ValuesSet("userAuthz.internal.authRuleCrds.0.spec.portForwarding", true)
+				f.HelmRender()
+			})
+
+			It("Should create a port-forward RoleBinding", func() {
+				rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:port-forward")
+				Expect(rb.Exists()).To(BeTrue())
+
+				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:port-forward"))
+				Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+			})
+		})
+
 		Context("allowScale option is set to true in a CAR", func() {
 			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.crds.0.spec.allowScale", true)
+				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.allowScale", true)
 				f.HelmRender()
 			})
 
@@ -179,15 +260,42 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			})
 		})
 
+		Context("allowScale option is set to true in a AR", func() {
+			BeforeEach(func() {
+				f.ValuesSet("userAuthz.internal.authRuleCrds.0.spec.allowScale", true)
+				f.HelmRender()
+			})
+
+			It("Should create a scale RoleBinding", func() {
+				rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:scale")
+				Expect(rb.Exists()).To(BeTrue())
+
+				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:scale"))
+				Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+			})
+		})
+
 		Context("allowScale option is set to false in a CAR", func() {
 			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.crds.0.spec.allowScale", false)
+				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.allowScale", false)
 				f.HelmRender()
 			})
 
 			It("Should not create a scale RoleBinding", func() {
 				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:scale")
 				Expect(crb.Exists()).To(BeFalse())
+			})
+		})
+
+		Context("allowScale option is set to false in a AR", func() {
+			BeforeEach(func() {
+				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.allowScale", false)
+				f.HelmRender()
+			})
+
+			It("Should not create a scale RoleBinding", func() {
+				rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev:scale")
+				Expect(rb.Exists()).To(BeFalse())
 			})
 		})
 
@@ -204,7 +312,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	Context("With custom resources (incl. limitNamespaces) and not enabledMultiTenancy", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.crds", testCRDsWithLimitNamespaces)
+			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.HelmRender()
 		})
 
@@ -216,7 +324,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	Context("With custom resources (incl. limitNamespaces) and not enabledMultiTenancy", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.crds", testCRDsWithAllowAccessToSystemNamespaces)
+			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithAllowAccessToSystemNamespaces)
 			f.HelmRender()
 		})
 

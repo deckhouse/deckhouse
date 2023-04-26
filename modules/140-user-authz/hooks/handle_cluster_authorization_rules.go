@@ -28,17 +28,17 @@ import (
 )
 
 const (
-	carSnapshot = "cluster_authorization_rules"
+	clusterAuthRuleSnapshot = "cluster_authorization_rules"
+	authRuleSnapshot        = "authorization_rules"
 )
 
-type ClusterAuthorizationRule struct {
-	Name string                 `json:"name"`
-	Spec map[string]interface{} `json:"spec"`
+type AuthorizationRule struct {
+	Name      string                 `json:"name"`
+	Spec      map[string]interface{} `json:"spec"`
+	Namespace string                 `json:"namespace,omitempty"`
 }
 
-func applyClusterAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	car := &ClusterAuthorizationRule{}
-	car.Name = obj.GetName()
+func applyAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
 	if !found {
 		return nil, fmt.Errorf(`".spec is not a map[string]interface{} or contains non-string values in the map: %s`, spew.Sdump(obj.Object))
@@ -47,31 +47,49 @@ func applyClusterAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hoo
 		return nil, err
 	}
 
-	car.Spec = spec
+	car := &AuthorizationRule{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+		Spec:      spec,
+	}
+
 	return car, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue(carSnapshot),
+	Queue: internal.Queue("d8_auth_rules"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       carSnapshot,
+			Name:       clusterAuthRuleSnapshot,
 			ApiVersion: "deckhouse.io/v1",
 			Kind:       "ClusterAuthorizationRule",
-			FilterFunc: applyClusterAuthorizationRuleFilter,
+			FilterFunc: applyAuthorizationRuleFilter,
+		},
+		{
+			Name:       authRuleSnapshot,
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "AuthorizationRule",
+			FilterFunc: applyAuthorizationRuleFilter,
 		},
 	},
-}, clusterAuthorizationRulesHandler)
+}, authorizationRulesHandler)
 
-func clusterAuthorizationRulesHandler(input *go_hook.HookInput) error {
-	snapshots := input.Snapshots[carSnapshot]
-	ccrs := make([]ClusterAuthorizationRule, 0, len(snapshots))
-	for _, snapshot := range snapshots {
-		ccr := snapshot.(*ClusterAuthorizationRule)
-		ccrs = append(ccrs, *ccr)
-	}
+func authorizationRulesHandler(input *go_hook.HookInput) error {
+	input.Values.Set("userAuthz.internal.clusterAuthRuleCrds", snapshotsToAuthorizationRulesSlice(input.Snapshots[clusterAuthRuleSnapshot]))
 
-	input.Values.Set("userAuthz.internal.crds", ccrs)
+	input.Values.Set("userAuthz.internal.authRuleCrds", snapshotsToAuthorizationRulesSlice(input.Snapshots[authRuleSnapshot]))
 
 	return nil
+}
+
+func snapshotsToAuthorizationRulesSlice(snapshots []go_hook.FilterResult) []AuthorizationRule {
+	ars := make([]AuthorizationRule, 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		if snapshot == nil {
+			continue
+		}
+		ar := snapshot.(*AuthorizationRule)
+		ars = append(ars, *ar)
+	}
+	return ars
 }

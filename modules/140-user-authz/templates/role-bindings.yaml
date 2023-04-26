@@ -1,11 +1,12 @@
-{{- range $crd := .Values.userAuthz.internal.clusterAuthRuleCrds }}
+{{- range $crd := .Values.userAuthz.internal.authRuleCrds }}
   {{- if $crd.spec.additionalRoles }}
     {{- range $additional_role := $crd.spec.additionalRoles }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: user-authz:{{ $crd.name }}:additional-role:{{ $additional_role.name }}
+  namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 roleRef:
   {{- $additional_role | toYaml | nindent 2 }}
@@ -15,33 +16,35 @@ subjects:
   {{- end }}
 
   {{- if hasKey $crd.spec "accessLevel" }}
-    {{- if not (list "User" "PrivilegedUser" "Editor" "Admin" "ClusterEditor" "ClusterAdmin" "SuperAdmin" | has $crd.spec.accessLevel) }}
+    {{- if not (list "User" "PrivilegedUser" "Editor" "Admin" | has $crd.spec.accessLevel) }}
       {{- cat "Unsupported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" | fail }}
     {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | kebabcase }}
+  namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: user-authz:{{ $crd.spec.accessLevel | kebabcase }}
 subjects:
 {{ $crd.spec.subjects | toYaml }}
 
-    {{- range $customClusterRole := (pluck ($crd.spec.accessLevel | untitle) $.Values.userAuthz.internal.customClusterRoles | first) }}
+    {{- range $customRole := (pluck ($crd.spec.accessLevel | untitle) $.Values.userAuthz.internal.customRoles | first) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
-  name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | kebabcase }}:custom-cluster-role:{{ $customClusterRole }}
+  name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | kebabcase }}:custom-role:{{ $customRole }}
+  namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: {{ $customClusterRole }}
+  kind: Role
+  name: {{ $customRole }}
 subjects:
 {{ $crd.spec.subjects | toYaml }}
     {{- end }}
@@ -51,13 +54,14 @@ subjects:
     {{- if ($crd.spec.portForwarding | default false) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: user-authz:{{ $crd.name }}:port-forward
+  namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: user-authz:port-forward
 subjects:
 {{ $crd.spec.subjects | toYaml }}
@@ -67,13 +71,14 @@ subjects:
   {{- if $crd.spec.allowScale }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: user-authz:{{ $crd.name }}:scale
+  namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: user-authz:scale
 subjects:
 {{ $crd.spec.subjects | toYaml }}

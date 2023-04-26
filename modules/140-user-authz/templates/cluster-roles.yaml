@@ -22,7 +22,7 @@
   {{- end }}
 {{- end -}}
 
-{{- define "user_authz_rules_for_not_recommended_objects" }}
+{{- define "user_authz_rules_for_not_recommended_objects_for_cluster_roles" }}
 - apiGroups:
   - apps
   - extensions
@@ -39,7 +39,7 @@
   {{- include "user_authz_verbs" "r" }}
 {{- end -}}
 
-{{- define "user_authz_common_rules" }}
+{{- define "user_authz_common_rules_for_cluster_roles" }}
   {{- $role := . -}}
   {{- $mode := "" }}
   {{- if or (eq $role "User") (eq $role "PrivilegedUser") }}
@@ -165,7 +165,7 @@
   - persistentvolumes
   verbs:
   {{- include "user_authz_verbs" "r" }}
-  {{- include "user_authz_rules_for_not_recommended_objects" . }}
+  {{- include "user_authz_rules_for_not_recommended_objects_for_cluster_roles" . }}
 - apiGroups:
   - discovery.k8s.io
   resources:
@@ -174,10 +174,10 @@
   {{- include "user_authz_verbs" $mode }}
 {{- end -}}
 
-{{- define "user_authz_user_rules" }}
+{{- define "user_authz_user_rules_for_clusterroles" }}
 {{- end -}}
 
-{{- define "user_authz_privileged_user_rules" }}
+{{- define "user_authz_privileged_user_rules_for_clusterroles" }}
 - apiGroups:
   - ""
   resources:
@@ -201,7 +201,7 @@
   {{- include "user_authz_verbs" "r" }}
 {{- end -}}
 
-{{- define "user_authz_editor_rules" }}
+{{- define "user_authz_editor_rules_for_clusterroles" }}
 - apiGroups:
   - ""
   resources:
@@ -210,7 +210,7 @@
   {{- include "user_authz_verbs" "w" }}
 {{- end -}}
 
-{{- define "user_authz_admin_rules" }}
+{{- define "user_authz_admin_rules_for_clusterroles" }}
 - apiGroups:
   - apps
   - extensions
@@ -293,8 +293,8 @@ metadata:
   name: user-authz:user
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "User" }}
-{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_common_rules_for_cluster_roles" "User" }}
+{{- include "user_authz_user_rules_for_clusterroles" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -302,9 +302,9 @@ metadata:
   name: user-authz:privileged-user
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "PrivilegedUser" }}
-{{- include "user_authz_user_rules" . }}
-{{- include "user_authz_privileged_user_rules" . }}
+{{- include "user_authz_common_rules_for_cluster_roles" "PrivilegedUser" }}
+{{- include "user_authz_user_rules_for_clusterroles" . }}
+{{- include "user_authz_privileged_user_rules_for_clusterroles" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -312,10 +312,10 @@ metadata:
   name: user-authz:editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "Editor" }}
-{{- include "user_authz_user_rules" . }}
-{{- include "user_authz_privileged_user_rules" . }}
-{{- include "user_authz_editor_rules" . }}
+{{- include "user_authz_common_rules_for_cluster_roles" "Editor" }}
+{{- include "user_authz_user_rules_for_clusterroles" . }}
+{{- include "user_authz_privileged_user_rules_for_clusterroles" . }}
+{{- include "user_authz_editor_rules_for_clusterroles" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -323,11 +323,11 @@ metadata:
   name: user-authz:admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "Admin" }}
-{{- include "user_authz_user_rules" . }}
-{{- include "user_authz_privileged_user_rules" . }}
-{{- include "user_authz_editor_rules" . }}
-{{- include "user_authz_admin_rules" . }}
+{{- include "user_authz_common_rules_for_cluster_roles" "Admin" }}
+{{- include "user_authz_user_rules_for_clusterroles" . }}
+{{- include "user_authz_privileged_user_rules_for_clusterroles" . }}
+{{- include "user_authz_editor_rules_for_clusterroles" . }}
+{{- include "user_authz_admin_rules_for_clusterroles" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -335,10 +335,10 @@ metadata:
   name: user-authz:cluster-editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "ClusterAdmin" }}
-{{- include "user_authz_user_rules" . }}
-{{- include "user_authz_privileged_user_rules" . }}
-{{- include "user_authz_editor_rules" . }}
+{{- include "user_authz_common_rules_for_cluster_roles" "ClusterAdmin" }}
+{{- include "user_authz_user_rules_for_clusterroles" . }}
+{{- include "user_authz_privileged_user_rules_for_clusterroles" . }}
+{{- include "user_authz_editor_rules_for_clusterroles" . }}
 {{- include "user_authz_cluster_editor_rules" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -347,11 +347,11 @@ metadata:
   name: user-authz:cluster-admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-{{- include "user_authz_common_rules" "ClusterAdmin" }}
-{{- include "user_authz_user_rules" . }}
-{{- include "user_authz_privileged_user_rules" . }}
-{{- include "user_authz_editor_rules" . }}
-{{- include "user_authz_admin_rules" . }}
+{{- include "user_authz_common_rules_for_cluster_roles" "ClusterAdmin" }}
+{{- include "user_authz_user_rules_for_clusterroles" . }}
+{{- include "user_authz_privileged_user_rules_for_clusterroles" . }}
+{{- include "user_authz_editor_rules_for_clusterroles" . }}
+{{- include "user_authz_admin_rules_for_clusterroles" . }}
 {{- include "user_authz_cluster_editor_rules" . }}
 {{- include "user_authz_cluster_admin_rules" . }}
 ---

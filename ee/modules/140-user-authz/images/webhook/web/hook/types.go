@@ -19,7 +19,7 @@ type DirectoryEntry struct {
 
 // UserAuthzConfig is a config composed from ClusterAuthorizationRules collected from Kubernetes cluster
 type UserAuthzConfig struct {
-	CRDs []struct {
+	ClusterAuthRuleCrds []struct {
 		Name string `json:"name"`
 		Spec struct {
 			AccessLevel                   string   `json:"accessLevel"`
@@ -38,7 +38,7 @@ type UserAuthzConfig struct {
 				Namespace string `json:"namespace"`
 			} `json:"subjects"`
 		} `json:"spec,omitempty"`
-	} `json:"crds"`
+	} `json:"clusterAuthRuleCrds"`
 }
 
 // WebhookRequest is a replica of the SubjectAccessReview Kubernetes kind with only important fields

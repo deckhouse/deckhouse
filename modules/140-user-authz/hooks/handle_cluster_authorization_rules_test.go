@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	stateCARs = `
+	stateClusterAuthRules = `
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -46,11 +46,37 @@ spec:
   - kind: Group
     name: Everyone
 `
+
+	stateAuthRules = `
+---
+apiVersion: deckhouse.io/v1
+kind: AuthorizationRule
+metadata:
+  name: ar0
+  namespace: test
+spec:
+  accessLevel: User
+  subjects:
+  - kind: Group
+    name: NotEveryone
+---
+apiVersion: deckhouse.io/v1
+kind: AuthorizationRule
+metadata:
+  name: ar1
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: Group
+    name: Everyone
+`
 )
 
 var _ = Describe("User Authz hooks :: handle cluster authorization rules ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "ClusterAuthorizationRule", false)
+	f.RegisterCRD("deckhouse.io", "v1", "AuthorizationRule", true)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -60,19 +86,21 @@ var _ = Describe("User Authz hooks :: handle cluster authorization rules ::", fu
 
 		It("CAR must be empty list", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds").String()).To(MatchJSON(`[]`))
 		})
 	})
 
-	Context("Cluster with two CARs", func() {
+	Context("Cluster with two CARs and two ARs", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCARs))
+			f.BindingContexts.Set(f.KubeStateSet(stateClusterAuthRules + stateAuthRules))
 			f.RunHook()
 		})
 
-		It("CAR must be stored in values", func() {
+		It("CARs and ARs must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor", "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin", "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor", "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin", "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
+			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds").String()).To(MatchJSON(`[{"name":"ar0","namespace":"test","spec":{"accessLevel":"User", "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"ar1","namespace":"test","spec":{"accessLevel":"Admin", "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
 		})
 	})
 })
