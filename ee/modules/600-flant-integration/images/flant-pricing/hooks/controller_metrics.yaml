@@ -63,6 +63,6 @@ kubernetes:
 schedule:
   - name: "d8_controllers_schedule"
     # NOTE: If you are changing crontab frequency - please change a time duration
-    # "PROMETHEUS_INTERVAL" variable in controller_metrics.py file.
+    # in prometheus query ("consumption_query" func) in controller_metrics.py file.
     crontab: "*/5 * * * *"
     group: "main"

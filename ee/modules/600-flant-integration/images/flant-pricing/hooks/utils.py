@@ -25,29 +25,10 @@ except FileNotFoundError:
     SERVICE_ACCOUNT_TOKEN = os.getenv("SERVICE_ACCOUNT_TOKEN")
 
 
-def prometheus_metric_builder(metric_name: str, labels: Dict[str, str] = None) -> str:
-    """build metric from metric name and labels"""
-
-    metric_labels = []
-    if labels:
-        metric_labels = [f'{k}="{v}"' for k, v in labels.items()]
-    return f"{metric_name}{{{','.join(metric_labels)}}}"
-
-
-def prometheus_function_builder(func: str, metric: str, interval: str = None) -> str:
-    """build prometheus function from func, metric name and internval"""
-
-    interval_str = ""
-    if interval is not None:
-        interval_str = f'[{interval}]'
-
-    return f'{func}({metric}{interval_str})'
-
-
 def prometheus_query(query: str) -> List[Dict[str, Any]]:
     """query prometheus from query and get api result response"""
 
-    response = make_get_request(
+    response = do_get_request(
         url=PROMETHEUS_URL,
         params={"query": query},
         headers={"Authorization": f"Bearer {SERVICE_ACCOUNT_TOKEN}"},
@@ -70,13 +51,13 @@ def prometheus_query_value(query: str) -> float:
     return 0.0
 
 
-def make_get_request(
+def do_get_request(
         url: str,
         params: Dict[str, str] = None,
         headers: Dict[str, str] = None,
         decode_json: bool = False,
 ) -> Any:
-    """make http request with retries"""
+    """do http request with retries"""
 
     retries = Retry(
         total=BACKOFF_LIMIT,

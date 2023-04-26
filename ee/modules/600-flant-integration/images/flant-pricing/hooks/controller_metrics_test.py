@@ -11,6 +11,7 @@ from shell_operator import hook
 
 class MockMetricCollector(AbstractMetricCollector):
     __cpu_values = {
+        # controller, module, kind, namespace
         ("dex", "user-authn", "Deployment", "d8-user-authn"): 1.0,
         ("controller-nginx", "ingress-nginx", "DaemonSet", "d8-ingress-nginx"): 3.5,
         ("prometheus-main", "monitoring", "StatefulSet", "d8-monitoring"): 2.0,
@@ -18,6 +19,7 @@ class MockMetricCollector(AbstractMetricCollector):
     }
 
     __memory_values = {
+        # controller, module, kind, namespace
         ("dex", "user-authn", "Deployment", "d8-user-authn"): 100,
         ("controller-nginx", "ingress-nginx", "DaemonSet", "d8-ingress-nginx"): 500,
         ("prometheus-main", "monitoring", "StatefulSet", "d8-monitoring"): 10000,
