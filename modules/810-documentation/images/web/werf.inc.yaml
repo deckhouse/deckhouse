@@ -37,7 +37,6 @@ ansible:
         rsync --ignore-existing /src/public/docs/ /src/public/ru/docs/ -a
         rsync --ignore-existing /src/public/images/ /src/public/ru/images/ -a
         rsync --ignore-existing /src/public/images/ /src/public/en/images/ -a
-        #exit 1
       args:
         chdir: /src
 git:
@@ -196,6 +195,18 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
+    - name: "Fix title for the Kubernetes documentation..."
+      shell: |
+        for i in $(find ./{ru,en}/k8s/ -regex '.*.html' -type f -print); do
+          grep -q "^---" $i || continue
+          head -n $(grep -n -E "^---" $i | head -2 | tail -1 | cut -d: -f 1) $i |
+             grep -q -E "^title:.*\:.*" || continue
+          _TITLELINE=$(grep -n -E "^title:" $i | head -n 1 | cut -d: -f 1)
+          sed -i -E "${_TITLELINE} s#^title: (.+)\$#title: '\1'#g" $i
+        done
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/
     - name: "Extracting the default Kubernetes version..."
       shell: |
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
@@ -236,14 +247,14 @@ ansible:
     - name: "Generating static files of the documentation part..."
       shell: |
         mkdir -m 777 -p /app/_site/
-        JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml --profile
+        JEKYLL_ENV=development jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml --profile
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
         warn: false
     - name: "Generating static file's of the main part..."
       shell: |
-        JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml  --profile
+        JEKYLL_ENV=development jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml --profile
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/site/

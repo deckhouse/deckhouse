@@ -49,6 +49,7 @@ plugins:
   - jekyll-assets
   - jekyll-regex-replace
   - jekyll_include_plugin
+  - jekyll-include-cache
 
 markdown: kramdown
 kramdown:
@@ -101,7 +102,6 @@ defaults:
       path: "*/k8s"
       type: "pages"
     values:
-      sidebarPageTitle: true
       sidebar: k8s-docs
       k8sDocs: true
   - scope:

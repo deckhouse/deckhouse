@@ -12,6 +12,26 @@
   {% include head-local.html %}
   {%- endif %}
   <!--#include virtual="/includes/head-site.html" -->
+    <script type="text/javascript">
+    $(document).ready(function () {
+        // Turn off sliding. (https://api.jquery.com/slideup/)
+        let fxOrig = jQuery.fx.off;
+        jQuery.fx.off = true;
+
+        // Activate page item in sidebar and expands its ancestors.
+        let page_url='{{ page.url | regex_replace: "^/(ru/|en/)", "/" }}';
+        let active_item = $(`#mysidebar li[data-page-url="${page_url}"]`);
+        active_item.addClass('active');
+        active_item.parents('li')
+          .addClass('active')
+          .each((_, parent) => {
+            $("#mysidebar").navgoco('toggle', true, $($(parent).children('[data-index]')).attr('data-index'));
+          });
+
+        // Restore sliding.
+        jQuery.fx.off = fxOrig;
+    });
+    </script>
 </head>
 
 <body>

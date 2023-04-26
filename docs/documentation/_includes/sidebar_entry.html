@@ -1,9 +1,8 @@
-{%- unless jekyll.environment == "development" %}
-
 {%- assign entry = include.entry %}
 {%- assign folder_entry_class = include.folder_entry_class %}
 {%- assign item_entry_class = include.item_entry_class %}
 {%- assign entry_title = '' %}
+{%- assign lang = include.lang %}
 
 {%- if entry.hot == true %}
     {%- assign item_entry_class = item_entry_class | append: ' sidebar__item_hot' %}
@@ -18,19 +17,19 @@
 {%- assign skip_item = true %}
 {%- endif %}
 
-{% unless skip_item %}
+{%- unless skip_item %}
 
 {%- if entry.d8Revision %}
     {%- assign folder_entry_class = folder_entry_class | append: ' sidebar__item_' | append: entry.d8Revision %}
-    {%- assign entry_title = site.data.i18n.features[entry.d8Revision][page.lang] | strip_html | regex_replace: '.$', '' %}
+    {%- assign entry_title = site.data.i18n.features[entry.d8Revision][lang] | strip_html | regex_replace: '.$', '' %}
 {%- endif %}
 
 {%- if entry.featureStatus %}
     {%- assign folder_entry_class = folder_entry_class | append: ' sidebar__item_' | append: entry.featureStatus %}
-    {%- assign entry_title = entry_title | append: " " | append: site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' %}
+    {%- assign entry_title = entry_title | append: " " | append: site.data.i18n.features[entry.featureStatus][lang] | lstrip | strip_html | regex_replace: '.$', '' %}
 {%- endif %}
 
-{% assign entry_with_lang = entry.url | prepend: page.lang | prepend: "/" %}
+{% assign entry_with_lang = entry.url | prepend: lang | prepend: "/" %}
 
 {%- assign page_url_parts = page.url | split: '/' -%}
 {%- assign page_url_last_parts = page_url_parts | last -%}
@@ -49,31 +48,19 @@
 {%- if entry.folders %}
 <li class="{{ folder_entry_class }}">
     <a href="#"{%- if entry_title.size > 0 %} title="{{ entry_title }}"{% endif -%}
-    >{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a>
+    >{%- if entry.title[lang] %}{{ entry.title[lang] }}{% else %}{{ entry.title }}{% endif -%}</a>
     <ul class="sidebar__submenu">
         {%- for entry in entry.folders %}
-        {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__submenu-item sidebar__submenu-item_parent" item_entry_class="sidebar__submenu-item" %}
+        {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__submenu-item sidebar__submenu-item_parent" item_entry_class="sidebar__submenu-item" is_404=include.is_404 lang=lang %}
         {%- endfor %}
     </ul>
 </li>
 {%- elsif entry.external_url %}
-<li class="{{ item_entry_class }}"><a href="{{ entry.external_url }}" target="_blank">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
-{%- elsif page_url == entry.url or page_url == entry_with_lang %}
-<li class="{{ item_entry_class }} active"><a href="{{ entry.url | true_relative_url }}">
-{%- if page.sidebarPageTitle %}{{ page.title }}
+<li class="{{ item_entry_class }}"><a href="{{ entry.external_url }}" target="_blank">{%- if entry.title[lang] %}{{ entry.title[lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
+{%- elsif include.is_404 %}
+<li class="{{ item_entry_class }}"><a data-proofer-ignore href="{{ site.canonical_url_prefix }}{{ entry.url | relative_url }}">{%- if entry.title[lang] %}{{ entry.title[lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
 {%- else %}
-  {%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}
-{% endif -%}
-</a></li>
-{%- else %}
-    {%- if page.name == '404.md' %}
-    <li class="{{ item_entry_class }}"><a data-proofer-ignore href="{{ site.canonical_url_prefix }}{{ entry.url | relative_url }}">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
-    {% else %}
-    <li class="{{ item_entry_class }}"><a href="{{ entry.url | true_relative_url }}">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
-    {%- endif %}
+<li class="{{ item_entry_class }}" data-page-url="{{ entry.url }}"><a href="{{ entry.url | true_relative_url }}">{%- if entry.title[lang] %}{{ entry.title[lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
 {%- endif %}
 
 {% endunless %}
-
-{% endunless %}
-
