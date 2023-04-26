@@ -56,6 +56,9 @@ properties:
         type: array
         items:
           type: object
+          required:
+            - name
+            - spec
           properties:
             name:
               type: string
@@ -120,6 +123,10 @@ properties:
       authRuleCrds:
         type: array
         items:
+          required:
+            - name
+            - namespace
+            - spec
           type: object
           properties:
             name:
