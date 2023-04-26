@@ -102,7 +102,9 @@ clusterAuthRuleCrds:
       - apiGroup: rbac.authorization.k8s.io
         kind: Role
         name: write-all
-        namespace: testenv
+      - apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: cluster-write-all
 `
 )
 
@@ -151,6 +153,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(crb.Exists()).To(BeTrue())
 
 			Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-write-all"))
+			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 		})
 
@@ -161,7 +164,15 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rb.Exists()).To(BeTrue())
 
 			Expect(rb.Field("roleRef.name").String()).To(Equal("write-all"))
+			Expect(rb.Field("roleRef.kind").String()).To(Equal("Role"))
 			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
+
+			rbc := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:additional-role:cluster-write-all")
+			Expect(rbc.Exists()).To(BeTrue())
+
+			Expect(rbc.Field("roleRef.name").String()).To(Equal("cluster-write-all"))
+			Expect(rbc.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
+			Expect(rbc.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 		})
 
 		It("Should create a ClusterRoleBinding to an appropriate ClusterRole", func() {
@@ -169,6 +180,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(crb.Exists()).To(BeTrue())
 
 			Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:admin"))
+			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 		})
 
@@ -177,6 +189,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rb.Exists()).To(BeTrue())
 
 			Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:editor"))
+			Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 		})
 
@@ -185,14 +198,16 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(crb.Exists()).To(BeTrue())
 
 			Expect(crb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:user"))
+			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 		})
 
 		It("Should create additional RoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-role:cert-manager:user-authz:editor")
+			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-cluster-role:cert-manager:user-authz:editor")
 			Expect(rb.Exists()).To(BeTrue())
 
 			Expect(rb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:editor"))
+			Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 		})
 
@@ -207,6 +222,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(crb.Exists()).To(BeTrue())
 
 				Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:port-forward"))
+				Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 				Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 			})
 		})
@@ -222,6 +238,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(rb.Exists()).To(BeTrue())
 
 				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:port-forward"))
+				Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 				Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 			})
 		})
@@ -237,6 +254,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(crb.Exists()).To(BeTrue())
 
 				Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:scale"))
+				Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 				Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 			})
 		})
@@ -252,6 +270,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(rb.Exists()).To(BeTrue())
 
 				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:scale"))
+				Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 				Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 			})
 		})

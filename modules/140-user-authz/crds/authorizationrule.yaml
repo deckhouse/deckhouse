@@ -90,8 +90,8 @@ spec:
                       kind: Role
                       name: write-all
                     - apiGroup: rbac.authorization.k8s.io
-                      kind: Role
-                      name: read-all
+                      kind: ClusterRole
+                      name: cluster-read-all
                     ```
                   items:
                     type: object
@@ -108,7 +108,7 @@ spec:
                       kind:
                         type: string
                         description: 'Kind of the role.'
-                        enum: [Role]
+                        enum: [Role,ClusterRole]
                         example: 'Role'
                       name:
                         type: string
