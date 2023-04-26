@@ -32,7 +32,7 @@ const (
 	authRuleSnapshot        = "authorization_rules"
 )
 
-type AuthorizationRule struct {
+type authorizationRule struct {
 	Name      string                 `json:"name"`
 	Spec      map[string]interface{} `json:"spec"`
 	Namespace string                 `json:"namespace,omitempty"`
@@ -47,7 +47,7 @@ func applyAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, err
 	}
 
-	car := &AuthorizationRule{
+	car := &authorizationRule{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
 		Spec:      spec,
@@ -82,13 +82,13 @@ func authorizationRulesHandler(input *go_hook.HookInput) error {
 	return nil
 }
 
-func snapshotsToAuthorizationRulesSlice(snapshots []go_hook.FilterResult) []AuthorizationRule {
-	ars := make([]AuthorizationRule, 0, len(snapshots))
+func snapshotsToAuthorizationRulesSlice(snapshots []go_hook.FilterResult) []authorizationRule {
+	ars := make([]authorizationRule, 0, len(snapshots))
 	for _, snapshot := range snapshots {
 		if snapshot == nil {
 			continue
 		}
-		ar := snapshot.(*AuthorizationRule)
+		ar := snapshot.(*authorizationRule)
 		ars = append(ars, *ar)
 	}
 	return ars
