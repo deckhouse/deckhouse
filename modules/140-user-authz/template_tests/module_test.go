@@ -35,6 +35,8 @@ const (
 	customClusterRolesFlat = `---
 admin:
   - cert-manager:user-authz:user
+editor:
+- cert-manager:user-authz:editor
 `
 
 	testCLusterRoleCRDsWithLimitNamespaces = `---
@@ -95,7 +97,7 @@ clusterAuthRuleCrds:
     allowScale: true
     subjects:
       - kind: User
-        name: Efrem Testenev
+        name: Namespace Testenev
     additionalRoles:
       - apiGroup: rbac.authorization.k8s.io
         kind: Role
@@ -159,7 +161,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rb.Exists()).To(BeTrue())
 
 			Expect(rb.Field("roleRef.name").String()).To(Equal("write-all"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 		})
 
 		It("Should create a ClusterRoleBinding to an appropriate ClusterRole", func() {
@@ -175,7 +177,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rb.Exists()).To(BeTrue())
 
 			Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:editor"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 		})
 
 		It("Should create additional ClusterRoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
@@ -186,12 +188,12 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 		})
 
-		It("Should create additional RoleBinding for each Role with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-role:test:user-authz:user")
+		It("Should create additional RoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
+			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-role:cert-manager:user-authz:editor")
 			Expect(rb.Exists()).To(BeTrue())
 
-			Expect(rb.Field("roleRef.name").String()).To(Equal("test:user-authz:user"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+			Expect(rb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:editor"))
+			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 		})
 
 		Context("portForwarding option is set in a CAR", func() {
@@ -220,7 +222,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(rb.Exists()).To(BeTrue())
 
 				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:port-forward"))
-				Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+				Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 			})
 		})
 
@@ -250,7 +252,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(rb.Exists()).To(BeTrue())
 
 				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:scale"))
-				Expect(rb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+				Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 			})
 		})
 
