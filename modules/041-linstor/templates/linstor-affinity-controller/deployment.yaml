@@ -109,7 +109,7 @@ spec:
             - --leader-election-id=$(NAME)
             - --lease-lock-namespace=$(NAMESPACE)
             - --lease-lock-name=linstor-affinity-controller
-            - --v=5
+            - --v=2
           env:
             - name: LEASE_LOCK_NAME
               value: linstor-affinity-controller
