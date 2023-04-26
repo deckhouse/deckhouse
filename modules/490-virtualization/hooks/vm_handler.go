@@ -385,7 +385,30 @@ func processD8VM(input *go_hook.HookInput, d8vm *v1alpha1.VirtualMachine) error 
 
 func checkAndCleanupDisk(input *go_hook.HookInput, disk *VirtualMachineDiskSnapshot) {
 	deckhouseVMSnap := input.Snapshots[deckhouseVMSnapshot]
-	if !disk.Ephemeral && disk.VMName != "" && getD8VM(&deckhouseVMSnap, disk.Namespace, disk.VMName) == nil {
+	if !disk.Ephemeral && disk.VMName != "" {
+		d8vm := getD8VM(&deckhouseVMSnap, disk.Namespace, disk.VMName)
+		if d8vm != nil {
+			// Check boot disk
+			if d8vm.Spec.BootDisk != nil {
+				bootVirtualMachineDiskName := d8vm.Spec.BootDisk.Name
+				if bootVirtualMachineDiskName == "" {
+					bootVirtualMachineDiskName = d8vm.Name + "-boot"
+				}
+				if bootVirtualMachineDiskName == disk.Name {
+					// disk still in use by vm
+					return
+				}
+			}
+			// Check disk attachments
+			if d8vm.Spec.DiskAttachments != nil {
+				for _, a := range *d8vm.Spec.DiskAttachments {
+					if a.Name == disk.Name {
+						// disk still in use by vm
+						return
+					}
+				}
+			}
+		}
 		// Remove vmName
 		patch := map[string]interface{}{"status": map[string]interface{}{"vmName": nil}}
 		input.PatchCollector.MergePatch(patch, gv, "VirtualMachineDisk", disk.Namespace, disk.Name, object_patch.WithSubresource("/status"))
