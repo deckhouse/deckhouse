@@ -196,7 +196,7 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 	}
 	got := newKubernetesStorageClass(&tp, 2)
 
-	volBindMode := storagev1.VolumeBindingImmediate
+	volBindMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 
 	expected := storagev1.StorageClass{
@@ -213,6 +213,7 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
 			"linstor.csi.linbit.com/placementCount":                                              "2",
+			"linstor.csi.linbit.com/allowRemoteVolumeAccess":                                     "false",
 			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",
@@ -226,7 +227,7 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 }
 
 func TestAllParametersAreSet(t *testing.T) {
-	volBindMode := storagev1.VolumeBindingImmediate
+	volBindMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 
 	oldSC := &storagev1.StorageClass{
@@ -257,6 +258,7 @@ func TestAllParametersAreSet(t *testing.T) {
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
 			"linstor.csi.linbit.com/placementCount":                                              "2",
+			"linstor.csi.linbit.com/allowRemoteVolumeAccess":                                     "false",
 			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",
@@ -275,7 +277,8 @@ func TestAllParametersAreSet(t *testing.T) {
 }
 
 func TestAppendOldParameters(t *testing.T) {
-	volBindMode := storagev1.VolumeBindingImmediate
+	oldVolBindMode := storagev1.VolumeBindingImmediate
+	volBindMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 
 	oldSC := &storagev1.StorageClass{
@@ -289,7 +292,7 @@ func TestAppendOldParameters(t *testing.T) {
 			},
 		},
 		Provisioner:          "linstor.csi.linbit.com",
-		VolumeBindingMode:    &volBindMode,
+		VolumeBindingMode:    &oldVolBindMode,
 		AllowVolumeExpansion: pointer.BoolPtr(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
@@ -313,6 +316,7 @@ func TestAppendOldParameters(t *testing.T) {
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
 			"linstor.csi.linbit.com/placementCount":                                              "2",
+			"linstor.csi.linbit.com/allowRemoteVolumeAccess":                                     "false",
 			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",
@@ -338,6 +342,7 @@ func TestAppendOldParameters(t *testing.T) {
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
 			"linstor.csi.linbit.com/placementCount":                                              "2",
+			"linstor.csi.linbit.com/allowRemoteVolumeAccess":                                     "false",
 			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",

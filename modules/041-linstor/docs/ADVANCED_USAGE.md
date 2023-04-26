@@ -130,6 +130,7 @@ metadata:
 parameters:
   linstor.csi.linbit.com/storagePool: lvmthin
   linstor.csi.linbit.com/placementCount: "2"
+  linstor.csi.linbit.com/allowRemoteVolumeAccess: "false"
   property.linstor.csi.linbit.com/DrbdOptions/Net/rr-conflict: retry-connect
   property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible: suspend-io
   property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated: force-secondary

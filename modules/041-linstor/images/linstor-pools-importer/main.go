@@ -542,7 +542,7 @@ func newKubernetesEvent(nodeName string, involvedObject v1.ObjectReference, even
 }
 
 func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.StorageClass {
-	volBindMode := storagev1.VolumeBindingImmediate
+	volBindMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 	return storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -556,6 +556,7 @@ func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.Storage
 		AllowVolumeExpansion: pointer.BoolPtr(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
+			"linstor.csi.linbit.com/allowRemoteVolumeAccess":                                     "false",
 			"linstor.csi.linbit.com/storagePool":                                                 sp.StoragePoolName,
 			"linstor.csi.linbit.com/placementCount":                                              fmt.Sprintf("%d", r),
 			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
@@ -567,6 +568,9 @@ func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.Storage
 }
 
 func allParametersAreSet(sc, oldSC *storagev1.StorageClass) bool {
+	if oldSC.VolumeBindingMode != sc.VolumeBindingMode {
+		return false
+	}
 	for k := range sc.Parameters {
 		if oldSC.Parameters[k] != sc.Parameters[k] {
 			return false
