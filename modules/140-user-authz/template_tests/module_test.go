@@ -310,7 +310,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
-	Context("With custom resources (incl. limitNamespaces) and not enabledMultiTenancy", func() {
+	Context("With CAR (incl. limitNamespaces) and not enabledMultiTenancy", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.HelmRender()
@@ -322,7 +322,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
-	Context("With custom resources (incl. limitNamespaces) and not enabledMultiTenancy", func() {
+	Context("With CAR (incl. limitNamespaces) and not enabledMultiTenancy", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithAllowAccessToSystemNamespaces)
 			f.HelmRender()

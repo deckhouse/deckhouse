@@ -24,8 +24,11 @@ subjects:
     {{- end }}
 
     {{- if hasKey $crd.spec "accessLevel" }}
-      {{- if not (list "User" "PrivilegedUser" "Editor" "Admin" "ClusterEditor" "ClusterAdmin" "SuperAdmin" | has $crd.spec.accessLevel) }}
+      {{- if and (eq $data.kind "ClusterRoleBinding") (not (list "User" "PrivilegedUser" "Editor" "Admin" "ClusterEditor" "ClusterAdmin" "SuperAdmin" | has $crd.spec.accessLevel)) }}
         {{- cat "Unsupported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" | fail }}
+      {{- end }}
+      {{- if and (eq $data.kind "RoleBinding") (not (list "User" "PrivilegedUser" "Editor" "Admin" | has $crd.spec.accessLevel)) }}
+        {{- cat "Unsupported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" "in namespace" $crd.namespace | fail }}
       {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
