@@ -248,7 +248,7 @@ properties:
           - d8:user-authz:cloud-provider-openstack:user
           - d8:user-authz:node-manager:user
           - d8:user-authz:prometheus-metrics-adapter:user
-      crds:
+      clusterAuthRuleCrds:
       - name: editor-crd
         spec:
           accessLevel: Editor
@@ -262,6 +262,30 @@ properties:
           - kind: Group
             name: Everyone
       - name: admin-crd
+        spec:
+          accessLevel: ClusterEditor
+          allowScale: false
+          portForwarding: true
+          subjects:
+          - kind: Group
+            name: NotEveryone
+      authRuleCrds:
+      - name: editor-crd
+        namespace: editor
+        spec:
+          accessLevel: Editor
+          subjects:
+          - kind: Group
+            name: Editors
+      - name: user-crd
+        namespace: user
+        spec:
+          accessLevel: User
+          subjects:
+          - kind: Group
+            name: Everyone
+      - name: admin-crd
+        namespace: admin
         spec:
           accessLevel: Admin
           allowScale: false
