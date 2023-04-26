@@ -68,9 +68,7 @@ chmod +x /var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
   {{- $images := set $images "registrypackages" (dict "jq16" $context.Values.global.modulesImages.digests.registrypackages.jq16) }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "images" $images }}
 cat > /var/lib/bashible/bootstrap.sh <<"END"
-
-{{- include "node_group_bashible_bootstrap_script" $bashible_bootstrap_script_tpl_context }}
-
+{{ include "node_group_bashible_bootstrap_script" $bashible_bootstrap_script_tpl_context }}
 END
 chmod +x /var/lib/bashible/bootstrap.sh
 
