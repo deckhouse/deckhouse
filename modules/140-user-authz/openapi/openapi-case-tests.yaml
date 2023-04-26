@@ -12,10 +12,5 @@ positive:
           admin: []
           clusterEditor: []
           clusterAdmin: []
-        customRoles:
-          user: []
-          privilegedUser: []
-          editor: []
-          admin: []
         clusterAuthRuleCrds: []
         authRuleCrds: []

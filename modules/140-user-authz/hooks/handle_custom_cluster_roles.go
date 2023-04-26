@@ -27,7 +27,6 @@ import (
 
 const (
 	customClusterRoleSnapshots = "custom_cluster_roles"
-	customRoleSnapshots        = "custom_roles"
 
 	accessLevelUser           = "User"
 	accessLevelPrivilegedUser = "PrivilegedUser"
@@ -66,21 +65,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "ClusterRole",
 			FilterFunc: applyCustomRoleFilter,
 		},
-		{
-			Name:       customRoleSnapshots,
-			ApiVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "Role",
-			FilterFunc: applyCustomRoleFilter,
-		},
 	},
 }, customClusterRolesHandler)
 
 func customClusterRolesHandler(input *go_hook.HookInput) error {
 	input.Values.Set("userAuthz.internal.customClusterRoles", snapshotsToInternalValuesCustomClusterRoles(input.Snapshots[customClusterRoleSnapshots]))
-
-	tmpValuesCustomRoles := snapshotsToInternalValuesCustomClusterRoles(input.Snapshots[customRoleSnapshots])
-	input.Values.Set("userAuthz.internal.customRoles", internalValuesCustomClusterToNamespaced(tmpValuesCustomRoles))
-
 	return nil
 }
 
@@ -139,20 +128,4 @@ func snapshotsToInternalValuesCustomClusterRoles(snapshots []go_hook.FilterResul
 	}
 
 	return values
-}
-
-type internalValuesCustomRoles struct {
-	User           []string `json:"user"`
-	PrivilegedUser []string `json:"privilegedUser"`
-	Editor         []string `json:"editor"`
-	Admin          []string `json:"admin"`
-}
-
-func internalValuesCustomClusterToNamespaced(c internalValuesCustomClusterRoles) *internalValuesCustomRoles {
-	return &internalValuesCustomRoles{
-		User:           c.User,
-		PrivilegedUser: c.PrivilegedUser,
-		Editor:         c.Editor,
-		Admin:          c.Admin,
-	}
 }

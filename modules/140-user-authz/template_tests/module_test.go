@@ -37,11 +37,6 @@ admin:
   - cert-manager:user-authz:user
 `
 
-	customRolesFlat = `---
-editor:
-- test:user-authz:user
-`
-
 	testCLusterRoleCRDsWithLimitNamespaces = `---
 - name: testenev
   spec:
@@ -107,21 +102,6 @@ clusterAuthRuleCrds:
         name: write-all
         namespace: testenv
 `
-
-	testRoleCRDsWithCRDsKey = `---
-authRuleCrds:
-- name: testenev-namespaced
-  spec:
-    accessLevel: Editor
-    allowScale: true
-    subjects:
-      - kind: User
-        name: Efrem Testenev
-    additionalRoles:
-      - apiGroup: rbac.authorization.k8s.io
-        kind: Role
-        name: write-all
-`
 )
 
 var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCLusterRoleCRDsWithCRDsKey))
@@ -151,7 +131,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
 			f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", customClusterRolesFlat)
-			f.ValuesSetFromYaml("userAuthz.internal.customRoles", customRolesFlat)
 
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)

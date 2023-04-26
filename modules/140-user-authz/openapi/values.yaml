@@ -40,30 +40,6 @@ properties:
               type: string
             default: []
         default: {}
-      customRoles:
-        type: object
-        properties:
-          user:
-            type: array
-            items:
-              type: string
-            default: []
-          privilegedUser:
-            type: array
-            items:
-              type: string
-            default: []
-          editor:
-            type: array
-            items:
-              type: string
-            default: []
-          admin:
-            type: array
-            items:
-              type: string
-            default: []
-        default: {}
       webhookCertificate:
         type: object
         properties:

@@ -73,47 +73,6 @@ metadata:
   annotations:
     user-authz.deckhouse.io/access-level: ClusterAdmin
 `
-
-	stateCustomRoles = `
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: cr-without-annotation0
-  namespace: test
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: cr0
-  namespace: test
-  annotations:
-    user-authz.deckhouse.io/access-level: User
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: cr1
-  namespace: test
-  annotations:
-    user-authz.deckhouse.io/access-level: PrivilegedUser
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: cr2
-  namespace: test
-  annotations:
-    user-authz.deckhouse.io/access-level: Editor
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: cr3
-  namespace: test
-  annotations:
-    user-authz.deckhouse.io/access-level: Admin
-`
 )
 
 var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
@@ -124,7 +83,7 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 			f.RunHook()
 		})
 
-		It("userAuthz.internal.customClusterRoles and userAuthz.internal.authRuleCrds must be dicts of empty arrays", func() {
+		It("userAuthz.internal.customClusterRoles must be dicts of empty arrays", func() {
 			ccrExpectation := `
 			{
 			  "user":[],
@@ -134,22 +93,14 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 			  "clusterEditor":[],
 			  "clusterAdmin":[]
 			}`
-			crExpectation := `
-			{
-			  "user":[],
-			  "privilegedUser":[],
-			  "editor":[],
-			  "admin":[]
-			}`
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").String()).To(MatchJSON(ccrExpectation))
-			Expect(f.ValuesGet("userAuthz.internal.customRoles").String()).To(MatchJSON(crExpectation))
 		})
 	})
 
-	Context("Cluster with pile of Custom Roles and ClusterRoles", func() {
+	Context("Cluster with pile of Custom ClusterRoles", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCustomRoles + stateCustomClusterRoles))
+			f.BindingContexts.Set(f.KubeStateSet(stateCustomClusterRoles))
 			f.RunHook()
 		})
 
@@ -161,11 +112,6 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.admin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3"))
 			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterEditor").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4"))
 			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterAdmin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4", "ccr5"))
-
-			Expect(f.ValuesGet("userAuthz.internal.customRoles.user").AsStringSlice()).Should(ConsistOf("cr0"))
-			Expect(f.ValuesGet("userAuthz.internal.customRoles.privilegedUser").AsStringSlice()).Should(ConsistOf("cr0", "cr1"))
-			Expect(f.ValuesGet("userAuthz.internal.customRoles.editor").AsStringSlice()).Should(ConsistOf("cr0", "cr1", "cr2"))
-			Expect(f.ValuesGet("userAuthz.internal.customRoles.admin").AsStringSlice()).Should(ConsistOf("cr0", "cr1", "cr2", "cr3"))
 		})
 	})
 })

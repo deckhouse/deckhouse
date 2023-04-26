@@ -32,22 +32,6 @@ roleRef:
   name: user-authz:{{ $crd.spec.accessLevel | kebabcase }}
 subjects:
 {{ $crd.spec.subjects | toYaml }}
-
-    {{- range $customRole := (pluck ($crd.spec.accessLevel | untitle) $.Values.userAuthz.internal.customRoles | first) }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: user-authz:{{ $crd.name }}:{{ $crd.spec.accessLevel | kebabcase }}:custom-role:{{ $customRole }}
-  namespace: {{ $crd.namespace }}
-  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ $customRole }}
-subjects:
-{{ $crd.spec.subjects | toYaml }}
-    {{- end }}
   {{- end }}
 
   {{- if hasKey $crd.spec "portForwarding" }}
