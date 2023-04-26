@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# In case we adopting node bootstrapped by kubeadm ???
+# In case we adopting node bootstrapped by kubeadm
 rm -f /etc/systemd/system/kubelet.service.d/10-kubeadm.conf     # for ubuntu
 rm -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf # for centos
 rm -f /var/lib/kubelet/kubeadm-flags.env

@@ -216,8 +216,8 @@ const (
 	MachineDeploymentAvailable MachineDeploymentConditionType = "Available"
 
 	// Progressing means the MachineDeployment is progressing. Progress for a MachineDeployment is
-	// considered when a new machine set is created and when new machines scale
-	// up. Progress is not estimated for paused MachineDeployments or
+	// considered when a new machine set is created or adopted, and when new machines scale
+ 	// up or old machines scale down. Progress is not estimated for paused MachineDeployments or
 	// when progressDeadlineSeconds is not specified.
 	MachineDeploymentProgressing MachineDeploymentConditionType = "Progressing"
 
