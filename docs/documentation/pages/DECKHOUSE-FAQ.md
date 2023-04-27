@@ -207,7 +207,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
 ### Manually upload images to an air-gapped registry
 
-1. Download the script on a host that have access to `registry.deckhouse.io` (for the script to work, you need installed `Docker`, [crane](https://michaelsauter.github.io/crane/) and [jq](https://github.com/stedolan/jq)):
+1. Download the script on a host that have access to `registry.deckhouse.io` (for the script to work, you need installed `Docker` and [jq](https://github.com/stedolan/jq)):
 
    ```shell
    curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
