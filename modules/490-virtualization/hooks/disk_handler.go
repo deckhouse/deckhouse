@@ -238,6 +238,8 @@ func handleVirtualMachineDisks(input *go_hook.HookInput) error {
 
 		// DataVolume not found, needs to create a new one
 		var source *v1alpha1.TypedObjectReference
+
+		// TODO: should we allow copy across namespaces?
 		if disk.Source != nil {
 			source = &v1alpha1.TypedObjectReference{
 				TypedLocalObjectReference: corev1.TypedLocalObjectReference{
@@ -245,6 +247,9 @@ func handleVirtualMachineDisks(input *go_hook.HookInput) error {
 					Kind:     disk.Source.Kind,
 					Name:     disk.Source.Name,
 				},
+			}
+			if disk.Source.Kind != "ClusterVirtualMachineImage" {
+				source.Namespace = disk.Namespace
 			}
 		}
 
