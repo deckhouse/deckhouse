@@ -200,7 +200,30 @@ metadata:
 spec:
   storageClassName: linstor-thindata-r2
   size: 10Gi
-
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachineDisk
+metadata:
+  name: mydata6
+  namespace: ns1
+spec:
+  source:
+    kind: VirtualMachineDisk
+    name: mydata3
+  storageClassName: linstor-thindata-r2
+  size: 10Gi
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachineDisk
+metadata:
+  name: mydata7
+  namespace: ns2
+spec:
+  source:
+    kind: VirtualMachineDisk
+    name: mydata3
+  storageClassName: linstor-thindata-r2
+  size: 10Gi
 `),
 			)
 			f.RunHook()
@@ -231,6 +254,15 @@ spec:
 			dataVolume = f.KubernetesResource("DataVolume", "ns1", "disk-mydata5")
 			Expect(dataVolume).To(Not(BeEmpty()))
 			Expect(dataVolume.Field(`spec.source.blank`).String()).To(Equal("{}"))
+
+			By("Should create DataVolume with source of other DataVolume")
+			dataVolume = f.KubernetesResource("DataVolume", "ns1", "disk-mydata6")
+			Expect(dataVolume).To(Not(BeEmpty()))
+			Expect(dataVolume.Field(`spec.source.pvc`).String()).To(Equal("{\"name\":\"disk-mydata3\",\"namespace\":\"ns1\"}"))
+
+			By("Should create DataVolume with source of non existing DataVolume")
+			dataVolume = f.KubernetesResource("DataVolume", "ns2", "disk-mydata7")
+			Expect(dataVolume).To(BeEmpty())
 		})
 	})
 
