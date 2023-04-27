@@ -7,9 +7,13 @@ ARG LINSTOR_CSI_VERSION=1.0.0
 ARG LINSTOR_WAIT_UNTIL_GITREPO=https://github.com/LINBIT/linstor-wait-until
 ARG LINSTOR_WAIT_UNTIL_VERSION=0.2.1
 
+# Copy patches
+COPY ./patches /patches
+
 RUN git clone ${LINSTOR_CSI_GITREPO} /usr/local/go/linstor-csi/ \
  && cd /usr/local/go/linstor-csi \
  && git reset --hard v${LINSTOR_CSI_VERSION} \
+ && git apply /patches/*.patch \
  && cd cmd/linstor-csi \
  && go build -ldflags="-X github.com/piraeusdatastore/linstor-csi/pkg/driver.Version=v${LINSTOR_CSI_VERSION}" \
  && mv ./linstor-csi /
