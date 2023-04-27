@@ -163,24 +163,11 @@ properties:
                       name:
                         type: string
                         minLength: 1
-                additionalRoles:
-                  type: array
-                  items:
-                    type: object
-                    required:
-                      - apiGroup
-                      - kind
-                      - name
-                    properties:
-                      apiGroup:
+                      namespace:
                         type: string
                         minLength: 1
-                      kind:
-                        type: string
-                        enum: [Role,ClusterRole]
-                      name:
-                        type: string
-                        minLength: 1
+                        maxLength: 63
+                        pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
         default: []
     x-examples:
     - webhookCertificate:

@@ -17,79 +17,24 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-
-	"github.com/davecgh/go-spew/spew"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
 
 const (
-	clusterAuthRuleSnapshot = "cluster_authorization_rules"
-	authRuleSnapshot        = "authorization_rules"
+	authRuleSnapshot = "authorization_rules"
 )
 
-type authorizationRule struct {
-	Name      string                 `json:"name"`
-	Spec      map[string]interface{} `json:"spec"`
-	Namespace string                 `json:"namespace,omitempty"`
-}
-
-func applyAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
-	if !found {
-		return nil, fmt.Errorf(`".spec is not a map[string]interface{} or contains non-string values in the map: %s`, spew.Sdump(obj.Object))
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	car := &authorizationRule{
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-		Spec:      spec,
-	}
-
-	return car, nil
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue("d8_auth_rules"),
+	Queue: internal.Queue(authRuleSnapshot),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       clusterAuthRuleSnapshot,
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "ClusterAuthorizationRule",
-			FilterFunc: applyAuthorizationRuleFilter,
-		},
-		{
 			Name:       authRuleSnapshot,
-			ApiVersion: "deckhouse.io/v1",
+			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "AuthorizationRule",
-			FilterFunc: applyAuthorizationRuleFilter,
+			FilterFunc: internal.ApplyAuthorizationRuleFilter,
 		},
 	},
-}, authorizationRulesHandler)
-
-func authorizationRulesHandler(input *go_hook.HookInput) error {
-	input.Values.Set("userAuthz.internal.clusterAuthRuleCrds", snapshotsToAuthorizationRulesSlice(input.Snapshots[clusterAuthRuleSnapshot]))
-
-	input.Values.Set("userAuthz.internal.authRuleCrds", snapshotsToAuthorizationRulesSlice(input.Snapshots[authRuleSnapshot]))
-
-	return nil
-}
-
-func snapshotsToAuthorizationRulesSlice(snapshots []go_hook.FilterResult) []authorizationRule {
-	ars := make([]authorizationRule, 0, len(snapshots))
-	for _, snapshot := range snapshots {
-		if snapshot == nil {
-			continue
-		}
-		ar := snapshot.(*authorizationRule)
-		ars = append(ars, *ar)
-	}
-	return ars
-}
+}, internal.AuthorizationRulesHandler("userAuthz.internal.authRuleCrds", authRuleSnapshot))

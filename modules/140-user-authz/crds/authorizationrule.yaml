@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema: &schema
+      schema:
         openAPIV3Schema:
           type: object
           description: |
@@ -76,46 +76,9 @@ spec:
                         type: string
                         description: 'Resource name.'
                         example: 'some-group-name'
-                additionalRoles:
-                  type: array
-                  description: |
-                    Additional roles to bind for subjects.
-
-                    This parameter is reserved for emergencies. Please, use the `accessLevel` parameter instead.
-
-                  x-doc-example: |
-                    ```yaml
-                    additionalRoles:
-                    - apiGroup: rbac.authorization.k8s.io
-                      kind: Role
-                      name: write-all
-                    - apiGroup: rbac.authorization.k8s.io
-                      kind: ClusterRole
-                      name: cluster-read-all
-                    ```
-                  items:
-                    type: object
-                    required:
-                    - apiGroup
-                    - kind
-                    - name
-                    properties:
-                      apiGroup:
+                      namespace:
                         type: string
-                        description: 'apiGroup for users.'
-                        example: 'rbac.authorization.k8s.io'
                         minLength: 1
-                      kind:
-                        type: string
-                        description: 'Kind of the role.'
-                        enum: [Role,ClusterRole]
-                        example: 'Role'
-                      name:
-                        type: string
-                        description: 'Name of the role.'
-                        minLength: 1
-                        example: 'admin'
-    - name: v1
-      served: true
-      storage: false
-      schema: *schema
+                        maxLength: 63
+                        pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                        description: 'ServiceAccount namespace.'

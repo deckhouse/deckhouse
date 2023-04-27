@@ -1,7 +1,7 @@
 spec:
   versions:
     - name: v1alpha1
-      schema: &schema
+      schema:
         openAPIV3Schema:
           description: |
             Управляет настройками RBAC и авторизацией по namespace.
@@ -38,20 +38,5 @@ spec:
                       name:
                         description: 'Имя ресурса.'
                         example: 'some-group-name'
-                additionalRoles:
-                  description: |
-                    Дополнительные роли, которые необходимо выдать для заданных `subjects`.
-
-                    Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
-                  items:
-                    properties:
-                      apiGroup:
-                        description: "apiGroup для пользователей."
-                      kind:
-                        description: 'Kind роли.'
-                      name:
-                        description: 'Название роли.'
-    - name: v1
-      served: true
-      storage: false
-      schema: *schema
+                      namespace:
+                        description: 'Namespace для ServiceAccount.'

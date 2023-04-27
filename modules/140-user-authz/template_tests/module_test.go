@@ -72,7 +72,7 @@ editor:
 `
 
 	testCLusterRoleCRDsWithCRDsKey = `---
-clusterAuthRuleCrds:
+crds:
   - name: testenev
     spec:
       accessLevel: Admin
@@ -98,13 +98,6 @@ clusterAuthRuleCrds:
     subjects:
       - kind: User
         name: Namespace Testenev
-    additionalRoles:
-      - apiGroup: rbac.authorization.k8s.io
-        kind: Role
-        name: write-all
-      - apiGroup: rbac.authorization.k8s.io
-        kind: ClusterRole
-        name: cluster-write-all
 `
 )
 
@@ -155,24 +148,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-write-all"))
 			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
-		})
-
-		It("Should create a RoleBinding for each additionalRole", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:additional-role:write-all")
-			Expect(rb.Exists()).To(BeTrue())
-
-			Expect(rb.Field("roleRef.name").String()).To(Equal("write-all"))
-			Expect(rb.Field("roleRef.kind").String()).To(Equal("Role"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
-
-			rbc := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:additional-role:cluster-write-all")
-			Expect(rbc.Exists()).To(BeTrue())
-
-			Expect(rbc.Field("roleRef.name").String()).To(Equal("cluster-write-all"))
-			Expect(rbc.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(rbc.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 		})
 
 		It("Should create a ClusterRoleBinding to an appropriate ClusterRole", func() {
