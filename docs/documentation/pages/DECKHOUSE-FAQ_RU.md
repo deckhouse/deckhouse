@@ -210,42 +210,53 @@ spec:
 
 ### Ручная загрузка образов в изолированный приватный registry
 
-Загрузите скрипт на хост, с которого есть доступ до `registry.deckhouse.io`. `Docker`, `crane` и `jq` должны быть установлены на хосте.
+1. Загрузите скрипт на хост, с которого есть доступ до `registry.deckhouse.io` (для работы скрипта потребуются установленные `Docker`, [crane](https://michaelsauter.github.io/crane/) и [jq](https://github.com/stedolan/jq)):
 
-```shell
-curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
-chmod 700 d8-pull.sh
-```
-> Важный момент: если вы хотите загрузить образы для версии Deckhouse v1.44 и старше - воспользуйтесь этими командами:
-> ```shell
-> curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-pull.sh
-> chmod 700 d8-pull.sh
-> ```
+   ```shell
+   curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
+   chmod 700 d8-pull.sh
+   ```
 
-Пример вызова команды скачивания образов:
+   > Внимание! Используйте следующие команды, если хотите загрузить образы для Deckhouse версии v1.44 и старше:
+   >
+   > ```shell
+   > curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-pull.sh
+   > chmod 700 d8-pull.sh
+   > ```
 
-```shell
-./d8-pull.sh --license YOUR_DECKHOUSE_LICENSE_KEY --output-dir /your/output-dir/
-```
+1. Скачайте образы с помощью скрипта `d8-pull.sh`.
 
-Загрузите директорию с образами, полученную на предыдущем шаге, на хост, с которого есть доступ до изолированного приватного registry. `Crane` должен быть установлен на хосте.
-Загрузите скрипт на этот хост:
+   Пример скачивания образов Deckhouse EE v1.45.5 в директорию `/your/output-dir/`:
+   
+   ```shell
+   ./d8-pull.sh --license <DECKHOUSE_LICENSE_KEY> --release v1.45.5 --output-dir /your/output-dir/ 
+   ```
+    
+   > Для Deckhouse CE укажите параметр `--edition ce` и опустите параметр `--license`. 
 
-```shell
-curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
-chmod 700 d8-push.sh
-```
-> Важный момент: если вы хотите загрузить образы для версии Deckhouse v1.44 и старше - воспользуйтесь этими командами:
-> ```shell
-> curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-push.sh
-> chmod 700 d8-push.sh
-> ```
+1. Загрузите директорию с образами на хост, с которого есть доступ до изолированного приватного registry.
 
-Пример вызова команды загрузки образов в изолированный приватный registry:
+1. Загрузите скрипт на этот хост (для работы скрипта потребуется установленный [crane](https://michaelsauter.github.io/crane/)):
 
-```shell
-./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username YOUR_USERNAME --password YOUR_PASSWORD
-```
+   ```shell
+   curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
+   chmod 700 d8-push.sh
+   ```
+   
+   > Внимание! Используйте следующие команды, если хотите загрузить образы для Deckhouse версии v1.44 и старше:
+   >
+   > ```shell
+   > curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-push.sh
+   > chmod 700 d8-push.sh
+   > ```
+
+1. Загрузите образы с помощью скрипта `d8-push.sh` в изолированный приватный registry.
+
+   Пример загрузки образов из директории `/your/source-dir/`:
+   
+   ```shell
+   ./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username <USERNAME> --password <PASSWORD>
+   ```
 
 ## Как создать кластер и запустить Deckhouse без использования каналов обновлений?
 
