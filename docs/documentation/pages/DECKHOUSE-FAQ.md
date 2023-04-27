@@ -233,7 +233,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
 1. Upload the directory from the previous step to a host with access to an air-gapped registry.
 
-1. Download script on the host (for the script to work, you need installed [crane](https://michaelsauter.github.io/crane/index.html)):
+1. Download script on the host:
 
    ```shell
    curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
