@@ -210,7 +210,7 @@ spec:
 
 ### Ручная загрузка образов в изолированный приватный registry
 
-1. Загрузите скрипт на хост, с которого есть доступ до `registry.deckhouse.io` (для работы скрипта потребуются установленные `Docker`, [crane](https://michaelsauter.github.io/crane/) и [jq](https://github.com/stedolan/jq)):
+1. Загрузите скрипт на хост, с которого есть доступ до `registry.deckhouse.io` (для работы скрипта потребуются установленные `Docker` и [jq](https://github.com/stedolan/jq)):
 
    ```shell
    curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
