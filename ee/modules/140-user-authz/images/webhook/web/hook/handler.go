@@ -231,7 +231,7 @@ func (h *Handler) renewDirectories() {
 	}
 
 	// fill limited namespaces by subjects kinds/names
-	for _, crd := range config.ClusterAuthRuleCrds {
+	for _, crd := range config.CRDs {
 		for _, subject := range crd.Spec.Subjects {
 			name := subject.Name
 			namespace := subject.Namespace

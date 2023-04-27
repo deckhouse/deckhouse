@@ -19,7 +19,7 @@ type DirectoryEntry struct {
 
 // UserAuthzConfig is a config composed from ClusterAuthorizationRules collected from Kubernetes cluster
 type UserAuthzConfig struct {
-	ClusterAuthRuleCrds []struct {
+	CRDs []struct {
 		Name string `json:"name"`
 		Spec struct {
 			AccessLevel                   string   `json:"accessLevel"`
