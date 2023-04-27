@@ -152,7 +152,7 @@ title: "Управление control plane: FAQ"
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-   Ответ должен сообщить вам, что тераформа не хочет ничего менять.
+   Ответ должен сообщить вам, что Terraform не хочет ничего менять.
 
 1. **В контейнере с инсталлятором** выполните следующую команду и укажите необходимый образ ОС в параметре `masterNodeGroup.instanceClass` (укажите адреса всех master-узлов в параметре `--ssh-host`):
 

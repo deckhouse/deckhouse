@@ -152,7 +152,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-   The response should tell you that the theraform does not want to change anything.
+   The response should tell you that Terraform does not want to change anything.
 
 1. **In the installer container**, run the following command and specify the required OS image using the `masterNodeGroup.instanceClass` parameter (specify the addresses of all master nodes using the `-ssh-host` parameter):
 
