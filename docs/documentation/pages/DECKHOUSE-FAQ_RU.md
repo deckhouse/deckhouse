@@ -216,6 +216,11 @@ spec:
 curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
 chmod 700 d8-pull.sh
 ```
+> Важный момент: если вы хотите загрузить образы для версии Deckhouse v1.44 и старше - воспользуйтесь этими командами:
+> ```shell
+> curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-pull.sh
+> chmod 700 d8-pull.sh
+> ```
 
 Пример вызова команды скачивания образов:
 
@@ -230,6 +235,11 @@ chmod 700 d8-pull.sh
 curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
 chmod 700 d8-push.sh
 ```
+> Важный момент: если вы хотите загрузить образы для версии Deckhouse v1.44 и старше - воспользуйтесь этими командами:
+> ```shell
+> curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-push.sh
+> chmod 700 d8-push.sh
+> ```
 
 Пример вызова команды загрузки образов в изолированный приватный registry:
 

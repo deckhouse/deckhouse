@@ -213,6 +213,11 @@ Download script on a host that have access to `registry.deckhouse.io`. `Docker`,
 curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
 chmod 700 d8-pull.sh
 ```
+> Note: if you want to upload images of Deckhouse v1.44 or older - use these commands:
+> ```shell
+> curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-pull.sh
+> chmod 700 d8-pull.sh
+> ```
 
 Example of pulling images:
 
@@ -227,6 +232,11 @@ Download script on a host that has access to an air-gapped registry.
 curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
 chmod 700 d8-push.sh
 ```
+> Note: if you want to upload images of Deckhouse v1.44 or older - use these commands:
+> ```shell
+> curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-push.sh
+> chmod 700 d8-push.sh
+> ```
 
 Example of pushing images:
 
