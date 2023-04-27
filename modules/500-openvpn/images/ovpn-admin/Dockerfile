@@ -4,7 +4,7 @@ ARG BASE_GOLANG_17_ALPINE
 
 FROM $BASE_ALPINE as src
 WORKDIR /app
-ENV GIT_COMMIT=95b4265cf1819f2434aef9c247fff6531a125cd3
+ENV GIT_COMMIT=2fabadc116c5560c804123438bdd3b7ac1d9b061
 RUN apk update && apk add git && git clone https://github.com/flant/ovpn-admin.git . && git checkout $GIT_COMMIT && echo $GIT_COMMIT > version
 
 FROM $BASE_NODE_16_ALPINE AS frontend
