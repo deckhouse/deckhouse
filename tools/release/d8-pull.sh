@@ -37,6 +37,10 @@ Usage: $0
     --license
         License key for Deckhouse registry.
 
+    --tarball
+        If set, script will download images in tarballs (tar archives).
+        Use this flag only for pulling images for security scanning.
+
     --help|-h
         Print this message.
 "
@@ -54,11 +58,17 @@ REGISTRY="${REGISTRY_ROOT}/deckhouse"
 RELEASE=$(curl -fsL https://api.github.com/repos/deckhouse/deckhouse/tags | jq -r ".[0].name")
 PULL_RELEASE_METADATA_IMAGES="yes"
 
+# By default, we want to pull images with preserving digests
+PULL_IMAGE_TYPE="dir"
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --do-not-pull-release-metadata-images)
         PULL_RELEASE_METADATA_IMAGES="no"
+        ;;
+      --tarball)
+        PULL_IMAGE_TYPE="tarball"
         ;;
       --release)
         shift
@@ -181,6 +191,7 @@ docker run \
   -e "PULL_RELEASE_METADATA_IMAGES=$PULL_RELEASE_METADATA_IMAGES" \
   -e "RUNNING_USER=$UID" \
   -e "RUNNING_GROUP=$(id -g $UID)" \
+  -e "PULL_IMAGE_TYPE=$PULL_IMAGE_TYPE" \
   --network host -ti --rm \
   --entrypoint /bin/bash \
   "quay.io/skopeo/stable:v1.11.2" -c '
@@ -206,15 +217,14 @@ pull_image() {
     delim=":"
   fi
 
-  # using dir to save digests of images
-  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$registry_full_path${delim}${1}" "dir:$IMAGE_PATH" >/dev/null
+  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$registry_full_path${delim}${1}" "$PULL_IMAGE_TYPE:$IMAGE_PATH" >/dev/null
   chown -R "$RUNNING_USER:$RUNNING_GROUP" "$IMAGE_PATH"
 }
 
 
 pull_trivy_db() {
   IMAGE_PATH="$OUTPUT_DIR/trivy-db"
-  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$REGISTRY_PATH/security/trivy-db:2" "dir:$IMAGE_PATH" >/dev/null
+  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$REGISTRY_PATH/security/trivy-db:2" "$PULL_IMAGE_TYPE:$IMAGE_PATH" >/dev/null
   chown -R "$RUNNING_USER:$RUNNING_GROUP" "$IMAGE_PATH"
 }
 
