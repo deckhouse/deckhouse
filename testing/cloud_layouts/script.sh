@@ -113,6 +113,7 @@ UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
 ServerAliveInterval 5
 ServerAliveCountMax 5
+ConnectTimeout 5
 LogLevel quiet
 EOF
   # ssh command with common args.
