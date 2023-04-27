@@ -213,7 +213,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
    chmod 700 d8-pull.sh
    ```
-   
+
    > Note! Use the following commands if you want to upload images of Deckhouse v1.44 or older:
    >
    > ```shell
@@ -224,11 +224,11 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 1. Pull images using the `d8-pull.sh` script.
 
    Example of pulling Deckhouse EE v1.45.5 images to the `/your/output-dir/` directory:
-   
+
    ```shell
    ./d8-pull.sh --license <DECKHOUSE_LICENSE_KEY> --release v1.45.5 --output-dir /your/output-dir/
    ```
-   
+
    > For Deckhouse CE specify the `--edition ce` parameter and omit the `--license` parameter.
 
 1. Upload the directory from the previous step to a host with access to an air-gapped registry.
@@ -250,7 +250,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 1. Push the images using the `d8-push.sh` script to an air-gapped registry.
 
    Example of pushing images from the `/your/source-dir/` directory:
-   
+
    ```shell
    ./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username <USERNAME> --password <PASSWORD>
    ```
