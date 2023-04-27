@@ -39,6 +39,7 @@ if bb-yum-package? docker-ce; then
   # Old version of pod kubelet-eviction-thresholds-exporter in cri=Docker mode mounts /var/run/containerd/containerd.sock, /var/run/containerd/containerd.sock will be a directory and newly installed containerd won't run. Same thing with crictl.
   rm -rf /var/run/containerd /usr/local/bin/crictl
   rm -rf /var/lib/docker/ /var/run/docker.sock
+  rm -f /var/lib/cni/networks/cbr0/*
 fi
 
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "redos" }}
