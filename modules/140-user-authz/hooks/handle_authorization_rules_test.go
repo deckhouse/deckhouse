@@ -52,7 +52,6 @@ spec:
 
 var _ = Describe("User Authz hooks :: handle authorization rules ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1", "ClusterAuthorizationRule", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "AuthorizationRule", true)
 
 	Context("Empty cluster", func() {
