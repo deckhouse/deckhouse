@@ -145,6 +145,15 @@ title: "Управление control plane: FAQ"
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
+1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:
+
+   ```bash
+   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+     --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
+   ```
+
+   Ответ должен сообщить вам, что Terraform не хочет ничего менять.
+
 1. **В контейнере с инсталлятором** выполните следующую команду и укажите необходимый образ ОС в параметре `masterNodeGroup.instanceClass` (укажите адреса всех master-узлов в параметре `--ssh-host`):
 
    ```bash
@@ -170,7 +179,7 @@ title: "Управление control plane: FAQ"
 1. Убедитесь, что узел пропал из списка членов кластера etcd:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name') -- sh -c \
    "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table"
@@ -198,6 +207,10 @@ title: "Управление control plane: FAQ"
 
 1. **В контейнере с инсталлятором** выполните следующую команду для создания обновленного узла:
 
+    Вам нужно внимательно прочитать, что converge собирается делать, когда запрашивает одобрение.
+
+    Если converge запрашивает одобрение для другого мастер-узла, его следует пропустить, выбрав "no".
+
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
@@ -212,7 +225,7 @@ title: "Управление control plane: FAQ"
 1. Убедитесь, что узел появился в списке членов кластера etcd:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name') -- sh -c \
    "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table"
