@@ -1,6 +1,6 @@
 000-common
 003-deckhouse-config
-010-cluster-autoscaler-crd
+010-cloud-data-crd
 010-operator-prometheus-crd
 010-prometheus-crd
 010-snapshot-controller-crd

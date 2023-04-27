@@ -1,5 +1,5 @@
 ---
-title: "The cluster-autoscaler-crd module"
+title: "The cloud-data-crd module"
 searchable: false
 ---
 
