@@ -41,12 +41,5 @@ shell:
   - find /patches/kube-apiserver/{{ $version }} -name '*.patch' -exec git apply {} \;
   - find /patches/kube-controller-manager/{{ $version }} -name '*.patch' -exec git apply {} \;
   - find /patches/kubeadm/{{ $version }} -name '*.patch' -exec git apply {} \;
-  - export GOLDFLAGS="-s -w -extldflags \"-static\""
-  - make all WHAT=cmd/kube-apiserver
-  - make all WHAT=cmd/kube-controller-manager
-  - make all WHAT=cmd/kube-scheduler
-  - make all WHAT=cmd/kube-proxy
-  - make all WHAT=cmd/kubelet
-  - make all WHAT=cmd/kubectl
-  - make all WHAT=cmd/kubeadm
+  - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\""
 {{- end }}
