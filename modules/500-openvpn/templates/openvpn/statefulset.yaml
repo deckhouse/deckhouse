@@ -282,6 +282,10 @@ spec:
               fieldPath: metadata.namespace
         - name: EASYRSA_PATH
           value: /mnt/easyrsa
+        {{- if eq .Values.openvpn.highAvailability true }}
+        - name: HA_MODE
+          value: "true"
+        {{- end }}
         volumeMounts:
           - mountPath: /mnt/easyrsa
             name: certs
