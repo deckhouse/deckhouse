@@ -37,6 +37,11 @@ Usage: $0
     --license
         License key for Deckhouse registry.
 
+    --tarball
+        If set, script will download images in tarballs (tar archives).
+        Use this flag only for pulling images for security scanning.
+        This won't work with d8-push.sh script
+
     --help|-h
         Print this message.
 "
@@ -54,11 +59,17 @@ REGISTRY="${REGISTRY_ROOT}/deckhouse"
 RELEASE=$(curl -fsL https://api.github.com/repos/deckhouse/deckhouse/tags | jq -r ".[0].name")
 PULL_RELEASE_METADATA_IMAGES="yes"
 
+# By default, we want to pull images with preserving digests
+PULL_IMAGE_TYPE="dir"
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --do-not-pull-release-metadata-images)
         PULL_RELEASE_METADATA_IMAGES="no"
+        ;;
+      --tarball)
+        PULL_IMAGE_TYPE="docker-archive"
         ;;
       --release)
         shift
@@ -181,6 +192,7 @@ docker run \
   -e "PULL_RELEASE_METADATA_IMAGES=$PULL_RELEASE_METADATA_IMAGES" \
   -e "RUNNING_USER=$UID" \
   -e "RUNNING_GROUP=$(id -g $UID)" \
+  -e "PULL_IMAGE_TYPE=$PULL_IMAGE_TYPE" \
   --network host -ti --rm \
   --entrypoint /bin/bash \
   "quay.io/skopeo/stable:v1.11.2" -c '
@@ -197,6 +209,11 @@ pull_image() {
   else
     IMAGE_PATH="$OUTPUT_DIR/$1"
   fi
+
+  if [[ "$PULL_IMAGE_TYPE" == "docker-archive" ]]; then
+    IMAGE_PATH=$(echo "$IMAGE_PATH" | tr ":" "_")
+  fi
+
   if [[ -s "$IMAGE_PATH" ]]; then
     return 0
   fi
@@ -206,8 +223,7 @@ pull_image() {
     delim=":"
   fi
 
-  # using dir to save digests of images
-  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$registry_full_path${delim}${1}" "dir:$IMAGE_PATH" >/dev/null
+  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$registry_full_path${delim}${1}" "$PULL_IMAGE_TYPE:$IMAGE_PATH" >/dev/null
   chown -R "$RUNNING_USER:$RUNNING_GROUP" "$IMAGE_PATH"
 }
 
