@@ -546,7 +546,7 @@ spec:
 
 ## Как изменить CRI для всего кластера?
 
-> **Внимание!** Docker deprecated, возможен переход только с Docker на Containerd. Переход с Containerd на Docker запрещён.
+> **Внимание!** Поддержка Docker устарела. Возможен переход только с Docker на Containerd.
 
 Необходимо при помощи утилиты `dhctl` отредактировать параметр `defaultCRI` в конфиге `cluster-configuration`.
 

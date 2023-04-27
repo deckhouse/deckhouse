@@ -543,11 +543,11 @@ node updates or requires manual confirmation.
 
 ## How to change CRI for the whole cluster?
 
-> **Note!** Docker is deprecated, CRI can only be switched from Docker to Containerd. It's prohibited to switch from Containerd to Docker.
+> **Note!** Docker is deprecated. CRI can only be switched from Docker to Containerd.
 
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
-Also, this operation can be done with patch:
+Also, this operation can be done with the following patch:
 * For Containerd
 
   ```shell
