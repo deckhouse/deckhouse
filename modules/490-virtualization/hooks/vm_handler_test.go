@@ -134,6 +134,7 @@ spec:
     autoDelete: true
   diskAttachments:
   - name: mydata
+    hotpluggable: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: VirtualMachineDisk
@@ -349,11 +350,40 @@ spec:
   sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAEQClLFf8t6raygWlAQ7wJqon"
   bootDisk:
     name: foo
+  diskAttachments:
+  - name: fooz
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: VirtualMachineDisk
 metadata:
   name: foo
+  namespace: default
+spec:
+  size: 10Gi
+  source:
+    kind: ClusterVirtualMachineImage
+    name: ubuntu-22.04
+  storageClassName: linstor-fast
+status:
+  ephemeral: false
+  vmName: vm6
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachineDisk
+metadata:
+  name: fool
+  namespace: default
+spec:
+  size: 10Gi
+  storageClassName: linstor-fast
+status:
+  ephemeral: false
+  vmName: vm6
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachineDisk
+metadata:
+  name: fooz
   namespace: default
 spec:
   size: 10Gi
@@ -426,6 +456,7 @@ status:
 			Expect(vm.Field(`spec.template.spec.nodeSelector.disktype`).String()).To(Equal("ssd"))
 			Expect(vm.Field(`spec.template.spec.tolerations`).Array()).To(HaveLen(1))
 			Expect(vm.Field(`spec.template.spec.volumes`).Array()).To(HaveLen(3))
+			Expect(vm.Field(`spec.template.spec.volumes`).Array()[2].String()).To(Equal("{\"dataVolume\":{\"hotpluggable\":true,\"name\":\"disk-mydata\"},\"name\":\"disk-1\"}"))
 
 			dataDisk := f.KubernetesResource("VirtualMachineDisk", "default", "mydata")
 			Expect(dataDisk).To(Not(BeEmpty()))
@@ -471,13 +502,22 @@ status:
 			Expect(disk5).To(Not(BeEmpty()))
 			Expect(disk5.Field(`status.vmName`).String()).To(BeEmpty())
 
+			By("Should release non ephemeral VirtualMachineDisk when it detached from VM but VM is not removed")
+			disk6 := f.KubernetesResource("VirtualMachineDisk", "default", "fool")
+			Expect(disk6).To(Not(BeEmpty()))
+			Expect(disk6.Field(`status.vmName`).String()).To(BeEmpty())
+
 			By("Should keep VirtualMachine and non ephemeral VirtualMachineDisk")
 			d8vm6 := f.KubernetesResource("VirtualMachine", "default", "vm6")
 			Expect(d8vm6).To(Not(BeEmpty()))
 
-			disk6 := f.KubernetesResource("VirtualMachineDisk", "default", "foo")
-			Expect(disk6).To(Not(BeEmpty()))
-			Expect(disk6.Field(`status.vmName`).String()).To(Equal("vm6"))
+			disk7 := f.KubernetesResource("VirtualMachineDisk", "default", "foo")
+			Expect(disk7).To(Not(BeEmpty()))
+			Expect(disk7.Field(`status.vmName`).String()).To(Equal("vm6"))
+
+			disk8 := f.KubernetesResource("VirtualMachineDisk", "default", "fooz")
+			Expect(disk8).To(Not(BeEmpty()))
+			Expect(disk8.Field(`status.vmName`).String()).To(Equal("vm6"))
 
 			By("Should not allow to run VirtualMachine with VirtualMachineDisk attached to other VirtualMachine")
 			vm7 := f.KubernetesResource("virtualmachines.kubevirt.io", "default", "vm7")
