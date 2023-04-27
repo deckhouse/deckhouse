@@ -706,9 +706,14 @@ function run_linstor_tests() {
 
   testScript=$(cat <<"END_SCRIPT"
 set -Eeuo pipefail
->&2 echo "Running linstor test suite ..."
+>&2 echo "Linstor test suite"
 set -x
->&2 kubectl -n d8-system exec deploy/deckhouse -- helm test -n d8-system linstor
+>&2 echo "Download helm3 binary..."
+>&2 kubectl -n d8-system exec deploy/deckhouse -- wget https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz -O /tmp/helm.tar.gz
+>&2 echo "Extract helm3 binary..."
+>&2 kubectl -n d8-system exec deploy/deckhouse -- tar -xzvf /tmp/helm.tar.gz -C /tmp
+>&2 echo "Running linstor test suite ..."
+>&2 kubectl -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm test -n d8-system linstor
 END_SCRIPT
 )
 
