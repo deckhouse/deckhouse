@@ -40,6 +40,7 @@ Usage: $0
     --tarball
         If set, script will download images in tarballs (tar archives).
         Use this flag only for pulling images for security scanning.
+        This won't work with d8-push.sh script
 
     --help|-h
         Print this message.
@@ -68,7 +69,7 @@ parse_args() {
         PULL_RELEASE_METADATA_IMAGES="no"
         ;;
       --tarball)
-        PULL_IMAGE_TYPE="tarball"
+        PULL_IMAGE_TYPE="docker-archive"
         ;;
       --release)
         shift
@@ -208,6 +209,11 @@ pull_image() {
   else
     IMAGE_PATH="$OUTPUT_DIR/$1"
   fi
+
+  if [[ "$PULL_IMAGE_TYPE" == "docker-archive" ]]; then
+    IMAGE_PATH=$(echo "$IMAGE_PATH" | tr ":" "_")
+  fi
+
   if [[ -s "$IMAGE_PATH" ]]; then
     return 0
   fi
@@ -224,7 +230,7 @@ pull_image() {
 
 pull_trivy_db() {
   IMAGE_PATH="$OUTPUT_DIR/trivy-db"
-  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$REGISTRY_PATH/security/trivy-db:2" "$PULL_IMAGE_TYPE:$IMAGE_PATH" >/dev/null
+  skopeo copy --authfile /root/.docker/config.json --preserve-digests "docker://$REGISTRY_PATH/security/trivy-db:2" "dir:$IMAGE_PATH" >/dev/null
   chown -R "$RUNNING_USER:$RUNNING_GROUP" "$IMAGE_PATH"
 }
 
