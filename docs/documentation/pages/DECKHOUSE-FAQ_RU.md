@@ -236,7 +236,7 @@ spec:
 
 1. Загрузите директорию с образами на хост, с которого есть доступ до изолированного приватного registry.
 
-1. Загрузите скрипт на этот хост (для работы скрипта потребуется установленный [crane](https://michaelsauter.github.io/crane/)):
+1. Загрузите скрипт на этот хост:
 
    ```shell
    curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
