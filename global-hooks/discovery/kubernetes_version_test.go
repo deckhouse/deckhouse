@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -264,6 +265,99 @@ subsets:
 
 		})
 
+		state := `
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  labels:
+    endpointslice.kubernetes.io/skip-mirror: "true"
+  name: kubernetes
+  namespace: default
+subsets:
+- addresses:
+  - ip: 192.168.128.190
+  ports:
+  - name: https
+    port: 6443
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2023-04-24T03:03:05Z"
+  labels:
+    component: apiserver
+    provider: kubernetes
+  name: kubernetes
+  namespace: default
+  resourceVersion: "190"
+  uid: 96574aff-f522-4f99-bc77-69ec111051b5
+spec:
+  clusterIP: 10.245.0.1
+  clusterIPs:
+  - 10.245.0.1
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 443
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+`
+
+		Context("Endpoint unavailable", func() {
+			const initialVersion = "1.19.2"
+			BeforeEach(func() {
+				dependency.TestDC.HTTPClient.DoMock.
+					Set(func(req *http.Request) (rp1 *http.Response, err error) {
+						switch req.Host {
+						case "10.245.0.1":
+							return versionsResponse(initialVersion), nil
+						case "192.168.128.190:6443":
+							return nil, errors.New("endpoint unavailable")
+						}
+
+						return nil, errors.New("not found")
+					})
+				f.BindingContexts.Set(f.KubeStateSet(state))
+				f.RunHook()
+			})
+
+			It("does not set k8s version with versions array with one version into values", func() {
+				Expect(f).NotTo(ExecuteSuccessfully())
+				assertNoValues()
+			})
+
+			It("does not write k8s version into file", func() {
+				Expect(f).NotTo(ExecuteSuccessfully())
+				assertNoFile()
+			})
+
+			Context("control plane manager is disabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
+
+					f.RunHook()
+				})
+
+				It("sets k8s version with versions array with one version into values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertValues(initialVersion, []string{initialVersion})
+				})
+
+				It("sets k8s version into file", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertVersionInFile(initialVersion)
+				})
+			})
+		})
 	})
 
 	Context("Endpoinds in cluster", func() {

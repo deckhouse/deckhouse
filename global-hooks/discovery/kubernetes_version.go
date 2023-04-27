@@ -37,6 +37,7 @@ import (
 
 const (
 	kubeEndpointsSnap         = "endpoinds"
+	kubeServiceSnap           = "service"
 	kubeAPIServK8sLabeledSnap = "apiserver-k8s-app"
 	kubeAPIServCPLabeledSnap  = "apiserver-cp"
 )
@@ -111,6 +112,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyEndpointsAPIServerFilter,
 		},
+
+		{
+			Name:       kubeServiceSnap,
+			ApiVersion: "v1",
+			Kind:       "Service",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"kubernetes"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"default"},
+				},
+			},
+			FilterFunc: applyServiceAPIServerFilter,
+		},
 	},
 }, k8sVersions)
 
@@ -146,6 +162,17 @@ func applyEndpointsAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filt
 		}
 	}
 	return addresses, nil
+}
+
+func applyServiceAPIServerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var service v1core.Service
+
+	err := sdk.FromUnstructured(obj, &service)
+	if err != nil {
+		return nil, err
+	}
+
+	return service.Spec.ClusterIP, nil
 }
 
 // getKubeVersionForServer
@@ -188,6 +215,28 @@ func getKubeVersionForServer(endpoint string, cl d8http.Client) (*semver.Version
 	}
 
 	return ver, nil
+}
+
+func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semver.Version, error) {
+	controlPlaneEnabled := module.IsEnabled("control-plane-manager", input)
+	if controlPlaneEnabled {
+		return nil, err
+	}
+
+	serviceSnap := input.Snapshots[kubeServiceSnap]
+
+	if len(serviceSnap) > 0 {
+		endpoint := serviceSnap[0].(string)
+
+		ver, err := getKubeVersionForServer(endpoint, versionHTTPClient)
+		if err != nil {
+			return nil, err
+		}
+
+		return ver, nil
+	}
+
+	return nil, err
 }
 
 func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
@@ -275,7 +324,10 @@ func k8sVersions(input *go_hook.HookInput) error {
 	for _, endpoint := range endpoints {
 		ver, err := getKubeVersionForServer(endpoint, versionHTTPClient)
 		if err != nil {
-			return err
+			ver, err = getKubeVersionForServerFallback(input, err)
+			if err != nil {
+				return err
+			}
 		}
 
 		if minVer == nil || ver.LessThan(minVer) {
