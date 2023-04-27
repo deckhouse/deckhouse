@@ -157,7 +157,7 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 </tbody>
 </table>
 
-> **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` will be able to work only in an already deployed cluster.
+> **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
 
 ## Managing placement of Deckhouse components
 
