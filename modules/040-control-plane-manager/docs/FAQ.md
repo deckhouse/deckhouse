@@ -145,6 +145,15 @@ Adding a master node to a static or hybrid cluster has no difference from adding
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
+1. **In the installer container**, run the following command to check the state before working:
+
+   ```bash
+   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+     --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
+   ```
+
+   The response should tell you that the theraform does not want to change anything.
+
 1. **In the installer container**, run the following command and specify the required OS image using the `masterNodeGroup.instanceClass` parameter (specify the addresses of all master nodes using the `-ssh-host` parameter):
 
    ```bash
@@ -170,7 +179,7 @@ Repeat the steps below for **each master node one by one**, starting with the no
 1. Make sure that the node is no longer listed as an etcd cluster member:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name') -- sh -c \
    "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table"
@@ -198,6 +207,10 @@ Repeat the steps below for **each master node one by one**, starting with the no
 
 1. **In the installer container**, run the following command to create the updated node:
 
+    You should read carefully what converge is going to do when it asks for approval.
+
+    If converge is requesting approval for another master it should be skipped by saying "no".
+
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
@@ -212,7 +225,7 @@ Repeat the steps below for **each master node one by one**, starting with the no
 1. Make sure the node is listed as an etcd cluster member:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name') -- sh -c \
    "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table"
