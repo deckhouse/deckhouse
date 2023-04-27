@@ -209,7 +209,7 @@ Repeat the steps below for **each master node one by one**, starting with the no
 
     You should read carefully what converge is going to do when it asks for approval.
 
-    If converge is requesting approval for another master it should be skipped by saying "no".
+    If converge requests approval for another master node, it should be skipped by saying "no".
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
