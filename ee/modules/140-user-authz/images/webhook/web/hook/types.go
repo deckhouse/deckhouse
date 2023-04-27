@@ -38,7 +38,7 @@ type UserAuthzConfig struct {
 				Namespace string `json:"namespace"`
 			} `json:"subjects"`
 		} `json:"spec,omitempty"`
-	} `json:"clusterAuthRuleCrds"`
+	} `json:"crds"`
 }
 
 // WebhookRequest is a replica of the SubjectAccessReview Kubernetes kind with only important fields

@@ -8,7 +8,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook")) | nindent 2 }}
 data:
   config.json: |
-    { "clusterAuthRuleCrds": {{ .Values.userAuthz.internal.clusterAuthRuleCrds | toJson}} }
+    { "crds": {{ .Values.userAuthz.internal.clusterAuthRuleCrds | toJson}} }
 {{- else }}
   {{- range $crd := .Values.userAuthz.internal.clusterAuthRuleCrds }}
     {{- if hasKey $crd.spec "allowAccessToSystemNamespaces" }}
