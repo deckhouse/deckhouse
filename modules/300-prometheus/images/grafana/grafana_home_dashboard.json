@@ -1011,6 +1011,17 @@
               ]
             }
           }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "module"
+              }
+            ]
+          }
         }
       ],
       "transparent": true,
