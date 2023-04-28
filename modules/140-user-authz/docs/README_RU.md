@@ -82,62 +82,18 @@ Role `User`:
   - serviceaccounts
   - services
   - storage.k8s.io/storageclasses
-  read-write:
-  - apiextensions.k8s.io/customresourcedefinitions
-  - apps/daemonsets
-  - apps/deployments
-  - apps/replicasets
-  - apps/statefulsets
-  - autoscaling.k8s.io/verticalpodautoscalers
-  - autoscaling/horizontalpodautoscalers
-  - batch/cronjobs
-  - batch/jobs
-  - configmaps
-  - discovery.k8s.io/endpointslices
-  - endpoints
-  - events
-  - events.k8s.io/events
-  - extensions/daemonsets
-  - extensions/deployments
-  - extensions/ingresses
-  - extensions/replicasets
-  - extensions/replicationcontrollers
-  - limitranges
-  - metrics.k8s.io/nodes
-  - metrics.k8s.io/pods
-  - namespaces
-  - networking.k8s.io/ingresses
-  - networking.k8s.io/networkpolicies
-  - nodes
-  - persistentvolumeclaims
-  - persistentvolumes
-  - pods
-  - pods/log
-  - policy/poddisruptionbudgets
-  - rbac.authorization.k8s.io/rolebindings
-  - rbac.authorization.k8s.io/roles
-  - replicationcontrollers
-  - resourcequotas
-  - serviceaccounts
-  - services
-  - storage.k8s.io/storageclasses
 
 Role `PrivilegedUser` (and all rules from `User`):
-  read:
+  create,get:
   - pods/attach
   - pods/exec
-  - secrets
-  read-write:
-  - pods/attach
-  - pods/exec
-  - secrets
-  write:
+  delete,deletecollection:
   - pods
-  - pods/attach
-  - pods/exec
+  read:
+  - secrets
 
 Role `Editor` (and all rules from `User`, `PrivilegedUser`):
-  write:
+  read-write:
   - apps/deployments
   - apps/statefulsets
   - autoscaling.k8s.io/verticalpodautoscalers
@@ -152,22 +108,23 @@ Role `Editor` (and all rules from `User`, `PrivilegedUser`):
   - networking.k8s.io/ingresses
   - persistentvolumeclaims
   - policy/poddisruptionbudgets
-  - secrets
   - serviceaccounts
   - services
+  write:
+  - secrets
 
 Role `Admin` (and all rules from `User`, `PrivilegedUser`, `Editor`):
-  write:
+  create,patch,update:
+  - pods
+  delete,deletecollection:
   - apps/replicasets
   - extensions/replicasets
+  write:
   - rbac.authorization.k8s.io/rolebindings
   - rbac.authorization.k8s.io/roles
 
 Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
   read:
-  - rbac.authorization.k8s.io/clusterrolebindings
-  - rbac.authorization.k8s.io/clusterroles
-  read-write:
   - rbac.authorization.k8s.io/clusterrolebindings
   - rbac.authorization.k8s.io/clusterroles
   write:
@@ -177,15 +134,12 @@ Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
   - storage.k8s.io/storageclasses
 
 Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
-  read:
-  - deckhouse.io/clusterauthorizationrules
   read-write:
   - deckhouse.io/clusterauthorizationrules
+  - networking.k8s.io/networkpolicies
   write:
-  - deckhouse.io/clusterauthorizationrules
   - limitranges
   - namespaces
-  - networking.k8s.io/networkpolicies
   - rbac.authorization.k8s.io/clusterrolebindings
   - rbac.authorization.k8s.io/clusterroles
   - resourcequotas
