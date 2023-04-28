@@ -667,7 +667,7 @@ function wait_cluster_ready() {
     run_linstor_tests || return $?
   fi
   echo "Linstor test suite: success"
-  exit 1
+  return 1
 
   test_failed=
 
