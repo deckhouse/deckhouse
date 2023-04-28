@@ -24,7 +24,7 @@ In addition to the RBAC, you can use a set of high-level roles in the module:
 - `Editor` — is the same as `PrivilegedUser` + can create and edit all objects that are usually required for application tasks.
 - `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`), also allows you to control access to namespace resources via `RoleBindings` and `Role`. **Note** that since `Admin` can edit `RoleBindings`, he can **broaden his privileges within the namespace**;
 - `ClusterEditor` — the same as `Editor` + can manage a limited set of `cluster-wide` objects that can be used in application tasks (`ClusterXXXMetric`, `ClusterRoleBindings`, `KeepalivedInstance`, `DaemonSet`, etc.). This role is best suited for cluster operators.
-- `ClusterAdmin` — the same as both `ClusterEditor` and `Admin` + can manage `cluster-wide` service objects (e.g.,  `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., as well as `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). This role is best suited for cluster administrators. **Note** that since `ClusterAdmin` can edit `ClusterRoleBindings`, he can **broaden his privileges within the cluster**;
+- `ClusterAdmin` — the same as both `ClusterEditor` and `Admin` + can manage `cluster-wide` service objects (e.g.,  `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., as well as `ClusterAuthorizationRule`, `ClusterRoleBindings` and `ClusterRole`). This role is best suited for cluster administrators. **Note** that since `ClusterAdmin` can edit `ClusterRoleBindings`, he can **broaden his privileges within the cluster**;
 - `SuperAdmin` — can perform any actions with any objects (note that [`limitNamespaces`](#module-features) restrictions remain valid).
 
 ## Implementation nuances
@@ -36,143 +36,143 @@ The `allowAccessToSystemNamespaces` and `limitNamespaces` options in the CR will
 ## Default access list for each role:
 <!-- start placeholder -->
 `verbs` aliases:
-*read - `get`, `list`, `watch`
-*read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
-*write - `create`, `delete`, `deletecollection`, `patch`, `update`
-
+* read - `get`, `list`, `watch`
+* read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
+* write - `create`, `delete`, `deletecollection`, `patch`, `update`
+```yaml
 Role `User`:
   read:
-  - events.k8s.io/events
-  - metrics.k8s.io/nodes
-  - persistentvolumeclaims
-  - services
-  - extensions/ingresses
-  - endpoints
-  - rbac.authorization.k8s.io/rolebindings
-  - events
-  - nodes
-  - policy/poddisruptionbudgets
-  - metrics.k8s.io/pods
-  - networking.k8s.io/networkpolicies
-  - replicationcontrollers
-  - resourcequotas
-  - limitranges
-  - batch/jobs
-  - serviceaccounts
-  - apps/replicasets
-  - extensions/replicationcontrollers
-  - apps/daemonsets
-  - discovery.k8s.io/endpointslices
   - apiextensions.k8s.io/customresourcedefinitions
-  - apps/statefulsets
-  - namespaces
-  - pods
-  - autoscaling/horizontalpodautoscalers
-  - persistentvolumes
-  - rbac.authorization.k8s.io/roles
-  - storage.k8s.io/storageclasses
-  - batch/cronjobs
+  - apps/daemonsets
   - apps/deployments
-  - pods/log
-  - extensions/replicasets
+  - apps/replicasets
+  - apps/statefulsets
+  - autoscaling.k8s.io/verticalpodautoscalers
+  - autoscaling/horizontalpodautoscalers
+  - batch/cronjobs
+  - batch/jobs
+  - configmaps
+  - discovery.k8s.io/endpointslices
+  - endpoints
+  - events
+  - events.k8s.io/events
   - extensions/daemonsets
   - extensions/deployments
-  - autoscaling.k8s.io/verticalpodautoscalers
-  - configmaps
+  - extensions/ingresses
+  - extensions/replicasets
+  - extensions/replicationcontrollers
+  - limitranges
+  - metrics.k8s.io/nodes
+  - metrics.k8s.io/pods
+  - namespaces
   - networking.k8s.io/ingresses
+  - networking.k8s.io/networkpolicies
+  - nodes
+  - persistentvolumeclaims
+  - persistentvolumes
+  - pods
+  - pods/log
+  - policy/poddisruptionbudgets
+  - rbac.authorization.k8s.io/rolebindings
+  - rbac.authorization.k8s.io/roles
+  - replicationcontrollers
+  - resourcequotas
+  - serviceaccounts
+  - services
+  - storage.k8s.io/storageclasses
   read-write:
-  - events.k8s.io/events
-  - metrics.k8s.io/nodes
-  - persistentvolumeclaims
-  - services
-  - extensions/ingresses
-  - endpoints
-  - rbac.authorization.k8s.io/rolebindings
-  - events
-  - nodes
-  - policy/poddisruptionbudgets
-  - metrics.k8s.io/pods
-  - networking.k8s.io/networkpolicies
-  - replicationcontrollers
-  - resourcequotas
-  - limitranges
-  - batch/jobs
-  - serviceaccounts
-  - apps/replicasets
-  - extensions/replicationcontrollers
-  - apps/daemonsets
-  - discovery.k8s.io/endpointslices
   - apiextensions.k8s.io/customresourcedefinitions
-  - apps/statefulsets
-  - namespaces
-  - pods
-  - autoscaling/horizontalpodautoscalers
-  - persistentvolumes
-  - rbac.authorization.k8s.io/roles
-  - storage.k8s.io/storageclasses
-  - batch/cronjobs
+  - apps/daemonsets
   - apps/deployments
-  - pods/log
-  - extensions/replicasets
+  - apps/replicasets
+  - apps/statefulsets
+  - autoscaling.k8s.io/verticalpodautoscalers
+  - autoscaling/horizontalpodautoscalers
+  - batch/cronjobs
+  - batch/jobs
+  - configmaps
+  - discovery.k8s.io/endpointslices
+  - endpoints
+  - events
+  - events.k8s.io/events
   - extensions/daemonsets
   - extensions/deployments
-  - autoscaling.k8s.io/verticalpodautoscalers
-  - configmaps
+  - extensions/ingresses
+  - extensions/replicasets
+  - extensions/replicationcontrollers
+  - limitranges
+  - metrics.k8s.io/nodes
+  - metrics.k8s.io/pods
+  - namespaces
   - networking.k8s.io/ingresses
+  - networking.k8s.io/networkpolicies
+  - nodes
+  - persistentvolumeclaims
+  - persistentvolumes
+  - pods
+  - pods/log
+  - policy/poddisruptionbudgets
+  - rbac.authorization.k8s.io/rolebindings
+  - rbac.authorization.k8s.io/roles
+  - replicationcontrollers
+  - resourcequotas
+  - serviceaccounts
+  - services
+  - storage.k8s.io/storageclasses
 
 Role `PrivilegedUser` (and all rules from `User`):
   read:
-  - pods/exec
   - pods/attach
+  - pods/exec
   - secrets
   read-write:
-  - pods/exec
   - pods/attach
+  - pods/exec
   - secrets
   write:
   - pods
-  - pods/exec
   - pods/attach
+  - pods/exec
 
 Role `Editor` (and all rules from `User`, `PrivilegedUser`):
   write:
-  - discovery.k8s.io/endpointslices
+  - apps/deployments
   - apps/statefulsets
-  - persistentvolumeclaims
-  - services
-  - extensions/ingresses
-  - endpoints
+  - autoscaling.k8s.io/verticalpodautoscalers
   - autoscaling/horizontalpodautoscalers
   - batch/cronjobs
+  - batch/jobs
+  - configmaps
+  - discovery.k8s.io/endpointslices
+  - endpoints
+  - extensions/deployments
+  - extensions/ingresses
+  - networking.k8s.io/ingresses
+  - persistentvolumeclaims
   - policy/poddisruptionbudgets
   - secrets
-  - apps/deployments
-  - batch/jobs
   - serviceaccounts
-  - extensions/deployments
-  - autoscaling.k8s.io/verticalpodautoscalers
-  - configmaps
-  - networking.k8s.io/ingresses
+  - services
 
 Role `Admin` (and all rules from `User`, `PrivilegedUser`, `Editor`):
   write:
-  - rbac.authorization.k8s.io/roles
   - apps/replicasets
   - extensions/replicasets
   - rbac.authorization.k8s.io/rolebindings
+  - rbac.authorization.k8s.io/roles
 
 Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
   read:
-  - rbac.authorization.k8s.io/clusterroles
   - rbac.authorization.k8s.io/clusterrolebindings
+  - rbac.authorization.k8s.io/clusterroles
   read-write:
-  - rbac.authorization.k8s.io/clusterroles
   - rbac.authorization.k8s.io/clusterrolebindings
+  - rbac.authorization.k8s.io/clusterroles
   write:
-  - storage.k8s.io/storageclasses
   - apiextensions.k8s.io/customresourcedefinitions
-  - extensions/daemonsets
   - apps/daemonsets
+  - extensions/daemonsets
+  - storage.k8s.io/storageclasses
 
 Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
   read:
@@ -180,14 +180,15 @@ Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Adm
   read-write:
   - deckhouse.io/clusterauthorizationrules
   write:
-  - networking.k8s.io/networkpolicies
-  - resourcequotas
+  - deckhouse.io/clusterauthorizationrules
   - limitranges
   - namespaces
-  - rbac.authorization.k8s.io/clusterroles
-  - deckhouse.io/clusterauthorizationrules
+  - networking.k8s.io/networkpolicies
   - rbac.authorization.k8s.io/clusterrolebindings
+  - rbac.authorization.k8s.io/clusterroles
+  - resourcequotas
 
+```
 <!-- end placeholder -->
 
 You can get additional list of access rules for module role from cluster ([existing user defined rules](usage.html#customizing-rights-of-high-level-roles) and non-default rules from other deckhouse modules):
