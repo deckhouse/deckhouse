@@ -113,7 +113,7 @@ UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
 ServerAliveInterval 5
 ServerAliveCountMax 5
-ConnectTimeout 5
+ConnectTimeout 10
 LogLevel quiet
 EOF
   # ssh command with common args.
@@ -710,7 +710,7 @@ set -Eeuo pipefail
 >&2 echo "Linstor test suite"
 set -x
 >&2 echo "Download helm3 binary..."
->&2 kubectl -n d8-system exec -it deploy/deckhouse -- curl https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz -o /tmp/helm.tar.gz
+>&2 kubectl -n d8-system exec deploy/deckhouse -- curl https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz -o /tmp/helm.tar.gz
 >&2 echo "Extract helm3 binary..."
 >&2 kubectl -n d8-system exec deploy/deckhouse -- tar -xzvf /tmp/helm.tar.gz -C /tmp
 >&2 echo "Running linstor test suite ..."
