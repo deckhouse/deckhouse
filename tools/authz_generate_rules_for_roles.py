@@ -14,16 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# This script is used for generating rules for user-authz roles to README.md and README_RU.md.
+# This script is used for generating rules for user-authz roles to
+# ./modules/140-user-authz/docs/README.md and ./modules/140-user-authz/docs/README_RU.md.
 # NOTE: this is a very poorly written script.
 # It inserts data between lines "<!-- start placeholder -->" and "<!-- end placeholder -->".
 # It useses rendered template from /deckhouse/modules/140-user-authz/templates/cluster-roles.yaml
 # Steps to use:
 #   * export USER_AUTHZ_RENDER_ROLES=yes
 #   * make tests-modules FOCUS=user-authz
-#   * ./modules/140-user-authz/docs/generate_rules_for_roles.py /tmp/rendered_templates.yaml
+#   * ./tools/authz_generate_rules_for_roles.py /tmp/rendered_templates.yaml
 #   * make lint-markdown-fix
-#   * check diff for README.md and README_RU.md files
+#   * check diff for ./modules/140-user-authz/docs/README.md and ./modules/140-user-authz/docs/README_RU.md files
 
 
 from re import sub
@@ -85,6 +86,7 @@ def camel_case(s):
 
 def update_readme(readme_file: str, data: str):
     directory = os.path.dirname(os.path.realpath(__file__))
+    directory = os.path.join(directory, "..", "modules/140-user-authz/docs")
 
     lines = []
     with open(os.path.join(directory, readme_file), "r", encoding="utf-8") as f:
