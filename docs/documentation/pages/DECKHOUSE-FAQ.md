@@ -207,32 +207,53 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
 ### Manually upload images to an air-gapped registry
 
-Download script on a host that have access to `registry.deckhouse.io`. `Docker`, `crane` and `jq` must be installed on this host.
+1. Download the script on a host that have access to `registry.deckhouse.io` (for the script to work, you need installed `Docker` and [jq](https://github.com/stedolan/jq)):
 
-```shell
-curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
-chmod 700 d8-pull.sh
-```
+   ```shell
+   curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
+   chmod 700 d8-pull.sh
+   ```
 
-Example of pulling images:
+   > Note! Use the following commands if you want to upload images of Deckhouse v1.44 or older:
+   >
+   > ```shell
+   > curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-pull.sh
+   > chmod 700 d8-pull.sh
+   > ```
 
-```shell
-./d8-pull.sh --license YOUR_DECKHOUSE_LICENSE_KEY --output-dir /your/output-dir/
-```
+1. Pull images using the `d8-pull.sh` script.
 
-Upload the folder from the previous step to a host with access to an air-gapped registry. `Crane` must be installed on this host.
-Download script on a host that has access to an air-gapped registry.
+   Example of pulling Deckhouse EE v1.45.5 images to the `/your/output-dir/` directory:
 
-```shell
-curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
-chmod 700 d8-push.sh
-```
+   ```shell
+   ./d8-pull.sh --license <DECKHOUSE_LICENSE_KEY> --release v1.45.5 --output-dir /your/output-dir/
+   ```
 
-Example of pushing images:
+   > For Deckhouse CE specify the `--edition ce` parameter and omit the `--license` parameter.
 
-```shell
-./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username YOUR_USERNAME --password YOUR_PASSWORD
-```
+1. Upload the directory from the previous step to a host with access to an air-gapped registry.
+
+1. Download script on the host:
+
+   ```shell
+   curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
+   chmod 700 d8-push.sh
+   ```
+
+   > Note! Use the following commands if you want to upload images of Deckhouse v1.44 or older:
+   >
+   > ```shell
+   > curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-push.sh
+   > chmod 700 d8-push.sh
+   > ```
+
+1. Push the images using the `d8-push.sh` script to an air-gapped registry.
+
+   Example of pushing images from the `/your/source-dir/` directory:
+
+   ```shell
+   ./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username <USERNAME> --password <PASSWORD>
+   ```
 
 ## How to bootstrap a cluster and run Deckhouse without the usage of release channels?
 
