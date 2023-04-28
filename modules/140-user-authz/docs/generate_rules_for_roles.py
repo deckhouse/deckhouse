@@ -22,6 +22,7 @@
 #   * export USER_AUTHZ_RENDER_ROLES=yes
 #   * make tests-modules FOCUS=user-authz
 #   * ./modules/140-user-authz/docs/generate_rules_for_roles.py /tmp/rendered_templates.yaml
+#   * make lint-markdown-fix
 #   * check diff for README.md and README_RU.md files
 
 
