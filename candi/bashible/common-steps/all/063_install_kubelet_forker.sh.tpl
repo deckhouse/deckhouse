@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
-
 bb-sync-file /opt/deckhouse/bin/d8-kubelet-forker - << "EOF"
 #!/bin/bash
 set -e
