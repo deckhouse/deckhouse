@@ -62,7 +62,7 @@ bb-sync-file /etc/systemd/system/kubelet.service.d/10-deckhouse.conf - << EOF
 [Service]
 Type=forking
 ExecStart=
-ExecStart=/usr/local/bin/d8-kubelet-forker /usr/bin/kubelet \\
+ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
 {{- if not (eq .nodeGroup.nodeType "Static") }}
     --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/csi-not-bootstrapped=:NoSchedule \\
 {{- else }}

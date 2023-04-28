@@ -43,6 +43,7 @@ const (
 	configPath                = `/config`
 	pkiPath                   = `/pki`
 	kubernetesPkiPath         = kubernetesConfigPath + `/pki`
+	kubeadmPath               = "/kubeadm"
 )
 
 type Config struct {
@@ -212,8 +213,4 @@ func (c *Config) getLastAppliedConfigurationChecksum() error {
 
 func (c *Config) writeLastAppliedConfigurationChecksum() error {
 	return os.WriteFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"), []byte(c.LastAppliedConfigurationChecksum), 0644)
-}
-
-func kubeadm() string {
-	return fmt.Sprintf("/kubeadm-%s", config.KubernetesVersion)
 }

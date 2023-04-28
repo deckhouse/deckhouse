@@ -5,19 +5,14 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /usr/local/bin
-    to: /usr/bin
-    includePaths:
-      - kube-scheduler
-    before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- artifact: common/kubernetes-artifact-{{ $version | replace "." "-" }}
+  add: /src/_output/bin/kube-scheduler
+  to: /usr/bin/kube-scheduler
+  before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/kube-scheduler"]
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: registry.k8s.io/kube-scheduler:v{{ printf "%s.%s" $version $patch }}@{{ $value.controlPlane.kubeScheduler }}
 {{- end }}

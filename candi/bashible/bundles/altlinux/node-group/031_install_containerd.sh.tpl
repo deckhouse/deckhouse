@@ -25,46 +25,5 @@ post-install() {
 }
 
 
-{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "altlinux" }}
-  {{- $altlinuxVersion := toString $key }}
-  {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
-if bb-is-altlinux-version? {{ $altlinuxVersion }} ; then
-  desired_version={{ $value.containerd.desiredVersion | quote }}
-  allowed_versions_pattern={{ $value.containerd.allowedPattern | quote }}
-fi
-  {{- end }}
-{{- end }}
-
-if [[ -z $desired_version ]]; then
-  bb-log-error "Desired version must be set"
-  exit 1
-fi
-
-should_install_containerd=true
-version_in_use="$(containerd --version 2>/dev/null | awk '{print "containerd-"$3}' | sed 's/v//' || true)"
-if test -n "$allowed_versions_pattern" && test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
-  should_install_containerd=false
-fi
-
-if [[ "$version_in_use" == "$desired_version" ]]; then
-  should_install_containerd=false
-fi
-
-if [[ "$should_install_containerd" == true ]]; then
-
-{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "altlinux" }}
-  {{- $altlinuxVersion := toString $key }}
-  if bb-is-altlinux-version? {{ $altlinuxVersion }} ; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdAltlinux%s" ($value.containerd.desiredVersion | replace "containerd-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
-  fi
-{{- end }}
-
-  bb-rp-install "containerd:${containerd_tag}"
-fi
-
-# install crictl
-crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
-if ! bb-rp-is-installed? "crictl" "${crictl_tag}" ; then
-  bb-rp-install "crictl:${crictl_tag}"
-fi
+bb-rp-install "containerd:{{- index $.images.registrypackages "containerd1620" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 {{- end }}

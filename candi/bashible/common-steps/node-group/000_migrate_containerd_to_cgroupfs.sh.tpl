@@ -35,12 +35,12 @@ Description=Containerd cgroup config migration
 Before=network.target
 [Service]
 type=simple
-ExecStart=/usr/local/bin/d8-containerd-cgroup-migration.sh
+ExecStart=/opt/deckhouse/bin/d8-containerd-cgroup-migration.sh
 [Install]
 WantedBy=multi-user.target
 EOF
 
-bb-sync-file /usr/local/bin/d8-containerd-cgroup-migration.sh - << "EOF"
+bb-sync-file /opt/deckhouse/bin/d8-containerd-cgroup-migration.sh - << "EOF"
 #!/bin/bash
 # Copyright 2021 Flant JSC
 #
@@ -65,5 +65,5 @@ echo 'cgroupfs' > /var/lib/bashible/cgroup_config
 sed -i 's/SystemdCgroup = true/SystemdCgroup = false/g' /etc/containerd/config.toml
 sed -i 's/cgroupDriver: systemd/cgroupDriver: cgroupfs/g' /var/lib/kubelet/config.yaml
 EOF
-chmod +x /usr/local/bin/d8-containerd-cgroup-migration.sh
+chmod +x /opt/deckhouse/bin/d8-containerd-cgroup-migration.sh
 {{- end }}

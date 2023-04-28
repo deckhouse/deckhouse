@@ -1,10 +1,7 @@
-# Copyright 2022 Flant JSC
+# Copyright 2023 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE.
 
 {{- if eq .cri "Containerd" }}
-
-# install toml-merge
-bb-rp-install "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
@@ -42,43 +39,5 @@ if bb-yum-package? docker-ce; then
   rm -f /var/lib/cni/networks/cbr0/*
 fi
 
-{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "redos" }}
-  {{- $redosVersion := toString $key }}
-  {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
-if bb-is-redos-version? {{ $redosVersion }} ; then
-  desired_version={{ $value.containerd.desiredVersion | quote }}
-  allowed_versions_pattern={{ $value.containerd.allowedPattern | quote }}
-fi
-  {{- end }}
-{{- end }}
-
-if [[ -z $desired_version ]]; then
-  bb-log-error "Desired version must be set"
-  exit 1
-fi
-
-should_install_containerd=true
-version_in_use="$(rpm -q containerd.io | head -1 || true)"
-if test -n "$allowed_versions_pattern" && test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
-  should_install_containerd=false
-fi
-
-if [[ "$version_in_use" == "$desired_version" ]]; then
-  should_install_containerd=false
-fi
-
-if [[ "$should_install_containerd" == true ]]; then
-
-{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "redos" }}
-  {{- $redosVersion := toString $key }}
-  if bb-is-redos-version? {{ $redosVersion }} ; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdRedos%s" ($value.containerd.desiredVersion | replace "containerd.io-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
-  fi
-{{- end }}
-
-  bb-rp-install "containerd-io:${containerd_tag}"
-fi
-
-# install crictl
-bb-rp-install "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
+bb-rp-install "containerd:{{- index $.images.registrypackages "containerd1620" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 {{- end }}

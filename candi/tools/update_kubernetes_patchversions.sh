@@ -27,19 +27,7 @@ function check_requirements() {
 # Updates version map with new patchversion
 # update_version_map VERSION PATCH
 function update_version_map() {
-  local NEW_DIGEST
   yq -i e ".k8s.\"${1}\".patch = ${2}" ../version_map.yml
-  # Kube-proxy
-  if yq -e e "select(.k8s.\"${1}\".controlPlane | has(\"kubeProxy\"))" ../version_map.yml >/dev/null 2>/dev/null; then
-    NEW_DIGEST="$(crane digest "registry.k8s.io/kube-proxy:v${1}.${2}")"
-    yq -i e ".k8s.\"${1}\".controlPlane.kubeProxy = \"${NEW_DIGEST}\"" ../version_map.yml
-  fi
-  # Kube-scheduler
-  NEW_DIGEST=""
-  if yq -e e "select(.k8s.\"${1}\".controlPlane | has(\"kubeScheduler\"))" ../version_map.yml >/dev/null 2>/dev/null; then
-    NEW_DIGEST="$(crane digest "registry.k8s.io/kube-scheduler:v${1}.${2}")"
-    yq -i e ".k8s.\"${1}\".controlPlane.kubeScheduler = \"${NEW_DIGEST}\"" ../version_map.yml
-  fi
 }
 
 check_requirements
