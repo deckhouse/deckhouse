@@ -37,6 +37,8 @@ topnav:
             url: /deckhouse_vs_kaas.html
           - title: Technical support regulations
             url: /regulations.html
+          - title: Our partners
+            url: /#clients
           - title: Blog
             external_url: 'https://blog.deckhouse.io/'
           - title: Community
@@ -92,6 +94,8 @@ topnav:
             url: /license.html
           - title: Правила лицензирования
             url: /license_rules.html
+          - title: Партнеры
+            url: /#clients
           - title: Сообщество
             url: /community/about.html
           - title: Блог
