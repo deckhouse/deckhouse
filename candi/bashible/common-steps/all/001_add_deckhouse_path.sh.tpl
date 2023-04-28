@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
-
 bb-sync-file /etc/profile.d/02-deckhouse-path.sh - << "EOF"
 export PATH="/opt/deckhouse/bin:$PATH"
 EOF
