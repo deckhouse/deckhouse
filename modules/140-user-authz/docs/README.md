@@ -135,10 +135,10 @@ Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
 Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
   read-write:
   - deckhouse.io/clusterauthorizationrules
-  - networking.k8s.io/networkpolicies
   write:
   - limitranges
   - namespaces
+  - networking.k8s.io/networkpolicies
   - rbac.authorization.k8s.io/clusterrolebindings
   - rbac.authorization.k8s.io/clusterroles
   - resourcequotas

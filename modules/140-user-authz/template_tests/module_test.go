@@ -106,12 +106,24 @@ var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCLusterRoleCRDsWit
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
+	renderRoles := os.Getenv("USER_AUTHZ_RENDER_ROLES") == "yes"
+	opts := make([]Option, 0)
+	var renderMap map[string]string
+	if renderRoles {
+		renderMap = make(map[string]string)
+		opts = append(opts, WithRenderOutput(renderMap))
+	}
+
 	BeforeSuite(func() {
 		err := os.Symlink("/deckhouse/ee/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
+		if renderRoles && renderMap != nil {
+			err := os.WriteFile("/tmp/rendered_templates.yaml", []byte(renderMap["user-authz/templates/cluster-roles.yaml"]), 0644)
+			Expect(err).ShouldNot(HaveOccurred())
+		}
 		err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
@@ -136,7 +148,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.ValuesSet("userAuthz.internal.webhookCertificate.crt", "test")
 			f.ValuesSet("userAuthz.internal.webhookCertificate.key", "test")
 
-			f.HelmRender()
+			f.HelmRender(opts...)
 		})
 
 		It("Should create a ClusterRoleBinding for each additionalRole", func() {
