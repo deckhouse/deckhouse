@@ -705,20 +705,16 @@ ENDSSH
 function run_linstor_tests() {
   test_failed=
 
-  # we cannot wget inside pod because proxy returns "bad request" during
-  # download helm inside pod
   testScript=$(cat <<"END_SCRIPT"
 set -Eeuo pipefail
 >&2 echo "Linstor test suite"
 set -x
 >&2 echo "Download helm3 binary..."
->&2 wget https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz -O /tmp/helm.tar.gz
+>&2 kubectl -n d8-system exec -it deploy/deckhouse -- curl https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz -o /tmp/helm.tar.gz
 >&2 echo "Extract helm3 binary..."
->&2 tar -xzvf /tmp/helm.tar.gz -C /tmp
->&2 echo "Copy helm binary to pod..."
->&2 kubectl -n d8-system cp /tmp/linux-amd64/helm "$(kubectl -n d8-system get po -l app=deckhouse -o json | jq -r '.items[0].metadata.name'):/tmp/helm"
+>&2 kubectl -n d8-system exec deploy/deckhouse -- tar -xzvf /tmp/helm.tar.gz -C /tmp
 >&2 echo "Running linstor test suite ..."
->&2 kubectl -n d8-system exec deploy/deckhouse -- /tmp/helm test -n d8-system linstor
+>&2 kubectl -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm test -n d8-system linstor
 END_SCRIPT
 )
 
