@@ -667,7 +667,6 @@ function wait_cluster_ready() {
     run_linstor_tests || return $?
   fi
   echo "Linstor test suite: success"
-  return 1
 
   test_failed=
 
@@ -715,7 +714,7 @@ set -x
 >&2 echo "Extract helm3 binary..."
 >&2 kubectl -n d8-system exec deploy/deckhouse -- tar -xzvf /tmp/helm.tar.gz -C /tmp
 >&2 echo "Running linstor test suite ..."
->&2 kubectl -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm test -n d8-system linstor
+>&2 kubectl -v 10 -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm test -n d8-system linstor
 END_SCRIPT
 )
 
