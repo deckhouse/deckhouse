@@ -12,20 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-_restart_containerd() {
+_reload_systemd() {
   systemctl daemon-reload
+{{- if eq .cri "Containerd" }}
   bb-flag-set containerd-need-restart
+{{- end }}
 }
 
 {{- if .proxy }}
-bb-event-on 'bb-sync-file-changed' '_restart_containerd'
+bb-event-on 'bb-sync-file-changed' '_reload_systemd'
 
 mkdir -p /etc/systemd/system.conf.d/
-
 bb-sync-file /etc/systemd/system.conf.d/proxy-default-environment.conf - << EOF
 [Manager]
 DefaultEnvironment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=${HTTPS_PROXY}" "https_proxy=${HTTPS_PROXY}" "NO_PROXY=${NO_PROXY}" "no_proxy=${NO_PROXY}"
 EOF
+
+  {{- if eq .cri "Containerd" }}
+mkdir -p /etc/systemd/system/containerd.service.d/
+bb-sync-file /etc/systemd/system/containerd.service.d/proxy-environment.conf - << EOF
+[Service]
+Environment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=${HTTPS_PROXY}" "https_proxy=${HTTPS_PROXY}" "NO_PROXY=${NO_PROXY}" "no_proxy=${NO_PROXY}"
+EOF
+  {{- end }}
 
 bb-sync-file /etc/profile.d/d8-system-proxy.sh - << EOF
 export HTTP_PROXY=${HTTP_PROXY}
@@ -38,7 +47,12 @@ EOF
 {{- else }}
 if [ -f /etc/systemd/system.conf.d/proxy-default-environment.conf ]; then
   rm -f /etc/systemd/system.conf.d/proxy-default-environment.conf
-  _restart_containerd
+  _reload_systemd
+fi
+
+if [ -f /etc/systemd/system/containerd.service.d/proxy-environment.conf ]; then
+  rm -f /etc/systemd/system/containerd.service.d/proxy-environment.conf
+  _reload_systemd
 fi
 
 if [ -f /etc/profile.d/d8-system-proxy.sh ]; then
