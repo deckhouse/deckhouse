@@ -12,14 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
-sed -i 's/^\# \"\\e\[6~\": history-search-forward/\"\\e\[6~\": history-search-forward/' /etc/inputrc
+if grep -qF '# "\e[5~": history-search-backward' /etc/inputrc; then
+  sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
+fi
+if grep -qF '# "\e[6~": history-search-forward' /etc/inputrc; then
+  sed -i 's/^\# \"\\e\[6~\": history-search-forward/\"\\e\[6~\": history-search-forward/' /etc/inputrc
+fi
 
-sed -i 's/\#force_color_prompt=yes/force_color_prompt=yes/' /root/.bashrc
-sed -i 's/01;32m/01;31m/' /root/.bashrc
+if grep -qF '#force_color_prompt=yes' /root/.bashrc; then
+  sed -i 's/\#force_color_prompt=yes/force_color_prompt=yes/' /root/.bashrc
+fi
+if grep -qF '01;32m' /root/.bashrc; then
+  sed -i 's/01;32m/01;31m/' /root/.bashrc
+fi
 
 mkdir -p /etc/bash_completion.d
 kubectl completion bash >/etc/bash_completion.d/kubectl
 
 completion="if [ -f /etc/bash_completion ] && ! shopt -oq posix; then . /etc/bash_completion ; fi"
-grep -qF -- "$completion" /root/.bashrc || echo "$completion" >> /root/.bashrc
+if ! grep -qF -- "$completion"  /root/.bashrc; then
+  echo "$completion" >> /root/.bashrc
+fi
