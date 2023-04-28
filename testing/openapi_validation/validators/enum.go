@@ -82,6 +82,10 @@ var (
 			"properties.storageClass.properties.provision.items.properties.type",
 			"properties.storageClass.properties.provision.items.oneOf[*].properties.type",
 		},
+		"modules/030-cloud-provider-openstack/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
+		},
 		"modules/030-cloud-provider-aws/openapi/values.yaml": {
 			// ignore AWS disk types
 			"properties.internal.properties.storageClasses.items.oneOf[*].properties.type",
