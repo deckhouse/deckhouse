@@ -714,7 +714,7 @@ set -x
 >&2 echo "Extract helm3 binary..."
 >&2 kubectl -n d8-system exec deploy/deckhouse -- tar -xzvf /tmp/helm.tar.gz -C /tmp
 >&2 echo "Running linstor test suite ..."
->&2 kubectl -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm test -n d8-system linstor
+>&2 kubectl -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm --debug test -n d8-system linstor
 END_SCRIPT
 )
 
