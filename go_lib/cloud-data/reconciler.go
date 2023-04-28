@@ -33,11 +33,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
 type Discoverer interface {
 	InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error)
+	VolumeTypes(ctx context.Context) ([]v1.VolumeType, error)
+	DiscoveryData(ctx context.Context) (v1.DiscoveryData, error)
 }
 
 type Reconciler struct {
@@ -171,6 +174,12 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 	c.logger.Infoln("Start next data discovery")
 	defer c.logger.Infoln("Finish data discovery")
 
+	c.instanceTypesReconcile(ctx)
+	c.volumeTypesReconcile(ctx)
+	c.discoveryDataReconcile(ctx)
+}
+
+func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 	instanceTypes, err := c.discoverer.InstanceTypes(ctx)
 	if err != nil {
 		c.logger.Errorf("Getting instance types error: %v\n", err)
@@ -194,7 +203,7 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 		cancel()
 
 		if errors.IsNotFound(errGetting) {
-			o, err := c.cloudDiscoveryUnstructured(nil, instanceTypes)
+			o, err := c.instanceTypesCloudDiscoveryUnstructured(nil, instanceTypes)
 			if err != nil {
 				// return because we have error in conversion
 				return
@@ -211,7 +220,7 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 
 			errGetting = nil
 		} else {
-			o, err := c.cloudDiscoveryUnstructured(data, instanceTypes)
+			o, err := c.instanceTypesCloudDiscoveryUnstructured(data, instanceTypes)
 			if err != nil {
 				// return because we have error in conversion
 				return
@@ -240,7 +249,7 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
 }
 
-func (c *Reconciler) cloudDiscoveryUnstructured(o *unstructured.Unstructured, instanceTypes []v1alpha1.InstanceType) (*unstructured.Unstructured, error) {
+func (c *Reconciler) instanceTypesCloudDiscoveryUnstructured(o *unstructured.Unstructured, instanceTypes []v1alpha1.InstanceType) (*unstructured.Unstructured, error) {
 	data := v1alpha1.InstanceTypesCatalog{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: v1alpha1.CloudDiscoveryDataResourceName,
@@ -262,6 +271,220 @@ func (c *Reconciler) cloudDiscoveryUnstructured(o *unstructured.Unstructured, in
 	}
 
 	data.InstanceTypes = instanceTypes
+
+	content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&data)
+	if err != nil {
+		c.logger.Errorf("Failed to convert data to unstructured. Error: %v\n", err)
+		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+		return nil, err
+	}
+
+	u := &unstructured.Unstructured{Object: content}
+
+	return u, nil
+}
+
+func (c *Reconciler) volumeTypesReconcile(ctx context.Context) {
+	volumeTypes, err := c.discoverer.VolumeTypes(ctx)
+	if err != nil {
+		c.logger.Errorf("Getting instance types error: %v\n", err)
+		c.cloudRequestErrorMetric.WithLabelValues("volume_types").Set(1.0)
+		return
+	}
+	c.cloudRequestErrorMetric.WithLabelValues("volume_types").Set(0.0)
+
+	sort.SliceStable(volumeTypes, func(i, j int) bool {
+		return volumeTypes[i].Name < volumeTypes[j].Name
+	})
+
+	for i := 1; i <= 3; i++ {
+		if i > 1 {
+			c.logger.Infoln("Waiting 3 seconds before next attempt")
+			time.Sleep(3 * time.Second)
+		}
+
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		data, errGetting := c.k8sClient.Resource(v1.GVR).Get(cctx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
+		cancel()
+
+		if errors.IsNotFound(errGetting) {
+			o, err := c.volumeTypesCloudDiscoveryUnstructured(nil, volumeTypes)
+			if err != nil {
+				// return because we have error in conversion
+				return
+			}
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.Resource(v1.GVR).Create(cctx, o, metav1.CreateOptions{})
+			cancel()
+
+			if err != nil {
+				c.logger.Errorf("Attempt %d. Cannot create cloud data resource: %v\n", i, err)
+				continue
+			}
+
+			errGetting = nil
+		} else {
+			o, err := c.volumeTypesCloudDiscoveryUnstructured(data, volumeTypes)
+			if err != nil {
+				// return because we have error in conversion
+				return
+			}
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.Resource(v1.GVR).Update(cctx, o, metav1.UpdateOptions{})
+			cancel()
+
+			if err != nil {
+				c.logger.Errorf("Attempt %d. Cannot update cloud data resource: %v\n", i, err)
+				continue
+			}
+		}
+
+		if errGetting != nil {
+			c.logger.Errorf("Attempt %d. Cannot get cloud data resource: %v", i, errGetting)
+			continue
+		}
+
+		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+		return
+	}
+
+	c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+}
+
+func (c *Reconciler) volumeTypesCloudDiscoveryUnstructured(o *unstructured.Unstructured, volumeTypes []v1.VolumeType) (*unstructured.Unstructured, error) {
+	data := v1.VolumeTypesCatalog{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: v1alpha1.CloudDiscoveryDataResourceName,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "VolumeTypesCatalog",
+			APIVersion: "deckhouse.io/v1",
+		},
+	}
+
+	if o != nil {
+		err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &data)
+		if err != nil {
+			c.logger.Errorf("Failed to convert unstructured to data. Error: %v\n", err)
+			c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+			return nil, err
+		}
+
+	}
+
+	data.VolumeTypes = volumeTypes
+
+	content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&data)
+	if err != nil {
+		c.logger.Errorf("Failed to convert data to unstructured. Error: %v\n", err)
+		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+		return nil, err
+	}
+
+	u := &unstructured.Unstructured{Object: content}
+
+	return u, nil
+}
+
+func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
+	discoveryData, err := c.discoverer.DiscoveryData(ctx)
+	if err != nil {
+		c.logger.Errorf("Getting instance types error: %v\n", err)
+		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(1.0)
+		return
+	}
+	c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
+
+	sort.SliceStable(discoveryData.Images, func(i, j int) bool {
+		return discoveryData.Images[i].Name < discoveryData.Images[j].Name
+	})
+
+	sort.SliceStable(discoveryData.Zones, func(i, j int) bool {
+		return discoveryData.Zones[i] < discoveryData.Zones[j]
+	})
+
+	for i := 1; i <= 3; i++ {
+		if i > 1 {
+			c.logger.Infoln("Waiting 3 seconds before next attempt")
+			time.Sleep(3 * time.Second)
+		}
+
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		data, errGetting := c.k8sClient.Resource(v1.GVRDiscoveryData).Get(cctx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
+		cancel()
+
+		if errors.IsNotFound(errGetting) {
+			o, err := c.discoveryDataCloudDiscoveryUnstructured(nil, discoveryData)
+			if err != nil {
+				// return because we have error in conversion
+				return
+			}
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.Resource(v1.GVRDiscoveryData).Create(cctx, o, metav1.CreateOptions{})
+			cancel()
+
+			if err != nil {
+				c.logger.Errorf("Attempt %d. Cannot create cloud data resource: %v\n", i, err)
+				continue
+			}
+
+			errGetting = nil
+		} else {
+			o, err := c.discoveryDataCloudDiscoveryUnstructured(data, discoveryData)
+			if err != nil {
+				// return because we have error in conversion
+				return
+			}
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.Resource(v1.GVRDiscoveryData).Update(cctx, o, metav1.UpdateOptions{})
+			cancel()
+
+			if err != nil {
+				c.logger.Errorf("Attempt %d. Cannot update cloud data resource: %v\n", i, err)
+				continue
+			}
+		}
+
+		if errGetting != nil {
+			c.logger.Errorf("Attempt %d. Cannot get cloud data resource: %v", i, errGetting)
+			continue
+		}
+
+		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+		return
+	}
+
+	c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+}
+
+func (c *Reconciler) discoveryDataCloudDiscoveryUnstructured(o *unstructured.Unstructured, discoveryData v1.DiscoveryData) (*unstructured.Unstructured, error) {
+	data := v1.DiscoveryDataset{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: v1alpha1.CloudDiscoveryDataResourceName,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "OpenStackDiscoveryData",
+			APIVersion: "deckhouse.io/v1",
+		},
+	}
+
+	if o != nil {
+		err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &data)
+		if err != nil {
+			c.logger.Errorf("Failed to convert unstructured to data. Error: %v\n", err)
+			c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+			return nil, err
+		}
+
+	}
+
+	data.DiscoveryData = discoveryData
 
 	content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&data)
 	if err != nil {

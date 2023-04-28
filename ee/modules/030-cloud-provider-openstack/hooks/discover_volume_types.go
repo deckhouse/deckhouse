@@ -6,25 +6,51 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"os"
 	"regexp"
 	"sort"
-	"strings"
-	"unicode"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+const volumeTypesCatalogSnapshot = "volume-types-catalog"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
-	Schedule: []go_hook.ScheduleConfig{
+	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:    "discover_volume_types",
-			Crontab: "45 * * * *",
+			Name:       volumeTypesCatalogSnapshot,
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "VolumeTypesCatalog",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-provider-openstack"},
+				},
+			},
+			FilterFunc: applyFilter,
 		},
 	},
 }, handleDiscoverVolumeTypes)
+
+func applyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var catalog VolumeTypesCatalog
+
+	err := sdk.FromUnstructured(obj, &catalog)
+	if err != nil {
+		return nil, err
+	}
+
+	volumeTypes := make(map[string]string, len(catalog.VolumeTypes))
+
+	for _, volumeType := range catalog.VolumeTypes {
+		volumeTypes[volumeType.Name] = volumeType.Type
+	}
+
+	return volumeTypes, nil
+}
 
 type storageClass struct {
 	Name string `json:"name"`
@@ -37,36 +63,30 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 		return err
 	}
 
-	var openstackVolumeTypes []string
-	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar", "SSD R1", "-Xx__$()? -foo-", "  YY fast SSD-foo."}
+	var volumeTypes map[string]string
+
+	snapshot := input.Snapshots[volumeTypesCatalogSnapshot]
+
+	if len(snapshot) > 0 {
+		volumeTypes = snapshot[0].(map[string]string)
 	} else {
-		openstackVolumeTypes, err = getVolumeTypesArray()
-		if err != nil {
-			return err
-		}
-	}
-
-	storageClassesMap := make(map[string]string, len(openstackVolumeTypes))
-
-	for _, vt := range openstackVolumeTypes {
-		storageClassesMap[getStorageClassName(vt)] = vt
+		return nil
 	}
 
 	excludes, ok := input.Values.GetOk("cloudProviderOpenstack.storageClass.exclude")
 	if ok {
 		for _, esc := range excludes.Array() {
 			rg := regexp.MustCompile("^(" + esc.String() + ")$")
-			for name := range storageClassesMap {
+			for name := range volumeTypes {
 				if rg.MatchString(name) {
-					delete(storageClassesMap, name)
+					delete(volumeTypes, name)
 				}
 			}
 		}
 	}
 
-	storageClasses := make([]storageClass, 0, len(storageClassesMap))
-	for name, typ := range storageClassesMap {
+	storageClasses := make([]storageClass, 0, len(volumeTypes))
+	for name, typ := range volumeTypes {
 		sc := storageClass{
 			Type: typ,
 			Name: name,
@@ -90,23 +110,15 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 	return nil
 }
 
-// Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
-func getStorageClassName(value string) string {
-	mapFn := func(r rune) rune {
-		if r >= 'a' && r <= 'z' ||
-			r >= 'A' && r <= 'Z' ||
-			r >= '0' && r <= '9' ||
-			r == '-' || r == '.' {
-			return unicode.ToLower(r)
-		} else if r == ' ' {
-			return '-'
-		}
-		return rune(-1)
-	}
+type VolumeType struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Parameters map[string]any
+}
 
-	// a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.'
-	value = strings.Map(mapFn, value)
+type VolumeTypesCatalog struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// must start and end with an alphanumeric character
-	return strings.Trim(value, "-.")
+	VolumeTypes []VolumeType `json:"volumeTypes"`
 }

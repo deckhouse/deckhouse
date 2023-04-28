@@ -10,13 +10,18 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumetypes"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
+	"github.com/gophercloud/utils/openstack/clientconfig"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	v1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
@@ -83,4 +88,65 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 	}
 
 	return res, nil
+}
+
+func (d *Discoverer) VolumeTypes(ctx context.Context) ([]v1.VolumeType, error) {
+	client, err := clientconfig.NewServiceClient("volume", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	allPages, err := volumetypes.List(client, volumetypes.ListOpts{}).AllPages()
+	if err != nil {
+		return nil, err
+	}
+
+	volumeTypes, err := volumetypes.ExtractVolumeTypes(allPages)
+	if err != nil || len(volumeTypes) == 0 {
+		return nil, fmt.Errorf("list of volume types is empty is empty, or an error was returned: %v", err)
+	}
+
+	var volumeTypesList []v1.VolumeType
+
+	for _, volumeType := range volumeTypes {
+		volumeTypesList = append(volumeTypesList, v1.VolumeType{
+			Name: getStorageClassName(volumeType.Name),
+			Type: volumeType.Name,
+			Parameters: map[string]any{
+				"ID":          volumeType.ID,
+				"Name":        volumeType.Name,
+				"Description": volumeType.Description,
+				"ExtraSpecs":  volumeType.ExtraSpecs,
+				"IsPublic":    volumeType.IsPublic,
+				"QosSpecID":   volumeType.QosSpecID,
+			},
+		})
+	}
+
+	return volumeTypesList, nil
+}
+
+// Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
+func getStorageClassName(value string) string {
+	mapFn := func(r rune) rune {
+		if r >= 'a' && r <= 'z' ||
+			r >= 'A' && r <= 'Z' ||
+			r >= '0' && r <= '9' ||
+			r == '-' || r == '.' {
+			return unicode.ToLower(r)
+		} else if r == ' ' {
+			return '-'
+		}
+		return rune(-1)
+	}
+
+	// a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.'
+	value = strings.Map(mapFn, value)
+
+	// must start and end with an alphanumeric character
+	return strings.Trim(value, "-.")
+}
+
+func (d *Discoverer) DiscoveryData(ctx context.Context) (v1.DiscoveryData, error) {
+	panic("not implemented")
 }

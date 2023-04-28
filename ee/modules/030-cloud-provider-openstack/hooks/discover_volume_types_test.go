@@ -13,6 +13,30 @@ import (
 )
 
 var _ = Describe("Modules :: cloud-provider-openstack :: hooks :: discover_volume_types ::", func() {
+	state := `
+---
+apiVersion: deckhouse.io/v1
+kind: VolumeTypesCatalog
+metadata:
+  name: openstack-volume-types
+  namespace: d8-cloud-provider-openstack
+volumeTypes:
+- name: bar
+  type: bar
+- name: default
+  type: __DEFAULT__
+- name: other-bar
+  type: other-bar
+- name: some-foo
+  type: some-foo
+- name: ssd-r1
+  type: SSD R1
+- name: xx--foo
+  type: -Xx__$()? -foo-
+- name: yy-fast-ssd-foo
+  type: "  YY fast SSD-foo."
+`
+
 	const (
 		initValuesStringA = `
 cloudProviderOpenstack:
@@ -45,7 +69,8 @@ cloudProviderOpenstack:
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RegisterCRD("deckhouse.io", "v1", "VolumeTypesCatalog", false)
+			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
 
@@ -92,7 +117,8 @@ cloudProviderOpenstack:
 
 	Context("Cluster has minimal cloudProviderOpenstack configuration with excluded storage classes and default specified", func() {
 		BeforeEach(func() {
-			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RegisterCRD("deckhouse.io", "v1", "VolumeTypesCatalog", false)
+			b.BindingContexts.Set(b.KubeStateSet(state))
 			b.RunHook()
 		})
 

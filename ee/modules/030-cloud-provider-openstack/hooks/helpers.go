@@ -7,38 +7,10 @@ package hooks
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumetypes"
-	"github.com/gophercloud/utils/openstack/clientconfig"
 )
-
-// getVolumeTypesArray extract volume types from go hooks
-func getVolumeTypesArray() ([]string, error) {
-	client, err := clientconfig.NewServiceClient("volume", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	allPages, err := volumetypes.List(client, volumetypes.ListOpts{}).AllPages()
-	if err != nil {
-		return nil, err
-	}
-
-	volumeTypes, err := volumetypes.ExtractVolumeTypes(allPages)
-	if err != nil || len(volumeTypes) == 0 {
-		return nil, fmt.Errorf("list of volume types is empty is empty, or an error was returned: %v", err)
-	}
-
-	var volumeTypesList []string
-	for _, vt := range volumeTypes {
-		volumeTypesList = append(volumeTypesList, vt.Name)
-	}
-
-	return volumeTypesList, nil
-}
 
 func initOpenstackEnvs(input *go_hook.HookInput) error {
 	osAuthURL, ok := input.Values.GetOk("cloudProviderOpenstack.internal.connection.authURL")

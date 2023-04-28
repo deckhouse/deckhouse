@@ -5,12 +5,15 @@ go 1.19
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
+	github.com/gophercloud/utils v0.0.0-20230418172808-6eab72e966e1
 	github.com/sirupsen/logrus v1.9.0
+	k8s.io/apimachinery v0.26.3
 )
 
 require (
+	github.com/hashicorp/go-uuid v1.0.3 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
-	k8s.io/apimachinery v0.26.3 // indirect
 	k8s.io/client-go v0.26.3 // indirect
 )
 
@@ -24,7 +27,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/gophercloud/gophercloud v1.2.0
+	github.com/gophercloud/gophercloud v1.3.0
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect

@@ -10,3 +10,5 @@ import (
 )
 
 var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-openstack/candi/openapi/instance_class.yaml")
+
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-openstack/crds/*.yaml")

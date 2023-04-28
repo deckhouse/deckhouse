@@ -22,8 +22,6 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/google/go-containerregistry v0.5.1
 	github.com/google/uuid v1.2.0
-	github.com/gophercloud/gophercloud v1.3.0
-	github.com/gophercloud/utils v0.0.0-20230418172808-6eab72e966e1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/imdario/mergo v0.3.15
