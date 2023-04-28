@@ -35,8 +35,8 @@ title: "Модуль user-authz"
 
 ## Список доступа для каждой роли модуля по умолчанию
 
-<!-- start placeholder -->
 сокращения для `verbs`:
+<!-- start placeholder -->
 * read - `get`, `list`, `watch`
 * read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
 * write - `create`, `delete`, `deletecollection`, `patch`, `update`

@@ -34,8 +34,9 @@ In addition to the RBAC, you can use a set of high-level roles in the module:
 The `allowAccessToSystemNamespaces` and `limitNamespaces` options in the CR will no longer be applied if the authorization system's webhook is unavailable for some reason. As a result, users will have access to all namespaces. After the webhook availability is restored, the options will become relevant again.
 
 ## Default access list for each role:
-<!-- start placeholder -->
+
 `verbs` aliases:
+<!-- start placeholder -->
 * read - `get`, `list`, `watch`
 * read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
 * write - `create`, `delete`, `deletecollection`, `patch`, `update`

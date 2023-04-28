@@ -143,8 +143,7 @@ def main():
                 result[key] = {}
             result[key][verb] = sorted(list(values))
 
-    result_string = f'''
-* read - {READ_VERBS_STR}
+    result_string = f'''* read - {READ_VERBS_STR}
 * read-write - {READ_WRITE_VERBS_STR}
 * write - {WRITE_VERBS_STR}
 
@@ -158,8 +157,8 @@ def main():
         result_string += yaml.safe_dump(
             {f"Role `{names[name]}`{postfix_annotation}": values}) + "\n"
     result_string += "```\n"
-    update_readme("README.md", "`verbs` aliases:"+result_string)
-    update_readme("README_RU.md", "сокращения для `verbs`:"+result_string)
+    update_readme("README.md", result_string)
+    update_readme("README_RU.md", result_string)
 
 
 if __name__ == "__main__":
