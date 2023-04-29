@@ -2,8 +2,9 @@
   {{- $version := toString $key }}
   {{- $patch := toString $value.patch }}
   {{- $v := semver $version }}
+  {{- $full_version := printf "%s.%s" $version $patch }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
     {{- if semverCompare ">=1.25" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
     {{- else if semverCompare ">=1.24" $version }}
@@ -27,11 +28,11 @@ shell:
   - apk add --no-cache make bash git mercurial patch rsync gcc musl-dev
   install:
   - mkdir /src
-  - wget https://github.com/kubernetes/kubernetes/archive/v{{ printf "%s.%s" $version $patch }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+  - wget https://github.com/kubernetes/kubernetes/archive/v{{ $full_version }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
   - |
     cat <<EOF > .kube-version
-    KUBE_GIT_VERSION='v{{ printf "%s.%s" $version $patch }}'
+    KUBE_GIT_VERSION='v{{ $full_version }}'
     KUBE_GIT_MAJOR='{{ $v.Major }}'
     KUBE_GIT_MINOR='{{ $v.Minor }}'
     KUBE_GIT_COMMIT='0000000000000000000000000000000000000000'
