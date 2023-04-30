@@ -2,6 +2,7 @@
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
   {{- $v := semver $version }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_ALPINE }}
@@ -9,7 +10,7 @@ git:
 - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-wrapper-installer.sh
   to: /iptables-wrapper-installer.sh
 import:
-- artifact: common/kubernetes-artifact-{{ $version | replace "." "-" }}
+- artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
   to: /usr/local/bin/kube-proxy
   before: setup

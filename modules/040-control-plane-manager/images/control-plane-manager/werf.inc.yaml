@@ -1,11 +1,12 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: common/kubernetes-artifact-{{ $version | replace "." "-" }}
+- artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin
   to: /
   includePaths:
