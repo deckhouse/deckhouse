@@ -14,6 +14,5 @@ metadata:
 type: Opaque
 data:
   cloud-config: {{ include "node_group_cloud_init_cloud_config" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}
-  adopt.sh: {{ include "node_group_static_or_hybrid_script" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first) true) | b64enc }}
-  bootstrap.sh: {{ include "node_group_static_or_hybrid_script" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first) false) | b64enc }}
+  bootstrap.sh: {{ include "node_group_static_or_hybrid_script" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}
 {{- end }}

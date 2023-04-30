@@ -2,7 +2,6 @@
   {{- $context := index . 0 -}}
   {{- $ng := index . 1 -}}
   {{- $bootstrap_token := index . 2 -}}
-  {{- $adopt := index . 3 -}}
 #!/bin/bash
 
 mkdir -p /var/lib/bashible
@@ -69,11 +68,7 @@ chmod +x /var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
   {{- $images := set $images "registrypackages" (dict "jq16" $context.Values.global.modulesImages.digests.registrypackages.jq16) }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "images" $images }}
 cat > /var/lib/bashible/bootstrap.sh <<"END"
-{{ if $adopt }}
-  {{- include "node_group_bashible_bootstrap_script_noninteractive" $bashible_bootstrap_script_tpl_context }}
-{{ else }}
-  {{- include "node_group_bashible_bootstrap_script" $bashible_bootstrap_script_tpl_context }}
-{{ end }}
+{{ include "node_group_bashible_bootstrap_script" $bashible_bootstrap_script_tpl_context }}
 END
 chmod +x /var/lib/bashible/bootstrap.sh
 
@@ -86,9 +81,7 @@ cat > /var/lib/bashible/bootstrap-token <<"EOF"
 EOF
 chmod 0600 /var/lib/bashible/bootstrap-token
 
-{{- if not $adopt }}
 touch /var/lib/bashible/first_run
-{{- end }}
 
 checkBashible=$(systemctl is-active bashible.timer)
 if [[ "$checkBashible" != "active" ]]; then

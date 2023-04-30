@@ -112,14 +112,6 @@ You can automate the bootstrap process with any automation platform you prefer. 
 
 5. Run the playbook with the inventory file.
 
-## How to put an existing cluster node under the node-manager's control?
-
-To make an existing Node controllable by the `node-manager`, perform the following steps:
-
-1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](examples.html#an-example-of-the-static-nodegroup-configuration).
-2. Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."adopt.sh"' -r`
-3. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
-
 ## How do I change the NodeGroup of a static node?
 
 To switch an existing static node to another NodeGroup, you need to change its group label:
