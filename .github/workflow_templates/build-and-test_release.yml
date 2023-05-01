@@ -210,7 +210,7 @@ jobs:
 {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_site_template" "production " | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web) | strings.Indent 6 }!}
 
   last_comment:
