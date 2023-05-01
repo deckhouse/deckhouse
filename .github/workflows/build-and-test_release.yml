@@ -2426,23 +2426,23 @@ jobs:
           WERF_SET_WEB_ENV: "web.env=web-production"
       # </template: deploy_doc_template>
       # <template: deploy_site_template>
-      - name: Deploy site to production 
+      - name: Deploy site to production
         uses: werf/actions/converge@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
-          env: web-production 
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD }}"
+          env: web-production
         env:
-          WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
+          WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/site"
           WERF_RELEASE: "deckhouse-site"
-          WERF_NAMESPACE: deckhouse-web-production 
+          WERF_NAMESPACE: deckhouse-web-production
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
-          WERF_SET_URL: "global.url=deckhouse.production .flant.com"
-          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.production .flant.com"
-          WERF_SET_WEB_ENV: "web.env=web-production "
-          WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLnByb2R1Y3Rpb24gLmZsYW50LmNvbSIsICJydSIgOiAiZGVja2hvdXNlLnJ1LnByb2R1Y3Rpb24gLmZsYW50LmNvbSJ9"
+          WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
+          WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLmlvIiwgInJ1IiA6ICJkZWNraG91c2UucnUifQ=="
       # </template: deploy_site_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
