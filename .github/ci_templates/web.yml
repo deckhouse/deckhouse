@@ -36,16 +36,26 @@ steps:
 
 {!{- define "web_links_test_template" -}!}
 # <template: web_links_test_template>
+{!{- $ctx  := index . 0 }!}
+{!{- $mode := index . 1 }!}
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_dev_registry_step"      . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "started_at_output"            $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"           $ctx | strings.Indent 2 }!}
+{!{ if eq $mode "release" }!}
+  {!{ tmpl.Exec "login_rw_registry_step"       $ctx | strings.Indent 2 }!}
+{!{- else }!}
+  {!{ tmpl.Exec "login_dev_registry_step"      $ctx | strings.Indent 2 }!}
+{!{- end }!}
+  {!{ tmpl.Exec "werf_install_step"            $ctx | strings.Indent 2 }!}
 
   - name: Prepare site structure
     env:
+{!{ if eq $mode "release" }!}
+      WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
+{!{- else }!}
       WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
+{!{- end }!}
     run: |
       type werf
       werf version
@@ -57,7 +67,7 @@ steps:
       echo "_TMPDIR=$_TMPDIR"
 
       export WERF_REPO="${WEB_REGISTRY_PATH}"
-      echo -n 'use werf_repo'
+      echo -n 'use werf_repo '
       echo $WERF_REPO | tr 'a-z' 'A-Z'
 
       # Extract site content to the tmp directory.

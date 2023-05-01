@@ -111,7 +111,7 @@ jobs:
       - doc_web_build
       - main_web_build
     continue-on-error: true
-{!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_links_test_template" (slice $ctx "release") | strings.Indent 4 }!}
 
   validators:
     name: Validators
