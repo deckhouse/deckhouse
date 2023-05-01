@@ -182,7 +182,7 @@ jobs:
       - git_info
       - doc_web_build
       - main_web_build
-{!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_links_test_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.web_links_test) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "validators" "Validators") }!}

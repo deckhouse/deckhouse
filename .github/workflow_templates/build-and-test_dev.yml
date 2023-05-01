@@ -158,7 +158,7 @@ jobs:
       - doc_web_build
       - main_web_build
     continue-on-error: true
-{!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_links_test_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   validators:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

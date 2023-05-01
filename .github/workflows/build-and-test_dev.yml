@@ -1319,6 +1319,7 @@ jobs:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -1348,6 +1349,7 @@ jobs:
 
       - name: Prepare site structure
         env:
+
           WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
         run: |
           type werf
@@ -1360,7 +1362,7 @@ jobs:
           echo "_TMPDIR=$_TMPDIR"
 
           export WERF_REPO="${WEB_REGISTRY_PATH}"
-          echo -n 'use werf_repo'
+          echo -n 'use werf_repo '
           echo $WERF_REPO | tr 'a-z' 'A-Z'
 
           # Extract site content to the tmp directory.
