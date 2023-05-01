@@ -1,41 +1,37 @@
-{!{- define "doc_web_build_template" -}!}
-# <template: doc_web_build_template>
+{!{- define "web_build_template" -}!}
+{!{- $ctx := index . 0 -}!}
+{!{- $docPart := index . 1 -}!}
+{!{- $buildType := index . 2 -}!}
+
+# <template: web_build_template>
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "started_at_output"         $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"        $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step"   $ctx | strings.Indent 2 }!}
+  {!{- $dir := "docs/documentation" -}!}
+{!{ if eq $docPart "main" }!}
+  {!{- $dir = "docs/site" -}!}
+{!{ end }!}
+{!{ if eq $buildType "release" }!}
+  {!{ tmpl.Exec "login_rw_registry_step"    $ctx | strings.Indent 2 }!}
+{!{ end }!}
 
-  - name: Run doc web build
+  - name: Run {!{ $docPart }!} web build
     uses: {!{ index (ds "actions") "werf/actions/build" }!}
     with:
       channel: ${{env.WERF_CHANNEL}}
     env:
-      WERF_DIR: "docs/documentation"
+      WERF_DIR: "{!{ $dir }!}"
       WERF_LOG_VERBOSE: "on"
-      WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
-# </template: doc_web_build_template>
-{!{- end -}!}
+{!{ if eq $buildType "release" }!}
+      WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
+      WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+{!{- else }!}
+      WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+{!{ end }!}
 
-{!{- define "main_web_build_template" -}!}
-# <template: main_web_build_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
-
-  - name: Run main web build
-    uses: {!{ index (ds "actions") "werf/actions/build" }!}
-    with:
-      channel: ${{env.WERF_CHANNEL}}
-    env:
-      WERF_DIR: "docs/site"
-      WERF_LOG_VERBOSE: "on"
-      WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
-# </template: main_web_build_template>
+# </template: web_build_template>
 {!{- end -}!}
 
 {!{- define "web_links_test_template" -}!}
@@ -44,13 +40,12 @@ runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step"      . | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
 
   - name: Prepare site structure
     env:
-      WEB_REGISTRY_PATH: ${{steps.check_flant_registry.outputs.web_registry_path}}
+      WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
     run: |
       type werf
       werf version
@@ -178,7 +173,9 @@ steps:
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
+{!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
 {!{- if eq $env "production" -}!}
+  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
@@ -192,7 +189,7 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
-    WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
+    WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/documentation"
     WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
     WERF_NAMESPACE: {!{ $ns }!}
@@ -210,7 +207,9 @@ steps:
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
+{!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
 {!{- if eq $env "production" -}!}
+  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
@@ -225,7 +224,7 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
-    WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
+    WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/site"
     WERF_RELEASE: "deckhouse-site"
     WERF_NAMESPACE: {!{ $ns }!}

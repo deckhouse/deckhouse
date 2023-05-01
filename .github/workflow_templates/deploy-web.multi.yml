@@ -88,7 +88,6 @@ jobs:
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
 
 {!{ tmpl.Exec "deploy_site_template" .webEnv | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
