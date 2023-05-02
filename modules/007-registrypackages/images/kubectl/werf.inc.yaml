@@ -29,7 +29,7 @@ git:
     setup:
     - '**/*'
 import:
-- artifact: common/kubernetes-artifact-{{ $version | replace "." "-" }}
+- artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
   to: /kubectl
   before: setup

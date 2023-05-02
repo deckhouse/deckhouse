@@ -1,6 +1,7 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := toString $value.patch }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_UBUNTU }}
@@ -9,7 +10,7 @@ import:
   add: /pause
   to: /pause
   before: setup
-- artifact: common/kubernetes-artifact-{{ $version | replace "." "-" }}
+- artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-controller-manager
   to: /usr/bin/kube-controller-manager
   before: setup

@@ -119,7 +119,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-{!{ tmpl.Exec "doc_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.doc_web_build) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "main_web_build" "Main web build") }!}
@@ -128,7 +128,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-{!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.main_web_build) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "tests" "Tests") }!}
@@ -177,11 +177,12 @@ jobs:
 {!{ $jobNames = coll.Merge $jobNames (dict "web_links_test" "Web links test") }!}
   web_links_test:
     name: {!{ $jobNames.web_links_test }!}
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
       - main_web_build
-{!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_links_test_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.web_links_test) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "validators" "Validators") }!}
@@ -206,7 +207,7 @@ jobs:
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}

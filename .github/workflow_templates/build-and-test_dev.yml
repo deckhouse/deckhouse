@@ -96,7 +96,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-{!{ tmpl.Exec "doc_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "dev") | strings.Indent 4 }!}
 
   main_web_build:
     name: Main web build
@@ -104,7 +104,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-{!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
 
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -150,7 +150,7 @@ jobs:
 {!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_deckhouse") | strings.Indent 4 }!}
 
   web_links_test:
-    if: ${{ needs.pull_request_info.outputs.changes_docs == 'true' }}
+    if: ${{ needs.pull_request_info.outputs.changes_docs == 'true' && github.repository == 'deckhouse/deckhouse' }}
     name: Web links test
     needs:
       - git_info
@@ -158,7 +158,7 @@ jobs:
       - doc_web_build
       - main_web_build
     continue-on-error: true
-{!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_links_test_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   validators:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

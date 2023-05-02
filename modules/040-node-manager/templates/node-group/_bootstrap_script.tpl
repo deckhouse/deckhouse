@@ -73,38 +73,6 @@ fi
 
 {{- end }}
 
-{{- define "node_group_bashible_bootstrap_script_noninteractive" -}}
-  {{- $context := . -}}
-
-  {{- include "node_group_bashible_bootstrap_script_base_bootstrap" $context }}
-
-  {{- include "node_group_bashible_bootstrap_script_download_bashible" $context }}
-
-cat > /etc/systemd/system/bashible.timer << "EOF"
-[Unit]
-Description=bashible timer
-
-[Timer]
-OnBootSec=1min
-OnUnitActiveSec=1min
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-cat > /etc/systemd/system/bashible.service << "EOF"
-[Unit]
-Description=Bashible service
-
-[Service]
-EnvironmentFile=/etc/environment
-ExecStart=/var/lib/bashible/bashible.sh --max-retries 10
-EOF
-
-systemctl daemon-reload
-systemctl restart bashible.timer
-systemctl enable bashible.timer
-{{- end }}
 
 {{- define "node_group_bashible_bootstrap_script_base_bootstrap" -}}
   {{- $context := . -}}

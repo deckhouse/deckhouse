@@ -199,7 +199,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
@@ -294,7 +297,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
@@ -384,7 +390,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -401,7 +410,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
@@ -418,7 +430,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -663,7 +678,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -680,7 +698,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
@@ -697,7 +718,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -942,7 +966,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -959,7 +986,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
@@ -976,7 +1006,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -1188,7 +1221,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-    # <template: doc_web_build_template>
+    # <template: web_build_template>
     runs-on: [self-hosted, regular]
     steps:
 
@@ -1207,52 +1240,55 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_flant_registry_step>
-      - name: Check flant registry credentials
-        id: check_flant_registry
-        env:
-          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then
-            echo "::set-output name=has_flant_credentials::true"
-            echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
-          else
-            echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
-      - name: Login to flant registry
+      - name: Login to dev registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_flant_registry_step>
+      # </template: login_rw_registry_step>
+
 
       - name: Run doc web build
         uses: werf/actions/build@v1.2
@@ -1261,8 +1297,11 @@ jobs:
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
-          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
-    # </template: doc_web_build_template>
+
+          WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
+          WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+
+    # </template: web_build_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -1300,7 +1339,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-    # <template: main_web_build_template>
+    # <template: web_build_template>
     runs-on: [self-hosted, regular]
     steps:
 
@@ -1319,52 +1358,55 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_flant_registry_step>
-      - name: Check flant registry credentials
-        id: check_flant_registry
-        env:
-          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then
-            echo "::set-output name=has_flant_credentials::true"
-            echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
-          else
-            echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
-      - name: Login to flant registry
+      - name: Login to dev registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_flant_registry_step>
+      # </template: login_rw_registry_step>
+
 
       - name: Run main web build
         uses: werf/actions/build@v1.2
@@ -1373,8 +1415,11 @@ jobs:
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
-          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
-    # </template: main_web_build_template>
+
+          WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
+          WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+
+    # </template: web_build_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -1437,7 +1482,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -1454,7 +1502,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -1545,7 +1596,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -1562,7 +1616,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -1654,7 +1711,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -1671,7 +1731,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -1771,7 +1834,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -1788,7 +1854,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -1888,7 +1957,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -1905,7 +1977,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -1976,6 +2051,7 @@ jobs:
 
   web_links_test:
     name: Web links test
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
@@ -1999,52 +2075,34 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
 
-      # <template: login_flant_registry_step>
-      - name: Check flant registry credentials
-        id: check_flant_registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
         env:
-          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then
-            echo "::set-output name=has_flant_credentials::true"
-            echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
-          else
-            echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
-      - name: Login to flant registry
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_flant_registry_step>
+      # </template: login_rw_registry_step>
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -2055,7 +2113,8 @@ jobs:
 
       - name: Prepare site structure
         env:
-          WEB_REGISTRY_PATH: ${{steps.check_flant_registry.outputs.web_registry_path}}
+
+          WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
         run: |
           type werf
           werf version
@@ -2067,7 +2126,7 @@ jobs:
           echo "_TMPDIR=$_TMPDIR"
 
           export WERF_REPO="${WEB_REGISTRY_PATH}"
-          echo -n 'use werf_repo'
+          echo -n 'use werf_repo '
           echo $WERF_REPO | tr 'a-z' 'A-Z'
 
           # Extract site content to the tmp directory.
@@ -2214,7 +2273,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -2231,7 +2293,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -2326,35 +2391,25 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
 
-      # <template: login_flant_registry_step>
-      - name: Check flant registry credentials
-        id: check_flant_registry
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
         env:
-          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
         run: |
           if [[ -n $HOST ]]; then
-            echo "::set-output name=has_flant_credentials::true"
-            echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
-          else
-            echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
-      - name: Login to flant registry
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_flant_registry_step>
+      # </template: login_readonly_registry_step>
 
       # <template: doc_version_template>
       - name: Set documentation version
@@ -2371,7 +2426,7 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD }}"
           env: web-production
         env:
-          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
+          WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
           WERF_NAMESPACE: deckhouse-web-production
@@ -2388,7 +2443,7 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD }}"
           env: web-production
         env:
-          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
+          WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/site"
           WERF_RELEASE: "deckhouse-site"
           WERF_NAMESPACE: deckhouse-web-production
