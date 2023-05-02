@@ -714,13 +714,13 @@ set -x
 >&2 echo "Extract helm3 binary..."
 >&2 kubectl -n d8-system exec deploy/deckhouse -- tar -xzvf /tmp/helm.tar.gz -C /tmp
 >&2 echo "Running linstor test suite ..."
->&2 kubectl -v 10 -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm --debug test -n d8-system linstor
+>&2 kubectl -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm test -n d8-system linstor
 END_SCRIPT
 )
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -vv -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       test_failed=""
       break
     else
