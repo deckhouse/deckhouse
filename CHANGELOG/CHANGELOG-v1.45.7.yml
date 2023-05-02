@@ -1,0 +1,19 @@
+descheduler:
+  fixes:
+    - summary: Restored descheduler migration hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4524
+docs:
+  fixes:
+    - summary: Change tools downloading links from the main branch to a placeholder.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4491
+linstor:
+  fixes:
+    - summary: Fix multiple requisites in volume placement request.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4515
+virtualization:
+  fixes:
+    - summary: Fix releasing disk lease when VM is not removed, but the disk is not attached.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4499
+    - summary: Fix copying `VirtualMachineDisk` from `VirtualMachineDisk`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4499
+
