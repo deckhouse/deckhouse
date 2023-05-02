@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
+{{ $kubeVersion := semver .Values.global.discovery.kubernetesVersion }}
 
 kind: DaemonSet
 apiVersion: apps/v1
