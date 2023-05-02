@@ -75,6 +75,7 @@
  - **[cloud-provider-gcp]** Disabled Node IPAM in GCP CCM that conflicted with kube-controller-manager's IPAM controller. [#4110](https://github.com/deckhouse/deckhouse/pull/4110)
  - **[cloud-provider-yandex]** Set `network_acceleration_type` to software accelerated, update netfilter parameters for new Yandex nat instances. [#4196](https://github.com/deckhouse/deckhouse/pull/4196)
  - **[deckhouse]** Hours and minutes can be used simultaneously for the `minimalNotificationTime` field in ModuleConfig CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
+ - **[descheduler]** Restored descheduler migration hook. [#4524](https://github.com/deckhouse/deckhouse/pull/4524)
  - **[dhctl]** Fix `kube-proxy` does not restart. [#4274](https://github.com/deckhouse/deckhouse/pull/4274)
  - **[extended-monitoring]** Fix RBAC rules for `image-availability-exporter`. [#4346](https://github.com/deckhouse/deckhouse/pull/4346)
  - **[extended-monitoring]** Fix `image-availability-exporter` for Kubernetes 1.25+. [#4331](https://github.com/deckhouse/deckhouse/pull/4331)
@@ -84,6 +85,7 @@
  - **[ingress-nginx]** Improve controller migration hook. [#4363](https://github.com/deckhouse/deckhouse/pull/4363)
  - **[ingress-nginx]** Fix RBAC rules for `kruise-controller`. [#4353](https://github.com/deckhouse/deckhouse/pull/4353)
  - **[istio]** Add registry secret for `d8-ingress-istio` namespace. [#4244](https://github.com/deckhouse/deckhouse/pull/4244)
+ - **[linstor]** Fix multiple requisites in volume placement request. [#4515](https://github.com/deckhouse/deckhouse/pull/4515)
  - **[linstor]** Update `linstor-scheduler-admission` to fix admission review. [#4343](https://github.com/deckhouse/deckhouse/pull/4343)
  - **[log-shipper]** Add multiline custom parser for `PodLoggingConfig` and add validation for multiline custom parser when `startsWhen` and `endsWhen` params  are both provided [#4307](https://github.com/deckhouse/deckhouse/pull/4307)
     `log-shipper` Pods will restart.
@@ -101,6 +103,8 @@
  - **[user-authn]** The `discover_dex_ca` hook subscribes secret according to the used mode. [#3842](https://github.com/deckhouse/deckhouse/pull/3842)
  - **[user-authz]** Fixed cluster_authorization_rule webhook so that it doesn't crash on fields with whitespaces anymore [#4419](https://github.com/deckhouse/deckhouse/pull/4419)
  - **[user-authz]** Disabled `NetworkPolicy` editing for Editors. [#4217](https://github.com/deckhouse/deckhouse/pull/4217)
+ - **[virtualization]** Fix releasing disk lease when VM is not removed, but the disk is not attached. [#4499](https://github.com/deckhouse/deckhouse/pull/4499)
+ - **[virtualization]** Fix copying `VirtualMachineDisk` from `VirtualMachineDisk`. [#4499](https://github.com/deckhouse/deckhouse/pull/4499)
  - **[virtualization]** Fix AdmissionReview for KubeVirt virtual machines [#4309](https://github.com/deckhouse/deckhouse/pull/4309)
  - **[virtualization]** Support other `cloud-init` sources. [#4176](https://github.com/deckhouse/deckhouse/pull/4176)
 
