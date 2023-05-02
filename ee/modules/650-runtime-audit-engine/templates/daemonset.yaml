@@ -95,6 +95,7 @@ spec:
         - --k8s-node
         - $(FALCO_K8S_NODE_NAME)
         - -pk
+        - --modern-bpf
         env:
         - name: FALCO_K8S_NODE_NAME
           valueFrom:
@@ -262,44 +263,6 @@ spec:
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
           {{- end }}
 
-      initContainers:
-      - name: falco-driver-loader
-        {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "falcoDriverLoader") }}
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: FALCO_BPF_PROBE
-          value: ""
-        # Always compile driver to prevent external internet requests in air-gapped environments
-        - name: ENABLE_COMPILE
-          value: "yes"
-        - name: ENABLE_DOWNLOAD
-          value: "no"
-        volumeMounts:
-          - mountPath: /root/.falco
-            name: root-falco-fs
-          - mountPath: /host/proc
-            name: proc-fs
-            readOnly: true
-          - mountPath: /host/boot
-            name: boot-fs
-            readOnly: true
-          - mountPath: /host/lib/modules
-            name: lib-modules
-          - mountPath: /host/usr
-            name: usr-fs
-            readOnly: true
-          - mountPath: /host/etc
-            name: etc-fs
-            readOnly: true
-          - mountPath: /sys/kernel/debug
-            name: debug-fs
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "falco_resources" . | nindent 14 }}
-          {{- end }}
       terminationGracePeriodSeconds: 30
       volumes:
       - emptyDir: {}

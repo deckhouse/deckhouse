@@ -27,15 +27,14 @@ Deckhouse deploys Falco agents (which run as a DaemonSet) on every node. The age
 > However, a Kubernetes cluster with the autoscaling feature enabled makes it hard to operate. 
 > Additional security mechanisms of Deckhouse (implemented by other modules), such as multitenancy and admission policy control, provide the required level of security to mitigate attacks on the Falco DaemonSet.
 
-There are five different containers in a single agent Pod:
+There are four different containers in a single agent Pod:
 ![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.svg)
 <!--- Source: https://docs.google.com/drawings/d/1rxSuJFs0tumfZ56WbAJ36crtPoy_NiPBHE6Hq5lejuI --->
 
-1. `falco-driver-loader` — this init container compiles the eBPF program and saves it in an empty dir to make it available to Falco.
-2. `falco` — collects events, enriches them with metadata and sends them to stdout.
-3. `rules-loader` — collects ([FalcoAuditRules](cr.html#falcoauditrules)) CRs from Kubernetes and saves them in a shared directory (empty dir).
-4. `falcosidekick` — exports events as metrics on which alerts can be generated.
-5. `kube-rbac-proxy` — protects the `falcosidekick` metric's endpoint.
+1. `falco` — collects events, enriches them with metadata and sends them to stdout.
+2. `rules-loader` — collects ([FalcoAuditRules](cr.html#falcoauditrules)) CRs from Kubernetes and saves them in a shared directory (empty dir).
+3. `falcosidekick` — exports events as metrics on which alerts can be generated. 
+4. `kube-rbac-proxy` — protects the `falcosidekick` metric's endpoint.
 
 ## Audit Rules
 
