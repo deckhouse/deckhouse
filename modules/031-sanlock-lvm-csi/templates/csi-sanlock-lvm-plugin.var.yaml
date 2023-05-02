@@ -1,0 +1,202 @@
+# Copyright 2020 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
+
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: csi-sanlock-lvm-plugin
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: csi-sanlock-lvm-plugin
+  template:
+    metadata:
+      labels:
+        app: csi-sanlock-lvm-plugin
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      initContainers:
+        - name: modprobe
+          image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
+          command: ['sh', '-c', 'modprobe dm_thin_pool && modprobe dm_snapshot && ( [ -d /dev/watchdog ] || modprobe softdog )']
+          volumeMounts:
+            - mountPath: /lib/modules
+              name: modules-dir
+              readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - SYS_MODULE
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+
+      containers:
+        - name: driverd
+          image: {{ include "helm_lib_module_image" (list . "csiSanlockLvmDriverd") }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--driver-name=csi-sanlock-lvm.csi.vleo.net"
+            - "--listen=$(CSI_ENDPOINT)"
+            - "--node-name=$(NODE_NAME)"
+            - "--lvmctrld=$(LVMCTRLD_ENDPOINT)"
+            - "--v=$(LOG_LEVEL)"
+          env:
+            - name: CSI_ENDPOINT
+              value: unix:///csi/csi.sock
+            - name: LVMCTRLD_ENDPOINT
+              value: unix:///csi/lvmctrld.sock
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: LOG_LEVEL
+              value: "3"
+          securityContext:
+            # This is necessary only for systems with SELinux, where
+            # non-privileged sidecar containers cannot access unix domain socket
+            # created by privileged CSI driver container.
+            privileged: true
+          ports:
+            - containerPort: 9898
+              name: healthz
+              protocol: TCP
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 200 # sanlock could require up to 3 minutes to start
+            timeoutSeconds: 3
+            periodSeconds: 2
+          readinessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: healthz
+            timeoutSeconds: 3
+            periodSeconds: 2
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+            failureThreshold: 30
+            periodSeconds: 10
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /var/lib/kubelet/pods
+              mountPropagation: Bidirectional
+              name: mountpoint-dir
+            - mountPath: /var/lib/kubelet/plugins
+              mountPropagation: Bidirectional
+              name: plugins-dir
+            - mountPath: /dev
+              name: dev-dir
+            - mountPath: /lib/modules
+              name: modules-dir
+
+        - name: lvmctrld
+          image: {{ include "helm_lib_module_image" (list . "csiSanlockLvmLvmctrld") }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--listen=$(LVMCTRLD_ENDPOINT)"
+            - "--lock-host-addr=$(NODE_IP)"
+            - "--v=$(LOG_LEVEL)"
+          env:
+            - name: LVMCTRLD_ENDPOINT
+              value: unix:///csi/lvmctrld.sock
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: LOG_LEVEL
+              value: "3"
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /dev
+              name: dev-dir
+
+        - name: node-driver-registrar
+          image: {{ include "helm_lib_module_common_image" (list $ (list "csiNodeDriverRegistrar" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "rm -rf /registration/csi-sanlock-lvm /registration/csi-sanlock-lvm-reg.sock"]
+          args:
+            - --v=5
+            - --csi-address=/csi/csi.sock
+            - --kubelet-registration-path=/var/lib/kubelet/plugins/csi-sanlock-lvm/csi.sock
+          securityContext:
+            # This is necessary only for systems with SELinux, where
+            # non-privileged sidecar containers cannot access unix domain socket
+            # created by privileged CSI driver container.
+            privileged: true
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /registration
+              name: registration-dir
+
+        - name: liveness-probe
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+          image: {{ include "helm_lib_module_common_image" (list $ (list "csiLivenessprobe" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+          args:
+            - --csi-address=/csi/csi.sock
+            - --connection-timeout=3s
+            - --health-port=9898
+
+      volumes:
+        - hostPath:
+            path: /var/lib/kubelet/plugins/csi-sanlock-lvm
+            type: DirectoryOrCreate
+          name: socket-dir
+        - hostPath:
+            path: /var/lib/kubelet/pods
+            type: DirectoryOrCreate
+          name: mountpoint-dir
+        - hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: Directory
+          name: registration-dir
+        - hostPath:
+            path: /var/lib/kubelet/plugins
+            type: Directory
+          name: plugins-dir
+        - hostPath:
+            path: /dev
+            type: Directory
+          name: dev-dir
+        - hostPath:
+            path: /lib/modules
+            type: Directory
+          name: modules-dir
