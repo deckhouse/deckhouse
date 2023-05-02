@@ -20,11 +20,10 @@
 {%- for osItem in osVersions %}
 {%- assign osKey = osItem[0] %}
 {%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
-{%- assign firstItemData = osItem[1] | first %}
-{%- if firstItemData[1][langSupportKey] and firstItemData[1][langSupportKey] != "true" %}{% continue %}{% endif %}
+{%- if site.data.supported_versions.osDistributions[osKey][langSupportKey] and site.data.supported_versions.osDistributions[osKey][langSupportKey] != "true" %}{% continue %}{% endif %}
 <tr>
   <td class="name">
-    <span {% if firstItemData[1]['ru_support'] and firstItemData[1]['ru_support'] == "true" %}class="table__asterisk"{% endif %}>
+    <span {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}class="table__asterisk"{% endif %}>
       {%- if site.data.supported_versions.osDistributions[osKey].url %}<a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
       {%- else %}{{ osName }}
       {%- endif%}
