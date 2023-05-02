@@ -34,8 +34,8 @@ ansible:
   install:
     - shell: |
         apk add rsync
-        gem update --system 3.2.3
-        gem install bundler -v 2.4.3
+        gem install bundler -v 2.4.3 --silent -q
+        gem update --system 3.2.3 --no-document --minimal-deps --silent -q 2>/dev/null
     - name: "Install Dependencies"
       shell: bundle install
       args:

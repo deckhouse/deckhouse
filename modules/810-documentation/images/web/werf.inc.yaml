@@ -93,8 +93,8 @@ ansible:
         apk add rsync jq tree
         export YQ_VERSION=v4.33.3 YQ_BINARY=yq_linux_amd64
         wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY} -O /usr/bin/yq && chmod +x /usr/bin/yq
-        gem update --system 3.2.3
-        gem install bundler -v 2.4.3
+        gem install bundler -v 2.4.3 --silent -q
+        gem update --system 3.2.3 --no-document --minimal-deps --silent -q 2>/dev/null
     - name: "Install Dependencies"
       shell: bundle install
       args:
@@ -261,7 +261,6 @@ ansible:
     - shell: |
         cp -Rf /app/_site/site/assets /app/_site/documentation/
         cp -Rf /app/_site/site/images /app/_site/documentation/
-        cp -Rf /app/_site/site/includes /app/_site/documentation/
         cp -Rf /app/_site/site/ru/includes /app/_site/documentation/ru
         cp -Rf /app/_site/site/en/includes /app/_site/documentation/en
         cp -Rf /app/_site/site/ru /app/_site/documentation/

@@ -69,7 +69,7 @@ relativeURLs = true
     lineNos = false
     lineNumbersInTable = true
     noClasses = true
-    style = "emacs"
+    style = "dracula"
     tabWidth = 4
   [markup.tableOfContents]
     endLevel = 3
