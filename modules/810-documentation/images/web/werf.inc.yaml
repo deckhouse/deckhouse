@@ -247,14 +247,18 @@ ansible:
     - name: "Generating static files of the documentation part..."
       shell: |
         mkdir -m 777 -p /app/_site/
-        JEKYLL_ENV=development jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml --profile
+        # TODO: REMOVE
+        # JEKYLL_ENV=development jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml --profile
+        JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml --profile
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
         warn: false
     - name: "Generating static file's of the main part..."
       shell: |
-        JEKYLL_ENV=development jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml --profile
+        # TODO: REMOVE
+        # JEKYLL_ENV=development jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml --profile
+        JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml --profile
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/site/
