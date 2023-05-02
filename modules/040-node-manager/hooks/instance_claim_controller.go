@@ -85,6 +85,14 @@ func instanceClaimMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	}, nil
 }
 
+var (
+	deleteFinalizersPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"finalizers": nil,
+		},
+	}
+)
+
 func instanceClaimNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ng d8v1.NodeGroup
 
@@ -111,9 +119,9 @@ func instanceClaimFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 func instanceClaimController(input *go_hook.HookInput) error {
-	instanceClaims := make(map[string]*d8v1alpha1.InstanceClaim)
-	machines := make(map[string]*machineForInstanceClaim)
-	nodeGroups := make(map[string]*nodeGroupForInstanceClaim)
+	instanceClaims := make(map[string]*d8v1alpha1.InstanceClaim, len(input.Snapshots["instances"]))
+	machines := make(map[string]*machineForInstanceClaim, len(input.Snapshots["machines"]))
+	nodeGroups := make(map[string]*nodeGroupForInstanceClaim, len(input.Snapshots["ngs"]))
 
 	for _, i := range input.Snapshots["instances"] {
 		ins := i.(*d8v1alpha1.InstanceClaim)
@@ -172,11 +180,6 @@ func instanceClaimController(input *go_hook.HookInput) error {
 	//		b. we should delete finalizers and delete instance claim if metadata.deletionTimestamp is zero
 	for _, ic := range instanceClaims {
 		if _, ok := machines[ic.GetName()]; !ok {
-			deleteFinalizersPatch := map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"finalizers": nil,
-				},
-			}
 			input.PatchCollector.MergePatch(deleteFinalizersPatch, "deckhouse.io/v1alpha1", "InstanceClaim", "", ic.Name)
 
 			ds := ic.GetDeletionTimestamp()
