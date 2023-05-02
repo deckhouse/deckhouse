@@ -1,0 +1,75 @@
+{{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
+{{- $logLevel := 10 -}}
+---
+# Source: csi-driver-lvm/templates/controller.yaml
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: csi-driver-lvm-controller
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-driver-lvm-controller
+  template:
+    metadata:
+      labels:
+        app: csi-driver-lvm-controller
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      imagePullSecrets:
+        - name: deckhouse-registry
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - csi-driver-lvm-plugin
+              topologyKey: kubernetes.io/hostname
+      serviceAccountName: csi-driver-lvm-controller
+      containers:
+        - name: csi-attacher
+          image: {{ include "helm_lib_module_common_image" (list $ (list "csiExternalAttacher" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - --v={{ $logLevel }}
+            - --csi-address=/csi/csi.sock
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+        - name: csi-provisioner
+          image: {{ include "helm_lib_module_common_image" (list $ (list "csiExternalProvisioner" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - -v={{ $logLevel }}
+            - --csi-address=/csi/csi.sock
+            - --feature-gates=Topology=true
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+        - name: csi-resizer
+          image: {{ include "helm_lib_module_common_image" (list $ (list "csiExternalResizer" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - -v={{ $logLevel }}
+            - -csi-address=/csi/csi.sock
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+      volumes:
+        - hostPath:
+            path: /var/lib/kubelet/plugins/csi-driver-lvm
+            type: DirectoryOrCreate
+          name: socket-dir

@@ -261,6 +261,10 @@ var DefaultImagesDigests = map[string]interface{}{
 	"loki": map[string]interface{}{
 		"loki": "imageHash-loki-loki",
 	},
+	"lvmCsi": map[string]interface{}{
+		"csiLvmDriver":            "imageHash-lvmCsi-csiLvmDriver",
+		"csiLvmDriverProvisioner": "imageHash-lvmCsi-csiLvmDriverProvisioner",
+	},
 	"metallb": map[string]interface{}{
 		"controller": "imageHash-metallb-controller",
 		"speaker":    "imageHash-metallb-speaker",
@@ -499,6 +503,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"falcoDriverLoader": "imageHash-runtimeAuditEngine-falcoDriverLoader",
 		"falcosidekick":     "imageHash-runtimeAuditEngine-falcosidekick",
 		"rulesLoader":       "imageHash-runtimeAuditEngine-rulesLoader",
+	},
+	"sanlockLvmCsi": map[string]interface{}{
+		"csiSanlockLvmDriverd":  "imageHash-sanlockLvmCsi-csiSanlockLvmDriverd",
+		"csiSanlockLvmLvmctrld": "imageHash-sanlockLvmCsi-csiSanlockLvmLvmctrld",
+		"socat":                 "imageHash-sanlockLvmCsi-socat",
 	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",

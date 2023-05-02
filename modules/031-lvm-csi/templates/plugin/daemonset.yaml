@@ -1,0 +1,162 @@
+{{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
+{{- $logLevel := 10 -}}
+---
+# Source: csi-driver-lvm/templates/plugin.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: csi-driver-lvm-plugin
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: csi-driver-lvm-plugin
+  template:
+    metadata:
+      labels:
+        app: csi-driver-lvm-plugin
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      imagePullSecrets:
+        - name: deckhouse-registry
+      serviceAccountName: csi-driver-lvm-plugin
+      containers:
+        - name: node-driver-registrar
+          args:
+            - --v={{ $logLevel }}
+            - --csi-address=/csi/csi.sock
+            - --kubelet-registration-path=/var/lib/kubelet/plugins/csi-driver-lvm/csi.sock
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          image: {{ include "helm_lib_module_common_image" (list $ (list "csiNodeDriverRegistrar" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          securityContext:
+            privileged: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /registration
+              name: registration-dir
+        - name: csi-driver-lvm-plugin
+          args:
+            - --drivername=lvm.csi.metal-stack.io
+            - --endpoint=unix:///csi/csi.sock
+            - --devices=/dev/killme
+            - --nodeid=$(KUBE_NODE_NAME)
+            - --vgname=csi-lvm
+            - --namespace=d8-{{ .Chart.Name }}
+            - --provisionerimage={{ include "helm_lib_module_image" (list . "csiLvmDriverProvisioner") }}
+            - --pullpolicy=IfNotPresent
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          image: {{ include "helm_lib_module_image" (list . "csiLvmDriver") }}
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: healthz
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 2
+            successThreshold: 1
+            timeoutSeconds: 3
+          ports:
+            - containerPort: 9898
+              name: healthz
+              protocol: TCP
+          resources: {}
+          securityContext:
+            privileged: true
+          terminationMessagePath: /termination.log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /var/lib/kubelet/pods
+              mountPropagation: Bidirectional
+              name: mountpoint-dir
+            - mountPath: /var/lib/kubelet/plugins
+              mountPropagation: Bidirectional
+              name: plugins-dir
+            - mountPath: /dev
+              name: dev-dir
+              mountPropagation: Bidirectional
+            - mountPath: /lib/modules
+              name: mod-dir
+            - mountPath: /etc/lvm/backup
+              name: lvmbackup
+              mountPropagation: Bidirectional
+            - mountPath: /etc/lvm/cache
+              name: lvmcache
+              mountPropagation: Bidirectional
+            - mountPath: /run/lock/lvm
+              name: lvmlock
+              mountPropagation: Bidirectional
+        - name: liveness-probe
+          args:
+            - --csi-address=/csi/csi.sock
+            - --health-port=9898
+          image: {{ include "helm_lib_module_common_image" (list $ (list "csiLivenessprobe" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - hostPath:
+            path: /var/lib/kubelet/plugins/csi-driver-lvm
+            type: DirectoryOrCreate
+          name: socket-dir
+        - hostPath:
+            path: /var/lib/kubelet/pods
+            type: DirectoryOrCreate
+          name: mountpoint-dir
+        - hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: Directory
+          name: registration-dir
+        - hostPath:
+            path: /var/lib/kubelet/plugins
+            type: Directory
+          name: plugins-dir
+        - hostPath:
+            path: /dev
+            type: Directory
+          name: dev-dir
+        - hostPath:
+            path: /lib/modules
+          name: mod-dir
+        - hostPath:
+            path: /etc/lvm/backup
+            type: DirectoryOrCreate
+          name: lvmbackup
+        - hostPath:
+            path: /etc/lvm/cache
+            type: DirectoryOrCreate
+          name: lvmcache
+        - hostPath:
+            path: /run/lock/lvm
+            type: DirectoryOrCreate
+          name: lvmlock

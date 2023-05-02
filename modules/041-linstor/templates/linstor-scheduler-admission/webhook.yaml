@@ -34,6 +34,8 @@ webhooks:
       - d8-cloud-provider-yandex
       - d8-ceph-csi
       - d8-local-path-provisioner
+      - d8-lvm-csi
+      - d8-sanlock-lvm-csi
       - d8-cni-flannel
       - d8-cni-simple-bridge
       - d8-cloud-instance-manager
