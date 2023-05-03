@@ -121,7 +121,9 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	AfterSuite(func() {
 		if renderRoles && renderMap != nil {
-			err := os.WriteFile("/tmp/rendered_templates.yaml", []byte(renderMap["user-authz/templates/cluster-roles.yaml"]), 0644)
+			renderFileName := os.Getenv("USER_AUTHZ_RENDER_FILE")
+			Expect(renderFileName).NotTo(Equal(""))
+			err := os.WriteFile(renderFileName, []byte(renderMap["user-authz/templates/cluster-roles.yaml"]), 0644)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 		err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")

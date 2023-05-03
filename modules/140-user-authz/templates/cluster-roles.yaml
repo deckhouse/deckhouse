@@ -232,13 +232,6 @@
   - create
   - patch
   - update
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - roles
-  - rolebindings
-  verbs:
-  {{- include "user_authz_verbs" "w" }}
 {{- end -}}
 
 {{- define "user_authz_cluster_editor_rules" }}
@@ -296,6 +289,8 @@
   resources:
   - clusterroles
   - clusterrolebindings
+  - roles
+  - rolebindings
   verbs:
 {{- include "user_authz_verbs" "w" }}
 {{- end }}
