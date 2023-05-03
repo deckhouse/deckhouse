@@ -21,12 +21,11 @@ import (
 	"errors"
 	"fmt"
 
-	eventsv1 "k8s.io/api/events/v1"
-
 	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -189,7 +188,7 @@ data:
 
 			event = dnode.buildEvent()
 			unst, _ := sdk.ToUnstructured(event)
-			f.BindingContextController.FakeCluster().Client.Dynamic().Resource(schema.GroupVersionResource{Resource: "events", Group: "events.k8s.io", Version: "v1"}).Namespace("default").Create(context.Background(), unst, v1.CreateOptions{})
+			_, _ = f.BindingContextController.FakeCluster().Client.Dynamic().Resource(schema.GroupVersionResource{Resource: "events", Group: "events.k8s.io", Version: "v1"}).Namespace("default").Create(context.Background(), unst, v1.CreateOptions{})
 		})
 
 		It("Should generate event", func() {
