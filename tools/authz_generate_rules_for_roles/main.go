@@ -78,7 +78,7 @@ var (
 		clusterEditorClusterRole, clusterAdminClusterRole,
 	}
 
-	neededСlusterRoleExcludes = map[string][]string{
+	neededClusterRoleExcludes = map[string][]string{
 		userClusterRole:           {},
 		privilegedUserClusterRole: {userClusterRole},
 		editorClusterRole:         {userClusterRole, privilegedUserClusterRole},
