@@ -22,6 +22,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	eventsv1 "k8s.io/api/events/v1"
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/sirupsen/logrus"
@@ -96,10 +100,12 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	return drainingNode{
-		Name:           node.Name,
-		DrainingSource: drainingSource,
-		DrainedSource:  drainedSource,
-		Unschedulable:  node.Spec.Unschedulable,
+		Name:            node.Name,
+		UID:             node.UID,
+		ResourceVersion: node.ResourceVersion,
+		DrainingSource:  drainingSource,
+		DrainedSource:   drainedSource,
+		Unschedulable:   node.Spec.Unschedulable,
 	}, nil
 }
 
@@ -158,11 +164,17 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		wg.Add(1)
-		go func(nodeName, drainingSource string) {
-			defer wg.Done()
-			err = drain.RunNodeDrain(drainHelper, nodeName)
-			drainingNodesC <- drainedNodeRes{NodeName: nodeName, DrainingSource: drainingSource, Err: err}
-		}(dNode.Name, dNode.DrainingSource)
+		go func(node drainingNode) {
+			err = drain.RunNodeDrain(drainHelper, node.Name)
+			drainingNodesC <- drainedNodeRes{
+				NodeName:            node.Name,
+				NodeUID:             node.UID,
+				NodeResourceVersion: node.ResourceVersion,
+				DrainingSource:      node.DrainingSource,
+				Err:                 err,
+			}
+			wg.Done()
+		}(dNode)
 	}
 
 	go func() {
@@ -172,7 +184,9 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
-			input.LogEntry.Errorf("node drain failed: %s", drainedNode.Err)
+			input.LogEntry.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
+			event := drainedNode.buildEvent()
+			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
 			continue
 		}
 		input.PatchCollector.MergePatch(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
@@ -203,10 +217,12 @@ var (
 )
 
 type drainingNode struct {
-	Name           string
-	DrainingSource string
-	DrainedSource  string
-	Unschedulable  bool
+	Name            string
+	UID             types.UID
+	ResourceVersion string
+	DrainingSource  string
+	DrainedSource   string
+	Unschedulable   bool
 }
 
 func (dn drainingNode) isDraining() bool {
@@ -218,7 +234,38 @@ func (dn drainingNode) isDrained() bool {
 }
 
 type drainedNodeRes struct {
-	NodeName       string
-	DrainingSource string
-	Err            error
+	NodeName            string
+	NodeUID             types.UID
+	NodeResourceVersion string
+	DrainingSource      string
+	Err                 error
+}
+
+func (dr drainedNodeRes) buildEvent() *eventsv1.Event {
+	return &eventsv1.Event{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "Event",
+			APIVersion: "events.k8s.io/v1",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			// Namespace field has to be filled - event will not be created without it
+			// and we have to set 'default' value here for linking this event with a Node object, which is global
+			Namespace:    "default",
+			GenerateName: "node-" + dr.NodeName + "-",
+		},
+		Regarding: corev1.ObjectReference{
+			Kind:            "Node",
+			Name:            dr.NodeName,
+			UID:             dr.NodeUID,
+			APIVersion:      "deckhouse.io/v1",
+			ResourceVersion: dr.NodeResourceVersion,
+		},
+		Reason:              "DrainFailed",
+		Note:                dr.Err.Error(),
+		Type:                "Warning",
+		EventTime:           v1.MicroTime{Time: time.Now()},
+		Action:              "Binding",
+		ReportingInstance:   "deckhouse",
+		ReportingController: "deckhouse",
+	}
 }
