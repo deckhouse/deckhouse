@@ -7,9 +7,6 @@ bashible:
         containerd:
           desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
           allowedPattern: "containerd.io-1.[1234]"
-      containerd:
-        desiredVersion: "containerd.io-1.6.18-3.1.el7.x86_64"
-        allowedPattern: ""
   alteros: &alteros
     '7':
       docker:
@@ -18,9 +15,6 @@ bashible:
         containerd:
           desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
           allowedPattern: "containerd.io-1.[1234]"
-      containerd:
-        desiredVersion: "containerd.io-1.6.18-3.1.el7.x86_64"
-        allowedPattern: ""
   astra: &astra
     '1.7':
       docker:
@@ -29,9 +23,6 @@ bashible:
         containerd:
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.18-1"
-        allowedPattern: ""
 k8s:
   '1.22':
     bashible:
