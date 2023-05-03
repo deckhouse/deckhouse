@@ -122,8 +122,6 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 				Memory:   resource.MustParse(memory + "Gi"),
 				RootDisk: resource.MustParse("0"),
 			})
-
-			res[0].RootDisk.IsZero()
 		}
 	}
 
