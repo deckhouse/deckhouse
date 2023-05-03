@@ -123,7 +123,7 @@ if [[ "$should_install_docker" == true ]]; then
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "centos" }}
   {{- $centosVersion := toString $key }}
   if bb-is-centos-version? {{ $centosVersion }} ; then
-    docker_tag="{{- index $.images.registrypackages (printf "dockerCentos%s%s" ($value.docker.desiredVersion | replace "docker-ce-" "" | replace "." "_" | replace ":" "_" | camelcase ) ($key | replace "." "")) }}"
+    docker_tag="{{- index $.images.registrypackages (printf "dockerCentos%s%s" ($value.docker.desiredVersion | replace "docker-ce-" "" | replace "." "_" | replace ":" "_" | camelcase ) $key) }}"
   fi
 {{- end }}
 

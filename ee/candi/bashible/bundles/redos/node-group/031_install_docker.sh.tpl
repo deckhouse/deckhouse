@@ -112,7 +112,7 @@ if [[ "$should_install_docker" == true ]]; then
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "redos" }}
   {{- $redosVersion := toString $key }}
   if bb-is-redos-version? {{ $redosVersion }} ; then
-    docker_tag="{{- index $.images.registrypackages (printf "dockerRedos%s%s" ($value.docker.desiredVersion | replace "docker-ce-" "" | replace "." "_" | replace ":" "_" | camelcase ) $key) }}"
+    docker_tag="{{- index $.images.registrypackages (printf "dockerRedos%s%s" ($value.docker.desiredVersion | replace "docker-ce-" "" | replace "." "_" | replace ":" "_" | camelcase ) ($key | replace "." "")) }}"
   fi
 {{- end }}
 
