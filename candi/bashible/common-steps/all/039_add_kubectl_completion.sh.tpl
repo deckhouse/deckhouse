@@ -26,8 +26,10 @@ if grep -qF '01;32m' /root/.bashrc; then
   sed -i 's/01;32m/01;31m/' /root/.bashrc
 fi
 
-mkdir -p /etc/bash_completion.d
-kubectl completion bash >/etc/bash_completion.d/kubectl
+if [ ! -f "/etc/bash_completion.d/kubectl" ]; then
+  mkdir -p /etc/bash_completion.d
+  kubectl completion bash >/etc/bash_completion.d/kubectl
+fi
 
 completion="if [ -f /etc/bash_completion ] && ! shopt -oq posix; then . /etc/bash_completion ; fi"
 if ! grep -qF -- "$completion"  /root/.bashrc; then
