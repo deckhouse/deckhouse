@@ -27,18 +27,26 @@ package template_tests
 import (
 	"encoding/base64"
 	"fmt"
+	"regexp"
+	"sort"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
+
+var (
+	zonesRE   = regexp.MustCompile(`--zone=([a-z]+)`)
+	projectRE = regexp.MustCompile(`--project=([a-z\-]+)`)
+)
 
 const globalValues = `
   clusterConfiguration:
@@ -266,4 +274,96 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
+	Context("Cloud data discoverer", func() {
+		deployment := func(f *Config) object_store.KubeObject {
+			return f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "cloud-data-discoverer")
+		}
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
+			f.ValuesSet("cloudProviderGcp.internal.providerClusterConfiguration.provider.serviceAccountJSON", `{"project_id": "my-proj"}`)
+			f.HelmRender()
+		})
+
+		It("Should render cloud data discoverer deployment with two containers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			d := deployment(f)
+			Expect(d.Exists()).To(BeTrue())
+
+			Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
+			Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+		})
+
+		It("Should render all zones in arguments", func() {
+			d := deployment(f)
+			Expect(d.Exists()).To(BeTrue())
+
+			args := d.Field("spec.template.spec.containers.0.args").Array()
+			zones := make([]string, 0, 2)
+
+			for _, a := range args {
+				found := zonesRE.FindAllStringSubmatch(a.String(), -1)
+				if len(found) > 0 {
+					zones = append(zones, found[0][1])
+				}
+			}
+
+			sort.Strings(zones)
+
+			Expect(zones).To(Equal([]string{"zonea", "zoneb"}))
+		})
+
+		It("Should render project in arguments", func() {
+			d := deployment(f)
+			Expect(d.Exists()).To(BeTrue())
+
+			args := d.Field("spec.template.spec.containers.0.args").Array()
+
+			project := ""
+			for _, a := range args {
+				found := projectRE.FindAllStringSubmatch(a.String(), -1)
+				if len(found) > 0 {
+					project = found[0][1]
+				}
+			}
+			Expect(project).To(Equal("my-proj"))
+		})
+
+		Context("vertical-pod-autoscaler-crd module enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
+				f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-gcp", "cloud-data-discoverer")
+				Expect(d.Exists()).To(BeTrue())
+			})
+		})
+
+		Context("vertical-pod-autoscaler-crd module disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `[]`)
+				f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-gcp", "cloud-data-discoverer")
+				Expect(d.Exists()).To(BeFalse())
+			})
+		})
+	})
 })
