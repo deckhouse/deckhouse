@@ -43,8 +43,8 @@ func gcpFlags(kpApp *kingpin.Application) {
 		Required().
 		StringsVar(&zones)
 
-	kpApp.Flag("project", "Zones for discovery").
-		Envar("GCP_ZONES").
+	kpApp.Flag("project", "Project for discovery").
+		Envar("GCP_PROJECT").
 		Required().
 		StringVar(&project)
 }
