@@ -83,9 +83,11 @@ var DefaultImagesTags = map[string]interface{}{
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
 	"cniCilium": map[string]interface{}{
-		"cilium":     "imageHash-cniCilium-cilium",
-		"operator":   "imageHash-cniCilium-operator",
-		"virtCilium": "imageHash-cniCilium-virtCilium",
+		"builderArtifact":        "imageHash-cniCilium-builderArtifact",
+		"builderRuntimeArtifact": "imageHash-cniCilium-builderRuntimeArtifact",
+		"cilium":                 "imageHash-cniCilium-cilium",
+		"operator":               "imageHash-cniCilium-operator",
+		"virtCilium":             "imageHash-cniCilium-virtCilium",
 	},
 	"cniFlannel": map[string]interface{}{
 		"flanneld": "imageHash-cniFlannel-flanneld",
