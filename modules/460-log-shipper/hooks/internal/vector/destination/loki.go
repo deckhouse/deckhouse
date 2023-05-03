@@ -61,6 +61,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 	// Asterisk is required here to expand all pod labels
 	// See https://github.com/vectordotdev/vector/pull/12041
 	labels := map[string]string{
+		// Kubernetes logs labels
 		"namespace":    "{{ namespace }}",
 		"container":    "{{ container }}",
 		"image":        "{{ image }}",
@@ -70,6 +71,11 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 		"stream":       "{{ stream }}",
 		"pod_labels_*": "{{ pod_labels }}",
 		"pod_owner":    "{{ pod_owner }}",
+		// File labels
+		// TODO(nabokihms): think about removing this label and always use the `node` labels.
+		//   If we do this right now, it will break already working setups.
+		"host": "{{ host }}",
+		// "file": "{{ file }}", The file label is excluded due to potential cardinality bomb
 	}
 
 	var dataField string

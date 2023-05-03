@@ -64,6 +64,7 @@ spec:
         - --alertmanager-instance-namespaces=d8-monitoring
         - --prometheus-instance-namespaces=d8-monitoring
         - --thanos-ruler-instance-namespaces=d8-monitoring
+        - --secret-field-selector=type!=kubernetes.io/dockercfg,type!=kubernetes.io/service-account-token,type!=helm.sh/release.v1
         - --web.listen-address=127.0.0.1:8080
         image: {{ include "helm_lib_module_image" (list . "prometheusOperator") }}
         name: prometheus-operator

@@ -46,7 +46,8 @@ var _ = Describe("Modules :: cloud-provider-azure :: hooks :: azure_cluster_conf
       "machineSize": "test",
       "urn": "test",
       "diskSizeGb": 50,
-      "diskType": "test"
+      "diskType": "test",
+      "etcdDiskType": "etcdTest"
     }
   },
   "provider": {
@@ -144,6 +145,9 @@ data:
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.instances.diskType").String()).To(Equal("test"))
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.instances.additionalTags").String()).To(Equal("{}"))
 
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.diskSizeGb").Int()).To(BeEquivalentTo(50))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb").Int()).To(BeEquivalentTo(20))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskType").String()).To(Equal("etcdTest"))
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.sshPublicKey").String()).To(Equal("ssh-rsa AAA"))
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.subscriptionId").String()).To(Equal("test"))
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.clientId").String()).To(Equal("test"))

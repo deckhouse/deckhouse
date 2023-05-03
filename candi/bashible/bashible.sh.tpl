@@ -25,11 +25,15 @@ function bb-event-error-create() {
     # bashible step and used events.k8s.io/v1 apiVersion.
     # eventName aggregates hostname with bashible step - sed keep only name and replace
     # underscore with dash due to regexp.
+    # nodeName is used for both .name and .uid fields intentionally as putting a real node uid
+    # has proven to have some side effects like missing events when describing objects
+    # using kubectl versions 1.23.x (https://github.com/deckhouse/deckhouse/issues/4609).
     # All of stderr outputs are stored in the eventLog file.
     # step is used as argument for function call.
     # If event creation failed, error from kubectl suppressed.
     step="$1"
     eventName="$(echo -n "$(hostname -s)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
+    nodeName="$(hostname -s)"
     eventLog="/var/lib/bashible/step.log"
     kubectl_exec apply -f - <<EOF || true
         apiVersion: events.k8s.io/v1
@@ -39,8 +43,8 @@ function bb-event-error-create() {
         regarding:
           apiVersion: v1
           kind: Node
-          name: '$(hostname -s)'
-          uid: "$(kubectl_exec get node $(hostname -s) -o jsonpath='{.metadata.uid}')"
+          name: ${nodeName}
+          uid: ${nodeName}
         note: '$(tail -c 500 ${eventLog})'
         reason: BashibleStepFailed
         type: Warning
@@ -66,13 +70,12 @@ function annotate_node() {
 
 function get_secret() {
   secret="$1"
-  max_retries="$2"
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
     until kubectl_exec -n d8-cloud-instance-manager get secret "$secret" -o json; do
       attempt=$(( attempt + 1 ))
-      if [ -n "${max_retries-}" ] && [ "$attempt" -gt "${max_retries}" ]; then
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
         exit 1
       fi
@@ -104,13 +107,12 @@ function get_secret() {
 function get_bundle() {
   resource="$1"
   name="$2"
-  max_retries="$3"
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
     until kubectl_exec get "$resource" "$name" -o json; do
       attempt=$(( attempt + 1 ))
-      if [ -n "${max_retries-}" ] && [ "$attempt" -gt "${max_retries}" ]; then
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
         exit 1
       fi
@@ -188,7 +190,7 @@ function main() {
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-    get_bundle bashible "${BUNDLE}.${NODE_GROUP}" "${MAX_RETRIES}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
+    get_bundle bashible "${BUNDLE}.${NODE_GROUP}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
       exit 1
@@ -219,13 +221,13 @@ function main() {
 
   if [ -z "${is_local-}" ]; then
     # update bashbooster library for idempotent scripting
-    get_secret bashible-bashbooster -o json | jq -r '.data."bashbooster.sh"' | base64 -d > $BOOTSTRAP_DIR/bashbooster.sh
+    get_secret bashible-bashbooster | jq -r '.data."bashbooster.sh"' | base64 -d > $BOOTSTRAP_DIR/bashbooster.sh
 
     # Get steps from bashible apiserver
 
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
-    ng_steps_collection="$(  get_bundle nodegroupbundle  "${BUNDLE}.${NODE_GROUP}"   | jq -rc '.data')"
+    ng_steps_collection="$(get_bundle nodegroupbundle "${BUNDLE}.${NODE_GROUP}" | jq -rc '.data')"
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
       jq -r --arg step "$step" '.[$step] // ""' <<< "$ng_steps_collection" > "$BUNDLE_STEPS_DIR/$step"

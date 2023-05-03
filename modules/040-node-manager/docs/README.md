@@ -1,5 +1,6 @@
 ---
 title: "Managing nodes"
+description: Deckhouse manages nodes of a Kubernetes cluster as a related group, configures and updates Kubernetes cluster node components, manages cluster scaling in the cloud, and manages Linux users on nodes.
 ---
 
 ## Primary functions
@@ -11,7 +12,7 @@ The `node-manager` module is responsible for managing nodes and has the followin
 2. **Chaos monkey** — the systemic termination of nodes. This feature tests the resilience of cluster elements and running applications.
 3. Installing, updating, and configuring the node software (containerd, kubelet, etc.), connecting the node to the cluster:
     * Installing operating system (see the list of [supported OS](../../supported_versions.html#linux)) regardless of the infrastructure used (any cloud/any hardware).
-    * The operating system's basic setup (disabling auto-update, installing the necessary packages, configuring logging parameters, configuring iptables, etc.).
+    * The operating system's basic setup (disabling auto-update, installing the necessary packages, configuring logging parameters, etc.).
     * Configuring nginx (and the system for automatically updating the lsit of upstreams) to balance node (kubelet) requests over API servers.
     * Installing and configuring CRI containerd and Kubernetes, adding the node to the cluster.
     * Managing node updates and their downtime (disruptions):
@@ -69,7 +70,7 @@ The supported Kubernetes version is specified in parameters right down to the mi
 Deckhouse automatically deploys cluster nodes by performing the following **idempotent** operations:
 - Configuring the OS and optimizing it for containerd and Kubernetes:
   - Installing the needed packages from the distribution's repository.
-  - Configuring kernel parameters, iptables, logging, log rotation, and other system parameters.
+  - Configuring kernel parameters, logging, log rotation, and other system parameters.
 - Installing the appropriate versions of containerd and kubelet; adding the node to the Kubernetes cluster.
 - Configuring Nginx and updating the list of upstream resources for balancing node requests to the Kubernetes API.
 

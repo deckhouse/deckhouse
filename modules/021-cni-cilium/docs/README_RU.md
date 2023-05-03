@@ -1,5 +1,6 @@
 ---
 title: "Модуль cni-cilium"
+description: Модуль cni-cilium Deckhouse обеспечивает работу сети в кластере Kubernetes с помощью cilium.
 ---
 
 Обеспечивает работу сети в кластере с помощью модуля [cilium](https://cilium.io/).

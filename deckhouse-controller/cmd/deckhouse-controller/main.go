@@ -19,6 +19,7 @@ import (
 	"fmt"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	ad_app "github.com/flant/addon-operator/pkg/app"
@@ -65,11 +66,12 @@ const (
 func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
+	FileName := filepath.Base(os.Args[0])
 
-	kpApp := kingpin.New(AppName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
+	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
 
 	// override usage template to reveal additional commands with information about start command
-	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(AppName))
+	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(FileName))
 
 	// print version
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {

@@ -33,6 +33,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager124": "imageHash-cloudProviderAws-cloudControllerManager124",
 		"cloudControllerManager125": "imageHash-cloudProviderAws-cloudControllerManager125",
 		"cloudControllerManager126": "imageHash-cloudProviderAws-cloudControllerManager126",
+		"cloudDataDiscoverer":       "imageHash-cloudProviderAws-cloudDataDiscoverer",
 		"ebsCsiPlugin":              "imageHash-cloudProviderAws-ebsCsiPlugin",
 		"nodeTerminationHandler":    "imageHash-cloudProviderAws-nodeTerminationHandler",
 	},
@@ -43,6 +44,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager124": "imageHash-cloudProviderAzure-cloudControllerManager124",
 		"cloudControllerManager125": "imageHash-cloudProviderAzure-cloudControllerManager125",
 		"cloudControllerManager126": "imageHash-cloudProviderAzure-cloudControllerManager126",
+		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
 	},
 	"cloudProviderGcp": map[string]interface{}{
 		"cloudControllerManager122": "imageHash-cloudProviderGcp-cloudControllerManager122",
@@ -50,6 +52,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager124": "imageHash-cloudProviderGcp-cloudControllerManager124",
 		"cloudControllerManager125": "imageHash-cloudProviderGcp-cloudControllerManager125",
 		"cloudControllerManager126": "imageHash-cloudProviderGcp-cloudControllerManager126",
+		"cloudDataDiscoverer":       "imageHash-cloudProviderGcp-cloudDataDiscoverer",
 		"pdCsiPlugin":               "imageHash-cloudProviderGcp-pdCsiPlugin",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
@@ -84,9 +87,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
 	"cniCilium": map[string]interface{}{
-		"cilium":     "imageHash-cniCilium-cilium",
-		"operator":   "imageHash-cniCilium-operator",
-		"virtCilium": "imageHash-cniCilium-virtCilium",
+		"builderArtifact":        "imageHash-cniCilium-builderArtifact",
+		"builderRuntimeArtifact": "imageHash-cniCilium-builderRuntimeArtifact",
+		"cilium":                 "imageHash-cniCilium-cilium",
+		"operator":               "imageHash-cniCilium-operator",
+		"virtCilium":             "imageHash-cniCilium-virtCilium",
 	},
 	"cniFlannel": map[string]interface{}{
 		"flanneld": "imageHash-cniFlannel-flanneld",
@@ -175,9 +180,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"deckhouseConfig": map[string]interface{}{
 		"deckhouseConfigWebhook": "imageHash-deckhouseConfig-deckhouseConfigWebhook",
 	},
-	"deckhouseWeb": map[string]interface{}{
-		"web": "imageHash-deckhouseWeb-web",
-	},
 	"delivery": map[string]interface{}{
 		"argocd":               "imageHash-delivery-argocd",
 		"argocdImageUpdater":   "imageHash-delivery-argocdImageUpdater",
@@ -186,6 +188,9 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"descheduler": map[string]interface{}{
 		"descheduler": "imageHash-descheduler-descheduler",
+	},
+	"documentation": map[string]interface{}{
+		"web": "imageHash-documentation-web",
 	},
 	"extendedMonitoring": map[string]interface{}{
 		"certExporter":               "imageHash-extendedMonitoring-certExporter",
@@ -312,7 +317,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"prometheus": map[string]interface{}{
 		"alertmanager":                "imageHash-prometheus-alertmanager",
-		"alertsReceiverWebhook":       "imageHash-prometheus-alertsReceiverWebhook",
+		"alertsReceiver":              "imageHash-prometheus-alertsReceiver",
 		"grafana":                     "imageHash-prometheus-grafana",
 		"grafanaDashboardProvisioner": "imageHash-prometheus-grafanaDashboardProvisioner",
 		"prometheus":                  "imageHash-prometheus-prometheus",
@@ -350,7 +355,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"crictl126":                           "imageHash-registrypackages-crictl126",
 		"d8Curl801":                           "imageHash-registrypackages-d8Curl801",
 		"dockerAlteros1903153El7X866473":      "imageHash-registrypackages-dockerAlteros1903153El7X866473",
-		"dockerAltlinux201021Alt1X8664":       "imageHash-registrypackages-dockerAltlinux201021Alt1X8664",
+		"dockerAltlinux2301Alt1X8664":         "imageHash-registrypackages-dockerAltlinux2301Alt1X8664",
 		"dockerAstra520101230DebianBuster":    "imageHash-registrypackages-dockerAstra520101230DebianBuster",
 		"dockerCentos1903153El7X86647":        "imageHash-registrypackages-dockerCentos1903153El7X86647",
 		"dockerCentos1903153El8X86648":        "imageHash-registrypackages-dockerCentos1903153El8X86648",
@@ -386,10 +391,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"virtWhatDebian1151Deb9u1":            "imageHash-registrypackages-virtWhatDebian1151Deb9u1",
 	},
 	"runtimeAuditEngine": map[string]interface{}{
-		"falco":             "imageHash-runtimeAuditEngine-falco",
-		"falcoDriverLoader": "imageHash-runtimeAuditEngine-falcoDriverLoader",
-		"falcosidekick":     "imageHash-runtimeAuditEngine-falcosidekick",
-		"rulesLoader":       "imageHash-runtimeAuditEngine-rulesLoader",
+		"falco":         "imageHash-runtimeAuditEngine-falco",
+		"falcosidekick": "imageHash-runtimeAuditEngine-falcosidekick",
+		"rulesLoader":   "imageHash-runtimeAuditEngine-rulesLoader",
 	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",

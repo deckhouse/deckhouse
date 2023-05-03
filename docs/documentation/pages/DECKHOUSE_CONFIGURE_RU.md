@@ -53,7 +53,7 @@ spec:
 $ kubectl get moduleconfigs
 NAME                STATE      VERSION    STATUS    AGE
 deckhouse           Enabled    1                    12h
-deckhouse-web       Enabled    2                    12h
+documentation       Enabled    2                    12h
 global              Enabled    1                    12h
 prometheus          Enabled    2                    12h
 upmeter             Disabled   2                    12h
@@ -71,7 +71,7 @@ kubectl -n d8-system edit moduleconfig/upmeter
 
 ## Настройка модуля
 
-> При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/VALUES.md). Будем признательны, если поставите проекту *звезду*.
+> При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). Будем признательны, если поставите проекту *звезду*.
 
 Модуль настраивается с помощью custom resource `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case). Custom resource `ModuleConfig` имеет следующие поля:
 

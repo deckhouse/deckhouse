@@ -77,7 +77,7 @@ if [[ "$should_install_containerd" == true ]]; then
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "altlinux" }}
   {{- $altlinuxVersion := toString $key }}
   if bb-is-altlinux-version? {{ $altlinuxVersion }} ; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdAltlinux%s" ($value.containerd.desiredVersion | replace "containerd-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
+    containerd_tag="{{- index $.images.registrypackages (printf "containerdAltlinux%s" ($value.docker.containerd.desiredVersion | replace "containerd-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
   fi
 {{- end }}
 

@@ -196,7 +196,7 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 	}
 	got := newKubernetesStorageClass(&tp, 2)
 
-	volBindMode := storagev1.VolumeBindingImmediate
+	volBindMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 
 	expected := storagev1.StorageClass{
@@ -226,7 +226,7 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 }
 
 func TestAllParametersAreSet(t *testing.T) {
-	volBindMode := storagev1.VolumeBindingImmediate
+	volBindMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 
 	oldSC := &storagev1.StorageClass{
@@ -275,7 +275,8 @@ func TestAllParametersAreSet(t *testing.T) {
 }
 
 func TestAppendOldParameters(t *testing.T) {
-	volBindMode := storagev1.VolumeBindingImmediate
+	oldVolBindMode := storagev1.VolumeBindingImmediate
+	volBindMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 
 	oldSC := &storagev1.StorageClass{
@@ -289,7 +290,7 @@ func TestAppendOldParameters(t *testing.T) {
 			},
 		},
 		Provisioner:          "linstor.csi.linbit.com",
-		VolumeBindingMode:    &volBindMode,
+		VolumeBindingMode:    &oldVolBindMode,
 		AllowVolumeExpansion: pointer.BoolPtr(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{

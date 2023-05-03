@@ -7,32 +7,32 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "alerts-receiver")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
-  name: alerts-receiver
-  namespace: d8-monitoring
+  name: d8:prometheus:alerts-receiver
   {{- include "helm_lib_module_labels" (list . (dict "app" "alerts-receiver")) | nindent 2 }}
 rules:
-  - apiGroups: ["events.k8s.io"]
+  - apiGroups: ["deckhouse.io"]
     resources:
-    - events
+    - clusteralerts
+    - clusteralerts/status
     verbs:
     - get
     - list
     - create
     - update
     - patch
+    - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
-  name: alerts-receiver
-  namespace: d8-monitoring
+  name: d8:prometheus:alerts-receiver
   {{- include "helm_lib_module_labels" (list . (dict "app" "alerts-receiver")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: alerts-receiver
+  kind: ClusterRole
+  name: d8:prometheus:alerts-receiver
 subjects:
 - kind: ServiceAccount
   name: alerts-receiver

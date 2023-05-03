@@ -176,7 +176,7 @@ var skipOssChecks = map[string]struct{}{
 	"500-okmeter":                             {},
 	"500-upmeter":                             {},
 	"600-secret-copier":                       {},
-	"810-deckhouse-web":                       {},
+	"810-documentation":                       {},
 }
 
 // TODO When lintignore files will be implemented in modules, detect "oss.yaml" line in it

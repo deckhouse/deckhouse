@@ -21,7 +21,7 @@ kubectl get mc global -o yaml
 
 ## How do I find the documentation for the version installed?
 
-> Documentation in the cluster is available when the [deckhouse-web](modules/810-deckhouse-web/) module is enabled (it is enabled by default except the `Minimal` [bundle](modules/002-deckhouse/configuration.html#parameters-bundle)).
+> Documentation in the cluster is available when the [documentation](modules/810-documentation/) module is enabled (it is enabled by default except the `Minimal` [bundle](modules/002-deckhouse/configuration.html#parameters-bundle)).
 
 The documentation for the Deckhouse version running in the cluster is available at `deckhouse.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the `global.modules.publicDomainTemplate` parameter.
 
@@ -254,6 +254,8 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    ```shell
    ./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username <USERNAME> --password <PASSWORD>
    ```
+
+   > Note! Please, refer to the documentation of your registry to properly specify the `--path` value. For example, for `Harbor` it can be `harbor.registry.com/deckhouse/deckhouse`, but not `harbor.registry.com/deckhouse`.
 
 ## How to bootstrap a cluster and run Deckhouse without the usage of release channels?
 

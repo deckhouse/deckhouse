@@ -115,8 +115,7 @@ apiVersions:
                 type: integer
               etcdDisk:
                 type: object
-                # Before changing the defaults, remove hook modules/030-cloud-provider-aws/hooks/set_etcd_disk_old_hardcoded_size_in_provider_configuration.go
-                default: {sizeGb: 150, type: "gp2"}
+                default: {sizeGb: 20, type: "gp3"}
                 properties:
                   sizeGb:
                     description: Etcd disk size in gigabytes.
@@ -171,7 +170,7 @@ apiVersions:
                   description: |
                     A list of labels to attach to cluster resources.
 
-                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
                   x-doc-example: |
@@ -185,7 +184,7 @@ apiVersions:
                   additionalProperties:
                     type: string
                   description: |
-                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -194,7 +193,7 @@ apiVersions:
                 taints:
                   type: array
                   description: |
-                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                     > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |

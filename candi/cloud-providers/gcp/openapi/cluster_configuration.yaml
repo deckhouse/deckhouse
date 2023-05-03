@@ -147,6 +147,11 @@ apiVersions:
                 description: Instance disk size in gigabytes.
                 example: 20
                 type: integer
+              etcdDiskSizeGb:
+                description: Etcd disk size in gigabytes.
+                example: 20
+                default: 20
+                type: integer
               disableExternalIP:
                 type: boolean
                 enum: [true, false]
@@ -186,17 +191,17 @@ apiVersions:
               properties:
                 labels:
                   type: object
-                  description: The same as the `metadata.labels` standard (https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                  description: The same as the `metadata.labels` standard (https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   additionalProperties:
                     type: string
                 annotations:
                   type: object
-                  description: The same as the `metadata.annotations` (https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                  description: The same as the `metadata.annotations` (https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   additionalProperties:
                     type: string
                 taints:
                   type: array
-                  description: The same as the `.spec.taints` field of the Node object(https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core). **CAUTION!** Only the `effect`, `key`, `values` fields are available
+                  description: The same as the `.spec.taints` field of the Node object(https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core). **CAUTION!** Only the `effect`, `key`, `values` fields are available
                   items:
                     type: object
                     properties:

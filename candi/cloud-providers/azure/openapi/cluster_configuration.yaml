@@ -176,7 +176,7 @@ apiVersions:
                 type: integer
               diskType:
                 description: |
-                  The type of the volume to create.
+                  The type of the volumes to create.
 
                   You can view a list of available volume types using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
 
@@ -185,6 +185,12 @@ apiVersions:
                   ```
                 example: StandardSSD_LRS
                 type: string
+              etcdDiskSizeGb:
+                description: |
+                  Etcd disk size in gigabytes.
+                example: 20
+                default: 20
+                type: integer
               additionalTags:
                 description: |
                   The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
@@ -240,7 +246,7 @@ apiVersions:
                   description: |
                     A list of labels to attach to cluster resources.
 
-                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
 
@@ -256,7 +262,7 @@ apiVersions:
                     type: string
                 annotations:
                   description: |
-                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -267,7 +273,7 @@ apiVersions:
                     type: string
                 taints:
                   description: |
-                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                     > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |

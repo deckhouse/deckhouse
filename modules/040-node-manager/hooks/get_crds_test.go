@@ -25,7 +25,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"k8s.io/apimachinery/pkg/api/resource"
 
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -352,6 +354,7 @@ metadata:
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.23.5", "kubernetesVersions":["1.23.5"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},},"nodeManager":{"internal": {"static": {"internalNetworkCIDRs":["172.18.200.0/24"]}}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "InstanceTypesCatalog", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 
 	Context("Cluster with NGs, MDs and provider secret", func() {
@@ -1286,6 +1289,15 @@ spec:
 		})
 	})
 
+	assertNodeCapacity := func(f *HookExecutionConfig, expectType v1alpha1.InstanceType) {
+		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").Exists()).To(BeTrue())
+
+		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.name").String()).To(Equal(expectType.Name))
+		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.cpu").String()).To(Equal(expectType.CPU.String()))
+		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.memory").String()).To(Equal(expectType.Memory.String()))
+		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.rootDisk").String()).To(Equal(expectType.RootDisk.String()))
+	}
+
 	Context("ScaleFromZero: can't find a capacity", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -1345,6 +1357,7 @@ kind: D8TestInstanceClass
 metadata:
   name: cap
 spec:
+  type: test
   capacity:
     cpu: 4
     memory: 8Gi
@@ -1357,8 +1370,69 @@ spec:
 			// cloudInstances field exists
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances").Exists()).To(BeTrue())
 			// nodeCapacity field does not exist
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").String()).To(Equal(`{"cpu":"4","memory":"8Gi"}`))
+			assertNodeCapacity(f, v1alpha1.InstanceType{
+				CPU:    resource.MustParse("4"),
+				Memory: resource.MustParse("8Gi"),
+			})
+		})
+	})
+
+	Context("ScaleFromZero: using catalog", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InstanceTypesCatalog
+metadata:
+  name: for-cluster-autoscaler
+instanceTypes:
+- name: test
+  cpu: "8"
+  memory: "16Gi"
+  rootDisk: "20Gi"
+- name: not-used
+  cpu: "1"
+  memory: "1Gi"
+  rootDisk: "10Gi"
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 0
+    maxPerZone: 3
+    classReference:
+      kind: D8TestInstanceClass
+      name: cap
+    zones: [a,b]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: cap
+spec:
+  type: test
+  capacity:
+    cpu: 4
+    memory: 8Gi
+`))
+			f.RunHook()
+		})
+
+		It("NodeGroup values must be valid and get from catalog", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// cloudInstances field exists
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances").Exists()).To(BeTrue())
+			// nodeCapacity field does not exist
+			assertNodeCapacity(f, v1alpha1.InstanceType{
+				CPU:      resource.MustParse("8"),
+				Memory:   resource.MustParse("16Gi"),
+				RootDisk: resource.MustParse("20Gi"),
+				Name:     "test",
+			})
 		})
 	})
 })

@@ -31,7 +31,7 @@ resource "google_compute_disk" "kubernetes_data" {
   zone   = local.zone
   name   = join("-", [local.prefix, "kubernetes-data", var.nodeIndex])
   type   = "pd-ssd"
-  size   = 20
+  size   = local.etcd_disk_size_gb
   labels = local.additional_labels
 }
 

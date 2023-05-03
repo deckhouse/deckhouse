@@ -29,7 +29,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 )
 
 func applyMasterPassphraseFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -57,8 +56,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"linstor-passphrase"},
 			},
-			FilterFunc:          applyMasterPassphraseFilter,
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc: applyMasterPassphraseFilter,
 		},
 	},
 }, applyMasterPassphrase)

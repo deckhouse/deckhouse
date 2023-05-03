@@ -126,12 +126,12 @@ It is recommended to provide the Deckhouse components with fast disks (the [stor
 ## Configuring alerts
 
 {% alert %}
-You can send alerts using the [internal](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Alertmanager or connect the [external](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) one.
+You can send alerts using the [internal](/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Alertmanager or connect the [external](/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) one.
 {% endalert %}
 
-Monitoring will work out of the box once Deckhouse is installed, however, it is not enough for production clusters. Configure the Alertmanager [built in](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse  or [connect your](/documentation/v1.44/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) own Alertmanager to receive incident notifications.
+Monitoring will work out of the box once Deckhouse is installed, however, it is not enough for production clusters. Configure the Alertmanager [built in](/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse  or [connect your](/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) own Alertmanager to receive incident notifications.
 
-Using the [CustomAlertmanager](/documentation/v1.44/modules/300-prometheus/cr.html#customalertmanager) custom resource, you can configure sending alerts to an [e-mail](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/documentation/v1/modules/300-prometheus/usage.html#sending-alerts-to-telegram), via the [webhook](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
+Using the [CustomAlertmanager](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager) custom resource, you can configure sending alerts to an [e-mail](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/documentation/v1/modules/300-prometheus/usage.html#sending-alerts-to-telegram), via the [webhook](/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
 
 ## Collecting logs
 
@@ -141,7 +141,7 @@ Using the [CustomAlertmanager](/documentation/v1.44/modules/300-prometheus/cr.ht
 
 Set up centralized log collection from system and user applications using the [log-shipper](/documentation/v1/modules/460-log-shipper/) module.
 
-All you have to do is to create a custom resource specifying *what to collect*: [ClusterLoggingConfig](/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig) or [PodLoggingConfig](/documentation/v1/modules/460-log-shipper/cr. html#podloggingconfig); and create a custom resource that specifies where to *send* the collected logs: [ClusterLogDestination](/documentation/v1/modules/460-log-shipper/cr.html#clusterlogdestination).
+All you have to do is to create a custom resource specifying *what to collect*: [ClusterLoggingConfig](/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig) or [PodLoggingConfig](/documentation/v1/modules/460-log-shipper/cr.html#podloggingconfig); and create a custom resource that specifies where to *send* the collected logs: [ClusterLogDestination](/documentation/v1/modules/460-log-shipper/cr.html#clusterlogdestination).
 
 Reference:
 - [Grafana Loki example](/documentation/v1/modules/460-log-shipper/examples.html#getting-logs-from-all-cluster-pods-and-sending-them-to-loki)

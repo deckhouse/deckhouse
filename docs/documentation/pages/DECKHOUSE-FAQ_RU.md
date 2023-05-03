@@ -22,7 +22,7 @@ kubectl get mc global -o yaml
 
 ## Как найти документацию по установленной у меня версии?
 
-> Документация доступна внутри кластера при включенном модуле [deckhouse-web](modules/810-deckhouse-web/) (включен по умолчанию, кроме [варианта поставки](modules/002-deckhouse/configuration.html#parameters-bundle) `Minimal`).
+> Документация доступна внутри кластера при включенном модуле [documentation](modules/810-documentation/) (включен по умолчанию, кроме [варианта поставки](modules/002-deckhouse/configuration.html#parameters-bundle) `Minimal`).
 
 Документация запущенной в кластере версии Deckhouse доступна по адресу `deckhouse.<cluster_domain>`, где `<cluster_domain>` — DNS имя в соответствии с шаблоном из параметра `global.modules.publicDomainTemplate` конфигурации.
 
@@ -257,6 +257,8 @@ spec:
    ```shell
    ./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username <USERNAME> --password <PASSWORD>
    ```
+
+   > Внимание! Обратитесь к документации вашего регистри, чтобы правильно указать значение флага `--path`. Например, для `Harbor` значение может быть `harbor.registry.com/deckhouse/deckhouse`, но не `harbor.registry.com/deckhouse`.
 
 ## Как создать кластер и запустить Deckhouse без использования каналов обновлений?
 

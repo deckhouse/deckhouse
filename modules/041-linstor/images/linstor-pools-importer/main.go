@@ -163,10 +163,10 @@ func provisionStoragePools(ctx context.Context, lc *lclient.Client, kc kclient.C
 					return
 				}
 				for _, cand := range candidates {
-					if _, yes := seen[cand.UUID]; yes {
+					if _, yes := seen[cand.UUID+"+"+cand.StoragePool.StoragePoolName]; yes {
 						continue
 					}
-					seen[cand.UUID] = struct{}{}
+					seen[cand.UUID+"+"+cand.StoragePool.StoragePoolName] = struct{}{}
 					candiCh <- cand
 				}
 			case <-ctx.Done():
@@ -542,7 +542,7 @@ func newKubernetesEvent(nodeName string, involvedObject v1.ObjectReference, even
 }
 
 func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.StorageClass {
-	volBindMode := storagev1.VolumeBindingImmediate
+	volBindMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 	return storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -567,6 +567,9 @@ func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.Storage
 }
 
 func allParametersAreSet(sc, oldSC *storagev1.StorageClass) bool {
+	if oldSC.VolumeBindingMode != sc.VolumeBindingMode {
+		return false
+	}
 	for k := range sc.Parameters {
 		if oldSC.Parameters[k] != sc.Parameters[k] {
 			return false

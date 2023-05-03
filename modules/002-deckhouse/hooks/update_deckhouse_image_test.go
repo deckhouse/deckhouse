@@ -68,7 +68,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(f).To(ExecuteSuccessfully())
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
-			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.26.0")
 			Expect(rl.Field("status.message").String()).To(Equal("Release is waiting for the update window: 02 Jan 21 08:00 UTC"))
 		})
 	})
@@ -144,7 +144,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(f).To(ExecuteSuccessfully())
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.1"))
-			patchRelease := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1")
+			patchRelease := f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.1")
 			Expect(patchRelease.Field("status.approved").Bool()).To(Equal(true))
 		})
 	})
@@ -279,7 +279,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		It("Should update deckhouse deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.1").Field("status.phase").String()).To(Equal("Deployed"))
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.1"))
 		})
@@ -296,7 +296,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		It("Should update deckhouse deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.1").Field("status.phase").String()).To(Equal("Deployed"))
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.1"))
 		})
@@ -311,10 +311,10 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		It("Should update deckhouse deployment for latest patch", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-3").Field("status.phase").String()).To(Equal("Deployed"))
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-2").Field("status.phase").String()).To(Equal("Skipped"))
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1").Field("status.phase").String()).To(Equal("Skipped"))
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-32-0").Field("status.phase").String()).To(Equal("Pending"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.3").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.2").Field("status.phase").String()).To(Equal("Skipped"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.1").Field("status.phase").String()).To(Equal("Skipped"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.32.0").Field("status.phase").String()).To(Equal("Pending"))
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.31.3"))
 		})
@@ -329,9 +329,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		It("Should update deckhouse even on suspended forced release", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1").Field("status.phase").String()).To(Equal("Deployed"))
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1").Field("metadata.annotations.release\\.deckhouse\\.io/force").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Field("status.phase").String()).To(Equal("Superseded"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.1").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.1").Field("metadata.annotations.release\\.deckhouse\\.io/force").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.0").Field("status.phase").String()).To(Equal("Superseded"))
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.31.1"))
 		})
@@ -346,8 +346,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		It("Should keep deckhouse deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			r1250 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0")
-			r1251 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1")
+			r1250 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0")
+			r1251 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.1")
 			Expect(r1250.Field("status.phase").String()).To(Equal("Deployed"))
 			Expect(r1251.Field("status.phase").String()).To(Equal("Pending"))
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
@@ -364,8 +364,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 			It("Should upgrade deckhouse deployment", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				r1250 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0")
-				r1251 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1")
+				r1250 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0")
+				r1251 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.1")
 				Expect(r1250.Field("status.phase").String()).To(Equal("Superseded"))
 				Expect(r1251.Field("status.phase").String()).To(Equal("Deployed"))
 				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
@@ -383,9 +383,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		It("Should update deckhouse deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			r1250 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0")
-			r1251 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1")
-			r1252 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-2")
+			r1250 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0")
+			r1251 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.1")
+			r1252 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.2")
 			Expect(r1250.Field("status.phase").String()).To(Equal("Superseded"))
 			Expect(r1251.Field("status.phase").String()).To(Equal("Suspended"))
 			Expect(r1251.Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
@@ -413,7 +413,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		It("Should not update deckhouse deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0")
+			r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.0")
 			Expect(r130.Field("status.phase").String()).To(Equal("Pending"))
 			Expect(r130.Field("status.message").String()).To(Equal(`"k8s" requirement for DeckhouseRelease "1.30.0" not met: min k8s version failed`))
 			Expect(f.MetricsCollector.CollectedMetrics()[2].Name).To(Equal("d8_release_blocked"))
@@ -431,7 +431,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 			It("Should update deckhouse deployment", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0")
+				r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.0")
 				Expect(r130.Field("status.phase").String()).To(Equal("Deployed"))
 				Expect(r130.Field("status.message").String()).To(Equal(``))
 				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
@@ -458,9 +458,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		It("Should block the release", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
+			r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.36.0")
 			Expect(r136.Field("status.phase").String()).To(Equal("Pending"))
-			Expect(r136.Field("status.message").String()).To(Equal("Release requires disruption approval (`kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true`): some test reason"))
+			Expect(r136.Field("status.message").String()).To(Equal("Release requires disruption approval (`kubectl annotate DeckhouseRelease v1.36.0 release.deckhouse.io/disruption-approved=true`): some test reason"))
 		})
 
 		Context("Disruption release approved", func() {
@@ -473,7 +473,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 			It("Should deploy the release", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
+				r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.36.0")
 				Expect(r136.Field("status.phase").String()).To(Equal("Deployed"))
 				Expect(r136.Field("status.message").String()).To(Equal(""))
 			})
@@ -503,7 +503,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(httpBody).To(ContainSubstring("New Deckhouse Release 1.26 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC"))
 			Expect(httpBody).To(ContainSubstring(`"version":"1.26"`))
-			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.26.0")
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
 			Expect(cm.Field("data.notified").Bool()).To(BeTrue())
 			Expect(r126.Field("status.phase").String()).To(Equal("Pending"))
@@ -519,7 +519,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-0
+  name: v1.25.0
 spec:
   version: "v1.25.0"
 status:
@@ -528,7 +528,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-26-0
+  name: v1.26.0
 spec:
   applyAfter: "2019-01-01T01:01:00Z"
   version: v1.26.0
@@ -551,7 +551,7 @@ metadata:
 		It("Release should be deployed", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
-			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.26.0")
 			Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
 			Expect(cm.Field("data.isUpdating").Bool()).To(BeTrue())
 			Expect(cm.Field("data.notified").Bool()).To(BeFalse())
@@ -565,7 +565,7 @@ metadata:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-26-0
+  name: v1.26.0
 spec:
   version: "v1.26.0"
 status:
@@ -585,7 +585,7 @@ metadata:
 		})
 		It("IsUpdating flag should be reset", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.26.0")
 			Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
 			Expect(cm.Field("data.isUpdating").Bool()).To(BeFalse())
@@ -620,7 +620,7 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(httpBody).To(ContainSubstring("New Deckhouse Release 1.36 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC"))
 			Expect(httpBody).To(ContainSubstring(`"version":"1.36"`))
-			r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
+			r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.36.0")
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
 			Expect(cm.Field("data.notified").Bool()).To(BeTrue())
 			Expect(r136.Field("status.phase").String()).To(Equal("Pending"))
@@ -767,7 +767,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-0
+  name: v1.25.0
 spec:
   version: "v1.25.0"
 status:
@@ -776,7 +776,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-26-0
+  name: v1.26.0
 spec:
   version: "v1.26.0"
 `
@@ -786,7 +786,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-0
+  name: v1.25.0
 spec:
   version: "v1.25.0"
 status:
@@ -795,7 +795,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-26-0
+  name: v1.26.0
 spec:
   version: "v1.26.0"
 approved: true
@@ -807,7 +807,7 @@ approved: true
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-1
+  name: v1.25.1
 spec:
   version: "v1.25.1"
 `
@@ -818,7 +818,7 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  name: v1-26-2
+  name: v1.26.2
 spec:
   version: v1.26.2
 status:
@@ -830,7 +830,7 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  name: v1-27-0
+  name: v1.27.0
 spec:
   version: v1.27.0
 ---
@@ -844,7 +844,7 @@ metadata:
 spec:
   containers:
     - name: deckhouse
-      image: dev-registry.deckhouse.io/sys/deckhouse-oss:1-26-2
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:1.26.2
 status:
   containerStatuses:
     - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
@@ -869,7 +869,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-0
+  name: v1.25.0
 spec:
   version: "v1.25.0"
 status:
@@ -878,7 +878,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-1
+  name: v1.25.1
   annotations:
     release.deckhouse.io/suspended: "true"
 spec:
@@ -889,7 +889,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-2
+  name: v1.25.2
 spec:
   version: "v1.25.2"
 status:
@@ -901,7 +901,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-0
+  name: v1.25.0
 spec:
   version: "v1.25.0"
 status:
@@ -910,7 +910,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-1
+  name: v1.25.1
 spec:
   version: "v1.25.1"
   applyAfter: "2222-11-11T23:23:23Z"
@@ -923,7 +923,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-35-0
+  name: v1.35.0
 spec:
   version: "v1.35.0"
 status:
@@ -932,7 +932,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-36-0
+  name: v1.36.0
 spec:
   version: "v1.36.0"
   applyAfter: "2222-11-11T23:23:23Z"
@@ -945,7 +945,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-29-0
+  name: v1.29.0
 spec:
   version: "v1.29.0"
 status:
@@ -954,7 +954,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-30-0
+  name: v1.30.0
 spec:
   version: "v1.30.0"
   requirements:
@@ -967,7 +967,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-31-0
+  name: v1.31.0
 spec:
   version: "v1.31.0"
 status:
@@ -976,7 +976,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-31-1
+  name: v1.31.1
 spec:
   version: "v1.31.1"
 status:
@@ -985,7 +985,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-31-2
+  name: v1.31.2
 spec:
   version: "v1.31.2"
 status:
@@ -994,7 +994,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-31-3
+  name: v1.31.3
 spec:
   version: "v1.31.3"
 status:
@@ -1003,7 +1003,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-32-0
+  name: v1.32.0
 spec:
   version: "v1.32.0"
 status:
@@ -1014,7 +1014,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-31-0
+  name: v1.31.0
 spec:
   version: "v1.31.0"
 status:
@@ -1023,7 +1023,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-31-1
+  name: v1.31.1
   annotations:
     release.deckhouse.io/force: "true"
 spec:
@@ -1037,7 +1037,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-36-0
+  name: v1.36.0
 spec:
   version: "v1.36.0"
   disruptions:
@@ -1050,7 +1050,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-36-0
+  name: v1.36.0
   annotations:
     release.deckhouse.io/disruption-approved: "true"
 spec:

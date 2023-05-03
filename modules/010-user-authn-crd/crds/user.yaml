@@ -22,6 +22,8 @@ spec:
           type: object
           description: |
             Contains information about the static user.
+
+            [Usage example...](usage.html#an-example-of-creating-a-static-user)
           required:
             - spec
           properties:

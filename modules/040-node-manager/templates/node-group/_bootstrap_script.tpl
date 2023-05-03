@@ -27,7 +27,7 @@ while [ "$patch_pending" = true ] ; do
       -H "Content-Type: application/json-patch+json" \
       --cacert "$BOOTSTRAP_DIR/ca.crt" \
       --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"${tcp_endpoint}:${output_log_port}\"} }]" \
-      "https://$server/apis/deckhouse.io/v1alpha1/instanceclaims/$(hostname -s)/status" ; then
+      "https://$server/apis/deckhouse.io/v1alpha1/instances/$(hostname -s)/status" ; then
 
       echo "Successfully patched machine $(hostname -s) status."
       patch_pending=false
@@ -149,7 +149,7 @@ fi
   {{- /*
 # IMPORTANT !!! Centos/Redhat put jq in /usr/local/bin but it is not in PATH.
   */}}
-export PATH="/usr/local/bin:$PATH"
+export PATH="/opt/deckhouse/bin:$PATH"
   {{- /*
 # Get bashible script from secret
   */}}

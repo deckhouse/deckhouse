@@ -369,6 +369,8 @@ git:
     - global-hooks/**/*.go
     - go_lib/**/*.go
     - modules/**/*.go
+    - go_lib/cloud-data/go.mod
+    - go_lib/cloud-data/go.sum
     - go.mod
     - go.sum
     - tools
@@ -390,6 +392,8 @@ git:
       - deckhouse-controller/go-build.sh
       - global-hooks/**/*.go
       - go_lib/**/*.go
+      - go_lib/cloud-data/go.mod
+      - go_lib/cloud-data/go.sum
       - modules/**/*.go
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}

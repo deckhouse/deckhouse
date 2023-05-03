@@ -1,0 +1,52 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ .Images.BASE_ALPINE }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /discoverer
+    to: /discoverer
+    before: setup
+docker:
+  ENTRYPOINT: ["/discoverer"]
+---
+{{ $discovererAbsPath := "/deckhouse/modules/030-cloud-provider-azure/images/cloud-data-discoverer" }}
+{{ $discovererRelPath := "modules/030-cloud-provider-azure/images/cloud-data-discoverer" }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+shell:
+  install:
+    - cd {{ $discovererAbsPath }}
+    - go mod download
+  setup:
+    - cd {{ $discovererAbsPath }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
+
+git:
+- add: /{{ $discovererRelPath }}
+  to:  {{ $discovererAbsPath }}
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+    - hack
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - "**/*.go"
+- add: /go_lib/cloud-data
+  to: /deckhouse/go_lib/cloud-data
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+    - hack
+    - {{ $discovererRelPath }}
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - go_lib/**/*.go
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg

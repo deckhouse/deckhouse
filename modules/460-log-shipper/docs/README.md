@@ -52,6 +52,31 @@ The main goal of this architecture is to send messages to the queue system as qu
 * The same pros and cons as for centralized architecture, yet one more middle layer storage is added.
 * Increased durability, suites for all infrastructures where logs delivery is crucial.
 
+## Metadata
+
+On collecting, all sources enrich logs with metadata. 
+
+### Kubernetes
+
+The following metadata fields will be exposed:
+
+| Label        | Pod spec path           |
+|--------------|-------------------------|
+| `pod`        | metadata.name           |
+| `namespace`  | metadata.namespace      |
+| `pod_labels` | metadata.labels         |
+| `pod_ip`     | status.podIP            |
+| `image`      | spec.containers[].image |
+| `container`  | spec.containers[].name  |
+| `node`       | spec.nodeName           |
+| `pod_owner`  | metadata.ownerRef[0]    |
+
+> **NOTE**: Splunk destination does not use `pod_labels`, because it is a nested object with keys and values.
+
+### File
+
+The only exposed label is `host`, which is equal to a node hostname.
+
 ## Log filters
 
 There is a couple of filters to reduce the number of lines sent to the destination — `log filter` and `label filter`.

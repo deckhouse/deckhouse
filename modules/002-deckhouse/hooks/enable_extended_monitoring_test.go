@@ -32,7 +32,7 @@ kind: Namespace
 metadata:
   name: kube-system
   annotations:
-    extended-monitoring.flant.com/enabled: ""
+  extended-monitoring.deckhouse.io: ""
 `
 		d8SystemNS = `
 ---
@@ -40,8 +40,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-system
-  annotations:
-    extended-monitoring.flant.com/enabled: ""
+  labels:
+    extended-monitoring.deckhouse.io/enabled: ""
 `
 	)
 

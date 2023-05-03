@@ -33,4 +33,9 @@ deckhouse:
           customTolerationKeys:
           - SystemLoad
     certManagerEnabled: true
+    # [<en>] Use for Deckhouse 1.46 or newer.
+    # [<ru>] для Deckhouse 1.46 и новее.
+    # documentationEnabled: true
+    # [<en>] Use for Deckhouse 1.45 or older.
+    # [<ru>] Для Deckhouse 1.45 и старее.
     deckhouseWebEnabled: true

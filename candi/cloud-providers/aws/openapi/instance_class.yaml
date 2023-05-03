@@ -35,8 +35,12 @@ spec:
                   example: t3.large
                   type: string
                 capacity:
+                  deprecated: true
+                  x-doc-deprecated: true
                   type: object
                   description: |
+                    Deprecated: the parameter is no longer used. Deckhouse is using parameters from the cloud for passed instance type.
+
                     Instance capacity for *non-standard* instance types (the `instanceTypes` parameter).
 
                     Cluster-autoscaler uses the parameter for scheduling only when there are no nodes in NodeGroup yet (if `minPerZone` equal to 0). If there are already nodes in the NodeGroup, then cluster-autoscaler uses the actual node capacity (CPU, memory) when planning, and does not use the `capacity` parameter.

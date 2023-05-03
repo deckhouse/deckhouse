@@ -119,7 +119,3 @@
   type: Counter
   labels: [content_kind, namespace, vhost, geohash, place]
   ttl: 1h
-#22
-- name: ingress_nginx_default_backend_requests_total
-  type: Counter
-  ttl: 1h

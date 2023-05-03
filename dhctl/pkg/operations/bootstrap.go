@@ -147,6 +147,10 @@ func CheckBashibleBundle(sshClient *ssh.Client) bool {
 }
 
 func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+	if err := CheckDHCTLDependencies(sshClient); err != nil {
+		return err
+	}
+
 	bundleName, err := DetermineBundleName(sshClient)
 	if err != nil {
 		return err
@@ -180,6 +184,25 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 	}
 
 	return RebootMaster(sshClient)
+}
+
+const dependencyCmd = "type"
+
+func CheckDHCTLDependencies(sshClient *ssh.Client) error {
+	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
+		var dependencyArgs = []string{"sudo", "rm", "tar"}
+
+		for _, args := range dependencyArgs {
+			output, err := sshClient.Command(dependencyCmd, args).CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("bashible dependency error: %s",
+					string(output),
+				)
+			}
+		}
+		log.InfoLn("OK!")
+		return nil
+	})
 }
 
 func DetermineBundleName(sshClient *ssh.Client) (string, error) {

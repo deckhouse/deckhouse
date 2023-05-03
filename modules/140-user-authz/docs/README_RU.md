@@ -1,5 +1,5 @@
 ---
-title: "Модуль user-authz" 
+title: "Модуль user-authz"
 ---
 
 Модуль отвечает за генерацию RBAC для пользователей и реализует простейший режим multi-tenancy с разграничением доступа по namespace.
@@ -20,11 +20,11 @@ title: "Модуль user-authz"
 
 В модуле кроме прямого использования RBAC можно использовать удобный набор высокоуровневых ролей:
 - `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам Pod'ов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
-- `PrivilegedUser` — то же самое, что и User, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять Pod'ы (что обеспечивает возможность перезагрузки);
-- `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать и изменять namespace и все объекты, которые обычно нужны для прикладных задач. **Обратите внимание**, что так как `Editor` уполномочен редактировать `RoleBindings`, он может **сам себе расширить полномочия в рамках namespace**;
-- `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, такие как `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-- `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором `cluster-wide`-объектов, которые могут понадобиться для прикладных задач, таких как `ClusterXXXMetric`, `ClusterRoleBindings`, `KeepalivedInstance`, `DaemonSet` и т.п.. Роль для работы оператора кластера. **Важно**, что так как `ClusterEditor` уполномочен редактировать `ClusterRoleBindings`, он может **сам себе расширить полномочия**.
-- `ClusterAdmin` — то же самое, что и `ClusterEditor` и `Admin` вместе взятые, кроме того данная роль позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т.п.). Роль для работы администратора кластера. **Важно**, что так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может **сам себе расширить полномочия**.
+- `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять Pod'ы (что обеспечивает возможность перезагрузки);
+- `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач.
+- `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например, `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
+- `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором `cluster-wide` объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т.д). Роль для работы оператора кластера.
+- `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., а так же `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера. **Важно**, что так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может **сам себе расширить полномочия**.
 - `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения [`limitNamespaces`](#возможности-модуля) продолжат работать.
 
 ## Особенности реализации
@@ -32,3 +32,123 @@ title: "Модуль user-authz"
 > **Важно!** Режим multi-tenancy (авторизация по namespace) в данный момент реализован по временной схеме и **не гарантирует безопасность!**
 
 Если webhook, который реализовывает систему авторизации по какой-то причине будет недоступен, то в это время опции `allowAccessToSystemNamespaces` и `limitNamespaces` в CR перестанут применяться и пользователи будут иметь доступ во все namespace. После восстановления доступности webhook'а опции продолжат работать.
+
+## Список доступа для каждой роли модуля по умолчанию
+
+сокращения для `verbs`:
+<!-- start user-authz roles placeholder -->
+* read - `get`, `list`, `watch`
+* read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
+* write - `create`, `delete`, `deletecollection`, `patch`, `update`
+
+```yaml
+Role `User`:
+    read:
+        - apiextensions.k8s.io/customresourcedefinitions
+        - apps/daemonsets
+        - apps/deployments
+        - apps/replicasets
+        - apps/statefulsets
+        - autoscaling.k8s.io/verticalpodautoscalers
+        - autoscaling/horizontalpodautoscalers
+        - batch/cronjobs
+        - batch/jobs
+        - configmaps
+        - discovery.k8s.io/endpointslices
+        - endpoints
+        - events
+        - events.k8s.io/events
+        - extensions/daemonsets
+        - extensions/deployments
+        - extensions/ingresses
+        - extensions/replicasets
+        - extensions/replicationcontrollers
+        - limitranges
+        - metrics.k8s.io/nodes
+        - metrics.k8s.io/pods
+        - namespaces
+        - networking.k8s.io/ingresses
+        - networking.k8s.io/networkpolicies
+        - nodes
+        - persistentvolumeclaims
+        - persistentvolumes
+        - pods
+        - pods/log
+        - policy/poddisruptionbudgets
+        - rbac.authorization.k8s.io/rolebindings
+        - rbac.authorization.k8s.io/roles
+        - replicationcontrollers
+        - resourcequotas
+        - serviceaccounts
+        - services
+        - storage.k8s.io/storageclasses
+    
+Role `PrivilegedUser` (and all rules from `User`):
+    create,get:
+        - pods/attach
+        - pods/exec
+    delete,deletecollection:
+        - pods
+    read:
+        - secrets
+    
+Role `Editor` (and all rules from `User`, `PrivilegedUser`):
+    read-write:
+        - apps/deployments
+        - apps/statefulsets
+        - autoscaling.k8s.io/verticalpodautoscalers
+        - autoscaling/horizontalpodautoscalers
+        - batch/cronjobs
+        - batch/jobs
+        - configmaps
+        - discovery.k8s.io/endpointslices
+        - endpoints
+        - extensions/deployments
+        - extensions/ingresses
+        - networking.k8s.io/ingresses
+        - persistentvolumeclaims
+        - policy/poddisruptionbudgets
+        - serviceaccounts
+        - services
+    write:
+        - secrets
+    
+Role `Admin` (and all rules from `User`, `PrivilegedUser`, `Editor`):
+    create,patch,update:
+        - pods
+    delete,deletecollection:
+        - apps/replicasets
+        - extensions/replicasets
+    
+Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
+    read:
+        - rbac.authorization.k8s.io/clusterrolebindings
+        - rbac.authorization.k8s.io/clusterroles
+    write:
+        - apiextensions.k8s.io/customresourcedefinitions
+        - apps/daemonsets
+        - extensions/daemonsets
+        - storage.k8s.io/storageclasses
+    
+Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
+    read-write:
+        - deckhouse.io/clusterauthorizationrules
+    write:
+        - limitranges
+        - namespaces
+        - networking.k8s.io/networkpolicies
+        - rbac.authorization.k8s.io/clusterrolebindings
+        - rbac.authorization.k8s.io/clusterroles
+        - rbac.authorization.k8s.io/rolebindings
+        - rbac.authorization.k8s.io/roles
+        - resourcequotas
+    
+```
+<!-- end user-authz roles placeholder -->
+
+Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](usage.html#customizing-rights-of-high-level-roles) и не стандартные правила из других модулей Deckhouse):
+
+```bash
+D8_ROLE_NAME=Editor
+kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.user-authz\.deckhouse\.io/access-level=='$D8_ROLE_NAME')]}{.rules}{'\n'}{end}" | jq -s add
+```

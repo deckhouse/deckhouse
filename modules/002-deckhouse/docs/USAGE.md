@@ -94,7 +94,7 @@ In this mode, it will be necessary to confirm each minor Deckhouse updates (excl
 Manual confirmation of the update to the version `v1.43.2`:
 
 ```shell
-kubectl patch DeckhouseRelease v1-43-2 --type=merge -p='{"approved": true}'
+kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
 ```
 
 ### Manual disruption update confirmation
@@ -119,7 +119,7 @@ In this mode, it will be necessary to confirm each minor disruptive update with 
 An example of confirmation of a potentially dangerous Deckhouse minor update `v1.36.4`:
 
 ```shell
-kubectl annotate DeckhouseRelease v1-36-4 release.deckhouse.io/disruption-approved=true
+kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
 ```
 
 ### Deckhouse update notification

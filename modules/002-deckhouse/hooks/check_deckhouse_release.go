@@ -24,7 +24,6 @@ import (
 	"io"
 	"path"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -102,8 +101,6 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	if newImageHash == "" {
 		return nil
 	}
-
-	releaseName := strings.ReplaceAll(releaseChecker.releaseMetadata.Version, ".", "-")
 
 	// run only if it's a canary release
 	var (
@@ -208,7 +205,7 @@ releaseLoop:
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        releaseName,
+			Name:        releaseChecker.releaseMetadata.Version,
 			Annotations: make(map[string]string),
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{

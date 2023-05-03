@@ -22,7 +22,11 @@ spec:
           type: object
           required: ['spec']
           description: |
-            Defines the configuration for connecting a third-party provider.  With it, you can flexibly configure the integration of the account directory with Kubernetes.
+            Defines the configuration for connecting a third-party provider.
+
+            With it, you can flexibly configure the integration of the account directory with Kubernetes.
+
+            [Usage example...](usage.html#configuring-a-provider)
           properties:
             spec:
               type: object
@@ -482,7 +486,12 @@ spec:
           type: object
           required: ['spec']
           description: |
-            Defines the configuration for connecting a third-party provider.  With it, you can flexibly configure the integration of the account directory with Kubernetes.
+            Defines the configuration for connecting a third-party provider.
+
+            With it, you can flexibly configure the integration of the account directory with Kubernetes.
+
+            [Usage example...](usage.html#configuring-a-provider)
+
           properties:
             spec:
               type: object

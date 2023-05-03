@@ -43,6 +43,7 @@ locals {
   machine_type                 = var.providerClusterConfiguration.masterNodeGroup.instanceClass.machineType
   image                        = var.providerClusterConfiguration.masterNodeGroup.instanceClass.image
   disk_size_gb                 = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 20)
+  etcd_disk_size_gb            = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 20)
   ssh_key                      = var.providerClusterConfiguration.sshKey
   ssh_user                     = "user"
   disable_external_ip          = var.providerClusterConfiguration.layout == "WithoutNAT" ? false : lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "disableExternalIP", true)

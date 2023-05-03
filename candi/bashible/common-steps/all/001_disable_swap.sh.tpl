@@ -18,4 +18,7 @@ for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swa
 done
 
 swapoff -a
-sed -i '/[[:space:]]swap[[:space:]]/d' /etc/fstab
+
+if grep -q "swap" /etc/fstab; then
+  sed -i '/[[:space:]]swap[[:space:]]/d' /etc/fstab
+fi

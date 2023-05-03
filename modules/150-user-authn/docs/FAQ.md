@@ -72,8 +72,8 @@ DexAuthenticator does not have a built-in system for allowing the user authentic
 2. DexAuthenticator sets the cookie with the whole refresh token (instead of storing it in Redis like an id token) because Redis does not persist data.
 If there is no id token by the id token ticket in Redis, the user will be able to get the new id token by providing the refresh token from the cookie.
 
-3. DexAuthenticator sets the `Authorization` header to the id token value from Redis. It is not required for services like Upmeter, because permissions to Upmeter entities are not highly grained.
-On the other hand, for the Kubernetes Dashboard, it is a crucial functionality because it sends the id token further to access Kubernetes API.
+3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](../500-upmeter/), because permissions to Upmeter entities are not highly grained.
+On the other hand, for the [Kubernetes Dashboard](../500-dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
 
 ## How can I generate a kubeconfig and access Kubernetes API?
 

@@ -120,6 +120,13 @@ apiVersions:
                   Yandex Compute Instance disk size in gigabytes.
                 example: 20
                 x-doc-default: 50
+              etcdDiskSizeGb:
+                type: integer
+                description: |
+                  Etcd disk size in gigabytes.
+                example: 10
+                default: 10
+                x-doc-default: 10
               externalIPAddresses:
                 type: array
                 description: |
@@ -200,7 +207,7 @@ apiVersions:
                   description: |
                     A list of labels to attach to cluster resources.
 
-                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
                   x-doc-example: |
@@ -214,7 +221,7 @@ apiVersions:
                 annotations:
                   type: object
                   description: |
-                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -225,7 +232,7 @@ apiVersions:
                 taints:
                   type: array
                   description: |
-                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                     > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |

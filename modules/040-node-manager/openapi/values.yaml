@@ -44,7 +44,7 @@ properties:
             taints:
               type: array
               description: |
-                Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                 **Caution!** Only `effect`, `key`, `value` fields are available.
               items:
@@ -237,6 +237,13 @@ properties:
             nodeCapacity:
               type: object
               properties:
+                name:
+                  type: string
+                rootDisk:
+                  oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
                 cpu:
                   oneOf:
                     - type: string

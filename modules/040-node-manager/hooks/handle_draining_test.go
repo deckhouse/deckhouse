@@ -18,12 +18,14 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -166,6 +168,37 @@ data:
 				})
 			}
 		}
+	})
+
+	Context("simulate error", func() {
+		var event *eventsv1.Event
+
+		BeforeEach(func() {
+
+			st := f.KubeStateSet("")
+			f.BindingContexts.Set(st)
+
+			dnode := drainedNodeRes{
+				NodeName:            "foo-1",
+				NodeUID:             "111-222-333",
+				NodeResourceVersion: "123123123123",
+				DrainingSource:      "bashible",
+				Err:                 errors.New("foo-bar-error"),
+			}
+
+			event = dnode.buildEvent()
+			unst, _ := sdk.ToUnstructured(event)
+			_, _ = f.BindingContextController.FakeCluster().Client.Dynamic().Resource(schema.GroupVersionResource{Resource: "events", Group: "events.k8s.io", Version: "v1"}).Namespace("default").Create(context.Background(), unst, v1.CreateOptions{})
+		})
+
+		It("Should generate event", func() {
+			ev := f.KubernetesResource("Event", "default", event.Name)
+			Expect(ev.Field("note").String()).To(Equal("foo-bar-error"))
+			Expect(ev.Field("reason").String()).To(Equal("DrainFailed"))
+			Expect(ev.Field("type").String()).To(Equal("Warning"))
+			Expect(ev.Field("regarding.kind").String()).To(Equal("Node"))
+			Expect(ev.Field("regarding.name").String()).To(Equal("foo-1"))
+		})
 	})
 })
 

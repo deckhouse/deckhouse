@@ -70,8 +70,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check deckhouse release ::", 
 		})
 		It("Release should be created", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-3").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-3").Field("spec.version").String()).To(BeEquivalentTo("v1.25.3"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.3").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.3").Field("spec.version").String()).To(BeEquivalentTo("v1.25.3"))
 		})
 	})
 
@@ -89,9 +89,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check deckhouse release ::", 
 		})
 		It("Release should be created without ApplyAfter (wave 0)", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("spec.version").String()).To(BeEquivalentTo("v1.25.0"))
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("spec.applyAfter").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Field("spec.version").String()).To(BeEquivalentTo("v1.25.0"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Field("spec.applyAfter").Exists()).To(BeFalse())
 		})
 	})
 
@@ -109,9 +109,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check deckhouse release ::", 
 		})
 		It("Release should be created with ApplyAfter (wave 4)", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-5").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-5").Field("spec.applyAfter").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-5").Field("spec.applyAfter").Time()).To(BeTemporally("~", time.Now().UTC().Add(60*time.Minute), time.Minute))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.5").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.5").Field("spec.applyAfter").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.5").Field("spec.applyAfter").Time()).To(BeTemporally("~", time.Now().UTC().Add(60*time.Minute), time.Minute))
 		})
 	})
 
@@ -129,7 +129,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check deckhouse release ::", 
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-0
+  name: v1.25.0
 spec:
   version: "v1.25.0"
 status:
@@ -140,8 +140,8 @@ status:
 		})
 		It("Release should be marked with annotation", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").String()).To(Equal("true"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").String()).To(Equal("true"))
 		})
 	})
 
@@ -159,7 +159,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-0
+  name: v1.25.0
 spec:
   version: "v1.25.0"
 status:
@@ -170,8 +170,8 @@ status:
 		})
 		It("Release should not be marked with annotation", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
 		})
 	})
 
@@ -191,8 +191,8 @@ status:
 		})
 		It("Release should be marked with annotation", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").String()).To(Equal("true"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").String()).To(Equal("true"))
 		})
 	})
 
@@ -210,7 +210,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-25-0
+  name: v1.25.0
   annotations:
     release.deckhouse.io/suspended: "true"
 spec:
@@ -223,10 +223,10 @@ status:
 		})
 		It("Release should be marked with annotation", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("status.phase").String()).To(Equal("Pending"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Field("status.phase").String()).To(Equal("Pending"))
 		})
 	})
 
@@ -247,7 +247,7 @@ status:
 		})
 		It("Release should not be created", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Exists()).To(BeFalse())
 		})
 	})
 
@@ -267,8 +267,8 @@ status:
 		})
 		It("Release should be created with requirements", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0").Exists()).To(BeTrue())
-			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0")
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.0")
 			Expect(rl.Field("spec.requirements").String()).To(Equal(`{"k8s":"1.19","req1":"dep1"}`))
 		})
 	})
@@ -289,8 +289,8 @@ status:
 		})
 		It("Release should be created with requirements", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Exists()).To(BeTrue())
-			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0")
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.0")
 			Expect(rl.Field("spec.applyAfter").Exists()).To(BeTrue())
 		})
 	})
@@ -318,8 +318,8 @@ status:
 		})
 		It("Release should be created with cooldown", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Exists()).To(BeTrue())
-			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0")
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.0")
 			Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).Exists()).To(BeTrue())
 			Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2026-06-06T16:16:16Z"))
 		})
@@ -340,8 +340,8 @@ status:
 			})
 			It("Release should inherit cooldown from previous one", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1").Exists()).To(BeTrue())
-				rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1")
+				Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.1").Exists()).To(BeTrue())
+				rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.1")
 				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).Exists()).To(BeTrue())
 				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2026-06-06T16:16:16Z"))
 			})
@@ -370,8 +370,8 @@ status:
 			})
 			It("Release should not inherit cooldown from previous one", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-2").Exists()).To(BeTrue())
-				rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-2")
+				Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.2").Exists()).To(BeTrue())
+				rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.2")
 				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).Exists()).To(BeTrue())
 				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2030-05-05T15:15:15Z"))
 			})
@@ -394,8 +394,8 @@ status:
 		})
 		It("Release should be created with requirements", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-32-0").Exists()).To(BeTrue())
-			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-32-0")
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.32.0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.32.0")
 			Expect(rl.Field("spec.disruptions").Array()).To(HaveLen(1))
 			Expect(rl.Field("spec.disruptions").Array()[0].String()).To(Equal("ingressNginx"))
 		})
@@ -449,8 +449,8 @@ global:
 		})
 		It("Release should be created with requirements", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Exists()).To(BeTrue())
-			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0")
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.0")
 
 			// global changelog is added
 			globalChangelog := rl.Field("spec.changelog.global")
@@ -498,7 +498,7 @@ global:
 		})
 		It("Manual release creation", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-666-0")
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.666.0")
 			fmt.Println("\n" + rl.ToYaml())
 			time.Sleep(300 * time.Millisecond)
 		})

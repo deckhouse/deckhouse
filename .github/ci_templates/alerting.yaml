@@ -7,7 +7,7 @@
   env:
     KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
   run: |
-    if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+    if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
 - name: Send alert on fail
 {!{- if coll.Has $ctx "if" }!}
   if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && ( {!{- $ctx.if -}!} ) }}

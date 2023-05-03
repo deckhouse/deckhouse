@@ -16,8 +16,8 @@ kubectl get -o json  nodegroupbundles  ubuntu-lts.master    # <os>.<nodegroup>
 or
 
 ```
-GET /api/bashible.deckhouse.io/v1alpha1/bashibles/ubuntu-lts.master
-GET /api/bashible.deckhouse.io/v1alpha1/nodegroupbundles/ubuntu-lts.master
+GET /apis/bashible.deckhouse.io/v1alpha1/bashibles/ubuntu-lts.master
+GET /apis/bashible.deckhouse.io/v1alpha1/nodegroupbundles/ubuntu-lts.master
 ```
 
 Example:

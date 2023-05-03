@@ -91,6 +91,7 @@ spec:
     Autoplacer/Weights/MinReservedSpace: "1"
     Autoplacer/Weights/MinRscCount: "0"
     Autoplacer/Weights/MaxThroughput: "0"
+    DrbdOptions/auto-resync-after-disable: "true"
     DrbdOptions/Net/connect-int: "10"
     DrbdOptions/Net/ping-int: "15"
     DrbdOptions/Net/ping-timeout: "20"

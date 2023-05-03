@@ -42,13 +42,13 @@ var _ = Describe("Modules :: deckhouse :: hooks :: cleanup deckhouse releases ::
 		})
 		It("Wrong deployed releases should be Superseded", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			rl1 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-28-0")
+			rl1 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.28.0")
 			Expect(rl1.Field("status.phase").String()).Should(Equal("Superseded"))
-			rl2 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-28-1")
+			rl2 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.28.1")
 			Expect(rl2.Field("status.phase").String()).Should(Equal("Superseded"))
-			rl3 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-28-2")
+			rl3 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.28.2")
 			Expect(rl3.Field("status.phase").String()).Should(Equal("Superseded"))
-			rl4 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-28-3")
+			rl4 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.28.3")
 			Expect(rl4.Field("status.phase").String()).Should(Equal("Deployed"))
 		})
 	})
@@ -76,7 +76,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: cleanup deckhouse releases ::
 		})
 		It("Shouldn't touch releases", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			rl1 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-28-0")
+			rl1 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.28.0")
 			Expect(rl1.Field("status.phase").String()).Should(Equal("Deployed"))
 
 			ll, _ := f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{Resource: "deckhousereleases", Group: "deckhouse.io", Version: "v1alpha1"}).List(context.TODO(), v1.ListOptions{})
@@ -91,7 +91,7 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  name: v1-30-16
+  name: v1.30.16
 spec:
   requirements:
     k8s: 1.19.0
@@ -105,7 +105,7 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  name: v1-30-17
+  name: v1.30.17
 spec:
   applyAfter: "2022-03-22T16:39:01.017873947Z"
   requirements:
@@ -120,7 +120,7 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  name: v1-30-18
+  name: v1.30.18
 spec:
   requirements:
     k8s: 1.19.0
@@ -135,7 +135,7 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  name: v1-30-19
+  name: v1.30.19
 spec:
   applyAfter: "2022-03-24T12:20:02.146704455Z"
   requirements:
@@ -150,7 +150,7 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  name: v1-30-9
+  name: v1.30.9
 spec:
   version: v1.30.9
 status:
@@ -165,9 +165,9 @@ status:
 		})
 		It("Should keep last release in order", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			rl19 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-19")
-			rl18 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-18")
-			rl17 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-17")
+			rl19 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.19")
+			rl18 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.18")
+			rl17 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.17")
 			Expect(rl17.Field("status.phase").String()).Should(Equal("Skipped"))
 			Expect(rl18.Field("status.phase").String()).Should(Equal("Deployed"))
 			Expect(rl19.Field("status.phase").String()).Should(Equal("Pending"))
@@ -184,7 +184,7 @@ func generateReleases(deployedReleasesCount, outdatedReleasesCount int) string {
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-28-%d
+  name: v1.28.%d
 spec:
   version: "v1.28.%d"
 status:
@@ -199,7 +199,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1-27-%d
+  name: v1.27.%d
 spec:
   version: "v1.27.%d"
 status:

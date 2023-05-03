@@ -114,10 +114,10 @@
     HOST: ${{secrets.FLANT_REGISTRY_HOST}}
   run: |
     if [[ -n $HOST ]]; then
-      echo "::set-output name=has_flant_credentials::true"
-      echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+      echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
     else
-      echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+      echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
     fi
 - name: Login to flant registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
@@ -153,7 +153,7 @@
   id: started_at
   run: |
     unixTimestamp=$(date +%s)
-    echo "::set-output name=started_at::${unixTimestamp}"
+    echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
 # </template: started_at_output>
 {!{- end -}!}
 

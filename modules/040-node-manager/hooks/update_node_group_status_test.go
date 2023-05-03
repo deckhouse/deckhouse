@@ -308,7 +308,7 @@ status:
 				"conditions": [
                     {
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
+						"status": "True",
               			"type": "Ready"
 					},
 					{
@@ -409,7 +409,7 @@ status:
 				  "conditions": [
                     {
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
+						"status": "True",
               			"type": "Ready"
 					},
 					{
@@ -496,7 +496,7 @@ status:
 				  "conditions": [
                     {
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
+						"status": "True",
               			"type": "Ready"
 					},
 					{
@@ -574,7 +574,7 @@ status:
                   "conditions": [
                     {
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
+						"status": "True",
               			"type": "Ready"
 					},
 					{
@@ -662,7 +662,7 @@ status:
                   "conditions": [
                     {
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
+						"status": "True",
               			"type": "Ready"
 					},
 					{
@@ -781,6 +781,19 @@ spec:
 			assertReadyCondition := func(f *HookExecutionConfig, s ngv1.ConditionStatus) {
 				assertCondition(f, ngv1.NodeGroupConditionTypeReady, s, nowTime, "")
 			}
+
+			Context("Have not nodes", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+						cloudNG1+machineDeploy+machines+stateCloudProviderSecret+configurationChecksums, 2))
+					f.RunHook()
+				})
+
+				It("Sets to True", func() {
+					assertReadyCondition(f, ngv1.ConditionTrue)
+				})
+			})
+
 			Context("All nodes in NG unschedulable but ready", func() {
 				BeforeEach(func() {
 					const nodes = `
