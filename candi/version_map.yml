@@ -68,7 +68,14 @@ bashible: &bashible
   altlinux:
     'p10':
       docker:
-        desiredVersion: "docker-engine=20.10.21-alt1.x86_64"
+        desiredVersion: "docker-engine=23.0.1-alt1.x86_64"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd-1.6.19"
+          allowedPattern: ""
+    '10.1':
+      docker:
+        desiredVersion: "docker-engine=23.0.1-alt1.x86_64"
         allowedPattern: ""
         containerd:
           desiredVersion: "containerd-1.6.19"
