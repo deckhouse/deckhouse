@@ -100,7 +100,7 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 // dnsAdress will be taken only from ClusterIP service in that order:
 // - from 'kube-dns' service
 // - from any other service selected by label 'k8s-app=kube-dns'
-//   if there are no more services with same label in namespace
+//   if there are no more ClusterIP services with same label in namespace
 
 func discoveryDNSAddress(input *go_hook.HookInput) error {
 	dnsAddress := ""
@@ -108,13 +108,13 @@ func discoveryDNSAddress(input *go_hook.HookInput) error {
 	for _, sRaw := range input.Snapshots["dns_cluster_ip"] {
 		s := sRaw.(ServiceAddr)
 
-		if s.Name == "kube-dns" && s.ClusterIP != "None" && s.ClusterIP != "" {
-			input.Values.Set("global.discovery.dnsAddress", s.ClusterIP)
-			return nil
-		}
-
 		if s.ClusterIP == "None" || s.ClusterIP == "" {
 			continue
+		}
+
+		if s.Name == "kube-dns" {
+			dnsAddress = s.ClusterIP
+			break
 		}
 
 		if dnsAddress != "" && dnsAddress != s.ClusterIP {
