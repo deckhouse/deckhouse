@@ -55,13 +55,19 @@ function __main__() {
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"Email must be unique '$newEmail'" }
 EOF
+    return 0
   fi
 
   if context::jq -er --arg name "$userName" --arg email "$email" --arg userid "$userID" '.snapshots.users[].filterResult | select(.name != $name) | select(.userID == $userid)' >/dev/null 2>&1; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"UserID must be unique '$userID'" }
 EOF
+    return 0
   fi
+
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
 
 }
 
