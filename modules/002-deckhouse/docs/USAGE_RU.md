@@ -94,7 +94,7 @@ spec:
 Пример подтверждения обновления на версию `v1.43.2`:
 
 ```shell
-kubectl patch DeckhouseRelease v1-43-2 --type=merge -p='{"approved": true}'
+kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
 ```
 
 ### Ручное подтверждение потенциально опасных (disruptive) обновлений
@@ -119,7 +119,7 @@ spec:
 Пример подтверждения минорного потенциально опасного обновления Deckhouse `v1.36.4`:
 
 ```shell
-kubectl annotate DeckhouseRelease v1-36-4 release.deckhouse.io/disruption-approved=true
+kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
 ```
 
 ### Оповещение об обновлении Deckhouse
