@@ -25,30 +25,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const (
-	dnsAddressServiceSnapName = "kube_dns_cluster_ip"
-	dnsAddressByD8AppSnapName = "cluster_dns_address_by_d8s_app"
-)
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       dnsAddressServiceSnapName,
-			ApiVersion: "v1",
-			Kind:       "Service",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"kube-dns"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			FilterFunc: applyDNSServiceIPFilter,
-		},
-
-		{
-			Name:       dnsAddressByD8AppSnapName,
+			Name:       "dns_cluster_ip",
 			ApiVersion: "v1",
 			Kind:       "Service",
 			NamespaceSelector: &types.NamespaceSelector{
