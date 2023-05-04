@@ -115,10 +115,8 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	}
 
 	BeforeSuite(func() {
-		if !renderRoles {
-			err := os.Symlink("/deckhouse/ee/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
-			Expect(err).ShouldNot(HaveOccurred())
-		}
+		err := os.Symlink("/deckhouse/ee/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
@@ -128,10 +126,8 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			err := os.WriteFile(renderFileName, []byte(renderMap["user-authz/templates/cluster-roles.yaml"]), 0644)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
-		if !renderRoles {
-			err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
-			Expect(err).ShouldNot(HaveOccurred())
-		}
+		err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	BeforeEach(func() {
@@ -293,15 +289,13 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 
 		It("Should deploy authorization webhook and supporting objects", func() {
-			if !renderRoles {
-				Expect(f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "control-plane-configurator").Field("data.ca").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "apiserver-authentication-requestheader-client-ca").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("Secret", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "control-plane-configurator").Field("data.ca").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "apiserver-authentication-requestheader-client-ca").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
 
-				Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCRDsKeyJSON))
-			}
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCRDsKeyJSON))
 		})
 	})
 
