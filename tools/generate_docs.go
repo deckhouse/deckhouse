@@ -16,4 +16,4 @@ limitations under the License.
 
 package main
 
-//go:generate CGO_ENABLED=0 go run ./authz_generate_rules_for_roles/ ../modules/140-user-authz/docs/README.md ../modules/140-user-authz/docs/README_RU.md
+//go:generate go run ./authz_generate_rules_for_roles/ ../modules/140-user-authz/docs/README.md ../modules/140-user-authz/docs/README_RU.md

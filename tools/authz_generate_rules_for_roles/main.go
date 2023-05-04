@@ -147,7 +147,7 @@ func renderTemplates() ([]byte, error) {
 	defer os.Remove(tempFile.Name())
 	defer tempFile.Close()
 
-	makeEnvs := []string{"USER_AUTHZ_RENDER_ROLES=yes", fmt.Sprintf("USER_AUTHZ_RENDER_FILE=%s", tempFile.Name())}
+	makeEnvs := []string{"USER_AUTHZ_RENDER_ROLES=yes", fmt.Sprintf("USER_AUTHZ_RENDER_FILE=%s", tempFile.Name()), "CGO_ENABLED=0"}
 	if err := runMake("tests-modules", makeEnvs...); err != nil {
 		return nil, err
 	}
