@@ -114,7 +114,7 @@ func main() {
 
 	crVerbResourceMap := make(map[string]map[string][]string)
 	for name, rules := range clusterRolesMap {
-		if _, f := neededСlusterRoleExcludes[name]; !f {
+		if _, f := neededClusterRoleExcludes[name]; !f {
 			continue
 		}
 		crVerbResourceMap[name] = processClusterRoleRules(rules)
@@ -220,7 +220,7 @@ func processRule(r rule) (string, []string) {
 
 func prepareContents(name string, crVerbResourceMap map[string]map[string][]string, builder *strings.Builder) error {
 	newHeader := fmt.Sprintf("Role `%s`", camelCase(name))
-	if excls := neededСlusterRoleExcludes[name]; len(excls) > 0 {
+	if excls := neededClusterRoleExcludes[name]; len(excls) > 0 {
 		newExcls := make([]string, 0, len(excls))
 		for _, v := range excls {
 			newExcls = append(newExcls, camelCase(v))
@@ -238,7 +238,7 @@ func prepareContents(name string, crVerbResourceMap map[string]map[string][]stri
 }
 
 func clusterRoleGenerateExcludes(name string, rulesMap map[string]map[string][]string) map[string][]string {
-	excludeNames := neededСlusterRoleExcludes[name]
+	excludeNames := neededClusterRoleExcludes[name]
 	excludesMap := make(map[string][]string)
 	for _, name := range excludeNames {
 		for verb, resources := range rulesMap[name] {
