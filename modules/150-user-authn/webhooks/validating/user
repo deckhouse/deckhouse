@@ -51,16 +51,16 @@ function __main__() {
   email=$(context::jq -r '.review.request.object.spec.email')
   userID=$(context::jq -r '.review.request.object.spec.userID')
 
-  if context::jq -er --arg name "$userName" --arg email "$email" --arg userid "$userID" '.snapshots.users[].filterResult | select(.name != $name) | select(.email == $email)' >/dev/null 2>&1; then
+  if userWithTheSameEmail="$(context::jq -er --arg name "$userName" --arg email "$email" --arg userid "$userID" '.snapshots.users[].filterResult | select(.name != $name) | select(.email == $email) | .name' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"Email must be unique '$newEmail'" }
+{"allowed":false, "message":"Email must be unique. User '$userWithTheSameEmail' is already using email '$email'" }
 EOF
     return 0
   fi
 
-  if context::jq -er --arg name "$userName" --arg email "$email" --arg userid "$userID" '.snapshots.users[].filterResult | select(.name != $name) | select(.userID == $userid)' >/dev/null 2>&1; then
+  if userWithTheSameUserID="$(context::jq -er --arg name "$userName" --arg email "$email" --arg userid "$userID" '.snapshots.users[].filterResult | select(.name != $name) | select(.userID == $userid) | .name' >/dev/null 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"UserID must be unique '$userID'" }
+{"allowed":false, "message":"UserID must be unique.  User '$userWithTheSameUserID' is already using userID '$userID'" }
 EOF
     return 0
   fi
