@@ -149,7 +149,7 @@ fi
   {{- /*
 # IMPORTANT !!! Centos/Redhat put jq in /usr/local/bin but it is not in PATH.
   */}}
-export PATH="/usr/local/bin:$PATH"
+export PATH="/opt/deckhouse/bin:$PATH"
   {{- /*
 # Get bashible script from secret
   */}}
