@@ -96,8 +96,10 @@ spec:
             name: conversion-http
             protocol: TCP
         livenessProbe:
-          tcpSocket:
-            port: validating-http
+          httpGet:
+            port: 9680
+            path: /healthz
+            scheme: HTTPS
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
