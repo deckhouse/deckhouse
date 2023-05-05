@@ -43,7 +43,7 @@ case "$ID" in
     exit 1
   ;;
   altlinux)
-    case "$VERSION_ID" in p10)
+    case "$VERSION_ID" in p10|10.1)
       echo "altlinux" && exit 0 ;;
     esac
     >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
