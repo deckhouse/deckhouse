@@ -179,7 +179,7 @@ jobs:
       - name: Run go generate
         run: |
 
-          (ln -s "$(pwd)" /deckhouse && cd tools && go generate)
+          (cd tools && go generate)
           (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate)
 
       - name: Check generated code
