@@ -191,7 +191,9 @@ func CalculateNodeGroupConditions(ng NodeGroup, nodes []*Node, currentConditions
 		curTime, _ = time.Parse(time.RFC3339, timeStr)
 	}
 
+	hasNodes := false
 	for _, node := range nodes {
+		hasNodes = true
 		if !node.Unschedulable {
 			schedulableNodes++
 
@@ -214,7 +216,11 @@ func CalculateNodeGroupConditions(ng NodeGroup, nodes []*Node, currentConditions
 		}
 	}
 
-	isReady := false
+	isReady := true
+	if hasNodes {
+		isReady = false
+	}
+
 	if schedulableNodes > 0 {
 		isReady = float64(readySchedulableNodes)/float64(schedulableNodes) > 0.9
 	}
