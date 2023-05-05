@@ -264,7 +264,7 @@ func clusterRoleGenerateExcludes(name string, rulesMap map[string]map[string][]s
 	return resultMap
 }
 
-func updateReame(filePath string, contents string) error {
+func updateReadme(filePath string, contents string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return err
