@@ -37,9 +37,7 @@ spec:
                     * `User` — has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
                     * `PrivilegedUser` — the same as `User` + can exec into containers, read secrets, and delete pods (and thus, restart them);
                     * `Editor` — is the same as `PrivilegedUser` + can create and edit all objects that are usually required for application tasks;
-                    * `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`), also allows you to control access to namespace resources via `RoleBindings` and `Role`;
-
-                      **Caution!** since `Admin` can edit `RoleBindings`, he can broader his privileges within the namespace;
+                    * `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`);
 
                   enum: [User,PrivilegedUser,Editor,Admin]
                   example: 'PrivilegedUser'
