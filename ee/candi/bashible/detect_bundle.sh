@@ -3,6 +3,17 @@
 # Copyright 2022 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */}}
+function name_is_not_supported() {
+    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
+    exit 1
+}
+
+function try_bundle(){
+  >&2 echo "WARNING: Trying to use ${1} bundle as default for: ${PRETTY_NAME}"
+  echo "${1}"
+  exit 0
+}
+
 if [ ! -e /etc/os-release ]; then
   >&2 echo "ERROR: Can't determine OS! /etc/os-release is not found."
   exit 1
@@ -14,36 +25,31 @@ case "$ID" in
     case "$VERSION_ID" in 7|7.*|8|8.*|9|9.*)
       echo "centos" && exit 0 ;;
     esac
-    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
-    exit 1
+    name_is_not_supported
   ;;
   redos)
     case "$VERSION_ID" in 7|7.*)
       echo "redos" && exit 0 ;;
     esac
-    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
-    exit 1
+    name_is_not_supported
   ;;
   alteros)
     case "$VERSION_ID" in 7|7.*)
       echo "alteros" && exit 0 ;;
     esac
-    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
-    exit 1
+    name_is_not_supported
   ;;
   ubuntu)
     case "$VERSION_ID" in 18.04|20.04|22.04)
       echo "ubuntu-lts" && exit 0 ;;
     esac
-    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
-    exit 1
+    name_is_not_supported
   ;;
   debian)
     case "$VERSION_ID" in 9|10|11)
       echo "debian" && exit 0 ;;
     esac
-    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
-    exit 1
+    name_is_not_supported
   ;;
   astra)
     case "$VERSION_ID" in
@@ -52,15 +58,13 @@ case "$ID" in
       2.12|2.12.*)
         echo "debian" && exit 0 ;;
     esac
-    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
-    exit 1
+    name_is_not_supported
   ;;
   altlinux)
     case "$VERSION_ID" in p10)
       echo "altlinux" && exit 0 ;;
     esac
-    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
-    exit 1
+    name_is_not_supported
   ;;
   "")
     >&2 echo "ERROR: Can't determine OS! No ID in /etc/os-release."
@@ -73,16 +77,13 @@ esac
 for ID in $ID_LIKE; do
   case "$ID" in
     centos|rhel)
-      >&2 echo "WARNING: Trying to use centos bundle as default for: ${PRETTY_NAME}"
-      echo "centos" && exit 0
+      try_bundle "centos"
     ;;
     debian)
-      >&2 echo "WARNING: Trying to use debian bundle as default for: ${PRETTY_NAME}"
-      echo "debian" && exit 0
+      try_bundle "debian"
     ;;
     altlinux)
-      >&2 echo "WARNING: Trying to use altlinux bundle as default for: ${PRETTY_NAME}"
-      echo "altlinux" && exit 0
+      try_bundle "altlinux"
     ;;
   esac
 done
@@ -93,5 +94,4 @@ bundle="debian"
 if yum -q --version >/dev/null 2>/dev/null; then
   bundle="centos"
 fi
->&2 echo "WARNING: Trying to use ${bundle} bundle as default for: ${PRETTY_NAME}"
-echo "${bundle}"
+try_bundle "${bundle}"
