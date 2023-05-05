@@ -17,101 +17,105 @@ limitations under the License.
 /*
 This binary is used for generating rules for user-authz roles to
 ./modules/140-user-authz/docs/README.md and ./modules/140-user-authz/docs/README_RU.md.
-It inserts data between lines "<!-- start placeholder -->" and "<!-- end placeholder -->".
+It inserts data between lines "<!-- start user-authz roles placeholder -->" and "<!-- end user-authz roles placeholder -->".
 It useses rendered template from /deckhouse/modules/140-user-authz/templates/cluster-roles.yaml
 Steps to use:
   - cd tools && go generate
-  - make lint-markdown-fix
+  - cd ../ && make lint-markdown-fix
   - check diff for ./modules/140-user-authz/docs/README.md and ./modules/140-user-authz/docs/README_RU.md files
 */
 
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"os"
-	"os/exec"
+	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/Masterminds/sprig"
+	"github.com/deckhouse/deckhouse/testing/library/helm"
 	"github.com/iancoleman/strcase"
 	"gopkg.in/yaml.v3"
 )
 
 var (
-	readVerbs      = []string{"get", "list", "watch"}
-	writeVerbs     = []string{"create", "delete", "deletecollection", "patch", "update"}
-	readWriteVerbs = append(readVerbs, writeVerbs...)
-
-	readVerbsString      = sliceToString(readVerbs)
-	writeVerbsString     = sliceToString(writeVerbs)
-	readWriteVerbsString = sliceToString(readWriteVerbs)
+	readVerbs      = sliceToString([]string{"get", "list", "watch"})
+	writeVerbs     = sliceToString([]string{"create", "delete", "deletecollection", "patch", "update"})
+	readWriteVerbs = sliceToString([]string{"get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"})
 
 	readAlias      = "read"
 	writeAlias     = "write"
 	readWriteAlias = "read-write"
 
-	clusterRoleModulePrefix = "user-authz:"
-
-	userString           = "user"
-	privilegedUserString = "privileged-user"
-	editorString         = "editor"
-	adminString          = "admin"
-	clusterEditorString  = "cluster-editor"
-	clusterAdminString   = "cluster-admin"
-
-	userClusterRole           = clusterRoleModulePrefix + userString
-	privilegedUserClusterRole = clusterRoleModulePrefix + privilegedUserString
-	editorClusterRole         = clusterRoleModulePrefix + editorString
-	adminClusterRole          = clusterRoleModulePrefix + adminString
-	clusterEditorClusterRole  = clusterRoleModulePrefix + clusterEditorString
-	clusterAdminClusterRole   = clusterRoleModulePrefix + clusterAdminString
+	userRole           = "User"
+	privilegedUserRole = "PrivilegedUser"
+	editorRole         = "Editor"
+	adminRole          = "Admin"
+	clusterEditorRole  = "ClusterEditor"
+	clusterAdminRole   = "ClusterAdmin"
 
 	orderedRoleNames = []string{
-		userClusterRole, privilegedUserClusterRole,
-		editorClusterRole, adminClusterRole,
-		clusterEditorClusterRole, clusterAdminClusterRole,
+		userRole,
+		privilegedUserRole,
+		editorRole,
+		adminRole,
+		clusterEditorRole,
+		clusterAdminRole,
 	}
 
 	neededClusterRoleExcludes = map[string][]string{
-		userClusterRole:           {},
-		privilegedUserClusterRole: {userClusterRole},
-		editorClusterRole:         {userClusterRole, privilegedUserClusterRole},
-		adminClusterRole:          {userClusterRole, privilegedUserClusterRole, editorClusterRole},
-		clusterEditorClusterRole:  {userClusterRole, privilegedUserClusterRole, editorClusterRole},
-		clusterAdminClusterRole:   {userClusterRole, privilegedUserClusterRole, editorClusterRole, adminClusterRole, clusterEditorClusterRole},
+		userRole:           {},
+		privilegedUserRole: {userRole},
+		editorRole:         {userRole, privilegedUserRole},
+		adminRole:          {userRole, privilegedUserRole, editorRole},
+		clusterEditorRole:  {userRole, privilegedUserRole, editorRole},
+		clusterAdminRole:   {userRole, privilegedUserRole, editorRole, adminRole, clusterEditorRole},
 	}
 )
 
+type TemplateData struct {
+	Roles []TemplateRole
+}
+
+func (t *TemplateData) toValues() map[string]interface{} {
+	return map[string]interface{}{"roles": t.Roles}
+}
+
+type TemplateRole struct {
+	Name            string
+	Rules           map[string][]string
+	AdditionalRoles []string
+}
+
+const readmeTemplate = "* read - `get`, `list`, `watch`\n" +
+	"* read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`\n" +
+	"* write - `create`, `delete`, `deletecollection`, `patch`, `update`\n\n" +
+	"```yaml\n" +
+	"{{range $role := .roles}}" +
+	"Role `{{$role.Name}}`{{if $role.AdditionalRoles}}{{printf \" (and all rules from `%s`)\" ($role.AdditionalRoles | join \"`, `\")}}{{end}}:\n" +
+	"{{$role.Rules | toYaml | indent 4 }}\n" +
+	"{{end}}" +
+	"```\n"
+
 func main() {
-	cwd, err := os.Getwd()
+	renderContents, err := renderTemplates("../modules/140-user-authz")
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	if err := os.Chdir("../"); err != nil {
-		log.Fatalln(err)
-	}
-
-	renderContents, err := renderTemplates()
+	clusterRolesMap := getClusterRoles(renderContents, "user-authz/templates/cluster-roles.yaml")
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	if err := os.Chdir(cwd); err != nil {
-		log.Fatalln(err)
-	}
-
-	clusterRolesMap := getClusterRoles(renderContents)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
+	// map[<role name>]map[<verb>][]<resources>
 	crVerbResourceMap := make(map[string]map[string][]string)
 	for name, rules := range clusterRolesMap {
 		if _, f := neededClusterRoleExcludes[name]; !f {
@@ -119,44 +123,26 @@ func main() {
 		}
 		crVerbResourceMap[name] = processClusterRoleRules(rules)
 	}
-
-	builder := &strings.Builder{}
-	builder.WriteString("* read - `get`, `list`, `watch`\n")
-	builder.WriteString("* read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`\n")
-	builder.WriteString("* write - `create`, `delete`, `deletecollection`, `patch`, `update`\n")
-	builder.WriteString("\n```yaml\n")
+	templateData := TemplateData{}
 	for _, name := range orderedRoleNames {
-		if err := prepareContents(name, crVerbResourceMap, builder); err != nil {
-			log.Fatalln(err)
-		}
+		templateData.Roles = append(templateData.Roles, prepareClusterRoleForTemplate(name, crVerbResourceMap))
 	}
-	builder.WriteString("```")
+
+	readmeContent, err := renderTemplate(readmeTemplate, templateData)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	for _, fileName := range os.Args[1:] {
-		if err := updateReame(fileName, builder.String()); err != nil {
+		if err := updateReadme(fileName, readmeContent); err != nil {
 			log.Fatalln(err)
 		}
 	}
 }
 
-func renderTemplates() ([]byte, error) {
-	tempFile, err := os.CreateTemp("/tmp", "render-template-*.yaml")
-	if err != nil {
-		return nil, err
-	}
-	defer os.Remove(tempFile.Name())
-	defer tempFile.Close()
-
-	makeEnvs := []string{"USER_AUTHZ_RENDER_ROLES=yes", fmt.Sprintf("USER_AUTHZ_RENDER_FILE=%s", tempFile.Name()), "CGO_ENABLED=0"}
-	if err := runMake("tests-modules", makeEnvs...); err != nil {
-		return nil, err
-	}
-
-	renderContents, err := io.ReadAll(tempFile)
-	if err != nil {
-		return nil, err
-	}
-	return renderContents, nil
+func renderTemplates(dir string) (map[string]string, error) {
+	r := helm.Renderer{}
+	return r.RenderChartFromDir(dir, `{"userAuthz":{"internal":{}},"global":{}}`)
 }
 
 type clusterRole struct {
@@ -172,18 +158,19 @@ type rule struct {
 	Resources []string `yaml:"resources"`
 }
 
-func getClusterRoles(contents []byte) map[string][]rule {
-	dec := yaml.NewDecoder(bytes.NewReader(contents))
+func getClusterRoles(contents map[string]string, fileName string) map[string][]rule {
+	dec := yaml.NewDecoder(strings.NewReader(contents[fileName]))
 	roleMap := make(map[string][]rule)
 	for {
-		var role clusterRole
-		if err := dec.Decode(&role); err != nil || len(role.Rules) < 1 {
+		var r clusterRole
+		if err := dec.Decode(&r); err != nil || len(r.Rules) < 1 {
 			if errors.Is(err, io.EOF) {
 				return roleMap
 			}
 			continue
 		}
-		roleMap[role.Metadata.Name] = role.Rules
+		roleName := newRoleFromClusterRoleName(r.Metadata.Name)
+		roleMap[roleName] = r.Rules
 	}
 }
 
@@ -208,49 +195,49 @@ func processRule(r rule) (string, []string) {
 	}
 	alias := sliceToString(r.Verbs)
 	switch alias {
-	case readVerbsString:
+	case readVerbs:
 		alias = readAlias
-	case writeVerbsString:
+	case writeVerbs:
 		alias = writeAlias
-	case readWriteVerbsString:
+	case readWriteVerbs:
 		alias = readWriteAlias
 	}
 	return alias, grSlice
 }
 
-func prepareContents(name string, crVerbResourceMap map[string]map[string][]string, builder *strings.Builder) error {
-	newHeader := fmt.Sprintf("Role `%s`", camelCase(name))
-	if excls := neededClusterRoleExcludes[name]; len(excls) > 0 {
-		newExcls := make([]string, 0, len(excls))
-		for _, v := range excls {
-			newExcls = append(newExcls, camelCase(v))
-		}
-		newHeader = fmt.Sprintf("%s (and all rules from `%s`)", newHeader, strings.Join(newExcls, "`, `"))
+func prepareClusterRoleForTemplate(name string, crVerbResourceMap map[string]map[string][]string) TemplateRole {
+	templateRole := TemplateRole{Name: name}
+	excls := neededClusterRoleExcludes[name]
+	if len(excls) > 0 {
+		templateRole.AdditionalRoles = excls
 	}
 
-	m, err := yaml.Marshal(map[string]interface{}{newHeader: clusterRoleGenerateExcludes(name, crVerbResourceMap)})
-	if err != nil {
-		return err
-	}
-	builder.Write(m)
-	builder.WriteString("\n")
-	return nil
+	excludesMap := clusterRoleGenerateExcludes(excls, crVerbResourceMap)
+	templateRole.Rules = clusterRoleApplyExcludes(crVerbResourceMap[name], excludesMap)
+	return templateRole
 }
 
-func clusterRoleGenerateExcludes(name string, rulesMap map[string]map[string][]string) map[string][]string {
-	excludeNames := neededClusterRoleExcludes[name]
-	excludesMap := make(map[string][]string)
+func clusterRoleGenerateExcludes(excludeNames []string, rulesMap map[string]map[string][]string) map[string]map[string]struct{} {
+	excludesMap := make(map[string]map[string]struct{})
 	for _, name := range excludeNames {
 		for verb, resources := range rulesMap[name] {
-			excludesMap[verb] = append(excludesMap[verb], resources...)
+			if excludesMap[verb] == nil {
+				excludesMap[verb] = make(map[string]struct{})
+			}
+			for _, resource := range resources {
+				excludesMap[verb][resource] = struct{}{}
+			}
 		}
 	}
+	return excludesMap
+}
 
-	resultMap := make(map[string][]string, len(rulesMap))
-	for verb, resources := range rulesMap[name] {
+func clusterRoleApplyExcludes(roleRules map[string][]string, excludesMap map[string]map[string]struct{}) map[string][]string {
+	resultMap := make(map[string][]string, len(roleRules))
+	for verb, resources := range roleRules {
 		resultResources := make([]string, 0)
 		for _, resource := range resources {
-			if isInSlice(resource, excludesMap[verb]) {
+			if _, f := excludesMap[verb][resource]; f {
 				continue
 			}
 			resultResources = append(resultResources, resource)
@@ -264,49 +251,82 @@ func clusterRoleGenerateExcludes(name string, rulesMap map[string]map[string][]s
 	return resultMap
 }
 
-func updateReadme(filePath string, contents string) error {
+func updateReadme(filePath string, content []byte) error {
+	const (
+		startPlaceholder = "<!-- start user-authz roles placeholder -->"
+		endPlaceholder   = "<!-- end user-authz roles placeholder -->"
+	)
+
 	f, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-	skip := false
-	newFileContents := make([]string, 0)
-	for scanner.Scan() {
-		txt := scanner.Text()
-		if strings.Contains(txt, "end placeholder") {
-			skip = false
-		}
-		if skip {
-			continue
-		}
-		newFileContents = append(newFileContents, txt)
-
-		if strings.Contains(txt, "start placeholder") {
-			skip = true
-			newFileContents = append(newFileContents, contents)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
+	fileText, err := io.ReadAll(f)
+	if err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(filePath, []byte(strings.Join(newFileContents, "\n")+"\n"), 0644); err != nil {
+	newFileContents, err := replacePlaceholder(fileText, content, startPlaceholder, endPlaceholder)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(filePath, []byte(newFileContents), 0644); err != nil {
 		return err
 	}
 	return nil
 }
 
-func isInSlice(str string, slice []string) bool {
-	for _, v := range slice {
-		if v == str {
-			return true
-		}
+func renderTemplate(templateString string, tempalteData TemplateData) ([]byte, error) {
+	var res bytes.Buffer
+	templateFuncMap := sprig.TxtFuncMap()
+	templateFuncMap["toYaml"] = tempalteToYaml
+
+	tpl, err := template.New("template").
+		Funcs(templateFuncMap).
+		Parse(templateString)
+	if err != nil {
+		return nil, err
 	}
-	return false
+
+	if err := tpl.Execute(&res, tempalteData.toValues()); err != nil {
+		return nil, err
+	}
+
+	return bytes.TrimSpace(res.Bytes()), nil
+}
+
+func replacePlaceholder(text, content []byte, startPlaceholder, endPlaceholder string) ([]byte, error) {
+	re, err := regexp.Compile(fmt.Sprintf("(?s)%s(.*?)%s", startPlaceholder, endPlaceholder))
+	if err != nil {
+		return nil, err
+	}
+	subMatchIndexes := re.FindSubmatchIndex(text)
+	if len(subMatchIndexes) < 4 {
+		return nil, fmt.Errorf("didn't find submatch inside placeholder `%s` and `%s`", startPlaceholder, endPlaceholder)
+	}
+
+	placeholderStart := subMatchIndexes[2] + 1
+	placeHolderEnd := subMatchIndexes[3] - 1
+
+	buf := bytes.NewBuffer(nil)
+	buf.Write(text[:placeholderStart])
+	buf.Write(content)
+	buf.Write(text[placeHolderEnd:])
+	return buf.Bytes(), nil
+}
+
+// tempalteToYaml is a template function that encodes an item into a Yaml string
+func tempalteToYaml(v interface{}) string {
+	output, _ := yaml.Marshal(v)
+	return string(output)
+}
+
+// newRoleFromClusterRoleName generates user-authz role name from ClusterRole name
+func newRoleFromClusterRoleName(name string) string {
+	return strcase.ToCamel(strings.TrimPrefix(name, "user-authz:"))
 }
 
 func sliceToString(s []string) string {
@@ -318,18 +338,4 @@ func sortStrings(s []string) []string {
 	copy(rs, s)
 	sort.Strings(rs)
 	return rs
-}
-
-func camelCase(s string) string {
-	return strcase.ToCamel(strings.TrimPrefix(s, clusterRoleModulePrefix))
-}
-
-func runMake(command string, envs ...string) error {
-	cmd := exec.Command("make", command, "FOCUS=user-authz")
-	cmd.Env = append(os.Environ(), envs...)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		fmt.Println(string(out))
-		return err
-	}
-	return nil
 }

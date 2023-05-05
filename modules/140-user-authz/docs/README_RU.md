@@ -36,7 +36,7 @@ title: "Модуль user-authz"
 ## Список доступа для каждой роли модуля по умолчанию
 
 сокращения для `verbs`:
-<!-- start placeholder -->
+<!-- start user-authz roles placeholder -->
 * read - `get`, `list`, `watch`
 * read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
 * write - `create`, `delete`, `deletecollection`, `patch`, `update`
@@ -82,7 +82,7 @@ Role `User`:
         - serviceaccounts
         - services
         - storage.k8s.io/storageclasses
-
+    
 Role `PrivilegedUser` (and all rules from `User`):
     create,get:
         - pods/attach
@@ -91,7 +91,7 @@ Role `PrivilegedUser` (and all rules from `User`):
         - pods
     read:
         - secrets
-
+    
 Role `Editor` (and all rules from `User`, `PrivilegedUser`):
     read-write:
         - apps/deployments
@@ -112,14 +112,14 @@ Role `Editor` (and all rules from `User`, `PrivilegedUser`):
         - services
     write:
         - secrets
-
+    
 Role `Admin` (and all rules from `User`, `PrivilegedUser`, `Editor`):
     create,patch,update:
         - pods
     delete,deletecollection:
         - apps/replicasets
         - extensions/replicasets
-
+    
 Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
     read:
         - rbac.authorization.k8s.io/clusterrolebindings
@@ -129,7 +129,7 @@ Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
         - apps/daemonsets
         - extensions/daemonsets
         - storage.k8s.io/storageclasses
-
+    
 Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
     read-write:
         - deckhouse.io/clusterauthorizationrules
@@ -142,9 +142,9 @@ Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Adm
         - rbac.authorization.k8s.io/rolebindings
         - rbac.authorization.k8s.io/roles
         - resourcequotas
-
+    
 ```
-<!-- end placeholder -->
+<!-- end user-authz roles placeholder -->
 
 Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](usage.html#customizing-rights-of-high-level-roles) и не стандартные правила из других модулей Deckhouse):
 
