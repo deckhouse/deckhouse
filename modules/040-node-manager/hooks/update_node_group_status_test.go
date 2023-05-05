@@ -794,7 +794,7 @@ spec:
 				})
 			})
 
-			FContext("All nodes in NG unschedulable but ready", func() {
+			Context("All nodes in NG unschedulable but ready", func() {
 				BeforeEach(func() {
 					const nodes = `
 ---
