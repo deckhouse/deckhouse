@@ -321,7 +321,7 @@ func sortStrings(s []string) []string {
 }
 
 func camelCase(s string) string {
-	return strcase.ToCamel(strings.ReplaceAll(s, clusterRoleModulePrefix, ""))
+	return strcase.ToCamel(strings.TrimPrefix(s, clusterRoleModulePrefix))
 }
 
 func runMake(command string, envs ...string) error {
