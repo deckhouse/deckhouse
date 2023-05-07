@@ -7,7 +7,7 @@ metadata:
 spec:
   type: Loki
   loki:
-    endpoint: "http://loki.d8-{{ .Chart.Name }}:3100"
+    endpoint: "http://loki.d8-monitoring:3100"
 {{- if .Values.loki.storeSystemLogs }}
 ---
 apiVersion: deckhouse.io/v1alpha1
