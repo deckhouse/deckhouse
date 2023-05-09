@@ -5,6 +5,8 @@ spec:
         openAPIV3Schema:
           description: |
             Содержит информацию о статическом пользователе.
+
+            [Пример использования...](usage.html#пример-создания-статического-пользователя)
           properties:
             spec:
               properties:
