@@ -22,6 +22,12 @@ spec:
           type: object
           description: |
             Allows applications that support DC authentication to interact with dex.
+
+            After the `DexClient` object appears in the cluster:
+            * Dex will register a client with a `dex-client-<NAME>@<NAMESPACE>` **clientID**, where `<NAME>` and `<NAMESPACE>` are `metadata.name` and `metadata.namespace` of the DexClient object, respectively.
+            * A `dex-client-<NAME>` Secret containing the client access password (**clientSecret**) will be created in the corresponding namespace (where `<NAME>` is `metadata.name` of the DexClient object).
+
+            [Usage example...](usage.html#configuring-the-oauth2-client-in-dex-for-connecting-an-application)
           required:
             - spec
           properties:
