@@ -1,5 +1,6 @@
 ---
 title: "Managing nodes"
+description: Deckhouse manages nodes of a Kubernetes cluster as a related group, configures and updates Kubernetes cluster node components, manages cluster scaling in the cloud, and manages Linux users on nodes.
 ---
 
 ## Primary functions
