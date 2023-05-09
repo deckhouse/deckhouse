@@ -1,5 +1,6 @@
 ---
 title: "Модуль linstor"
+description: Deckhouse с помощью модуля linstor управляет в кластере Kubernetes реплицируемым блочным хранилищем.
 ---
 
 Модуль управляет в кластере реплицируемым блочным хранилищем на базе [LINSTOR](https://linbit.com/linstor/) и модуля ядра [DRBD](https://linbit.com/drbd/).
