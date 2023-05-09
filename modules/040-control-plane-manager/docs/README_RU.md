@@ -1,5 +1,6 @@
 ---
 title: Управление control plane
+description: Deckhouse управляет компонентами control plane Kubernetes — сертификатами, манифестами, версиями. Управляет конфигурацией etcd-кластера и следит за актуальностью конфигурации для kubectl.
 ---
 
 Управление компонентами control plane кластера осуществляется с помощью модуля `control-plane-manager`, который запускается на всех master-узлах кластера (узлы с лейблом `node-role.kubernetes.io/control-plane: ""`).

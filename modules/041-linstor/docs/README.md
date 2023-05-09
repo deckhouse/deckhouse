@@ -1,5 +1,6 @@
 ---
 title: "The linstor module"
+description: Deckhouse uses the linstor module to manage a replicated block storage in the Kubernetes cluster.
 ---
 
 This module manages a replicated block storage solution in the cluster using the [LINSTOR](https://linbit.com/linstor/) and the [DRBD](https://linbit.com/drbd/) kernel module.
