@@ -1,5 +1,6 @@
 ---
 title: Managing control plane
+description: Deckhouse manages a Kubernetes cluster control plane components — certificates, manifests, versions. Manages the configuration of the etcd cluster and maintains an up-to-date kubectl configuration.
 ---
 
 The `control-plane-manager` (CPM) module is responsible for managing the cluster's control plane components. It runs on all master nodes of the cluster (nodes that have the `node-role.kubernetes.io/control-plane: ""` label).
