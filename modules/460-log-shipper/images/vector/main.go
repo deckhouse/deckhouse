@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/sys/unix"
 )
@@ -65,7 +66,6 @@ func main() {
 				if !ok {
 					return
 				}
-				log.Println("event: ", event)
 				if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
 					err := reloadVectorConfig()
 					if err != nil {
@@ -82,7 +82,7 @@ func main() {
 		}
 	}()
 
-	// TODO: watch whole directory and react to resolv.conf files changes
+	// TODO: watch whole directory
 	err = watcher.Add(sampleConfig)
 	if err != nil {
 		log.Fatal(err)
@@ -92,11 +92,17 @@ func main() {
 	<-make(chan struct{})
 }
 
-func reloadVectorConfig() error {
+func reloadVectorConfig() (err error) {
 	tempConfigDir, err := os.MkdirTemp("", "vector-config")
 	if err != nil {
 		return err
 	}
+	defer func() {
+		tempErr := os.RemoveAll(tempConfigDir)
+		if err != nil {
+			err = tempErr
+		}
+	}()
 
 	if ok, err := shouldReload(tempConfigDir); err != nil {
 		return err
@@ -155,7 +161,49 @@ func shouldReload(tempConfigDir string) (bool, error) {
 		return false, err
 	}
 
-	return oldChecksum != newChecksum, nil
+	if oldChecksum != newChecksum {
+		err := displayDiff(templatedSampleConfigPath, dynamicConfigPath)
+		if err != nil {
+			return true, err
+		}
+
+		source, err := os.Open(templatedSampleConfigPath)
+		if err != nil {
+			return true, err
+		}
+		defer source.Close()
+
+		destination, err := os.Create(dynamicConfigPath)
+		if err != nil {
+			return true, err
+		}
+		defer destination.Close()
+
+		_, err = io.Copy(source, destination)
+		if err != nil {
+			return true, err
+		}
+
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func displayDiff(firstPath, secondPath string) error {
+	first, err := os.ReadFile(firstPath)
+	if err != nil {
+		return err
+	}
+	second, err := os.ReadFile(secondPath)
+	if err != nil {
+		return err
+	}
+
+	differ := diffmatchpatch.New()
+	log.Print(diffmatchpatch.New().PatchToText(differ.PatchMake(differ.DiffMain(string(first), string(second), true))))
+
+	return nil
 }
 
 func runVector(args string) (string, error) {
