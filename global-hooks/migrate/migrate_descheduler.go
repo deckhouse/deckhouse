@@ -23,6 +23,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
+
+const defaultLegacyDeschedulerConfigJSON = `{
+"removePodsViolatingInterPodAntiAffinity": true,
+"removePodsViolatingNodeAffinity": true
+}
+`
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
@@ -46,22 +53,9 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 
 	moduleConfig, err := kubeCl.Dynamic().Resource(mcGVR).Get(context.TODO(), "descheduler", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		input.LogEntry.Info("ModuleConfig for descheduler does not exists, nothing to migrate")
-		return nil
+		input.LogEntry.Info("ModuleConfig for descheduler does not exists, migrating with default config")
 	} else if err != nil {
 		return err
-	}
-
-	mcVersion, exists, err := unstructured.NestedInt64(moduleConfig.UnstructuredContent(), "spec", "version")
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("moduleConfig does not exists, that should not be happening")
-	}
-	if mcVersion != 1 {
-		input.LogEntry.Infof("moduleConfig is not version 1, skipping migration")
-		return nil
 	}
 
 	moduleEnabled, exists, err := unstructured.NestedBool(moduleConfig.UnstructuredContent(), "spec", "enabled")
@@ -85,10 +79,10 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 			return err
 		}
 	} else {
-		input.LogEntry.Info("Config for descheduler is empty, but module is enabled, migrating without config")
+		deschedulerConfigJSON = []byte(defaultLegacyDeschedulerConfigJSON)
 	}
 
-	_, err = kubeCl.CoreV1().ConfigMaps("d8-system").Create(context.TODO(), &corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",
@@ -98,12 +92,9 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 			Namespace: "d8-system",
 		},
 		Data: map[string]string{"config": string(deschedulerConfigJSON)},
-	}, metav1.CreateOptions{})
-	if errors.IsAlreadyExists(err) {
-		input.LogEntry.Infof("CM already existis, skipping migration: %s", err)
-	} else if err != nil {
-		return err
 	}
+
+	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
 
 	return nil
 }

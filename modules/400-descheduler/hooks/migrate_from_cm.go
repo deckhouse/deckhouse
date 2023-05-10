@@ -155,6 +155,7 @@ func createFirstDeschedulerCR(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	input.PatchCollector.Create(object, object_patch.IgnoreIfExists())
+	input.PatchCollector.Delete("deckhouse.io/v1alpha1", "ModuleConfig", "", "descheduler")
 	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "descheduler-config-migration")
 
 	return nil
