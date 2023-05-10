@@ -59,7 +59,7 @@ data:
 `
 )
 
-var _ = FDescribe("Modules :: descheduler :: hooks :: migrate_from_cm ::", func() {
+var _ = Describe("Modules :: descheduler :: hooks :: migrate_from_cm ::", func() {
 	f := HookExecutionConfigInit(`{"descheduler":{"internal":{}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Descheduler", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
