@@ -70,7 +70,10 @@ defaults:
       sitemap_include: true
       topnav: topnav
       output: web
-      sidebar: main
+      #sidebar: main
+      sidebars:
+        - main
+        - k8s-docs
       multilang: true
       comparable: true
       lang: en
@@ -102,7 +105,7 @@ defaults:
       path: "*/k8s"
       type: "pages"
     values:
-      sidebar: k8s-docs
+      #sidebar: k8s-docs
       k8sDocs: true
   - scope:
       path: "*/030-cloud-provider-openstack"

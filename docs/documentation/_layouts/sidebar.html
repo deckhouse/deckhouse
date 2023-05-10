@@ -14,7 +14,13 @@ layout: default
       {%- else %}
         {%- assign page_rel_path = page.url | true_relative_url | remove: page.url %}
       {%- endif %}
-      {%- include_cached sidebar.html sidebar=page.sidebar lang=page.lang is_404=is_404 page_rel_path=page_rel_path %}
+      {%- if page.sidebar %}
+        {%- include_cached sidebar.html sidebar=page.sidebar lang=page.lang is_404=is_404 page_rel_path=page_rel_path %}
+      {%- elsif page.sidebars %}
+        {%- include_cached sidebars.html sidebars=page.sidebars lang=page.lang is_404=is_404 page_rel_path=page_rel_path %}
+      {%- endif %}
+      <!-- this highlights the active parent class in the navgoco sidebar. this is critical so that the parent expands when you're viewing a page. This must appear below the sidebar code above. Otherwise, if placed inside customscripts.js, the script runs before the sidebar code runs and the class never gets inserted.-->
+      <script>$("li.active").parents('li').toggleClass("active");</script>
     {%- endunless %}
     </div>
     <div class="layout-sidebar__content">

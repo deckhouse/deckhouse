@@ -1,4 +1,7 @@
 # Next lines are for local build only
+title:
+  en: Deckhouse
+  ru: Deckhouse
 entries:
   folders:
     - title:
