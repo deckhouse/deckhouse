@@ -41,13 +41,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:node-manager:bashible:instance-claim-bootstrapped-nodes
+  name: d8:node-manager:bashible:instance-bootstrapped-nodes
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - instanceclaims/status
+  - instance/status
   verbs:
   - patch
   - update
@@ -126,12 +126,12 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:node-manager:bashible:instance-claim-bootstrapped-nodes
+  name: d8:node-manager:bashible:instance-bootstrapped-nodes
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:node-manager:bashible:instance-claim-bootstrapped-nodes
+  name: d8:node-manager:bashible:instance-bootstrapped-nodes
 subjects:
   - kind: Group
     name: system:bootstrappers:d8-node-manager

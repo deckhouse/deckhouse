@@ -25,10 +25,10 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: node-manager :: hooks :: instance_claim_controller ::", func() {
+var _ = Describe("Modules :: node-manager :: hooks :: instance_controller ::", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.23.1"}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "InstanceClaim", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Instance", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 
@@ -49,14 +49,14 @@ spec:
     minPerZone: 1
 `
 
-	assertFinalizersExists := func(f *HookExecutionConfig, claimName string) {
-		finalizers := f.KubernetesGlobalResource("InstanceClaim", claimName).Field("metadata.finalizers")
+	assertFinalizersExists := func(f *HookExecutionConfig, instanceName string) {
+		finalizers := f.KubernetesGlobalResource("Instance", instanceName).Field("metadata.finalizers")
 		Expect(finalizers.AsStringSlice()).To(Equal([]string{"node-manager.hooks.deckhouse.io/instance-controller"}))
 	}
 
-	assertCurrentStatus := func(f *HookExecutionConfig, claimName string) {
-		ic := f.KubernetesGlobalResource("InstanceClaim", claimName)
-		machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", claimName)
+	assertCurrentStatus := func(f *HookExecutionConfig, instanceName string) {
+		ic := f.KubernetesGlobalResource("Instance", instanceName)
+		machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", instanceName)
 
 		Expect(ic.Field("status.currentStatus.lastUpdateTime").Exists()).To(BeTrue())
 		Expect(machine.Field("status.currentStatus.lastUpdateTime").Exists()).To(BeTrue())
@@ -71,9 +71,9 @@ spec:
 		Expect(ic.Field("status.currentStatus.phase").String()).To(Equal(machine.Field("status.currentStatus.phase").String()))
 	}
 
-	assertLastOperation := func(f *HookExecutionConfig, claimName string) {
-		ic := f.KubernetesGlobalResource("InstanceClaim", claimName)
-		machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", claimName)
+	assertLastOperation := func(f *HookExecutionConfig, instanceName string) {
+		ic := f.KubernetesGlobalResource("Instance", instanceName)
+		machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", instanceName)
 
 		Expect(ic.Field("status.lastOperation.lastUpdateTime").Exists()).To(BeTrue())
 		Expect(machine.Field("status.lastOperation.lastUpdateTime").Exists()).To(BeTrue())
@@ -93,8 +93,8 @@ spec:
 		Expect(ic.Field("status.lastOperation.type").String()).To(Equal(machine.Field("status.lastOperation.type").String()))
 	}
 
-	assertMachineRef := func(f *HookExecutionConfig, claimName string) {
-		ic := f.KubernetesGlobalResource("InstanceClaim", claimName)
+	assertMachineRef := func(f *HookExecutionConfig, instanceName string) {
+		ic := f.KubernetesGlobalResource("Instance", instanceName)
 
 		Expect(ic.Field("status.machineRef.kind").Exists()).To(BeTrue())
 		Expect(ic.Field("status.machineRef.kind").String()).To(Equal("Machine"))
@@ -106,7 +106,7 @@ spec:
 		Expect(ic.Field("status.machineRef.namespace").String()).To(Equal("d8-cloud-instance-manager"))
 
 		Expect(ic.Field("status.machineRef.name").Exists()).To(BeTrue())
-		Expect(ic.Field("status.machineRef.name").String()).To(Equal(claimName))
+		Expect(ic.Field("status.machineRef.name").String()).To(Equal(instanceName))
 	}
 
 	Context("Empty cluster", func() {
@@ -120,12 +120,12 @@ spec:
 		})
 	})
 
-	Context("Adding instance claims", func() {
+	Context("Adding instances", func() {
 		const (
 			ic1 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: InstanceClaim
+kind: Instance
 metadata:
   name: worker-ac32h
   finalizers:
@@ -188,11 +188,11 @@ status:
 				f.RunHook()
 			})
 
-			It("Should keep 'as is' instance claim with machine", func() {
+			It("Should keep 'as is' instance with machine", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
-				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h")
+				ic := f.KubernetesGlobalResource("Instance", "worker-ac32h")
 				machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h")
 
 				Expect(ic.Exists()).To(BeTrue())
@@ -202,10 +202,10 @@ status:
 				Expect(machine.ToYaml()).To(MatchYAML(machine1))
 			})
 
-			It("Should create instance claim for machine", func() {
+			It("Should create instance for machine", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-fac21")
+				ic := f.KubernetesGlobalResource("Instance", "worker-fac21")
 				machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-fac21")
 
 				Expect(ic.Exists()).To(BeTrue())
@@ -226,13 +226,13 @@ status:
 		})
 	})
 
-	Context("Updating instance claims status", func() {
+	Context("Updating instances status", func() {
 		Context("Phase is Running and bootstrapStatus is not empty", func() {
 			const (
 				ic1 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: InstanceClaim
+kind: Instance
 metadata:
   labels:
     node.deckhouse.io/group: "ng1"
@@ -290,7 +290,7 @@ status:
 				ic2 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: InstanceClaim
+kind: Instance
 metadata:
   labels:
     node.deckhouse.io/group: "ng1"
@@ -351,10 +351,10 @@ status:
 				f.RunHook()
 			})
 
-			It("Should keep instance claim bootstrapStatus for none running machines", func() {
+			It("Should keep instance bootstrapStatus for none running machines", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-dde21")
+				ic := f.KubernetesGlobalResource("Instance", "worker-dde21")
 
 				Expect(ic.Exists()).To(BeTrue())
 				Expect(ic.Field(`status.bootstrapStatus.logsEndpoint`).String()).To(Equal("127.0.0.0:1111"))
@@ -364,7 +364,7 @@ status:
 			It("Should remove bootstrapStatus for running machines", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h")
+				ic := f.KubernetesGlobalResource("Instance", "worker-ac32h")
 
 				Expect(ic.Exists()).To(BeTrue())
 				Expect(ic.Field(`status.bootstrapStatus.logsEndpoint`).String()).To(BeEmpty())
@@ -377,7 +377,7 @@ status:
 				ic1 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: InstanceClaim
+kind: Instance
 metadata:
   labels:
     node.deckhouse.io/group: "ng1"
@@ -460,7 +460,7 @@ status:
 				ic2 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: InstanceClaim
+kind: Instance
 metadata:
   labels:
     node.deckhouse.io/group: "ng1"
@@ -495,11 +495,11 @@ status:
 				f.RunHook()
 			})
 
-			It("Should keep another instance claims", func() {
+			It("Should keep another instances", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
-				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-dde21")
+				ic := f.KubernetesGlobalResource("Instance", "worker-dde21")
 				machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-dde21")
 
 				Expect(ic.Exists()).To(BeTrue())
@@ -515,11 +515,11 @@ status:
 				assertLastOperation(f, "worker-dde21")
 			})
 
-			It("Should update instance claim status from machine status", func() {
+			It("Should update instance status from machine status", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
-				ic := f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h")
+				ic := f.KubernetesGlobalResource("Instance", "worker-ac32h")
 				machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h")
 
 				Expect(ic.Exists()).To(BeTrue())
@@ -537,12 +537,12 @@ status:
 		})
 	})
 
-	Context("Deleting instance claims (have instance claims but do not have machines)", func() {
+	Context("Deleting instances (have instances but do not have machines)", func() {
 		const (
 			ic1 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: InstanceClaim
+kind: Instance
 metadata:
   name: worker-ac32h
   finalizers:
@@ -571,11 +571,11 @@ spec:
 `
 		)
 
-		Context("does not start deletion instance claim (without deletion timestamp", func() {
+		Context("does not start deletion instance (without deletion timestamp", func() {
 			const ic2 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: InstanceClaim
+kind: Instance
 metadata:
   name: worker-bg11u
   finalizers:
@@ -590,28 +590,28 @@ status:
 				f.RunHook()
 			})
 
-			It("Should keep instance claim with machine", func() {
+			It("Should keep instance with machine", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
-				Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("Instance", "worker-ac32h").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h").Exists()).To(BeTrue())
 				assertFinalizersExists(f, "worker-ac32h")
 			})
 
-			It("Should delete instance claim without machine", func() {
+			It("Should delete instance without machine", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-bg11u").Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Instance", "worker-bg11u").Exists()).To(BeFalse())
 			})
 		})
 
-		Context("start deletion instance claim (with deletion timestamp)", func() {
-			Context("does not have machine for deleted instance claim", func() {
+		Context("start deletion instance (with deletion timestamp)", func() {
+			Context("does not have machine for deleted instance", func() {
 				const ic2 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: InstanceClaim
+kind: Instance
 metadata:
   name: worker-bg11u
   finalizers:
@@ -627,30 +627,30 @@ status:
 					f.RunHook()
 				})
 
-				It("Should keep instance claim with machine", func() {
+				It("Should keep instance with machine", func() {
 					Expect(f).To(ExecuteSuccessfully())
 
 					Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
-					Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h").Exists()).To(BeTrue())
+					Expect(f.KubernetesGlobalResource("Instance", "worker-ac32h").Exists()).To(BeTrue())
 					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h").Exists()).To(BeTrue())
 					assertFinalizersExists(f, "worker-ac32h")
 				})
 
-				It("Should remove finalizers from instance claim without machine", func() {
+				It("Should remove finalizers from instance without machine", func() {
 					Expect(f).To(ExecuteSuccessfully())
 
-					ic := f.KubernetesGlobalResource("InstanceClaim", "worker-bg11u")
+					ic := f.KubernetesGlobalResource("Instance", "worker-bg11u")
 					Expect(ic.Exists()).To(BeTrue())
 					Expect(ic.Field("metadata.finalizers").Array()).To(BeEmpty())
 				})
 			})
 
-			Context("have machine for deleted instance claim", func() {
+			Context("have machine for deleted instance", func() {
 				const (
 					ic2 = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: InstanceClaim
+kind: Instance
 metadata:
   name: worker-bg11u
   finalizers:
@@ -684,11 +684,11 @@ spec:
 					f.RunHook()
 				})
 
-				It("Should keep another instance claims", func() {
+				It("Should keep another instances", func() {
 					Expect(f).To(ExecuteSuccessfully())
 
 					Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
-					Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-ac32h").Exists()).To(BeTrue())
+					Expect(f.KubernetesGlobalResource("Instance", "worker-ac32h").Exists()).To(BeTrue())
 					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-ac32h").Exists()).To(BeTrue())
 					assertFinalizersExists(f, "worker-ac32h")
 				})
@@ -699,10 +699,10 @@ spec:
 					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-bg11u").Exists()).To(BeFalse())
 				})
 
-				It("Should keep instance claim with finalizers", func() {
+				It("Should keep instance with finalizers", func() {
 					Expect(f).To(ExecuteSuccessfully())
 
-					Expect(f.KubernetesGlobalResource("InstanceClaim", "worker-bg11u").Exists()).To(BeTrue())
+					Expect(f.KubernetesGlobalResource("Instance", "worker-bg11u").Exists()).To(BeTrue())
 					assertFinalizersExists(f, "worker-bg11u")
 				})
 			})

@@ -39,19 +39,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		ExecutionMinInterval: 1 * time.Second,
 		ExecutionBurst:       2,
 	},
-	Queue: "/modules/node-manager/instance_claim_controller",
+	Queue: "/modules/node-manager/instance_controller",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "instances",
-			Kind:       "InstanceClaim",
+			Kind:       "Instance",
 			ApiVersion: "deckhouse.io/v1alpha1",
-			FilterFunc: instanceClaimFilter,
+			FilterFunc: instanceFilter,
 		},
 		{
 			Name:       "ngs",
 			Kind:       "NodeGroup",
 			ApiVersion: "deckhouse.io/v1",
-			FilterFunc: instanceClaimNodeGroupFilter,
+			FilterFunc: instanceNodeGroupFilter,
 		},
 		{
 			Name:       "machines",
@@ -62,12 +62,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-cloud-instance-manager"},
 				},
 			},
-			FilterFunc: instanceClaimMachineFilter,
+			FilterFunc: instanceMachineFilter,
 		},
 	},
-}, instanceClaimController)
+}, instanceController)
 
-func instanceClaimMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func instanceMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var machine mcmv1alpha1.Machine
 
 	err := sdk.FromUnstructured(obj, &machine)
@@ -75,7 +75,7 @@ func instanceClaimMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		return nil, err
 	}
 
-	return &machineForInstanceClaim{
+	return &machineForInstance{
 		NodeGroup:         machine.Spec.NodeTemplateSpec.Labels["node.deckhouse.io/group"],
 		NodeName:          machine.GetLabels()["node"],
 		Name:              machine.GetName(),
@@ -93,7 +93,7 @@ var (
 	}
 )
 
-func instanceClaimNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func instanceNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ng d8v1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
@@ -101,15 +101,15 @@ func instanceClaimNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, err
 	}
 
-	return &nodeGroupForInstanceClaim{
+	return &nodeGroupForInstance{
 		Name:           ng.GetName(),
 		UID:            ng.GetUID(),
 		ClassReference: ng.Spec.CloudInstances.ClassReference,
 	}, nil
 }
 
-func instanceClaimFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ic d8v1alpha1.InstanceClaim
+func instanceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ic d8v1alpha1.Instance
 
 	err := sdk.FromUnstructured(obj, &ic)
 	if err != nil {
@@ -119,47 +119,47 @@ func instanceClaimFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	return &ic, nil
 }
 
-func instanceClaimController(input *go_hook.HookInput) error {
-	instanceClaims := make(map[string]*d8v1alpha1.InstanceClaim, len(input.Snapshots["instances"]))
-	machines := make(map[string]*machineForInstanceClaim, len(input.Snapshots["machines"]))
-	nodeGroups := make(map[string]*nodeGroupForInstanceClaim, len(input.Snapshots["ngs"]))
+func instanceController(input *go_hook.HookInput) error {
+	instances := make(map[string]*d8v1alpha1.Instance, len(input.Snapshots["instances"]))
+	machines := make(map[string]*machineForInstance, len(input.Snapshots["machines"]))
+	nodeGroups := make(map[string]*nodeGroupForInstance, len(input.Snapshots["ngs"]))
 
 	for _, i := range input.Snapshots["instances"] {
-		ins := i.(*d8v1alpha1.InstanceClaim)
-		instanceClaims[ins.GetName()] = ins
+		ins := i.(*d8v1alpha1.Instance)
+		instances[ins.GetName()] = ins
 	}
 
 	for _, m := range input.Snapshots["machines"] {
-		mc := m.(*machineForInstanceClaim)
+		mc := m.(*machineForInstance)
 		machines[mc.Name] = mc
 	}
 
 	for _, m := range input.Snapshots["ngs"] {
-		ng := m.(*nodeGroupForInstanceClaim)
+		ng := m.(*nodeGroupForInstance)
 		nodeGroups[ng.Name] = ng
 	}
 
-	// first, check mapping from machines to instance claims
+	// first, check mapping from machines to instance
 	// here we handle two cases:
-	//   1. if instance claim exists, then we have 2 subcases:
-	//  	a. first, we should compare machines fields and instance claim status and if we have changes path status
-	//		b. next, we should check metadata.deletionTimestamp for instance claim
-	//         if we have non-zero timestamp this means that client deletes instance claim, and we should delete machine.
+	//   1. if instance exists, then we have 2 subcases:
+	//  	a. first, we should compare machines fields and instance status and if we have changes path status
+	//		b. next, we should check metadata.deletionTimestamp for instance
+	//         if we have non-zero timestamp this means that client deletes instance, and we should delete machine.
 	//         Before deletion, we should check metadata.deletionTimestamp in the machine for prevent multiple deletion
-	//   2. if instance claim does not exist, create instance claim for machine
+	//   2. if instance does not exist, create instance for machine
 	for name, machine := range machines {
 		ng, ok := nodeGroups[machine.NodeGroup]
 		if !ok {
 			return fmt.Errorf("NodeGroup %s not found", machine.NodeGroup)
 		}
 
-		if ic, ok := instanceClaims[name]; ok {
-			statusPatch := getInstanceClaimStatusPatch(ic, machine, ng)
+		if ic, ok := instances[name]; ok {
+			statusPatch := getInstanceStatusPatch(ic, machine, ng)
 			if len(statusPatch) > 0 {
 				patch := map[string]interface{}{
 					"status": statusPatch,
 				}
-				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "InstanceClaim", "", ic.Name, object_patch.WithSubresource("/status"))
+				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
@@ -169,24 +169,24 @@ func instanceClaimController(input *go_hook.HookInput) error {
 				}
 			}
 		} else {
-			newIc := newInstanceClaim(machine, ng)
+			newIc := newInstance(machine, ng)
 			input.PatchCollector.Create(newIc, object_patch.IgnoreIfExists())
 		}
 	}
 
-	// next, check mapping from instance claims to machines
+	// next, check mapping from instance  to machines
 	// here we handle next cases:
 	//   1. if machine exists, then skip it, we handle it above
 	//   2. if machine does not exist:
 	//  	a. we should delete finalizers only if metadata.deletionTimestamp is non-zero
-	//		b. we should delete finalizers and delete instance claim if metadata.deletionTimestamp is zero
-	for _, ic := range instanceClaims {
+	//		b. we should delete finalizers and delete instance if metadata.deletionTimestamp is zero
+	for _, ic := range instances {
 		if _, ok := machines[ic.GetName()]; !ok {
-			input.PatchCollector.MergePatch(deleteFinalizersPatch, "deckhouse.io/v1alpha1", "InstanceClaim", "", ic.Name)
+			input.PatchCollector.MergePatch(deleteFinalizersPatch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name)
 
 			ds := ic.GetDeletionTimestamp()
 			if ds == nil || ds.IsZero() {
-				input.PatchCollector.Delete("deckhouse.io/v1alpha1", "InstanceClaim", "", ic.Name)
+				input.PatchCollector.Delete("deckhouse.io/v1alpha1", "Instance", "", ic.Name)
 			}
 		}
 	}
@@ -194,10 +194,10 @@ func instanceClaimController(input *go_hook.HookInput) error {
 	return nil
 }
 
-func newInstanceClaim(machine *machineForInstanceClaim, ng *nodeGroupForInstanceClaim) *d8v1alpha1.InstanceClaim {
-	return &d8v1alpha1.InstanceClaim{
+func newInstance(machine *machineForInstance, ng *nodeGroupForInstance) *d8v1alpha1.Instance {
+	return &d8v1alpha1.Instance{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "InstanceClaim",
+			Kind:       "Instance",
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 
@@ -223,7 +223,7 @@ func newInstanceClaim(machine *machineForInstanceClaim, ng *nodeGroupForInstance
 			},
 		},
 
-		Status: d8v1alpha1.InstanceClaimStatus{
+		Status: d8v1alpha1.InstanceStatus{
 			ClassReference: d8v1alpha1.ClassReference{
 				Name: ng.ClassReference.Name,
 				Kind: ng.ClassReference.Kind,
@@ -235,7 +235,7 @@ func newInstanceClaim(machine *machineForInstanceClaim, ng *nodeGroupForInstance
 				Namespace:  "d8-cloud-instance-manager",
 			},
 			CurrentStatus: d8v1alpha1.CurrentStatus{
-				Phase:          d8v1alpha1.InstanceClaimPhase(machine.CurrentStatus.Phase),
+				Phase:          d8v1alpha1.InstancePhase(machine.CurrentStatus.Phase),
 				LastUpdateTime: machine.CurrentStatus.LastUpdateTime,
 			},
 			LastOperation: d8v1alpha1.LastOperation{
@@ -248,7 +248,7 @@ func newInstanceClaim(machine *machineForInstanceClaim, ng *nodeGroupForInstance
 	}
 }
 
-func instanceClaimLastOpMap(s map[string]interface{}) map[string]interface{} {
+func instanceLastOpMap(s map[string]interface{}) map[string]interface{} {
 	m, ok := s["lastOperation"]
 	if !ok {
 		m = make(map[string]interface{})
@@ -258,7 +258,7 @@ func instanceClaimLastOpMap(s map[string]interface{}) map[string]interface{} {
 	return m.(map[string]interface{})
 }
 
-func getInstanceClaimStatusPatch(ic *d8v1alpha1.InstanceClaim, machine *machineForInstanceClaim, ng *nodeGroupForInstanceClaim) map[string]interface{} {
+func getInstanceStatusPatch(ic *d8v1alpha1.Instance, machine *machineForInstance, ng *nodeGroupForInstance) map[string]interface{} {
 	status := make(map[string]interface{})
 
 	if ic.Status.NodeRef.Name != machine.NodeName {
@@ -280,22 +280,22 @@ func getInstanceClaimStatusPatch(ic *d8v1alpha1.InstanceClaim, machine *machineF
 	}
 
 	if ic.Status.LastOperation.Description != machine.LastOperation.Description {
-		m := instanceClaimLastOpMap(status)
+		m := instanceLastOpMap(status)
 		m["description"] = machine.LastOperation.Description
 	}
 
 	if string(ic.Status.LastOperation.Type) != string(machine.LastOperation.Type) {
-		m := instanceClaimLastOpMap(status)
+		m := instanceLastOpMap(status)
 		m["type"] = string(machine.LastOperation.Type)
 	}
 
 	if string(ic.Status.LastOperation.State) != string(machine.LastOperation.State) {
-		m := instanceClaimLastOpMap(status)
+		m := instanceLastOpMap(status)
 		m["state"] = string(machine.LastOperation.State)
 	}
 
 	if !ic.Status.LastOperation.LastUpdateTime.Equal(&machine.LastOperation.LastUpdateTime) {
-		m := instanceClaimLastOpMap(status)
+		m := instanceLastOpMap(status)
 		m["lastUpdateTime"] = machine.LastOperation.LastUpdateTime.Format(time.RFC3339)
 	}
 
@@ -309,7 +309,7 @@ func getInstanceClaimStatusPatch(ic *d8v1alpha1.InstanceClaim, machine *machineF
 	return status
 }
 
-type machineForInstanceClaim struct {
+type machineForInstance struct {
 	NodeGroup         string
 	NodeName          string
 	Name              string
@@ -318,7 +318,7 @@ type machineForInstanceClaim struct {
 	DeletionTimestamp *metav1.Time
 }
 
-type nodeGroupForInstanceClaim struct {
+type nodeGroupForInstance struct {
 	Name           string
 	UID            k8stypes.UID
 	ClassReference d8v1.ClassReference

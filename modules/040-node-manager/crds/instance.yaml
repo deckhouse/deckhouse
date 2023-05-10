@@ -11,7 +11,7 @@ spec:
   names:
     plural: instances
     singular: instance
-    kind: InstanceClaim
+    kind: Instance
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
