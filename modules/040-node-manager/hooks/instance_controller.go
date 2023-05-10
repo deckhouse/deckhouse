@@ -102,8 +102,9 @@ func instanceClaimNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	return &nodeGroupForInstanceClaim{
-		Name: ng.GetName(),
-		UID:  ng.GetUID(),
+		Name:           ng.GetName(),
+		UID:            ng.GetUID(),
+		ClassReference: ng.Spec.CloudInstances.ClassReference,
 	}, nil
 }
 
@@ -147,8 +148,13 @@ func instanceClaimController(input *go_hook.HookInput) error {
 	//         Before deletion, we should check metadata.deletionTimestamp in the machine for prevent multiple deletion
 	//   2. if instance claim does not exist, create instance claim for machine
 	for name, machine := range machines {
+		ng, ok := nodeGroups[machine.NodeGroup]
+		if !ok {
+			return fmt.Errorf("NodeGroup %s not found", machine.NodeGroup)
+		}
+
 		if ic, ok := instanceClaims[name]; ok {
-			statusPatch := getInstanceClaimStatusPatch(ic, machine)
+			statusPatch := getInstanceClaimStatusPatch(ic, machine, ng)
 			if len(statusPatch) > 0 {
 				patch := map[string]interface{}{
 					"status": statusPatch,
@@ -163,10 +169,6 @@ func instanceClaimController(input *go_hook.HookInput) error {
 				}
 			}
 		} else {
-			ng, ok := nodeGroups[machine.NodeGroup]
-			if !ok {
-				return fmt.Errorf("NodeGroup %s not found", machine.NodeGroup)
-			}
 			newIc := newInstanceClaim(machine, ng)
 			input.PatchCollector.Create(newIc, object_patch.IgnoreIfExists())
 		}
@@ -217,11 +219,15 @@ func newInstanceClaim(machine *machineForInstanceClaim, ng *nodeGroupForInstance
 			},
 
 			Finalizers: []string{
-				"node-manager.hooks.deckhouse.io/instance-claim-controller",
+				"node-manager.hooks.deckhouse.io/instance-controller",
 			},
 		},
 
 		Status: d8v1alpha1.InstanceClaimStatus{
+			ClassReference: d8v1alpha1.ClassReference{
+				Name: ng.ClassReference.Name,
+				Kind: ng.ClassReference.Kind,
+			},
 			MachineRef: d8v1alpha1.MachineRef{
 				APIVersion: "machine.sapcloud.io/v1alpha1",
 				Kind:       "Machine",
@@ -252,7 +258,7 @@ func instanceClaimLastOpMap(s map[string]interface{}) map[string]interface{} {
 	return m.(map[string]interface{})
 }
 
-func getInstanceClaimStatusPatch(ic *d8v1alpha1.InstanceClaim, machine *machineForInstanceClaim) map[string]interface{} {
+func getInstanceClaimStatusPatch(ic *d8v1alpha1.InstanceClaim, machine *machineForInstanceClaim, ng *nodeGroupForInstanceClaim) map[string]interface{} {
 	status := make(map[string]interface{})
 
 	if ic.Status.NodeRef.Name != machine.NodeName {
@@ -293,6 +299,13 @@ func getInstanceClaimStatusPatch(ic *d8v1alpha1.InstanceClaim, machine *machineF
 		m["lastUpdateTime"] = machine.LastOperation.LastUpdateTime.Format(time.RFC3339)
 	}
 
+	if ic.Status.ClassReference.Kind != ng.ClassReference.Kind || ic.Status.ClassReference.Name != ng.ClassReference.Name {
+		status["classReference"] = map[string]interface{}{
+			"kind": ng.ClassReference.Kind,
+			"name": ng.ClassReference.Name,
+		}
+	}
+
 	return status
 }
 
@@ -306,6 +319,7 @@ type machineForInstanceClaim struct {
 }
 
 type nodeGroupForInstanceClaim struct {
-	Name string
-	UID  k8stypes.UID
+	Name           string
+	UID            k8stypes.UID
+	ClassReference d8v1.ClassReference
 }

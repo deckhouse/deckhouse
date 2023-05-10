@@ -42,13 +42,16 @@ metadata:
 spec:
   nodeType: CloudEphemeral
   cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: worker
     maxPerZone: 5
     minPerZone: 1
 `
 
 	assertFinalizersExists := func(f *HookExecutionConfig, claimName string) {
 		finalizers := f.KubernetesGlobalResource("InstanceClaim", claimName).Field("metadata.finalizers")
-		Expect(finalizers.AsStringSlice()).To(Equal([]string{"node-manager.hooks.deckhouse.io/instance-claim-controller"}))
+		Expect(finalizers.AsStringSlice()).To(Equal([]string{"node-manager.hooks.deckhouse.io/instance-controller"}))
 	}
 
 	assertCurrentStatus := func(f *HookExecutionConfig, claimName string) {
@@ -126,8 +129,11 @@ kind: InstanceClaim
 metadata:
   name: worker-ac32h
   finalizers:
-  - node-manager.hooks.deckhouse.io/instance-claim-controller
-status: {}
+  - node-manager.hooks.deckhouse.io/instance-controller
+status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
 `
 			machine1 = `
 ---
@@ -232,8 +238,11 @@ metadata:
     node.deckhouse.io/group: "ng1"
   name: worker-dde21
   finalizers:
-  - node-manager.hooks.deckhouse.io/instance-claim-controller
+  - node-manager.hooks.deckhouse.io/instance-controller
 status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
   currentStatus:
     lastUpdateTime: "2023-04-18T15:54:55Z"
     phase: Pending
@@ -287,8 +296,11 @@ metadata:
     node.deckhouse.io/group: "ng1"
   name: worker-ac32h
   finalizers:
-  - node-manager.hooks.deckhouse.io/instance-claim-controller
+  - node-manager.hooks.deckhouse.io/instance-controller
 status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
   currentStatus:
     lastUpdateTime: "2023-04-18T15:54:55Z"
     phase: Pending
@@ -371,8 +383,11 @@ metadata:
     node.deckhouse.io/group: "ng1"
   name: worker-dde21
   finalizers:
-  - node-manager.hooks.deckhouse.io/instance-claim-controller
+  - node-manager.hooks.deckhouse.io/instance-controller
 status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
   currentStatus:
     lastUpdateTime: "2023-04-18T15:54:55Z"
     phase: Pending
@@ -451,8 +466,11 @@ metadata:
     node.deckhouse.io/group: "ng1"
   name: worker-ac32h
   finalizers:
-  - node-manager.hooks.deckhouse.io/instance-claim-controller
+  - node-manager.hooks.deckhouse.io/instance-controller
 status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
   currentStatus:
     lastUpdateTime: "2023-04-18T15:54:55Z"
     phase: Pending
@@ -528,8 +546,11 @@ kind: InstanceClaim
 metadata:
   name: worker-ac32h
   finalizers:
-  - node-manager.hooks.deckhouse.io/instance-claim-controller
-status: {}
+  - node-manager.hooks.deckhouse.io/instance-controller
+status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
 `
 			machine = `
 ---
@@ -558,8 +579,11 @@ kind: InstanceClaim
 metadata:
   name: worker-bg11u
   finalizers:
-  - node-manager.hooks.deckhouse.io/instance-claim-controller
-status: {}
+  - node-manager.hooks.deckhouse.io/instance-controller
+status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
 `
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(ng + ic1 + ic2 + machine))
@@ -591,9 +615,12 @@ kind: InstanceClaim
 metadata:
   name: worker-bg11u
   finalizers:
-  - node-manager.hooks.deckhouse.io/instance-claim-controller
+  - node-manager.hooks.deckhouse.io/instance-controller
   deletionTimestamp: "1970-01-01T00:00:00Z"
-status: {}
+status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
 `
 				BeforeEach(func() {
 					f.BindingContexts.Set(f.KubeStateSet(ng + ic1 + ic2 + machine))
@@ -627,9 +654,12 @@ kind: InstanceClaim
 metadata:
   name: worker-bg11u
   finalizers:
-  - node-manager.hooks.deckhouse.io/instance-claim-controller
+  - node-manager.hooks.deckhouse.io/instance-controller
   deletionTimestamp: "1970-01-01T00:00:00Z"
-status: {}
+status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
 `
 					machine2 = `
 ---

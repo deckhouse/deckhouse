@@ -53,6 +53,17 @@ type InstanceClaimStatus struct {
 
 	// Information about instance bootstrapping process
 	BootstrapStatus BootstrapStatus `json:"bootstrapStatus,omitempty"`
+
+	// Reference to a ClassInstance resource. Required.
+	ClassReference ClassReference `json:"classReference"`
+}
+
+type ClassReference struct {
+	// Kind of a ClassReference resource: OpenStackInstanceClass, GCPInstanceClass, ...
+	Kind string `json:"kind,omitempty"`
+
+	// Name of a ClassReference resource.
+	Name string `json:"name,omitempty"`
 }
 
 // BootstrapStatus is information about bootstrapping process

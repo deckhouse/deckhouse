@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: instanceclaims.deckhouse.io
+  name: instances.deckhouse.io
   labels:
     heritage: deckhouse
     module: node-manager
@@ -9,8 +9,8 @@ spec:
   group: deckhouse.io
   scope: Cluster
   names:
-    plural: instanceclaims
-    singular: instanceclaim
+    plural: instances
+    singular: instance
     kind: InstanceClaim
   preserveUnknownFields: false
   versions:
@@ -23,7 +23,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the claim for cloud instance.
+            Defines the cloud instance.
           properties:
             status:
               type: object
@@ -35,6 +35,26 @@ spec:
                     name:
                       type: string
                       description: Node name
+                classReference:
+                  description: |
+                    The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
+                  type: object
+                  properties:
+                    kind:
+                      description: |
+                        The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                      type: string
+                      enum:
+                        - OpenStackInstanceClass
+                        - GCPInstanceClass
+                        - VsphereInstanceClass
+                        - AWSInstanceClass
+                        - YandexInstanceClass
+                        - AzureInstanceClass
+                    name:
+                      description: |
+                        The name of the required `InstanceClass` object (e.g., `finland-medium`).
+                      type: string
                 machineRef:
                   type: object
                   description: Reference to instance in the cloud.
@@ -53,14 +73,14 @@ spec:
                       description: Namespace of referenced object.
                 currentStatus:
                   type: object
-                  description: Current status of the instance claim object.
+                  description: Current status of the instance object.
                   properties:
                     lastUpdateTime:
                       description: Last update time of current status.
                       format: date-time
                       type: string
                     phase:
-                      description: InstancePhase is a label for the condition of a instance claim at the current time.
+                      description: InstancePhase is a label for the condition of a instance at the current time.
                       type: string
                 lastOperation:
                   description: Last operation refers to the status of the last operation performed.
@@ -92,7 +112,7 @@ spec:
       additionalPrinterColumns:
         - name: Status
           type: string
-          description: Current status of the instance claim.
+          description: Current status of the instance.
           jsonPath: .status.currentStatus.phase
         - name: Age
           type: date
