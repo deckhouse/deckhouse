@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/autoscaler/capacity"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -102,6 +103,17 @@ func applyCloudProviderSecretKindZonesFilter(obj *unstructured.Unstructured) (go
 	}, nil
 }
 
+func applyInstanceTypesCatalog(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	c := v1alpha1.InstanceTypesCatalog{}
+
+	err := sdk.FromUnstructured(obj, &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.InstanceTypes, nil
+}
+
 var getCRDsHookConfig = &go_hook.HookConfig{
 	Queue:        "/modules/node-manager",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -153,6 +165,15 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 				MatchNames: []string{"d8-node-manager-cloud-provider"},
 			},
 			FilterFunc: applyCloudProviderSecretKindZonesFilter,
+		},
+		{
+			Name:       "instance_types_catalog",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "InstanceTypesCatalog",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{v1alpha1.CloudDiscoveryDataResourceName},
+			},
+			FilterFunc: applyInstanceTypesCatalog,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -260,6 +281,17 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	// Expire node_group_info metric.
 	input.MetricsCollector.Expire("")
 
+	iCatalogRaw := input.Snapshots["instance_types_catalog"]
+	var instanceTypes []v1alpha1.InstanceType
+
+	if len(iCatalogRaw) == 1 {
+		instanceTypes = iCatalogRaw[0].([]v1alpha1.InstanceType)
+	} else {
+		instanceTypes = make([]v1alpha1.InstanceType, 0)
+	}
+
+	instanceTypeCatalog := capacity.NewInstanceTypesCatalog(instanceTypes)
+
 	for _, v := range input.Snapshots["ngs"] {
 		nodeGroup := v.(NodeGroupCrdInfo)
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
@@ -337,7 +369,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			if nodeGroup.Spec.CloudInstances.MinPerZone != nil && nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
 				if *nodeGroup.Spec.CloudInstances.MinPerZone == 0 && *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
-					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
+					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
 						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
 						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))

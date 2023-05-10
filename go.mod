@@ -62,6 +62,8 @@ require (
 )
 
 require (
+	go.uber.org/automaxprocs v1.5.2
+	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
 	k8s.io/cli-runtime v0.25.5
 	k8s.io/kubectl v0.25.5
 )
@@ -216,6 +218,8 @@ require (
 )
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
+
+replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
