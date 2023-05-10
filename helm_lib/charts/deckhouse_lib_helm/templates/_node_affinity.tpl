@@ -63,7 +63,14 @@ nodeSelector:
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}  {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }} {{- /* base strategy, one of "frontend" "monitoring" "system" any-node" "wildcard" */ -}}
-  {{- $additionalStrategies := tuple "storage-problems" }} {{- /* list of additional strategies. To add strategy list it with prefix "with-", to remove strategy list it with prefix "without-". */ -}}
+  {{- $additionalStrategies := tuple }} {{- /* list of additional strategies. To add strategy list it with prefix "with-", to remove strategy list it with prefix "without-". */ -}}
+  {{- if eq $strategy "custom" }}
+    {{ if lt (len .) 3 }}
+        {{- fail (print "additional strategies is required") }}
+    {{- end }}
+  {{- else }}
+    {{- $additionalStrategies = tuple "storage-problems" }}
+  {{- end }}
   {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
   {{- if gt (len .) 2 }}
     {{- range $as := slice . 2 (len .) }}
@@ -98,7 +105,7 @@ tolerations:
       {{- include "_helm_lib_frontend_tolerations" $context }}
 
     {{- /* System: Nodes for system components: prometheus, dns, cert-manager */ -}}
-     {{- else if eq $strategy "system" }}
+    {{- else if eq $strategy "system" }}
       {{- include "_helm_lib_system_tolerations" $context }}
     {{- end }}
 
@@ -128,7 +135,7 @@ tolerations:
 {{- /* Verify base strategy. */ -}}
 {{- /* Fails if strategy not in allowed list */ -}}
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
-  {{ if not (has . (list "frontend" "monitoring" "system" "any-node" "wildcard" )) }}
+  {{ if not (has . (list "custom" "frontend" "monitoring" "system" "any-node" "wildcard" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
