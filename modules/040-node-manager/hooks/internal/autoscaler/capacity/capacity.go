@@ -92,6 +92,10 @@ type awsInstanceClass struct {
 }
 
 func (aic awsInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+	// TODO remove after 1.48
+	// we cannot remove capacity now
+	// because InstanceTypesCatalog may not have time for discovery
+	// and we get empty catalog, machine deployment will be changed
 	if aic.Capacity != nil {
 		return aic.Capacity, nil
 	}
@@ -112,7 +116,7 @@ func (azic azureInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*
 	// TODO remove after 1.48
 	// we cannot remove capacity now
 	// because InstanceTypesCatalog may not have time for discovery
-	// and we get empty catalog, we
+	// and we get empty catalog, machine deployment will be changed
 	if azic.Capacity != nil {
 		return azic.Capacity, nil
 	}
@@ -130,6 +134,10 @@ type gcpInstanceClass struct {
 }
 
 func (gic gcpInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+	// TODO remove after 1.48
+	// we cannot remove capacity now
+	// because InstanceTypesCatalog may not have time for discovery
+	// and we get empty catalog, machine deployment will be changed
 	if gic.Capacity != nil {
 		return gic.Capacity, nil
 	}
@@ -172,6 +180,10 @@ type openStackInstanceClass struct {
 }
 
 func (osic openStackInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+	// TODO remove after 1.48
+	// we cannot remove capacity now
+	// because InstanceTypesCatalog may not have time for discovery
+	// and we get empty catalog, machine deployment will be changed
 	if osic.Capacity != nil {
 		return osic.Capacity, nil
 	}
