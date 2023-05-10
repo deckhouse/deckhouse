@@ -58,21 +58,12 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 		return err
 	}
 
-	moduleEnabled, exists, err := unstructured.NestedBool(moduleConfig.UnstructuredContent(), "spec", "enabled")
-	if err != nil {
-		return err
-	}
-	if exists && !moduleEnabled {
-		input.LogEntry.Infof("module explicitly disabled, skipping migration")
-		return nil
-	}
-
-	deschedulerSettings, exists, err := unstructured.NestedMap(moduleConfig.UnstructuredContent(), "spec", "settings")
+	deschedulerSettings, exists, err := extractDeschedulerSettingsFromMC(moduleConfig)
 	if err != nil {
 		return err
 	}
 
-	deschedulerConfigJSON := []byte("{}")
+	var deschedulerConfigJSON []byte
 	if exists && len(deschedulerSettings) > 0 {
 		deschedulerConfigJSON, err = json.Marshal(deschedulerSettings)
 		if err != nil {
@@ -97,4 +88,25 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
 
 	return nil
+}
+
+func extractDeschedulerSettingsFromMC(mc *unstructured.Unstructured) (map[string]interface{}, bool, error) {
+	if mc == nil {
+		return nil, false, nil
+	}
+
+	moduleEnabled, exists, err := unstructured.NestedBool(mc.UnstructuredContent(), "spec", "enabled")
+	if err != nil {
+		return nil, false, err
+	}
+	if exists && !moduleEnabled {
+		return nil, false, nil
+	}
+
+	deschedulerSettings, _, err := unstructured.NestedMap(mc.UnstructuredContent(), "spec", "settings")
+	if err != nil {
+		return deschedulerSettings, false, err
+	}
+
+	return deschedulerSettings, true, nil
 }

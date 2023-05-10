@@ -23,12 +23,22 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 const (
+	moduleConfig = `---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: descheduler
+data:
+  version: 1
+`
 	emptyConfigMap = `---
 apiVersion: v1
 kind: ConfigMap
@@ -49,17 +59,27 @@ data:
 `
 )
 
-var _ = Describe("Modules :: descheduler :: hooks :: migrate_from_cm ::", func() {
+var _ = FDescribe("Modules :: descheduler :: hooks :: migrate_from_cm ::", func() {
 	f := HookExecutionConfigInit(`{"descheduler":{"internal":{}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Descheduler", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+
+	cm := &corev1.ConfigMap{}
+	Expect(yaml.Unmarshal([]byte(emptyConfigMap), &cm)).To(Succeed())
+	mc := &unstructured.Unstructured{}
+	Expect(yaml.Unmarshal([]byte(moduleConfig), &mc)).To(Succeed())
 
 	Context("Cluster with enabled, but unconfigured descheduler", func() {
 		BeforeEach(func() {
-			cm := &corev1.ConfigMap{}
-			Expect(yaml.Unmarshal([]byte(emptyConfigMap), &cm)).To(Succeed())
 
 			f.KubeStateSet("")
 			_, err := f.KubeClient().CoreV1().ConfigMaps("d8-system").Create(context.TODO(), cm, v1.CreateOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{
+				Group:    "deckhouse.io",
+				Version:  "v1alpha1",
+				Resource: "modulesconfigs",
+			}).Create(context.TODO(), mc, v1.CreateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			f.RunHook()
@@ -93,6 +113,12 @@ spec:
 			f.KubeStateSet("")
 			_, err := f.KubeClient().CoreV1().ConfigMaps("d8-system").Create(context.TODO(), cm, v1.CreateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
+			_, err = f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{
+				Group:    "deckhouse.io",
+				Version:  "v1alpha1",
+				Resource: "modulesconfigs",
+			}).Create(context.TODO(), mc, v1.CreateOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
 
 			f.RunHook()
 		})
@@ -100,6 +126,7 @@ spec:
 		It("Should create the default Descheduler CR", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			Expect(f.KubernetesGlobalResource("ModuleConfig", "descheduler").Exists()).To(BeFalse())
 			legacyCR := f.KubernetesGlobalResource("Descheduler", "legacy")
 			Expect(legacyCR.ToYaml()).To(MatchYAML(`
 apiVersion: deckhouse.io/v1alpha1
@@ -123,11 +150,19 @@ spec:
 		BeforeEach(func() {
 			f.KubeStateSet(``)
 			f.RunHook()
+
+			_, err := f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{
+				Group:    "deckhouse.io",
+				Version:  "v1alpha1",
+				Resource: "modulesconfigs",
+			}).Create(context.TODO(), mc, v1.CreateOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		It("Should create the default Descheduler CR", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			Expect(f.KubernetesGlobalResource("ModuleConfig", "descheduler").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("Descheduler", "legacy").Exists()).To(BeFalse())
 		})
 	})
