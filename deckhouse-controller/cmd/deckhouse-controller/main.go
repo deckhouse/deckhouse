@@ -28,7 +28,6 @@ import (
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 	log "github.com/sirupsen/logrus"
-	_ "go.uber.org/automaxprocs" // To automatically adjust GOMAXPROCS
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
