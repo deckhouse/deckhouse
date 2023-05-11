@@ -1,18 +1,12 @@
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
 metadata:
   name: alerts-receiver
   {{- include "helm_lib_module_labels" (list $ (dict "app" "alerts-receiver")) | nindent 2 }}
 spec:
-  type: Internal
-  internal:
-    route:
-      groupBy: [ 'job' ]
-      groupWait: 30s
-      groupInterval: 5m
-      repeatInterval: 5m
-      receiver: 'alerts-receiver-webhook'
-    receivers:
-      - name: 'alerts-receiver-webhook'
-        webhookConfigs:
-          - url: 'http://alerts-receiver-webhook.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}:8080/'
+  type: External
+  external:
+    service:
+      namespace: d8-monitoring
+      name: alerts-receiver
