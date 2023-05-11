@@ -14,6 +14,12 @@ import:
   add: /app/_site/documentation
   to: /app
   before: setup
+  excludePaths:
+  - '*/gs/'
+  - '*/guides/'
+  - search-index.json
+  - '*/sitemap*.xml'
+  - '*/robots.txt'
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
