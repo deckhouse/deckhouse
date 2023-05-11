@@ -13,6 +13,10 @@ spec:
     port: 9090
     protocol: TCP
     targetPort: https
+  - name: http-metrics
+    port: 9102
+    protocol: TCP
+    targetPort: http
   selector:
     prometheus: main
     app.kubernetes.io/name: prometheus
