@@ -535,6 +535,99 @@ status:
 				assertLastOperation(f, "worker-ac32h")
 			})
 		})
+
+		Context("Machine with last operation 'Started Machine creation process'", func() {
+			const (
+				ic1 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Instance
+metadata:
+  labels:
+    node.deckhouse.io/group: "ng1"
+  name: worker-dde21
+  finalizers:
+  - node-manager.hooks.deckhouse.io/instance-controller
+status:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
+  currentStatus:
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    phase: Pending
+  lastOperation:
+    description: AAAA
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    state: Processing
+    type: Create
+  machineRef:
+    kind: Machine
+    apiVersion: machine.sapcloud.io/v1alpha1
+    namespace: d8-cloud-instance-manager
+    name: worker-dde21
+`
+				machine1 = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-dde21
+  namespace: d8-cloud-instance-manager
+  labels:
+    instance-group: ng1-nova
+    node: worker-dde21
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/ng1: ""
+        node.deckhouse.io/group: ng1
+        node.deckhouse.io/type: CloudEphemeral
+status:
+  currentStatus:
+    lastUpdateTime: "2023-04-18T15:54:55Z"
+    phase: Pending
+  lastOperation:
+    description: 'Started Machine creation process'
+    lastUpdateTime: "2020-05-15T15:01:13Z"
+    state: Failed
+    type: Create
+`
+			)
+
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(ng + ic1 + machine1))
+				f.RunHook()
+			})
+
+			It("Should update instance status from machine status", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Exists()).To(BeTrue())
+				ic := f.KubernetesGlobalResource("Instance", "worker-dde21")
+				machine := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-dde21")
+
+				Expect(ic.Exists()).To(BeTrue())
+				Expect(machine.Exists()).To(BeTrue())
+
+				Expect(ic.Field("status.lastOperation.lastUpdateTime").Exists()).To(BeTrue())
+				Expect(machine.Field("status.lastOperation.lastUpdateTime").Exists()).To(BeTrue())
+				icTime, err := time.Parse(time.RFC3339, ic.Field("status.lastOperation.lastUpdateTime").String())
+				Expect(err).ToNot(HaveOccurred())
+				machineTime, err := time.Parse(time.RFC3339, "2023-04-18T15:54:55Z")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(icTime.Equal(machineTime)).To(BeTrue())
+
+				Expect(ic.Field("status.lastOperation.description").Exists()).To(BeTrue())
+				Expect(ic.Field("status.lastOperation.description").String()).To(Equal("AAAA"))
+
+				Expect(ic.Field("status.lastOperation.state").Exists()).To(BeTrue())
+				Expect(ic.Field("status.lastOperation.state").String()).To(Equal("Processing"))
+
+				Expect(ic.Field("status.lastOperation.type").Exists()).To(BeTrue())
+				Expect(ic.Field("status.lastOperation.type").String()).To(Equal("Create"))
+			})
+		})
 	})
 
 	Context("Deleting instances (have instances but do not have machines)", func() {

@@ -279,24 +279,32 @@ func getInstanceStatusPatch(ic *d8v1alpha1.Instance, machine *machineForInstance
 		}
 	}
 
+	shouldUpdateLastOp := true
+
 	if ic.Status.LastOperation.Description != machine.LastOperation.Description {
-		m := instanceLastOpMap(status)
-		m["description"] = machine.LastOperation.Description
+		if machine.LastOperation.Description != "Started Machine creation process" {
+			m := instanceLastOpMap(status)
+			m["description"] = machine.LastOperation.Description
+		} else {
+			shouldUpdateLastOp = false
+		}
 	}
 
-	if string(ic.Status.LastOperation.Type) != string(machine.LastOperation.Type) {
-		m := instanceLastOpMap(status)
-		m["type"] = string(machine.LastOperation.Type)
-	}
+	if shouldUpdateLastOp {
+		if string(ic.Status.LastOperation.Type) != string(machine.LastOperation.Type) {
+			m := instanceLastOpMap(status)
+			m["type"] = string(machine.LastOperation.Type)
+		}
 
-	if string(ic.Status.LastOperation.State) != string(machine.LastOperation.State) {
-		m := instanceLastOpMap(status)
-		m["state"] = string(machine.LastOperation.State)
-	}
+		if string(ic.Status.LastOperation.State) != string(machine.LastOperation.State) {
+			m := instanceLastOpMap(status)
+			m["state"] = string(machine.LastOperation.State)
+		}
 
-	if !ic.Status.LastOperation.LastUpdateTime.Equal(&machine.LastOperation.LastUpdateTime) {
-		m := instanceLastOpMap(status)
-		m["lastUpdateTime"] = machine.LastOperation.LastUpdateTime.Format(time.RFC3339)
+		if !ic.Status.LastOperation.LastUpdateTime.Equal(&machine.LastOperation.LastUpdateTime) {
+			m := instanceLastOpMap(status)
+			m["lastUpdateTime"] = machine.LastOperation.LastUpdateTime.Format(time.RFC3339)
+		}
 	}
 
 	if ic.Status.ClassReference.Kind != ng.ClassReference.Kind || ic.Status.ClassReference.Name != ng.ClassReference.Name {
