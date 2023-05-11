@@ -25,11 +25,15 @@ function bb-event-error-create() {
     # bashible step and used events.k8s.io/v1 apiVersion.
     # eventName aggregates hostname with bashible step - sed keep only name and replace
     # underscore with dash due to regexp.
+    # nodeName is used for both .name and .uid fields intentionally as putting a real node uid
+    # has proven to have some side effects like missing events when describing objects
+    # using kubectl versions 1.23.x (https://github.com/deckhouse/deckhouse/issues/4609).
     # All of stderr outputs are stored in the eventLog file.
     # step is used as argument for function call.
     # If event creation failed, error from kubectl suppressed.
     step="$1"
     eventName="$(echo -n "$(hostname -s)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
+    nodeName="$(hostname -s)"
     eventLog="/var/lib/bashible/step.log"
     kubectl_exec apply -f - <<EOF || true
         apiVersion: events.k8s.io/v1
@@ -39,8 +43,8 @@ function bb-event-error-create() {
         regarding:
           apiVersion: v1
           kind: Node
-          name: '$(hostname -s)'
-          uid: "$(kubectl_exec get node $(hostname -s) -o jsonpath='{.metadata.uid}')"
+          name: ${nodeName}
+          uid: ${nodeName}
         note: '$(tail -c 500 ${eventLog})'
         reason: BashibleStepFailed
         type: Warning
