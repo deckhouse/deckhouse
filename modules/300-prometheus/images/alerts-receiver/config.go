@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	reconcileTime = 5 * time.Minute
+	reconcileTime = 1 * time.Minute
 	nameSpace     = "d8-monitoring"
 )
 

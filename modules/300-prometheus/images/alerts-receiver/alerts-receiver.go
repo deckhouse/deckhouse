@@ -19,15 +19,14 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/prometheus/common/model"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/prometheus/alertmanager/template"
+	"github.com/prometheus/common/model"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -56,7 +55,8 @@ func main() {
 	}()
 
 	http.HandleFunc("/healthz", readyHandler)
-	http.HandleFunc("/", webhookHandler)
+	http.HandleFunc("/api/v1/alerts", alertsHandler)
+	http.HandleFunc("/api/v2/alerts", alertsHandler)
 
 	srv := &http.Server{
 		Addr: net.JoinHostPort(config.listenHost, config.listenPort),
@@ -71,7 +71,7 @@ func main() {
 		log.Error(err)
 	}()
 
-	go reconcileLoop(ctx)
+	//go reconcileLoop(ctx)
 
 	<-ctx.Done()
 
@@ -85,15 +85,15 @@ func readyHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func webhookHandler(w http.ResponseWriter, r *http.Request) {
+func alertsHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	data := template.Data{}
+	var data model.Alerts
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		log.Error(err)
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
-	for _, alert := range data.Alerts {
+	for _, alert := range data {
 		if config.logLevel == log.DebugLevel {
 			a, err := json.Marshal(alert)
 			if err != nil {
@@ -102,13 +102,13 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Debugf("received alert: %s", a)
 		}
-
-		// skip DeadMansSwitch alerts
-		if alert.Labels["alertname"] == "DeadMansSwitch" {
-			log.Debug("skip DeadMansSwitch alert")
-			continue
-		}
-
+		/*
+			// skip DeadMansSwitch alerts
+			if alert.Labels["alertname"] == "DeadMansSwitch" {
+				log.Debug("skip DeadMansSwitch alert")
+				continue
+			}
+		*/
 		// skip adding alerts if alerts queue is full
 		if len(alertStore.alerts) == alertStore.capacity {
 			log.Infof("cannot add alert to queue (capacity = %d), queue is full", alertStore.capacity)
@@ -116,17 +116,18 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// update alert
-		if _, ok := alertStore.alerts[alert.Fingerprint]; ok {
-			alertStore.update(&alert)
+		if _, ok := alertStore.alerts[alert.Fingerprint()]; ok {
+			alertStore.update(alert)
 			continue
 		}
 
 		// add alert
-		alertStore.add(&alert)
+		alertStore.add(alert)
 	}
 	w.WriteHeader(http.StatusOK)
 }
 
+/*
 func reconcileLoop(ctx context.Context) {
 	ticker := time.NewTicker(reconcileTime)
 	for {
@@ -138,6 +139,8 @@ func reconcileLoop(ctx context.Context) {
 		}
 	}
 }
+*/
+/*
 
 func reconcile() {
 	alertStore.m.RLock()
@@ -155,3 +158,4 @@ func reconcile() {
 		}
 	}
 }
+*/
