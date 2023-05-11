@@ -4,6 +4,8 @@ layout: none
 searchable: false
 sitemap_include: false
 ---
+
+{%- unless site.mode == "local" %}
 [
 {%- assign searchedpages = site.pages | where: "searchable", true %}
 {%- for page in searchedpages %}
@@ -19,3 +21,4 @@ sitemap_include: false
 {%- endunless %}
 {%- endfor %}
 ]
+{%- endunless %}
