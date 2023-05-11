@@ -62,7 +62,6 @@ require (
 )
 
 require (
-	go.uber.org/automaxprocs v1.5.2
 	k8s.io/cli-runtime v0.25.5
 	k8s.io/kubectl v0.25.5
 )
