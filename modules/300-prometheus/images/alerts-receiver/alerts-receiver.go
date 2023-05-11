@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/prometheus/common/model"
 
@@ -71,7 +72,7 @@ func main() {
 		log.Error(err)
 	}()
 
-	//go reconcileLoop(ctx)
+	go reconcileLoop(ctx)
 
 	<-ctx.Done()
 
@@ -120,7 +121,6 @@ func alertsHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-/*
 func reconcileLoop(ctx context.Context) {
 	ticker := time.NewTicker(reconcileTime)
 	for {
@@ -132,27 +132,21 @@ func reconcileLoop(ctx context.Context) {
 		}
 	}
 }
-*/
-/*
 
 func reconcile() {
-	alertStore.m.RLock()
-	defer alertStore.m.RUnlock()
-	for _, v := range alertStore.alerts {
-		f := v.alert.Fingerprint
-
-		if err := alertStore.updateEvent(f); err != nil {
-			log.Error(err)
+	log.Info("starting reconcile")
+	alertStore.RLock()
+	defer alertStore.RUnlock()
+	for f, v := range alertStore.alerts {
+		if v.Resolved() {
+			alertStore.remove(f)
+			continue
 		}
-
-		// remove resolved and outdated alerts
-		if v.alert.Status == string(model.AlertResolved) || time.Since(v.lastReceivedTime) > 2*reconcileTime {
-			alertStore.remove(v.alert)
-		}
+		log.Infof("update CR with name %s", f)
 	}
 }
 
-
+/*
 if alert.EndsAt.After(time.Now()) {
 			api.m.Firing().Inc()
 		} else {

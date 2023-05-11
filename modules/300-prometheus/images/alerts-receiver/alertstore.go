@@ -75,10 +75,9 @@ func (a *alertStoreStruct) insert(alert *model.Alert) {
 	return
 }
 
-func (a *alertStoreStruct) remove(alert *model.Alert) {
+func (a *alertStoreStruct) remove(fingerprint model.Fingerprint) {
 	a.Lock()
 	defer a.Unlock()
-	fingerprint := alert.Fingerprint()
 	log.Infof("alert with fingerprint %s removed from queue", fingerprint)
 	delete(a.alerts, fingerprint)
 }
