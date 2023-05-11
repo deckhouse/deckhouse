@@ -179,7 +179,7 @@ func shouldReload(tempConfigDir string) (bool, error) {
 		}
 		defer destination.Close()
 
-		_, err = io.Copy(source, destination)
+		_, err = io.Copy(destination, source)
 		if err != nil {
 			return true, err
 		}
