@@ -159,7 +159,12 @@ func shouldReload(tempConfigDir string) (bool, error) {
 		return false, err
 	}
 
+	log.Print("old cksum ", oldChecksum)
+	log.Print("new cksum ", newChecksum)
+
 	if oldChecksum != newChecksum {
+		log.Printf("checksums are unequal")
+
 		err := displayDiff(templatedSampleConfigPath, dynamicConfigPath)
 		if err != nil {
 			return true, err
