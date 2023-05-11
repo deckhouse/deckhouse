@@ -40,13 +40,14 @@ RUN cargo build \
     --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/dynamic-linking,rdkafka?/gssapi-vendored,vrl-cli" \
     && strip target/release/vector
 
+### 2: Config reloader
 FROM $BASE_GOLANG_19_ALPINE as artifact
 WORKDIR /src/
 COPY main.go go.mod go.sum /src/
 RUN apk add --no-cache git && \
     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o reloader main.go
 
-### 2: Final image
+### 3: Final image
 FROM $BASE_UBUNTU
 RUN mkdir -p /etc/vector \
     && apt-get update \

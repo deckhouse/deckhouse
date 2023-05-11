@@ -62,16 +62,14 @@ func main() {
 	go func() {
 		for {
 			select {
-			case event, ok := <-watcher.Events:
+			case _, ok := <-watcher.Events:
 				if !ok {
 					return
 				}
 
-				if event.Name == filepath.Base(sampleConfig) {
-					err := reloadVectorConfig()
-					if err != nil {
-						log.Fatal(err)
-					}
+				err := reloadVectorConfig()
+				if err != nil {
+					log.Fatal(err)
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
@@ -235,6 +233,8 @@ func getFileChecksum(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	log.Printf("cksum for %s: %s", path, hash.Sum(nil))
 
 	return string(hash.Sum(nil)), nil
 }
