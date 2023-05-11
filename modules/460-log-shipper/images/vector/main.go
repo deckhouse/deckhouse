@@ -66,7 +66,8 @@ func main() {
 				if !ok {
 					return
 				}
-				if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
+
+				if event.Name == filepath.Base(sampleConfig) {
 					err := reloadVectorConfig()
 					if err != nil {
 						log.Fatal(err)
@@ -82,8 +83,7 @@ func main() {
 		}
 	}()
 
-	// TODO: watch whole directory
-	err = watcher.Add(sampleConfig)
+	err = watcher.Add(filepath.Dir(sampleConfig))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -222,6 +222,7 @@ func getFileChecksum(path string) (string, error) {
 		_ = fd.Close()
 	}(fd)
 	if errors.Is(err, os.ErrNotExist) {
+		log.Printf("file does not exist yet, returning empty cksum: %s", err)
 		return "", nil
 	}
 	if err != nil {
