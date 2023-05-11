@@ -27,16 +27,6 @@ You can use several external authentication providers simultaneously.
 
 ## Integration features
 
-### Integration with Kubernetes and Deckhouse
-
-The module generates [control-plane-manager](../../modules/040-control-plane-manager/) settings (based on the Kubernetes and Deckhouse versions).
-
-Thus, one of these modules configures the `kube-apiserver` so that it becomes the Dex OIDC client. Several other Deckhouse modules will also be configured to integrate with dex, including:
-- [prometheus](../300-prometheus/)
-- [dashboard](../500-dashboard/)
-- [openvpn](../500-openvpn/)
-- etc.
-
 ### Authenticating to the Kubernetes API using a login and password
 
 Currently, login and password-based authentication to the Kubernetes API is **only** available for the *Crowd* provider.
