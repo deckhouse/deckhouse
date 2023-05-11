@@ -47,7 +47,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - instance/status
+  - instances/status
   verbs:
   - patch
   - update
