@@ -38,26 +38,41 @@ func newStore(l int) *alertStoreStruct {
 	return &alertStoreStruct{alerts: a, capacity: l}
 }
 
-func (a *alertStoreStruct) add(alert *model.Alert) {
+func (a *alertStoreStruct) insert(alert *model.Alert) {
 	a.Lock()
 	defer a.Unlock()
 
-	fingerprint := alert.Fingerprint()
-	log.Infof("alert with fingerprint %s added to queue", fingerprint)
-	a.alerts[fingerprint] = &types.Alert{
-		Alert: *alert,
-		UpdatedAt: time.Now(),
+	now := time.Now()
+
+	ta := &types.Alert{
+		Alert:     *alert,
+		UpdatedAt: now,
 	}
 
-	return
-}
+	// Ensure StartsAt is set.
+	if ta.StartsAt.IsZero() {
+		if ta.EndsAt.IsZero() {
+			ta.StartsAt = now
+		} else {
+			ta.StartsAt = ta.EndsAt
+		}
+	}
+	// If no end time is defined, set a timeout after which an alert
+	// is marked resolved if it is not updated.
+	if ta.EndsAt.IsZero() {
+		ta.Timeout = true
+		ta.EndsAt = now.Add(resolveTimeout)
+	}
+	fingerprint := ta.Fingerprint()
 
-func (a *alertStoreStruct) update(alert *model.Alert) {
-	a.Lock()
-	defer a.Unlock()
-	fingerprint := alert.Fingerprint()
-	log.Infof("alert with fingerprint %s updated in queue", fingerprint)
-	a.alerts[fingerprint].UpdatedAt = time.Now()
+	if _, ok := a.alerts[fingerprint]; ok {
+		log.Infof("alert with fingerprint %s updated in queue", fingerprint)
+	} else {
+		log.Infof("alert with fingerprint %s added to queue", fingerprint)
+	}
+	a.alerts[fingerprint] = ta
+
+	return
 }
 
 func (a *alertStoreStruct) remove(alert *model.Alert) {

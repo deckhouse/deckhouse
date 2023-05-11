@@ -115,14 +115,7 @@ func alertsHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// update alert
-		if _, ok := alertStore.alerts[alert.Fingerprint()]; ok {
-			alertStore.update(alert)
-			continue
-		}
-
-		// add alert
-		alertStore.add(alert)
+		alertStore.insert(alert)
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -158,4 +151,11 @@ func reconcile() {
 		}
 	}
 }
+
+
+if alert.EndsAt.After(time.Now()) {
+			api.m.Firing().Inc()
+		} else {
+			api.m.Resolved().Inc()
+		}
 */

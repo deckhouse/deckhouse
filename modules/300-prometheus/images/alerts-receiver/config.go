@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	reconcileTime = 1 * time.Minute
-	nameSpace     = "d8-monitoring"
+	reconcileTime  = 1 * time.Minute
+	nameSpace      = "d8-monitoring"
+	resolveTimeout = 5 * time.Minute
 )
 
 type configStruct struct {
