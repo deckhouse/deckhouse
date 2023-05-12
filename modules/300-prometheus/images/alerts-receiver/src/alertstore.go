@@ -131,6 +131,10 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 		obj.Object = content
 
 		_, err = config.k8sClient.Resource(config.gvr).Namespace("").Create(context.Background(), obj, v1.CreateOptions{})
+		if err != nil {
+			return err
+		}
+		_, err = config.k8sClient.Resource(config.gvr).Namespace("").UpdateStatus(context.Background(), obj, v1.UpdateOptions{})
 		return err
 	}
 	return nil
@@ -152,7 +156,7 @@ func getLabel(labels model.LabelSet, key string) string {
 }
 
 func removePlkAnnotations(alert *model.Alert) {
-	for k, _ := range alert.Annotations {
+	for k := range alert.Annotations {
 		if strings.HasPrefix(string(k),"plk_") {
 			delete(alert.Annotations, k)
 		}
