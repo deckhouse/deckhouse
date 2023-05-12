@@ -1,5 +1,5 @@
-{{- $ciliumVersion := "1.12.8" }}
-# https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L8-L11
+{{- $ciliumVersion := "1.13.2" }}
+# https://github.com/cilium/cilium/blob/v1.13.2/images/runtime/Dockerfile#L8-L11
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
 from: quay.io/cilium/cilium-llvm:3408daa17f6490a464dfc746961e28ae31964c66@sha256:ff13a1a9f973d102c6ac907d2bc38a524c8e1d26c6c1b16ed809a98925206a79
@@ -13,9 +13,9 @@ from: quay.io/cilium/cilium-iproute2:f882e3fd516184703eea5ee9b3b915748b5d4ee8@sh
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
 from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
 ---
-# https://github.com/cilium/cilium/blob/v1.12.8/images/cilium/Dockerfile#L11
+# https://github.com/cilium/cilium/blob/v1.13.2/images/cilium/Dockerfile#L10
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
-from: quay.io/cilium/cilium-envoy:04413917ff99e4f6ab51d1c6eb424d4a055f4462@sha256:af076f80818bc8d894f2f4f3104d5f4288112a67be5fb6e1b9a9c78370c7c9c8
+from: quay.io/cilium/cilium-envoy:v1.23-9d3ac11580c59ef31521f2b3df33014642c1fd3b@sha256:b7454b67697ff3c4b199072ebe88f8ff4f08173ee748608bb033d140d04f116d
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
 from: {{ $.Images.BASE_ALPINE }}
@@ -78,9 +78,9 @@ shell:
   - apt-get update
   - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu curl
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/2a518bb669db2de4677acb952a7eef4f269fcb48/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/17a78a2325a18793388428402daf063de7d72100/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/a1046bcc10b75c7130f0579d40d0529c85e1fe56/images/runtime/cni-version.sh -o /go/src/github.com/cilium/cilium/images/runtime/cni-version.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/cni-version.sh -o /go/src/github.com/cilium/cilium/images/runtime/cni-version.sh
   - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   install:
   - cd /go/src/github.com/cilium/cilium/images/runtime
@@ -133,8 +133,8 @@ shell:
   - apt-get upgrade -y
   - apt-get install -y jq curl
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/17a78a2325a18793388428402daf063de7d72100/images/runtime/install-runtime-deps.sh -o /go/src/github.com/cilium/cilium/images/runtime/install-runtime-deps.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/369f3f917ec9f2d9bb46dde2e4aaba64934d60a4/images/runtime/iptables-wrapper-installer.sh -o /go/src/github.com/cilium/cilium/images/runtime/iptables-wrapper-installer.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/install-runtime-deps.sh -o /go/src/github.com/cilium/cilium/images/runtime/install-runtime-deps.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/iptables-wrapper-installer.sh -o /go/src/github.com/cilium/cilium/images/runtime/iptables-wrapper-installer.sh
   - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   install:
   - cd /go/src/github.com/cilium/cilium/images/runtime
