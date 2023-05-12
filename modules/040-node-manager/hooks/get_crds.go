@@ -111,7 +111,7 @@ func applyInstanceTypesCatalog(obj *unstructured.Unstructured) (go_hook.FilterRe
 		return nil, err
 	}
 
-	return c.InstanceTypes, nil
+	return capacity.NewInstanceTypesCatalog(c.InstanceTypes), nil
 }
 
 var getCRDsHookConfig = &go_hook.HookConfig{
@@ -282,15 +282,13 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("")
 
 	iCatalogRaw := input.Snapshots["instance_types_catalog"]
-	var instanceTypes []v1alpha1.InstanceType
+	var instanceTypeCatalog *capacity.InstanceTypesCatalog
 
 	if len(iCatalogRaw) == 1 {
-		instanceTypes = iCatalogRaw[0].([]v1alpha1.InstanceType)
+		instanceTypeCatalog = iCatalogRaw[0].(*capacity.InstanceTypesCatalog)
 	} else {
-		instanceTypes = make([]v1alpha1.InstanceType, 0)
+		instanceTypeCatalog = capacity.NewInstanceTypesCatalog(nil)
 	}
-
-	instanceTypeCatalog := capacity.NewInstanceTypesCatalog(instanceTypes)
 
 	for _, v := range input.Snapshots["ngs"] {
 		nodeGroup := v.(NodeGroupCrdInfo)
