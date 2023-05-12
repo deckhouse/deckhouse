@@ -154,8 +154,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: ADDON_OPERATOR_REGISTER_MODULES_GV
-              value: "deckhouse.io/v1alpha1"
+            - name: ADDON_OPERATOR_ADMISSION_SERVER_ENABLED
+              value: "true"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_CERTS_DIR
               value: "/certs"
             - name: HELM3LIB
