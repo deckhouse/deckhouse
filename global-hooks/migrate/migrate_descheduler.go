@@ -56,12 +56,12 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 
 	mcGVR := schema.ParseGroupResource("moduleconfigs.deckhouse.io").WithVersion("v1alpha1")
 
-	mCM, err := kubeCl.CoreV1().ConfigMaps(migrationNS).Get(context.TODO(), migrationCM, metav1.GetOptions{})
+	_, err = kubeCl.CoreV1().ConfigMaps(migrationNS).Get(context.TODO(), migrationCM, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
-	if mCM != nil {
-		input.LogEntry.Info("Migration cm %s already exists, skipping migration", migrationCM)
+	if !errors.IsNotFound(err) {
+		input.LogEntry.Infof("Migration cm %s already exists, skipping migration", migrationCM)
 		return nil
 	}
 
