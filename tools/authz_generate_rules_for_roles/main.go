@@ -198,14 +198,23 @@ func renderHelmTemplates(dir, values string) (map[string]string, error) {
 		return nil, err
 	}
 
+	helmLibPath := "helm_lib/charts/deckhouse_lib_helm"
 	deckhouseRoot := filepath.Dir(cwd)
-	helmLibPath := filepath.Join(deckhouseRoot, "helm_lib/charts/deckhouse_lib_helm")
 	chartHelmLibPath := filepath.Join(deckhouseRoot, "modules/140-user-authz/charts/helm_lib")
-	if err := os.Symlink(helmLibPath, chartHelmLibPath); err != nil {
-		if !errors.Is(err, os.ErrExist) {
-			return nil, err
-		}
+	if err := os.Remove(chartHelmLibPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
 	}
+
+	helmLibFullPath := filepath.Join(deckhouseRoot, helmLibPath)
+	if err := os.Symlink(helmLibFullPath, chartHelmLibPath); err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		_ = os.Remove(chartHelmLibPath)
+		helmLibFullPath = filepath.Join("/deckhouse", helmLibPath)
+		_ = os.Symlink(helmLibFullPath, chartHelmLibPath)
+	}()
 
 	r := helm.Renderer{}
 	return r.RenderChartFromDir(dir, values)
