@@ -50,6 +50,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, discoveryDNSAddress)
 
+type ServiceAddr struct {
+	Name      string
+	ClusterIP string
+}
+
 func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var service v1core.Service
 	err := sdk.FromUnstructured(obj, &service)
@@ -57,24 +62,45 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return "", err
 	}
 
-	return service.Spec.ClusterIP, nil
+	return ServiceAddr{service.Name, service.Spec.ClusterIP}, nil
 }
 
-func discoveryDNSAddress(input *go_hook.HookInput) error {
-	dnsAddressSnap := input.Snapshots["dns_cluster_ip"]
+// Providers are deploying node-local-dns to cluster in different ways
+// E.g.: services in 'kube-system' namespace for Deckhouse and GKE
 
+//      | .metadata.Name     |  .spec.Type   | .metadata.labels
+//  ----+--------------------+---------------+-------------------
+//  GKE | kube-dns           |  ClusterIP    |  k8s-app=kube-dns
+//      | kube-dns-upstream  |  ClusterIP    |  k8s-app=kube-dns
+//  ----+--------------------+---------------+-------------------
+//  D8  | kube-dns           |  ExternalName |  k8s-app=kube-dns
+//      | d8-kube-dns        |  ClusterIP    |  k8s-app=kube-dns
+
+// dnsAdress will be taken only from ClusterIP service in that order:
+// - from 'kube-dns' service
+// - from any other service selected by label 'k8s-app=kube-dns'
+//   if there are no more ClusterIP services with same label in namespace
+
+func discoveryDNSAddress(input *go_hook.HookInput) error {
 	dnsAddress := ""
-	for _, addrRaw := range dnsAddressSnap {
-		addr := addrRaw.(string)
-		if addr == "None" || addr == "" {
+
+	for _, sRaw := range input.Snapshots["dns_cluster_ip"] {
+		s := sRaw.(ServiceAddr)
+
+		if s.ClusterIP == "None" || s.ClusterIP == "" {
 			continue
 		}
 
-		if dnsAddress != "" && dnsAddress != addr {
-			return fmt.Errorf("ERROR: can't find a single kube-dns service, found %s %s", dnsAddress, addr)
+		if s.Name == "kube-dns" {
+			dnsAddress = s.ClusterIP
+			break
 		}
 
-		dnsAddress = addr
+		if dnsAddress != "" && dnsAddress != s.ClusterIP {
+			return fmt.Errorf("ERROR: can't select a single service by 'k8s-app: kube-dns' label, found %s %s", dnsAddress, s.ClusterIP)
+		}
+
+		dnsAddress = s.ClusterIP
 	}
 
 	if dnsAddress == "" {
