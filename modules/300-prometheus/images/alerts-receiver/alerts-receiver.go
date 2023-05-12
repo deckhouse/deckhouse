@@ -116,7 +116,7 @@ func alertsHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		alertStore.insert(alert)
+		alertStore.insertAlert(alert)
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -139,7 +139,9 @@ func reconcile() {
 	defer alertStore.RUnlock()
 	for f, v := range alertStore.alerts {
 		if v.Resolved() {
-			alertStore.remove(f)
+			if err := alertStore.removeCR(f); err == nil {
+				alertStore.removeAlert(f)
+			}
 			continue
 		}
 		log.Infof("update CR with name %s", f)

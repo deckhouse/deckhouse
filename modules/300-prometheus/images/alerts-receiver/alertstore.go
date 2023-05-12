@@ -17,13 +17,15 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"sync"
 	"time"
 
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
-
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type alertStoreStruct struct {
@@ -38,7 +40,7 @@ func newStore(l int) *alertStoreStruct {
 	return &alertStoreStruct{alerts: a, capacity: l}
 }
 
-func (a *alertStoreStruct) insert(alert *model.Alert) {
+func (a *alertStoreStruct) insertAlert(alert *model.Alert) {
 	a.Lock()
 	defer a.Unlock()
 
@@ -75,9 +77,27 @@ func (a *alertStoreStruct) insert(alert *model.Alert) {
 	return
 }
 
-func (a *alertStoreStruct) remove(fingerprint model.Fingerprint) {
+func (a *alertStoreStruct) removeAlert(fingerprint model.Fingerprint) {
 	a.Lock()
 	defer a.Unlock()
 	log.Infof("alert with fingerprint %s removed from queue", fingerprint)
 	delete(a.alerts, fingerprint)
+}
+
+func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) {
+	a.RLock()
+	defer a.RUnlock()
+	log.Infof("alert with fingerprint %s removed from queue", fingerprint)
+	delete(a.alerts, fingerprint)
+}
+
+func (a *alertStoreStruct) removeCR(fingerprint model.Fingerprint) error {
+	a.RLock()
+	defer a.RUnlock()
+	log.Infof("remove CR with name %s from cluster", fingerprint)
+	err := config.k8sClient.Resource(config.gvr).Namespace("").Delete(context.Background(), fingerprint.String(), v1.DeleteOptions{})
+	if errors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
