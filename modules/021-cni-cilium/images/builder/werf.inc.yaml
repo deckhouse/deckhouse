@@ -90,8 +90,8 @@ import:
   to: /bin
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
-  add: /usr/local/go/
-  to: /usr/local/go/
+  add: /usr/local/go
+  to: /usr/local/go
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
