@@ -83,7 +83,7 @@ shell:
   - ./iptables-wrapper-installer.sh --no-sanity-check
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
+fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/llvm-objcopy
