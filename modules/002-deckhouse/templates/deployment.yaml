@@ -154,6 +154,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: ADDON_OPERATOR_REGISTER_MODULES_GV
+              value: "deckhouse.io/v1alpha1"
+            - name: ADDON_OPERATOR_ADMISSION_SERVER_CERTS_DIR
+              value: "/certs"
             - name: HELM3LIB
               value: "yes"
             - name: HELM_HISTORY_MAX
@@ -176,10 +180,10 @@ spec:
             - containerPort: 9650
               name: self
             - containerPort: 9651
-              name: custom
+              name: webhook
           readinessProbe:
             httpGet:
-              path: /ready
+              path: /readyz
               port: 9650
             initialDelaySeconds: 5
             # fail after 10 minutes
@@ -197,6 +201,9 @@ spec:
             name: tmp
           - mountPath: /.kube
             name: kube
+          - mountPath: /certs
+            name: certs
+            readOnly: true
 {{- if (.Values.global.enabledModules | has "external-module-manager") }}
           - mountPath: /deckhouse/external-modules
             name: external-modules
@@ -215,6 +222,9 @@ spec:
       - emptyDir:
           medium: Memory
         name: kube
+      - name: certs
+        secret:
+          secretName: admission-webhook-certs
 {{- if (.Values.global.enabledModules | has "external-module-manager") }}
       - name: external-modules
         hostPath:

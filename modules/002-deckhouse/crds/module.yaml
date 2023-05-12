@@ -1,0 +1,44 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: modules.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: deckhouse
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: modules
+    singular: module
+    kind: Module
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration for Deckhouse module.
+          required:
+            - properties
+          properties:
+            properties:
+              type: object
+              properties:
+                weight:
+                  type: integer
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: weight
+          jsonPath: .properties.weight
+          type: integer
+          description: 'Module order weight.'
