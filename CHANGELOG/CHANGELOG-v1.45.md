@@ -75,6 +75,7 @@
  - **[cloud-provider-gcp]** Disabled Node IPAM in GCP CCM that conflicted with kube-controller-manager's IPAM controller. [#4110](https://github.com/deckhouse/deckhouse/pull/4110)
  - **[cloud-provider-yandex]** Set `network_acceleration_type` to software accelerated, update netfilter parameters for new Yandex nat instances. [#4196](https://github.com/deckhouse/deckhouse/pull/4196)
  - **[deckhouse]** Hours and minutes can be used simultaneously for the `minimalNotificationTime` field in ModuleConfig CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
+ - **[descheduler]** Create a default Descheduler instance. [#4606](https://github.com/deckhouse/deckhouse/pull/4606)
  - **[descheduler]** Restored descheduler migration hook. [#4524](https://github.com/deckhouse/deckhouse/pull/4524)
  - **[dhctl]** Fix `kube-proxy` does not restart. [#4274](https://github.com/deckhouse/deckhouse/pull/4274)
  - **[extended-monitoring]** Fix RBAC rules for `image-availability-exporter`. [#4346](https://github.com/deckhouse/deckhouse/pull/4346)
@@ -91,6 +92,8 @@
     `log-shipper` Pods will restart.
  - **[log-shipper]** Make vector retrying request on startup with backoff. [#4270](https://github.com/deckhouse/deckhouse/pull/4270)
  - **[log-shipper]** Fix using hyphens in the `extraLabels` keys field of the `ClusterLogDestination` spec. [#4112](https://github.com/deckhouse/deckhouse/pull/4112)
+ - **[loki]** Fix `ClusterLogDestination` Loki endpoint. [#4408](https://github.com/deckhouse/deckhouse/pull/4408)
+ - **[node-manager]** Fix the Ready condition for node groups. [#4582](https://github.com/deckhouse/deckhouse/pull/4582)
  - **[node-manager]** Revert removing `early-oom` (the [#3821](https://github.com/deckhouse/deckhouse/pull/3821) PR). [#4376](https://github.com/deckhouse/deckhouse/pull/4376)
  - **[node-manager]** Restrict changing `nodeType` for NodeGroups and remove stale status fields from static NodeGroups. [#4257](https://github.com/deckhouse/deckhouse/pull/4257)
  - **[node-manager]** Fix `WaitingForDisruptiveApproval` status calculating. [#4250](https://github.com/deckhouse/deckhouse/pull/4250)
