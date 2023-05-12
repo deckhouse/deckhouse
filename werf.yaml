@@ -369,6 +369,8 @@ git:
     - global-hooks/**/*.go
     - go_lib/**/*.go
     - modules/**/*.go
+    - go_lib/cloud-data/go.mod
+    - go_lib/cloud-data/go.sum
     - go.mod
     - go.sum
     - tools
