@@ -43,6 +43,7 @@ func newStore(l int) *alertStoreStruct {
 	return &alertStoreStruct{alerts: a, capacity: l}
 }
 
+// Add or update alert in internal store
 func (a *alertStoreStruct) insertAlert(alert *model.Alert) {
 	a.Lock()
 	defer a.Unlock()
@@ -83,6 +84,7 @@ func (a *alertStoreStruct) insertAlert(alert *model.Alert) {
 	return
 }
 
+// Remove alerr from internal store
 func (a *alertStoreStruct) removeAlert(fingerprint model.Fingerprint) {
 	a.Lock()
 	defer a.Unlock()
@@ -140,6 +142,7 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 	return nil
 }
 
+// Remove CR from cluster
 func (a *alertStoreStruct) removeCR(fingerprint model.Fingerprint) error {
 	a.RLock()
 	defer a.RUnlock()
@@ -151,13 +154,15 @@ func (a *alertStoreStruct) removeCR(fingerprint model.Fingerprint) error {
 	return err
 }
 
+// Return label by key as string
 func getLabel(labels model.LabelSet, key string) string {
 	return string(labels[model.LabelName(key)])
 }
 
+// Remove unwanted annotations started with plk_
 func removePlkAnnotations(alert *model.Alert) {
 	for k := range alert.Annotations {
-		if strings.HasPrefix(string(k),"plk_") {
+		if strings.HasPrefix(string(k), "plk_") {
 			delete(alert.Annotations, k)
 		}
 	}
