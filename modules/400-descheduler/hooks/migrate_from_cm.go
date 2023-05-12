@@ -28,9 +28,12 @@ import (
 	"github.com/tidwall/sjson"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
+
+const migratedKey = "cm-migrated"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
@@ -49,6 +52,11 @@ func createFirstDeschedulerCR(input *go_hook.HookInput, dc dependency.Container)
 	}
 	if err != nil {
 		return err
+	}
+
+	if _, ok := cm.GetAnnotations()[migratedKey]; ok {
+		input.LogEntry.Info("already migrated")
+		return nil
 	}
 
 	configJSON, ok := cm.Data["config"]
@@ -156,7 +164,19 @@ func createFirstDeschedulerCR(input *go_hook.HookInput, dc dependency.Container)
 
 	input.PatchCollector.Create(object, object_patch.IgnoreIfExists())
 	input.PatchCollector.Delete("deckhouse.io/v1alpha1", "ModuleConfig", "", "descheduler")
-	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "descheduler-config-migration")
+	input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		objCopy := obj.DeepCopy()
+
+		annotations := objCopy.GetAnnotations()
+		if annotations == nil {
+			objCopy.SetAnnotations(map[string]string{migratedKey: ""})
+			return objCopy, nil
+
+		}
+		annotations[migratedKey] = ""
+		objCopy.SetAnnotations(annotations)
+		return objCopy, nil
+	}, "v1", "ConfigMap", "d8-system", "descheduler-config-migration")
 
 	return nil
 }

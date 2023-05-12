@@ -33,11 +33,16 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-const defaultLegacyDeschedulerConfigJSON = `{
+const (
+	defaultLegacyDeschedulerConfigJSON = `{
 "removePodsViolatingInterPodAntiAffinity": true,
 "removePodsViolatingNodeAffinity": true
 }
 `
+
+	migrationCM = "descheduler-config-migration"
+	migrationNS = "d8-system"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
@@ -50,6 +55,15 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 	}
 
 	mcGVR := schema.ParseGroupResource("moduleconfigs.deckhouse.io").WithVersion("v1alpha1")
+
+	mCM, err := kubeCl.CoreV1().ConfigMaps(migrationNS).Get(context.TODO(), migrationCM, metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	if mCM != nil {
+		input.LogEntry.Info("Migration cm %s already exists, skipping migration", migrationCM)
+		return nil
+	}
 
 	moduleConfig, err := kubeCl.Dynamic().Resource(mcGVR).Get(context.TODO(), "descheduler", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -79,8 +93,8 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "descheduler-config-migration",
-			Namespace: "d8-system",
+			Name:      migrationCM,
+			Namespace: migrationNS,
 		},
 		Data: map[string]string{"config": string(deschedulerConfigJSON)},
 	}
