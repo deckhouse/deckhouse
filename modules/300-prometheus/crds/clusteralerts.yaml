@@ -27,7 +27,7 @@ spec:
         jsonPath: .alert.severity_level
       - name: Active since
         type: date
-        jsonPath: .metadata.creationTimestamp
+        jsonPath: .status.startsAt
       - name: Last received
         type: date
         jsonPath: .status.lastUpdateTime
@@ -57,7 +57,10 @@ spec:
               properties:
                 alertStatus:
                   type: string
-                  description: "Current alert status."
+                  description: Current alert status.
+                startsAt:
+                  type: string
+                  description: Timestamp of alert creation.
                 lastUpdateTime:
                   type: string
                   description: Timestamp of last status update for operation.

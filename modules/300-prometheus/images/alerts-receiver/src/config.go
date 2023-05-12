@@ -28,8 +28,11 @@ import (
 )
 
 const (
-	reconcileTime  = 1 * time.Minute
-	resolveTimeout = 5 * time.Minute
+	reconcileTime    = 1 * time.Minute
+	resolveTimeout   = 5 * time.Minute
+	severityLabel    = "severity_level"
+	summaryLabel     = "summary"
+	descriptionLabel = "description"
 )
 
 type configStruct struct {

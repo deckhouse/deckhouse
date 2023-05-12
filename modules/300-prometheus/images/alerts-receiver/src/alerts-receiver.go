@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/prometheus/common/model"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -139,12 +138,13 @@ func reconcile() {
 	defer alertStore.RUnlock()
 	for f, v := range alertStore.alerts {
 		if v.Resolved() {
-			if err := alertStore.removeCR(f); err == nil {
-				alertStore.removeAlert(f)
-			}
+			alertStore.removeAlert(f)
 			continue
 		}
-		log.Infof("update CR with name %s", f)
+
+		if err := alertStore.insertCR(f); err != nil {
+			log.Error(err)
+		}
 	}
 }
 

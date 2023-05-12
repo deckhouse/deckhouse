@@ -26,6 +26,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type alertStoreStruct struct {
@@ -69,6 +71,7 @@ func (a *alertStoreStruct) insertAlert(alert *model.Alert) {
 
 	if _, ok := a.alerts[fingerprint]; ok {
 		log.Infof("alert with fingerprint %s updated in queue", fingerprint)
+		a.alerts[fingerprint] = ta.Merge(a.alerts[fingerprint])
 	} else {
 		log.Infof("alert with fingerprint %s added to queue", fingerprint)
 	}
@@ -84,11 +87,50 @@ func (a *alertStoreStruct) removeAlert(fingerprint model.Fingerprint) {
 	delete(a.alerts, fingerprint)
 }
 
-func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) {
+func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 	a.RLock()
 	defer a.RUnlock()
-	log.Infof("alert with fingerprint %s removed from queue", fingerprint)
-	delete(a.alerts, fingerprint)
+	_, err := config.k8sClient.Resource(config.gvr).Namespace("").Get(context.Background(), fingerprint.String(), v1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
+	if errors.IsNotFound(err) {
+		log.Infof("creating CR with name %s", fingerprint)
+		alert := &ClusterAlert{
+			TypeMeta: v1.TypeMeta{
+				APIVersion: "deckhouse.io/v1alpha1",
+				Kind:       "ClusterAlert",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				Name: fingerprint.String(),
+				Labels: map[string]string{"app": "alert-receiver"},
+			},
+			Alert: ClusterAlertSpec{
+				Name:          a.alerts[fingerprint].Name(),
+				SeverityLevel: getLabel(a.alerts[fingerprint].Labels, severityLabel),
+				Summary:       getLabel(a.alerts[fingerprint].Labels, summaryLabel),
+				Description:   getLabel(a.alerts[fingerprint].Labels, descriptionLabel),
+				Annotations:   a.alerts[fingerprint].Annotations,
+				Labels:        a.alerts[fingerprint].Labels,
+			},
+			Status: ClusterAlertStatus{
+				AlertStatus:    clusterAlertFiring,
+				StartsAt:       a.alerts[fingerprint].StartsAt.String(),
+				LastUpdateTime: a.alerts[fingerprint].UpdatedAt.String(),
+			},
+		}
+		content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(alert)
+		if err != nil {
+			return err
+		}
+		obj := &unstructured.Unstructured{}
+		obj.Object = content
+
+		_, err = config.k8sClient.Resource(config.gvr).Namespace("").Create(context.Background(), obj, v1.CreateOptions{})
+		return err
+	}
+	return nil
 }
 
 func (a *alertStoreStruct) removeCR(fingerprint model.Fingerprint) error {
@@ -100,4 +142,8 @@ func (a *alertStoreStruct) removeCR(fingerprint model.Fingerprint) error {
 		return nil
 	}
 	return err
+}
+
+func getLabel(labels model.LabelSet, key string) string {
+	return string(labels[model.LabelName(key)])
 }
