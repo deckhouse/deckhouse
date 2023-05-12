@@ -15,7 +15,7 @@ deckhouse:
         publicDomainTemplate: "%s.k8s.smoke.flant.com"
       storageClass: localpath-all
     certManagerEnabled: true
-    deckhouseWebEnabled: true
+    documentationEnabled: true
     upmeterEnabled: true
     prometheusCrdEnabled: true
     operatorPrometheusCrdEnabled: true

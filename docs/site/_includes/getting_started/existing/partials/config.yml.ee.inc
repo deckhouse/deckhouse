@@ -39,4 +39,4 @@ deckhouse:
           customTolerationKeys:
           - SystemLoad
     certManagerEnabled: true
-    deckhouseWebEnabled: true
+    documentationEnabled: true

@@ -17,13 +17,13 @@
 
   {% snippetcut %}
 ```bash
-kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values deckhouse-web -o json | jq -r '.deckhouseWeb.internal.auth.password'"
+kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.documentation.internal.auth.password'"
 ```
 {% endsnippetcut %}
 
   {% offtopic title="Пример вывода..." %}
 ```
-$ kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values deckhouse-web -o json | jq -r '.deckhouseWeb.internal.auth.password'" 
+$ kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.documentation.internal.auth.password'" 
 3aE7nY1VlfiYCH4GFIqA
 ```
   {% endofftopic %}

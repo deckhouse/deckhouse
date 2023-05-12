@@ -91,6 +91,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini"
 	_ "github.com/deckhouse/deckhouse/modules/600-namespace-configurator/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/600-secret-copier/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks/https"
+	_ "github.com/deckhouse/deckhouse/modules/810-documentation/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/810-documentation/hooks/https"
 )
