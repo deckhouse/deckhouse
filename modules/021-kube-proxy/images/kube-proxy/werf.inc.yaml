@@ -14,6 +14,10 @@ import:
   add: /src/_output/bin/kube-proxy
   to: /usr/local/bin/kube-proxy
   before: setup
+- artifact: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /iptables-wrapper
+  before: setup
 shell:
   beforeInstall:
     - apk add --no-cache iptables ip6tables conntrack-tools
