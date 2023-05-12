@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,6 +48,8 @@ func (a *alertStoreStruct) insertAlert(alert *model.Alert) {
 	defer a.Unlock()
 
 	now := time.Now()
+
+	removePlkAnnotations(alert)
 
 	ta := &types.Alert{
 		Alert:     *alert,
@@ -103,14 +106,14 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 				Kind:       "ClusterAlert",
 			},
 			ObjectMeta: v1.ObjectMeta{
-				Name: fingerprint.String(),
+				Name:   fingerprint.String(),
 				Labels: map[string]string{"app": "alert-receiver"},
 			},
 			Alert: ClusterAlertSpec{
 				Name:          a.alerts[fingerprint].Name(),
 				SeverityLevel: getLabel(a.alerts[fingerprint].Labels, severityLabel),
-				Summary:       getLabel(a.alerts[fingerprint].Labels, summaryLabel),
-				Description:   getLabel(a.alerts[fingerprint].Labels, descriptionLabel),
+				Summary:       getLabel(a.alerts[fingerprint].Annotations, summaryLabel),
+				Description:   getLabel(a.alerts[fingerprint].Annotations, descriptionLabel),
 				Annotations:   a.alerts[fingerprint].Annotations,
 				Labels:        a.alerts[fingerprint].Labels,
 			},
@@ -146,4 +149,12 @@ func (a *alertStoreStruct) removeCR(fingerprint model.Fingerprint) error {
 
 func getLabel(labels model.LabelSet, key string) string {
 	return string(labels[model.LabelName(key)])
+}
+
+func removePlkAnnotations(alert *model.Alert) {
+	for k, _ := range alert.Annotations {
+		if strings.HasPrefix(string(k),"plk_") {
+			delete(alert.Annotations, k)
+		}
+	}
 }
