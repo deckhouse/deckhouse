@@ -66,6 +66,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		"pod_ip",
 		"stream",
 		"pod_owner",
+		"host",
 		// "pod_labels", Splunk does not support objects with dynamic keys for indexes, consider using extraLabels
 	}
 

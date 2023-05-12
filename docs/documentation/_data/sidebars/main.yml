@@ -647,10 +647,12 @@ entries:
                     ru: Настройки
                   url: /modules/340-extended-monitoring/configuration.html
         - title:
-            en: Other modules
-            ru: Другие модули
+            en: Logs
+            ru: Логи
           folders:
-            - title: log-shipper
+            - title:
+                en: Logs shipment
+                ru: Доставка логов
               folders:
                 - title:
                     en: Description
@@ -674,7 +676,9 @@ entries:
                       url: /modules/460-log-shipper/configuration.html
                     - title: Custom Resources
                       url: /modules/460-log-shipper/cr.html
-            - title: loki
+            - title:
+                en: Short-term logs storage
+                ru: Кратковременное хранение логов
               folders:
                 - title:
                     en: Description
@@ -688,6 +692,10 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/462-loki/configuration.html
+        - title:
+            en: Other modules
+            ru: Другие модули
+          folders:
             - title: flant-integration
               d8Revision: ee
               folders:
