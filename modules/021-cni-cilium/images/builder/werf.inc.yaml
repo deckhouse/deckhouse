@@ -127,6 +127,7 @@ shell:
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/builder/install-protoplugins.sh -o /go/src/github.com/cilium/cilium/images/builder/install-protoplugins.sh
   - chmod +x /go/src/github.com/cilium/cilium/images/builder/*.sh
   install:
+  - export PATH=$PATH:/usr/local/go/bin
   - cd /go/src/github.com/cilium/cilium/images/builder
   - ./install-protoc.sh
   - ./install-protoplugins.sh

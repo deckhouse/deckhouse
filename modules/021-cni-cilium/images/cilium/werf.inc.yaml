@@ -21,6 +21,7 @@ shell:
   - mkdir /tmp/cilium-repo
   - curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v{{ $ciliumVersion }}.tar.gz | tar xvz -C /tmp/cilium-repo
   install:
+  - export PATH=$PATH:/usr/local/go/bin
   - cd /tmp/cilium-repo/cilium-{{ $ciliumVersion }}
   {{- if eq $type "virtualization" }}
   - find /patches -name '*.patch' -exec git apply {} \;
