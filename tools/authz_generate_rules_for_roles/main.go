@@ -197,7 +197,11 @@ func renderHelmTemplates(dir, values string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.Symlink(filepath.Dir(cwd), "/deckhouse"); err != nil {
+
+	deckhouseRoot := filepath.Dir(cwd)
+	helmLibPath := filepath.Join(deckhouseRoot, "helm_lib/charts/deckhouse_lib_helm")
+	chartHelmLibPath := filepath.Join(deckhouseRoot, "modules/140-user-authz/charts/helm_lib")
+	if err := os.Symlink(helmLibPath, chartHelmLibPath); err != nil {
 		if !errors.Is(err, os.ErrExist) {
 			return nil, err
 		}
