@@ -15,6 +15,7 @@ rules:
   - apiGroups: ["deckhouse.io"]
     resources:
     - clusteralerts
+    - clusteralerts/status
     verbs:
     - get
     - list
