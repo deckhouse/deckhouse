@@ -171,7 +171,6 @@ func createFirstDeschedulerCR(input *go_hook.HookInput, dc dependency.Container)
 		if annotations == nil {
 			objCopy.SetAnnotations(map[string]string{migratedKey: ""})
 			return objCopy, nil
-
 		}
 		annotations[migratedKey] = ""
 		objCopy.SetAnnotations(annotations)
