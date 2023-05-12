@@ -75,12 +75,6 @@ var (
 		clusterEditorRole:  {userRole, privilegedUserRole, editorRole},
 		clusterAdminRole:   {userRole, privilegedUserRole, editorRole, adminRole, clusterEditorRole},
 	}
-
-	readmeFiles = []string{
-		"../modules/140-user-authz/docs/README.md",
-		"../modules/140-user-authz/docs/README_RU.md",
-	}
-	readmeTemplateFile = "authz_generate_rules_for_roles/readme-placeholder.tpl"
 )
 
 // readmeTemplateData is data for readme template
@@ -122,8 +116,8 @@ func newAlias(name string, verbs []string) alias {
 	}
 }
 
+// aliases for verbs commonly used in user-authz ClusterRole templates
 var (
-	// aliases for verbs commonly used in user-authz ClusterRole templates
 	readAlias = newAlias(
 		"read",
 		[]string{"get", "list", "watch"},
@@ -181,11 +175,15 @@ func main() {
 		templateData.Roles = append(templateData.Roles, prepareClusterRoleForTemplate(roleName, neededClusterRoleExcludes[roleName], crVerbResourceMap))
 	}
 
-	readmeContent, err := renderTemplate(readmeTemplateFile, templateData)
+	readmeContent, err := renderTemplate("authz_generate_rules_for_roles/readme-placeholder.tpl", templateData)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	readmeFiles := []string{
+		"../modules/140-user-authz/docs/README.md",
+		"../modules/140-user-authz/docs/README_RU.md",
+	}
 	for _, fileName := range readmeFiles {
 		if err := updateReadme(fileName, readmeContent); err != nil {
 			log.Fatalln(err)
@@ -195,6 +193,16 @@ func main() {
 
 // renderHelmTemplates renders helm template for chart directory "dir" with values "values"
 func renderHelmTemplates(dir, values string) (map[string]string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	if err := os.Symlink(filepath.Dir(cwd), "/deckhouse"); err != nil {
+		if !errors.Is(err, os.ErrExist) {
+			return nil, err
+		}
+	}
+
 	r := helm.Renderer{}
 	return r.RenderChartFromDir(dir, values)
 }
@@ -368,7 +376,6 @@ func renderTemplate(templateFile string, tempalteData templateData) ([]byte, err
 		return nil, err
 	}
 
-	fmt.Println(templateFuncMap)
 	var res bytes.Buffer
 	if err := tpl.Execute(&res, tempalteData.toValues()); err != nil {
 		return nil, err

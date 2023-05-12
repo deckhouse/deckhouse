@@ -106,34 +106,18 @@ var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCLusterRoleCRDsWit
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
-	renderRoles := os.Getenv("USER_AUTHZ_RENDER_ROLES") == "yes"
-	opts := make([]Option, 0)
-	var renderMap map[string]string
-	if renderRoles {
-		renderMap = make(map[string]string)
-		opts = append(opts, WithRenderOutput(renderMap))
-	}
-
 	BeforeSuite(func() {
 		err := os.Symlink("/deckhouse/ee/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
-		if renderRoles && renderMap != nil {
-			renderFileName := os.Getenv("USER_AUTHZ_RENDER_FILE")
-			Expect(renderFileName).NotTo(Equal(""))
-			err := os.WriteFile(renderFileName, []byte(renderMap["user-authz/templates/cluster-roles.yaml"]), 0644)
-			Expect(err).ShouldNot(HaveOccurred())
-		}
 		err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	BeforeEach(func() {
-		// TODO: move to some common function???
-		f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
-		f.ValuesSet("global.modulesImages.registry.base", "registryAddr")
+		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{}`)
 	})
 
@@ -150,7 +134,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.ValuesSet("userAuthz.internal.webhookCertificate.crt", "test")
 			f.ValuesSet("userAuthz.internal.webhookCertificate.key", "test")
 
-			f.HelmRender(opts...)
+			f.HelmRender()
 		})
 
 		It("Should create a ClusterRoleBinding for each additionalRole", func() {
