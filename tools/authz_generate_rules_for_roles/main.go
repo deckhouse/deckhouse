@@ -32,7 +32,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"os"
@@ -40,6 +39,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"text/template"
 
 	"github.com/Masterminds/sprig"
 	"github.com/deckhouse/deckhouse/testing/library/helm"
