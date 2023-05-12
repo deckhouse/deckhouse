@@ -14,6 +14,8 @@ spec:
   {{- if .Values.global.modules.publicDomainTemplate }}
   config:
     uploadProxyURLOverride: {{ include "helm_lib_module_public_domain" (list . "cdi-uploadproxy") }}
+    featureGates:
+    - HonorWaitForFirstConsumer
   {{- end }}
   workload:
     nodeSelector:
