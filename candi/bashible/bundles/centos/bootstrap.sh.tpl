@@ -39,10 +39,12 @@ if [ "${VERSION_ID}" == "8" ] ; then
   yum install python3 -y
   alternatives --set python /usr/bin/python3
 fi
-
+{{- /*
+Description of problem with XFS https://www.suse.com/support/kb/doc/?id=000020068
+*/}}
 for FS_NAME in $(mount -l -t xfs | awk '{ print $1 }'); do
   if command -v xfs_info >/dev/null && xfs_info $FS_NAME | grep -q ftype=0; then
-     >&2 echo "XFS file system with ftype=0 was found ($FS_NAME). This may cause problems (https://www.suse.com/support/kb/doc/?id=000020068), please fix it and try again."
+     >&2 echo "ERROR: XFS file system with ftype=0 was found ($FS_NAME)."
      exit 1
   fi
 done
