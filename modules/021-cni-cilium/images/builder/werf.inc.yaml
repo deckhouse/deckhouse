@@ -17,6 +17,9 @@ from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d0
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
 from: quay.io/cilium/cilium-envoy:v1.23-9d3ac11580c59ef31521f2b3df33014642c1fd3b@sha256:b7454b67697ff3c4b199072ebe88f8ff4f08173ee748608bb033d140d04f116d
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
+from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
 from: {{ $.Images.BASE_ALPINE }}
 shell:
@@ -86,7 +89,7 @@ import:
   add: /usr/local/bin/llvm-objcopy
   to: /bin
   before: install
-- artifact: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
   add: /usr/local/go/
   to: /usr/local/go/
   before: install
