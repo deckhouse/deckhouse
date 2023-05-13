@@ -109,8 +109,6 @@ func main() {
 				os.Exit(1)
 			}
 
-			fmt.Println("1", operator.ModuleManager)
-			fmt.Println("2", module.Builder())
 			operator.ModuleManager.SetupModuleBuilder(module.Builder())
 			// Init deckhouse-config service with ModuleManager instance.
 			d8config.InitService(operator.ModuleManager)
