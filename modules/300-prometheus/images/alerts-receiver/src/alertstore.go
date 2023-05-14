@@ -122,7 +122,7 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 
 	obj := &unstructured.Unstructured{}
 	obj.Object = content
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	_, err = config.k8sClient.Resource(GVR).Create(ctx, obj, v1.CreateOptions{})
 	cancel()
 
@@ -135,24 +135,24 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 	defer a.RUnlock()
 
 	log.Infof("update status of CR with name %s", fingerprint)
-	/*
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		obj, err := config.k8sClient.Resource(GVR).Get(ctx, fingerprint.String(), v1.GetOptions{})
-		cancel()
-		if err != nil {
-			return err
-		}
 
-		obj.Object["status"] = map[string]interface{}{
-			"AlertStatus":    clusterAlertFiring,
-			"StartsAt":       a.alerts[fingerprint].StartsAt.String(),
-			"LastUpdateTime": a.alerts[fingerprint].UpdatedAt.String(),
-		}
-		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-		_, err = config.k8sClient.Resource(GVR).UpdateStatus(ctx, obj, v1.UpdateOptions{})
-		cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	obj, err := config.k8sClient.Resource(GVR).Get(ctx, fingerprint.String(), v1.GetOptions{})
+	cancel()
+	if err != nil {
 		return err
-	*/
+	}
+
+	obj.Object["status"] = map[string]interface{}{
+		"AlertStatus":    clusterAlertFiring,
+		"StartsAt":       a.alerts[fingerprint].StartsAt.String(),
+		"LastUpdateTime": a.alerts[fingerprint].UpdatedAt.String(),
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), contextTimeout)
+	_, err = config.k8sClient.Resource(GVR).UpdateStatus(ctx, obj, v1.UpdateOptions{})
+	cancel()
+	return err
+
 	return nil
 }
 
