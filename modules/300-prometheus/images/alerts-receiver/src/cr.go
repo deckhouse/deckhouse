@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	clusterAlertFiring       = "Firing"
-	clusterAlertFiringStaled = "Firing (staled)"
+	clusterAlertFiring       = "firing"
+	clusterAlertFiringStaled = "firing (stale)"
 )
 
 type ClusterAlert struct {
