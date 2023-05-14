@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis"
+
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtologrus"
@@ -109,7 +111,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			operator.ModuleManager.SetupModuleBuilder(module.Builder())
+			operator.ModuleManager.SetupModuleBuilder(apis.NewModuleBuilder())
 			// Init deckhouse-config service with ModuleManager instance.
 			d8config.InitService(operator.ModuleManager)
 
