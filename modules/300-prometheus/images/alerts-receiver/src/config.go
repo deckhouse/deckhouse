@@ -35,13 +35,18 @@ const (
 	descriptionLabel = "description"
 )
 
+var GVR = schema.GroupVersionResource{
+	Group:    "deckhouse.io",
+	Version:  "v1alpha1",
+	Resource: "clusteralerts",
+}
+
 type configStruct struct {
 	listenHost          string
 	listenPort          string
 	alertsQueueCapacity int
 	logLevel            log.Level
 	k8sClient           *dynamic.DynamicClient
-	gvr                 schema.GroupVersionResource
 }
 
 func newConfig() *configStruct {
@@ -81,12 +86,6 @@ func newConfig() *configStruct {
 	c.k8sClient, err = dynamic.NewForConfig(k8sConfig)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	c.gvr = schema.GroupVersionResource{
-		Group:    "deckhouse.io",
-		Version:  "v1alpha1",
-		Resource: "clusteralerts",
 	}
 
 	return c

@@ -134,8 +134,6 @@ func reconcileLoop(ctx context.Context) {
 
 func reconcile() {
 	log.Info("starting reconcile")
-	alertStore.RLock()
-	defer alertStore.RUnlock()
 	for f, v := range alertStore.alerts {
 		if v.Resolved() {
 			alertStore.removeAlert(f)
