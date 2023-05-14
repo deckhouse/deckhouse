@@ -139,11 +139,12 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 	log.Infof("update status of CR with name %s", fingerprint)
 
 	patch := map[string]interface{}{
-		"alertStatus":    clusterAlertFiring,
-		"startsAt":       a.alerts[fingerprint].StartsAt.String(),
-		"lastUpdateTime": a.alerts[fingerprint].UpdatedAt.String(),
+		"status": map[string]interface{}{
+			"alertStatus":    clusterAlertFiring,
+			"startsAt":       a.alerts[fingerprint].StartsAt.String(),
+			"lastUpdateTime": a.alerts[fingerprint].UpdatedAt.String(),
+		},
 	}
-
 	data, err := json.Marshal(patch)
 	if err != nil {
 		return err

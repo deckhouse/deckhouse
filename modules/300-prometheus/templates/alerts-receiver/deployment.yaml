@@ -73,7 +73,7 @@ spec:
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /healthz
+            path: /readyz
             port: 8080
             scheme: HTTP
           timeoutSeconds: 5

@@ -54,7 +54,8 @@ func main() {
 		cancel()
 	}()
 
-	http.HandleFunc("/healthz", readyHandler)
+	http.HandleFunc("/healthz", livenessHandler)
+	http.HandleFunc("/readyz", readinessHandler)
 	http.HandleFunc("/api/v1/alerts", alertsHandler)
 	http.HandleFunc("/api/v2/alerts", alertsHandler)
 
@@ -81,7 +82,15 @@ func main() {
 	}
 }
 
-func readyHandler(w http.ResponseWriter, _ *http.Request) {
+func readinessHandler(w http.ResponseWriter, _ *http.Request) {
+	if !livenessOK {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func livenessHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -102,19 +111,15 @@ func alertsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Debugf("received alert: %s", a)
 		}
-		/*
-			// skip DeadMansSwitch alerts
-			if alert.Labels["alertname"] == "DeadMansSwitch" {
-				log.Debug("skip DeadMansSwitch alert")
-				continue
-			}
-		*/
+
 		// skip adding alerts if alerts queue is full
 		if len(alertStore.alerts) == alertStore.capacity {
 			log.Infof("cannot add alert to queue (capacity = %d), queue is full", alertStore.capacity)
+			livenessOK = false
 			continue
 		}
 
+		livenessOK = true
 		alertStore.insertAlert(alert)
 	}
 	w.WriteHeader(http.StatusOK)

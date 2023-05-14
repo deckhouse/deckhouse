@@ -43,6 +43,8 @@ var GVR = schema.GroupVersionResource{
 	Resource: "clusteralerts",
 }
 
+var livenessOK = true
+
 type configStruct struct {
 	listenHost          string
 	listenPort          string
