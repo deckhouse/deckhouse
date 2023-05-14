@@ -28,6 +28,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+    t "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/yaml"
 )
 
 type alertStoreStruct struct {
@@ -136,24 +138,19 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 
 	log.Infof("update status of CR with name %s", fingerprint)
 
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	obj, err := config.k8sClient.Resource(GVR).Get(ctx, fingerprint.String(), v1.GetOptions{})
-	cancel()
-	if err != nil {
-		return err
-	}
-
-	obj.Object["status"] = map[string]interface{}{
+	patch := map[string]interface{}{
 		"AlertStatus":    clusterAlertFiring,
 		"StartsAt":       a.alerts[fingerprint].StartsAt.String(),
 		"LastUpdateTime": a.alerts[fingerprint].UpdatedAt.String(),
 	}
-	ctx, cancel = context.WithTimeout(context.Background(), contextTimeout)
-	_, err = config.k8sClient.Resource(GVR).UpdateStatus(ctx, obj, v1.UpdateOptions{})
+	data, err := yaml.Marshal(patch)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	_, err = config.k8sClient.Resource(GVR).Patch(ctx, fingerprint.String(), t.MergePatchType, data, v1.PatchOptions{}, "/status")
 	cancel()
 	return err
-
-	return nil
 }
 
 // Return label by key as string

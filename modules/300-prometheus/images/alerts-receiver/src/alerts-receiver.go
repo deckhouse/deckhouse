@@ -151,7 +151,7 @@ func reconcile() {
 
 		alertSet[f.String()] = struct{}{}
 
-		// is alerts CR does not exist in cluster
+		// is alerts CR does not exist in cluster, insert CR
 		if _, ok := crSet[f.String()]; !ok {
 			err := alertStore.insertCR(f)
 			if err != nil {
