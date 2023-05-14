@@ -39,9 +39,9 @@ type ClusterAlert struct {
 }
 
 type ClusterAlertStatus struct {
-	AlertStatus    string `json:"alertStatus,omitempty"`
-	StartsAt       string `json:"startsAt,omitempty"`
-	LastUpdateTime string `json:"lastUpdateTime,omitempty"`
+	AlertStatus    string  `json:"alertStatus,omitempty"`
+	StartsAt       v1.Time `json:"startsAt,omitempty"`
+	LastUpdateTime v1.Time `json:"lastUpdateTime,omitempty"`
 }
 
 type ClusterAlertSpec struct {
