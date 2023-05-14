@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"sync"
 	"time"
@@ -28,8 +29,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-    t "k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/yaml"
+	t "k8s.io/apimachinery/pkg/types"
 )
 
 type alertStoreStruct struct {
@@ -144,7 +144,7 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 		"lastUpdateTime": a.alerts[fingerprint].UpdatedAt.String(),
 	}
 
-	data, err := yaml.Marshal(patch)
+	data, err := json.Marshal(patch)
 	if err != nil {
 		return err
 	}
