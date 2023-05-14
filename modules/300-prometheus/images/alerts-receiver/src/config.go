@@ -28,6 +28,7 @@ import (
 )
 
 const (
+	appName          = "prometheus"
 	reconcileTime    = 1 * time.Minute
 	resolveTimeout   = 5 * time.Minute
 	severityLabel    = "severity_level"

@@ -28,6 +28,8 @@ import (
 
 	"github.com/prometheus/common/model"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -134,14 +136,45 @@ func reconcileLoop(ctx context.Context) {
 
 func reconcile() {
 	log.Info("starting reconcile")
+
+	crSet, err := listCRs()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	// Add or update CRs
+	alertSet := make(map[string]struct{}, len(alertStore.alerts))
 	for f, v := range alertStore.alerts {
 		if v.Resolved() {
 			alertStore.removeAlert(f)
 			continue
 		}
 
-		if err := alertStore.insertCR(f); err != nil {
+		alertSet[f.String()] = struct{}{}
+
+		// is alerts CR does not exist in cluster
+		if _, ok := crSet[f.String()]; !ok {
+			err := alertStore.insertCR(f)
+			if err != nil {
+				log.Error(err)
+			}
+		}
+
+		// Update CR status
+		err := alertStore.updateCRStatus(f)
+		if err != nil {
 			log.Error(err)
+		}
+	}
+
+	// Remove CRs which do not have corresponding alerts
+	for k := range crSet {
+		if _, ok := alertSet[k]; !ok {
+			err := removeCR(k)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}
 }
@@ -153,3 +186,35 @@ if alert.EndsAt.After(time.Now()) {
 			api.m.Resolved().Inc()
 		}
 */
+
+func listCRs() (map[string]struct{}, error) {
+	log.Info("list CRs")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	crList, err := config.k8sClient.Resource(GVR).List(ctx, v1.ListOptions{
+		LabelSelector:        "app=" + appName+ ",heritage=deckhouse",
+		ResourceVersionMatch: v1.ResourceVersionMatchNotOlderThan,
+		ResourceVersion:      "0",
+	})
+	cancel()
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[string]struct{}, len(crList.Items))
+	for _, item := range crList.Items {
+		res[item.GetName()] = struct{}{}
+	}
+	log.Infof("found %d CRs in cluster", len(crList.Items))
+	return res, nil
+}
+
+// Remove CR from cluster
+func removeCR(fingerprint string) error {
+	log.Infof("remove CR with name %s from cluster", fingerprint)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	err := config.k8sClient.Resource(GVR).Delete(ctx, fingerprint, v1.DeleteOptions{})
+	cancel()
+	if errors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
