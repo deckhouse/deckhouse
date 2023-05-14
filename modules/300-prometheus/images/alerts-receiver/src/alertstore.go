@@ -145,6 +145,7 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 	defer a.RUnlock()
 
 	log.Infof("update status of CR with name %s", fingerprint)
+/*
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	obj, err := config.k8sClient.Resource(GVR).Get(ctx, fingerprint.String(), v1.GetOptions{})
 	cancel()
@@ -152,7 +153,6 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 		return err
 	}
 
-	log.Infof("%v", obj.Object["status"])
 	obj.Object["status"] = map[string]interface{}{
 		"AlertStatus":    clusterAlertFiring,
 		"StartsAt":       a.alerts[fingerprint].StartsAt.String(),
@@ -162,7 +162,10 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 	_, err = config.k8sClient.Resource(GVR).UpdateStatus(ctx, obj, v1.UpdateOptions{})
 	cancel()
 	return err
+*/
+	return nil
 }
+
 
 // Remove CR from cluster
 func (a *alertStoreStruct) removeCR(fingerprint model.Fingerprint) error {
