@@ -102,6 +102,14 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 
 	if errors.IsNotFound(err) {
 		log.Infof("creating CR with name %s", fingerprint)
+		summary, err := renderTemplate(getLabel(a.alerts[fingerprint].Annotations, summaryLabel), a.alerts[fingerprint].Labels)
+		if err != nil {
+			return err
+		}
+		description, err := renderTemplate(getLabel(a.alerts[fingerprint].Annotations, summaryLabel), a.alerts[fingerprint].Labels)
+		if err != nil {
+			return err
+		}
 		alert := &ClusterAlert{
 			TypeMeta: v1.TypeMeta{
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -114,8 +122,8 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 			Alert: ClusterAlertSpec{
 				Name:          a.alerts[fingerprint].Name(),
 				SeverityLevel: getLabel(a.alerts[fingerprint].Labels, severityLabel),
-				Summary:       getLabel(a.alerts[fingerprint].Annotations, summaryLabel),
-				Description:   getLabel(a.alerts[fingerprint].Annotations, descriptionLabel),
+				Summary:       summary,
+				Description:   description,
 				Annotations:   a.alerts[fingerprint].Annotations,
 				Labels:        a.alerts[fingerprint].Labels,
 			},
@@ -179,4 +187,11 @@ func removePlkAnnotations(alert *model.Alert) {
 			delete(alert.Annotations, k)
 		}
 	}
+}
+
+// Render message
+func renderTemplate(template string, labels model.LabelSet) (string, error) {
+	var res string
+	res = template
+	return res, nil
 }
