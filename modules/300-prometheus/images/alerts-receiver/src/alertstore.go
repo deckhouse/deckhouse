@@ -95,7 +95,7 @@ func (a *alertStoreStruct) removeAlert(fingerprint model.Fingerprint) {
 func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 	a.RLock()
 	defer a.RUnlock()
-	_, err := config.k8sClient.Resource(config.gvr).Namespace("").Get(context.Background(), fingerprint.String(), v1.GetOptions{})
+	_, err := config.k8sClient.Resource(config.gvr).Get(context.Background(), fingerprint.String(), v1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
@@ -127,7 +127,7 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 		obj := &unstructured.Unstructured{}
 		obj.Object = content
 
-		_, err = config.k8sClient.Resource(config.gvr).Namespace("").Create(context.Background(), obj, v1.CreateOptions{})
+		_, err = config.k8sClient.Resource(config.gvr).Create(context.Background(), obj, v1.CreateOptions{})
 		if err != nil {
 			return err
 		}
@@ -141,17 +141,18 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 	a.RLock()
 	defer a.RUnlock()
 	log.Infof("update status of CR with name %s", fingerprint)
-	obj, err := config.k8sClient.Resource(config.gvr).Namespace("").Get(context.Background(), fingerprint.String(), v1.GetOptions{})
+	obj, err := config.k8sClient.Resource(config.gvr).Get(context.Background(), fingerprint.String(), v1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
+	log.Infof("%v", obj.Object["status"])
 	obj.Object["status"] = map[string]interface{}{
 		"AlertStatus":    clusterAlertFiring,
 		"StartsAt":       a.alerts[fingerprint].StartsAt.String(),
 		"LastUpdateTime": a.alerts[fingerprint].UpdatedAt.String(),
 	}
-	_, err = config.k8sClient.Resource(config.gvr).Namespace("").UpdateStatus(context.Background(), obj, v1.UpdateOptions{})
+	_, err = config.k8sClient.Resource(config.gvr).UpdateStatus(context.Background(), obj, v1.UpdateOptions{})
 	return err
 }
 
@@ -160,7 +161,7 @@ func (a *alertStoreStruct) removeCR(fingerprint model.Fingerprint) error {
 	a.RLock()
 	defer a.RUnlock()
 	log.Infof("remove CR with name %s from cluster", fingerprint)
-	err := config.k8sClient.Resource(config.gvr).Namespace("").Delete(context.Background(), fingerprint.String(), v1.DeleteOptions{})
+	err := config.k8sClient.Resource(config.gvr).Delete(context.Background(), fingerprint.String(), v1.DeleteOptions{})
 	if errors.IsNotFound(err) {
 		return nil
 	}
