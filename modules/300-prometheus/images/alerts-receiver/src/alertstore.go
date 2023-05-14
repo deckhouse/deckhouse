@@ -119,11 +119,6 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 				Annotations:   a.alerts[fingerprint].Annotations,
 				Labels:        a.alerts[fingerprint].Labels,
 			},
-			Status: ClusterAlertStatus{
-				AlertStatus:    clusterAlertFiring,
-				StartsAt:       a.alerts[fingerprint].StartsAt.String(),
-				LastUpdateTime: a.alerts[fingerprint].UpdatedAt.String(),
-			},
 		}
 		content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(alert)
 		if err != nil {
@@ -136,10 +131,28 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 		if err != nil {
 			return err
 		}
-		_, err = config.k8sClient.Resource(config.gvr).Namespace("").UpdateStatus(context.Background(), obj, v1.UpdateOptions{})
+	}
+
+	return alertStore.updateCRStatus(fingerprint)
+}
+
+// Uodate CR status
+func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
+	a.RLock()
+	defer a.RUnlock()
+	log.Infof("update status of CR with name %s", fingerprint)
+	obj, err := config.k8sClient.Resource(config.gvr).Namespace("").Get(context.Background(), fingerprint.String(), v1.GetOptions{})
+	if err != nil {
 		return err
 	}
-	return nil
+
+	obj.Object["status"] = map[string]interface{}{
+		"AlertStatus":    clusterAlertFiring,
+		"StartsAt":       a.alerts[fingerprint].StartsAt.String(),
+		"LastUpdateTime": a.alerts[fingerprint].UpdatedAt.String(),
+	}
+	_, err = config.k8sClient.Resource(config.gvr).Namespace("").UpdateStatus(context.Background(), obj, v1.UpdateOptions{})
+	return err
 }
 
 // Remove CR from cluster

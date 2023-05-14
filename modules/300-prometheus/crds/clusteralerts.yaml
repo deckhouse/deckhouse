@@ -24,7 +24,7 @@ spec:
         jsonPath: .alert.name
       - name: Severity
         type: string
-        jsonPath: .alert.severity_level
+        jsonPath: .alert.severityLevel
       - name: Active since
         type: date
         jsonPath: .status.startsAt
@@ -76,7 +76,7 @@ spec:
                   type: string
                   description: |
                     Alert name.
-                severity_level:
+                severityLevel:
                   x-kubernetes-int-or-string: true
                   description: |
                     Severity level.

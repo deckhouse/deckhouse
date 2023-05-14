@@ -42,7 +42,7 @@ type ClusterAlertStatus struct {
 
 type ClusterAlertSpec struct {
 	Name          string         `json:"name"`
-	SeverityLevel string         `json:"severity_level,omitempty"`
+	SeverityLevel string         `json:"severityLevel,omitempty"`
 	Summary       string         `json:"summary,omitempty"`
 	Description   string         `json:"description,omitempty"`
 	Annotations   model.LabelSet `json:"annotations,omitempty"`
