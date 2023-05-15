@@ -13,7 +13,6 @@ shell:
     - apk fetch -R -o . iptables ip6tables conntrack-tools
     - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
     - mkdir /filtered-apk && rsync -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
-    - ./iptables-wrapper-installer.sh /sbin /iptables-wrapper
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         rm -f "/filtered-apk/sbin/${cmd}"
