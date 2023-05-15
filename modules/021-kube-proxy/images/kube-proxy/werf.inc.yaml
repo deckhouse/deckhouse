@@ -13,8 +13,8 @@ shell:
     - apk add rsync
     - apk fetch -R -o . iptables ip6tables conntrack-tools
     - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
-    - mkdir /filtered-apk && rsync --verbose -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
-    - iptables-wrapper-installer.sh /sbin /iptables-wrapper
+    - mkdir /filtered-apk && rsync -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
+    - ./iptables-wrapper-installer.sh /sbin /iptables-wrapper
 ---
 image: distroless-kube-proxy
 from: common/distroless
