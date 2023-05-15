@@ -19,7 +19,7 @@ shell:
 artifact: distroless-kube-proxy
 from: common/distroless
 import:
-- artifact: common/kubernetes-artifact-{{ $image_version }}
+- artifact: distroless-kube-proxy-deps
   add: /filtered-apk
   to: /
   before: setup
