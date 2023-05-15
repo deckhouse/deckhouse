@@ -103,8 +103,17 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 	severityLevel := getLabel(a.alerts[fingerprint].Labels, severityLabel)
 	summary := getLabel(a.alerts[fingerprint].Annotations, summaryLabel)
 	description := getLabel(a.alerts[fingerprint].Annotations, descriptionLabel)
+
 	reducedAnnotations := make(model.LabelSet, len(a.alerts[fingerprint].Annotations))
+	for k,v := range a.alerts[fingerprint].Annotations {
+		reducedAnnotations[k] = v
+	}
+
 	reducedLabels := make(model.LabelSet, len(a.alerts[fingerprint].Labels))
+	for k,v := range a.alerts[fingerprint].Labels {
+		reducedLabels[k] = v
+	}
+
 	delete(reducedAnnotations, summaryLabel)
 	delete(reducedAnnotations, descriptionLabel)
 	delete(reducedLabels, severityLabel)
