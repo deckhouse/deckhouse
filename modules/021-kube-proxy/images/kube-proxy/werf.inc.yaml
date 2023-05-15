@@ -16,7 +16,7 @@ shell:
     - mkdir /filtered-apk && rsync --verbose -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
     - iptables-wrapper-installer.sh /sbin /iptables-wrapper
 ---
-artifact: distroless-kube-proxy
+image: distroless-kube-proxy
 from: common/distroless
 import:
 - artifact: distroless-kube-proxy-deps
