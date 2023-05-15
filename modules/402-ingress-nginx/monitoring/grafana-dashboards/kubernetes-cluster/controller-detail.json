@@ -1017,7 +1017,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\".*\", app=~\".*\", node=~\".*\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\".*\", app=~\".*\", node=~\".*\", vhost=~\"_\"}[$__interval_sx4]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1027,7 +1027,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\".*\", app=~\".*\", node=~\".*\"}[$__interval_sx4])) by (controller)",
+          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\".*\", app=~\".*\", node=~\".*\", vhost=~\"_\"}[$__interval_sx4])) by (controller)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1144,7 +1144,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\".*\", app=~\".*\", node=~\".*\"}[$__interval_sx4])) by (controller)\n/ scalar(sum(rate(ingress_nginx_default_backend_requests_total{job=\"nginx-ingress-controller\", controller=~\".*\", app=~\".*\", node=~\".*\"}[$__interval_sx4])))",
+          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\".*\", app=~\".*\", node=~\".*\", vhost=~\"_\"}[$__interval_sx4])) by (controller)\n/ scalar(sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\".*\", app=~\".*\", node=~\".*\", vhost=~\"_\"}[$__interval_sx4])))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

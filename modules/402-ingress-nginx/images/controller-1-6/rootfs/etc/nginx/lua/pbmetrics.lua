@@ -211,11 +211,6 @@ local function fill_buffer()
   -- For older versions we just cut of the asterisk from vhost
   local var_server_name = ngx.var.server_name:gsub("^*", ""):gsub("~^%(%?<subdomain>%[\\w%-]%+%)", ""):gsub("$$", ""):gsub("\\", "")
 
-  if var_server_name == "_" then
-    _increment("c22", {}, 22)
-    return
-  end
-
   local content_kind
   local var_upstream_x_content_kind = ngx.var.upstream_x_content_kind
   local var_upstream_addr = ngx.var.upstream_addr
