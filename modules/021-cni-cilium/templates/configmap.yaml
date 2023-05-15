@@ -90,7 +90,7 @@ data:
   enable-session-affinity: "true"
   enable-svc-source-range-check: {{ .Values.cniCilium.svcSourceRangeCheck | quote }}
 
-  sockops-enable: "false"
+  sockops-enable: "false" # is deprecated and will be removed in 1.14
   enable-icmp-rules: "true"
   enable-endpoint-health-checking: "true"
   enable-health-checking: "true"
