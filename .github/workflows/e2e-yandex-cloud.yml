@@ -79,7 +79,7 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
 
@@ -101,7 +101,7 @@ jobs:
     steps:
       - id: git_info
         name: Get tag name and SHA
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
@@ -183,12 +183,12 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
 
       # </template: checkout_step>
       - name: Check e2e labels
         id: check
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             const provider = 'yandex-cloud';
@@ -229,12 +229,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -242,7 +242,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -265,7 +265,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -285,7 +285,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -293,7 +293,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -402,13 +402,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -499,7 +499,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -589,7 +589,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_docker_1_22
           path: |
@@ -598,7 +598,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_docker_1_22
           path: |
@@ -625,7 +625,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -680,12 +680,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -693,7 +693,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -716,7 +716,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -736,7 +736,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -744,7 +744,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -853,13 +853,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -950,7 +950,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -1040,7 +1040,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_docker_1_23
           path: |
@@ -1049,7 +1049,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_docker_1_23
           path: |
@@ -1076,7 +1076,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -1131,12 +1131,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -1144,7 +1144,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -1167,7 +1167,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1187,7 +1187,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -1195,7 +1195,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1304,13 +1304,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1401,7 +1401,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -1491,7 +1491,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_docker_1_24
           path: |
@@ -1500,7 +1500,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_docker_1_24
           path: |
@@ -1527,7 +1527,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -1582,12 +1582,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -1595,7 +1595,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -1618,7 +1618,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1638,7 +1638,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -1646,7 +1646,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1755,13 +1755,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1852,7 +1852,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -1942,7 +1942,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_docker_1_25
           path: |
@@ -1951,7 +1951,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_docker_1_25
           path: |
@@ -1978,7 +1978,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -2033,12 +2033,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -2046,7 +2046,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -2069,7 +2069,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -2089,7 +2089,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -2097,7 +2097,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -2206,13 +2206,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -2303,7 +2303,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -2393,7 +2393,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_docker_1_26
           path: |
@@ -2402,7 +2402,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_docker_1_26
           path: |
@@ -2429,7 +2429,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -2484,12 +2484,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -2497,7 +2497,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -2520,7 +2520,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -2540,7 +2540,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -2548,7 +2548,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -2657,13 +2657,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -2754,7 +2754,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -2844,7 +2844,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_docker_1_27
           path: |
@@ -2853,7 +2853,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_docker_1_27
           path: |
@@ -2880,7 +2880,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -2935,12 +2935,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -2948,7 +2948,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -2971,7 +2971,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -2991,7 +2991,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -2999,7 +2999,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -3108,13 +3108,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -3205,7 +3205,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -3295,7 +3295,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_containerd_1_22
           path: |
@@ -3304,7 +3304,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_containerd_1_22
           path: |
@@ -3331,7 +3331,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -3386,12 +3386,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -3399,7 +3399,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -3422,7 +3422,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -3442,7 +3442,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -3450,7 +3450,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -3559,13 +3559,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -3656,7 +3656,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -3746,7 +3746,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_containerd_1_23
           path: |
@@ -3755,7 +3755,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_containerd_1_23
           path: |
@@ -3782,7 +3782,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -3837,12 +3837,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -3850,7 +3850,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -3873,7 +3873,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -3893,7 +3893,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -3901,7 +3901,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -4010,13 +4010,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -4107,7 +4107,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -4197,7 +4197,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_containerd_1_24
           path: |
@@ -4206,7 +4206,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_containerd_1_24
           path: |
@@ -4233,7 +4233,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -4288,12 +4288,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -4301,7 +4301,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -4324,7 +4324,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -4344,7 +4344,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -4352,7 +4352,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -4461,13 +4461,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -4558,7 +4558,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -4648,7 +4648,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_containerd_1_25
           path: |
@@ -4657,7 +4657,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_containerd_1_25
           path: |
@@ -4684,7 +4684,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -4739,12 +4739,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -4752,7 +4752,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -4775,7 +4775,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -4795,7 +4795,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -4803,7 +4803,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -4912,13 +4912,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -5009,7 +5009,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -5099,7 +5099,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_containerd_1_26
           path: |
@@ -5108,7 +5108,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_containerd_1_26
           path: |
@@ -5135,7 +5135,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -5190,12 +5190,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -5203,7 +5203,7 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -5226,7 +5226,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -5246,7 +5246,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -5254,7 +5254,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -5363,13 +5363,13 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -5460,7 +5460,7 @@ jobs:
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
           SSH_BASTION_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_bastion_str_file }}
@@ -5550,7 +5550,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: failed_cluster_state_yandex-cloud_containerd_1_27
           path: |
@@ -5559,7 +5559,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: test_output_yandex-cloud_containerd_1_27
           path: |
@@ -5586,7 +5586,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -5623,7 +5623,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
 
       # </template: checkout_step>
       # <template: update_comment_on_finish>
@@ -5634,7 +5634,7 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -5662,7 +5662,7 @@ jobs:
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
         if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           JOB_STATUS: ${{ job.status }}
           STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}

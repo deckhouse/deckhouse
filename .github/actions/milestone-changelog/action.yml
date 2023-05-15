@@ -14,12 +14,12 @@ runs:
       id: args
       shell: bash
       run: |
-        echo "::set-output name=milestone_title::${{ fromJSON(inputs.milestone).title }}"
-        echo "::set-output name=milestone_number::${{ fromJSON(inputs.milestone).number }}"
+        echo "milestone_title=${{ fromJSON(inputs.milestone).title }}" >> $GITHUB_OUTPUT
+        echo "milestone_number=${{ fromJSON(inputs.milestone).number }}" >> $GITHUB_OUTPUT
 
     - name: Find possible sections in project structure
       id: sections
-      uses: actions/github-script@v5
+      uses: actions/github-script@v6.4.1
       with:
         result-encoding: string
         script: |

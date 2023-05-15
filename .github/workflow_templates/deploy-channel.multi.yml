@@ -95,7 +95,7 @@ jobs:
           for edition in CE EE FE ; do
             if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
               echo "  - enable deploy of ${edition} edition."
-              echo "::set-output name=DEPLOY_${edition}::true"
+              echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
               RESTRICTED=yes
             fi
           done
@@ -103,7 +103,7 @@ jobs:
           if [[ $RESTRICTED == "no" ]] ; then
             echo "No restrictions. Enable deploy to all editions."
             for edition in CE EE FE ; do
-              echo "::set-output name=DEPLOY_${edition}::true"
+              echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
             done
           fi
 
@@ -144,10 +144,10 @@ Jobs for visual control allowed editions when approving deploy to environments.
           REPO: ${{github.repository}}
         run: |
           if [[ ${REPO} == "deckhouse/deckhouse" ]]; then
-            echo "::set-output name=enable::true"
+            echo "enable=true" >> $GITHUB_OUTPUT
           fi
           if [[ ${SKIP_PUSH_FOR_DEPLOY} != "true" ]]; then
-            echo "::set-output name=enable::true"
+            echo "enable=true" >> $GITHUB_OUTPUT
           fi
 
       {!{ range $werfEnv := slice "CE" "EE" "FE" }!}

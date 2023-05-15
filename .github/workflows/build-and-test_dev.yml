@@ -62,7 +62,7 @@ jobs:
       - name: Get PR info for push trigger
         id: push_info
         if: ${{ github.event_name == 'push' }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             // Support for 'push' trigger: find PR by commit SHA and pass response to pr_props step.
@@ -101,7 +101,7 @@ jobs:
       - name: Get PR info for pull_request trigger
         id: pr_info
         if: ${{ startsWith(github.event_name, 'pull_request') }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             // Support for 'pull_request' and 'pull_request_target' triggers:
@@ -139,7 +139,7 @@ jobs:
 
       - name: Check PR properties
         id: pr_props
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           PR_INFO: ${{ steps.push_info.outputs.pr_info || steps.pr_info.outputs.pr_info }}
         with:
@@ -221,7 +221,7 @@ jobs:
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
         if: steps.pr_props.outputs.should_check == 'true'
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ steps.pr_props.outputs.ref }}
 
@@ -256,7 +256,7 @@ jobs:
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
         if: ${{ steps.pr_props.outputs.should_check == 'true' && steps.changes.outputs.dangerous == 'true' }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             core.setFailed('External PR contains dangerous changes.')
@@ -281,7 +281,7 @@ jobs:
     steps:
       - id: git_info
         name: Get tag name and SHA
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
@@ -386,12 +386,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
@@ -407,7 +407,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -455,12 +455,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
@@ -476,7 +476,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -514,7 +514,7 @@ jobs:
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -531,7 +531,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -551,7 +551,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -571,7 +571,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -579,7 +579,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -704,7 +704,7 @@ jobs:
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
-          echo "::set-output name=tests_image_name::$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)"
+          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Cleanup
         if: ${{ always() }}
@@ -728,12 +728,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -750,7 +750,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -788,12 +788,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -810,7 +810,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -849,12 +849,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -871,7 +871,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -891,7 +891,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -899,7 +899,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -935,12 +935,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -957,7 +957,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -977,7 +977,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -985,7 +985,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1022,12 +1022,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -1044,7 +1044,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1064,7 +1064,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -1072,7 +1072,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1117,12 +1117,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -1139,7 +1139,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1159,7 +1159,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -1167,7 +1167,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1212,12 +1212,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -1234,7 +1234,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1254,7 +1254,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -1262,7 +1262,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1308,12 +1308,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -1331,7 +1331,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1464,12 +1464,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
@@ -1486,7 +1486,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1506,7 +1506,7 @@ jobs:
             echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -1514,7 +1514,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1560,7 +1560,7 @@ jobs:
     steps:
     - name: Set commit status after e2e run
       id: set_e2e_requirement_status
-      uses: actions/github-script@v5.0.0
+      uses: actions/github-script@v6.4.1
       env:
         STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
         PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
