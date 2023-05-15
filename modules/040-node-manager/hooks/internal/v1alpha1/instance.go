@@ -25,27 +25,27 @@ import (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// InstanceClaim is a claim for instance in the cloud.
-type InstanceClaim struct {
+// Instance is resource for instance in the cloud.
+type Instance struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Most recently observed status of the instance claim.
-	Status InstanceClaimStatus `json:"status,omitempty"`
+	// Most recently observed status of the instance.
+	Status InstanceStatus `json:"status,omitempty"`
 }
 
-// InstanceClaimStatus is a status of instance claim.
-type InstanceClaimStatus struct {
+// InstanceStatus is a status of instance.
+type InstanceStatus struct {
 	// Reference to kubernetes node object
 	NodeRef NodeRef `json:"nodeRef,omitempty"`
 
 	// Reference to specific machine in the cloud
 	MachineRef MachineRef `json:"machineRef,omitempty"`
 
-	// Current status of the instance claim object
+	// Current status of the instance object
 	CurrentStatus CurrentStatus `json:"currentStatus,omitempty"`
 
 	// Last operation refers to the status of the last operation performed
@@ -53,6 +53,17 @@ type InstanceClaimStatus struct {
 
 	// Information about instance bootstrapping process
 	BootstrapStatus BootstrapStatus `json:"bootstrapStatus,omitempty"`
+
+	// Reference to a ClassInstance resource. Required.
+	ClassReference ClassReference `json:"classReference"`
+}
+
+type ClassReference struct {
+	// Kind of a ClassReference resource: OpenStackInstanceClass, GCPInstanceClass, ...
+	Kind string `json:"kind,omitempty"`
+
+	// Name of a ClassReference resource.
+	Name string `json:"name,omitempty"`
 }
 
 // BootstrapStatus is information about bootstrapping process
@@ -110,36 +121,36 @@ type LastOperation struct {
 	Type OperationType `json:"type,omitempty"`
 }
 
-// InstanceClaimPhase is a label for the condition of a machines at the current time.
-type InstanceClaimPhase string
+// InstancePhase is a label for the condition of a machines at the current time.
+type InstancePhase string
 
 // These are the valid statuses of machines.
 const (
-	// InstanceClaimPending means that the machine is being created
-	InstanceClaimPending InstanceClaimPhase = "Pending"
+	// InstancePending means that the machine is being created
+	InstancePending InstancePhase = "Pending"
 
-	// InstanceClaimAvailable means that machine is present on provider but hasn't joined cluster yet
-	InstanceClaimAvailable InstanceClaimPhase = "Available"
+	// InstanceAvailable means that machine is present on provider but hasn't joined cluster yet
+	InstanceAvailable InstancePhase = "Available"
 
-	// InstanceClaimRunning means node is ready and running successfully
-	InstanceClaimRunning InstanceClaimPhase = "Running"
+	// InstanceRunning means node is ready and running successfully
+	InstanceRunning InstancePhase = "Running"
 
-	// InstanceClaimTerminating means node is terminating
-	InstanceClaimTerminating InstanceClaimPhase = "Terminating"
+	// InstanceTerminating means node is terminating
+	InstanceTerminating InstancePhase = "Terminating"
 
-	// InstanceClaimUnknown indicates that the node is not ready at the movement
-	InstanceClaimUnknown InstanceClaimPhase = "Unknown"
+	// InstanceUnknown indicates that the node is not ready at the movement
+	InstanceUnknown InstancePhase = "Unknown"
 
-	// InstanceClaimFailed means operation failed leading to machine status failure
-	InstanceClaimFailed InstanceClaimPhase = "Failed"
+	// InstanceFailed means operation failed leading to machine status failure
+	InstanceFailed InstancePhase = "Failed"
 
-	// InstanceClaimCrashLoopBackOff means creation or deletion of the machine is failing.
-	InstanceClaimCrashLoopBackOff InstanceClaimPhase = "CrashLoopBackOff"
+	// InstanceCrashLoopBackOff means creation or deletion of the machine is failing.
+	InstanceCrashLoopBackOff InstancePhase = "CrashLoopBackOff"
 )
 
 // CurrentStatus contains information about the current status of Machine.
 type CurrentStatus struct {
-	Phase InstanceClaimPhase `json:"phase,omitempty"`
+	Phase InstancePhase `json:"phase,omitempty"`
 
 	// Last update time of current status
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
@@ -162,27 +173,13 @@ type NodeRef struct {
 	Name string `json:"name,omitempty"`
 }
 
-type InstanceClaimOperation struct {
-	// Last operation's description.
-	Description string `json:"description,omitempty"`
+type instanceKind struct{}
 
-	// Timestamp of last status update for operation.
-	LastUpdateTime string `json:"lastUpdateTime,omitempty"`
-
-	// Machine's operation state.
-	State string `json:"state,omitempty"`
-
-	// Type of operation.
-	Type string `json:"type,omitempty"`
+func (in *InstanceStatus) GetObjectKind() schema.ObjectKind {
+	return &instanceKind{}
 }
 
-type instanceClaimKind struct{}
-
-func (in *InstanceClaimStatus) GetObjectKind() schema.ObjectKind {
-	return &instanceClaimKind{}
-}
-
-func (f *instanceClaimKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *instanceClaimKind) GroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "InstanceClaim"}
+func (f *instanceKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
+func (f *instanceKind) GroupVersionKind() schema.GroupVersionKind {
+	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Instance"}
 }
