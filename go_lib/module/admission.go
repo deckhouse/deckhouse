@@ -1,7 +1,6 @@
 package module
 
 import (
-	"fmt"
 	"net/http"
 	"path"
 	"strings"
@@ -16,7 +15,6 @@ var (
 )
 
 func SetupAdmissionRoutes(srv AdmissionServer) {
-	fmt.Println("D8 ROUTAES", routes)
 	for route, handler := range routes {
 		srv.RegisterHandler(route, handler)
 	}
