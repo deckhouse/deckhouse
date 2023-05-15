@@ -16,7 +16,7 @@ shell:
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         rm -f "/filtered-apk/sbin/${cmd}"
-        ln -s /iptables-wrapper "/sbin/${cmd}"
+        ln -s /iptables-wrapper "/filtered-apk/sbin/${cmd}"
       done
 ---
 artifact: distroless-kube-proxy
