@@ -1,14 +1,14 @@
 artifact: distroless-kube-proxy
 from: {{ .Images.BASE_ALPINE }}
-import:
-- add: /file-whitelist
+git:
+- add: /modules/021-kube-proxy/images/kube-proxy
   to: /workdir/
-  before: install
-- add: /iptables-wrapper-installer.sh
-  to: /workdir/
-  before: install
+  includePaths:
+  - '**/iptables-wrapper-installer.sh'
+  - '**/file-whitelist'
 shell:
   install:
+    - cd /workdir
     - apk update
     - apk add rsync
     - apk fetch -R -o . iptables ip6tables conntrack-tools
