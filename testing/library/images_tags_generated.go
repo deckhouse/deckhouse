@@ -132,6 +132,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"csiNodeDriverRegistrar124": "imageHash-common-csiNodeDriverRegistrar124",
 		"csiNodeDriverRegistrar125": "imageHash-common-csiNodeDriverRegistrar125",
 		"csiNodeDriverRegistrar126": "imageHash-common-csiNodeDriverRegistrar126",
+		"distroless":                "imageHash-common-distroless",
+		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
 		"pause":                     "imageHash-common-pause",
 	},
