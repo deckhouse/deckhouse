@@ -4,7 +4,6 @@ git:
 - add: /modules/021-kube-proxy/images/kube-proxy
   to: /workdir/
   includePaths:
-  - '**/iptables-wrapper-installer.sh'
   - '**/file-whitelist'
 shell:
   install:
@@ -15,6 +14,11 @@ shell:
     - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
     - mkdir /filtered-apk && rsync -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
     - ./iptables-wrapper-installer.sh /sbin /iptables-wrapper
+    - |
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        rm -f "/filtered-apk/sbin/${cmd}"
+        ln -s /iptables-wrapper "/sbin/${cmd}"
+      done
 ---
 image: distroless-kube-proxy
 from: common/distroless
