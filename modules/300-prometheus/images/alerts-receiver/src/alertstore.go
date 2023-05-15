@@ -58,6 +58,7 @@ func (a *alertStoreStruct) insertAlert(alert *model.Alert) {
 		UpdatedAt: now,
 	}
 
+	// https://github.com/prometheus/alertmanager/blob/f67d03fe2854191bb36dbcb305ec507237583aa2/api/v2/api.go#L321-L334
 	// Ensure StartsAt is set.
 	if ta.StartsAt.IsZero() {
 		if ta.EndsAt.IsZero() {
@@ -138,9 +139,16 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 
 	log.Infof("update status of CR with name %s", fingerprint)
 
+	alertStatus := clusterAlertFiring
+
+	// If alert was updated last time > 2min ago, alert is marked as stale
+	if time.Since(a.alerts[fingerprint].UpdatedAt) > 2*reconcileTime {
+		alertStatus = clusterAlertFiringStaled
+	}
+
 	patch := map[string]interface{}{
 		"status": map[string]interface{}{
-			"alertStatus":    clusterAlertFiring,
+			"alertStatus":    alertStatus,
 			"startsAt":       a.alerts[fingerprint].StartsAt.Format(time.RFC3339),
 			"lastUpdateTime": a.alerts[fingerprint].UpdatedAt.Format(time.RFC3339),
 		},
