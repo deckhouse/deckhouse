@@ -1,6 +1,5 @@
 artifact: distroless-kube-proxy
 from: {{ .Images.BASE_ALPINE }}
-workdir: /workdir
 import:
 - add: file-whitelist
   to: /workdir/
