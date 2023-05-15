@@ -14,7 +14,7 @@ import:
   add: /src/_output/bin/kube-proxy
   to: /usr/local/bin/kube-proxy
   before: setup
-- artifact: common/iptables-wrapper
+- image: common/iptables-wrapper
   add: /iptables-wrapper
   to: /iptables-wrapper
   before: setup
