@@ -22,14 +22,14 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"vector/internal"
+
 	"github.com/fsnotify/fsnotify"
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/sys/unix"
 )
@@ -103,9 +103,11 @@ func reloadVectorConfig() (err error) {
 		}
 	}()
 
-	if ok, err := shouldReload(tempConfigDir); err != nil {
+	ok, err := shouldReload(tempConfigDir)
+	if err != nil {
 		return err
-	} else if !ok {
+	}
+	if !ok {
 		return nil
 	}
 
@@ -160,34 +162,34 @@ func shouldReload(tempConfigDir string) (bool, error) {
 		return false, err
 	}
 
-	if oldChecksum != newChecksum {
+	if oldChecksum == newChecksum {
+		return false, nil
 
-		err := displayDiff(templatedSampleConfigPath, dynamicConfigPath)
-		if err != nil {
-			return true, err
-		}
-
-		source, err := os.Open(templatedSampleConfigPath)
-		if err != nil {
-			return true, err
-		}
-		defer source.Close()
-
-		destination, err := os.Create(dynamicConfigPath)
-		if err != nil {
-			return true, err
-		}
-		defer destination.Close()
-
-		_, err = io.Copy(destination, source)
-		if err != nil {
-			return true, err
-		}
-
-		return true, nil
 	}
 
-	return false, nil
+	err = displayDiff(templatedSampleConfigPath, dynamicConfigPath)
+	if err != nil {
+		return true, err
+	}
+
+	source, err := os.Open(templatedSampleConfigPath)
+	if err != nil {
+		return true, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dynamicConfigPath)
+	if err != nil {
+		return true, err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	if err != nil {
+		return true, err
+	}
+
+	return true, nil
 }
 
 func displayDiff(firstPath, secondPath string) error {
@@ -201,14 +203,9 @@ func displayDiff(firstPath, secondPath string) error {
 		return err
 	}
 
-	differ := diffmatchpatch.New()
-	escapedDiff := diffmatchpatch.New().PatchToText(differ.PatchMake(differ.DiffMain(string(second), string(first), true)))
-	unescapedDiff, err := url.QueryUnescape(escapedDiff)
-	if err != nil {
-		return err
-	}
+	diff := internal.Diff("old", second, "new", first)
 
-	log.Println(unescapedDiff)
+	log.Println(string(diff))
 
 	return nil
 }
