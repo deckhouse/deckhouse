@@ -15,9 +15,19 @@
 - Логин — `admin`
 - Пароль сгенерирован автоматически. Узнать его можно выполнив команду:
 
-  {% snippetcut %}
+  - Для Deckhouse 1.46 и новее:
+
+    {% snippetcut %}
 ```bash
 kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.documentation.internal.auth.password'"
+```
+{% endsnippetcut %}
+
+  - Для Deckhouse 1.45 и старее:
+    
+    {% snippetcut %}
+```bash
+kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values deckhouse-web -o json | jq -r '.deckhouseWeb.internal.auth.password'"
 ```
 {% endsnippetcut %}
 

@@ -2,7 +2,7 @@
 {{- $_ := set . "Env" "FE" }}
 {{- end }}
 ---
-project: documentation
+project: deckhouse-web
 configVersion: 1
 ---
 # Base Images

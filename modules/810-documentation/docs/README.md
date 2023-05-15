@@ -1,7 +1,7 @@
 ---
 title: "The documentation module"
 webIfaces:
-- name: deckhouse
+- name: documentation
 ---
 
 The module creates a documentation web UI for the Deckhouse version currently used in a cluster.

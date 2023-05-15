@@ -14,10 +14,20 @@ For access to the in-cluster documentation the `deckhouse` domain is reserved in
 Access to the documentation is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](../../documentation/v1/modules/150-user-authn/) module):
 - Login — `admin`
 - Password was generated automatically. You can find it out by running the command:
+  
+  - For Deckhouse 1.46 or newer:
 
-  {% snippetcut %}
+    {% snippetcut %}
 ```bash
 kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.documentation.internal.auth.password'"
+```
+{% endsnippetcut %}
+
+  - For Deckhouse 1.45 or older:
+
+    {% snippetcut %}
+```bash
+kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values deckhouse-web -o json | jq -r '.deckhouseWeb.internal.auth.password'"
 ```
 {% endsnippetcut %}
 

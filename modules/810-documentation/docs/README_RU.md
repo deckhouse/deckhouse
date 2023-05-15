@@ -1,7 +1,7 @@
 ---
 title: "Модуль documentation"
 webIfaces:
-- name: deckhouse
+- name: documentation
 ---
 
 Этот модуль создает web-интерфейс с документацией, соответствующей запущенной версии Deckhouse.
