@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,7 +34,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var (
+const (
 	vectorBinaryPath = "/usr/bin/vector"
 
 	defaultConfig = "/etc/vector/default/defaults.json"
@@ -97,7 +98,7 @@ func reloadVectorConfig() (err error) {
 	}
 	defer func() {
 		tempErr := os.RemoveAll(tempConfigDir)
-		if err != nil {
+		if tempErr != nil {
 			err = tempErr
 		}
 	}()
@@ -159,11 +160,7 @@ func shouldReload(tempConfigDir string) (bool, error) {
 		return false, err
 	}
 
-	log.Print("old cksum ", oldChecksum)
-	log.Print("new cksum ", newChecksum)
-
 	if oldChecksum != newChecksum {
-		log.Printf("checksums are unequal")
 
 		err := displayDiff(templatedSampleConfigPath, dynamicConfigPath)
 		if err != nil {
@@ -195,16 +192,23 @@ func shouldReload(tempConfigDir string) (bool, error) {
 
 func displayDiff(firstPath, secondPath string) error {
 	first, err := os.ReadFile(firstPath)
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
+
 	second, err := os.ReadFile(secondPath)
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 
 	differ := diffmatchpatch.New()
-	log.Print(diffmatchpatch.New().PatchToText(differ.PatchMake(differ.DiffMain(string(first), string(second), true))))
+	escapedDiff := diffmatchpatch.New().PatchToText(differ.PatchMake(differ.DiffMain(string(second), string(first), true)))
+	unescapedDiff, err := url.QueryUnescape(escapedDiff)
+	if err != nil {
+		return err
+	}
+
+	log.Println(unescapedDiff)
 
 	return nil
 }
@@ -238,8 +242,6 @@ func getFileChecksum(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	log.Printf("cksum for %s: %s", path, hash.Sum(nil))
 
 	return string(hash.Sum(nil)), nil
 }

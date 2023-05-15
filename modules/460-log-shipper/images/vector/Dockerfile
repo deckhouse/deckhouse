@@ -43,7 +43,7 @@ RUN cargo build \
 ### 2: Config reloader
 FROM $BASE_GOLANG_19_ALPINE as artifact
 WORKDIR /src/
-COPY main.go go.mod go.sum /src/
+COPY reloader/ /src/
 RUN apk add --no-cache git && \
     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o reloader main.go
 
