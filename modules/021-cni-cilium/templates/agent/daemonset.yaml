@@ -389,6 +389,7 @@ spec:
             mountPath: /host/opt/cni/bin
       restartPolicy: Always
       serviceAccountName: agent
+      automountServiceAccountToken: true
       terminationGracePeriodSeconds: 1
       volumes:
       - name: host-proc-sys-net

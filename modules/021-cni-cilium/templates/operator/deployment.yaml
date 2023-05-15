@@ -141,6 +141,7 @@ spec:
       restartPolicy: Always
       serviceAccount: operator
       serviceAccountName: operator
+      automountServiceAccountToken: true
       volumes:
       - name: tmp
         emptyDir: {}
