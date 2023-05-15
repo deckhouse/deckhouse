@@ -15,9 +15,9 @@ shell:
     - mkdir /filtered-apk && rsync -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        rm -f "/filtered-apk/sbin/${cmd}"
-        ln -s /iptables-wrapper "/filtered-apk/sbin/${cmd}"
+        ln -f -s /iptables-wrapper "/filtered-apk/sbin/${cmd}"
       done
+      ls -la /filtered-apk/sbin/
 ---
 artifact: distroless-kube-proxy
 fromImage: common/distroless
