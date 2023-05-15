@@ -20,7 +20,7 @@ shell:
       done
 ---
 artifact: distroless-kube-proxy
-from: common/distroless
+fromImage: common/distroless
 import:
 - artifact: distroless-kube-proxy-deps
   add: /filtered-apk
@@ -34,12 +34,8 @@ import:
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: s{{ $.Images.BASE_SCRATCH }}
+fromArtifact: distroless-kube-proxy
 import:
-- artifact: distroless-kube-proxy
-  add: /
-  to: /
-  before: setup
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
   to: /usr/local/bin/kube-proxy
