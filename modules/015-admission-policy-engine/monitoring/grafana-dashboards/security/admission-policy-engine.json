@@ -432,24 +432,14 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum  by (time, violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg) rate(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}[5m]))",
+          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg)",
           "format": "table",
-          "hide": true,
+          "hide": false,
+          "instant": true,
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A"
-        },
-        {
-          "exemplar": false,
-          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (time, violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg)",
-          "format": "table",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "B"
         }
       ],
       "timeFrom": null,
