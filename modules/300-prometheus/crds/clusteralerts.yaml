@@ -25,7 +25,7 @@ spec:
       - name: Severity
         type: string
         jsonPath: .alert.severityLevel
-      - name: Active since
+      - name: Age
         type: date
         jsonPath: .status.startsAt
       - name: Last received
