@@ -179,7 +179,7 @@ steps:
 {!{ define "deploy_doc_template" }!}
 {!{- $env := . -}!}
 {!{- $webEnv := printf "web-%s" $env -}!}
-{!{- $ns := printf "documentation-%s" $env -}!}
+{!{- $ns := printf "deckhouse-web-%s" $env -}!}
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
@@ -213,7 +213,7 @@ steps:
 {!{ define "deploy_site_template" }!}
 {!{- $env := . -}!}
 {!{- $webEnv := printf "web-%s" $env -}!}
-{!{- $ns := printf "documentation-%s" $env -}!}
+{!{- $ns := printf "deckhouse-web-%s" $env -}!}
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
