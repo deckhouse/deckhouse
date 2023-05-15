@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.2
+    controller-gen.kubebuilder.io/version: v0.7.0
   labels:
     heritage: deckhouse
     module: deckhouse
@@ -69,17 +69,30 @@ spec:
                 items:
                   description: "EgressRule contains all rule types which can be applied
                     at egress, i.e. network traffic that originates inside the endpoint
-                    and exits the endpoint selected by the endpointSelector. \n -
+                    and exits the endpoint selected by the endpointSelector. \n   -
                     All members of this structure are optional. If omitted or empty,
-                    the   member will have no effect on the rule. \n - If multiple
-                    members of the structure are specified, then all members   must
+                    the     member will have no effect on the rule. \n   - If multiple
+                    members of the structure are specified, then all members     must
                     match in order for the rule to take effect. The exception to this
-                    \  rule is the ToRequires member; the effects of any Requires
-                    field in any   rule will apply to all other rules as well. \n
-                    - ToEndpoints, ToCIDR, ToCIDRSet, ToEntities, ToServices and ToGroups
-                    are   mutually exclusive. Only one of these members may be present
-                    within an   individual rule."
+                    \    rule is the ToRequires member; the effects of any Requires
+                    field in any     rule will apply to all other rules as well. \n
+                    \  - ToEndpoints, ToCIDR, ToCIDRSet, ToEntities, ToServices and
+                    ToGroups are     mutually exclusive. Only one of these members
+                    may be present within an     individual rule."
                   properties:
+                    auth:
+                      description: Auth is the required authentication type for the
+                        allowed traffic, if any.
+                      properties:
+                        type:
+                          description: Type is the required authentication type for
+                            the allowed traffic, if any.
+                          enum:
+                          - "null"
+                          type: string
+                      required:
+                      - type
+                      type: object
                     icmps:
                       description: "ICMPs is a list of ICMP rule identified by type
                         number which the endpoint subject to the rule is allowed to
@@ -344,6 +357,45 @@ spec:
                         description: PortRule is a list of ports/protocol combinations
                           with optional Layer 7 rules which must be met.
                         properties:
+                          listener:
+                            description: listener specifies the name of a custom Envoy
+                              listener to which this traffic should be redirected
+                              to.
+                            properties:
+                              envoyConfig:
+                                description: EnvoyConfig is a reference to the CEC
+                                  or CCNP resource in which the listener is defined.
+                                properties:
+                                  kind:
+                                    description: Kind is the resource type being referred
+                                      to. Defaults to CiliumEnvoyConfig or CiliumClusterwideEnvoyConfig
+                                      for CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy,
+                                      respectively. The only case this is currently
+                                      explicitly needed is when referring to a CiliumClusterwideEnvoyConfig
+                                      from CiliumNetworkPolicy, as using a namespaced
+                                      listener from a cluster scoped policy is not
+                                      allowed.
+                                    enum:
+                                    - CiliumEnvoyConfig
+                                    - CiliumClusterwideEnvoyConfig
+                                    type: string
+                                  name:
+                                    description: Name is the resource name of the
+                                      CiliumEnvoyConfig or CiliumClusterwideEnvoyConfig
+                                      where the listener is defined in.
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              name:
+                                description: Name is the name of the listener.
+                                minLength: 1
+                                type: string
+                            required:
+                            - envoyConfig
+                            - name
+                            type: object
                           originatingTLS:
                             description: OriginatingTLS is the TLS context for the
                               connections originated by the L7 proxy.  For egress
@@ -415,13 +467,14 @@ spec:
                                 protocol:
                                   description: "Protocol is the L4 protocol. If omitted
                                     or empty, any protocol matches. Accepted values:
-                                    \"TCP\", \"UDP\", \"\"/\"ANY\" \n Matching on
-                                    ICMP is not supported. \n Named port specified
+                                    \"TCP\", \"UDP\", \"SCTP\", \"ANY\" \n Matching
+                                    on ICMP is not supported. \n Named port specified
                                     for a container may narrow this down, but may
                                     not contradict this."
                                   enum:
                                   - TCP
                                   - UDP
+                                  - SCTP
                                   - ANY
                                   type: string
                               required:
@@ -674,6 +727,13 @@ spec:
                                   Key-value pair rules apply.
                                 type: string
                             type: object
+                          serverNames:
+                            description: ServerNames is a list of allowed TLS SNI
+                              values. If not empty, then TLS must be present and one
+                              of the provided SNIs must be indicated in the TLS handshake.
+                            items:
+                              type: string
+                            type: array
                           terminatingTLS:
                             description: TerminatingTLS is the TLS context for the
                               connection terminated by the L7 proxy.  For egress policy
@@ -889,15 +949,15 @@ spec:
                   description: "EgressDenyRule contains all rule types which can be
                     applied at egress, i.e. network traffic that originates inside
                     the endpoint and exits the endpoint selected by the endpointSelector.
-                    \n - All members of this structure are optional. If omitted or
-                    empty, the   member will have no effect on the rule. \n - If multiple
-                    members of the structure are specified, then all members   must
-                    match in order for the rule to take effect. The exception to this
-                    \  rule is the ToRequires member; the effects of any Requires
-                    field in any   rule will apply to all other rules as well. \n
-                    - ToEndpoints, ToCIDR, ToCIDRSet, ToEntities, ToServices and ToGroups
-                    are   mutually exclusive. Only one of these members may be present
-                    within an   individual rule."
+                    \n   - All members of this structure are optional. If omitted
+                    or empty, the     member will have no effect on the rule. \n   -
+                    If multiple members of the structure are specified, then all members
+                    \    must match in order for the rule to take effect. The exception
+                    to this     rule is the ToRequires member; the effects of any
+                    Requires field in any     rule will apply to all other rules as
+                    well. \n   - ToEndpoints, ToCIDR, ToCIDRSet, ToEntities, ToServices
+                    and ToGroups are     mutually exclusive. Only one of these members
+                    may be present within an     individual rule."
                   properties:
                     icmps:
                       description: "ICMPs is a list of ICMP rule identified by type
@@ -1132,13 +1192,14 @@ spec:
                                 protocol:
                                   description: "Protocol is the L4 protocol. If omitted
                                     or empty, any protocol matches. Accepted values:
-                                    \"TCP\", \"UDP\", \"\"/\"ANY\" \n Matching on
-                                    ICMP is not supported. \n Named port specified
+                                    \"TCP\", \"UDP\", \"SCTP\", \"ANY\" \n Matching
+                                    on ICMP is not supported. \n Named port specified
                                     for a container may narrow this down, but may
                                     not contradict this."
                                   enum:
                                   - TCP
                                   - UDP
+                                  - SCTP
                                   - ANY
                                   type: string
                               required:
@@ -1361,15 +1422,29 @@ spec:
                   description: "IngressRule contains all rule types which can be applied
                     at ingress, i.e. network traffic that originates outside of the
                     endpoint and is entering the endpoint selected by the endpointSelector.
-                    \n - All members of this structure are optional. If omitted or
-                    empty, the   member will have no effect on the rule. \n - If multiple
-                    members are set, all of them need to match in order for   the
-                    rule to take effect. The exception to this rule is FromRequires
-                    field;   the effects of any Requires field in any rule will apply
-                    to all other   rules as well. \n - FromEndpoints, FromCIDR, FromCIDRSet
-                    and FromEntities are mutually   exclusive. Only one of these members
-                    may be present within an individual   rule."
+                    \n   - All members of this structure are optional. If omitted
+                    or empty, the     member will have no effect on the rule. \n   -
+                    If multiple members are set, all of them need to match in order
+                    for     the rule to take effect. The exception to this rule is
+                    FromRequires field;     the effects of any Requires field in any
+                    rule will apply to all other     rules as well. \n   - FromEndpoints,
+                    FromCIDR, FromCIDRSet and FromEntities are mutually     exclusive.
+                    Only one of these members may be present within an individual
+                    \    rule."
                   properties:
+                    auth:
+                      description: Auth is the required authentication type for the
+                        allowed traffic, if any.
+                      properties:
+                        type:
+                          description: Type is the required authentication type for
+                            the allowed traffic, if any.
+                          enum:
+                          - "null"
+                          type: string
+                      required:
+                      - type
+                      type: object
                     fromCIDR:
                       description: "FromCIDR is a list of IP blocks which the endpoint
                         subject to the rule is allowed to receive connections from.
@@ -1617,6 +1692,45 @@ spec:
                         description: PortRule is a list of ports/protocol combinations
                           with optional Layer 7 rules which must be met.
                         properties:
+                          listener:
+                            description: listener specifies the name of a custom Envoy
+                              listener to which this traffic should be redirected
+                              to.
+                            properties:
+                              envoyConfig:
+                                description: EnvoyConfig is a reference to the CEC
+                                  or CCNP resource in which the listener is defined.
+                                properties:
+                                  kind:
+                                    description: Kind is the resource type being referred
+                                      to. Defaults to CiliumEnvoyConfig or CiliumClusterwideEnvoyConfig
+                                      for CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy,
+                                      respectively. The only case this is currently
+                                      explicitly needed is when referring to a CiliumClusterwideEnvoyConfig
+                                      from CiliumNetworkPolicy, as using a namespaced
+                                      listener from a cluster scoped policy is not
+                                      allowed.
+                                    enum:
+                                    - CiliumEnvoyConfig
+                                    - CiliumClusterwideEnvoyConfig
+                                    type: string
+                                  name:
+                                    description: Name is the resource name of the
+                                      CiliumEnvoyConfig or CiliumClusterwideEnvoyConfig
+                                      where the listener is defined in.
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              name:
+                                description: Name is the name of the listener.
+                                minLength: 1
+                                type: string
+                            required:
+                            - envoyConfig
+                            - name
+                            type: object
                           originatingTLS:
                             description: OriginatingTLS is the TLS context for the
                               connections originated by the L7 proxy.  For egress
@@ -1688,13 +1802,14 @@ spec:
                                 protocol:
                                   description: "Protocol is the L4 protocol. If omitted
                                     or empty, any protocol matches. Accepted values:
-                                    \"TCP\", \"UDP\", \"\"/\"ANY\" \n Matching on
-                                    ICMP is not supported. \n Named port specified
+                                    \"TCP\", \"UDP\", \"SCTP\", \"ANY\" \n Matching
+                                    on ICMP is not supported. \n Named port specified
                                     for a container may narrow this down, but may
                                     not contradict this."
                                   enum:
                                   - TCP
                                   - UDP
+                                  - SCTP
                                   - ANY
                                   type: string
                               required:
@@ -1947,6 +2062,13 @@ spec:
                                   Key-value pair rules apply.
                                 type: string
                             type: object
+                          serverNames:
+                            description: ServerNames is a list of allowed TLS SNI
+                              values. If not empty, then TLS must be present and one
+                              of the provided SNIs must be indicated in the TLS handshake.
+                            items:
+                              type: string
+                            type: array
                           terminatingTLS:
                             description: TerminatingTLS is the TLS context for the
                               connection terminated by the L7 proxy.  For egress policy
@@ -2012,14 +2134,15 @@ spec:
                   description: "IngressDenyRule contains all rule types which can
                     be applied at ingress, i.e. network traffic that originates outside
                     of the endpoint and is entering the endpoint selected by the endpointSelector.
-                    \n - All members of this structure are optional. If omitted or
-                    empty, the   member will have no effect on the rule. \n - If multiple
-                    members are set, all of them need to match in order for   the
-                    rule to take effect. The exception to this rule is FromRequires
-                    field;   the effects of any Requires field in any rule will apply
-                    to all other   rules as well. \n - FromEndpoints, FromCIDR, FromCIDRSet
-                    and FromEntities are mutually   exclusive. Only one of these members
-                    may be present within an individual   rule."
+                    \n   - All members of this structure are optional. If omitted
+                    or empty, the     member will have no effect on the rule. \n   -
+                    If multiple members are set, all of them need to match in order
+                    for     the rule to take effect. The exception to this rule is
+                    FromRequires field;     the effects of any Requires field in any
+                    rule will apply to all other     rules as well. \n   - FromEndpoints,
+                    FromCIDR, FromCIDRSet and FromEntities are mutually     exclusive.
+                    Only one of these members may be present within an individual
+                    \    rule."
                   properties:
                     fromCIDR:
                       description: "FromCIDR is a list of IP blocks which the endpoint
@@ -2289,13 +2412,14 @@ spec:
                                 protocol:
                                   description: "Protocol is the L4 protocol. If omitted
                                     or empty, any protocol matches. Accepted values:
-                                    \"TCP\", \"UDP\", \"\"/\"ANY\" \n Matching on
-                                    ICMP is not supported. \n Named port specified
+                                    \"TCP\", \"UDP\", \"SCTP\", \"ANY\" \n Matching
+                                    on ICMP is not supported. \n Named port specified
                                     for a container may narrow this down, but may
                                     not contradict this."
                                   enum:
                                   - TCP
                                   - UDP
+                                  - SCTP
                                   - ANY
                                   type: string
                               required:
@@ -2416,16 +2540,30 @@ spec:
                     description: "EgressRule contains all rule types which can be
                       applied at egress, i.e. network traffic that originates inside
                       the endpoint and exits the endpoint selected by the endpointSelector.
-                      \n - All members of this structure are optional. If omitted
-                      or empty, the   member will have no effect on the rule. \n -
-                      If multiple members of the structure are specified, then all
-                      members   must match in order for the rule to take effect. The
-                      exception to this   rule is the ToRequires member; the effects
-                      of any Requires field in any   rule will apply to all other
-                      rules as well. \n - ToEndpoints, ToCIDR, ToCIDRSet, ToEntities,
-                      ToServices and ToGroups are   mutually exclusive. Only one of
-                      these members may be present within an   individual rule."
+                      \n   - All members of this structure are optional. If omitted
+                      or empty, the     member will have no effect on the rule. \n
+                      \  - If multiple members of the structure are specified, then
+                      all members     must match in order for the rule to take effect.
+                      The exception to this     rule is the ToRequires member; the
+                      effects of any Requires field in any     rule will apply to
+                      all other rules as well. \n   - ToEndpoints, ToCIDR, ToCIDRSet,
+                      ToEntities, ToServices and ToGroups are     mutually exclusive.
+                      Only one of these members may be present within an     individual
+                      rule."
                     properties:
+                      auth:
+                        description: Auth is the required authentication type for
+                          the allowed traffic, if any.
+                        properties:
+                          type:
+                            description: Type is the required authentication type
+                              for the allowed traffic, if any.
+                            enum:
+                            - "null"
+                            type: string
+                        required:
+                        - type
+                        type: object
                       icmps:
                         description: "ICMPs is a list of ICMP rule identified by type
                           number which the endpoint subject to the rule is allowed
@@ -2694,6 +2832,46 @@ spec:
                           description: PortRule is a list of ports/protocol combinations
                             with optional Layer 7 rules which must be met.
                           properties:
+                            listener:
+                              description: listener specifies the name of a custom
+                                Envoy listener to which this traffic should be redirected
+                                to.
+                              properties:
+                                envoyConfig:
+                                  description: EnvoyConfig is a reference to the CEC
+                                    or CCNP resource in which the listener is defined.
+                                  properties:
+                                    kind:
+                                      description: Kind is the resource type being
+                                        referred to. Defaults to CiliumEnvoyConfig
+                                        or CiliumClusterwideEnvoyConfig for CiliumNetworkPolicy
+                                        and CiliumClusterwideNetworkPolicy, respectively.
+                                        The only case this is currently explicitly
+                                        needed is when referring to a CiliumClusterwideEnvoyConfig
+                                        from CiliumNetworkPolicy, as using a namespaced
+                                        listener from a cluster scoped policy is not
+                                        allowed.
+                                      enum:
+                                      - CiliumEnvoyConfig
+                                      - CiliumClusterwideEnvoyConfig
+                                      type: string
+                                    name:
+                                      description: Name is the resource name of the
+                                        CiliumEnvoyConfig or CiliumClusterwideEnvoyConfig
+                                        where the listener is defined in.
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                name:
+                                  description: Name is the name of the listener.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - envoyConfig
+                              - name
+                              type: object
                             originatingTLS:
                               description: OriginatingTLS is the TLS context for the
                                 connections originated by the L7 proxy.  For egress
@@ -2766,13 +2944,14 @@ spec:
                                   protocol:
                                     description: "Protocol is the L4 protocol. If
                                       omitted or empty, any protocol matches. Accepted
-                                      values: \"TCP\", \"UDP\", \"\"/\"ANY\" \n Matching
-                                      on ICMP is not supported. \n Named port specified
-                                      for a container may narrow this down, but may
-                                      not contradict this."
+                                      values: \"TCP\", \"UDP\", \"SCTP\", \"ANY\"
+                                      \n Matching on ICMP is not supported. \n Named
+                                      port specified for a container may narrow this
+                                      down, but may not contradict this."
                                     enum:
                                     - TCP
                                     - UDP
+                                    - SCTP
                                     - ANY
                                     type: string
                                 required:
@@ -3030,6 +3209,14 @@ spec:
                                     Key-value pair rules apply.
                                   type: string
                               type: object
+                            serverNames:
+                              description: ServerNames is a list of allowed TLS SNI
+                                values. If not empty, then TLS must be present and
+                                one of the provided SNIs must be indicated in the
+                                TLS handshake.
+                              items:
+                                type: string
+                              type: array
                             terminatingTLS:
                               description: TerminatingTLS is the TLS context for the
                                 connection terminated by the L7 proxy.  For egress
@@ -3250,15 +3437,16 @@ spec:
                     description: "EgressDenyRule contains all rule types which can
                       be applied at egress, i.e. network traffic that originates inside
                       the endpoint and exits the endpoint selected by the endpointSelector.
-                      \n - All members of this structure are optional. If omitted
-                      or empty, the   member will have no effect on the rule. \n -
-                      If multiple members of the structure are specified, then all
-                      members   must match in order for the rule to take effect. The
-                      exception to this   rule is the ToRequires member; the effects
-                      of any Requires field in any   rule will apply to all other
-                      rules as well. \n - ToEndpoints, ToCIDR, ToCIDRSet, ToEntities,
-                      ToServices and ToGroups are   mutually exclusive. Only one of
-                      these members may be present within an   individual rule."
+                      \n   - All members of this structure are optional. If omitted
+                      or empty, the     member will have no effect on the rule. \n
+                      \  - If multiple members of the structure are specified, then
+                      all members     must match in order for the rule to take effect.
+                      The exception to this     rule is the ToRequires member; the
+                      effects of any Requires field in any     rule will apply to
+                      all other rules as well. \n   - ToEndpoints, ToCIDR, ToCIDRSet,
+                      ToEntities, ToServices and ToGroups are     mutually exclusive.
+                      Only one of these members may be present within an     individual
+                      rule."
                     properties:
                       icmps:
                         description: "ICMPs is a list of ICMP rule identified by type
@@ -3495,13 +3683,14 @@ spec:
                                   protocol:
                                     description: "Protocol is the L4 protocol. If
                                       omitted or empty, any protocol matches. Accepted
-                                      values: \"TCP\", \"UDP\", \"\"/\"ANY\" \n Matching
-                                      on ICMP is not supported. \n Named port specified
-                                      for a container may narrow this down, but may
-                                      not contradict this."
+                                      values: \"TCP\", \"UDP\", \"SCTP\", \"ANY\"
+                                      \n Matching on ICMP is not supported. \n Named
+                                      port specified for a container may narrow this
+                                      down, but may not contradict this."
                                     enum:
                                     - TCP
                                     - UDP
+                                    - SCTP
                                     - ANY
                                     type: string
                                 required:
@@ -3728,16 +3917,29 @@ spec:
                     description: "IngressRule contains all rule types which can be
                       applied at ingress, i.e. network traffic that originates outside
                       of the endpoint and is entering the endpoint selected by the
-                      endpointSelector. \n - All members of this structure are optional.
-                      If omitted or empty, the   member will have no effect on the
-                      rule. \n - If multiple members are set, all of them need to
-                      match in order for   the rule to take effect. The exception
-                      to this rule is FromRequires field;   the effects of any Requires
-                      field in any rule will apply to all other   rules as well. \n
-                      - FromEndpoints, FromCIDR, FromCIDRSet and FromEntities are
-                      mutually   exclusive. Only one of these members may be present
-                      within an individual   rule."
+                      endpointSelector. \n   - All members of this structure are optional.
+                      If omitted or empty, the     member will have no effect on the
+                      rule. \n   - If multiple members are set, all of them need to
+                      match in order for     the rule to take effect. The exception
+                      to this rule is FromRequires field;     the effects of any Requires
+                      field in any rule will apply to all other     rules as well.
+                      \n   - FromEndpoints, FromCIDR, FromCIDRSet and FromEntities
+                      are mutually     exclusive. Only one of these members may be
+                      present within an individual     rule."
                     properties:
+                      auth:
+                        description: Auth is the required authentication type for
+                          the allowed traffic, if any.
+                        properties:
+                          type:
+                            description: Type is the required authentication type
+                              for the allowed traffic, if any.
+                            enum:
+                            - "null"
+                            type: string
+                        required:
+                        - type
+                        type: object
                       fromCIDR:
                         description: "FromCIDR is a list of IP blocks which the endpoint
                           subject to the rule is allowed to receive connections from.
@@ -3986,6 +4188,46 @@ spec:
                           description: PortRule is a list of ports/protocol combinations
                             with optional Layer 7 rules which must be met.
                           properties:
+                            listener:
+                              description: listener specifies the name of a custom
+                                Envoy listener to which this traffic should be redirected
+                                to.
+                              properties:
+                                envoyConfig:
+                                  description: EnvoyConfig is a reference to the CEC
+                                    or CCNP resource in which the listener is defined.
+                                  properties:
+                                    kind:
+                                      description: Kind is the resource type being
+                                        referred to. Defaults to CiliumEnvoyConfig
+                                        or CiliumClusterwideEnvoyConfig for CiliumNetworkPolicy
+                                        and CiliumClusterwideNetworkPolicy, respectively.
+                                        The only case this is currently explicitly
+                                        needed is when referring to a CiliumClusterwideEnvoyConfig
+                                        from CiliumNetworkPolicy, as using a namespaced
+                                        listener from a cluster scoped policy is not
+                                        allowed.
+                                      enum:
+                                      - CiliumEnvoyConfig
+                                      - CiliumClusterwideEnvoyConfig
+                                      type: string
+                                    name:
+                                      description: Name is the resource name of the
+                                        CiliumEnvoyConfig or CiliumClusterwideEnvoyConfig
+                                        where the listener is defined in.
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                name:
+                                  description: Name is the name of the listener.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - envoyConfig
+                              - name
+                              type: object
                             originatingTLS:
                               description: OriginatingTLS is the TLS context for the
                                 connections originated by the L7 proxy.  For egress
@@ -4058,13 +4300,14 @@ spec:
                                   protocol:
                                     description: "Protocol is the L4 protocol. If
                                       omitted or empty, any protocol matches. Accepted
-                                      values: \"TCP\", \"UDP\", \"\"/\"ANY\" \n Matching
-                                      on ICMP is not supported. \n Named port specified
-                                      for a container may narrow this down, but may
-                                      not contradict this."
+                                      values: \"TCP\", \"UDP\", \"SCTP\", \"ANY\"
+                                      \n Matching on ICMP is not supported. \n Named
+                                      port specified for a container may narrow this
+                                      down, but may not contradict this."
                                     enum:
                                     - TCP
                                     - UDP
+                                    - SCTP
                                     - ANY
                                     type: string
                                 required:
@@ -4322,6 +4565,14 @@ spec:
                                     Key-value pair rules apply.
                                   type: string
                               type: object
+                            serverNames:
+                              description: ServerNames is a list of allowed TLS SNI
+                                values. If not empty, then TLS must be present and
+                                one of the provided SNIs must be indicated in the
+                                TLS handshake.
+                              items:
+                                type: string
+                              type: array
                             terminatingTLS:
                               description: TerminatingTLS is the TLS context for the
                                 connection terminated by the L7 proxy.  For egress
@@ -4388,15 +4639,15 @@ spec:
                     description: "IngressDenyRule contains all rule types which can
                       be applied at ingress, i.e. network traffic that originates
                       outside of the endpoint and is entering the endpoint selected
-                      by the endpointSelector. \n - All members of this structure
-                      are optional. If omitted or empty, the   member will have no
-                      effect on the rule. \n - If multiple members are set, all of
-                      them need to match in order for   the rule to take effect. The
-                      exception to this rule is FromRequires field;   the effects
-                      of any Requires field in any rule will apply to all other   rules
-                      as well. \n - FromEndpoints, FromCIDR, FromCIDRSet and FromEntities
-                      are mutually   exclusive. Only one of these members may be present
-                      within an individual   rule."
+                      by the endpointSelector. \n   - All members of this structure
+                      are optional. If omitted or empty, the     member will have
+                      no effect on the rule. \n   - If multiple members are set, all
+                      of them need to match in order for     the rule to take effect.
+                      The exception to this rule is FromRequires field;     the effects
+                      of any Requires field in any rule will apply to all other     rules
+                      as well. \n   - FromEndpoints, FromCIDR, FromCIDRSet and FromEntities
+                      are mutually     exclusive. Only one of these members may be
+                      present within an individual     rule."
                     properties:
                       fromCIDR:
                         description: "FromCIDR is a list of IP blocks which the endpoint
@@ -4667,13 +4918,14 @@ spec:
                                   protocol:
                                     description: "Protocol is the L4 protocol. If
                                       omitted or empty, any protocol matches. Accepted
-                                      values: \"TCP\", \"UDP\", \"\"/\"ANY\" \n Matching
-                                      on ICMP is not supported. \n Named port specified
-                                      for a container may narrow this down, but may
-                                      not contradict this."
+                                      values: \"TCP\", \"UDP\", \"SCTP\", \"ANY\"
+                                      \n Matching on ICMP is not supported. \n Named
+                                      port specified for a container may narrow this
+                                      down, but may not contradict this."
                                     enum:
                                     - TCP
                                     - UDP
+                                    - SCTP
                                     - ANY
                                     type: string
                                 required:
