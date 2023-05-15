@@ -18,14 +18,6 @@ shell:
         ln -f -s /iptables-wrapper "/filtered-apk/sbin/${cmd}"
       done
       ls -la /filtered-apk/sbin/
----
-artifact: distroless-kube-proxy
-fromImage: common/distroless
-import:
-- artifact: distroless-kube-proxy-deps
-  add: /filtered-apk
-  to: /
-  before: setup
 
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
@@ -34,8 +26,12 @@ import:
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-fromArtifact: distroless-kube-proxy
+fromImage: common/distroless
 import:
+- artifact: distroless-kube-proxy-deps
+  add: /
+  to: /
+  before: setup
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
   to: /usr/local/bin/kube-proxy
