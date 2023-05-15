@@ -60,9 +60,11 @@ spec:
                   description: Current alert status.
                 startsAt:
                   type: string
+                  format: date-time
                   description: Timestamp of alert creation.
                 lastUpdateTime:
                   type: string
+                  format: date-time
                   description: Timestamp of last status update for operation.
             alert:
               type: object

@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -142,8 +141,8 @@ func (a *alertStoreStruct) updateCRStatus(fingerprint model.Fingerprint) error {
 	patch := map[string]interface{}{
 		"status": map[string]interface{}{
 			"alertStatus":    clusterAlertFiring,
-			"startsAt":       fmt.Sprintf("%d", a.alerts[fingerprint].StartsAt.UnixMicro()),
-			"lastUpdateTime": fmt.Sprintf("%d", a.alerts[fingerprint].UpdatedAt.UnixMicro()),
+			"startsAt":       a.alerts[fingerprint].StartsAt.Format(time.RFC3339),
+			"lastUpdateTime": a.alerts[fingerprint].UpdatedAt.Format(time.RFC3339),
 		},
 	}
 	data, err := json.Marshal(patch)
