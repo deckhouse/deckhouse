@@ -100,6 +100,15 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 
 	log.Infof("creating CR with name %s", fingerprint)
 
+	severityLevel := getLabel(a.alerts[fingerprint].Labels, severityLabel)
+	summary := getLabel(a.alerts[fingerprint].Annotations, summaryLabel)
+	description := getLabel(a.alerts[fingerprint].Annotations, descriptionLabel)
+	reducedAnnotations := make(model.LabelSet, len(a.alerts[fingerprint].Annotations))
+	reducedLabels := make(model.LabelSet, len(a.alerts[fingerprint].Labels))
+	delete(reducedAnnotations, summaryLabel)
+	delete(reducedAnnotations, descriptionLabel)
+	delete(reducedLabels, severityLabel)
+
 	alert := &ClusterAlert{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "deckhouse.io/v1alpha1",
@@ -111,11 +120,11 @@ func (a *alertStoreStruct) insertCR(fingerprint model.Fingerprint) error {
 		},
 		Alert: ClusterAlertSpec{
 			Name:          a.alerts[fingerprint].Name(),
-			SeverityLevel: getLabel(a.alerts[fingerprint].Labels, severityLabel),
-			Summary:       getLabel(a.alerts[fingerprint].Annotations, summaryLabel),
-			Description:   getLabel(a.alerts[fingerprint].Annotations, descriptionLabel),
-			Annotations:   a.alerts[fingerprint].Annotations,
-			Labels:        a.alerts[fingerprint].Labels,
+			SeverityLevel: severityLevel,
+			Summary:       summary,
+			Description:   description,
+			Annotations:   reducedAnnotations,
+			Labels:        reducedLabels,
 		},
 	}
 	content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(alert)
