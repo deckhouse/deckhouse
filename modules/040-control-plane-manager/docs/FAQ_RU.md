@@ -266,6 +266,8 @@ title: "Управление control plane: FAQ"
    --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
+Внимание! Последний параметр в таблице вывода показывает, что член etcd находится в состоянии *learner*, а не в состоянии _leader_.
+
 ### Вариант 2
 
 Используйте команду `etcdctl endpoint status`. Пятый параметр в таблице вывода будет`true` у лидера.

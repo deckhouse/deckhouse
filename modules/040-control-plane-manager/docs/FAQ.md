@@ -266,6 +266,8 @@ Repeat the steps below for **each master node one by one**, starting with the no
    --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
+Warning! The last parameter in the output table shows etcd member is in *learner* state, is not in _leader_ state.
+
 ### Option 2
 
 Use the `etcdctl endpoint status` command. The fith parameter in the output table will be `true` for the leader.
