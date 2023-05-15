@@ -19,7 +19,7 @@ shell:
         ln -s /iptables-wrapper "/sbin/${cmd}"
       done
 ---
-image: distroless-kube-proxy
+artifact: distroless-kube-proxy
 from: common/distroless
 import:
 - artifact: distroless-kube-proxy-deps
