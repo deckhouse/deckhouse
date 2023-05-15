@@ -1,3 +1,11 @@
+{{- define "cilium_image" }}
+  {{- if has "virtualization" .Values.global.enabledModules -}}
+  {{- include "helm_lib_module_image" (list . "virtCilium") -}}
+  {{- else -}}
+  {{- include "helm_lib_module_image" (list . "cilium") -}}
+  {{- end -}}
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -34,6 +42,7 @@ spec:
         container.apparmor.security.beta.kubernetes.io/clean-cilium-state: "unconfined"
         container.apparmor.security.beta.kubernetes.io/mount-cgroup: "unconfined"
         container.apparmor.security.beta.kubernetes.io/install-cni-binaries: "unconfined"
+        container.apparmor.security.beta.kubernetes.io/apply-sysctl-overwrites: "unconfined"
       labels:
         app: agent
         module: cni-cilium
@@ -45,11 +54,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: cilium-agent
-        {{- if has "virtualization" .Values.global.enabledModules }}
-        image: {{ include "helm_lib_module_image" (list . "virtCilium") }}
-        {{- else }}
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
-        {{- end }}
+        image: {{ include "cilium_image" . }}
         command:
         - cilium-agent
         args:
@@ -231,11 +236,7 @@ spec:
       initContainers:
       {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 4.9.17") | nindent 6 }}
       - name: mount-cgroup
-        {{- if has "virtualization" .Values.global.enabledModules }}
-        image: {{ include "helm_lib_module_image" (list . "virtCilium") }}
-        {{- else }}
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
-        {{- end }}
+        image: {{ include "cilium_image" . }}
         env:
         - name: CGROUP_ROOT
           value: "/run/cilium/cgroupv2"
@@ -270,12 +271,42 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      - name: apply-sysctl-overwrites
+        image: {{ include "cilium_image" . }}
+        env:
+        - name: BIN_PATH
+          value: /opt/cni/bin
+        command:
+        - sh
+        - -ec
+        # The statically linked Go program binary is invoked to avoid any
+        # dependency on utilities like sh that can be missing on certain
+        # distros installed on the underlying host. Copy the binary to the
+        # same directory where we install cilium cni plugin so that exec permissions
+        # are available.
+        - |
+          cp /usr/bin/cilium-sysctlfix /hostbin/cilium-sysctlfix;
+          nsenter --mount=/hostproc/1/ns/mnt "${BIN_PATH}/cilium-sysctlfix";
+          rm /hostbin/cilium-sysctlfix
+        volumeMounts:
+        - name: hostproc
+          mountPath: /hostproc
+        - name: cni-path
+          mountPath: /hostbin
+        terminationMessagePolicy: FallbackToLogsOnError
+        securityContext:
+          seLinuxOptions:
+            level: s0
+            type: spc_t
+          capabilities:
+            add:
+              - SYS_ADMIN
+              - SYS_CHROOT
+              - SYS_PTRACE
+            drop:
+              - ALL
       - name: clean-cilium-state
-        {{- if has "virtualization" .Values.global.enabledModules }}
-        image: {{ include "helm_lib_module_image" (list . "virtCilium") }}
-        {{- else }}
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
-        {{- end }}
+        image: {{ include "cilium_image" . }}
         command:
         - /init-container.sh
         env:
@@ -336,11 +367,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       # Install the CNI binaries in an InitContainer so we don't have a writable host mount in the agent
       - name: install-cni-binaries
-        {{- if has "virtualization" .Values.global.enabledModules }}
-        image: {{ include "helm_lib_module_image" (list . "virtCilium") }}
-        {{- else }}
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
-        {{- end }}
+        image: {{ include "cilium_image" . }}
         command:
           - "/install-plugin.sh"
         resources:
