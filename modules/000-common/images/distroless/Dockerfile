@@ -10,7 +10,7 @@ RUN apk fetch -R -o . tzdata alpine-baselayout-data
 RUN mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
 
 COPY file-whitelist .
-RUN mkdir /filtered-apk && rsync -av --include-from file-whitelist --exclude '**' /apk/ /filtered-apk/
+RUN mkdir /filtered-apk && rsync --verbose -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
 
 FROM scratch
 

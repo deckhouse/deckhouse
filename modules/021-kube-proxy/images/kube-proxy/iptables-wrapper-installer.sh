@@ -25,6 +25,6 @@ if [ ! -f "${iptables_wrapper_path}" ]; then
 fi
 
 for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        rm -f "${sbin}/${cmd}"
+        rm -f "/filtered-apk${sbin}/${cmd}"
         ln -s "${iptables_wrapper_path}" "${sbin}/${cmd}"
 done

@@ -1,3 +1,22 @@
+artifact: distroless-kube-proxy
+from: {{ .Images.BASE_ALPINE }}
+workdir: /workdir
+import:
+- add: file-whitelist
+  to: /workdir/
+  before: install
+- add: iptables-wrapper-installer.sh
+  to: /workdir/
+  before: install
+shell:
+  install:
+    - apk update
+    - apk add rsync
+    - apk fetch -R -o . iptables ip6tables conntrack-tools
+    - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
+    - mkdir /filtered-apk && rsync --verbose -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
+    - iptables-wrapper-installer.sh /sbin /iptables-wrapper
+
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
@@ -5,7 +24,7 @@
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+from: distroless-kube-proxy
 git:
 - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-wrapper-installer.sh
   to: /iptables-wrapper-installer.sh
@@ -18,11 +37,6 @@ import:
   add: /iptables-wrapper
   to: /iptables-wrapper
   before: setup
-shell:
-  beforeInstall:
-    - apk add --no-cache iptables ip6tables conntrack-tools
-  setup:
-    - /iptables-wrapper-installer.sh
 docker:
   ENTRYPOINT: ["/usr/bin/kube-proxy"]
 {{- end }}
