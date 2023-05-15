@@ -1,4 +1,4 @@
-artifact: distroless-kube-proxy
+artifact: distroless-kube-proxy-deps
 from: {{ .Images.BASE_ALPINE }}
 git:
 - add: /modules/021-kube-proxy/images/kube-proxy
@@ -15,6 +15,14 @@ shell:
     - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
     - mkdir /filtered-apk && rsync --verbose -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
     - iptables-wrapper-installer.sh /sbin /iptables-wrapper
+---
+artifact: distroless-kube-proxy
+from: common/distroless
+import:
+- artifact: common/kubernetes-artifact-{{ $image_version }}
+  add: /filtered-apk
+  to: /
+  before: setup
 
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
@@ -24,9 +32,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: distroless-kube-proxy
-git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-wrapper-installer.sh
-  to: /iptables-wrapper-installer.sh
 import:
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
