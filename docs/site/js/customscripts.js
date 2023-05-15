@@ -179,6 +179,6 @@ const openDiagram = function () {
   })
 }
 
-document.addEventListener("DOMContentLoaded", function() {
+window.addEventListener("load", function() {
   openDiagram()
 });
