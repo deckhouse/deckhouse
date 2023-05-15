@@ -21,8 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis"
-
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtologrus"
@@ -39,6 +37,7 @@ import (
 	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/module"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis"
 )
 
 // Variables with component versions. They set by 'go build' command.
@@ -111,7 +110,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			operator.ModuleManager.SetupModuleBuilder(apis.NewModuleBuilder())
+			operator.ModuleManager.SetupModuleProducer(apis.NewModuleProducer())
 			// Init deckhouse-config service with ModuleManager instance.
 			d8config.InitService(operator.ModuleManager)
 

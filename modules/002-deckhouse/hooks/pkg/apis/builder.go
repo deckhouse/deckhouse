@@ -7,19 +7,19 @@ import (
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
-type ModuleBuilder struct {
+type ModuleProducer struct {
 }
 
-func NewModuleBuilder() *ModuleBuilder {
-	return &ModuleBuilder{}
+func NewModuleProducer() *ModuleProducer {
+	return &ModuleProducer{}
 }
 
-func (mb *ModuleBuilder) GetGVK() schema.GroupVersionKind {
+func (mp *ModuleProducer) GetGVK() schema.GroupVersionKind {
 	return v1alpha1.ModuleGVK
 }
 
-func (mb *ModuleBuilder) NewModuleTemplate() *v1alpha1.Module {
-	m := &v1alpha1.Module{
+func (mp *ModuleProducer) NewModule() *v1alpha1.Module {
+	return &v1alpha1.Module{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.ModuleGVK.GroupVersion().String(),
 			Kind:       v1alpha1.ModuleGVK.Kind,
@@ -33,6 +33,4 @@ func (mb *ModuleBuilder) NewModuleTemplate() *v1alpha1.Module {
 		},
 		Status: v1alpha1.ModuleStatus{},
 	}
-
-	return m
 }
