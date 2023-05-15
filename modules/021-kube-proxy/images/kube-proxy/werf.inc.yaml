@@ -1,10 +1,10 @@
 artifact: distroless-kube-proxy
 from: {{ .Images.BASE_ALPINE }}
 import:
-- add: file-whitelist
+- add: /file-whitelist
   to: /workdir/
   before: install
-- add: iptables-wrapper-installer.sh
+- add: /iptables-wrapper-installer.sh
   to: /workdir/
   before: install
 shell:
