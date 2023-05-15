@@ -3,6 +3,14 @@ module tools
 go 1.15
 
 require (
-	// github.com/golangci/golangci-lint v1.40.1
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	github.com/Masterminds/sprig v2.22.0+incompatible
+	github.com/deckhouse/deckhouse v0.0.0
+	github.com/golangci/golangci-lint v1.40.1
+	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
+	gopkg.in/yaml.v3 v3.0.1
+)
+
+replace (
+	github.com/deckhouse/deckhouse => ../
+	github.com/deckhouse/deckhouse/dhctl => ../dhctl
 )

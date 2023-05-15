@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,17 +24,17 @@ import (
 )
 
 const (
-	clusterAuthRuleSnapshot = "cluster_authorization_rules"
+	authRuleSnapshot = "authorization_rules"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue(clusterAuthRuleSnapshot),
+	Queue: internal.Queue(authRuleSnapshot),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       clusterAuthRuleSnapshot,
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "ClusterAuthorizationRule",
+			Name:       authRuleSnapshot,
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "AuthorizationRule",
 			FilterFunc: internal.ApplyAuthorizationRuleFilter,
 		},
 	},
-}, internal.AuthorizationRulesHandler("userAuthz.internal.clusterAuthRuleCrds", clusterAuthRuleSnapshot))
+}, internal.AuthorizationRulesHandler("userAuthz.internal.authRuleCrds", authRuleSnapshot))

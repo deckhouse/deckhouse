@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	stateCCRs = `
+	stateCustomClusterRoles = `
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -83,7 +83,7 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 			f.RunHook()
 		})
 
-		It("userAuthz.internal.customClusterRoles must be dict of empty arrays", func() {
+		It("userAuthz.internal.customClusterRoles must be dicts of empty arrays", func() {
 			ccrExpectation := `
 			{
 			  "user":[],
@@ -98,13 +98,13 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 		})
 	})
 
-	Context("Cluster with pile of CCRs", func() {
+	Context("Cluster with pile of Custom ClusterRoles", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCCRs))
+			f.BindingContexts.Set(f.KubeStateSet(stateCustomClusterRoles))
 			f.RunHook()
 		})
 
-		It("CCR must be stored in values", func() {
+		It("Custom Roles and ClusterRoles must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.user").AsStringSlice()).Should(ConsistOf("ccr0"))
 			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.privilegedUser").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1"))
