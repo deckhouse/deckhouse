@@ -178,3 +178,7 @@ const openDiagram = function () {
     }
   })
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+  openDiagram()
+});
