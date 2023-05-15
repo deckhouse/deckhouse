@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	module.RegisterValidationHandler("/validate/v1alpha1/module", moduleValidationHandler())
+	module.RegisterValidationHandler("/validate/v1alpha1/modules", moduleValidationHandler())
 }
 
 func moduleValidationHandler() http.Handler {
