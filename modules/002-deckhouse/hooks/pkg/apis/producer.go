@@ -1,6 +1,7 @@
 package apis
 
 import (
+	"github.com/flant/addon-operator/pkg/module_manager"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -18,7 +19,11 @@ func (mp *ModuleProducer) GetGVK() schema.GroupVersionKind {
 	return v1alpha1.ModuleGVK
 }
 
-func (mp *ModuleProducer) NewModule() *v1alpha1.Module {
+func (mp *ModuleProducer) NewModule() module_manager.ModuleObject {
+	return mp.newModule()
+}
+
+func (mp *ModuleProducer) newModule() *v1alpha1.Module {
 	return &v1alpha1.Module{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.ModuleGVK.GroupVersion().String(),
