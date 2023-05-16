@@ -30,7 +30,7 @@
           {%- if item.url %}
           <a href="{{ item.url | relative_url }}">{{ item.description[page.lang] }}</a>
           {%- elsif item.external_url %}
-          <a href="{{ item.external_url[page.lang] }}">{{ item.description[page.lang] }}</a>
+          <a href="{{ item.external_url[page.lang] }}" target="_blank">{{ item.description[page.lang] }}</a>
           {%- else %}
           {{ item.description[page.lang] }}
           {%- endif %}

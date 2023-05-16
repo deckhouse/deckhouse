@@ -201,3 +201,8 @@ sections:
         external_url:
           en: https://deckhouse.io/services/training.html
           ru: https://deckhouse.ru/services/training.html
+      - description:
+          ru: Единый реестр российского ПО
+        revision: ee
+        external_url:
+          ru: https://reestr.digital.gov.ru/reestr/490559/
