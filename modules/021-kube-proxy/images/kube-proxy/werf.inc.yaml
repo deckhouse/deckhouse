@@ -32,10 +32,10 @@ import:
   add: /
   to: /
   excludePaths:
-  - /sys
-  - /dev
-  - /proc
-  - /mnt
+  - sys
+  - dev
+  - proc
+  - mnt
   before: setup
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
