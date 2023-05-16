@@ -12,3 +12,9 @@ Debian 11 explicitly requires files from `/usr/lib/linux-kbuild-5.10`
 This patch passes through `/usr/lib` directory into kernel-module-injector and sets symlinks to allow using it
 
 - Upstream: https://github.com/piraeusdatastore/piraeus-operator/pull/475
+
+### Add SELinux params for enforced mode
+
+This is proposition from upstream, made for set satellite usable in enforced SELinux mode. 
+
+- Upstream: https://github.com/piraeusdatastore/piraeus-operator/pull/477
