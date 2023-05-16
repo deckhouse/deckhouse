@@ -1,5 +1,11 @@
 ## Patches
 
+### Add SELinux params for enforced mode
+
+This is proposition from upstream, made for set satellite usable in enforced SELinux mode. 
+
+https://github.com/piraeusdatastore/piraeus-operator/pull/477
+
 ### Disable finalizers
 
 This is our internal patch to disable finalizers logic for piraeus-operator custom resources.
