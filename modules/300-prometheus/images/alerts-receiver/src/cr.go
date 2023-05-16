@@ -17,11 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"context"
-
 	"github.com/prometheus/common/model"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -51,36 +47,4 @@ type ClusterAlertSpec struct {
 	Description   string         `json:"description,omitempty"`
 	Annotations   model.LabelSet `json:"annotations,omitempty"`
 	Labels        model.LabelSet `json:"labels"`
-}
-
-func listCRs() (map[string]struct{}, error) {
-	log.Info("list CRs")
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	crList, err := config.k8sClient.Resource(GVR).List(ctx, v1.ListOptions{
-		LabelSelector:        "app=" + appName + ",heritage=deckhouse",
-		ResourceVersionMatch: v1.ResourceVersionMatchNotOlderThan,
-		ResourceVersion:      "0",
-	})
-	cancel()
-	if err != nil {
-		return nil, err
-	}
-	res := make(map[string]struct{}, len(crList.Items))
-	for _, item := range crList.Items {
-		res[item.GetName()] = struct{}{}
-	}
-	log.Infof("found %d CRs in cluster", len(crList.Items))
-	return res, nil
-}
-
-// Remove CR from cluster
-func removeCR(fingerprint string) error {
-	log.Infof("remove CR with name %s from cluster", fingerprint)
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	err := config.k8sClient.Resource(GVR).Delete(ctx, fingerprint, v1.DeleteOptions{})
-	cancel()
-	if errors.IsNotFound(err) {
-		return nil
-	}
-	return err
 }

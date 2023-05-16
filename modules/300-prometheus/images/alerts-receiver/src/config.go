@@ -22,9 +22,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -37,20 +34,11 @@ const (
 	descriptionLabel = "description"
 )
 
-var GVR = schema.GroupVersionResource{
-	Group:    "deckhouse.io",
-	Version:  "v1alpha1",
-	Resource: "clusteralerts",
-}
-
-var livenessOK = true
-
 type configStruct struct {
-	listenHost          string
-	listenPort          string
-	alertsQueueCapacity int
-	logLevel            log.Level
-	k8sClient           *dynamic.DynamicClient
+	listenHost string
+	listenPort string
+	capacity   int
+	logLevel   log.Level
 }
 
 func newConfig() *configStruct {
@@ -67,29 +55,19 @@ func newConfig() *configStruct {
 
 	q := os.Getenv("ALERTS_QUEUE_LENGTH")
 	if q == "" {
-		c.alertsQueueCapacity = 100
+		c.capacity = 100
 	} else {
 		l, err := strconv.Atoi(q)
 		if err != nil {
 			log.Error(err)
 			os.Exit(1)
 		}
-		c.alertsQueueCapacity = l
+		c.capacity = l
 	}
 
 	c.logLevel = log.InfoLevel
 	if d := os.Getenv("DEBUG"); d == "YES" {
 		c.logLevel = log.DebugLevel
-	}
-
-	k8sConfig, err := rest.InClusterConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	c.k8sClient, err = dynamic.NewForConfig(k8sConfig)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	return c

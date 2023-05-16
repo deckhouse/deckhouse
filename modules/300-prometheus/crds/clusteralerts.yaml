@@ -51,6 +51,8 @@ spec:
                   type: string
                   pattern: "^[a-z0-9]+$"
                   maxLength: 64
+                  description: |
+                    Alert identifier (fingerprint) as it calculated by Alertmanager.
             status:
               type: object
               required: []
