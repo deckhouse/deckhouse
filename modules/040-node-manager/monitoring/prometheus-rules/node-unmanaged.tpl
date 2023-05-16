@@ -14,7 +14,7 @@
     {{- if .Values.global.modules.publicDomainTemplate }}
         summary: The {{`{{ $labels.node }}`}} Node is not managed by the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module.
         description: |
-          The {{`{{ $labels.node }}`}} Node is not managed by the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module.
+          The {{`{{ $labels.node }}`}} Node is not managed by the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/faq.html#how-to-put-an-existing-cluster-node-under-the-node-managers-control) module.
     {{- else }}
         summary: The {{`{{ $labels.node }}`}} Node is not managed by the `node-manager`.
         description: |
