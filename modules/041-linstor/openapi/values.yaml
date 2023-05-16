@@ -10,7 +10,11 @@ properties:
     - httpsControllerCert
     - sslControllerCert
     - sslNodeCert
+    - drbdVersion
     properties:
+      drbdVersion:
+        type: string
+        default: "9.2.4"
       masterPassphrase:
         type: string
       httpsClientCert:

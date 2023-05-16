@@ -80,6 +80,8 @@ spec:
   additionalEnv:
   - name: SPAAS_URL
     value: "https://spaas.d8-linstor.svc:2020"
+  - name: LB_SELINUX_AS
+    value: "modules_object_t"
   extraVolumes:
   - name: spaas-certs
     secret:
