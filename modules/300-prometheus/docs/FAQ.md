@@ -711,7 +711,7 @@ metadata:
 2. If storage doesn't support online resize, the message `Waiting for user to (re-)start a pod to finish file system resize of volume on node.` will appear in the PersistentVolumeClaim status.
 3. Restart the Pod to complete the file system resizing.
 
-## How to see cluster alerts?
+## How to get information about alerts in a cluster?
 
 Run the following command to get cluster alerts:
 
