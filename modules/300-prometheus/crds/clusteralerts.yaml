@@ -40,7 +40,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Resource to display Prometheus alerts
+            Resource to display Prometheus alerts.
           required:
             - alert
           properties:
@@ -87,13 +87,13 @@ spec:
                   x-doc-example: 4
                 summary:
                   type: string
-                  description:
+                  description: |
                     Alert summary.
 
                     Optional.
                 description:
                   type: string
-                  description:
+                  description: |
                     Alert description.
 
                     Optional.
