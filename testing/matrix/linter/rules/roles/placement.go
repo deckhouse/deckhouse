@@ -129,7 +129,13 @@ func objectRBACPlacementServiceAccount(m utils.Module, object storage.StoreObjec
 			}
 			return errors.EmptyRuleError
 		}
+
 		if objectName == serviceAccountName {
+			// hack for cluster-api manifests
+			if serviceAccountName == "capi-controller-manager" && namespace == "d8-capi-system" {
+				return errors.EmptyRuleError
+			}
+
 			if m.Namespace != namespace {
 				return errors.NewLintRuleError(
 					"MANIFEST053",
@@ -316,6 +322,11 @@ func handleNestedRBACForUs(m utils.Module, object storage.StoreObject, shortPath
 
 	switch {
 	case strings.HasPrefix(objectName, localPrefix):
+
+		// hack for cluster-api manifests
+		if localPrefix == "capi-controller-manager" && namespace == "d8-capi-system" {
+			return errors.EmptyRuleError
+		}
 		if namespace != m.Namespace {
 			return errors.NewLintRuleError(
 				"MANIFEST053",
