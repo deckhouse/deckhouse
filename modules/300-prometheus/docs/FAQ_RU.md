@@ -710,7 +710,13 @@ metadata:
 
 ## Как посмотреть алерты в кластере?
 
-Выполните команду:
+Выполните следующую команду для получения списка алертов в кластере:
+
+```shell
+kubectl get clusteralerts
+```
+
+Пример:
 
 ```shell
 # kubectl get clusteralerts
@@ -722,7 +728,13 @@ NAME               ALERT                                      SEVERITY   AGE    
 ab17837fffa5e440   DeadMansSwitch                             4          5d4h    41s             firing
 ```
 
-Для просмотра конкретного алерта:
+Выполните следующую команду для просмотра конкретного алерта:
+
+```shell
+kubectl get clusteralerts <ALERT_NAME> -o yaml
+```
+
+Пример:
 
 ```shell
 # kubectl get clusteralerts 235d4efba7df6af4 -o yaml
