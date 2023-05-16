@@ -17,7 +17,7 @@ shell:
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         ln -f -s /iptables-wrapper "/filtered-apk/sbin/${cmd}"
       done
-      ls -la /filtered-apk/sbin/
+      touch /iptables-wrapper
 
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
@@ -29,13 +29,8 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
 - artifact: distroless-kube-proxy-deps
-  add: /
+  add: /filtered-apk
   to: /
-  excludePaths:
-  - sys
-  - dev
-  - proc
-  - mnt
   before: setup
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
