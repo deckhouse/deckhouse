@@ -21,12 +21,12 @@ spec:
 
                     Необязательный параметр.
                 summary:
-                  description:
+                  description: |
                     Краткое описание алерта.
 
                     Необязательный параметр.
                 description:
-                  description:
+                  description: |
                     Расширенное описание алерта.
 
                     Необязательный параметр.

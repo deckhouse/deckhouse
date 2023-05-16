@@ -711,9 +711,15 @@ metadata:
 2. If storage doesn't support online resize, the message `Waiting for user to (re-)start a pod to finish file system resize of volume on node.` will appear in the PersistentVolumeClaim status.
 3. Restart the Pod to complete the file system resizing.
 
-## How to see cluster alerts?
+## How to get information about alerts in a cluster?
 
-Execute command:
+Run the following command to get cluster alerts:
+
+```shell
+kubectl get clusteralerts
+```
+
+Example:
 
 ```shell
 # kubectl get clusteralerts
@@ -725,7 +731,13 @@ NAME               ALERT                                      SEVERITY   AGE    
 ab17837fffa5e440   DeadMansSwitch                             4          5d4h    41s             firing
 ```
 
-To view a specific alert:
+Run the following command to view a specific alert:
+
+```shell
+kubectl get clusteralerts <ALERT_NAME> -o yaml
+```
+
+Example:
 
 ```shell
 # kubectl get clusteralerts 235d4efba7df6af4 -o yaml
@@ -758,4 +770,4 @@ status:
   startsAt: "2023-05-10T13:43:09Z"
 ```
 
-Remember the special alert `DeadMansSwitch` - its presence in the cluster indicates that Prometheus is working.
+Remember the special alert `DeadMansSwitch` — its presence in the cluster indicates that Prometheus is working.
