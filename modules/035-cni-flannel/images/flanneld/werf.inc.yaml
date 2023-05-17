@@ -47,10 +47,10 @@ import:
 - artifact: entrypoint-artifact
   add: /workdir/entrypoint
   to: /entrypoint
-  before: install
+  before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
   to: /iptables-wrapper
-  before: install
+  before: setup
 docker:
   ENTRYPOINT: ["/entrypoint"]
