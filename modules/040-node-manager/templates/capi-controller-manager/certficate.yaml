@@ -1,0 +1,20 @@
+{{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
+  name: capi-serving-cert
+  namespace: d8-capi-system
+spec:
+  dnsNames:
+    - capi-webhook-service.capi-system.svc
+    - capi-webhook-service.capi-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: selfsigned
+  secretName: capi-webhook-service-cert
+  subject:
+    organizations:
+      - k8s-sig-cluster-lifecycle
+  {{- end }}

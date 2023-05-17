@@ -1,3 +1,4 @@
+{{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -393,3 +394,4 @@ subjects:
   - kind: ServiceAccount
     name: capi-controller-manager
     namespace: d8-capi-system
+{{- end }}
