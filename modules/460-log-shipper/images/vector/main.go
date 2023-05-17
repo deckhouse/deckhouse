@@ -67,10 +67,12 @@ func main() {
 				}
 				log.Println("event: ", event)
 				if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
+					log.Println("Reloading config...")
 					err := reloadVectorConfig()
 					if err != nil {
 						log.Fatal(err)
 					}
+					log.Println("Config reloaded")
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
@@ -102,6 +104,16 @@ func reloadVectorConfig() error {
 		return err
 	} else if !ok {
 		return nil
+	}
+
+	sampleConfigContentsBytes, err := os.ReadFile(filepath.Join(tempConfigDir, "vector.json"))
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(filepath.Join(dynamicConfigDir, "vector.json"), []byte(os.ExpandEnv(string(sampleConfigContentsBytes))), 0666)
+	if err != nil {
+		return err
 	}
 
 	processes, err := process.Processes()
