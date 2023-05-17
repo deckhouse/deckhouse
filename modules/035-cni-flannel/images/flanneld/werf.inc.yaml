@@ -38,7 +38,7 @@ fromImage: common/distroless
 import:
 - artifact: flannel
   add: /opt/bin/flanneld
-  to: /opt/bin/
+  to: /opt/bin/flanneld
   before: setup
 - artifact: distroless-cni-flannel-artifact
   add: /filtered-apk
