@@ -938,6 +938,7 @@ entries:
             en: Audit
             ru: Аудит
           d8Revision: ee
+          featureStatus: experimental
           folders:
             - title:
                 en: Description
@@ -1001,6 +1002,7 @@ entries:
                 url: /modules/101-cert-manager/faq.html
           - title: operator-trivy
             d8Revision: ee
+            featureStatus: experimental
             folders:
               - title:
                   en: Description
