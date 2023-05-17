@@ -32,7 +32,8 @@ shell:
 image: {{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: quay.io/coreos/flannel:v0.15.1-amd64@sha256:a3ebdc7e5e44d1ba3ba8ccd8399e81444102bd35f5f480997a637a42d1e1da6b
+  # FIXME: SHA not working
+- image: quay.io/coreos/flannel:v0.15.1-amd64
   add: /opt/bin/flanneld
   to: /opt/bin
   before: setup
