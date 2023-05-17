@@ -9,3 +9,5 @@
 + etc/protocols
 + etc/services
 + etc/nsswitch.conf
+# ca-certificates
++ /usr/share/ca-certificates/***

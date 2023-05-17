@@ -7,13 +7,15 @@ WORKDIR /workdir
 
 
 RUN apk update
-RUN apk add rsync
-RUN apk fetch -R -o . tzdata alpine-baselayout-data
+RUN apk add rsync ca-certificates
+RUN apk fetch -R -o . tzdata alpine-baselayout-data ca-certificates
 
 RUN mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
 
 COPY file-whitelist .
 RUN mkdir /filtered-apk && rsync -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
+
+RUN update-ca-certificates && mkdir -p /filtered-apk/etc/ssl/certs && cp -r /etc/ssl/cert.pem /etc/ssl/certs /filtered-apk/etc/ssl/
 
 FROM $BASE_SCRATCH
 
