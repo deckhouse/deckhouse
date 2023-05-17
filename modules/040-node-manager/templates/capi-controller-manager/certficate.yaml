@@ -11,7 +11,7 @@ spec:
     - capi-webhook-service.capi-system.svc
     - capi-webhook-service.capi-system.svc.cluster.local
   issuerRef:
-    kind: Issuer
+    kind: ClusterIssuer
     name: selfsigned
   secretName: capi-webhook-service-cert
   subject:
