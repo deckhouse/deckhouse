@@ -70,7 +70,7 @@ Changes are applied automatically once the resource configuration is saved.
 
 ## Configuring the module
 
-> Deckhouse uses [addon-operator](https://github.com/flant/addon-operator/) when working with modules. Please refer to its documentation to learn how Deckhouse works with [modules](https://github.com/flant/addon-operator/blob/main/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/HOOKS.md) and [module parameters](https://github.com/flant/addon-operator/blob/main/VALUES.md). We would appreciate it if you *star* the project.
+> Deckhouse uses [addon-operator](https://github.com/flant/addon-operator/) when working with modules. Please refer to its documentation to learn how Deckhouse works with [modules](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) and [module parameters](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). We would appreciate it if you *star* the project.
 
 The module is configured using the `ModuleConfig` custom resource , whose name is the same as the module name (in kebab-case). The `ModuleConfig` custom resource has the following fields:
 
