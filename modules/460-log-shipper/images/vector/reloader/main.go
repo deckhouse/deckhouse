@@ -27,12 +27,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"vector/internal"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/sys/unix"
 )
 
-var (
+const (
 	vectorBinaryPath = "/usr/bin/vector"
 
 	defaultConfig = "/etc/vector/default/defaults.json"
@@ -61,16 +63,14 @@ func main() {
 	go func() {
 		for {
 			select {
-			case event, ok := <-watcher.Events:
+			case _, ok := <-watcher.Events:
 				if !ok {
 					return
 				}
-				log.Println("event: ", event)
-				if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
-					err := reloadVectorConfig()
-					if err != nil {
-						log.Fatal(err)
-					}
+
+				err := reloadVectorConfig()
+				if err != nil {
+					log.Fatal(err)
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
@@ -82,8 +82,7 @@ func main() {
 		}
 	}()
 
-	// TODO: watch whole directory and react to resolv.conf files changes
-	err = watcher.Add(sampleConfig)
+	err = watcher.Add(filepath.Dir(sampleConfig))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,15 +91,23 @@ func main() {
 	<-make(chan struct{})
 }
 
-func reloadVectorConfig() error {
+func reloadVectorConfig() (err error) {
 	tempConfigDir, err := os.MkdirTemp("", "vector-config")
 	if err != nil {
 		return err
 	}
+	defer func() {
+		tempErr := os.RemoveAll(tempConfigDir)
+		if tempErr != nil {
+			err = tempErr
+		}
+	}()
 
-	if ok, err := shouldReload(tempConfigDir); err != nil {
+	ok, err := shouldReload(tempConfigDir)
+	if err != nil {
 		return err
-	} else if !ok {
+	}
+	if !ok {
 		return nil
 	}
 
@@ -155,7 +162,52 @@ func shouldReload(tempConfigDir string) (bool, error) {
 		return false, err
 	}
 
-	return oldChecksum != newChecksum, nil
+	if oldChecksum == newChecksum {
+		return false, nil
+
+	}
+
+	err = displayDiff(templatedSampleConfigPath, dynamicConfigPath)
+	if err != nil {
+		return true, err
+	}
+
+	source, err := os.Open(templatedSampleConfigPath)
+	if err != nil {
+		return true, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dynamicConfigPath)
+	if err != nil {
+		return true, err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	if err != nil {
+		return true, err
+	}
+
+	return true, nil
+}
+
+func displayDiff(firstPath, secondPath string) error {
+	first, err := os.ReadFile(firstPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	second, err := os.ReadFile(secondPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	diff := internal.Diff("old", second, "new", first)
+
+	log.Println(string(diff))
+
+	return nil
 }
 
 func runVector(args string) (string, error) {
@@ -174,6 +226,7 @@ func getFileChecksum(path string) (string, error) {
 		_ = fd.Close()
 	}(fd)
 	if errors.Is(err, os.ErrNotExist) {
+		log.Printf("file does not exist yet, returning empty cksum: %s", err)
 		return "", nil
 	}
 	if err != nil {
