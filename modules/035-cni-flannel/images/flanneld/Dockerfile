@@ -13,8 +13,6 @@ RUN apk add --no-cache git && \
 FROM $BASE_ALPINE
 
 COPY --from=base /opt/bin/flanneld /opt/bin/
-COPY --from=base /opt/bin/mk-docker-opts.sh /opt/bin/
-
 COPY --from=artifact /src/entrypoint /
 
 COPY iptables-wrapper-installer.sh /
