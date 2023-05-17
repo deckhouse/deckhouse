@@ -67,6 +67,7 @@
 
  - **[admission-policy-engine]** Fix `requiredLabels` OperationPolicy. [#4264](https://github.com/deckhouse/deckhouse/pull/4264)
     `requiredLabel` unmarshalling leads to an error.
+ - **[candi]** Fix the error in the `detect_bundle.sh` script. [#4669](https://github.com/deckhouse/deckhouse/pull/4669)
  - **[candi]** Bump gophercloud/utils version. [#4472](https://github.com/deckhouse/deckhouse/pull/4472)
  - **[candi]** Fix SELinux permissions Bashible step in clusters without Cilium. [#4418](https://github.com/deckhouse/deckhouse/pull/4418)
  - **[candi]** Remove the `node-role.kubernetes.io/master` taint from the first control-plane node during bootstrap. [#4159](https://github.com/deckhouse/deckhouse/pull/4159)
