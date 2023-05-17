@@ -93,6 +93,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"operator":               "imageHash-cniCilium-operator",
 		"virtCilium":             "imageHash-cniCilium-virtCilium",
 	},
+	"cniFlannel": map[string]interface{}{
+		"flanneld": "imageHash-cniFlannel-flanneld",
+	},
 	"cniSimpleBridge": map[string]interface{}{
 		"simpleBridge": "imageHash-cniSimpleBridge-simpleBridge",
 	},
@@ -196,9 +199,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"eventsExporter":             "imageHash-extendedMonitoring-eventsExporter",
 		"extendedMonitoringExporter": "imageHash-extendedMonitoring-extendedMonitoringExporter",
 		"imageAvailabilityExporter":  "imageHash-extendedMonitoring-imageAvailabilityExporter",
-	},
-	"flanneld": map[string]interface{}{
-		"flanneld": "imageHash-flanneld-flanneld",
 	},
 	"flantIntegration": map[string]interface{}{
 		"flantPricing": "imageHash-flantIntegration-flantPricing",

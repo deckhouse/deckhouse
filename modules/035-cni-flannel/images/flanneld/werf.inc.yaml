@@ -26,16 +26,16 @@ git:
   to: /workdir/
 shell:
   install:
+    - cd /workdir
     - apk add --no-cache git
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint main.go
 ---
 artifact: flannel
 from: quay.io/coreos/flannel:v0.15.1-amd64@sha256:a3ebdc7e5e44d1ba3ba8ccd8399e81444102bd35f5f480997a637a42d1e1da6b
 ---
-image: {{ .ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  # FIXME: SHA not working
 - artifact: flannel
   add: /opt/bin/flanneld
   to: /opt/bin
