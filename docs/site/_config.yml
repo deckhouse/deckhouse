@@ -106,6 +106,7 @@ defaults:
       type: "pages"
     values:
       d8Revision: ee
+      featureStatus: experimental
   - scope:
       path: "*/041-linstor"
       type: "pages"
@@ -146,6 +147,7 @@ defaults:
       type: "pages"
     values:
       d8Revision: ee
+      featureStatus: experimental
   - scope:
       path: "*/500-okmeter"
       type: "pages"
