@@ -81,7 +81,6 @@ func main() {
 	for _, ip := range allIPs {
 		flannelArgs = append(flannelArgs, "-iface", ip)
 	}
-	log.Printf("running flanneld with args: %s\n", strings.Join(flannelArgs, " "))
 	err = unix.Exec("/opt/bin/flanneld", flannelArgs, os.Environ())
 	if err != nil {
 		log.Fatal(err)
