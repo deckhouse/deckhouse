@@ -1,4 +1,4 @@
-artifact: distroless-kube-proxy-deps
+artifact: distroless-kube-proxy-artifact
 from: {{ .Images.BASE_ALPINE }}
 git:
 - add: /modules/021-kube-proxy/images/kube-proxy
@@ -28,7 +28,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: distroless-kube-proxy-deps
+- artifact: distroless-kube-proxy-artifact
   add: /filtered-apk
   to: /
   before: setup

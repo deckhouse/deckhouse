@@ -1,4 +1,4 @@
-artifact: distroless-cni-flannel-deps-artifact
+artifact: distroless-cni-flannel-artifact
 from: {{ .Images.BASE_ALPINE }}
 git:
 - add: /modules/035-cni-flannel/images/flanneld
@@ -40,7 +40,7 @@ import:
   add: /opt/bin/flanneld
   to: /opt/bin/
   before: setup
-- artifact: distroless-cni-flannel-deps-artifact
+- artifact: distroless-cni-flannel-artifact
   add: /filtered-apk
   to: /
   before: setup

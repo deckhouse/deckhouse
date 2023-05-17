@@ -1,3 +1,4 @@
+ARG BASE_SCRATCH
 ARG BASE_GOLANG_19_ALPINE
 
 FROM $BASE_GOLANG_19_ALPINE as builder
@@ -6,5 +7,5 @@ WORKDIR /src
 RUN wget https://github.com/kubernetes-sigs/iptables-wrappers/tarball/5792812d9e5a5bb7f22d79d557bbfeece253343d -O - | tar -xz --strip-components=1 -C /src
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o iptables-wrapper main.go
 
-FROM scratch
+FROM $BASE_SCRATCH
 COPY --from=builder /src/iptables-wrapper /

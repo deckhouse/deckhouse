@@ -1,4 +1,7 @@
-FROM alpine:3.18 as apk_extractor
+ARG BASE_SCRATCH
+ARG BASE_ALPINE
+
+FROM $BASE_ALPINE as apk_extractor
 
 WORKDIR /workdir
 
@@ -12,6 +15,6 @@ RUN mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
 COPY file-whitelist .
 RUN mkdir /filtered-apk && rsync -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
 
-FROM scratch
+FROM $BASE_SCRATCH
 
 COPY --from=apk_extractor /filtered-apk/ /
