@@ -346,7 +346,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                       x-doc-example: |
                         ```yaml
                         labels:
@@ -359,7 +359,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                       x-doc-example: |
                         ```yaml
                         annotations:
@@ -368,7 +368,7 @@ spec:
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
                       x-doc-example: |
@@ -986,7 +986,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                       x-doc-example: |
                         ```yaml
                         labels:
@@ -999,7 +999,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                       x-doc-example: |
                         ```yaml
                         annotations:
@@ -1008,7 +1008,7 @@ spec:
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
                       x-doc-example: |
@@ -1642,7 +1642,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                       x-doc-example: |
                         ```yaml
                         labels:
@@ -1655,7 +1655,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                       x-doc-example: |
                         ```yaml
                         annotations:
@@ -1664,7 +1664,7 @@ spec:
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
                       x-doc-example: |
