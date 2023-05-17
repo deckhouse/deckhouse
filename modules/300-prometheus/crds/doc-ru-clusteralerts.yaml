@@ -1,13 +1,16 @@
 spec:
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
           description: |
             Ресурс для отображения алертов Prometheus.
           properties:
+            metadata:
+              properties:
+                name:
+                  description: |
+                    Идентификатор алерта (fingerprint). Соответствует идентификатору алерта в Alertmanager.
             alert:
               description: |
                 Описание алерта.
