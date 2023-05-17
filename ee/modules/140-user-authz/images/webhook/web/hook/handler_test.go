@@ -11,6 +11,11 @@ import (
 	"log"
 	"regexp"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestAuthorizeRequest(t *testing.T) {
@@ -19,6 +24,7 @@ func TestAuthorizeRequest(t *testing.T) {
 		Group        []string
 		Attributes   WebhookResourceAttributes
 		ResultStatus WebhookRequestStatus
+		Namespaces   []runtime.Object
 	}{
 		{
 			Name:  "Namespaced",
@@ -139,7 +145,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "making cluster scoped requests for namespaced resources are not allowed",
+				Reason: "making cluster-scoped requests for namespaced resources is not allowed",
 			},
 		},
 		{
@@ -195,7 +201,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "making cluster scoped requests for namespaced resources are not allowed",
+				Reason: "making cluster-scoped requests for namespaced resources is not allowed",
 			},
 		},
 		{
@@ -220,7 +226,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "making cluster scoped requests for namespaced resources are not allowed",
+				Reason: "making cluster-scoped requests for namespaced resources is not allowed",
 			},
 		},
 		{
@@ -240,15 +246,271 @@ func TestAuthorizeRequest(t *testing.T) {
 			Attributes:   WebhookResourceAttributes{},
 			ResultStatus: WebhookRequestStatus{},
 		},
+		{
+			Name:  "Limited with NamespaceSelectors and labels match",
+			Group: []string{"limited-namespace-selectors"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "namespaceSelector-test",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "true",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and labels don't match",
+			Group: []string{"limited-namespace-selectors"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "namespaceSelector-test",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "false",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "user has no access to the namespace",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces, and matches limitNamespaces",
+			Group: []string{"limited-plus"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "test-abc-def",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "false",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces, and matches NamespaceSelectors",
+			Group: []string{"limited-plus"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "namespaceSelector-test",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "true",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces, wants d8-system namespace without AllowAccessToSystemNamespaces",
+			Group: []string{"limited-plus"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "d8-system",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "true",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "user has no access to the namespace",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces, wants d8-system namespace without AllowAccessToSystemNamespaces but the namespace has the labels",
+			Group: []string{"limited-plus"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "d8-system",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "true",
+						},
+					},
+				},
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "d8-system",
+						Labels: map[string]string{
+							"match": "true",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "user has no access to the namespace",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces, wants d8-system with AllowAccessToSystemNamespaces",
+			Group: []string{"limited-and-system-allowed-plus"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "d8-system",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "true",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces from different groups, matches LimitNamespaces",
+			Group: []string{"limited", "limited-namespace-selectors"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "test-abc-def",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "true",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces from different groups, matches labels",
+			Group: []string{"limited", "limited-namespace-selectors"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "namespaceSelector-test",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "true",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces from different groups, wants d8-system with AllowAccessToSystemNamespaces",
+			Group: []string{"limited-and-system-allowed", "limited-namespace-selectors"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "d8-system",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "namespaceSelector-test",
+						Labels: map[string]string{
+							"match": "true",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
 	}
 
 	for _, testCase := range tc {
 		t.Run(testCase.Name, func(t *testing.T) {
 			nsRegex, _ := regexp.Compile("^test-.*$")
 			allRegex, _ := regexp.Compile("^.*$")
+			namespaceSelector := &NamespaceSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels:      map[string]string{
+						"match": "true",
+					},
+				},
+			}
 
 			handler := &Handler{
 				logger: log.New(io.Discard, "", 0),
+				kubeclient: fake.NewSimpleClientset(testCase.Namespaces...),
 				cache: &dummyCache{
 					data: map[string]map[string]bool{
 						"test/v1": {
@@ -276,10 +538,28 @@ func TestAuthorizeRequest(t *testing.T) {
 						"limited": {
 							LimitNamespaces: []*regexp.Regexp{nsRegex},
 						},
+						"limited-namespace-selectors": {
+							NamespaceSelectors: []*NamespaceSelector{
+								namespaceSelector,
+							},
+						},
+						"limited-plus": {
+							NamespaceSelectors: []*NamespaceSelector{
+								namespaceSelector,
+							},
+							LimitNamespaces: []*regexp.Regexp{nsRegex},
+						},
 						"limited-with-unlimited-regex": {
 							LimitNamespaces: []*regexp.Regexp{allRegex},
 						},
 						"limited-and-system-allowed": {
+							LimitNamespaces:               []*regexp.Regexp{nsRegex},
+							AllowAccessToSystemNamespaces: true,
+						},
+						"limited-and-system-allowed-plus": {
+							NamespaceSelectors: []*NamespaceSelector{
+								namespaceSelector,
+							},
 							LimitNamespaces:               []*regexp.Regexp{nsRegex},
 							AllowAccessToSystemNamespaces: true,
 						},

@@ -208,7 +208,7 @@ func (c *NamespacedDiscoveryCache) requestPreferredVersion(group string) (string
 
 		preferredVersion = apiGroup.PreferredVersion.Version
 		if preferredVersion == "" {
-			return true, fmt.Errorf("empty preffered version parsed from kube response: %s", rawRespBody)
+			return true, fmt.Errorf("empty preferred version parsed from kube response: %s", rawRespBody)
 		}
 
 		return false, nil
