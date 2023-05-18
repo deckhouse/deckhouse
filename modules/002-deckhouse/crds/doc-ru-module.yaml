@@ -1,0 +1,11 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяется конфигурацию модуля Deckhouse.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+          description: 'Очередность применения модуля.'

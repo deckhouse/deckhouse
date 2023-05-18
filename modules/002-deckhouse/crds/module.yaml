@@ -30,15 +30,10 @@ spec:
               properties:
                 weight:
                   type: integer
-            status:
-              type: object
-              properties:
-                phase:
-                  type: string
       subresources:
         status: {}
       additionalPrinterColumns:
         - name: weight
           jsonPath: .properties.weight
           type: integer
-          description: 'Module order weight.'
+          description: 'Module weight.'
