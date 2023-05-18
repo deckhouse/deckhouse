@@ -27,5 +27,5 @@ rewrite ^/(.+)/modules/500-okmeter/usage.html$ /$1/modules/500-okmeter/examples.
 rewrite ^/(.+)/modules/500-openvpn/usage.html$ /$1/modules/500-openvpn/examples.html redirect;
 rewrite ^/(.+)/modules/500-upmeter/usage.html$ /$1/modules/500-upmeter/examples.html redirect;
 rewrite ^/(.+)/modules/600-namespace-configurator/usage.html$ /$1/modules/600-namespace-configurator/examples.html redirect;
-rewrite ^/(.+)/modules/810-deckhouse-web/usage.html$ /$1/modules/810-deckhouse-web/examples.html redirect;
+rewrite ^/(.+)/modules/810-deckhouse-web/(.*)$ /$1/modules/810-documentation/$2 redirect;
 {{- end }}

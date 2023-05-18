@@ -53,7 +53,7 @@ spec:
 $ kubectl get moduleconfigs
 NAME                STATE      VERSION    STATUS    AGE
 deckhouse           Enabled    1                    12h
-deckhouse-web       Enabled    2                    12h
+documentation       Enabled    2                    12h
 global              Enabled    1                    12h
 prometheus          Enabled    2                    12h
 upmeter             Disabled   2                    12h

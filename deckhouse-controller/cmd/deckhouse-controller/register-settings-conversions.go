@@ -11,5 +11,5 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/500-dashboard/settings-conversion"
 	_ "github.com/deckhouse/deckhouse/modules/500-openvpn/settings-conversion"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/settings-conversion"
-	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/settings-conversion"
+	_ "github.com/deckhouse/deckhouse/modules/810-documentation/settings-conversion"
 )

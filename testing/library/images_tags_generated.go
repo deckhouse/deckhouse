@@ -180,9 +180,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"deckhouseConfig": map[string]interface{}{
 		"deckhouseConfigWebhook": "imageHash-deckhouseConfig-deckhouseConfigWebhook",
 	},
-	"deckhouseWeb": map[string]interface{}{
-		"web": "imageHash-deckhouseWeb-web",
-	},
 	"delivery": map[string]interface{}{
 		"argocd":               "imageHash-delivery-argocd",
 		"argocdImageUpdater":   "imageHash-delivery-argocdImageUpdater",
@@ -191,6 +188,9 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"descheduler": map[string]interface{}{
 		"descheduler": "imageHash-descheduler-descheduler",
+	},
+	"documentation": map[string]interface{}{
+		"web": "imageHash-documentation-web",
 	},
 	"extendedMonitoring": map[string]interface{}{
 		"certExporter":               "imageHash-extendedMonitoring-certExporter",

@@ -71,20 +71,20 @@ entries:
                       url: /modules/002-deckhouse/cr.html
                 - title: FAQ
                   url: /modules/002-deckhouse/faq.html
-            - title: deckhouse-web
+            - title: documentation
               folders:
                 - title:
                     en: Description
                     ru: Описание
-                  url: /modules/810-deckhouse-web/
+                  url: /modules/810-documentation/
                 - title:
                     en: Examples
                     ru: Примеры
-                  url: /modules/810-deckhouse-web/examples.html
+                  url: /modules/810-documentation/examples.html
                 - title:
                     en: Configuration
                     ru: Настройки
-                  url: /modules/810-deckhouse-web/configuration.html
+                  url: /modules/810-documentation/configuration.html
     - title:
         en: Kubernetes Cluster
         ru: Кластер Kubernetes
