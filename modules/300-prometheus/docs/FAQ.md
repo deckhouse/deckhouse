@@ -713,6 +713,8 @@ metadata:
 
 ## How to get information about alerts in a cluster?
 
+You can get information about active alerts not only in the Grafana/Prometheus web interface but in the CLI. This can be useful if you only have access to the cluster API server and there is no way to open the Grafana/Prometheus web interface.
+
 Run the following command to get cluster alerts:
 
 ```shell
