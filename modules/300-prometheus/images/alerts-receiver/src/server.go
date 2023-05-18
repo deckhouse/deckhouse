@@ -26,12 +26,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type serverStruct struct {
+type server struct {
 	*http.Server
 	isReady atomic.Bool
 }
 
-func (s *serverStruct) readinessHandler(w http.ResponseWriter, _ *http.Request) {
+func (s *server) readinessHandler(w http.ResponseWriter, _ *http.Request) {
 	if !s.isReady.Load() {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
@@ -39,34 +39,30 @@ func (s *serverStruct) readinessHandler(w http.ResponseWriter, _ *http.Request) 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *serverStruct) livenessHandler(w http.ResponseWriter, _ *http.Request) {
+func (s *server) livenessHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func newServer(host, port string) *serverStruct {
-	return &serverStruct{
+func newServer(host, port string) *server {
+	return &server{
 		Server: &http.Server{
 			Addr: net.JoinHostPort(host, port),
 		},
 	}
 }
 
-func (s *serverStruct) setHandlers(config *configStruct, store *storeStruct) {
+func (s *server) setHandlers(config *config, store *storeStruct) {
 	http.HandleFunc("/healthz", s.livenessHandler)
 	http.HandleFunc("/readyz", s.readinessHandler)
 	http.HandleFunc("/api/v1/alerts", s.alertsHandler(config, store))
 	http.HandleFunc("/api/v2/alerts", s.alertsHandler(config, store))
 }
 
-func (s *serverStruct) ready() {
-	s.isReady.Store(true)
+func (s *server) setReadiness(ready bool) {
+	s.isReady.Store(ready)
 }
 
-func (s *serverStruct) notReady() {
-	s.isReady.Store(false)
-}
-
-func (s *serverStruct) alertsHandler(config *configStruct, store *storeStruct) func(w http.ResponseWriter, r *http.Request) {
+func (s *server) alertsHandler(config *config, store *storeStruct) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		var data model.Alerts
@@ -88,11 +84,11 @@ func (s *serverStruct) alertsHandler(config *configStruct, store *storeStruct) f
 			// skip adding alerts if alerts queue is full
 			if len(store.memStore.alerts) == config.capacity {
 				log.Infof("cannot add alert to queue (capacity = %d), queue is full", config.capacity)
-				s.notReady()
+				s.setReadiness(false)
 				continue
 			}
 
-			s.ready()
+			s.setReadiness(true)
 			store.memStore.insertAlert(alert)
 		}
 		w.WriteHeader(http.StatusOK)

@@ -34,15 +34,15 @@ const (
 	descriptionLabel = "description"
 )
 
-type configStruct struct {
+type config struct {
 	listenHost string
 	listenPort string
 	capacity   int
 	logLevel   log.Level
 }
 
-func newConfig() *configStruct {
-	c := &configStruct{}
+func newConfig() *config {
+	c := &config{}
 	c.listenHost = os.Getenv("LISTEN_HOST")
 	if c.listenHost == "" {
 		c.listenHost = "0.0.0.0"

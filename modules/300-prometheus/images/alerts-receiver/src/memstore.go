@@ -25,18 +25,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type memStoreStruct struct {
+type memStore struct {
 	alerts map[model.Fingerprint]*types.Alert
 	sync.RWMutex
 }
 
-func newMemStore(l int) *memStoreStruct {
+func newMemStore(l int) *memStore {
 	a := make(map[model.Fingerprint]*types.Alert, l)
-	return &memStoreStruct{alerts: a}
+	return &memStore{alerts: a}
 }
 
 // Add or update alert in internal store
-func (a *memStoreStruct) insertAlert(alert *model.Alert) {
+func (a *memStore) insertAlert(alert *model.Alert) {
 	a.Lock()
 	defer a.Unlock()
 
@@ -78,7 +78,7 @@ func (a *memStoreStruct) insertAlert(alert *model.Alert) {
 }
 
 // Remove alert from internal store
-func (a *memStoreStruct) removeAlert(fingerprint model.Fingerprint) {
+func (a *memStore) removeAlert(fingerprint model.Fingerprint) {
 	a.Lock()
 	defer a.Unlock()
 	log.Infof("alert with fingerprint %s removed from queue", fingerprint)
@@ -86,7 +86,7 @@ func (a *memStoreStruct) removeAlert(fingerprint model.Fingerprint) {
 }
 
 // Get alert from internal store
-func (a *memStoreStruct) getAlert(fingerprint model.Fingerprint) (*types.Alert, bool) {
+func (a *memStore) getAlert(fingerprint model.Fingerprint) (*types.Alert, bool) {
 	a.Lock()
 	defer a.Unlock()
 	alert, ok := a.alerts[fingerprint]

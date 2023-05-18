@@ -35,12 +35,12 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type clusterStoreStruct struct {
+type clusterStore struct {
 	dc  *dynamic.DynamicClient
 	GVR schema.GroupVersionResource
 }
 
-func newClusterStore() *clusterStoreStruct {
+func newClusterStore() *clusterStore {
 	k8sConfig, err := rest.InClusterConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -51,7 +51,7 @@ func newClusterStore() *clusterStoreStruct {
 		log.Fatal(err)
 	}
 
-	return &clusterStoreStruct{
+	return &clusterStore{
 		dc: k8sClient,
 		GVR: schema.GroupVersionResource{
 			Group:    "deckhouse.io",
@@ -61,7 +61,7 @@ func newClusterStore() *clusterStoreStruct {
 	}
 }
 
-func (c *clusterStoreStruct) listCRs(rootCtx context.Context) (map[string]struct{}, error) {
+func (c *clusterStore) listCRs(rootCtx context.Context) (map[string]struct{}, error) {
 	log.Info("list CRs")
 	ctx, cancel := context.WithTimeout(rootCtx, contextTimeout)
 	crList, err := c.dc.Resource(c.GVR).List(ctx, v1.ListOptions{
@@ -82,7 +82,7 @@ func (c *clusterStoreStruct) listCRs(rootCtx context.Context) (map[string]struct
 }
 
 // Remove CR from cluster
-func (c *clusterStoreStruct) removeCR(rootCtx context.Context, fingerprint string) error {
+func (c *clusterStore) removeCR(rootCtx context.Context, fingerprint string) error {
 	log.Infof("remove CR with name %s from cluster", fingerprint)
 	ctx, cancel := context.WithTimeout(rootCtx, contextTimeout)
 	err := c.dc.Resource(c.GVR).Delete(ctx, fingerprint, v1.DeleteOptions{})
@@ -94,7 +94,7 @@ func (c *clusterStoreStruct) removeCR(rootCtx context.Context, fingerprint strin
 }
 
 // Create CR for corresponding alert in cluster
-func (c *clusterStoreStruct) createCR(rootCtx context.Context, fingerprint string, alert *types.Alert) error {
+func (c *clusterStore) createCR(rootCtx context.Context, fingerprint string, alert *types.Alert) error {
 	log.Infof("creating CR with name %s", fingerprint)
 
 	severityLevel := getLabel(alert.Labels, severityLabel)
@@ -149,7 +149,7 @@ func (c *clusterStoreStruct) createCR(rootCtx context.Context, fingerprint strin
 }
 
 // Uodate CR status
-func (c *clusterStoreStruct) updateCRStatus(rootCtx context.Context, fingerprint string, alert *types.Alert) error {
+func (c *clusterStore) updateCRStatus(rootCtx context.Context, fingerprint string, alert *types.Alert) error {
 	log.Infof("update status of CR with name %s", fingerprint)
 
 	alertStatus := clusterAlertFiring

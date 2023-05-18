@@ -21,8 +21,8 @@ import (
 )
 
 type storeStruct struct {
-	memStore     *memStoreStruct
-	clusterStore *clusterStoreStruct
+	memStore     *memStore
+	clusterStore *clusterStore
 	sync.RWMutex
 }
 
