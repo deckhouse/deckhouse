@@ -8,8 +8,8 @@ metadata:
   namespace: d8-capi-system
 spec:
   dnsNames:
-    - capi-webhook-service.capi-system.svc
-    - capi-webhook-service.capi-system.svc.cluster.local
+    - capi-webhook-service.d8-capi-system.svc
+    - capi-webhook-service.d8-capi-system.svc.cluster.local
   issuerRef:
     kind: ClusterIssuer
     name: selfsigned
