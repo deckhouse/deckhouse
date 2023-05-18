@@ -22,12 +22,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func GetPod(kubeCl *client.KubernetesClient) (*v1.Pod, error) {
 	pods, err := kubeCl.CoreV1().Pods("d8-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
-		return nil, fmt.Errorf("%v: %v", ErrListPods, err)
+		log.DebugF("Cannot get deckhouse pod. Got error: %v", err)
+		return nil, ErrListPods
 	}
 
 	if len(pods.Items) == 0 {
