@@ -43,6 +43,7 @@ func main() {
 	go func() {
 		sig := <-sigCh
 		log.Infof("got signal %v", sig)
+		cancel()
 	}()
 
 	server := newServer(config.listenHost, config.listenPort)
@@ -53,7 +54,8 @@ func main() {
 		if err == nil || err == http.ErrServerClosed {
 			return
 		}
-		log.Fatal(err)
+		log.Error(err)
+		cancel()
 	}()
 
 	server.setReadiness(true)
