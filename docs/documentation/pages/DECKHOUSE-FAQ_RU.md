@@ -258,8 +258,7 @@ spec:
    ./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username <USERNAME> --password <PASSWORD>
    ```
 
-   > Внимание! Обратитесь к документации вашего регистри, чтобы правильно указать значение флага `--path`
-   > (например, для `Harbor` значение может быть `harbor.registry.com/deckhouse/deckhouse`, но не `harbor.registry.com/deckhouse`)
+   > Внимание! Обратитесь к документации вашего регистри, чтобы правильно указать значение флага `--path`. Например, для `Harbor` значение может быть `harbor.registry.com/deckhouse/deckhouse`, но не `harbor.registry.com/deckhouse`.
 
 ## Как создать кластер и запустить Deckhouse без использования каналов обновлений?
 

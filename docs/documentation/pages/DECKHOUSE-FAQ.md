@@ -255,8 +255,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    ./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username <USERNAME> --password <PASSWORD>
    ```
 
-   > Note! please, refer to documentation of your registry to proper specify `--path` value
-   > (for example, for `Harbor` it can be `harbor.registry.com/deckhouse/deckhouse`, but not `harbor.registry.com/deckhouse`)
+   > Note! Please, refer to the documentation of your registry to properly specify the `--path` value. For example, for `Harbor` it can be `harbor.registry.com/deckhouse/deckhouse`, but not `harbor.registry.com/deckhouse`.
 
 ## How to bootstrap a cluster and run Deckhouse without the usage of release channels?
 
