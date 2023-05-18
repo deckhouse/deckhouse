@@ -542,7 +542,7 @@ func newKubernetesEvent(nodeName string, involvedObject v1.ObjectReference, even
 }
 
 func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.StorageClass {
-	volBindMode := storagev1.VolumeBindingWaitForFirstConsumer
+	volBindMode := storagev1.VolumeBindingImmediate
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 	return storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -568,9 +568,6 @@ func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.Storage
 }
 
 func allParametersAreSet(sc, oldSC *storagev1.StorageClass) bool {
-	if oldSC.VolumeBindingMode != sc.VolumeBindingMode {
-		return false
-	}
 	for k := range sc.Parameters {
 		if oldSC.Parameters[k] != sc.Parameters[k] {
 			return false
