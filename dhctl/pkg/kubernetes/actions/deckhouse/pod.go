@@ -33,6 +33,7 @@ func GetPod(kubeCl *client.KubernetesClient) (*v1.Pod, error) {
 	}
 
 	if len(pods.Items) == 0 {
+		log.DebugF("Cannot get deckhouse pod. Count of returned pods is zero")
 		return nil, ErrListPods
 	}
 
