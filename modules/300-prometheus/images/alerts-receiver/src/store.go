@@ -16,14 +16,9 @@ limitations under the License.
 
 package main
 
-import (
-	"sync"
-)
-
 type storeStruct struct {
 	memStore     *memStore
 	clusterStore *clusterStore
-	sync.RWMutex
 }
 
 func newStore(l int) *storeStruct {

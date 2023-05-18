@@ -43,7 +43,6 @@ func main() {
 	go func() {
 		sig := <-sigCh
 		log.Infof("got signal %v", sig)
-		cancel()
 	}()
 
 	server := newServer(config.listenHost, config.listenPort)
@@ -51,12 +50,13 @@ func main() {
 
 	go func() {
 		err := server.ListenAndServe()
-		cancel()
 		if err == nil || err == http.ErrServerClosed {
 			return
 		}
-		log.Error(err)
+		log.Fatal(err)
 	}()
+
+	server.setReadiness(true)
 
 	go reconcileLoop(ctx, store)
 
