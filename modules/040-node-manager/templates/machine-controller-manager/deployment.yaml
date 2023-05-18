@@ -31,6 +31,18 @@ spec:
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     {{- end }}
 ---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: "machine-controller-manager"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -55,7 +67,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: machine-controller-manager
       hostNetwork: true
-      dnsPolicy: Default
+      dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
       - name: deckhouse-registry
       containers:

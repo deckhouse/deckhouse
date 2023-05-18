@@ -35,7 +35,7 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
 spec:
-  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  minAvailable: 1
   selector:
     matchLabels:
       app: "bashible-apiserver"
