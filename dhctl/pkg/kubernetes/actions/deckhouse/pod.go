@@ -27,7 +27,7 @@ import (
 func GetPod(kubeCl *client.KubernetesClient) (*v1.Pod, error) {
 	pods, err := kubeCl.CoreV1().Pods("d8-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
-		return nil, ErrListPods
+		return nil, fmt.Errorf("%v: %v", ErrListPods, err)
 	}
 
 	if len(pods.Items) == 0 {
