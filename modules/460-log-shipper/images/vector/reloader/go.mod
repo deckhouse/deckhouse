@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/sergi/go-diff v1.3.1
 	github.com/shirou/gopsutil/v3 v3.23.2
 	golang.org/x/sys v0.5.0
 )

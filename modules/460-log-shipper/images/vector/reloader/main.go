@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,13 +18,10 @@ package main
 
 import (
 	"crypto/md5"
-	"errors"
-	"fmt"
-	"io"
+	"encoding/hex"
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"vector/internal"
@@ -35,82 +32,16 @@ import (
 )
 
 const (
-	vectorBinaryPath = "/usr/bin/vector"
+	vectorBinPath = "/usr/bin/vector"
 
-	defaultConfig = "/etc/vector/default/defaults.json"
-	sampleConfig  = "/opt/vector/vector.json"
+	defaultConfigPath = "/etc/vector/default/defaults.json"
 
-	dynamicConfigDir = "/etc/vector/dynamic"
+	sampleConfigPath  = "/opt/vector/vector.json"
+	dynamicConfigPath = "/etc/vector/dynamic/vector.json"
 )
 
-func main() {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func(watcher *fsnotify.Watcher) {
-		err := watcher.Close()
-		if err != nil {
-			log.Fatalf("Can't close fsnotify watcher: %s", err)
-		}
-	}(watcher)
-
-	err = reloadVectorConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	go func() {
-		for {
-			select {
-			case _, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-
-				err := reloadVectorConfig()
-				if err != nil {
-					log.Fatal(err)
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				// TODO: add health checking machinery
-				log.Fatalf("inotify watcher returned error: %s", err)
-			}
-		}
-	}()
-
-	err = watcher.Add(filepath.Dir(sampleConfig))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// TODO: add signal handling
-	<-make(chan struct{})
-}
-
-func reloadVectorConfig() (err error) {
-	tempConfigDir, err := os.MkdirTemp("", "vector-config")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		tempErr := os.RemoveAll(tempConfigDir)
-		if tempErr != nil {
-			err = tempErr
-		}
-	}()
-
-	ok, err := shouldReload(tempConfigDir)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return nil
-	}
-
+// pkill -P vector SIGHUP
+func sendReloadSignal() error {
 	processes, err := process.Processes()
 	if err != nil {
 		return err
@@ -121,124 +52,144 @@ func reloadVectorConfig() (err error) {
 			return err
 		}
 
-		if strings.Contains(cmdline, vectorBinaryPath) {
+		if strings.Contains(cmdline, vectorBinPath) {
 			err := p.SendSignal(unix.SIGHUP)
 			if err != nil {
 				return err
 			}
+			// There can be more than one processes of vector running
+			// because of 'vector top' and 'vector vrl' debug commands
 			break
 		}
 	}
-
 	return nil
 }
 
-func shouldReload(tempConfigDir string) (bool, error) {
-	templatedSampleConfigPath := filepath.Join(tempConfigDir, "vector.json")
-	dynamicConfigPath := filepath.Join(dynamicConfigDir, "vector.json")
+func reloadOnce() {
+	log.Println("start reloading Vector config")
 
-	sampleConfigContentsBytes, err := os.ReadFile(sampleConfig)
-	if err != nil {
-		return false, err
+	sampleConfig := LoadConfig(sampleConfigPath)
+	dynamicConfig := LoadConfig(dynamicConfigPath)
+
+	if compareConfigs(dynamicConfig, sampleConfig) {
+		log.Println("configs are equal, doing nothing")
+		return
 	}
 
-	sampleConfigContents := os.ExpandEnv(string(sampleConfigContentsBytes))
-	err = os.WriteFile(templatedSampleConfigPath, []byte(sampleConfigContents), 0666)
-	if err != nil {
-		return false, err
+	if err := sampleConfig.Validate(); err != nil {
+		log.Println("invalid config, skip running")
+		return
 	}
 
-	errOut, err := runVector(fmt.Sprintf("--color never validate --config-json %s --config-json %s", defaultConfig, templatedSampleConfigPath))
-	if err != nil {
-		return false, fmt.Errorf("skipping config reload, err: %s, vector output: %s", err, errOut)
+	if err := sampleConfig.SaveTo(dynamicConfigPath); err != nil {
+		log.Println(err)
+		return
 	}
 
-	oldChecksum, err := getFileChecksum(templatedSampleConfigPath)
-	if err != nil {
-		return false, err
-	}
-	newChecksum, err := getFileChecksum(dynamicConfigPath)
-	if err != nil {
-		return false, err
+	if err := sendReloadSignal(); err != nil {
+		log.Println(err)
+		return
 	}
 
-	if oldChecksum == newChecksum {
-		return false, nil
-
-	}
-
-	err = displayDiff(templatedSampleConfigPath, dynamicConfigPath)
-	if err != nil {
-		return true, err
-	}
-
-	source, err := os.Open(templatedSampleConfigPath)
-	if err != nil {
-		return true, err
-	}
-	defer source.Close()
-
-	destination, err := os.Create(dynamicConfigPath)
-	if err != nil {
-		return true, err
-	}
-	defer destination.Close()
-
-	_, err = io.Copy(destination, source)
-	if err != nil {
-		return true, err
-	}
-
-	return true, nil
+	log.Println("Vector config has been reloaded")
 }
 
-func displayDiff(firstPath, secondPath string) error {
-	first, err := os.ReadFile(firstPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+// Config represents Vector configuration file.
+// https://vector.dev/docs/reference/configuration/
+type Config struct {
+	content []byte
+	path    string
+}
+
+func LoadConfig(path string) *Config {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &Config{content: content, path: path}
+}
+
+func (c *Config) HashSum() string {
+	hash := md5.Sum(c.content)
+	return hex.EncodeToString(hash[:])
+}
+
+func (c *Config) SaveTo(path string) error {
+	return os.WriteFile(path, c.content, 0666)
+}
+
+// Validate executes 'vector validate' command.
+func (c *Config) Validate() error {
+	cmd := exec.Command(
+		vectorBinPath,
+		"--color", "never",
+		"validate",
+		"--config-json", defaultConfigPath,
+		"--config-json", c.path,
+	)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
 		return err
 	}
+	return nil
+}
 
-	second, err := os.ReadFile(secondPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+// compareConfigs compares md5 hash of config files and prints diff if so.
+func compareConfigs(c1, c2 *Config) bool {
+	res := c1.HashSum() == c2.HashSum()
+	if res {
+		return true
 	}
-
-	diff := internal.Diff("old", second, "new", first)
-
+	diff := internal.Diff(c1.path, c1.content, c2.path, c2.content)
 	log.Println(string(diff))
 
-	return nil
+	return false
 }
 
-func runVector(args string) (string, error) {
-	var errBuffer strings.Builder
-
-	cmd := exec.Command(vectorBinaryPath, strings.Fields(args)...)
-	cmd.Env = os.Environ()
-	cmd.Stderr = &errBuffer
-
-	return errBuffer.String(), cmd.Run()
-}
-
-func getFileChecksum(path string) (string, error) {
-	fd, err := os.Open(path)
-	defer func(fd *os.File) {
-		_ = fd.Close()
-	}(fd)
-	if errors.Is(err, os.ErrNotExist) {
-		log.Printf("file does not exist yet, returning empty cksum: %s", err)
-		return "", nil
+func main() {
+	if err := LoadConfig(sampleConfigPath).SaveTo(dynamicConfigPath); err != nil {
+		log.Fatal(err)
+		return
 	}
+	if err := sendReloadSignal(); err != nil {
+		log.Fatal(err)
+		return
+	}
+	log.Printf("initial Vector config has been applied")
+
+	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return "", err
+		log.Fatal(err)
 	}
+	defer watcher.Close()
 
-	hash := md5.New()
-
-	_, err = io.Copy(hash, fd)
+	err = watcher.Add(sampleConfigPath)
 	if err != nil {
-		return "", err
+		log.Fatal(err)
 	}
 
-	return string(hash.Sum(nil)), nil
+	log.Printf("start watching Vector config changes")
+	for {
+		select {
+		case event := <-watcher.Events:
+			if event.Op == fsnotify.Remove {
+				// k8s configmaps use symlinks,
+				// old file is deleted and a new link with the same name is created
+				_ = watcher.Remove(event.Name)
+				if err := watcher.Add(event.Name); err != nil {
+					log.Fatal(err)
+				}
+				switch event.Name {
+				case sampleConfigPath:
+					reloadOnce()
+				}
+			}
+
+		case err := <-watcher.Errors:
+			log.Printf("watch files error: %s", err)
+		}
+	}
 }
