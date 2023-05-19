@@ -10,11 +10,7 @@
     <link rel="icon" href="{{ url .ReqPath "static/img/favicon.png" }}">
   </head>
 
-  <body>
-    <video playsinline autoplay muted loop class="bg-video">
-      <source src="{{ url .ReqPath "static/video/bg.mp4" }}" type="video/mp4">
-    </video>
-    <div class="bg-video-overlay"></div>
+  <body style="background-image: url({{ url .ReqPath "static/img/background.jpg" }})">
     <div class="layout">
       <div class="layout-header"></div>
       <div class="layout-content">

@@ -432,6 +432,8 @@ body {
   flex-grow: 1;
   --tw-bg-opacity: 1;
   background-color: rgb(11 53 118 / var(--tw-bg-opacity));
+  background-size: cover;
+  background-position: center;
 }
 
 *, ::before, ::after {
@@ -526,36 +528,6 @@ body {
   --tw-backdrop-opacity:  ;
   --tw-backdrop-saturate:  ;
   --tw-backdrop-sepia:  ;
-}
-
-.bg-video {
-  position: fixed;
-  top: 0px;
-  left: 0px;
-  z-index: -20;
-  min-height: 100%;
-  min-width: 100%;
-  -o-object-fit: cover;
-     object-fit: cover;
-  opacity: 0;
-  transition-property: opacity;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 500ms;
-}
-
-.bg-video-overlay {
-  position: fixed;
-  top: 0px;
-  left: 0px;
-  z-index: -10;
-  min-height: 100%;
-  min-width: 100%;
-  background-color: rgb(0 100 255 / var(--tw-bg-opacity));
-  --tw-bg-opacity: 0.75;
-}
-
-body.loaded .bg-video {
-  opacity: 1;
 }
 
 .layout {
