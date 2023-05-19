@@ -109,7 +109,7 @@ spec:
                           minItems: 1
                           items:
                             type: string
-                            pattern: '^[a-z]?/[a-zA-Z]+$'
+                            pattern: '^[a-z]*/[a-zA-Z]+$'
                             example: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
                     requiredProbes:
                       type: array

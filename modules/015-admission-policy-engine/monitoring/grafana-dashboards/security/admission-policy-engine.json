@@ -298,7 +298,9 @@
       "type": "row"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -307,7 +309,8 @@
           "custom": {
             "align": "left",
             "displayMode": "auto",
-            "filterable": false
+            "filterable": false,
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -345,7 +348,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 108
+                "value": 50
               }
             ]
           },
@@ -393,7 +396,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 55
+                "value": 108
               }
             ]
           },
@@ -408,6 +411,30 @@
                 "value": 400
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Namespace"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 99
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 205
+              }
+            ]
           }
         ]
       },
@@ -419,41 +446,31 @@
       },
       "id": 34,
       "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "frameIndex": 10,
         "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Time"
-          }
-        ]
+        "sortBy": []
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum  by (time, violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg) rate(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}[5m]))",
+          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg)",
           "format": "table",
-          "hide": true,
+          "hide": false,
+          "instant": true,
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A"
-        },
-        {
-          "exemplar": false,
-          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (time, violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg)",
-          "format": "table",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "B"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "OPA Violations",
       "transformations": [
         {
@@ -463,11 +480,11 @@
               "names": [
                 "Time",
                 "kind",
-                "name",
+                "violating_kind",
                 "violating_name",
                 "violation_enforcement",
-                "violating_kind",
-                "violation_msg"
+                "violation_msg",
+                "violating_namespace"
               ]
             }
           }
@@ -475,13 +492,24 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": {},
-            "indexByName": {},
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "Time": 0,
+              "kind": 1,
+              "violating_kind": 3,
+              "violating_name": 4,
+              "violating_namespace": 2,
+              "violation_enforcement": 5,
+              "violation_msg": 6
+            },
             "renameByName": {
               "Time": "",
               "kind": "Policy",
               "violating_kind": "Kind",
-              "violating_name": "Pod name",
+              "violating_name": "Name",
+              "violating_namespace": "Namespace",
               "violation_enforcement": "Enforcement",
               "violation_msg": "Message"
             }
