@@ -13,4 +13,5 @@ require (
 replace (
 	github.com/deckhouse/deckhouse => ../
 	github.com/deckhouse/deckhouse/dhctl => ../dhctl
+	github.com/deckhouse/deckhouse/go_lib/cloud-data => ../go_lib/cloud-data
 )
