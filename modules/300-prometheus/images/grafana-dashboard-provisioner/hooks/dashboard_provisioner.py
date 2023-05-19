@@ -30,8 +30,13 @@ def main(ctx: hook.Context):
 
     for i in ctx.snapshots.get("dashboard_resources", []):
         dashboard = i["filterResult"]
-        definition = json.loads(dashboard["definition"])
         dashboard_name = dashboard.get('name', '')
+        try:
+            definition = json.loads(dashboard["definition"])
+        except Exception as e:
+            print(f"ERROR: Dashboard '{dashboard_name}' contains errors: {e}.")
+            malformed_dashboards.append(dashboard_name)
+            continue
 
         title = definition.get("title")
         if not title:
