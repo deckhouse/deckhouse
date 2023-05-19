@@ -150,7 +150,7 @@ spec:
       target:
         # `Value` or `AverageValue` can be used for metrics of the Object type.
         type: AverageValue
-        # Scaling occurs if the average value of the custom metric is very different from 10.
+        # Scaling occurs if the average value for all Pods in the Deployment of the custom metric is very different from 10.
         averageValue: 10
 ```
 
