@@ -53,6 +53,17 @@ var _ = Describe("Modules :: virtualization :: hooks :: vm_handler ::", func() {
 				f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachine
+metadata:
+  name: 000-invalid
+  namespace: default
+spec:
+  cloudInit:
+    userDataSecretRef: my-vm-userdata
+    userData: |-
+      chpasswd: { expire: False }
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: VirtualMachineIPAddressClaim
 metadata:
   name: vm10

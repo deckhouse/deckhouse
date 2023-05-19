@@ -159,6 +159,9 @@ func reducedDataVolumeSource2cdiDataVolumeSource(x *v1alpha1.ReducedDataVolumeSo
 }
 
 func reducedDataVolumeSourceRegistry2cdiDataVolumeSourceRegistry(x *v1alpha1.ReducedDataVolumeSourceRegistry) *cdiv1.DataVolumeSourceRegistry {
+	if x == nil {
+		return nil
+	}
 	pullNode := cdiv1.RegistryPullNode
 	return &cdiv1.DataVolumeSourceRegistry{
 		URL:           x.URL,
