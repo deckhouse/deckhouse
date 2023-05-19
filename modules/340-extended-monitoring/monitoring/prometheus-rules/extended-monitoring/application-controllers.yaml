@@ -51,7 +51,7 @@
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
 
-  - alert: KubernetesDaemonSetReplicasUnavailable
+  - alert:  KubernetesDaemonSetReplicasUnavailable
     expr: |
       kube_daemonset_status_number_unavailable
       > on (namespace, daemonset)
