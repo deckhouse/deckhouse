@@ -17,12 +17,16 @@
 # This helper script is looking for *_GITREPO *_VERSION and *_COMMIT_REF variables
 # on Dockerfiles and updating them to the latest versions from GitHub
 #
-# Usage: hack/update.sh [./images]
+# Usage: [DRBDONLY=1] hack/update.sh [./images]
 
 sed_regex=""
 targets="$(grep -rl '^ARG [A-Z_]*_\(VERSION\|COMMIT_REF\)=' $@)"
 versions=$(grep -r '^ARG [A-Z_]*_\(VERSION\|COMMIT_REF\)=' $targets | awk '{print $NF}' | sort -u)
 gitrepos=$(grep -r '^ARG [A-Z_]*_GITREPO=' $targets | awk '{print $NF}' | sort -u)
+
+if [ "$DRBDONLY" = 1 ]; then
+  gitrepos=$(echo "$gitrepos" | grep '\(DRBD_GITREPO\|UTILS_GITREPO\|SPAAS_GITREPO\)')
+fi
 
 while read name repo; do
   shortrepo=$(echo "$repo" | awk -F/ '{print $(NF-1) "/" $NF}')

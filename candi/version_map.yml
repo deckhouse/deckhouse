@@ -104,12 +104,12 @@ k8s:
       gcp: 133826d967b2852f8bb8aa177d5f11cb1adb1f01
     csi:
       openstack: v1.22.0
-      provisioner: v3.2.1@sha256:4ad5fcdbe7e9147b541a863d74e4d1d519bf435ecda4c7bde5abe237a43f7029
-      attacher: v4.0.0@sha256:9a685020911e2725ad019dbce6e4a5ab93d51e3d4557f115e64343345e05781b
-      resizer: v1.6.0@sha256:425d8f1b769398127767b06ed97ce62578a3179bcb99809ce93a1649e025ffe7
-      registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
-      snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
-      livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
+      provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
+      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
+      resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
+      registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
+      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
+      livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.23':
     status: available
     patch: 17
@@ -124,12 +124,12 @@ k8s:
       gcp: 66064c62c6c23110c7a93faca5fba668018df732
     csi:
       openstack: v1.23.1
-      provisioner: v3.2.1@sha256:4ad5fcdbe7e9147b541a863d74e4d1d519bf435ecda4c7bde5abe237a43f7029
-      attacher: v4.0.0@sha256:9a685020911e2725ad019dbce6e4a5ab93d51e3d4557f115e64343345e05781b
-      resizer: v1.6.0@sha256:425d8f1b769398127767b06ed97ce62578a3179bcb99809ce93a1649e025ffe7
-      registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
-      snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
-      livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
+      provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
+      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
+      resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
+      registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
+      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
+      livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.24':
     status: available
     patch: 13
@@ -143,12 +143,12 @@ k8s:
       gcp: eda9a5a3dd73ef923df7b16cf067af1b0ccbb929
     csi:
       openstack: v1.24.2
-      provisioner: v3.2.1@sha256:4ad5fcdbe7e9147b541a863d74e4d1d519bf435ecda4c7bde5abe237a43f7029
-      attacher: v4.0.0@sha256:9a685020911e2725ad019dbce6e4a5ab93d51e3d4557f115e64343345e05781b
-      resizer: v1.6.0@sha256:425d8f1b769398127767b06ed97ce62578a3179bcb99809ce93a1649e025ffe7
-      registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
-      snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
-      livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
+      provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
+      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
+      resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
+      registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
+      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
+      livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.25':
     status: available
     patch: 9
@@ -162,12 +162,12 @@ k8s:
       gcp: ccm/v25.3.0
     csi:
       openstack: v1.25.3
-      provisioner: v3.3.0@sha256:ee3b525d5b89db99da3b8eb521d9cd90cb6e9ef0fbb651e98bb37be78d36b5b8
-      attacher: v4.0.0@sha256:9a685020911e2725ad019dbce6e4a5ab93d51e3d4557f115e64343345e05781b
-      resizer: v1.6.0@sha256:425d8f1b769398127767b06ed97ce62578a3179bcb99809ce93a1649e025ffe7
-      registrar: v2.6.2@sha256:a13bff2ed69af0cf4270f0cf47bdedf75a56c095cd95b91195ae6c713a9b1845
-      snapshotter: v6.1.0@sha256:291334908ddf71a4661fd7f6d9d97274de8a5378a2b6fdfeb2ce73414a34f82f
-      livenessprobe: v2.8.0@sha256:cacee2b5c36dd59d4c7e8469c05c9e4ef53ecb2df9025fa8c10cdaf61bce62f0
+      provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
+      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
+      resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
+      registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
+      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
+      livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.26':
     status: available
     patch: 4
@@ -181,7 +181,7 @@ k8s:
       gcp: ccm/v26.0.4
     csi:
       openstack: v1.26.1
-      provisioner: v3.4.0@sha256:e468dddcd275163a042ab297b2d8c2aca50d5e148d2d22f3b6ba119e2f31fa79
+      provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
       attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
       resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
       registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183

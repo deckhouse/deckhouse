@@ -34,7 +34,7 @@ RUN dpkg-buildpackage -us -uc
 FROM $BASE_UBUNTU as reactor-builder
 
 ARG REACTOR_GITREPO=https://github.com/LINBIT/drbd-reactor
-ARG REACTOR_VERSION=1.0.1
+ARG REACTOR_VERSION=1.2.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
