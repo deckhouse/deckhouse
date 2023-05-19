@@ -8,4 +8,7 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
+        - name: weight
+          jsonPath: .properties.weight
+          type: integer
           description: 'Очередность применения модуля.'
