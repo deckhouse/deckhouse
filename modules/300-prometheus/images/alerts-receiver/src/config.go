@@ -22,25 +22,27 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 const (
-	reconcileTime = 5 * time.Minute
-	nameSpace     = "d8-monitoring"
+	appName          = "prometheus"
+	reconcileTime    = 1 * time.Minute
+	resolveTimeout   = 5 * time.Minute
+	contextTimeout   = 10 * time.Second
+	severityLabel    = "severity_level"
+	summaryLabel     = "summary"
+	descriptionLabel = "description"
 )
 
-type configStruct struct {
-	listenHost          string
-	listenPort          string
-	alertsQueueCapacity int
-	logLevel            log.Level
-	k8sClient           *kubernetes.Clientset
+type config struct {
+	listenHost string
+	listenPort string
+	capacity   int
+	logLevel   log.Level
 }
 
-func newConfig() *configStruct {
-	c := &configStruct{}
+func newConfig() *config {
+	c := &config{}
 	c.listenHost = os.Getenv("LISTEN_HOST")
 	if c.listenHost == "" {
 		c.listenHost = "0.0.0.0"
@@ -53,29 +55,19 @@ func newConfig() *configStruct {
 
 	q := os.Getenv("ALERTS_QUEUE_LENGTH")
 	if q == "" {
-		c.alertsQueueCapacity = 100
+		c.capacity = 100
 	} else {
 		l, err := strconv.Atoi(q)
 		if err != nil {
 			log.Error(err)
 			os.Exit(1)
 		}
-		c.alertsQueueCapacity = l
+		c.capacity = l
 	}
 
 	c.logLevel = log.InfoLevel
 	if d := os.Getenv("DEBUG"); d == "YES" {
 		c.logLevel = log.DebugLevel
-	}
-
-	k8sConfig, err := rest.InClusterConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	c.k8sClient, err = kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	return c

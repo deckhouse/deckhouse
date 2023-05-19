@@ -707,3 +707,66 @@ metadata:
    * Увеличение размера возможно если в StorageClass поле `allowVolumeExpansion` установлено в `true`.
 2. Если используемое хранилище не поддерживает изменение диска на лету, то в статусе PersistentVolumeClaim появится сообщение `Waiting for user to (re-)start a pod to finish file system resize of volume on node.`.
 3. Перезапустите Pod для завершения изменения размера файловой системы.
+
+## Как получить информацию об алертах в кластере?
+
+Информацию об активных алертах можно получить не только в веб-интерфейсе Grafana/Prometheus, но и в CLI. Это может быть полезным, если у вас есть только доступ к API-серверу кластера и нет возможности открыть веб-интерфейс Grafana/Prometheus.
+
+Выполните следующую команду для получения списка алертов в кластере:
+
+```shell
+kubectl get clusteralerts
+```
+
+Пример:
+
+```shell
+# kubectl get clusteralerts
+NAME               ALERT                                      SEVERITY   AGE     LAST RECEIVED   STATUS
+086551aeee5b5b24   ExtendedMonitoringDeprecatatedAnnotation   4          3h25m   38s             firing
+226d35c886464d6e   ExtendedMonitoringDeprecatatedAnnotation   4          3h25m   38s             firing
+235d4efba7df6af4   D8SnapshotControllerPodIsNotReady          8          5d4h    44s             firing
+27464763f0aa857c   D8PrometheusOperatorPodIsNotReady          7          5d4h    43s             firing
+ab17837fffa5e440   DeadMansSwitch                             4          5d4h    41s             firing
+```
+
+Выполните следующую команду для просмотра конкретного алерта:
+
+```shell
+kubectl get clusteralerts <ALERT_NAME> -o yaml
+```
+
+Пример:
+
+```shell
+# kubectl get clusteralerts 235d4efba7df6af4 -o yaml
+alert:
+  description: |
+    The recommended course of action:
+    1. Retrieve details of the Deployment: `kubectl -n d8-snapshot-controller describe deploy snapshot-controller`
+    2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-snapshot-controller describe pod -l app=snapshot-controller`
+  labels:
+    pod: snapshot-controller-75bd776d76-xhb2c
+    prometheus: deckhouse
+    tier: cluster
+  name: D8SnapshotControllerPodIsNotReady
+  severityLevel: "8"
+  summary: The snapshot-controller Pod is NOT Ready.
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterAlert
+metadata:
+  creationTimestamp: "2023-05-15T14:24:08Z"
+  generation: 1
+  labels:
+    app: prometheus
+    heritage: deckhouse
+  name: 235d4efba7df6af4
+  resourceVersion: "36262598"
+  uid: 817f83e4-d01a-4572-8659-0c0a7b6ca9e7
+status:
+  alertStatus: firing
+  lastUpdateTime: "2023-05-15T18:10:09Z"
+  startsAt: "2023-05-10T13:43:09Z"
+```
+
+Помните о специальном алерте `DeadMansSwitch` - его присутствие в кластере говорит о работоспособности Prometheus.
