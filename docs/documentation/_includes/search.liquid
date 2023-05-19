@@ -29,7 +29,26 @@ var documents=[
 "title": "{{ page.title | escape }}",
 "url": "{{ page_canonical_url }}",
 {%- if page['module-name'] %}
-"keywords": {{ page['module-name'] | jsonify }},
+  {%- assign keywords = page['module-name'] %}
+{%- else %}
+  {%- assign keywords = "" %}
+{%- endif %}
+{%- if page['legacy-enabled-commands'] %}
+  {%- if keywords.size > 0 %}
+    {%- assign keywords = page['legacy-enabled-commands'] | append: ", " | append: keywords %}
+  {%- else %}
+    {%- assign keywords = page['legacy-enabled-commands'] %}
+  {%- endif %}
+{%- endif %}
+{%- if page.search.size > 0 %}
+  {%- if keywords.size > 0 %}
+    {%- assign keywords = page.search | append: ", " | append: keywords %}
+  {%- else %}
+    {%- assign keywords = page.search %}
+  {%- endif %}
+{%- endif %}
+{%- if keywords.size > 0 %}
+"keywords": {{ keywords | jsonify }},
 {%- endif %}
 "content": {{ page.content | normalizeSearchContent | jsonify }}
 }
