@@ -163,10 +163,10 @@ func provisionStoragePools(ctx context.Context, lc *lclient.Client, kc kclient.C
 					return
 				}
 				for _, cand := range candidates {
-					if _, yes := seen[cand.UUID]; yes {
+					if _, yes := seen[cand.UUID+"+"+cand.StoragePool.StoragePoolName]; yes {
 						continue
 					}
-					seen[cand.UUID] = struct{}{}
+					seen[cand.UUID+"+"+cand.StoragePool.StoragePoolName] = struct{}{}
 					candiCh <- cand
 				}
 			case <-ctx.Done():
