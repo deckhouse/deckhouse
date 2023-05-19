@@ -50,7 +50,7 @@ data:
       name:
         matches: ".*"
         as: "rps_1m"
-      metricsQuery: 'sum(irate(<<.Series>>{<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>)'
+      metricsQuery: 'sum(irate(<<.Series>>{<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>) OR on() vector(0)'
     - seriesQuery: 'container_cpu_usage_seconds_total{namespace!="",pod!="",container!="POD"}'
       resources:
         overrides:
@@ -78,7 +78,7 @@ data:
       name:
         matches: ".*"
         as: "rps_{{ . }}"
-      metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[{{ . }}])) by (<<.GroupBy>>)'
+      metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[{{ . }}])) by (<<.GroupBy>>) OR on() vector(0)'
     - seriesQuery: 'container_cpu_usage_seconds_total{namespace!="",pod!="",container!="POD"}'
       resources:
         overrides:
