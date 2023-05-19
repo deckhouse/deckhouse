@@ -1,0 +1,28 @@
+diff --git a/pkg/app/server.go b/pkg/app/server.go
+index e497f3f..21ddfae 100644
+--- a/pkg/app/server.go
++++ b/pkg/app/server.go
+@@ -251,6 +251,11 @@ func buildTelemetryServer(registry prometheus.Gatherer) *http.ServeMux {
+ 
+ 	// Add metricsPath
+ 	mux.Handle(metricsPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorLog: promLogger{}}))
++	// Add healthzPath
++	mux.HandleFunc(healthzPath, func(w http.ResponseWriter, r *http.Request) {
++		w.WriteHeader(http.StatusOK)
++		w.Write([]byte(http.StatusText(http.StatusOK)))
++	})
+ 	// Add index
+ 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+ 		w.Write([]byte(`<html>
+@@ -278,11 +283,6 @@ func buildMetricsServer(m *metricshandler.MetricsHandler, durationObserver prome
+ 
+ 	mux.Handle(metricsPath, promhttp.InstrumentHandlerDuration(durationObserver, m))
+ 
+-	// Add healthzPath
+-	mux.HandleFunc(healthzPath, func(w http.ResponseWriter, r *http.Request) {
+-		w.WriteHeader(http.StatusOK)
+-		w.Write([]byte(http.StatusText(http.StatusOK)))
+-	})
+ 	// Add index
+ 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+ 		w.Write([]byte(`<html>
