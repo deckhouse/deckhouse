@@ -1,5 +1,5 @@
 ---
-title: "Модуль operator-trivy: FAQ"
+title: "The operator-trivy module: FAQ"
 ---
 {% raw %}
 ## How to view all resources that have not passed CIS compliance checks?
