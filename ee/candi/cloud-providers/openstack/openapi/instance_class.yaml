@@ -40,6 +40,8 @@ spec:
                   example: m1.medium
                   type: string
                 capacity:
+                  deprecated: true
+                  x-doc-deprecated: true
                   type: object
                   description: |
                     Instance capacity for *non-standard* instance types (the `flavorName` parameter).

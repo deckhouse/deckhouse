@@ -37,6 +37,8 @@ spec:
                     ```
                   example: Standard_F4
                 capacity:
+                  deprecated: true
+                  x-doc-deprecated: true
                   type: object
                   description: |
                     Instance capacity for *non-standard* instance types (the `machineSize` parameter).
