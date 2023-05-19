@@ -18,6 +18,7 @@ import (
 	"fmt"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	ad_app "github.com/flant/addon-operator/pkg/app"
@@ -51,8 +52,7 @@ func version() string {
 // Go hooks and set some defaults. Also, helper commands are defined for Shell hooks.
 
 const (
-	AppFullName    = "deckhouse-controller"
-	AppShortName   = "deckhouse"
+	AppName        = "deckhouse"
 	AppDescription = "controller for Kubernetes platform from Flant"
 
 	DefaultLogType         = "json"
@@ -65,11 +65,12 @@ const (
 func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
+	FileName := filepath.Base(os.Args[0])
 
-	kpApp := kingpin.New(AppFullName, fmt.Sprintf("%s %s: %s", AppShortName, DeckhouseVersion, AppDescription))
+	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
 
 	// override usage template to reveal additional commands with information about start command
-	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(AppFullName))
+	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(FileName))
 
 	// print version
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
