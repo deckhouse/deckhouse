@@ -3,13 +3,13 @@ title: "Модуль operator-trivy: FAQ"
 ---
 {% raw %}
 
-## Как посмотреть все ресурсы, которые не прошли  CIS compliance проверки?
+## Как посмотреть все ресурсы, которые не прошли CIS compliance проверки?
 
 ```bash
 kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson | jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
 ```
 
-## Как посмотреть ресуры, которые не прошли конкретные CIS compliance проверки
+## Как посмотреть ресуры, которые не прошли конкретную CIS compliance-проверку?
 
 По `id`:
 

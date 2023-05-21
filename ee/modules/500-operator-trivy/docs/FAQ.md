@@ -9,7 +9,7 @@ title: "The operator-trivy module: FAQ"
 kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson | jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
 ```
 
-## How to view resources that have not passed specific CIS compliance checks
+## How to view resources that have not passed a specific CIS compliance check?
 
 By check `id`:
 
