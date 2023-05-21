@@ -27,4 +27,5 @@ check_desc="Apply Security Context to Your Pods and Containers"
 kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
   jq --arg check_desc "$check_desc" '.status.detailReport.results | map(select(.description == $check_desc))'
 ```
+
 {% endraw %}
