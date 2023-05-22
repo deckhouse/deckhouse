@@ -429,16 +429,16 @@ check_e2e_labels:
         IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
         echo '::echo::on'
-        echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-        echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
-        echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-        echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+        echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+        echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+        echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+        echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
 {!{- if eq $provider "eks" }!}
-        echo "::set-output name=terraform-image-name::${TERRAFORM_IMAGE_NAME}"
+        echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
 {!{- end }!}
-        echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-        echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-        echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+        echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+        echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+        echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
 
@@ -619,13 +619,13 @@ check_e2e_labels:
 {!{- end }!}
 
         echo '::echo::on'
-        echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-        echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-        echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
+        echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+        echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+        echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
 {!{- if eq $provider "eks" }!}
-        echo "::set-output name=terraform-image-name::${TERRAFORM_IMAGE_NAME}"
+        echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
 {!{- end }!}
-        echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+        echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
 
