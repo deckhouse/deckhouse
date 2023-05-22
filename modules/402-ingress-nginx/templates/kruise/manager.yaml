@@ -152,6 +152,7 @@ spec:
             - "--v=2"
             - "--logtostderr=true"
             - "--stale-cache-interval=1h30m"
+            - "--livez-path=/livez"
           env:
             - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
               valueFrom:
@@ -159,9 +160,11 @@ spec:
                   fieldPath: status.podIP
             - name: KUBE_RBAC_PROXY_CONFIG
               value: |
+                excludePaths:
+                - /healthz
                 upstreams:
-                - upstream: http://127.0.0.1:8082/metrics
-                  path: /metrics
+                - upstream: http://127.0.0.1:8082/
+                  path: /
                   authorization:
                     resourceAttributes:
                       namespace: d8-{{ .Chart.Name }}
@@ -170,6 +173,16 @@ spec:
                       resource: deployments
                       subresource: kruise-state-metrics
                       name: kruise
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 10354
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: 10354
+              scheme: HTTPS
           ports:
             - containerPort: 10354
               name: https-metrics
@@ -195,7 +208,8 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8081
+              port: 10354
+              scheme: HTTPS
           readinessProbe:
             httpGet:
               path: /

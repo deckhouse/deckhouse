@@ -5,11 +5,8 @@ FROM $BASE_GOLANG_19_BULLSEYE as builder
 ARG KRUISE_STATE_METRICS_BRANCH=master
 ARG KRUISE_STATE_METRICS_COMMIT=b081f2ae9e011fd92fd23f6efa209601f5a20a01
 
-COPY patches/move-healthz-endpoint.patch /
-
 RUN git clone --depth 1 --branch ${KRUISE_STATE_METRICS_BRANCH} https://github.com/openkruise/kruise-state-metrics.git && \
     cd kruise-state-metrics && git checkout ${KRUISE_STATE_METRICS_COMMIT} && \
-    git apply /move-healthz-endpoint.patch && \
     CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go
 
 FROM $BASE_ALPINE

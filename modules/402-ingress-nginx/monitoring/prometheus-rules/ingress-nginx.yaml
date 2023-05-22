@@ -62,29 +62,35 @@
         `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter`.
       summary: The Ingress Nginx sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
 
-  - alert: NginxIngressContainerRestarts
-    expr: sum by (namespace, pod, container) (increase(kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx", pod=~"controller-.+"}[24h])) > 10
+  - alert: NginxIngressPodIsRestartingTooOften
+    expr: |
+      max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"controller-.+"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"controller-.+"}) > 5
     labels:
       severity_level: "4"
     annotations:
+      description: |-
+        The number of restarts in the last hour: {{ $value }}.
+        Excessive nginx ingress restarts indicate that something is wrong. Normally, it should be up and running all the time.
+      plk_labels_as_annotations: "pod"
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        Nginx ingress {{$labels.container}} container of {{$labels.pod}} pod in {{$labels.namespace}} namespace has been restarted more than 10 times in the last 24 hours.
+      summary: Too many nginx ingress restarts have been detected.
 
-      summary: Nginx ingress {{$labels.container}} container of {{$labels.pod}} pod in {{$labels.namespace}} namespace has been restarted more than 10 times in the last 24 hours.
-
-  - alert: KruiseControllerContainerRestarts
-    expr: sum by (namespace, pod, container) (increase(kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx", pod=~"kruise-controller-manager-.+"}[24h])) > 10
+  - alert: D8KruiseControllerPodIsRestartingTooOften
+    expr: |
+      max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}) > 5
     labels:
       severity_level: "8"
     annotations:
+      description: |-
+        The number of restarts in the last hour: {{ $value }}.
+        Excessive kruise controller restarts indicate that something is wrong. Normally, it should be up and running all the time.
+      plk_create_group_if_not_exists__d8_kruise_controller_malfunctioning: D8KruiseControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_kruise_controller_malfunctioning: D8KruiseControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_labels_as_annotations: "pod"
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        Kruise controller {{$labels.container}} container of {{$labels.pod}} pod in {{$labels.namespace}} namespace has been restarted more than 10 times in the last 24 hours.
-
-      summary: Kruise controller {{$labels.container}} container of {{$labels.pod}} pod in {{$labels.namespace}} namespace has been restarted more than 10 times in the last 24 hours.
+      summary: Too many kruise controller restarts have been detected.
 
   - alert: NginxIngressDaemonSetReplicasUnavailable
     expr: kruise_daemonset_status_number_unavailable{namespace="d8-ingress-nginx"} > 0
@@ -112,7 +118,7 @@
           <(kubectl get no -o'custom-columns=NAME:.metadata.name' --no-headers)
         ```
 
-  - alert: NginxIngressaemonSetReplicasUnavailable
+  - alert: NginxIngressDaemonSetReplicasUnavailable
     expr: (kruise_daemonset_status_number_available{namespace="d8-ingress-nginx"} == 0) * (kruise_daemonset_status_desired_number_scheduled{namespace="d8-ingress-nginx"} != 0)
     for: 5m
     labels:
