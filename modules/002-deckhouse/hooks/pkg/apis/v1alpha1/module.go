@@ -45,7 +45,10 @@ type ModuleProperties struct {
 	Weight int `json:"weight"`
 }
 
-type ModuleStatus struct{}
+type ModuleStatus struct {
+	State  string `json:"state"`
+	Source string `json:"source"`
+}
 
 type moduleKind struct{}
 
@@ -67,6 +70,25 @@ func (m *Module) SetName(name string) {
 
 func (m *Module) SetWeight(weight int) {
 	m.Properties.Weight = weight
+}
+
+func (m *Module) SetSource(source string) {
+	if source == "" {
+		source = "Embedded"
+	}
+
+	if source != "Embedded" {
+		source = "External: " + source
+	}
+
+	m.Status.Source = source
+}
+func (m *Module) SetEnabledState(enabled bool) {
+	if enabled {
+		m.Status.State = "Enabled"
+	} else {
+		m.Status.State = "Disabled"
+	}
 }
 
 func (m *Module) calculateLabels() {

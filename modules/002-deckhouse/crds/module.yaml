@@ -30,6 +30,16 @@ spec:
               properties:
                 weight:
                   type: integer
+            status:
+              type: object
+              properties:
+                state:
+                  type: string
+                  enum:
+                    - Enabled
+                    - Disabled
+                source:
+                  type: string
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -37,3 +47,11 @@ spec:
           jsonPath: .properties.weight
           type: integer
           description: 'Module weight.'
+        - name: state
+          jsonPath: .status.state
+          type: string
+          description: 'Module state.'
+        - name: source
+          jsonPath: .status.source
+          type: string
+          description: 'Module source repository.'
