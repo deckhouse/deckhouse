@@ -46,13 +46,15 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
 
+# Monitoring is enabled by default for all controllers in a namespace and can be disabled by using
+# the 'extended-monitoring.deckhouse.io/enabled=false' label
+# or the 'extended-monitoring.flant.com/enabled=false' annotation.
 def is_monitoring_enabled(labels, annotations):
-    if annotations and annotations.get(DEPRECATED_EXTENDED_MONITORING_ENABLED_ANNOTATION, "false") != "false":
-        return True
-    if labels and labels.get(EXTENDED_MONITORING_ENABLED_LABEL, "false") != "false":
-        return True
-
-    return False
+    if annotations and annotations.get(DEPRECATED_EXTENDED_MONITORING_ENABLED_ANNOTATION, "true") == "false":
+        return False
+    if labels and labels.get(EXTENDED_MONITORING_ENABLED_LABEL, "true") == "false":
+        return False
+    return True
 
 
 def parse_thresholds(labels, annotations, default_thresholds):
