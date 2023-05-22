@@ -170,6 +170,9 @@ nodeGroups:
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
+  # Required if rootDiskSize is specified. Volume type map for node's root volume
+  volumeTypeMap:
+    nova: ceph-ssd
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 provider:
   ...

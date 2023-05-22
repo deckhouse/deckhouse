@@ -179,6 +179,9 @@ nodeGroups:
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
+  # Требуется, если указан параметр rootDiskSize. Карта типов томов для главного корневого тома нод
+  volumeTypeMap:
+    nova: ceph-ssd
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 provider:
   ...
