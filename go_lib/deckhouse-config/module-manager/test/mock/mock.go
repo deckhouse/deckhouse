@@ -92,6 +92,11 @@ func (m *ModuleManagerMock) AddOpenAPISchemas(modName string, modPath string) er
 	return AddOpenAPISchemas(m.valuesValidator, modName, modPath)
 }
 
+func (m *ModuleManagerMock) SetModuleSource(moduleName, source string) {
+	module := m.modules[moduleName]
+	module.Source = source
+}
+
 type ModuleMock struct {
 	module  *module_manager.Module
 	enabled *bool

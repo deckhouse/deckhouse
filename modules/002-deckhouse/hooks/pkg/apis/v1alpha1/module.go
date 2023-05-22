@@ -91,6 +91,10 @@ func (m *Module) SetEnabledState(enabled bool) {
 	}
 }
 
+func (m *Module) GetStatus() interface{} {
+	return m.Status
+}
+
 func (m *Module) calculateLabels() {
 	// could be removed when we will ready properties from the module.yaml file
 
