@@ -22,17 +22,12 @@ spec:
           type: object
           description: |
             Defines the configuration for Deckhouse module.
-          required:
-            - properties
           properties:
-            properties:
+            status:
               type: object
               properties:
                 weight:
                   type: integer
-            status:
-              type: object
-              properties:
                 state:
                   type: string
                   enum:
@@ -44,7 +39,7 @@ spec:
         status: {}
       additionalPrinterColumns:
         - name: weight
-          jsonPath: .properties.weight
+          jsonPath: .status.weight
           type: integer
           description: 'Module weight.'
         - name: state

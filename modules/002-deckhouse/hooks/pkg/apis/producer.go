@@ -49,9 +49,6 @@ func (mp *ModuleProducer) newModule() *v1alpha1.Module {
 			Name:   "",
 			Labels: make(map[string]string),
 		},
-		Properties: v1alpha1.ModuleProperties{
-			Weight: 0,
-		},
 		Status: v1alpha1.ModuleStatus{},
 	}
 }
