@@ -41,7 +41,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
-	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
@@ -176,7 +175,6 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 
 			createRelease(input, ex.Name, moduleName, moduleVersion)
-			deckhouse_config.Service().AddExternalModuleName(moduleName, ex.Name)
 		}
 
 		sc.ModuleErrors = moduleErrors

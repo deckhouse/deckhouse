@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 	"syscall"
 	"time"
 
@@ -53,21 +54,35 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, applyModuleRelease)
 
+var (
+	fsSynchronized = false
+)
+
 func applyModuleRelease(input *go_hook.HookInput) error {
 	var modulesChanged bool
+	var fsModulesLinks map[string]string
 
 	snap := input.Snapshots["releases"]
 
 	externalModulesDir := os.Getenv("EXTERNAL_MODULES_DIR")
 	if externalModulesDir == "" {
-		input.LogEntry.Warn("EXTERNAL_MODULE_DIR is not set")
+		input.LogEntry.Warn("EXTERNAL_MODULES_DIR is not set")
 		return nil
 	}
 	// directory for symlinks will actual versions to all external-modules
 	symlinksDir := filepath.Join(externalModulesDir, "modules")
 
-	moduleReleases := make(map[string][]enqueueRelease, 0)
+	// run only once on startup
+	if !fsSynchronized {
+		var err error
+		fsModulesLinks, err = readModulesFromFS(symlinksDir)
+		if err != nil {
+			input.LogEntry.Errorf("Could not read modules from fs: %s", err)
+			return nil
+		}
+	}
 
+	moduleReleases := make(map[string][]enqueueRelease, 0)
 	for _, sn := range snap {
 		if sn == nil {
 			continue
@@ -90,6 +105,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 	for module, releases := range moduleReleases {
 		sort.Sort(byVersion[enqueueRelease](releases))
+		delete(fsModulesLinks, module)
 
 		pred := NewReleasePredictor(releases)
 
@@ -164,6 +180,16 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 		}
 	}
+	if !fsSynchronized {
+		if len(fsModulesLinks) > 0 {
+			for module, moduleLinkPath := range fsModulesLinks {
+				input.LogEntry.Warnf("Module %q has no releases. Purging from FS", module)
+				_ = os.RemoveAll(moduleLinkPath)
+			}
+			modulesChanged = true
+		}
+		fsSynchronized = true
+	}
 
 	if modulesChanged {
 		err := syscall.Kill(1, syscall.SIGUSR2)
@@ -230,6 +256,27 @@ func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		Status:       release.Status.Phase,
 		Approved:     releaseApproved,
 	}, nil
+}
+
+func readModulesFromFS(dir string) (map[string]string, error) {
+	moduleLinks, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	modules := make(map[string]string, len(moduleLinks))
+
+	for _, moduleLink := range moduleLinks {
+		index := strings.Index(moduleLink.Name(), "-")
+		if index == -1 {
+			continue
+		}
+
+		moduleName := moduleLink.Name()[index+1:]
+		modules[moduleName] = path.Join(dir, moduleLink.Name())
+	}
+
+	return modules, nil
 }
 
 type enqueueRelease struct {
