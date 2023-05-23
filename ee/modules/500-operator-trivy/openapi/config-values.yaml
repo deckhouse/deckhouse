@@ -1,41 +1,40 @@
 type: object
 properties:
-  scanJobs:
-    type: object
-    description: Options for operator trivy scan jobs
-    default: {}
-    properties:
-      tolerations:
-        type: array
-        description: |
-          Scan jobs tolerations.
+  tolerations:
+    type: array
+    description: |
+      Operator and scan jobs tolerations.
 
-          The same as `spec.tolerations` for the Kubernetes pod.
-        items:
-          type: object
-          properties:
-            effect:
-              type: string
-            key:
-              type: string
-            operator:
-              type: string
-            tolerationSeconds:
-              type: integer
-              format: int64
-            value:
-              type: string
-        x-examples:
-        - [{"operator": "Exists"}]
-        - [{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]
-      nodeSelector:
-        type: object
-        additionalProperties:
+      The same as `spec.tolerations` for the Kubernetes pod.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
           type: string
-        x-kubernetes-preserve-unknown-fields: true
-        x-examples:
-          - disktype: ssd
-        description: |
-          Scan jobs nodeSelector.
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+    - [{"operator": "Exists"}]
+    - [{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      Operator and scan jobs nodeSelector.
 
-          The same as `spec.nodeSelector` for the Kubernetes pod.
+      The same as `spec.nodeSelector` for the Kubernetes pod.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).

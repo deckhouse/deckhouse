@@ -36,19 +36,29 @@ discovery:
 `
 
 	scanJobsValues = `
-scanJobs:
-  tolerations:
-    - key: "key1"
-      operator: "Equal"
-      value: "value1"
-      effect: "NoSchedule"
-  nodeSelector:
-    test-label: test-value
+tolerations:
+  - key: "key1"
+    operator: "Equal"
+    value: "value1"
+    effect: "NoSchedule"
+nodeSelector:
+  test-label: test-value
 `
 )
 
 var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificate", func() {
 	f := SetupHelmConfig(``)
+
+	checkTivyOperatorCM := func(f *Config, tolerations, nodeSelector string) {
+		cm := f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator")
+		Expect(cm.Exists()).To(BeTrue())
+
+		cmdData := cm.Field(`data`).Map()
+
+		Expect(cmdData["scanJob.tolerations"]).To(MatchJSON(tolerations))
+		Expect(cmdData["scanJob.nodeSelector"]).To(MatchJSON(nodeSelector))
+
+	}
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
@@ -64,9 +74,13 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 		It("Everything must render properly for default cluster", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
+
+		It("Operator trivy configmap has proper tolerations and nodeSelector", func() {
+			checkTivyOperatorCM(f, "[]", "{}")
+		})
 	})
 
-	Context("Scan jobs with tolerations and nodeSelector", func() {
+	Context("Operator trivy with custom tolerations and nodeSelector", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("operatorTrivy", scanJobsValues)
 			f.HelmRender()
@@ -76,13 +90,10 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Operator trivy configmap has proper scan jobs tolerations and nodeSelector", func() {
-			otcm := f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator")
-			Expect(otcm.Exists()).To(BeTrue())
-
-			cmdData := otcm.Field(`data`).Map()
-			Expect(cmdData["scanJob.tolerations"]).To(MatchJSON(`[{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]`))
-			Expect(cmdData["scanJob.nodeSelector"]).To(MatchJSON(`{"test-label":"test-value"}`))
+		It("Operator trivy configmap has proper tolerations and nodeSelector", func() {
+			tolerations := `[{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]`
+			nodeSelector := `{"test-label":"test-value"}`
+			checkTivyOperatorCM(f, tolerations, nodeSelector)
 		})
 	})
 
