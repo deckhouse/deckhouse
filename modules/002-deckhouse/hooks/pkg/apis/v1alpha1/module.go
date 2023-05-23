@@ -36,14 +36,18 @@ type Module struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	Properties ModuleProperties `json:"properties,omitempty"`
+
 	Status ModuleStatus `json:"status,omitempty"`
 }
 
-type ModuleStatus struct {
+type ModuleProperties struct {
 	Weight int    `json:"weight"`
 	State  string `json:"state"`
 	Source string `json:"source"`
 }
+
+type ModuleStatus struct{}
 
 type moduleKind struct{}
 
@@ -64,7 +68,7 @@ func (m *Module) SetName(name string) {
 }
 
 func (m *Module) SetWeight(weight int) {
-	m.Status.Weight = weight
+	m.Properties.Weight = weight
 }
 
 func (m *Module) SetSource(source string) {
@@ -76,13 +80,13 @@ func (m *Module) SetSource(source string) {
 		source = "External: " + source
 	}
 
-	m.Status.Source = source
+	m.Properties.Source = source
 }
 func (m *Module) SetEnabledState(enabled bool) {
 	if enabled {
-		m.Status.State = "Enabled"
+		m.Properties.State = "Enabled"
 	} else {
-		m.Status.State = "Disabled"
+		m.Properties.State = "Disabled"
 	}
 }
 

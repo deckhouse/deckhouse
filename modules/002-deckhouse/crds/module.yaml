@@ -23,7 +23,7 @@ spec:
           description: |
             Defines the configuration for Deckhouse module.
           properties:
-            status:
+            properties:
               type: object
               properties:
                 weight:
@@ -39,14 +39,14 @@ spec:
         status: {}
       additionalPrinterColumns:
         - name: weight
-          jsonPath: .status.weight
+          jsonPath: .properties.weight
           type: integer
           description: 'Module weight.'
         - name: state
-          jsonPath: .status.state
+          jsonPath: .properties.state
           type: string
-          description: 'Module state.'
+          description: 'Module state. Enabled or Disabled.'
         - name: source
-          jsonPath: .status.source
+          jsonPath: .properties.source
           type: string
           description: 'Module source repository.'
