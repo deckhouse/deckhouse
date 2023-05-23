@@ -1,5 +1,11 @@
 # Changelog v1.45
 
+## [MALFORMED]
+
+
+ - #4016 unknown section "deckhouse-web"
+ - #4624 unknown section "deckhouse-web"
+
 ## Know before update
 
 
@@ -83,6 +89,7 @@
  - **[extended-monitoring]** Fix `image-availability-exporter` for Kubernetes 1.25+. [#4331](https://github.com/deckhouse/deckhouse/pull/4331)
  - **[external-module-manager]** Fix chmod permissions for external modules. [#4388](https://github.com/deckhouse/deckhouse/pull/4388)
  - **[global-hooks]** Deploy PDB as a normal helm resource, not a helm hook. [#4016](https://github.com/deckhouse/deckhouse/pull/4016)
+ - **[ingress-nginx]** Add metrics and alerts for Nginx Ingress DaemonSets created by Kruise controller manager. [#4698](https://github.com/deckhouse/deckhouse/pull/4698)
  - **[ingress-nginx]** Set `imagePullSecrets` for `kruise-controller`. [#4369](https://github.com/deckhouse/deckhouse/pull/4369)
  - **[ingress-nginx]** Improve controller migration hook. [#4363](https://github.com/deckhouse/deckhouse/pull/4363)
  - **[ingress-nginx]** Fix RBAC rules for `kruise-controller`. [#4353](https://github.com/deckhouse/deckhouse/pull/4353)
@@ -102,6 +109,7 @@
  - **[node-manager]** Hours and minutes can be used simultaneously in the `spec.chaos.period` field of the NodeGroup CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
  - **[node-manager]** (Reverted in 1.45.3!) Removed early-oom. Added kubelet memory reservation option. [#3821](https://github.com/deckhouse/deckhouse/pull/3821)
  - **[operator-trivy]** Fix operator ConfigMap to properly use digests. [#4449](https://github.com/deckhouse/deckhouse/pull/4449)
+ - **[prometheus]** Handle error on malformed Grafana dashboard and skip it instead of failing. [#4693](https://github.com/deckhouse/deckhouse/pull/4693)
  - **[user-authn]** Fix the job image path. [#4385](https://github.com/deckhouse/deckhouse/pull/4385)
  - **[user-authn]** Hours and minutes can be used simultaneously in the `spec.tls` field of the User CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
  - **[user-authn]** The `discover_dex_ca` hook subscribes secret according to the used mode. [#3842](https://github.com/deckhouse/deckhouse/pull/3842)
