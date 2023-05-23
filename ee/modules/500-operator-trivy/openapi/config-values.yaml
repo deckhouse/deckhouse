@@ -23,8 +23,11 @@ properties:
         value:
           type: string
     x-examples:
-    - [{"operator": "Exists"}]
-    - [{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]
+    -
+      - key: "key1"
+        operator: "Equal"
+        value: "value1"
+        effect: "NoSchedule"
   nodeSelector:
     type: object
     additionalProperties:
