@@ -22,10 +22,10 @@ RUN apt-get update \
     && make install
 
 WORKDIR /vector
-COPY patches/vrl-version.patch /
+# COPY patches/some-patch.patch /
 RUN git clone --depth 1 --branch v0.30.0 https://github.com/vectordotdev/vector.git \
-    && cd vector \
-    && git apply /vrl-version.patch
+    && cd vector
+    # && git apply /some-patch.patch
 
 # Download and cache dependencies
 WORKDIR /vector/vector
@@ -36,7 +36,7 @@ RUN cargo build \
     -j $(($(nproc) /2)) \
     --offline \
     --no-default-features \
-    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/dynamic-linking,rdkafka?/gssapi-vendored,vrl-cli" \
+    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/dynamic-linking,rdkafka?/gssapi-vendored" \
     && strip target/release/vector
 
 ### 2: Config reloader
