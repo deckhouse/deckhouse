@@ -35,13 +35,15 @@ discovery:
   clusterDomain: cluster.local
 `
 
-	scanJobsToleratrionValues = `
+	scanJobsValues = `
 scanJobs:
   tolerations:
     - key: "key1"
       operator: "Equal"
       value: "value1"
       effect: "NoSchedule"
+  nodeSelector:
+    test-label: test-value
 `
 )
 
@@ -64,9 +66,9 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 		})
 	})
 
-	Context("Scan jobs with tolerations", func() {
+	Context("Scan jobs with tolerations and nodeSelector", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("operatorTrivy", scanJobsToleratrionValues)
+			f.ValuesSetFromYaml("operatorTrivy", scanJobsValues)
 			f.HelmRender()
 		})
 
@@ -74,12 +76,13 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Operator trivy configmap has scan jobs tolerations", func() {
+		It("Operator trivy configmap has proper scan jobs tolerations and nodeSelector", func() {
 			otcm := f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator")
 			Expect(otcm.Exists()).To(BeTrue())
 
 			cmdData := otcm.Field(`data`).Map()
 			Expect(cmdData["scanJob.tolerations"]).To(MatchJSON(`[{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]`))
+			Expect(cmdData["scanJob.nodeSelector"]).To(MatchJSON(`{"test-label":"test-value"}`))
 		})
 	})
 

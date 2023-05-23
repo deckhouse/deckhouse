@@ -28,3 +28,14 @@ properties:
         x-examples:
         - [{"operator": "Exists"}]
         - [{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]
+      nodeSelector:
+        type: object
+        additionalProperties:
+          type: string
+        x-kubernetes-preserve-unknown-fields: true
+        x-examples:
+          - disktype: ssd
+        description: |
+          Scan jobs nodeSelector.
+
+          The same as `spec.nodeSelector` for the Kubernetes pod.

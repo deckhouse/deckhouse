@@ -15,6 +15,9 @@ data:
   {{- with ( .Values.operatorTrivy | dig "scanJobs" "tolerations" (list) ) }}
   scanJob.tolerations: {{ . | toJson | quote }}
   {{- end }}
+  {{- with ( .Values.operatorTrivy | dig "scanJobs" "nodeSelector" (list) ) }}
+  scanJob.nodeSelector: {{ . | toJson | quote }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap

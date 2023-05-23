@@ -8,3 +8,8 @@ properties:
           tolerations для Scan Jobs.
 
           Структура, аналогичная `spec.tolerations` Kubernetes pod.
+      nodeSelector:
+        description: |
+          tolerations для Scan Jobs.
+
+           Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
