@@ -1,0 +1,9 @@
+ingress-nginx:
+  fixes:
+    - summary: Add metrics and alerts for Nginx Ingress DaemonSets created by Kruise controller manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4698
+prometheus:
+  fixes:
+    - summary: Handle error on malformed Grafana dashboard and skip it instead of failing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4693
+
