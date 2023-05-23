@@ -15,7 +15,8 @@
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
       },
-      "glob_minimum_cooldown_ms": 1000
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
     },
     "cluster_logging_config/testsource:foot": {
       "type": "kubernetes_logs",
@@ -32,7 +33,8 @@
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
       },
-      "glob_minimum_cooldown_ms": 1000
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
     }
   },
   "sinks": {

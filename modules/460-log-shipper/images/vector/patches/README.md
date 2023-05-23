@@ -1,13 +1,7 @@
 ## Patches
 
-### Match Speedup
+### VRL version
 
-Precompile match VRL expressions with static regexes.
+Use version to be able to specify timezone for timestamps.
 
-Upstream PR - https://github.com/vectordotdev/vector/pull/16920
-
-### Kubernetes API backoff
-
-Slow down retries if Kubernetes API is unavailable.
-
-Upstream PR - https://github.com/vectordotdev/vector/pull/17009
+Upstream PR: https://github.com/vectordotdev/vrl/pull/247

@@ -22,11 +22,10 @@ RUN apt-get update \
     && make install
 
 WORKDIR /vector
-COPY patches/match-speedup.patch patches/kubernetes-backoff.patch /
-RUN git clone --depth 1 --branch v0.28.1 https://github.com/vectordotdev/vector.git \
+COPY patches/vrl-version.patch /
+RUN git clone --depth 1 --branch v0.30.0 https://github.com/vectordotdev/vector.git \
     && cd vector \
-    && git apply /match-speedup.patch \
-    && git apply /kubernetes-backoff.patch
+    && git apply /vrl-version.patch
 
 # Download and cache dependencies
 WORKDIR /vector/vector
