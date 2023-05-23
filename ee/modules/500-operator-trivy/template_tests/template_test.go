@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -49,14 +50,14 @@ nodeSelector:
 var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificate", func() {
 	f := SetupHelmConfig(``)
 
-	checkTivyOperatorCM := func(f *Config, tolerations, nodeSelector string) {
+	checkTivyOperatorCM := func(f *Config, tolerations, nodeSelector types.GomegaMatcher) {
 		cm := f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator")
 		Expect(cm.Exists()).To(BeTrue())
 
 		cmdData := cm.Field(`data`).Map()
 
-		Expect(cmdData["scanJob.tolerations"]).To(MatchJSON(tolerations))
-		Expect(cmdData["scanJob.nodeSelector"]).To(MatchJSON(nodeSelector))
+		Expect(cmdData["scanJob.tolerations"].String()).To(tolerations)
+		Expect(cmdData["scanJob.nodeSelector"].String()).To(nodeSelector)
 
 	}
 
@@ -76,7 +77,7 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 		})
 
 		It("Operator trivy configmap has proper tolerations and nodeSelector", func() {
-			checkTivyOperatorCM(f, "[]", "{}")
+			checkTivyOperatorCM(f, Equal(""), Equal(""))
 		})
 	})
 
@@ -93,7 +94,7 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 		It("Operator trivy configmap has proper tolerations and nodeSelector", func() {
 			tolerations := `[{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]`
 			nodeSelector := `{"test-label":"test-value"}`
-			checkTivyOperatorCM(f, tolerations, nodeSelector)
+			checkTivyOperatorCM(f, MatchJSON(tolerations), MatchJSON(nodeSelector))
 		})
 	})
 
