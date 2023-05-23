@@ -36,7 +36,7 @@ SQL_CLEAN=$(sqlite3 "$DB_TEMP" ".schema" | grep -q "nano" &&
         echo "$SQL_CLEAN_AFTER" ||
         echo "$SQL_CLEAN_BEFORE")
 
-podecho "Cleaning oudated data to reduce the DB size..."
+podecho "Cleaning outdated data to reduce the DB size..."
 sqlite3 "$DB_TEMP" "$SQL_CLEAN"
 
 podecho "Shrinking free DB space..."
