@@ -12,6 +12,7 @@ metadata:
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.documentation.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.documentation.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.documentation.auth.externalAuthentication.authURL | quote }}
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
     nginx.ingress.kubernetes.io/configuration-snippet: |
   {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
