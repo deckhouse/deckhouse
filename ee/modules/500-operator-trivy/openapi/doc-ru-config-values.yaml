@@ -1,2 +1,10 @@
 type: object
-properties: {}
+properties:
+  scanJobs:
+    description: Общие настройки для scan Jobs
+    properties:
+      tolerations:
+        description: |
+          tolerations для Scan Jobs.
+
+          Структура, аналогичная `spec.tolerations` Kubernetes pod.

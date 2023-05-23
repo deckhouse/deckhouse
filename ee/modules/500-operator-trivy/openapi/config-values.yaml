@@ -1,2 +1,30 @@
 type: object
-properties: {}
+properties:
+  scanJobs:
+    type: object
+    description: Options for operator trivy scan jobs
+    default: {}
+    properties:
+      tolerations:
+        type: array
+        description: |
+          Scan jobs tolerations.
+
+          The same as `spec.tolerations` for the Kubernetes pod.
+        items:
+          type: object
+          properties:
+            effect:
+              type: string
+            key:
+              type: string
+            operator:
+              type: string
+            tolerationSeconds:
+              type: integer
+              format: int64
+            value:
+              type: string
+        x-examples:
+        - [{"operator": "Exists"}]
+        - [{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]
