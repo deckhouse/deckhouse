@@ -28,13 +28,16 @@ spec:
               properties:
                 weight:
                   type: integer
+                  description: 'Module weight.'
                 state:
                   type: string
+                  description: 'Module state.'
                   enum:
                     - Enabled
                     - Disabled
                 source:
                   type: string
+                  description: 'Module source repository.'
       subresources:
         status: {}
       additionalPrinterColumns:
