@@ -55,12 +55,12 @@ apiVersions:
               diskType:
                 description: Тип созданного диска.
               diskSizeGb:
-                description: Размер root-диска. Значение указывается в гигабайтах.
+                description: Размер root-диска. Значение указывается в `ГиБ`.
               etcdDisk:
                 type: object
                 properties:
                   sizeGb:
-                    description: Размер диска для etcd. Значение указывается в гигабайтах.
+                    description: Размер диска для etcd. Значение указывается в `ГиБ`.
                   type:
                     description: Тип диска для etcd.
           zones:
@@ -129,7 +129,7 @@ apiVersions:
                 diskType:
                   description: Тип созданного диска.
                 diskSizeGb:
-                  description: Размер root-диска. Значение указывается в гигабайтах.
+                  description: Размер root-диска. Значение указывается в `ГиБ`.
             zones:
               description: |
                 Список зон, в которых допустимо создавать узлы.
@@ -182,7 +182,7 @@ apiVersions:
                   diskType:
                     description: Тип созданного root-диска.
                   diskSizeGb:
-                    description: Размер root-диска. Значение указывается в гигабайтах.
+                    description: Размер root-диска. Значение указывается в `ГиБ`.
       vpcNetworkCIDR:
         description: |
           Подсеть, которая будет указана в созданном VPC.

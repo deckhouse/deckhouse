@@ -110,7 +110,7 @@ apiVersions:
                 type: string
                 enum: [gp3, gp2, io2, io1, st1, sc1]
               diskSizeGb:
-                description: Instance disk size in gigabytes.
+                description: Instance disk size in gibibytes.
                 example: 20
                 type: integer
               etcdDisk:
@@ -118,7 +118,7 @@ apiVersions:
                 default: {sizeGb: 20, type: "gp3"}
                 properties:
                   sizeGb:
-                    description: Etcd disk size in gigabytes.
+                    description: Etcd disk size in gibibytes.
                     type: integer
                   type:
                     description: Etcd disk type.
@@ -250,7 +250,7 @@ apiVersions:
                   type: string
                   enum: [ gp3, gp2, io2, io1, st1, sc1 ]
                 diskSizeGb:
-                  description: Instance disk size in gigabytes.
+                  description: Instance disk size in gibibytes.
                   example: 20
                   type: integer
             zones:
@@ -346,7 +346,7 @@ apiVersions:
                     type: string
                     enum: [gp3, gp2, io2, io1, st1, sc1]
                   diskSizeGb:
-                    description: Instance disk size in gigabytes.
+                    description: Instance disk size in gibibytes.
                     example: 20
                     type: integer
       vpcNetworkCIDR:

@@ -72,6 +72,8 @@ apiVersions:
                   > **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
               diskSizeGb:
                 description: Размер root-диска. Значение указывается в `ГиБ`.
+              etcdDiskSizeGb:
+                description: Размер диска для etcd. Значение указывается в `ГиБ`.
               disableExternalIP:
                 description: |
                   Запретить ли назначение внешнего IP для инстанса.

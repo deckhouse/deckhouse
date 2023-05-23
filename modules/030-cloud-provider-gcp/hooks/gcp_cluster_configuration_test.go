@@ -156,6 +156,8 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderGcp.internal.providerClusterConfiguration.provider.region").String()).To(Equal("europe-west4"))
 			Expect(f.ValuesGet("cloudProviderGcp.internal.providerClusterConfiguration.sshKey").String()).To(Equal("ssh-rsa AAA"))
+			Expect(f.ValuesGet("cloudProviderGcp.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.diskSizeGb").Int()).To(BeEquivalentTo(20))
+			Expect(f.ValuesGet("cloudProviderGcp.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb").Int()).To(BeEquivalentTo(20))
 
 			desiredServiceAccountJSON := `
 {
@@ -175,22 +177,24 @@ data:
 
 			desiredJSON := `
 {
-  "networkName": "example",
-  "subnetworkName": "example",
+  "apiVersion": "deckhouse.io/v1",
   "disableExternalIP": true,
   "instances": {
-    "image": "ubuntu",
     "diskSizeGb": 50,
     "diskType": "pd-standard",
+    "image": "ubuntu",
+    "labels": {},
     "networkTags": [
       "tag"
-    ],
-   "labels": {}
+    ]
   },
+  "kind": "GCPCloudDiscoveryData",
+  "networkName": "example",
+  "subnetworkName": "example",
   "zones": [
-	"a",
-	"b",
-	"c"
+    "a",
+    "b",
+    "c"
   ]
 }
 `
