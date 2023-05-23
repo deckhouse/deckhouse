@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -175,6 +177,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 
 			createRelease(input, ex.Name, moduleName, moduleVersion)
+			deckhouse_config.Service().AddExternalModuleName(moduleName, ex.Name)
 		}
 
 		sc.ModuleErrors = moduleErrors
