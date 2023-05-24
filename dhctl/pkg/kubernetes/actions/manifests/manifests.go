@@ -169,14 +169,6 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 }
 
 func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
-	initContainerImage := params.Registry
-	imagesDigestsDict, err := loadImagesDigests(imagesDigestsJSON)
-	if err != nil {
-		log.ErrorLn(err)
-	} else {
-		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["alpine"].(string))
-	}
 
 	deckhouseDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -204,8 +196,6 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 	}
 
-	hostPathDirectory := apiv1.HostPathDirectoryOrCreate
-
 	deckhousePodTemplate := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: deckhouseDeployment.Spec.Selector.MatchLabels,
@@ -228,15 +218,6 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					Name: "kube",
 					VolumeSource: apiv1.VolumeSource{
 						EmptyDir: &apiv1.EmptyDirVolumeSource{Medium: apiv1.StorageMediumMemory},
-					},
-				},
-				{
-					Name: "external-modules",
-					VolumeSource: apiv1.VolumeSource{
-						HostPath: &apiv1.HostPathVolumeSource{
-							Path: "/var/lib/deckhouse/external-modules",
-							Type: &hostPathDirectory,
-						},
 					},
 				},
 			},
@@ -293,27 +274,6 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				ReadOnly:  false,
 				MountPath: "/.kube",
 			},
-			{
-				Name:      "external-modules",
-				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
-			},
-		},
-	}
-
-	deckhouseInitContainer := apiv1.Container{
-		Name:            "init-external-modules",
-		Image:           initContainerImage,
-		ImagePullPolicy: apiv1.PullAlways,
-		Command: []string{
-			"sh", "-c", "mkdir -p /deckhouse/external-modules/modules && chown -h 65534 /deckhouse/external-modules /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules /deckhouse/external-modules/modules",
-		},
-		VolumeMounts: []apiv1.VolumeMount{
-			{
-				Name:      "external-modules",
-				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
-			},
 		},
 	}
 
@@ -341,14 +301,6 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		{
 			Name:  "HELM_HISTORY_MAX",
 			Value: "3",
-		},
-		{
-			Name:  "MODULES_DIR",
-			Value: "/deckhouse/modules:/deckhouse/external-modules/modules",
-		},
-		{
-			Name:  "EXTERNAL_MODULES_DIR",
-			Value: "/deckhouse/external-modules/",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
@@ -383,7 +335,6 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	// Deployment composition
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
-	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
