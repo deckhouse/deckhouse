@@ -21,7 +21,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            This object manages RBAC and namespace-based authorization.
+            This cluster-wide object manages RBAC and authorization.
           required:
           - spec
           properties:
