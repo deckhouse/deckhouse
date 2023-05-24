@@ -40,7 +40,8 @@ import (
 )
 
 const (
-	metricReleasesGroup = "d8_releases"
+	metricReleasesGroup      = "d8_releases"
+	waitingManualApprovalMsg = "Waiting for manual approval"
 )
 
 type DeckhouseUpdater struct {
@@ -215,7 +216,7 @@ func (du *DeckhouseUpdater) checkMinorReleaseConditions(predictedRelease *Deckho
 		if !predictedRelease.Status.Approved {
 			du.input.LogEntry.Infof("Release %s is waiting for manual approval", predictedRelease.Name)
 			du.input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
-			du.updateStatus(predictedRelease, "Waiting for manual approval", v1alpha1.PhasePending)
+			du.updateStatus(predictedRelease, waitingManualApprovalMsg, v1alpha1.PhasePending)
 			return false
 		}
 	} else {
@@ -545,7 +546,7 @@ func (du *DeckhouseUpdater) patchManualRelease(release DeckhouseRelease) Deckhou
 
 	if !release.ManuallyApproved {
 		release.Status.Approved = false
-		release.Status.Message = "Release is waiting for manual approval"
+		release.Status.Message = waitingManualApprovalMsg
 		du.totalPendingManualReleases++
 	} else {
 		release.Status.Approved = true
