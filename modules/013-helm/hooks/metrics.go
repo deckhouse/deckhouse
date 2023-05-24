@@ -80,8 +80,12 @@ const unsupportedVersionsYAML = `
 "1.26":
   "flowcontrol.apiserver.k8s.io/v1beta1": ["FlowSchema", "PriorityLevelConfiguration"]
   "autoscaling/v2beta2": ["HorizontalPodAutoscaler"]
+
 "1.27":
   "storage.k8s.io/v1beta1": ["CSIStorageCapacity"]
+
+"1.29":
+  "flowcontrol.apiserver.k8s.io/v1beta2": ["FlowSchema", "PriorityLevelConfiguration"]
 `
 
 const (
