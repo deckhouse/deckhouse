@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Управляет настройками RBAC и авторизацией по namespace.
+            Cluster-wide-ресурс для управления настройками RBAC и авторизацией
           properties:
             spec:
               properties:
