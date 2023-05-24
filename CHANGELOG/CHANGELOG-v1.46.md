@@ -81,6 +81,7 @@
 ## Fixes
 
 
+ - **[candi]** Force deletion of the `/usr/local/bin/crictl` directory. [#4742](https://github.com/deckhouse/deckhouse/pull/4742)
  - **[candi]** Update bashible network bootstrap in AWS cloud to use IMDSv2 for obtaining instance metadata. [#4632](https://github.com/deckhouse/deckhouse/pull/4632)
  - **[candi]** Events created by bashible get connected to the relevant node objects. [#4623](https://github.com/deckhouse/deckhouse/pull/4623)
  - **[cloud-data-crd]** The `cluster-autoscaler-crd module has been renamed to the `cloud-data-crd` module. [#4497](https://github.com/deckhouse/deckhouse/pull/4497)
