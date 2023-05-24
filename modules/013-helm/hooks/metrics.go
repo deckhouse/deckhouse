@@ -70,7 +70,7 @@ const unsupportedVersionsYAML = `
   "snapshot.storage.k8s.io/v1beta1": ["VolumeSnapshot"]
 
 "1.25":
-  "batch/v1": ["CronJob"]
+  "batch/v1beta1": ["CronJob"]
   "discovery.k8s.io/v1beta1": ["EndpointSlice"]
   "events.k8s.io/v1beta1": ["Event"]
   "autoscaling/v2beta1": ["HorizontalPodAutoscaler"]
@@ -79,9 +79,13 @@ const unsupportedVersionsYAML = `
 
 "1.26":
   "flowcontrol.apiserver.k8s.io/v1beta1": ["FlowSchema", "PriorityLevelConfiguration"]
+  "autoscaling/v2beta2": ["HorizontalPodAutoscaler"]
 
 "1.27":
   "storage.k8s.io/v1beta1": ["CSIStorageCapacity"]
+
+"1.29":
+  "flowcontrol.apiserver.k8s.io/v1beta2": ["FlowSchema", "PriorityLevelConfiguration"]
 `
 
 const (
