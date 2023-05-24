@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Force deletion of the `/usr/local/bin/crictl` directory.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4742
+
