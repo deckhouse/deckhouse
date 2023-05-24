@@ -21,7 +21,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Global hooks :: discovery :: migrate_daemonset ", func() {
+var _ = Describe("Global hooks :: discovery :: migrate_daemonset ", func() {
 	initValuesString := `{"ingressNginx":{"defaultControllerVersion": "1.1", "internal": {}}}`
 	globalValuesString := `{}`
 	f := HookExecutionConfigInit(initValuesString, globalValuesString)
