@@ -125,6 +125,14 @@ func migrateDaemonSet(input *go_hook.HookInput) (err error) {
 
 	for _, ds := range dss {
 		dsName := ds.(string)
+		patch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]string{
+					"helm.sh/resource-policy": "keep",
+				},
+			},
+		}
+		input.PatchCollector.MergePatch(patch, "apps/v1", "DaemonSet", internal.Namespace, dsName, object_patch.IgnoreMissingObject())
 		input.PatchCollector.Delete("apps/v1", "DaemonSet", internal.Namespace, dsName, object_patch.NonCascading())
 	}
 
