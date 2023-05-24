@@ -320,6 +320,49 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		})
 	})
 
+	Context("Pending Manual release", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
+			f.ValuesDelete("deckhouse.update.windows")
+			f.KubeStateSet(deckhouseBootstrapPod + deckhouseDeployment + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.45.0
+spec:
+  version: "v1.45.0"
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  transitionTime: "2023-04-20T10:10:30Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.46.0
+spec:
+  version: "v1.46.0"
+status:
+  approved: false
+  message: "Waiting for manual approval"
+  phase: Pending
+  transitionTime: "2023-05-20T10:10:10Z"
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should not change transition time", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			rs := f.KubernetesGlobalResource("DeckhouseRelease", "v1.46.0")
+			Expect(rs.Field("status.phase").String()).To(Equal("Pending"))
+			Expect(rs.Field("status.message").String()).To(Equal("Waiting for manual approval"))
+			Expect(rs.Field("status.transitionTime").String()).To(Equal("2023-05-20T10:10:10Z"))
+		})
+	})
+
 	Context("Forced release", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(deckhousePodYaml + forcedRelease)
