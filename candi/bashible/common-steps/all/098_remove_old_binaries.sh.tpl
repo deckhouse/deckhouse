@@ -14,4 +14,4 @@
 
 # TODO remove after 1.46 release !!!
 cd /usr/local/bin
-rm -f crictl d8-curl d8-kubelet-forker jq sysctl-tuner toml-merge
+rm -rf crictl d8-curl d8-kubelet-forker jq sysctl-tuner toml-merge
