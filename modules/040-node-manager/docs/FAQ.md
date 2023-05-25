@@ -227,10 +227,20 @@ This is only needed if you have to move a static node from one cluster to anothe
 
 ## How do I know if something went wrong?
 
-The `node-manager` module creates the `bashible` service on each node. You can browse its logs using the following command:
+If a node in a nodeGroup is not updated (the value of `UPTODATE` when executing the `kubectl get nodegroup` command is less than the value of `NODES`) or you assume some other problems that may be related to the `node-manager` module, then you need to look at the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
+
+You can browse its logs using the following command:
 
 ```shell
 journalctl -fu bashible
+```
+
+Example of output when the `bashible` service has performed all necessary actions:
+
+```console
+May 25 04:39:16 kube-master-0 systemd[1]: Started Bashible service.
+May 25 04:39:16 kube-master-0 bashible.sh[1976339]: Configuration is in sync, nothing to do.
+May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 ```
 
 ## How do I know what is running on a node while it is being created?
