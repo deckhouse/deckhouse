@@ -1,8 +1,9 @@
-ARG BASE_GOLANG_19_BULLSEYE
+ARG BASE_GOLANG_18_BULLSEYE
+ARG BASE_NODE_16_ALPINE
 ARG BASE_ALPINE
 
-FROM $BASE_GOLANG_19_BULLSEYE as artifact
-ENV PROMETHEUS_VERSION=v2.44.0
+FROM $BASE_GOLANG_18_BULLSEYE as artifact
+ENV PROMETHEUS_VERSION=v2.43.0+stringlabels
 
 RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
   apt install -y nodejs && \
