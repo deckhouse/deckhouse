@@ -10,7 +10,7 @@ skinparam backgroundColor transparent
 
 
 if (\nПоддерживается\nзаказ\nбалансировщиков?\n) then (да             )
-partition Облака: AWS, GCP, Azure, ... {
+partition OpenStack-облако, Yandex, VK, Selectel, AWS, GCP, Azure, ... {
   split
     :inlet **LoadBalancer**;
      kill
@@ -20,7 +20,7 @@ partition Облака: AWS, GCP, Azure, ... {
   end split
   }
 else (             нет)
-partition Bare metal;\nОблака: vSpnere, OpenStack {
+partition Bare metal, облако на vSphere, ...{
   split
     ->Вариант 1;
     :Добавьте несколько\nА-записей в DNS;
