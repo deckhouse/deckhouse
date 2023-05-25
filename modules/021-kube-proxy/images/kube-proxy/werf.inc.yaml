@@ -28,7 +28,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/distroless-kube-proxy-artifact
+- artifact: {{ $.ModuleName }}/distroless-kube-proxy-artifact
   add: /filtered-apk
   to: /
   before: setup
