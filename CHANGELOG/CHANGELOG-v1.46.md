@@ -86,6 +86,7 @@
  - **[candi]** Events created by bashible get connected to the relevant node objects. [#4623](https://github.com/deckhouse/deckhouse/pull/4623)
  - **[cloud-data-crd]** The `cluster-autoscaler-crd module has been renamed to the `cloud-data-crd` module. [#4497](https://github.com/deckhouse/deckhouse/pull/4497)
  - **[cni-flannel]** Fix cleanup flannel used IPs on migration from docker to containerd. [#4306](https://github.com/deckhouse/deckhouse/pull/4306)
+ - **[deckhouse]** Add `prometheus.deckhouse.io/rules-watcher-enabled` on the `d8-system` namespace. [#4752](https://github.com/deckhouse/deckhouse/pull/4752)
  - **[deckhouse]** Remove Deckhouse release naming transformation. [#4568](https://github.com/deckhouse/deckhouse/pull/4568)
  - **[deckhouse]** Change liveness probe for `webhook-handler` to prevent EOF log spamming. [#4562](https://github.com/deckhouse/deckhouse/pull/4562)
     The `webhook-handler` Pod will restart.
@@ -98,8 +99,10 @@
  - **[linstor]** Disable the `auto-resync-after` option. [#4501](https://github.com/deckhouse/deckhouse/pull/4501)
  - **[log-shipper]** Add host label and the doc about labels. [#4383](https://github.com/deckhouse/deckhouse/pull/4383)
  - **[metallb]** Fix MetalLB speaker tolerations. [#4435](https://github.com/deckhouse/deckhouse/pull/4435)
+ - **[monitoring-kubernetes]** Fixed path to hostPath in thresholds-exporter. [#4736](https://github.com/deckhouse/deckhouse/pull/4736)
  - **[monitoring-kubernetes]** Remove duplicates of memory graphs on namespace dashboard [#4701](https://github.com/deckhouse/deckhouse/pull/4701)
  - **[node-local-dns]** Added logs if changed state iptables. [#4613](https://github.com/deckhouse/deckhouse/pull/4613)
+ - **[node-manager]** Fix draining hook queue flooding. [#4770](https://github.com/deckhouse/deckhouse/pull/4770)
  - **[node-manager]** Fix bashible-apiserver altlinux docker containerd version (otherwise, bashible-apiserver will not work). [#4553](https://github.com/deckhouse/deckhouse/pull/4553)
  - **[node-manager]** Fix the error node group condition. [#4367](https://github.com/deckhouse/deckhouse/pull/4367)
  - **[openvpn]** Fix updating user list in HA mode. [#4506](https://github.com/deckhouse/deckhouse/pull/4506)
