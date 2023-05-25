@@ -14,3 +14,19 @@ spec:
     - effect: NoExecute
       key: dedicated.deckhouse.io
       value: system
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      dedicated.worker: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated
+      value: worker
