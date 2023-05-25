@@ -6,6 +6,7 @@
     labels:
       d8_module: cni-cilium
       d8_component: agent
+      severity_level: "5"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
@@ -22,6 +23,7 @@
     labels:
       d8_module: cni-cilium
       d8_component: agent
+      severity_level: "5"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
@@ -38,6 +40,7 @@
     labels:
       d8_module: cni-cilium
       d8_component: agent
+      severity_level: "4"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
@@ -53,6 +56,7 @@
     labels:
       d8_module: cni-cilium
       d8_component: agent
+      severity_level: "7"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
@@ -70,6 +74,7 @@
     labels:
       d8_module: cni-cilium
       d8_component: agent
+      severity_level: "3"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
