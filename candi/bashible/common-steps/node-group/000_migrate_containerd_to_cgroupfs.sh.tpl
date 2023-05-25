@@ -40,6 +40,8 @@ ExecStart=/opt/deckhouse/bin/d8-containerd-cgroup-migration.sh
 WantedBy=multi-user.target
 EOF
 
+mkdir -p /opt/deckhouse/bin
+
 bb-sync-file /opt/deckhouse/bin/d8-containerd-cgroup-migration.sh - << "EOF"
 #!/bin/bash
 # Copyright 2021 Flant JSC

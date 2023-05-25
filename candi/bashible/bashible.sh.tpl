@@ -142,7 +142,7 @@ function get_bundle() {
 }
 
 function main() {
-  export PATH="/opt/deckhouse/bin:$PATH"
+  export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
   export BOOTSTRAP_DIR="/var/lib/bashible"
   export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
   export BUNDLE="{{ .bundle }}"
