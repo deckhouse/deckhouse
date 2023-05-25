@@ -78,7 +78,7 @@ Reference:
 {% alert %}
 Use two or more frontend nodes.
 
-Use inlet `LoadBalancer` for AWS/GCP/Azure, inlet `HostPort` with an external load balancer for bare metal or vSphere/OpenStack.
+Use inlet `LoadBalancer` for OpenStack-based clouds and cloud services where automatic balancer ordering is not supported (AWS, GCP, Azure, etc.). Use inlet  `HostPort` with an external load balancer for bare metal or vSphere.
 {% endalert %}
 
 Frontend nodes are used for balancing incoming traffic. Such nodes are allocated for Ingress controllers. The [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) of the frontend nodes has a `node-role.deckhouse.io/frontend` label. Read more about [allocating nodes for specific load types...](/documentation/v1/#advanced-scheduling)
@@ -89,7 +89,9 @@ For example, if the cluster has two frontend nodes, each frontend node must be a
 
 Select the [inlet type](/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) (it defines the way the traffic comes in).  
 
-When deploying a cluster using Deckhouse in a cloud infrastructure where provisioning of load balancers is supported (e.g., AWS, GCP, Azure, etc.), use the `LoadBalancer` or `LoadBalancerWithProxyProtocol` inlet. In environments where automatic load balancer provisioning is not supported (bare metal clusters, vSphere, OpenStack), use the `HostPort` or `HostPortWithProxyProtocol` inlet. In this case, you can either add some A-records to DNS for the corresponding domain or use an external load-balancing service (e.g., Cloudflare, Qrator solutions, or configure metallb).
+When deploying a cluster using Deckhouse in a cloud infrastructure where provisioning of load balancers is supported (e.g., OpenStack-based clouds, AWS, GCP, Azure, etc.), use the `LoadBalancer` or `LoadBalancerWithProxyProtocol` inlet.
+
+In environments where automatic load balancer provisioning is not supported (bare metal clusters, vSphere, custom OpenStack solutions), use the `HostPort` or `HostPortWithProxyProtocol` inlet. In this case, you can either add some A-records to DNS for the corresponding domain or use an external load-balancing service (e.g., Cloudflare, Qrator solutions, or configure metallb).
 
 {% alert level="warning" %}
 The `HostWithFailover` inlet is suitable for clusters with a single frontend node. It reduces the time that the Ingress controller is unavailable during updates. This type of inlet is suitable for important development environments, but **not recommended for production**.
