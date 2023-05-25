@@ -219,12 +219,20 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 ## Как понять, что что-то пошло не так?
 
-Для этого необходимо посмотреть логи сервиса `bashible`, который модуль `node-manager` создает на каждом узле.
+Если узел в nodeGroup не обновляется (значение `UPTODATE` при выполнении команды `kubectl get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, то нужно посмотреть логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
 
-Посмотреть логи сервиса `bashible` можно командой:
+To view the logs of the `bashible` service on a specific node, run the following command:
 
 ```shell
 journalctl -fu bashible
+```
+
+Пример вывода, когда все необходимые действия выполнены:
+
+```console
+May 25 04:39:16 kube-master-0 systemd[1]: Started Bashible service.
+May 25 04:39:16 kube-master-0 bashible.sh[1976339]: Configuration is in sync, nothing to do.
+May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 ```
 
 ## Как посмотреть, что в данный момент выполняется на узле при его создании?
