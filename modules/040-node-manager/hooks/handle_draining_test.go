@@ -179,11 +179,9 @@ data:
 			f.BindingContexts.Set(st)
 
 			dnode := drainedNodeRes{
-				NodeName:            "foo-1",
-				NodeUID:             "111-222-333",
-				NodeResourceVersion: "123123123123",
-				DrainingSource:      "bashible",
-				Err:                 errors.New("foo-bar-error"),
+				NodeName:       "foo-1",
+				DrainingSource: "bashible",
+				Err:            errors.New("foo-bar-error"),
 			}
 
 			event = dnode.buildEvent()
