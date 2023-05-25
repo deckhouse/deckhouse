@@ -631,7 +631,7 @@ spec:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
 * Алгоритм обновления (для примера, на версию `1.16`):
   * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.16"]`).
-  * Дождаться появления соответствующего Pod'а `istiod-v1x16-xxx-yyy` в namespace `d8-istiod`.
+  * Дождаться появления соответствующего Pod'а `istiod-v1x16-xxx-yyy` в namespace `d8-istio`.
   * Для каждого прикладного namespace, где включен istio:
     * Поменять label `istio-injection: enabled` на `istio.io/rev: v1x16`.
     * По очереди пересоздать Pod'ы в namespace, параллельно контролируя работоспособность приложения.
