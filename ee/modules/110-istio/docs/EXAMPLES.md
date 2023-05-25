@@ -629,7 +629,7 @@ The annotation below adds the preStop hook to istio-proxy container in applicati
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
 * Upgrade algorithm (i.e. to `1.16`):
   * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.16"]`).
-  * Wait for the corresponding pod `istiod-v1x16-xxx-yyy` to appear in `d8-istiod` namespace.
+  * Wait for the corresponding pod `istiod-v1x16-xxx-yyy` to appear in `d8-istio` namespace.
   * For every application Namespase with istio enabled:
     * Change `istio-injection: enabled` lable to `istio.io/rev: v1x16`.
     * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application workability.
