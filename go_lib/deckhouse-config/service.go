@@ -86,6 +86,9 @@ func (srv *ConfigService) SetExternalNames(allExternalNamesToRepos map[string]st
 	defer srv.externalNamesLock.Unlock()
 
 	srv.externalNames = allExternalNamesToRepos
+	for moduleName, source := range allExternalNamesToRepos {
+		srv.moduleManager.SetModuleSource(moduleName, source)
+	}
 }
 
 func (srv *ConfigService) AddExternalModuleName(moduleName, moduleSource string) {
@@ -93,6 +96,8 @@ func (srv *ConfigService) AddExternalModuleName(moduleName, moduleSource string)
 	defer srv.externalNamesLock.Unlock()
 
 	srv.externalNames[moduleName] = moduleSource
+
+	srv.moduleManager.SetModuleSource(moduleName, moduleSource)
 }
 
 func (srv *ConfigService) ExternalNames() map[string]string {

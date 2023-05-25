@@ -14,19 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package deckhouse_config
+package hooks
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager"
-	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
-// ModuleManager interface is a part of addon-operator's ModuleManager interface
-// with methods needed for deckhouse-config package.
-type ModuleManager interface {
-	IsModuleEnabled(modName string) bool
-	GetModule(modName string) *module_manager.Module
-	GetModuleNames() []string
-	GetValuesValidator() *validation.ValuesValidator
-	SetModuleSource(moduleName, source string)
-}
+const (
+	deckhouseService = "deckhouse.d8-system.svc"
+)
+
+var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
+	SANs: tls_certificate.DefaultSANs([]string{
+		deckhouseService,
+		tls_certificate.ClusterDomainSAN(deckhouseService),
+	}),
+
+	CN: deckhouseService,
+
+	Namespace:            "d8-system",
+	TLSSecretName:        "admission-webhook-certs",
+	FullValuesPathPrefix: "deckhouse.internal.admissionWebhookCert",
+})

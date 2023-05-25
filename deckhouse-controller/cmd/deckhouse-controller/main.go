@@ -36,6 +36,8 @@ import (
 	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	"github.com/deckhouse/deckhouse/go_lib/module"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis"
 )
 
 // Variables with component versions. They set by 'go build' command.
@@ -59,8 +61,6 @@ const (
 	DefaultLogType         = "json"
 	DefaultKubeClientQPS   = "20"
 	DefaultKubeClientBurst = "40"
-
-	HookMetricsListenPort = "9651"
 )
 
 func main() {
@@ -88,11 +88,6 @@ func main() {
 	// start main loop
 	startCmd := kpApp.Command("start", "Start deckhouse.").
 		Action(func(c *kingpin.ParseContext) error {
-			// Force separate port for hook metrics.
-			if sh_app.HookMetricsListenPort == "" {
-				sh_app.HookMetricsListenPort = HookMetricsListenPort
-			}
-
 			sh_app.AppStartMessage = version()
 
 			// Workaround to run AddonOperator with deprecated settings:
@@ -108,12 +103,14 @@ func main() {
 
 			operator := addon_operator.NewAddonOperator(context.Background())
 			operator.InitialKubeConfig = initialKubeConfig
+			module.SetupAdmissionRoutes(operator.AdmissionServer)
 
 			err = operator.Start()
 			if err != nil {
 				os.Exit(1)
 			}
 
+			operator.ModuleManager.SetupModuleProducer(apis.NewModuleProducer())
 			// Init deckhouse-config service with ModuleManager instance.
 			d8config.InitService(operator.ModuleManager)
 

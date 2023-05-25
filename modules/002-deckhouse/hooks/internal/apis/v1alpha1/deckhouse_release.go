@@ -39,6 +39,8 @@ const (
 	PhaseOutdated = "Outdated"
 )
 
+// +k8s:deepcopy-gen=false
+
 // DeckhouseRelease is a deckhouse release object.
 type DeckhouseRelease struct {
 	metav1.TypeMeta `json:",inline"`
@@ -54,6 +56,8 @@ type DeckhouseRelease struct {
 	Status DeckhouseReleaseStatus `json:"status,omitempty"`
 }
 
+// +k8s:deepcopy-gen=false
+
 type DeckhouseReleaseSpec struct {
 	Version       string                 `json:"version,omitempty"`
 	ApplyAfter    *time.Time             `json:"applyAfter,omitempty"`
@@ -62,6 +66,8 @@ type DeckhouseReleaseSpec struct {
 	Changelog     map[string]interface{} `json:"changelog,omitempty"`
 	ChangelogLink string                 `json:"changelogLink,omitempty"`
 }
+
+// +k8s:deepcopy-gen=false
 
 type DeckhouseReleaseStatus struct {
 	Phase          string    `json:"phase,omitempty"`
@@ -80,6 +86,8 @@ func (f *deckhouseReleaseKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *deckhouseReleaseKind) GroupVersionKind() schema.GroupVersionKind {
 	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "DeckhouseRelease"}
 }
+
+// +k8s:deepcopy-gen=false
 
 // Duration custom type for appropriate json marshalling / unmarshalling (like "15m")
 type Duration struct {

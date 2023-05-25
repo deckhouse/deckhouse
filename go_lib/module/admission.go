@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,19 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package deckhouse_config
+package module
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager"
-	"github.com/flant/addon-operator/pkg/values/validation"
+	"net/http"
+	"path"
+	"strings"
 )
 
-// ModuleManager interface is a part of addon-operator's ModuleManager interface
-// with methods needed for deckhouse-config package.
-type ModuleManager interface {
-	IsModuleEnabled(modName string) bool
-	GetModule(modName string) *module_manager.Module
-	GetModuleNames() []string
-	GetValuesValidator() *validation.ValuesValidator
-	SetModuleSource(moduleName, source string)
+type AdmissionServer interface {
+	RegisterHandler(route string, handler http.Handler)
+}
+
+var (
+	routes = make(map[string]http.Handler)
+)
+
+func SetupAdmissionRoutes(srv AdmissionServer) {
+	for route, handler := range routes {
+		srv.RegisterHandler(route, handler)
+	}
+}
+
+func RegisterValidationHandler(route string, handler http.Handler) {
+	if !strings.HasPrefix(route, "/validate") {
+		route = path.Join("/validate", route)
+	}
+
+	routes[route] = handler
 }

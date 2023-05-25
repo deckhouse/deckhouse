@@ -1,0 +1,22 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяется конфигурацию модуля Deckhouse.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: weight
+          jsonPath: .properties.weight
+          type: integer
+          description: 'Очередность применения модуля.'
+        - name: state
+          jsonPath: .properties.state
+          type: string
+          description: 'Статус модуля - включен или выключен.'
+        - name: source
+          jsonPath: .properties.source
+          type: string
+          description: 'Источник модуля.'

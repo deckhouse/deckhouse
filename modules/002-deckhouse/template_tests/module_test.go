@@ -65,6 +65,10 @@ internal:
     crt: a
     key: b
     ca: c
+  admissionWebhookCert:
+    crt: a
+    key: b
+    ca: c
   currentReleaseImageName: test
 `
 
@@ -78,6 +82,10 @@ tolerations:
   operator: Exists
 internal:
   webhookHandlerCert:
+    crt: a
+    key: b
+    ca: c
+  admissionWebhookCert:
     crt: a
     key: b
     ca: c
