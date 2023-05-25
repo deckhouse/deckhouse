@@ -1,23 +1,35 @@
 {% if page.lang == 'ru' -%}
 {% offtopic title="Как явно включить или отключить модуль..." %}
-Установите `spec.enabled` в `true` или `false` в [настройках модуля]({{ "/#настройка-модуля" | true_relative_url }}) для его явного включения или выключения.
+> **Обратите внимание,** что при установке Deckhouse для явного включения/отключения и настройки модуля используется параметр [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides) ресурса *InitConfiguration*, а не *ModuleConfig*.
+>
+> Чтобы явно включить или выключить модуль `{{ include.moduleKebabName }}` при установке Deckhouse, укажите `{{ include.moduleSnakeName }}Enabled: true` или `{{ include.moduleSnakeName }}Enabled: false` в секции [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides).
+>
+> Чтобы задать настройки модуля при установке Deckhouse, используйте секцию `{{ moduleSnakeName }}` параметра [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides).
 
-Пример включения модуля `{{ include.moduleName }}`:
-{% include module-enable-snippet.liquid moduleName=include.moduleName enabled="true" %}
+Чтобы явно включить или выключить модуль `{{ include.moduleKebabName }}`, установите `spec.enabled` в `true` или `false` в `ModuleConfig/{{ moduleKebabName }}`.
 
-Пример выключения модуля `{{ include.moduleName }}`:
-{% include module-enable-snippet.liquid moduleName=include.moduleName enabled="false" %}
+Пример включения модуля `{{ include.moduleKebabName }}`:
+{% include module-enable-snippet.liquid moduleKebabName=include.moduleKebabName enabled="true" %}
+
+Пример выключения модуля `{{ include.moduleKebabName }}`:
+{% include module-enable-snippet.liquid moduleKebabName=include.moduleKebabName enabled="false" %}
 
 {% endofftopic %}
 {% else %}
 {% offtopic title="How to explicitly enable the module..." %}
-Set the `spec.enabled` [module parameter]({{ "/#configuring-the-module" | true_relative_url }}) to `true` or `false`  to explicitly enable or disable the module.
+> **Note** that the [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides) parameter of the *InitConfiguration* resource is used when installing Deckhouse, not *ModuleConfig*.
+>
+> Set the `{{ include.moduleSnakeName }}Enabled: true` or `{{ include.moduleSnakeName }}Enabled: false` in the [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides) parameter to explicitly enable or disable the module when installing Deckhouse.
+>
+> Use the `{{ moduleSnakeName }}` section of the [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides) parameter to configure the module when installing Deckhouse.
 
-Example of enabling the `{{ include.moduleName }}` module:
-{% include module-enable-snippet.liquid moduleName=include.moduleName enabled="true" %}
+Set the `spec.enabled` [module parameter]({{ "/#configuring-the-module" | true_relative_url }}) to `true` or `false` to explicitly enable or disable the module.
 
-Example of disabling the `{{ include.moduleName }}` module:
-{% include module-enable-snippet.liquid moduleName=include.moduleName enabled="false" %}
+Example of enabling the `{{ include.moduleKebabName }}` module:
+{% include module-enable-snippet.liquid moduleKebabName=include.moduleKebabName enabled="true" %}
+
+Example of disabling the `{{ include.moduleKebabName }}` module:
+{% include module-enable-snippet.liquid moduleKebabName=include.moduleKebabName enabled="false" %}
 
 {% endofftopic %}
 {% endif %}
