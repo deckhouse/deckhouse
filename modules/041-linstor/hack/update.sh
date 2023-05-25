@@ -23,6 +23,7 @@ sed_regex=""
 targets="$(grep -rl '^ARG [A-Z_]*_\(VERSION\|COMMIT_REF\)=' $@)"
 versions=$(grep -r '^ARG [A-Z_]*_\(VERSION\|COMMIT_REF\)=' $targets | awk '{print $NF}' | sort -u)
 gitrepos=$(grep -r '^ARG [A-Z_]*_GITREPO=' $targets | awk '{print $NF}' | sort -u)
+drbd_alert_version=
 
 if [ "$DRBDONLY" = 1 ]; then
   gitrepos=$(echo "$gitrepos" | grep '\(DRBD_GITREPO\|UTILS_GITREPO\|SPAAS_GITREPO\)')
@@ -35,6 +36,8 @@ while read name repo; do
     if [ "$name" = DRBD ]; then
       # Convert drbd-9.X.X to v9.X.X and select the latest 9 version
       current_tag=$(curl -fLsS "https://api.github.com/repos/${shortrepo}/tags" | jq -r '.[] | .name' | sed -n 's|drbd-9|v9|p' | sort -V | tail -n1)
+      # convert v9.X.X to 9.X.X
+      drbd_alert_version=${current_tag#*v}
     else
       current_tag=$(curl -fLsS "https://api.github.com/repos/${shortrepo}/tags" | jq -r '.[0].name')
     fi
@@ -50,5 +53,7 @@ while read name repo; do
 done < <(echo "$gitrepos" | sed -n 's|_GITREPO=| |p')
 
 echo "Applying changes:"
-set -x
-sed -e "$sed_regex" -i $targets
+(set -x; sed -e "$sed_regex" -i $targets)
+if [ -n "$drbd_alert_version" ]; then
+  (set -x; sed -e "/expr: drbd_version/ s/\(kmod!=\"\)[^\"]*/\1${drbd_alert_version}/" -e "s/\(expected: \).*/\1${drbd_alert_version}/" -i monitoring/prometheus-rules/drbd-version.yaml)
+fi
