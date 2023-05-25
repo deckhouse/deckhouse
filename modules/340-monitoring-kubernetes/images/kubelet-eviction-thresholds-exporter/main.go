@@ -27,6 +27,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -45,6 +46,8 @@ const (
 	nodeFsInodesFreeEvictionSignal      = "nodefs.inodesFree"
 	imageFsBytesAvailableEvictionSignal = "imagefs.available"
 	imageFsInodesFreeEvictionSignal     = "imagefs.inodesFree"
+
+	hostPath = "/host"
 )
 
 var (
@@ -92,8 +95,8 @@ func generateMetrics() error {
 		log.Fatal(err)
 	}
 
-	nodeFsBytesAvail, nodeFsInodesAvail, err := getBytesAndInodeStatsFromPath(kubeletRootDir)
-	imageFsBytesAvail, imageFsInodesAvail, err := getBytesAndInodeStatsFromPath(runtimeRootDir)
+	nodeFsBytesAvail, nodeFsInodesAvail, err := getBytesAndInodeStatsFromPath(filepath.Join(hostPath, kubeletRootDir))
+	imageFsBytesAvail, imageFsInodesAvail, err := getBytesAndInodeStatsFromPath(filepath.Join(hostPath, runtimeRootDir))
 	softEvictionMap := kubeletConfig.KubeletConfiguration.EvictionSoft
 	hardEvictionMap := kubeletConfig.KubeletConfiguration.EvictionHard
 
