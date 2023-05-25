@@ -99,12 +99,10 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	return drainingNode{
-		Name:            node.Name,
-		UID:             node.UID,
-		ResourceVersion: node.ResourceVersion,
-		DrainingSource:  drainingSource,
-		DrainedSource:   drainedSource,
-		Unschedulable:   node.Spec.Unschedulable,
+		Name:           node.Name,
+		DrainingSource: drainingSource,
+		DrainedSource:  drainedSource,
+		Unschedulable:  node.Spec.Unschedulable,
 	}, nil
 }
 
@@ -166,11 +164,9 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		go func(node drainingNode) {
 			err = drain.RunNodeDrain(drainHelper, node.Name)
 			drainingNodesC <- drainedNodeRes{
-				NodeName:            node.Name,
-				NodeUID:             node.UID,
-				NodeResourceVersion: node.ResourceVersion,
-				DrainingSource:      node.DrainingSource,
-				Err:                 err,
+				NodeName:       node.Name,
+				DrainingSource: node.DrainingSource,
+				Err:            err,
 			}
 			wg.Done()
 		}(dNode)
@@ -216,12 +212,10 @@ var (
 )
 
 type drainingNode struct {
-	Name            string
-	UID             types.UID
-	ResourceVersion string
-	DrainingSource  string
-	DrainedSource   string
-	Unschedulable   bool
+	Name           string
+	DrainingSource string
+	DrainedSource  string
+	Unschedulable  bool
 }
 
 func (dn drainingNode) isDraining() bool {
@@ -233,11 +227,9 @@ func (dn drainingNode) isDrained() bool {
 }
 
 type drainedNodeRes struct {
-	NodeName            string
-	NodeUID             types.UID
-	NodeResourceVersion string
-	DrainingSource      string
-	Err                 error
+	NodeName       string
+	DrainingSource string
+	Err            error
 }
 
 func (dr drainedNodeRes) buildEvent() *eventsv1.Event {
@@ -253,11 +245,12 @@ func (dr drainedNodeRes) buildEvent() *eventsv1.Event {
 			GenerateName: "node-" + dr.NodeName + "-",
 		},
 		Regarding: corev1.ObjectReference{
-			Kind:            "Node",
-			Name:            dr.NodeName,
-			UID:             dr.NodeUID,
-			APIVersion:      "deckhouse.io/v1",
-			ResourceVersion: dr.NodeResourceVersion,
+			Kind: "Node",
+			Name: dr.NodeName,
+			// nodeName is used for both .name and .uid fields intentionally as putting a real node uid
+			// has proven to have some side effects like missing events when describing objects using kubectl versions 1.23.x
+			UID:        types.UID(dr.NodeName),
+			APIVersion: "deckhouse.io/v1",
 		},
 		Reason:              "DrainFailed",
 		Note:                dr.Err.Error(),
