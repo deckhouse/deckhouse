@@ -27,16 +27,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, enableExtendedMonitoring)
 
 func enableExtendedMonitoring(input *go_hook.HookInput) error {
-	labelsPatch := map[string]interface{}{
+	d8SystemPatch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"labels": map[string]string{
+				"extended-monitoring.deckhouse.io/enabled":      "",
+				"prometheus.deckhouse.io/rules-watcher-enabled": "true",
+			},
+		},
+	}
+	input.PatchCollector.MergePatch(d8SystemPatch, "v1", "Namespace", "", "d8-system")
+
+	kubeSystemPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
 				"extended-monitoring.deckhouse.io/enabled": "",
 			},
 		},
 	}
-
-	input.PatchCollector.MergePatch(labelsPatch, "v1", "Namespace", "", "d8-system")
-	input.PatchCollector.MergePatch(labelsPatch, "v1", "Namespace", "", "kube-system")
+	input.PatchCollector.MergePatch(kubeSystemPatch, "v1", "Namespace", "", "kube-system")
 
 	input.PatchCollector.Filter(removeDeprecatedAnnotation, "v1", "Namespace", "", "d8-system")
 	input.PatchCollector.Filter(removeDeprecatedAnnotation, "v1", "Namespace", "", "kube-system")
