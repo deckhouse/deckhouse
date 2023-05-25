@@ -89,6 +89,8 @@
  - **[extended-monitoring]** Fix `image-availability-exporter` for Kubernetes 1.25+. [#4331](https://github.com/deckhouse/deckhouse/pull/4331)
  - **[external-module-manager]** Fix chmod permissions for external modules. [#4388](https://github.com/deckhouse/deckhouse/pull/4388)
  - **[global-hooks]** Deploy PDB as a normal helm resource, not a helm hook. [#4016](https://github.com/deckhouse/deckhouse/pull/4016)
+ - **[helm]** Fix deprecated k8s resources metrics. [#4751](https://github.com/deckhouse/deckhouse/pull/4751)
+ - **[ingress-nginx]** Add protection for ingress-nginx-controller daemonset migration. [#4734](https://github.com/deckhouse/deckhouse/pull/4734)
  - **[ingress-nginx]** Add metrics and alerts for Nginx Ingress DaemonSets created by Kruise controller manager. [#4698](https://github.com/deckhouse/deckhouse/pull/4698)
  - **[ingress-nginx]** Set `imagePullSecrets` for `kruise-controller`. [#4369](https://github.com/deckhouse/deckhouse/pull/4369)
  - **[ingress-nginx]** Improve controller migration hook. [#4363](https://github.com/deckhouse/deckhouse/pull/4363)
