@@ -65,9 +65,11 @@ spec:
                   x-doc-default: false
                 limitNamespaces:
                   type: array
+                  x-doc-deprecated: true
                   description: |
-                    Deprecated. Use namespaceSelector field.
                     List of regex-patterns that define namespaces accessible by the user.
+                    
+                    Deprecated. Use the [namespaceSelector](#clusterauthorizationrule-v1alpha1-spec-namespaceselector) field instead.
 
                     The decision making process:
                     * If the list is defined, then only its constituents are accessible.
@@ -247,6 +249,7 @@ spec:
                           type: object
                 limitNamespaces:
                   type: array
+                  x-doc-deprecated: true
                   description: |
                     Deprecated. Use namespaceSelector field.
                     List of regex-patterns that define namespaces accessible by the user.
@@ -256,6 +259,8 @@ spec:
                     * If the list is not defined, then all namespaces are accessible (except for the system ones - see `spec.allowAccessToSystemNamespaces` below).
 
                     Option available only if [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
+
+                    Deprecated. Use the [namespaceSelector](#clusterauthorizationrule-v1-spec-namespaceselector) field instead.
                   x-doc-d8Revision: ee
                   example: ['production-.*']
                   items:
