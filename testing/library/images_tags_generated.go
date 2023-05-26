@@ -322,6 +322,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"grafana":                     "imageHash-prometheus-grafana",
 		"grafanaDashboardProvisioner": "imageHash-prometheus-grafanaDashboardProvisioner",
 		"prometheus":                  "imageHash-prometheus-prometheus",
+		"prometheusTargetsMetrics":    "imageHash-prometheus-prometheusTargetsMetrics",
 		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{
