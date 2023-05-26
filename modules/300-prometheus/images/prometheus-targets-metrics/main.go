@@ -46,19 +46,23 @@ func recordMetrics() {
 			client := &http.Client{}
 			req, err := http.NewRequest("GET", "http://127.0.0.1:9090/api/v1/targets?state=active&scrapePool=", nil)
 			if err != nil {
+				log.Println("1")
 				log.Println(err)
 			} else {
 				resp, err := client.Do(req)
 				if err != nil {
+					log.Println("2")
 					log.Println(err)
 				} else {
 					defer resp.Body.Close()
 					bodyText, err := ioutil.ReadAll(resp.Body)
 					if err != nil {
+						log.Println("3")
 						log.Println(err)
 					} else {
 						var y Prom
 						if err := json.Unmarshal([]byte(string(bodyText)), &y); err != nil {
+							log.Println("4")
 							log.Println(err)
 						} else {
 							metrics.UnregisterAllMetrics()
@@ -82,9 +86,12 @@ func recordMetrics() {
 }
 
 func main() {
+	log.Println("start recordMetrics()")
 	recordMetrics()
+	log.Println("start http.HandleFunc()")
 	http.HandleFunc("/metrics", func(w http.ResponseWriter, req *http.Request) {
 		metrics.WritePrometheus(w, false)
 	})
+	log.Println("start http.ListenAndServe()")
 	http.ListenAndServe(":9101", nil)
 }
