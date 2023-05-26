@@ -40,6 +40,8 @@ spec:
                     * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
 
                     **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) (версия `v1` custom resource'а).
                 subjects:
                   description: |
                     Пользователи и/или группы, которым необходимо предоставить права.
