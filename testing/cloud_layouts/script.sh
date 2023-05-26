@@ -194,6 +194,39 @@ function cleanup() {
       fi
   fi
 
+  {
+    set -x
+    if [[ "$PROVIDER" == "vSphere" ]]; then
+      for ((i=1; 10; i++)); do
+        mkdir govc
+        cd govc
+        wget -O - https://github.com/vmware/govmomi/releases/download/v0.30.4/govc_Linux_x86_64.tar.gz | tar -xzv  -C .
+        scp -F -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" govc /tmp/
+
+        if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+
+export GOVC_URL=p-vc-3.${VSPHERE_BASE_DOMAIN}
+export GOVC_USERNAME=dvadm@vsphere.local
+export GOVC_PASSWORD=${VSPHERE_PASSWORD}
+export GOVC_INSECURE=1
+
+mapfile machines < <(kubectl -n d8-cloud-instance-manager get machine -o json | jq -r '.items[].metadata.name')
+mapfile vms < <(/tmp/govc ls -json "/X2/vm/$PREFIX" | jq -r '.elements[].Object.Name')
+for vm in "${vms[@]}"; do
+  if [[ ! " ${machines[*]} " =~  ${vm}  ]]; then
+    echo "VM $vm not present in known Machines, deleting"
+    # /tmp/govc vm.destroy "/X2/vm/$PREFIX/$vm"
+  fi
+done
+ENDSSH
+fi
+      done
+    fi
+  }
+
   >&2 echo "Run cleanup ..."
   if [[ -z "$master_ip" ]] ; then
     >&2 echo "No master IP: try to abort without cache, then abort from cache"
