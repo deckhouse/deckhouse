@@ -264,7 +264,9 @@ if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
 fi
 
 #pull trivy CVE database
-pull_trivy_db
+if [[ "$EDITION" != "ce" ]]; then
+  pull_trivy_db
+fi
 
 echo ""
 echo "Operation is complete."

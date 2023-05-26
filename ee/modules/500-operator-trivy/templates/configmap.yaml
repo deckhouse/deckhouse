@@ -30,7 +30,7 @@ data:
   trivy.additionalVulnerabilityReportFields: ""
   trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   trivy.slow: "true"
-  trivy.dbRepository: "{{ $registryBase._0 }}/security/trivy-db"
+  trivy.dbRepository: "{{ .Values.global.modulesImages.registry.base }}/security/trivy-db"
   trivy.command: "image"
   trivy.dbRepositoryInsecure: "false"
   trivy.useBuiltinRegoPolicies: "true"
