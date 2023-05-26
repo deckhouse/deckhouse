@@ -68,7 +68,7 @@ spec:
     startupProbe:
       failureThreshold: 300
   - name: metrics
-    image: {{ include "helm_lib_module_image" (list . "prometheus-targets-metrics") }}
+    image: {{ include "helm_lib_module_image" (list . "prometheusTargetsMetrics") }}
     ports:
     - containerPort: 9102
       name: http-metrics
