@@ -27,8 +27,9 @@ import (
 )
 
 type Target struct {
-	LastError string            `json:"lastError"`
-	Labels    map[string]string `json:"labels"`
+	LastError  string            `json:"lastError"`
+	ScrapePool string            `json:"scrapePool"`
+	Labels     map[string]string `json:"labels"`
 }
 
 type data struct {
@@ -63,15 +64,9 @@ func recordMetrics() {
 							metrics.UnregisterAllMetrics()
 							for row := range y.Data.Target {
 								if y.Data.Target[row].LastError == "sample limit exceeded" {
-									var s string
-									i := 0
+									s := fmt.Sprintf(`scrapePool="%s"`, y.Data.Target[row].ScrapePool)
 									for k, v := range y.Data.Target[row].Labels {
-										if i == 0 {
-											s += fmt.Sprintf(`%s="%s"`, k, v)
-										} else {
-											s += fmt.Sprintf(`,%s="%s"`, k, v)
-										}
-										i += 1
+										s += fmt.Sprintf(`,%s="%s"`, k, v)
 									}
 									name := fmt.Sprintf(`prometheus_target_limits_metrics{%s}`, s)
 									metrics.GetOrCreateCounter(name).Add(1)
@@ -81,7 +76,6 @@ func recordMetrics() {
 					}
 				}
 			}
-			fmt.Println("sleep")
 			time.Sleep(600 * time.Second)
 		}
 	}()
