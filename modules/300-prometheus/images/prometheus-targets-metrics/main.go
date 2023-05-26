@@ -51,8 +51,7 @@ func recordMetrics() {
 			} else {
 				resp, err := client.Do(req)
 				if err != nil {
-					log.Println("2")
-					log.Println(err)
+					log.Println("connect ", err)
 				} else {
 					defer resp.Body.Close()
 					bodyText, err := ioutil.ReadAll(resp.Body)
@@ -61,9 +60,10 @@ func recordMetrics() {
 						log.Println(err)
 					} else {
 						var y Prom
+
 						if err := json.Unmarshal([]byte(string(bodyText)), &y); err != nil {
-							log.Println("4")
-							log.Println(err)
+							log.Println("json parse ", err)
+							log.Println(bodyText)
 						} else {
 							metrics.UnregisterAllMetrics()
 							for row := range y.Data.Target {
