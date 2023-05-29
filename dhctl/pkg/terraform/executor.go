@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -88,9 +89,16 @@ func (c *CMDExecutor) Exec(args ...string) (int, error) {
 		return c.cmd.ProcessState.ExitCode(), err
 	}
 
-	var errBuf bytes.Buffer
-	waitCh := make(chan error)
+	var (
+		wg     sync.WaitGroup
+		errBuf bytes.Buffer
+	)
+
+	wg.Add(2)
+
 	go func() {
+		defer wg.Done()
+
 		e := bufio.NewScanner(stderr)
 		for e.Scan() {
 			if app.IsDebug {
@@ -99,16 +107,20 @@ func (c *CMDExecutor) Exec(args ...string) (int, error) {
 				errBuf.WriteString(e.Text() + "\n")
 			}
 		}
-
-		waitCh <- c.cmd.Wait()
 	}()
 
-	s := bufio.NewScanner(stdout)
-	for s.Scan() {
-		log.InfoLn(s.Text())
-	}
+	go func() {
+		defer wg.Done()
 
-	err = <-waitCh
+		s := bufio.NewScanner(stdout)
+		for s.Scan() {
+			log.InfoLn(s.Text())
+		}
+	}()
+
+	wg.Wait()
+
+	err = c.cmd.Wait()
 
 	exitCode := c.cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
 	if err != nil && exitCode != terraformHasChangesExitCode {
