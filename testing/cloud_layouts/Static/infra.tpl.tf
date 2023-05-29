@@ -84,6 +84,14 @@ resource "openstack_networking_port_v2" "system_internal_without_security" {
   }
 }
 
+resource "openstack_networking_port_v2" "worker_internal_without_security" {
+  network_id = openstack_networking_network_v2.internal.id
+  admin_state_up = "true"
+  fixed_ip {
+    subnet_id = openstack_networking_subnet_v2.internal.id
+  }
+}
+
 resource "openstack_networking_router_v2" "router" {
   name = "candi-${PREFIX}"
   admin_state_up = "true"
@@ -106,6 +114,18 @@ data "openstack_images_image_v2" "astra_image" {
   name        = "alse-vanilla-1.7.2-cloud-mg7.2.0"
 }
 
+data "openstack_images_image_v2" "alt_image" {
+  most_recent = true
+  visibility  = "shared"
+  name        = "alt-p10-cloud-x86_64"
+}
+
+data "openstack_images_image_v2" "redos_image" {
+  most_recent = true
+  visibility  = "shared"
+  name        = "redos-MUROM-7.3.2-20221027.0"
+}
+
 resource "openstack_blockstorage_volume_v3" "master" {
   name                 = "candi-${PREFIX}-master-0"
   size                 = "20"
@@ -124,7 +144,7 @@ resource "openstack_compute_instance_v2" "master" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
-  user_data            = "${file("instance-bootstrap.sh")}"
+  user_data            = "${file("astra-instance-bootstrap.sh")}"
 
   network {
     port = openstack_networking_port_v2.master_internal_without_security.id
@@ -174,7 +194,7 @@ resource "openstack_compute_instance_v2" "bastion" {
 resource "openstack_blockstorage_volume_v3" "system" {
   name                 = "candi-${PREFIX}-system-0"
   size                 = "20"
-  image_id             = data.openstack_images_image_v2.astra_image.id
+  image_id             = data.openstack_images_image_v2.alt_image.id
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
@@ -188,7 +208,7 @@ resource "openstack_compute_instance_v2" "system" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
-  user_data            = "${file("instance-bootstrap.sh")}"
+  user_data            = "${file("alt-instance-bootstrap.sh")}"
 
   network {
     port = openstack_networking_port_v2.system_internal_without_security.id
@@ -196,6 +216,39 @@ resource "openstack_compute_instance_v2" "system" {
 
   block_device {
     uuid             = openstack_blockstorage_volume_v3.system.id
+    source_type      = "volume"
+    destination_type = "volume"
+    boot_index       = 0
+    delete_on_termination = true
+  }
+
+}
+
+resource "openstack_blockstorage_volume_v3" "worker" {
+  name                 = "candi-${PREFIX}-worker-0"
+  size                 = "20"
+  image_id             = data.openstack_images_image_v2.redos_image.id
+  volume_type          = var.volume_type
+  availability_zone    = var.az_zone
+  enable_online_resize = true
+  lifecycle {
+    ignore_changes = [image_id]
+  }
+}
+
+resource "openstack_compute_instance_v2" "worker" {
+  name = "candi-${PREFIX}-worker-0"
+  flavor_name = var.flavor_name_large
+  key_pair = "candi-${PREFIX}-key"
+  availability_zone = var.az_zone
+  user_data            = "${file("redos-instance-bootstrap.sh")}"
+
+  network {
+    port = openstack_networking_port_v2.worker_internal_without_security.id
+  }
+
+  block_device {
+    uuid             = openstack_blockstorage_volume_v3.worker.id
     source_type      = "volume"
     destination_type = "volume"
     boot_index       = 0
@@ -219,6 +272,10 @@ output "master_ip_address_for_ssh" {
 
 output "system_ip_address_for_ssh" {
   value = lookup(openstack_compute_instance_v2.system.network[0], "fixed_ip_v4")
+}
+
+output "worker_ip_address_for_ssh" {
+  value = lookup(openstack_compute_instance_v2.worker.network[0], "fixed_ip_v4")
 }
 
 output "bastion_ip_address_for_ssh" {

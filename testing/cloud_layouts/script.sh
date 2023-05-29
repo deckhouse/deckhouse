@@ -346,7 +346,10 @@ function prepare_environment() {
     # "Hide" infra template from terraform.
     mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
 
+    # use different users for different OSs
     ssh_user="astra"
+    ssh_user_system="altlinux"
+    ssh_user_worker="redos"
     ;;
   esac
 
@@ -391,6 +394,10 @@ function bootstrap_static() {
     >&2 echo "ERROR: can't parse system_ip from terraform.log"
     return 1
   fi
+  if ! worker_ip="$(grep "worker_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+    >&2 echo "ERROR: can't parse worker_ip from terraform.log"
+    return 1
+  fi
   if ! bastion_ip="$(grep "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
     >&2 echo "ERROR: can't parse bastion_ip from terraform.log"
     return 1
@@ -417,13 +424,24 @@ function bootstrap_static() {
   done
 
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$system_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: system instance couldn't get bootstrapped"
       return 1
     fi
     >&2 echo "ERROR: system instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: worker instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
     sleep 5
   done
 
@@ -471,7 +489,7 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
        echo "post-up ip route del default" >> /etc/network/interfaces
        echo "post-up ip route add 10.111.0.0/16 dev lo" >> /etc/network/interfaces
        echo "post-up ip route add 10.222.0.0/16 dev lo" >> /etc/network/interfaces
@@ -491,6 +509,27 @@ ENDSSH
     return 1
   fi
 
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "post-up ip route del default" >> /etc/network/interfaces
+       echo "post-up ip route add 10.111.0.0/16 dev lo" >> /etc/network/interfaces
+       echo "post-up ip route add 10.222.0.0/16 dev lo" >> /etc/network/interfaces
+       ip route del default
+       ip route add 10.111.0.0/16 dev lo
+       ip route add 10.222.0.0/16 dev lo
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
   dhctl bootstrap --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
@@ -498,7 +537,7 @@ ENDSSH
 
   >&2 echo "==============================================================
 
-  Cluster bootstrapped. Register 'system' node and starting the test now.
+  Cluster bootstrapped. Register 'system' and 'worker' nodes and starting the test now.
 
   If you'd like to pause the cluster deletion for debugging:
    1. ssh to cluster: 'ssh $ssh_user@$master_ip'
@@ -524,13 +563,37 @@ ENDSSH
     return 1
   fi
 
+  for ((i=0; i<10; i++)); do
+    bootstrap_worker="$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq -r '.data."bootstrap.sh"'
+ENDSSH
+)" && break
+    >&2 echo "Attempt to get secret manual-bootstrap-for-worker in d8-cloud-instance-manager namespace #$i failed. Sleeping 30 seconds..."
+    sleep 30
+  done
+
+  if [[ -z "$bootstrap_worker" ]]; then
+    >&2 echo "Couldn't get secret manual-bootstrap-for-worker in d8-cloud-instance-manager namespace."
+    return 1
+  fi
+
   # shellcheck disable=SC2087
   # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
 base64 -d <<< "$bootstrap_system" | bash
+ENDSSH
+
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" sudo su -c /bin/bash <<ENDSSH || true
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+base64 -d <<< "$bootstrap_worker" | bash
 ENDSSH
 
   registration_failed=
@@ -541,7 +604,7 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl get nodes
-kubectl get nodes -o json | jq -re '.items | length > 0' >/dev/null
+kubectl get nodes -o json | jq -re '.items | length == 3' >/dev/null
 kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
 ENDSSH
       registration_failed=""
