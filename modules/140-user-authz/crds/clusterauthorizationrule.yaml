@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: false
-      schema: &schema
+      schema:
         openAPIV3Schema:
           type: object
           description: |
@@ -75,7 +75,7 @@ spec:
 
                     Option available only if [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
 
-                    Deprecated. Use the `namespaceSelector` parameter (API version `v1` of the CR) instead.
+                    Deprecated. Use the [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter (API version `v1` of the CR) instead.
                   x-doc-d8Revision: ee
                   example: ['production-.*']
                   items:
@@ -179,7 +179,7 @@ spec:
                     * `ClusterAdmin` — the same as both `ClusterEditor` and `Admin` + can manage `cluster-wide` service objects (e.g.,  `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., as well as `ClusterAuthorizationRule`, `ClusterRoleBindings` and `ClusterRole`). This role is best suited for cluster administrators.
 
                       **Caution!** since `ClusterAdmin` can edit `ClusterRoleBindings`, he can broader his privileges within the cluster;
-                    * `SuperAdmin` — can perform any actions with any objects (note that `limitNamespaces` (see below) restrictions remain valid).
+                    * `SuperAdmin` — can perform any actions with any objects (note that `limitNamespaces` and `namespaceSelector` (see below) restrictions remain valid).
                   enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
                   example: 'PrivilegedUser'
                 portForwarding:
@@ -202,10 +202,10 @@ spec:
                   x-doc-default: false
                 namespaceSelector:
                   description: |
-                    Defines a set of namespaces using labelSelector values accessible by the user.
+                    Defines a set of namespaces accessible by the user, using labelSelector values.
 
                     Compatibility with limit limitNamespaces:
-                    * This field is checked first and if exists, it overrides limitNamespaces settings for the current clusterAuthorizationRule.
+                    * If this field is set, the limitNamespaces value is ignored for the current clusterAuthorizationRule.
                     * The field limitNamespaces is deprecated.
 
                     The decision making process:
@@ -218,17 +218,25 @@ spec:
                     - labelSelector
                   properties:
                     labelSelector:
+                      description: |
+                         Contains labelselector definitions. 
+
+                         If both matchExpressions and matchLabels parameters are set, their requirements are ANDed together -- they must all be satisfied in order to match.
                       type: object
                       properties:
                         matchExpressions:
+                          description: An array of set-based requirements.
                           items:
                             properties:
                               key:
+                                description: A label name.
                                 type: string
                               operator:
+                                description: A comparison operator.
                                 type: string
                                 enum: [In,NotIn,Exists,DoesNotExist]
                               values:
+                                description: A label value.
                                 type: array
                                 items:
                                   type: string
@@ -241,6 +249,7 @@ spec:
                             type: object
                           type: array
                         matchLabels:
+                          description: A set of labels to match/not match.
                           additionalProperties:
                             type: string
                             pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
