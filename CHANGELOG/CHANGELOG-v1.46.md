@@ -112,6 +112,7 @@
  - **[operator-trivy]** Fixed k8s file permissions. [#3995](https://github.com/deckhouse/deckhouse/pull/3995)
  - **[prometheus]** Fixed creation of multiple CustomAlertmanager resources. [#4402](https://github.com/deckhouse/deckhouse/pull/4402)
  - **[prometheus]** Update Prometheus to `2.43.0` (bug and security fixes, performance improvements). [#4269](https://github.com/deckhouse/deckhouse/pull/4269)
+ - **[snapshot-controller]** Added a list of csi drivers that support snapshots to the documentation [#4765](https://github.com/deckhouse/deckhouse/pull/4765)
  - **[user-authn]** Use a static background image for Dex login screen. [#4696](https://github.com/deckhouse/deckhouse/pull/4696)
  - **[user-authz]** Removed some rules for the `Editor`, `Admin`, and `ClusterEditor` access levels. [#4494](https://github.com/deckhouse/deckhouse/pull/4494)
     Removed write permissions on `namespace`, `limitrange`, `resourcequota`, `role` and `clusterrole` resources for the `Editor`, `Admin`, and `ClusterEditor` access levels. Read the [issue](https://github.com/deckhouse/deckhouse/pull/4494) description If you want to return the permissions.
