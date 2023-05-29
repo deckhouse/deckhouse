@@ -8,7 +8,7 @@ title: "Модуль user-authz: FAQ"
 
 ## Как ограничить права пользователю конкретными namespace?
 
-Использовать параметры `namespaceSelector` или `limitNamespaces`(устаревший) в CR [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
+Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в CR [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
 
 ## Что если два ClusterAuthorizationRules подходят для одного пользователя?
 
