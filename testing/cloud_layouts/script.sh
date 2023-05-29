@@ -194,18 +194,19 @@ function cleanup() {
       fi
   fi
 
-  set -x
-  if [[ "$PROVIDER" == "vSphere" ]]; then
-    pwd
-    ls -la
-    mkdir -p govc
-    cd govc
+  {
+    set -x
+    if [[ "$PROVIDER" == "vSphere" ]]; then
+      pwd
+      ls -la
+      mkdir -p /tmp/govc
+      cd /tmp/govc
 
-    for ((i=1; 10; i++)); do
-      wget -O - https://github.com/vmware/govmomi/releases/download/v0.30.4/govc_Linux_x86_64.tar.gz | tar -xzv  -C .
-      scp -F -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" govc /tmp/
+      for ((i=1; 10; i++)); do
+        wget -O - https://github.com/vmware/govmomi/releases/download/v0.30.4/govc_Linux_x86_64.tar.gz | tar -xzv  -C .
+        scp -F -i "$ssh_private_key_path" "$ssh_user@$master_ip":/tmp/
 
-      if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+        if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
@@ -224,14 +225,14 @@ if [[ ! " \${machines[*]} " =~  \${vm}  ]]; then
 fi
 done
 ENDSSH
-      break
+        break
+      fi
+
+      sleep 10
+
+      done
     fi
-
-    sleep 10
-
-    done
-  fi
-
+  }
 
   >&2 echo "Run cleanup ..."
   if [[ -z "$master_ip" ]] ; then
