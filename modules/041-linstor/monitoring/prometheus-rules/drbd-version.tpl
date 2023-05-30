@@ -1,7 +1,7 @@
 - name: kubernetes.drbd.device_state
   rules:
     - alert: D8DRBDVersionIsOutdated
-      expr: drbd_version{kmod!="__DRBD_VERSION__"}
+      expr: drbd_version{kmod!="{{ $.Values.linstor.internal.drbdVersion }}"}
       for: 5m
       labels:
         severity_level: "9"
@@ -13,10 +13,10 @@
         plk_grouped_by__d8_drbd_device_health: "D8DrbdVersion,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: DRBD version is outdated
         description: |
-          LINSTOR node {{ $labels.node }} has outdated DRBD version
+          LINSTOR node `{{"{{ $labels.node }}"}}` has outdated DRBD version
 
-          in use: {{ $labels.kmod }}
-          expected: __DRBD_VERSION__
+          in use: `{{"{{ $labels.kmod }}"}}`
+          expected: `{{ $.Values.linstor.internal.drbdVersion }}`
 
           The recommended course of action:
           - reboot the node
