@@ -204,7 +204,7 @@ function cleanup() {
 
       for ((i=1; 10; i++)); do
         wget -O - https://github.com/vmware/govmomi/releases/download/v0.30.4/govc_Linux_x86_64.tar.gz | tar -xzv  -C .
-        scp -F /tmp/cloud-test-ssh-config -i "$ssh_private_key_path" "$ssh_user@$master_ip":/tmp/
+        scp -F /tmp/cloud-test-ssh-config -i "$ssh_private_key_path" ./govc "$ssh_user@$master_ip":/tmp/
 
         if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
