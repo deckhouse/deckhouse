@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.# on every push to dev branches
-name: Build and test for dev branches
+name: Build and test for dev branches, debug
 on:
   pull_request:
      types:
@@ -34,7 +34,7 @@ env:
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}-debug
   cancel-in-progress: true
 
 jobs:
