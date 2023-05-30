@@ -12,6 +12,12 @@ data:
   configAuditReports.scanner: "Trivy"
   report.recordFailedChecksOnly: "true"
   node.collector.imageRef: {{ include "helm_lib_module_image" (list . "nodeCollector") }}
+  {{- with (include "tolerations" . | fromJson) }}
+  scanJob.tolerations: {{ .tolerations | toJson | quote }}
+  {{- end }}
+  {{- with (include "nodeSelector" . | fromJson) }}
+  scanJob.nodeSelector: {{ .nodeSelector | toJson | quote }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
