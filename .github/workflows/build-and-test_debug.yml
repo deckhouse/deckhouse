@@ -494,7 +494,7 @@ jobs:
             echo "WERF_VIRTUAL_MERGE='${WERF_VIRTUAL_MERGE}'"
             # Build using dev-registry as primary repo and prod registry as secondary (ro) repo.
             # This build will put stages to "dev" registry. If "dev" registry is empty, existing stages are copied from prod registry.
-              #WERF_LOG_DEBUG=true WERF_LOG=true \
+             WERF_LOG_DEBUG=true WERF_LOG=true \
              WERF_VIRTUAL_MERGE=false \
               werf build \
               --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
