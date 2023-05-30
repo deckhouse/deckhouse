@@ -1,7 +1,7 @@
 - name: kubernetes.drbd.device_state
   rules:
     - alert: D8DRBDVersionIsOutdated
-      expr: drbd_version{kmod!="9.2.3"}
+      expr: drbd_version{kmod!="__DRBD_VERSION__"}
       for: 5m
       labels:
         severity_level: "9"
@@ -16,7 +16,7 @@
           LINSTOR node {{ $labels.node }} has outdated DRBD version
 
           in use: {{ $labels.kmod }}
-          expected: 9.2.3
+          expected: __DRBD_VERSION__
 
           The recommended course of action:
           - reboot the node

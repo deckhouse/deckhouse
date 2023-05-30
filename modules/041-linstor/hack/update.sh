@@ -53,7 +53,8 @@ while read name repo; do
 done < <(echo "$gitrepos" | sed -n 's|_GITREPO=| |p')
 
 echo "Applying changes:"
-(set -x; sed -e "$sed_regex" -i $targets)
 if [ -n "$drbd_alert_version" ]; then
-  (set -x; sed -e "/expr: drbd_version/ s/\(kmod!=\"\)[^\"]*/\1${drbd_alert_version}/" -e "s/\(expected: \).*/\1${drbd_alert_version}/" -i monitoring/prometheus-rules/drbd-version.yaml)
+  (set -x; printf '{{ define "drbd_version" }}%s{{ end }}' $drbd_alert_version > templates/_drbd_version.tpl)
 fi
+
+(set -x; sed -e "$sed_regex" -i $targets)
