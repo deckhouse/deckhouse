@@ -343,8 +343,6 @@ jobs:
       - git_info
       - pull_request_info
     env:
-      WERF_LOG_DEBUG: "true"
-      WERF_LOG: "true"
       WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
     # <template: build_template>
     runs-on: [self-hosted, regular]
@@ -495,7 +493,8 @@ jobs:
           if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # Build using dev-registry as primary repo and prod registry as secondary (ro) repo.
             # This build will put stages to "dev" registry. If "dev" registry is empty, existing stages are copied from prod registry.
-            werf build \
+              #WERF_LOG_DEBUG=true WERF_LOG=true \
+              werf build \
               --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
               --parallel=true --parallel-tasks-limit=5 \
               --report-path images_tags_werf.json
