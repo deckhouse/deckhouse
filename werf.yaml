@@ -649,6 +649,7 @@ args:
   BASE_UBUNTU: {{ .Images.BASE_UBUNTU }}
   BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
+  {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless" "common/iptables-wrapper")) }}
 dependencies:
 - image: common/distroless
   imports:
@@ -658,6 +659,7 @@ dependencies:
   imports:
   - type: ImageName
     targetBuildArg: BASE_IPTABLES_WRAPPER
+  {{- end }}
 {{- else }}
 {{ tpl .ImageBuildData . }}
 {{- end }}
