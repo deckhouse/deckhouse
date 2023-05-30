@@ -16,6 +16,9 @@ To enable the `monitoring-custom` module to collect application metrics, you mus
 - Set the `http-metrics` or `https-metrics` name to the port that will be used for collecting metrics to connect to it over HTTP or HTTPS, respectively.
 
   If it is not feasible for some reason (e.g., the port is already defined and has a different name), you can use the `prometheus.deckhouse.io/port: port_number` annotation to set the port number and `prometheus.deckhouse.io/tls: "true"` if metrics are collected over HTTPS.
+
+  > **Note!** When annotating a Service, you must use `targetPort` as the port value. I.e., the port that is open and listening by your application, not the Service port.
+
   - Example No. 1:
 
     ```yaml
