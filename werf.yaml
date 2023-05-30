@@ -649,6 +649,15 @@ args:
   BASE_UBUNTU: {{ .Images.BASE_UBUNTU }}
   BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
+dependencies:
+- image: common/distroless
+  imports:
+  - type: ImageName
+    targetBuildArg: BASE_DISTROLESS
+- image: common/iptables-wrapper
+  imports:
+  - type: ImageName
+    targetBuildArg: BASE_IPTABLES_WRAPPER
 {{- else }}
 {{ tpl .ImageBuildData . }}
 {{- end }}
