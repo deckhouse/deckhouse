@@ -22,10 +22,8 @@ RUN apt-get update \
     && make install
 
 WORKDIR /vector
-COPY patches/vrl_0_4_0.patch /
-RUN git clone --depth 1 --branch v0.30.0 https://github.com/vectordotdev/vector.git \
-    && cd vector \
-    && git apply /vrl_0_4_0.patch
+RUN git clone --depth 1 --branch v0.31.0 https://github.com/vectordotdev/vector.git \
+    && cd vector
 
 # Download and cache dependencies
 WORKDIR /vector/vector
