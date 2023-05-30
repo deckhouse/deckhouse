@@ -53,8 +53,7 @@ while read name repo; do
 done < <(echo "$gitrepos" | sed -n 's|_GITREPO=| |p')
 
 echo "Applying changes:"
-if [ -n "$drbd_alert_version" ]; then
-  (set -x; printf '{{ define "drbd_version" }}%s{{ end }}' $drbd_alert_version > templates/_drbd_version.tpl)
-fi
-
 (set -x; sed -e "$sed_regex" -i $targets)
+if [ -n "$drbd_alert_version" ]; then
+  (set -x; sed -e "/^      drbdVersion:/,/default:/{/^\([[:space:]]*default: \).*/s//\1\"${drbd_alert_version}\"/}" -i openapi/values.yaml)
+fi

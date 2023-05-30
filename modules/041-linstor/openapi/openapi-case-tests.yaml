@@ -2,7 +2,8 @@ positive:
   configValues:
   - {}
   values:
-  - { internal: {} }
+  - internal:
+      drbdVersion: "9.3.2"
 negative:
   configValues:
   - { somethingInConfig: yes }
