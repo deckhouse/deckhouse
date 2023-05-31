@@ -194,6 +194,7 @@ docker run \
   -e "RUNNING_GROUP=$(id -g $UID)" \
   -e "PULL_IMAGE_TYPE=$PULL_IMAGE_TYPE" \
   --network host -ti --rm \
+  --security-opt seccomp=unconfined \
   --entrypoint /bin/bash \
   "quay.io/skopeo/stable:v1.11.2" -c '
 
