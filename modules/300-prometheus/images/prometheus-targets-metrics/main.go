@@ -62,7 +62,7 @@ func recordMetrics() {
 						var y Prom
 
 						if err := json.Unmarshal([]byte(string(bodyText)), &y); err != nil {
-							log.Println("json parse ", err)
+							log.Println("json parse", err)
 							log.Println(string(bodyText))
 						} else {
 							metrics.UnregisterAllMetrics()
