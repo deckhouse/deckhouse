@@ -115,3 +115,8 @@ properties:
       Disable `letsencrypt` and `letsencrypt-staging` ClusterIssuer objects (if set to `true`).
     x-examples: [true, false]
 
+  maxConcurrentChallenges:
+    type: int
+    description: |
+      The maximum number of challenges that can be scheduled as 'processing' at once. (default 60)
+    x-examples: [25]
