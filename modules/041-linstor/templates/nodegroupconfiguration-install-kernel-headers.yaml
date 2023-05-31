@@ -46,9 +46,9 @@ spec:
       bb-apt-install "linux-headers-${version_in_use}"
 
       # Remove unused kernel-headers
-      version_in_use_pattern="$(echo "$version_in_use" | sed -r 's/([0-9\.-]+)-([^0-9]+)$/^linux-[a-z0-9\.-]+(\1|\1-\2)$/')"
+      version_in_use_pattern="$(echo "$version_in_use" | sed -r 's/([0-9\.-]+)-([^0-9]+)$/^linux-headers-(\1|\1-\2)$/')"
       packages_to_remove="$(
-        dpkg --get-selections | grep -E '^linux-headers-.*\s(install|hold)$' | awk '{print $1}' | grep -Ev "$version_in_use_pattern" | grep -Ev 'linux-headers-[^0-9]+$' || true
+        dpkg-query -S '/lib/modules/*/build' | awk -F: '{print $1}' | grep -Ev "$version_in_use_pattern" || true
       )"
       if [ -n "$packages_to_remove" ]; then
         bb-apt-remove $packages_to_remove
