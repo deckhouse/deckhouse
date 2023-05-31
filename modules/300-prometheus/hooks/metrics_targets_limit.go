@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
-	"net/http"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
+	"net/http"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -84,10 +83,10 @@ func makePrometheusRequest(promURL string, dc dependency.Container) ([]Target, e
 	return response.Data.Target, nil
 }
 
-func filterTargets(LastError string, list []Target) []Labels {
+func filterTargets(filter string, list []Target) []Labels {
 	var rows []Labels
 	for row := range list {
-		if list[row].LastError == LastError {
+		if list[row].LastError == filter {
 			temp := list[row].Labels
 			temp["scrapePool"] = list[row].ScrapePool
 			rows = append(rows, temp)

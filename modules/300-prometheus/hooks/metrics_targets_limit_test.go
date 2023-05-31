@@ -27,7 +27,7 @@ import (
 
 var _ = Describe("Modules :: prometheus :: hooks :: metrics_targets_limit ::", func() {
 
-	f := HookExecutionConfigInit(`{"prometheus": {"internal":{"prometheusMain":{}, "prometheusLongterm":{} }, "retentionDays": 14, "longtermRetentionDays": 300}}`, `{}`)
+	f := HookExecutionConfigInit(``, ``)
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
