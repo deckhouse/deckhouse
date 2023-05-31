@@ -154,6 +154,7 @@ docker run \
   -e "REGISTRY_PATH=$REGISTRY_PATH" \
   -e "USE_HTTPS=$USE_HTTPS" \
   --network host -ti --rm \
+  --security-opt seccomp=unconfined \
   --entrypoint /bin/bash \
   "quay.io/skopeo/stable:v1.11.2" -c '
 
