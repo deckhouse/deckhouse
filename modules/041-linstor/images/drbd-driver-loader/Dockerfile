@@ -25,8 +25,10 @@ RUN tar xvf /drbd.tar.gz --strip-components=2 --wildcards 'drbd-*/docker/entry.s
 
 FROM $BASE_UBUNTU
 
+# Debian 11 requires gcc-10
+# RHEL 9 requires libelf-dev
 RUN apt-get update \
- && apt-get install -y kmod gnupg wget make gcc patch curl libelf-dev \
+ && apt-get install -y kmod gnupg wget make gcc gcc-10 patch curl libelf-dev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
