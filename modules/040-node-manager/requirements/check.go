@@ -18,6 +18,7 @@ package requirements
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -25,8 +26,10 @@ import (
 )
 
 const (
-	minUbuntuVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
-	requirementsKey           = "nodesMinimalOSVersionUbuntu"
+	minUbuntuVersionValuesKey      = "nodeManager:nodesMinimalOSVersionUbuntu"
+	requirementsKey                = "nodesMinimalOSVersionUbuntu"
+	containerDRequirementsKey      = "containerDOnly"
+	hasNodesOtherThanContainerDKey = "nodeManager:hasNodesOtherThanContainerD"
 )
 
 func init() {
@@ -51,5 +54,23 @@ func init() {
 		return true, nil
 	}
 
+	checkContainerDRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		requirementValue = strings.TrimSpace(requirementValue)
+		if requirementValue == "false" || requirementValue == "" {
+			return true, nil
+		}
+
+		hasNodesOtherThanContainerD, exists := getter.Get(hasNodesOtherThanContainerDKey)
+		if !exists {
+			return true, nil
+		}
+
+		if hasNodesOtherThanContainerD.(bool) {
+			return false, errors.New("has nodes other than containerd")
+		}
+
+		return true, nil
+	}
 	requirements.RegisterCheck(requirementsKey, checkRequirementFunc)
+	requirements.RegisterCheck(containerDRequirementsKey, checkContainerDRequirementFunc)
 }

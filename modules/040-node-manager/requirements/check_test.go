@@ -40,4 +40,18 @@ func TestNodeOSVersionRequirement(t *testing.T) {
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
+
+	t.Run("containerD requirement successfully", func(t *testing.T) {
+		requirements.SaveValue(hasNodesOtherThanContainerDKey, false)
+		ok, err := requirements.CheckRequirement(containerDRequirementsKey, "true")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("containerD requirement fail", func(t *testing.T) {
+		requirements.SaveValue(hasNodesOtherThanContainerDKey, true)
+		ok, err := requirements.CheckRequirement(containerDRequirementsKey, "true")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
 }
