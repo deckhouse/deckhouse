@@ -106,7 +106,7 @@ func convergeComponent(componentName string) error {
 	if recreateConfig {
 		log.Infof("generate new manifest for %s", componentName)
 		if err := backupFile(filepath.Join(manifestsPath, componentName+".yaml")); err != nil {
-			return err
+			log.Warnf("Backup failed, %s", err)
 		}
 
 		if err := generateChecksumPatch(componentName, checksum); err != nil {

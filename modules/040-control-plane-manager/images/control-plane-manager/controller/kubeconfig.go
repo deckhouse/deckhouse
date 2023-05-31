@@ -172,7 +172,7 @@ func checkKubeletConfig() error {
 		return err
 	}
 
-	if res.Clusters[0].Cluster.Server == "https://127.0.0.1:6445" {
+	if strings.HasPrefix(res.Clusters[0].Cluster.Server, "https://127.0.0.1:6445") {
 		return nil
 	}
 
