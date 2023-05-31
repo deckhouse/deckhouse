@@ -12,8 +12,8 @@ RUN apk fetch -R -o . tzdata alpine-baselayout-data ca-certificates
 
 RUN mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
 
-COPY file-whitelist .
-RUN mkdir /filtered-apk && rsync -av --include-from=file-whitelist --include='*/' --exclude '*' /apk/ /filtered-apk/
+COPY file-filter .
+RUN mkdir /filtered-apk && rsync -av --include-from=file-filter --include='*/' --exclude '*' /apk/ /filtered-apk/
 
 RUN update-ca-certificates && mkdir -p /filtered-apk/etc/ssl/certs && cp -r /etc/ssl/cert.pem /etc/ssl/certs /filtered-apk/etc/ssl/
 
