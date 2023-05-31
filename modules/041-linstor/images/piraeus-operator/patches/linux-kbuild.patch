@@ -1,0 +1,53 @@
+diff --git a/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go b/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
+index 2c93547..f9f163a 100644
+--- a/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
++++ b/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
+@@ -1260,12 +1260,18 @@ func daemonSetWithDRBDKernelModuleInjection(ds *apps.DaemonSet, satelliteSet *pi
+ 		MountPath: kubeSpec.ModulesDir,
+ 	},
+ 	)
++	volumeMounts = append(volumeMounts, corev1.VolumeMount{
++		Name:      kubeSpec.UsrLibDirName,
++		MountPath: kubeSpec.UsrLibDirMountPath,
++	},
++	)
+ 
+ 	ds.Spec.Template.Spec.InitContainers = []corev1.Container{
+ 		{
+ 			Name:            "kernel-module-injector",
+ 			Image:           satelliteSet.Spec.KernelModuleInjectionImage,
+ 			ImagePullPolicy: satelliteSet.Spec.ImagePullPolicy,
++			Command:         []string{"/bin/bash", "-c", "find /host/usr/lib -maxdepth 1 -mindepth 1 -exec ln -vs {} /usr/lib \\; 2>/dev/null; exec /entry.sh"},
+ 			SecurityContext: &corev1.SecurityContext{Privileged: &kubeSpec.Privileged},
+ 			Env:             env,
+ 			VolumeMounts:    volumeMounts,
+@@ -1294,6 +1300,15 @@ func daemonSetWithDRBDKernelModuleInjection(ds *apps.DaemonSet, satelliteSet *pi
+ 				},
+ 			},
+ 		})
++		ds.Spec.Template.Spec.Volumes = append(ds.Spec.Template.Spec.Volumes, corev1.Volume{
++			Name: kubeSpec.UsrLibDirName,
++			VolumeSource: corev1.VolumeSource{
++				HostPath: &corev1.HostPathVolumeSource{
++					Path: kubeSpec.UsrLibDir,
++					Type: &kubeSpec.HostPathDirectoryType,
++				},
++			},
++		})
+ 	}
+ 
+ 	return ds
+diff --git a/pkg/k8s/spec/const.go b/pkg/k8s/spec/const.go
+index fe89064..a9d186e 100644
+--- a/pkg/k8s/spec/const.go
++++ b/pkg/k8s/spec/const.go
+@@ -40,6 +40,9 @@ const (
+ 	LinstorCertDirName          = "linstor-certs"
+ 	ModulesDir                  = "/lib/modules/" // "/usr/lib/modules/"
+ 	ModulesDirName              = "modules-dir"
++	UsrLibDir                   = "/usr/lib"
++	UsrLibDirMountPath          = "/host/usr/lib"
++	UsrLibDirName               = "usr-lib-dir"
+ 	SrcDir                      = "/usr/src"
+ 	SrcDirName                  = "src-dir"
+ 	SysDir                      = "/sys/"
