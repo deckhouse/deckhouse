@@ -76,11 +76,13 @@ func main() {
 	}
 
 	var flannelArgs []string
+	flannelArgs[0] = "flannel"
+	flannelArgs = append(flannelArgs, os.Args[1:]...)
 	for _, ip := range allIPs {
 		flannelArgs = append(flannelArgs, "-iface", ip)
 	}
 
-	err = unix.Exec(os.Args[0], append(os.Args, flannelArgs...), os.Environ())
+	err = unix.Exec("/opt/bin/flanneld", flannelArgs, os.Environ())
 	if err != nil {
 		log.Fatal(err)
 	}
