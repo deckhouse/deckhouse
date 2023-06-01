@@ -9,18 +9,10 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy patches
-COPY ./patches /patches
-
 # Using source code from GitHub repository
 RUN git clone ${DRBD_GITREPO} /drbd \
  && cd /drbd \
  && git reset --hard drbd-${DRBD_VERSION} \
- && git apply /patches/*.patch \
- && git config --global user.email "vasily.oleynikov@flant.com" \
- && git config --global user.name "duckhawk" \
- && git add docker/entry.sh \
- && git commit -m "changes in entry.sh for SELimux support" \
  && make tarball \
  && mv ./drbd-*.tar.gz /drbd.tar.gz
 
