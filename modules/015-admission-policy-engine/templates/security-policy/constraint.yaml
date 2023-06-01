@@ -1,0 +1,183 @@
+{{- $context := . }}
+
+{{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
+
+{{- range $cr := .Values.admissionPolicyEngine.internal.securityPolicies }}
+  {{- if not $cr.spec.policies.allowPrivileged }}
+    {{- include "allow_privileged" (list $context $cr) }}
+  {{- end }}
+  {{- if not $cr.spec.policies.allowPrivilegeEscalation }}
+    {{- include "allow_privilege_escalation" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedFlexVolumes" }}
+    {{- include "allowed_flex_volumes" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedHostPaths" }}
+    {{- include "allowed_host_paths" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedCapabilities" }}
+    {{- include "allowed_capabilities" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "defaultAddCapabilities" }}
+    {{- include "add_default_capabilities" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "requiredDropCapabilities" }}
+    {{- include "required_drop_capabilities" (list $context $cr) }}
+  {{- end }}
+{{- end }}
+
+{{- end }} # end if bootstrapped
+
+{{- define "allow_privileged" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8PSSPrivilegedContainer
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "allow_privilege_escalation" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8PSSAllowPrivilegeEscalation
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "allowed_flex_volumes" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8PSSAllowedFlexVolumes
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "allowed_host_paths" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8PSSAllowedHostPaths
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "allowed_capabilities" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8PSSAllowedCapabilities
+metadata:
+  name: {{(printf "%s-allowed-cap" $cr.metadata.name)}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: ["*"]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    allowedCapabilities:
+      {{- $cr.spec.policies.allowedCapabilities | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "add_default_capabilities" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: mutations.gatekeeper.sh/v1
+kind: ModifySet
+metadata:
+  name: {{(printf "%s-add-default-cap" $cr.metadata.name)}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  match:
+    kinds:
+    - apiGroups: ["*"]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  applyTo:
+  - groups: [""]
+    kinds: ["Pod"]
+    versions: ["v1"]
+  location: "spec.containers[name: *].securityContext.capabilities.add"
+  parameters:
+    operation: merge
+    values:
+      fromList:
+        {{- $cr.spec.policies.defaultAddCapabilities | toYaml | nindent 8}}
+{{- end }}
+
+{{- define "required_drop_capabilities" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: mutations.gatekeeper.sh/v1
+kind: ModifySet
+metadata:
+  name: {{(printf "%s-drop-cap" $cr.metadata.name)}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  match:
+    kinds:
+    - apiGroups: ["*"]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  applyTo:
+  - groups: [""]
+    kinds: ["Pod"]
+    versions: ["v1"]
+  location: "spec.containers[name: *].securityContext.capabilities.drop"
+  parameters:
+    operation: merge
+    values:
+      fromList:
+        {{- $cr.spec.policies.requiredDropCapabilities | toYaml | nindent 8}}
+{{- end }}

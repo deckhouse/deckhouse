@@ -1,0 +1,2 @@
+{{- $parameters := dict "allowedHostPaths" (list (dict "pathPrefix" "/tmp" "rootOnly" false) ) }}
+{{- include "pod_security_policy" (list . "D8PSSAllowedHostPaths" $parameters ) }}

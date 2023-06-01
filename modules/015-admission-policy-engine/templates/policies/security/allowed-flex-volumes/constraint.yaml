@@ -1,0 +1,2 @@
+{{- $parameters := dict "allowedFlexVolumes" (list (dict "driver" "example/lvm") (dict "driver" "example/cifs")) }}
+{{- include "pod_security_policy" (list . "D8PSSAllowedFlexVolumes" $parameters ) }}

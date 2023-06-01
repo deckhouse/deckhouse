@@ -57,3 +57,10 @@ properties:
           # this spec is validated by CRD's openapi spec
           type: object
           additionalProperties: true
+      securityPolicies:
+        type: array
+        default: []
+        items:
+          # this spec is validated by CRD's openapi spec
+          type: object
+          additionalProperties: true

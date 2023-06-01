@@ -20,6 +20,17 @@
 {{- include "pod_security_standard_base" (list $context "restricted" $policyCRDName $parameters ) }}
 {{- end }}
 
+{{- define "pod_security_policy" }}
+  {{- $context := index . 0 }}
+  {{- $policyCRDName := index . 1 }}
+  {{- $parameters := dict }}
+  {{- if gt (len .) 2 }}
+  {{- $parameters = index . 2}}
+  {{- end}}
+
+{{- include "pod_security_standard_base" (list $context "security_policy" $policyCRDName $parameters ) }}
+{{- end }}
+
 {{- define "pod_security_standard_base" }}
   {{- $context := index . 0 }}
   {{- $standard := index . 1 }}
@@ -47,6 +58,9 @@ spec:
       {{- else if eq $standard "restricted" }}
       matchLabels:
         security.deckhouse.io/pod-policy: restricted
+      {{- else if eq $standard "security_policy" }}
+      matchLabels:
+        security.deckhouse.io/security-policy: test
       {{- else}}
         {{ cat "Unknown policy standard" | fail }}
       {{- end }}

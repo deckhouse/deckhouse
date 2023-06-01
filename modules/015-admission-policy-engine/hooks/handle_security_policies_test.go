@@ -23,68 +23,57 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operation policies", func() {
+var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security policies", func() {
 	f := HookExecutionConfigInit(
 		`{"admissionPolicyEngine": {"internal": {"bootstrapped": true} } }`,
 		`{"admissionPolicyEngine":{}}`,
 	)
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "OperationPolicy", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "SecurityPolicy", false)
 
-	Context("Operation policy is set", func() {
+	Context("Security Policy is set", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(testOperationPolicy))
+			f.BindingContexts.Set(f.KubeStateSet(testSecurityPolicy))
 			f.RunHook()
 		})
 		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()).To(HaveLen(1))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(1))
 		})
 	})
+
 })
 
-var testOperationPolicy = `
+var testSecurityPolicy = `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: OperationPolicy
+kind: SecurityPolicy
 metadata:
   name: foo
 spec:
-  policies:
-    allowedRepos:
-      - foo
-    requiredResources:
-      limits:
-        - memory
-      requests:
-        - cpu
-        - memory
-    disallowedImageTags:
-      - latest
-    requiredLabels:
-      labels:
-      - allowedRegex: ^P\d{4}$
-        key: product-id
-      watchKinds:
-      - /Namespace
-    requiredAnnotations:
-      annotations:
-      - allowedRegex: ^P\d{4}$
-        key: foobar
-      watchKinds:
-      - /Namespace
-    requiredProbes:
-      - livenessProbe
-      - readinessProbe
-    maxRevisionHistoryLimit: 3
-    imagePullPolicy: Always
-    priorityClassNames:
-      - foo
-      - bar
-    checkHostNetworkDNSPolicy: true
-    checkContainerDuplicates: true
+  enforcementAction: Deny
   match:
     namespaceSelector:
-      matchNames:
-        - default
+      labelSelector:
+        matchLabels:
+          operation-policy.deckhouse.io/enabled: "true"
+  policies:
+    allowHostIPC: false
+    allowHostNetwork: false
+    allowHostPID: false
+    allowHostPath: false
+    allowHostPorts: false
+    allowPrivileged: false
+    allowedCapabilities: []
+    allowedFlexVolumes: []
+    allowedUnsafeSysctls: []
+    allowedVolumes:
+    - '*'
+    defaultAddCapabilities: []
+    forbiddenSysctls:
+    - '*'
+    readOnlyRootFilesystem: false
+    requiredDropCapabilities:
+    - ALL
+    seccompProfiles: []
 `

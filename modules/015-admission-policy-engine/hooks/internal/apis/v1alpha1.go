@@ -28,10 +28,72 @@ type OperationPolicy struct {
 	// Spec defines the behavior of a node group.
 	Spec OperationPolicySpec `json:"spec"`
 
-	// Most recently observed status of the node.
+	// Most recently observed status of the policy.
 	// Populated by the system.
 
-	Status OperationPolicyStatus `json:"status,omitempty"`
+	Status PolicyStatus `json:"status,omitempty"`
+}
+
+type SecurityPolicy struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Spec defines the behavior of a node group.
+	Spec SecurityPolicySpec `json:"spec"`
+
+	// Most recently observed status of the policy.
+	// Populated by the system.
+
+	Status PolicyStatus `json:"status,omitempty"`
+}
+
+type SecurityPolicySpec struct {
+	EnforcementAction string `json:"enforcementAction"`
+	Policies          struct {
+		AllowedHostPaths []struct {
+			PathPrefix string `json:"pathPrefix"`
+			ReadOnly   bool   `json:"readOnly"`
+		} `json:"allowedHostPath,omitempty"`
+		AllowHostIPC             bool     `json:"allowHostIPC,omitempty"`
+		AllowHostNetwork         bool     `json:"allowHostNetwork,omitempty"`
+		AllowHostPorts           bool     `json:"allowHostPorts,omitempty"`
+		AllowHostPID             bool     `json:"allowHostPID,omitempty"`
+		AllowPrivileged          bool     `json:"allowPrivileged,omitempty"`
+		AllowPrivilegeEscalation bool     `json:"allowPrivilegeEscalation,omitempty"`
+		AllowedCapabilities      []string `json:"allowedCapabilities,omitempty"`
+		AllowedFlexVolumes       []struct {
+			Driver string `json:"driver"`
+		} `json:"allowedFlexVolumes,omitempty"`
+		AllowedUnsafeSysctls     []string          `json:"allowedUnsafeSysctls,omitempty"`
+		DefaultAddCapabilities   []string          `json:"defaultAddCapabilities,omitempty"`
+		ForbiddenSysctls         []string          `json:"forbiddenSysctls,omitempty"`
+		FsGroup                  ContextIDSettings `json:"fsGroup,omitempty"`
+		ReadOnlyRootFilesystem   bool              `json:"readOnlyRootFilesystem"`
+		RequiredDropCapabilities []string          `json:"requiredDropCapabilities,omitempty"`
+		RunAsUser                ContextIDSettings `json:"runAsUser,omitempty"`
+		SeccompProfiles          []string          `json:"seccompProfiles"`
+		SeLinuxContext           struct {
+			Type string `json:"type"`
+		} `json:"selinuxContext,omitempty"`
+		SupplementalGroups ContextIDSettings `json:"supplementalGroups,omitempty"`
+		AllowedVolumes     []string          `json:"allowedVolumes"`
+	} `json:"policies"`
+	Match struct {
+		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
+		LabelSelector     metav1.LabelSelector `json:"labelSelector,omitempty"`
+	} `json:"match"`
+}
+
+type ContextIDSettings struct {
+	Type   string `json:"type"`
+	ID     int    `json:"id,omitempty"`
+	Ranges []struct {
+		Min int `json:"min,omitempty"`
+		Max int `json:"max,omitempty"`
+	} `json:"ranges,omitempty"`
 }
 
 type OperationPolicySpec struct {
@@ -70,7 +132,7 @@ type OperationPolicySpec struct {
 	} `json:"match"`
 }
 
-type OperationPolicyStatus struct {
+type PolicyStatus struct {
 }
 
 type NamespaceSelector struct {
