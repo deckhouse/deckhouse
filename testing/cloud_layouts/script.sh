@@ -467,11 +467,13 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    # Convert to air-gap environment
+    # Convert to air-gap environment by removing default route
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "post-up ip route del default" >> /etc/network/interfaces
-       echo "post-up ip route add 10.111.0.0/16 dev lo" >> /etc/network/interfaces
-       echo "post-up ip route add 10.222.0.0/16 dev lo" >> /etc/network/interfaces
+       echo "#!/bin/sh" > /etc/network/if-up.d/add-routes
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
+       echo "ip route del default" >> /etc/network/if-up.d/add-routes
+       chmod 0755 /etc/network/if-up.d/add-routes
        ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
@@ -490,9 +492,11 @@ ENDSSH
 
   for ((i=1; i<=$testRunAttempts; i++)); do
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "post-up ip route del default" >> /etc/network/interfaces
-       echo "post-up ip route add 10.111.0.0/16 dev lo" >> /etc/network/interfaces
-       echo "post-up ip route add 10.222.0.0/16 dev lo" >> /etc/network/interfaces
+       echo "#!/bin/sh" > /etc/rc.d/rc.local
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/rc.d/rc.local
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/rc.d/rc.local
+       echo "ip route del default" >> /etc/rc.d/rc.local
+       chmod 0755 /etc/rc.d/rc.local
        ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
@@ -511,9 +515,11 @@ ENDSSH
 
   for ((i=1; i<=$testRunAttempts; i++)); do
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "post-up ip route del default" >> /etc/network/interfaces
-       echo "post-up ip route add 10.111.0.0/16 dev lo" >> /etc/network/interfaces
-       echo "post-up ip route add 10.222.0.0/16 dev lo" >> /etc/network/interfaces
+       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
        ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
@@ -603,7 +609,7 @@ ENDSSH
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
-kubectl get nodes
+kubectl get nodes -o wide
 kubectl get nodes -o json | jq -re '.items | length == 3' >/dev/null
 kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
 ENDSSH
