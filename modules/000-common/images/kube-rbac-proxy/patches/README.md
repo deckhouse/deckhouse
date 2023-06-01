@@ -17,3 +17,6 @@ Do not check upstream TLS certificate.
 
 #### preserve-auth-header.patch
 Propagate the `Authorization` header to upstream.
+
+### secure-listen-address.patch
+Check if the --secure-listen-address flag is set.
