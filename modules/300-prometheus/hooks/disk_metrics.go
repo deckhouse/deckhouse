@@ -58,7 +58,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "prometheus",
+					"app.kubernetes.io/name": "prometheus",
 				},
 			},
 			FilterFunc: applyPodFilter,
