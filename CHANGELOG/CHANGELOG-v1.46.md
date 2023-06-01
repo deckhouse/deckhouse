@@ -86,13 +86,18 @@
  - **[candi]** Events created by bashible get connected to the relevant node objects. [#4623](https://github.com/deckhouse/deckhouse/pull/4623)
  - **[cloud-data-crd]** The `cluster-autoscaler-crd module has been renamed to the `cloud-data-crd` module. [#4497](https://github.com/deckhouse/deckhouse/pull/4497)
  - **[cni-flannel]** Fix cleanup flannel used IPs on migration from docker to containerd. [#4306](https://github.com/deckhouse/deckhouse/pull/4306)
+ - **[control-plane-manager]** Fix errors in control-plane-manager converge and preflight checks. [#4822](https://github.com/deckhouse/deckhouse/pull/4822)
+    control-plane-manager will restart.
  - **[deckhouse]** Add `prometheus.deckhouse.io/rules-watcher-enabled` on the `d8-system` namespace. [#4752](https://github.com/deckhouse/deckhouse/pull/4752)
  - **[deckhouse]** Remove Deckhouse release naming transformation. [#4568](https://github.com/deckhouse/deckhouse/pull/4568)
  - **[deckhouse]** Change liveness probe for `webhook-handler` to prevent EOF log spamming. [#4562](https://github.com/deckhouse/deckhouse/pull/4562)
     The `webhook-handler` Pod will restart.
  - **[docs]** Update the description of the global `storageClass` parameter. [#4424](https://github.com/deckhouse/deckhouse/pull/4424)
+ - **[extended-monitoring]** Send one `ExtendedMonitoringDeprecatatedAnnotation` alert per cluster. [#4829](https://github.com/deckhouse/deckhouse/pull/4829)
  - **[global-hooks]** Fix cluster DNS address discovery. [#4521](https://github.com/deckhouse/deckhouse/pull/4521)
  - **[global-hooks]** Fix the Kubernetes version hook for `DigitalOcean`. [#4473](https://github.com/deckhouse/deckhouse/pull/4473)
+ - **[ingress-nginx]** Fixed incorrect indentation of resources block in `kube-rbac-proxy` container of `kruise-controller-manager` deployment. [#4738](https://github.com/deckhouse/deckhouse/pull/4738)
+ - **[linstor]** Support Debian 11. [#4724](https://github.com/deckhouse/deckhouse/pull/4724)
  - **[linstor]** Enable `WaitForFirstConsumer`. [#4681](https://github.com/deckhouse/deckhouse/pull/4681)
     - all auto-generated linstor storageclasses will be recreated with WaitForFirstConsumer option.
     - all existing Persistent Volumes do not require any update or modifications.
@@ -110,6 +115,7 @@
  - **[operator-prometheus]** Added secret-field-selector in args. [#4619](https://github.com/deckhouse/deckhouse/pull/4619)
  - **[operator-trivy]** Add support for kubernetes.io/dockercfg secrets in imagePullSecrets pods field for scan jobs. [#4469](https://github.com/deckhouse/deckhouse/pull/4469)
  - **[operator-trivy]** Fixed k8s file permissions. [#3995](https://github.com/deckhouse/deckhouse/pull/3995)
+ - **[prometheus]** Fixed `d8_prometheus_fs` metrics. [#4805](https://github.com/deckhouse/deckhouse/pull/4805)
  - **[prometheus]** Fixed creation of multiple CustomAlertmanager resources. [#4402](https://github.com/deckhouse/deckhouse/pull/4402)
  - **[prometheus]** Update Prometheus to `2.43.0` (bug and security fixes, performance improvements). [#4269](https://github.com/deckhouse/deckhouse/pull/4269)
  - **[snapshot-controller]** Added a list of csi drivers that support snapshots to the documentation [#4765](https://github.com/deckhouse/deckhouse/pull/4765)
