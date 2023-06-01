@@ -77,6 +77,11 @@ kubectl get deckhousereleases
   * Deckhouse downloads release data from the release channel (the `Alpha` release channel in the example) and compares it with the existing `DeckhouseReleases`.
   * Then Deckhouse performs the update according to the [update parameters](modules/002-deckhouse/configuration.html#parameters-update).
 
+
+{% offtopic title="The scheme of using the releaseChannel parameter during Deckhouse installation and operation" %}
+![The scheme of using the releaseChannel parameter during Deckhouse installation and operation](images/common/deckhouse-update-process.png)
+{% endofftopic %}
+
 ## How do I run Deckhouse on a particular node?
 
 Set the `nodeSelector` [parameter](modules/002-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
