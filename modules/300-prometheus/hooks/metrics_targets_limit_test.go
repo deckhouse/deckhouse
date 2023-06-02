@@ -18,14 +18,16 @@ package hooks
 
 import (
 	"bytes"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
+	"io"
+	"net/http"
+
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io"
 	"k8s.io/utils/pointer"
-	"net/http"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 func Before(f *HookExecutionConfig, body string) {
