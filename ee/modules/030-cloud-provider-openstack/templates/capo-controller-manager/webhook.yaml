@@ -1,0 +1,161 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: mutating-webhook-configuration
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+webhooks:
+  - admissionReviewVersions:
+      - v1beta1
+    clientConfig:
+      service:
+        name: capo-webhook-service
+        namespace: d8-cloud-provider-openstack
+        path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackcluster
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: default.openstackcluster.infrastructure.cluster.x-k8s.io
+    rules:
+      - apiGroups:
+          - infrastructure.cluster.x-k8s.io
+        apiVersions:
+          - v1alpha6
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - openstackclusters
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1beta1
+    clientConfig:
+      service:
+        name: capo-webhook-service
+        namespace: d8-cloud-provider-openstack
+        path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackclustertemplate
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: default.openstackclustertemplate.infrastructure.cluster.x-k8s.io
+    rules:
+      - apiGroups:
+          - infrastructure.cluster.x-k8s.io
+        apiVersions:
+          - v1alpha6
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - openstackclustertemplates
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1beta1
+    clientConfig:
+      service:
+        name: capo-webhook-service
+        namespace: d8-cloud-provider-openstack
+        path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackmachine
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: default.openstackmachine.infrastructure.cluster.x-k8s.io
+    rules:
+      - apiGroups:
+          - infrastructure.cluster.x-k8s.io
+        apiVersions:
+          - v1alpha6
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - openstackmachines
+    sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+webhooks:
+  - admissionReviewVersions:
+      - v1beta1
+    clientConfig:
+      service:
+        name: capo-webhook-service
+        namespace: d8-cloud-provider-openstack
+        path: /validate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackcluster
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.openstackcluster.infrastructure.cluster.x-k8s.io
+    rules:
+      - apiGroups:
+          - infrastructure.cluster.x-k8s.io
+        apiVersions:
+          - v1alpha6
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - openstackclusters
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1beta1
+    clientConfig:
+      service:
+        name: capo-webhook-service
+        namespace: d8-cloud-provider-openstack
+        path: /validate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackclustertemplate
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.openstackclustertemplate.infrastructure.cluster.x-k8s.io
+    rules:
+      - apiGroups:
+          - infrastructure.cluster.x-k8s.io
+        apiVersions:
+          - v1alpha6
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - openstackclustertemplates
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1beta1
+    clientConfig:
+      service:
+        name: capo-webhook-service
+        namespace: d8-cloud-provider-openstack
+        path: /validate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackmachine
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.openstackmachine.infrastructure.cluster.x-k8s.io
+    rules:
+      - apiGroups:
+          - infrastructure.cluster.x-k8s.io
+        apiVersions:
+          - v1alpha6
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - openstackmachines
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1beta1
+    clientConfig:
+      service:
+        name: capo-webhook-service
+        namespace: d8-cloud-provider-openstack
+        path: /validate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackmachinetemplate
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.openstackmachinetemplate.infrastructure.cluster.x-k8s.io
+    rules:
+      - apiGroups:
+          - infrastructure.cluster.x-k8s.io
+        apiVersions:
+          - v1alpha6
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - openstackmachinetemplates
+    sideEffects: None
