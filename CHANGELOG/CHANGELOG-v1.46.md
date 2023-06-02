@@ -85,6 +85,7 @@
  - **[candi]** Update bashible network bootstrap in AWS cloud to use IMDSv2 for obtaining instance metadata. [#4632](https://github.com/deckhouse/deckhouse/pull/4632)
  - **[candi]** Events created by bashible get connected to the relevant node objects. [#4623](https://github.com/deckhouse/deckhouse/pull/4623)
  - **[cloud-data-crd]** The `cluster-autoscaler-crd module has been renamed to the `cloud-data-crd` module. [#4497](https://github.com/deckhouse/deckhouse/pull/4497)
+ - **[cni-flannel]** flannel's entrypoint now correctly passes arguments to the flannel itself. [#4837](https://github.com/deckhouse/deckhouse/pull/4837)
  - **[cni-flannel]** Fix cleanup flannel used IPs on migration from docker to containerd. [#4306](https://github.com/deckhouse/deckhouse/pull/4306)
  - **[control-plane-manager]** Fix errors in control-plane-manager converge and preflight checks. [#4822](https://github.com/deckhouse/deckhouse/pull/4822)
     control-plane-manager will restart.
