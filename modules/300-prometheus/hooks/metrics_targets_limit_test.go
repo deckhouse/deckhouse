@@ -72,6 +72,15 @@ var _ = Describe("Modules :: prometheus :: hooks :: metrics_targets_limit ::", f
     "activeTargets": [
       {
         "labels": {
+          "instance": "kube-state-metrics.d8-monitoring.svc.cluster.local.:8080",
+          "job": "kube-state-metrics",
+          "scrape_endpoint": "main"
+        },
+        "scrapePool": "kube-state-metrics/main",
+        "lastError": ""
+      },
+      {
+        "labels": {
           "instance": "10.128.0.93:9100",
           "job": "custom-test2",
           "namespace": "default",
