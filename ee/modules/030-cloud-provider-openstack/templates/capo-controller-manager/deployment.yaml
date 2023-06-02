@@ -76,9 +76,17 @@ spec:
         - --leader-elect
         - --v=2
         - --metrics-bind-addr=127.0.0.1:8081
+        - --health-addr=$(HOST_IP):9441
+        - --namespace=d8-capi-system
+        - --webhook-port=9444
+        env:
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
         ports:
         - name: https
-          containerPort: 9440
+          containerPort: 9441
         livenessProbe:
           httpGet:
             path: /healthz

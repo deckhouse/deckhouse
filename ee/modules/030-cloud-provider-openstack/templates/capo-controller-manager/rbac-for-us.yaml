@@ -13,83 +13,144 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capo-controller-manager")) | nindent 2 }}
 rules:
 - apiGroups:
-  - ""
+    - ""
   resources:
-  - events
+    - events
   verbs:
-  - create
-  - patch
-  - update
+    - create
+    - get
+    - list
+    - patch
+    - update
+    - watch
 - apiGroups:
-  - ""
+    - ""
   resources:
-  - nodes
+    - secrets
   verbs:
-  - '*'
+    - get
+    - list
+    - watch
 - apiGroups:
-  - ""
+    - cluster.x-k8s.io
   resources:
-  - nodes/status
+    - clusters
+    - clusters/status
   verbs:
-  - patch
+    - get
+    - list
+    - watch
 - apiGroups:
-  - ""
+    - cluster.x-k8s.io
   resources:
-  - services
-  - services/status
+    - machines
+    - machines/status
   verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
+    - get
+    - list
+    - watch
 - apiGroups:
-  - ""
+    - infrastructure.cluster.x-k8s.io
   resources:
-  - serviceaccounts
+    - openstackclusters
   verbs:
-  - create
-  - get
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
 - apiGroups:
-  - ""
+    - infrastructure.cluster.x-k8s.io
   resources:
-  - persistentvolumes
+    - openstackclusters/status
   verbs:
-  - '*'
+    - get
+    - patch
+    - update
 - apiGroups:
-  - ""
+    - infrastructure.cluster.x-k8s.io
   resources:
-  - endpoints
+    - openstackmachines
   verbs:
-  - create
-  - get
-  - list
-  - watch
-  - update
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
 - apiGroups:
-  - ""
+    - infrastructure.cluster.x-k8s.io
   resources:
-  - configmaps
+    - openstackmachines/status
   verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - list
-  - get
-  - watch
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - get
-  - create
-  - update
+    - get
+    - patch
+    - update
+---
+# permissions to do leader election.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capo-controller-manager")) | nindent 2 }}
+  name: capo-controller-manager:capo-leader-election-role
+  namespace: d8-cloud-provider-openstack
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+  - apiGroups:
+      - "coordination.k8s.io"
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capo-controller-manager")) | nindent 2 }}
+  name: capo-controller-manager:capo-leader-election-rolebinding
+  namespace: d8-cloud-provider-openstack
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: capo-controller-manager:capo-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: capo-controller-manager
+    namespace: d8-cloud-provider-openstack
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
