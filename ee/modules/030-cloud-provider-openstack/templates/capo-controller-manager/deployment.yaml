@@ -26,6 +26,7 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: policy/v1
@@ -74,7 +75,7 @@ spec:
         args:
         - --leader-elect
         - --v=2
-        - --metrics-bind-addr=127.0.0.1:8080
+        - --metrics-bind-addr=127.0.0.1:8081
         ports:
         - name: https
           containerPort: 9440
@@ -115,7 +116,7 @@ spec:
               excludePaths:
               - /healthz
               upstreams:
-              - upstream: http://127.0.0.1:8080/
+              - upstream: http://127.0.0.1:8081/
                 path: /
                 authorization:
                   resourceAttributes:
