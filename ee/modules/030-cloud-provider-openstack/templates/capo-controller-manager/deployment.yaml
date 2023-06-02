@@ -95,20 +95,20 @@ spec:
               fieldRef:
                 fieldPath: status.hostIP
         ports:
-        - name: https
+        - name: healthz
           containerPort: 9441
+          protocol: TCP
         - name: webhook-server
           containerPort: 9444
+          protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz
-            port: https
-            scheme: HTTPS
+            port: healthz
         readinessProbe:
           httpGet:
-            path: /healthz
-            port: https
-            scheme: HTTPS
+            path: /readyz
+            port: healthz
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
