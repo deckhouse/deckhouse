@@ -76,7 +76,7 @@ func main() {
 	}
 
 	var flannelArgs []string
-	flannelArgs = append(flannelArgs, "flannel")
+	flannelArgs = append(flannelArgs, "flanneld")
 	flannelArgs = append(flannelArgs, os.Args[1:]...)
 	for _, ip := range allIPs {
 		flannelArgs = append(flannelArgs, "-iface", ip)
