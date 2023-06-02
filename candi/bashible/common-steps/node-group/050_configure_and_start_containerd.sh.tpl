@@ -115,7 +115,7 @@ oom_score = 0
       default_runtime_name = "runc"
       no_pivot = false
       disable_snapshot_annotations = true
-      discard_unpacked_layers = false
+      discard_unpacked_layers = true
       [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
         runtime_type = ""
         runtime_engine = ""
@@ -193,6 +193,16 @@ else
 fi
 
 bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
+
+# TODO remove when the next version is released !!!
+#
+# This is a oneshot job to remove unnecessary blobs (compressd image layers)
+# pulled before changing the `discard_unpacked_layer` option. In the future,
+# it will be removed automatically after image has been pulled and unpacked.
+#
+# Clean content to save disk space
+bb-log-info "Removing containerd content (unnecessary blobs) to save disk space"
+ctr -n k8s.io content prune references
 
 bb-sync-file /etc/crictl.yaml - << "EOF"
 runtime-endpoint: unix:/var/run/containerd/containerd.sock
