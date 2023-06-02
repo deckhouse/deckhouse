@@ -29,6 +29,23 @@ import (
 	"net/http"
 )
 
+func Before(f *HookExecutionConfig, body string) {
+	BeforeEach(func() {
+		// Mock HTTP client to emulate prom targets.
+		buf := bytes.NewBufferString(fmt.Sprintf(`%s`, body))
+		rc := io.NopCloser(buf)
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				Header:     map[string][]string{"Content-Type": {"application/json"}},
+				StatusCode: http.StatusOK,
+				Body:       rc,
+			}, nil)
+		f.KubeStateSet(``)
+		f.RunHook()
+	})
+}
+
 var _ = Describe("Modules :: prometheus :: hooks :: metrics_targets_limit ::", func() {
 	const (
 		nolimit = `
@@ -68,26 +85,10 @@ var _ = Describe("Modules :: prometheus :: hooks :: metrics_targets_limit ::", f
 }`
 	)
 
+	f := HookExecutionConfigInit(``, ``)
+
 	Context("No targets with limits", func() {
-		f := HookExecutionConfigInit(``, ``)
-
-		BeforeEach(func() {
-			// Mock HTTP client to emulate prom targets.
-			buf := bytes.NewBufferString(fmt.Sprintf(`%s`, nolimit))
-			rc := io.NopCloser(buf)
-			dependency.TestDC.HTTPClient.DoMock.
-				Expect(&http.Request{}).
-				Return(&http.Response{
-					Header:     map[string][]string{"Content-Type": {"application/json"}},
-					StatusCode: http.StatusOK,
-					Body:       rc,
-				}, nil)
-
-			f.KubeStateSet(``)
-			f.RunHook()
-		})
-
-		f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
+		Before(f, nolimit)
 
 		It("Hook must execute successfully", func() {
 			m := f.MetricsCollector.CollectedMetrics()
@@ -102,25 +103,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: metrics_targets_limit ::", f
 	})
 
 	Context("No targets with limits", func() {
-		f := HookExecutionConfigInit(``, ``)
-
-		BeforeEach(func() {
-			// Mock HTTP client to emulate prom targets.
-			buf := bytes.NewBufferString(fmt.Sprintf(`%s`, limit))
-			rc := io.NopCloser(buf)
-			dependency.TestDC.HTTPClient.DoMock.
-				Expect(&http.Request{}).
-				Return(&http.Response{
-					Header:     map[string][]string{"Content-Type": {"application/json"}},
-					StatusCode: http.StatusOK,
-					Body:       rc,
-				}, nil)
-
-			f.KubeStateSet(``)
-			f.RunHook()
-		})
-
-		f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
+		Before(f, limit)
 
 		It("Hook must execute successfully", func() {
 			m := f.MetricsCollector.CollectedMetrics()
