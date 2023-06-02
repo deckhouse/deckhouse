@@ -75,7 +75,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	flannelArgs := os.Args[1:]
+	var flannelArgs []string
+	flannelArgs = append(flannelArgs, "flanneld")
+	flannelArgs = append(flannelArgs, os.Args[1:]...)
 	for _, ip := range allIPs {
 		flannelArgs = append(flannelArgs, "-iface", ip)
 	}
