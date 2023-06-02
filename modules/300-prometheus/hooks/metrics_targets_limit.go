@@ -19,12 +19,14 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"net/http"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	"net/http"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
