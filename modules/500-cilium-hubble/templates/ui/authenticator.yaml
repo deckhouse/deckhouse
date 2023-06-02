@@ -8,7 +8,9 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "cilium-hubble" )) | nindent 2 }}
 spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "hubble") }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- with .Values.ciliumHubble.auth.allowedUserGroups }}
   allowedGroups:
