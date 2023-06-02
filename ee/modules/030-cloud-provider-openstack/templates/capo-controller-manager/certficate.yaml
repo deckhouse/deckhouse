@@ -4,7 +4,7 @@ kind: Certificate
 metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
   name: capo-serving-cert
-  namespace: d8-cluster-provider-openstack
+  namespace: d8-cloud-provider-openstack
 spec:
   dnsNames:
     - capo-webhook-service.d8-capi-system.svc
