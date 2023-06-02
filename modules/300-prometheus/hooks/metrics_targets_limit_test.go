@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
@@ -32,7 +31,7 @@ import (
 func Before(f *HookExecutionConfig, body string) {
 	BeforeEach(func() {
 		// Mock HTTP client to emulate prom targets.
-		buf := bytes.NewBufferString(fmt.Sprintf(`%s`, body))
+		buf := bytes.NewBufferString(body)
 		rc := io.NopCloser(buf)
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).

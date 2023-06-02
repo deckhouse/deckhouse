@@ -56,7 +56,7 @@ func makePrometheusRequest(promURL string, dc dependency.Container) ([]Target, e
 
 	req, err := http.NewRequest("GET", promURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("cannot create http conection: %v", err)
+		return nil, fmt.Errorf("cannot create http connection: %v", err)
 	}
 	err = d8http.SetKubeAuthToken(req)
 	if err != nil {
@@ -65,7 +65,7 @@ func makePrometheusRequest(promURL string, dc dependency.Container) ([]Target, e
 
 	res, err := cl.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("cannot http conection: %v", err)
+		return nil, fmt.Errorf("cannot http connection: %v", err)
 	}
 	defer res.Body.Close()
 
