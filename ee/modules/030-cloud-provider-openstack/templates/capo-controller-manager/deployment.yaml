@@ -68,6 +68,12 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: capo-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: capo-webhook-service-cert
       containers:
       - name: capo-controller-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -79,6 +85,10 @@ spec:
         - --health-addr=$(HOST_IP):9441
         - --namespace=d8-capi-system
         - --webhook-port=9444
+        volumeMounts:
+          - mountPath: /tmp/k8s-webhook-server/serving-certs
+            name: cert
+            readOnly: true
         env:
           - name: HOST_IP
             valueFrom:
