@@ -34,18 +34,20 @@
       summary: Target is down
 
   - alert: TargetSampleLimitExceeded
-    expr: max by (namespace, pod) (increase(prometheus_target_scrapes_exceeded_sample_limit_total[__SCRAPE_INTERVAL_X_2__])) > 0
+    expr: |
+      sum without (
+        exported_instance, instance, exported_job, exported_pod, pod, scrape_source, tier, hook, module
+      ) (
+        label_replace(
+          d8_prometheus_target_limits_metrics,
+        "job", "$1", "exported_job", "(.*)")
+      ) > 0
     for: __SCRAPE_INTERVAL_X_2__
     labels:
       severity_level: "7"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_labels_as_annotations: "namespace,pod"
       description: |
         Some targets are down because of a sample limit exceeded.
-
-        To find the targets, you should go to the "Status/Targets" menu in Prometheus and search by the `sample limit exceeded` keyword or
-        `kubectl -n d8-monitoring exec -it prometheus-main-0 -- curl localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.lastError=="sample limit exceeded") | .labels'`
-
       summary: Scrapes are exceding sample limit
