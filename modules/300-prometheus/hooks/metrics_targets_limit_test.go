@@ -26,6 +26,37 @@ import (
 )
 
 var _ = Describe("Modules :: prometheus :: hooks :: metrics_targets_limit ::", func() {
+	const (
+		nolimit = `
+{
+  "status": "success",
+  "data": {
+    "activeTargets": [
+      {
+        "labels": {
+          "instance": "kube-state-metrics.d8-monitoring.svc.cluster.local.:8080",
+          "job": "kube-state-metrics",
+          "scrape_endpoint": "main"
+        },
+        "scrapePool": "kube-state-metrics/main"
+      }
+}
+
+
+
+{
+  "global": {
+  },
+  "flantIntegration": {
+    "internal": {
+      "licenseKey": "xxx"
+    }
+  }
+}`
+		limit = `
+
+`
+	)
 
 	f := HookExecutionConfigInit(``, ``)
 
@@ -34,6 +65,8 @@ var _ = Describe("Modules :: prometheus :: hooks :: metrics_targets_limit ::", f
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
+
+		f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 		It("Hook must execute successfully", func() {
 			m := f.MetricsCollector.CollectedMetrics()
