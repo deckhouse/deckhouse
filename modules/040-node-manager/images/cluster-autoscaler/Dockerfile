@@ -1,6 +1,6 @@
 ARG BASE_ALPINE
-ARG  BASE_GOLANG_18_ALPINE
-FROM $BASE_GOLANG_18_ALPINE as artifact
+ARG  BASE_GOLANG_19_ALPINE
+FROM $BASE_GOLANG_19_ALPINE as artifact
 WORKDIR /go/src/github.com/gardener/autoscaler
 COPY "patches/daemonset-eviction.patch" /
 COPY "patches/scale-from-zero.patch" /
