@@ -201,8 +201,17 @@ bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "$
 # it will be removed automatically once they have been pulled and unpacked.
 #
 # Clean content to save disk space
-bb-log-info "Removing compressed image layers from containerd's content store"
-ctr -n k8s.io content prune references
+if [ ! -f /var/lib/bashible/containerd_content_store_is_cleared ] ; then
+  bb-log-info "Removing compressed image layers from containerd's content store"
+
+  ctr -n k8s.io content prune references
+  if [ $? -eq 0 ]; then
+    touch /var/lib/bashible/containerd_content_store_is_cleared
+  else
+    bb-log-warning "Failed to clean up containerd's content store. Skip this for now"
+  fi
+fi
+
 
 bb-sync-file /etc/crictl.yaml - << "EOF"
 runtime-endpoint: unix:/var/run/containerd/containerd.sock
