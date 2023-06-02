@@ -6,11 +6,11 @@ docker:
   ENV:
     WORKDIR: /
     USER: 65534
-    ENTRYPOINT: "/manager"
+    ENTRYPOINT: "/capo-controller-manager"
 import:
   - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /src/manager
-    to: /capi-controller-manager
+    to: /capo-controller-manager
     before: setup
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
