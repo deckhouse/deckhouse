@@ -1,8 +1,8 @@
 diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
-index c3deb5e64..2db8bd502 100644
+index 52fd0b9b8..06e1ed259 100644
 --- a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
 +++ b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
-@@ -733,7 +733,27 @@ func (m *McmManager) GetMachineDeploymentNodeTemplate(machinedeployment *Machine
+@@ -759,7 +759,27 @@ func (m *McmManager) GetMachineDeploymentNodeTemplate(machinedeployment *Machine
  			return nil, cloudprovider.ErrNotImplemented
  		}
  	default:
@@ -29,5 +29,5 @@ index c3deb5e64..2db8bd502 100644
 +			return nil, cloudprovider.ErrNotImplemented
 +		}
  	}
-
+ 
  	labels := make(map[string]string)
