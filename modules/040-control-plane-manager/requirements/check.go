@@ -40,7 +40,7 @@ func init() {
 		}
 
 		if currentVersion.LessThan(desiredVersion) {
-			return false, errors.New("current kubernetes version is lower then required")
+			return false, errors.New("current kubernetes version is lower than required")
 		}
 
 		return true, nil
