@@ -6,7 +6,7 @@ docker:
   ENV:
     WORKDIR: /
     USER: 65534
-    ENTRYPOINT: "/capo-controller-manager"
+  ENTRYPOINT: ["/capo-controller-manager"]
 import:
   - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /src/manager
