@@ -56,7 +56,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pdCsiPlugin":               "imageHash-cloudProviderGcp-pdCsiPlugin",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
-		"capiControllerManager":     "imageHash-cloudProviderOpenstack-capiControllerManager",
+		"capoControllerManager":     "imageHash-cloudProviderOpenstack-capoControllerManager",
 		"cinderCsiPlugin122":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin122",
 		"cinderCsiPlugin123":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin123",
 		"cinderCsiPlugin124":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin124",

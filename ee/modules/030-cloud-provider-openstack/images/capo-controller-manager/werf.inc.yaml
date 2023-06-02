@@ -5,7 +5,7 @@ from: {{ .Images.BASE_SCRATCH }}
 docker:
   ENV:
     WORKDIR: /
-    USER: 65532
+    USER: 65534
     ENTRYPOINT: "/manager"
 import:
   - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
