@@ -196,12 +196,12 @@ bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "$
 
 # TODO remove when the next version is released !!!
 #
-# This is a oneshot job to remove unnecessary blobs (compressd image layers)
+# This is a oneshot job to remove unnecessary blobs (compressed image layers)
 # pulled before changing the `discard_unpacked_layer` option. In the future,
-# it will be removed automatically after image has been pulled and unpacked.
+# it will be removed automatically once they have been pulled and unpacked.
 #
 # Clean content to save disk space
-bb-log-info "Removing containerd content (unnecessary blobs) to save disk space"
+bb-log-info "Removing compressed image layers from containerd's content store"
 ctr -n k8s.io content prune references
 
 bb-sync-file /etc/crictl.yaml - << "EOF"
