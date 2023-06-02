@@ -6,6 +6,8 @@ metadata:
     cert-manager.io/inject-ca-from: d8-capi-system/capi-serving-cert
     controller-gen.kubebuilder.io/version: v0.11.4
   labels:
+    heritage: deckhouse
+    module: node-manager
     cluster.x-k8s.io/provider: cluster-api
   name: clusters.cluster.x-k8s.io
 spec:
