@@ -129,6 +129,21 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-c", "kubectl -n $(kubectl get ns -o custom-columns=NAME:metadata.name | grep d8-cloud-provider) logs -l app=cloud-controller-manager --tail=3000"},
 		},
 		{
+			File: "vpa-admission-controller-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-admission-controller", "--tail", "3000", "-c", "admission-controller"},
+		},
+		{
+			File: "vpa-recommender-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-recommender", "--tail", "3000", "-c", "recommender"},
+		},
+		{
+			File: "vpa-updater-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-updater", "--tail", "3000", "-c", "updater"},
+		},
+		{
 			File: "terraform-check.json",
 			Cmd:  "kubectl",
 			Args: []string{"exec", "deploy/terraform-state-exporter", "--", "dhctl", "terraform", "check", "--logger-type", "json", "-o", "json"},

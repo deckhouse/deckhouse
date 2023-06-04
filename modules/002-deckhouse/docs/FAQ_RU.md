@@ -57,6 +57,9 @@ kubectl logs job.batch/kube-bench
 * логи Deckhouse
 * логи machine controller manager
 * логи cloud controller manager
+* логи vertical-pod-autoscaler admission controller
+* логи vertical-pod-autoscaler recommender
+* логи vertical-pod-autoscaler updater
 * все горящие уведомления в Prometheus
 * метрики terraform-state-exporter
 
