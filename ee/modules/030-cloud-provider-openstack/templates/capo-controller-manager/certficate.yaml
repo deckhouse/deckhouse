@@ -7,8 +7,8 @@ metadata:
   namespace: d8-cloud-provider-openstack
 spec:
   dnsNames:
-    - capo-webhook-service.d8-capi-system.svc
-    - capo-webhook-service.d8-capi-system.svc.cluster.local
+    - capo-webhook-service.d8-cloud-provider-openstack.svc
+    - capo-webhook-service.d8-cloud-provider-openstack.local
   issuerRef:
     kind: ClusterIssuer
     name: selfsigned

@@ -1,0 +1,20 @@
+{{- define "clouds_yaml_render" }}
+clouds:
+  openstack:
+    auth:
+      auth_url: {{ .Values.cloudProviderOpenstack.internal.connection.authURL | quote }}
+      username: {{ .Values.cloudProviderOpenstack.internal.connection.username | quote }}
+      project_name: {{ .Values.cloudProviderOpenstack.internal.connection.tenantName | quote }}
+      user_domain_name: {{ .Values.cloudProviderOpenstack.internal.connection.domainName | quote }}
+    region_name: {{ .Values.cloudProviderOpenstack.internal.connection.region | quote }}
+    interface: "public"
+    identity_api_version: 3
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloud-config
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  clouds.yaml: {{ include "clouds_yaml_render" . | b64enc }}
