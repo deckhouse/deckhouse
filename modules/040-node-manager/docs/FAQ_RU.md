@@ -98,14 +98,14 @@ search: добавить ноду в кластер, добавить узел �
    [system]
    system-0
    system-1
-   
+
    [system:vars]
    node_group=system
-   
+
    [worker]
    worker-0
    worker-1
-   
+
    [worker:vars]
    node_group=worker
    ```
@@ -283,7 +283,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="5.15.0-53-generic"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -291,13 +291,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-apt-install "linux-image-${desired_version}"
 ```
@@ -331,7 +331,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="3.10.0-1160.42.2.el7.x86_64"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -339,13 +339,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-yum-install "kernel-${desired_version}"
 ```
@@ -907,4 +907,35 @@ spec:
 
 Шаблоны узлов (labels/taints) для NodeGroup `worker` и `worker-spot` должны быть одинаковыми, или, как минимум, подходить для той нагрузки, которая запускает процесс увеличения кластера.
 
+## Как интерпретировать состояния Node Group
+
+**Ready** - Node Group содержит минимально необходимое число Scheduled Nodes. Расчитываются по формуле:
+```go
+isReady := len(nodes) == 0
+
+if readySchedulableNodes > 0 {
+	isReady = readySchedulableNodes >= minPerAllZone
+}
+```
+
+**Updating** - Node Group содержит как минимум одну Node, в которой в анотации присутствует
+запись с префиксом ```update.node.deckhouse.io```
+
+**WaitingForDisruptiveApproval** - Node Group содержит как минимум одну Node, в которой
+в анотации присутствует запись ```update.node.deckhouse.io/disruption-required``` и
+отсутствует запись ```update.node.deckhouse.io/disruption-approved```
+
+**Scaling** - Расчитывается только для Node Group с типом ```CloudEphemeral``` по формуле:
+```go
+inUpScale := ng.Desired > int32(len(nodes))
+inDownScale = inDownScale || ng.Desired < ng.Instances
+
+isScaling := inDownScale || inUpScale
+```
+
+```ng.Desired``` - Node Group параметр отвечающий за настройку желаемого числа Node в группе
+```ng.Instances``` - Число инстансов в Node Group
+```inDownScale``` - начальное значение равно ```true``` если хотябы одна нода помечена к удалению
+
+**Error** - Node Group 
 {% endraw %}

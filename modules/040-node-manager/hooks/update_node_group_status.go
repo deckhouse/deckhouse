@@ -39,11 +39,9 @@ import (
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
-var (
-	// cache for event messages to avoid event spamming
-	// it's much harder to increment counter for existing event
-	ngStatusCache = make(map[string]string)
-)
+// cache for event messages to avoid event spamming
+// it's much harder to increment counter for existing event
+var ngStatusCache = make(map[string]string)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Settings: &go_hook.HookConfigSettings{
@@ -402,7 +400,13 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 		if len(failureReason) > 0 {
 			errors = append(errors, failureReason)
 		}
-		newConditions := conditions.CalculateNodeGroupConditions(ngForConditions, nodesForCalcConditions, nodeGroup.Conditions, errors)
+		newConditions := conditions.CalculateNodeGroupConditions(
+			ngForConditions,
+			nodesForCalcConditions,
+			nodeGroup.Conditions,
+			errors,
+			int(minPerZone),
+		)
 
 		patch := buildUpdateStatusPatch(
 			nodesNum, readyNodesNum, uptodateNodesCount,

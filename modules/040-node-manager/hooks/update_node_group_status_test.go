@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: node-manager :: hooks :: update_node_group_status ::", func() {
+var _ = FDescribe("Modules :: node-manager :: hooks :: update_node_group_status ::", func() {
 	const (
 		stateCloudNG1 = `
 ---
@@ -364,7 +364,7 @@ status:
 				  "conditions": [
                     {
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
+						"status": "True",
               			"type": "Ready"
 					},
 					{
@@ -462,7 +462,7 @@ status:
 				  "conditions": [
                     {
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
+						"status": "True",
               			"type": "Ready"
 					},
 					{
@@ -873,8 +873,8 @@ status:
 						cloudNG1+machineDeploy+machines+stateCloudProviderSecret+configurationChecksums+nodes, 2))
 					f.RunHook()
 				})
-				It("Sets to False", func() {
-					assertReadyCondition(f, ngv1.ConditionFalse)
+				It("Sets to True", func() {
+					assertReadyCondition(f, ngv1.ConditionTrue)
 				})
 			})
 
