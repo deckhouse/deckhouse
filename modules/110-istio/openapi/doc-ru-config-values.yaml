@@ -125,6 +125,33 @@ properties:
         items:
           type: string
           pattern: '^[0-9]{1,5}$'
+      resourceManagement:
+        description: |
+          Настройки управления ресурсами istio-sidecar.
+
+          **Внимание!** Настройка применяется только для новых pods с istio-proxy.
+        properties:
+          mode:
+          static:
+            description: |
+              Настройки управления ресурсами в статическом режиме.
+            properties:
+              requests:
+                properties:
+                  cpu:
+                    description: |
+                      Реквесты CPU.
+                  memory:
+                    description: |
+                      Реквесты памяти.
+              limits:
+                properties:
+                  cpu:
+                    description: |
+                      Лимиты CPU.
+                  memory:
+                    description: |
+                      Лимиты памяти.
   ca:
     description: Явно заданный корневой сертификат, который будет использован для подписывания индивидуальных сертификатов сервисов в случае включения MTLS.
     properties:

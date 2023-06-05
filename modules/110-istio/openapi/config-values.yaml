@@ -259,6 +259,74 @@ properties:
         example: ["8080", "8443"]
         x-examples:
         - ["8080", "8443"]
+      resourcesManagement:
+        description: |
+          istio sidecar resources management options.
+
+          **Caution!** The setting only applies to new pods with istio-proxy.
+        default: {}
+        x-examples:
+          - mode: Static
+            static:
+              requests:
+                cpu: "100m"
+                memory: "128Mi"
+              limits:
+                cpu: 2
+                memory: "1Gi"
+        properties:
+          mode:
+            type: string
+            description: |
+              The mode for managing resource requests. Classical `Static` requests/limit.
+            enum: [ 'Static']
+            default: 'Static'
+          static:
+            type: object
+            description: |
+              Static resource management settings.
+            properties:
+              requests:
+                type: object
+                description: |
+                  Requests configuration.
+                properties:
+                  cpu:
+                    oneOf:
+                      - type: string
+                        pattern: "^[0-9]+m?$"
+                      - type: number
+                    default: '100m'
+                    description: |
+                      CPU requests.
+                  memory:
+                    oneOf:
+                      - type: string
+                        pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      - type: number
+                    default: '128Mi'
+                    description: |
+                      Memory requests.
+              limits:
+                type: object
+                description: |
+                  Limits configuration.
+                properties:
+                  cpu:
+                    oneOf:
+                      - type: string
+                        pattern: "^[0-9]+m?$"
+                      - type: number
+                    description: |
+                      CPU limits.
+                  memory:
+                    oneOf:
+                      - type: string
+                        pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      - type: number
+                    default: '1Gi'
+                    description: |
+                      Memory limits.
   ca:
     type: object
     description: Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.

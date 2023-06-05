@@ -140,7 +140,8 @@ spec:
       proxy:
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
         clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
-        resources: {}
+        resources:
+{{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.sidecar.resourcesManagement "1Mi") | nindent 10 }}
         logLevel: warning
         componentLogLevel: "misc:error"
         includeIPRanges:      {{ $.Values.istio.sidecar.includeOutboundIPRanges | default list "0.0.0.0/0" | join "," | quote }}
