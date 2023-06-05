@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: node-manager :: hooks :: update_node_group_status ::", func() {
+var _ = Describe("Modules :: node-manager :: hooks :: update_node_group_status ::", func() {
 	const (
 		stateCloudNG1 = `
 ---
