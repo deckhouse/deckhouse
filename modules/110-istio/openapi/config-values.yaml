@@ -266,13 +266,11 @@ properties:
           **Caution!** The setting only applies to new pods with istio-proxy.
         default: {}
         x-examples:
-          - mode: Static
-            static:
+          - static:
               requests:
                 cpu: "100m"
                 memory: "128Mi"
               limits:
-                cpu: 2
                 memory: "1Gi"
         properties:
           mode:
