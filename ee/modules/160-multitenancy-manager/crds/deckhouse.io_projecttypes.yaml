@@ -73,9 +73,9 @@ spec:
                     Fully compatible with all `helm` functions.
 
                     it is possible to use several types of `values`:
-                    - `{{ .projectName }}` stores the name `Project` (see [Creating a Isolated Environment](usage.html#create-an-isolated-environment)).
+                    - `{{ .projectName }}` stores the name of the `Project` (see [Creating a Isolated Environment](usage.html#create-an-isolated-environment)).
                     - `{{ .projectTypeName }}` stores the name of the `ProjectType`.
-                    - `{{ .params }}` stores a dictionary of custom values, described in `.spec.openAPI` and defined in the `Project` `.spec.template` field.
+                    - `{{ .params }}` stores a dictionary of custom values, described in the `.spec.openAPI` and defined in the `Project` `.spec.template` field.
 
                     > **Note!** Specifying `.metadata.namespace` fields for objects is optional,
                     > as they are automatically setted with the name of the created `Project` (see [Creating an isolated environment](usage.html#create-an-isolated-environment))).
