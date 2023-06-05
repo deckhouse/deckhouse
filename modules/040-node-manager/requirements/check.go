@@ -28,7 +28,7 @@ import (
 const (
 	minUbuntuVersionValuesKey      = "nodeManager:nodesMinimalOSVersionUbuntu"
 	requirementsKey                = "nodesMinimalOSVersionUbuntu"
-	containerDRequirementsKey      = "containerDOnly"
+	containerDRequirementsKey      = "containerdOnAllNodes"
 	hasNodesOtherThanContainerDKey = "nodeManager:hasNodesOtherThanContainerD"
 )
 
