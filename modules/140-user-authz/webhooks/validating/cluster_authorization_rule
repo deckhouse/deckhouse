@@ -76,6 +76,10 @@ function __main__() {
   done
   unset IFS
 
+  set -x
+
+  context::jq -r '.'
+  
   if context::jq -er '.review.request.object.spec.subjects // [] | length == 0' >/dev/null 2>&1; then
     message="$message Field \".spec.subjects\" must not be empty"
   fi
@@ -89,6 +93,7 @@ EOF
 {"allowed":false, "message":"$message"}
 EOF
   fi
+  set +x
 }
 
 hook::run "$@"
