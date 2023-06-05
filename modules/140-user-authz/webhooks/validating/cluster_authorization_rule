@@ -79,9 +79,9 @@ function __main__() {
   set -x
 
   context::jq -r '.'
-  
+
   if context::jq -er '.review.request.object.spec.subjects // [] | length == 0' >/dev/null 2>&1; then
-    message="$message Field \".spec.subjects\" must not be empty"
+    message="$message Field <.spec.subjects> must not be empty"
   fi
 
   if [[ "$message" == "error:" ]]; then
