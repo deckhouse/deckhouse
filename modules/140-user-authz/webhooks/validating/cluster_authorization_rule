@@ -76,7 +76,7 @@ function __main__() {
   done
   unset IFS
 
-  if context::jq -er '.review.request.object.spec.subjects // [] | length == 0'; then
+  if context::jq -er '.review.request.object.spec.subjects // [] | length == 0' >/dev/null 2>&1; then
     message="Field \".spec.subjects\" must not be empty"
   fi
 
