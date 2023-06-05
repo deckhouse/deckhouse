@@ -76,6 +76,10 @@ function __main__() {
   done
   unset IFS
 
+  if context::jq -er '.review.request.object.spec.subjects // [] | length == 0'; then
+    message="Field \".spec.subjects\" must not be empty"
+  fi
+
   if [[ "$message" == "error:" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
