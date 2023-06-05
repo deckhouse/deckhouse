@@ -937,5 +937,5 @@ isScaling := inDownScale || inUpScale
 ```ng.Instances``` - Число инстансов в Node Group
 ```inDownScale``` - начальное значение равно ```true``` если хотябы одна нода помечена к удалению
 
-**Error** - Node Group 
+**Error** -  При создании э в Node Group
 {% endraw %}
