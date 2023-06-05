@@ -916,6 +916,28 @@ entries:
                   url: /modules/140-user-authz/cr.html
             - title: FAQ
               url: /modules/140-user-authz/faq.html
+        - title: Multitenancy
+          d8Revision: ee
+          featureStatus: experimental
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/160-multitenancy-manager/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/160-multitenancy-manager/configuration.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/160-multitenancy-manager/configuration.html
+                - title: Custom Resources
+                  url: /modules/160-multitenancy-manager/cr.html
         - title:
             en: Admission Policy
             ru: Политики контроля доступа
@@ -967,56 +989,56 @@ entries:
             en: Other modules
             ru: Другие модули
           folders:
-          - title: network-policy-engine
-            folders:
-              - title:
-                  en: Description
-                  ru: Описание
-                url: /modules/050-network-policy-engine/
-              - title:
-                  en: Examples
-                  ru: Примеры
-                url: /modules/050-network-policy-engine/examples.html
-              - title:
-                  en: Configuration
-                  ru: Настройки
-                url: /modules/050-network-policy-engine/configuration.html
-          - title: cert-manager
-            folders:
-              - title:
-                  en: Description
-                  ru: Описание
-                url: /modules/101-cert-manager/
-              - title:
-                  en: Usage
-                  ru: Примеры
-                url: /modules/101-cert-manager/usage.html
-              - title:
-                  en: Reference
-                  ru: Справка
-                folders:
-                  - title:
-                      en: Configuration
-                      ru: Настройки
-                    url: /modules/101-cert-manager/configuration.html
-                  - title: Custom Resources
-                    url: /modules/101-cert-manager/cr.html
-              - title: FAQ
-                url: /modules/101-cert-manager/faq.html
-          - title: operator-trivy
-            d8Revision: ee
-            featureStatus: experimental
-            folders:
-              - title:
-                  en: Description
-                  ru: Описание
-                url: /modules/500-operator-trivy/
-              - title:
-                  en: Configuration
-                  ru: Настройки
-                url: /modules/500-operator-trivy/configuration.html
-              - title: FAQ
-                url: /modules/500-operator-trivy/faq.html
+            - title: network-policy-engine
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/050-network-policy-engine/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/050-network-policy-engine/examples.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/050-network-policy-engine/configuration.html
+            - title: cert-manager
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/101-cert-manager/
+                - title:
+                    en: Usage
+                    ru: Примеры
+                  url: /modules/101-cert-manager/usage.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/101-cert-manager/configuration.html
+                    - title: Custom Resources
+                      url: /modules/101-cert-manager/cr.html
+                - title: FAQ
+                  url: /modules/101-cert-manager/faq.html
+            - title: operator-trivy
+              d8Revision: ee
+              featureStatus: experimental
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/500-operator-trivy/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/500-operator-trivy/configuration.html
+                - title: FAQ
+                  url: /modules/500-operator-trivy/faq.html
     - title:
         en: Storage
         ru: Хранилище

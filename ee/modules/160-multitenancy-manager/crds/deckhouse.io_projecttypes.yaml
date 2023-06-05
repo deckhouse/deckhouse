@@ -1,0 +1,164 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: (devel)
+  labels:
+    heritage: deckhouse
+    module: deckhouse
+  name: projecttypes.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: ProjectType
+    listKind: ProjectTypeList
+    plural: projecttypes
+    shortNames:
+      - pt
+    singular: projecttype
+  scope: Cluster
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.statusSummary.status
+          name: Ready
+          type: boolean
+        - jsonPath: .status.statusSummary.message
+          name: Message
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              description:
+                "APIVersion defines the versioned schema of this representation
+                of an object. Servers should convert recognized schemas to the latest
+                internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
+              type: string
+            kind:
+              description:
+                "Kind is a string value representing the REST resource this
+                object represents. Servers may infer this from the endpoint the client
+                submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                namespaceMetadata:
+                  description:
+                    Labels and annotations that apply to the generated Project
+                    namespaces.
+                  properties:
+                    annotations:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    labels:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  type: object
+                openAPI:
+                  additionalProperties:
+                    x-kubernetes-preserve-unknown-fields: true
+                  description:
+                    OpenAPI specification for template values (`values`)
+                    in resourcesTemplate.
+                  type: object
+                resourcesTemplate:
+                  description: |
+                    Resource templates in `helm` format to be created when starting a new `Project` (environment).
+                    Fully compatible with all `helm` functions.
+
+                    it is possible to use several types of `values`:
+                    - `{{ .projectName }}` stores the name `Project` (see [Creating a Isolated Environment](usage.html#create-an-isolated-environment)).
+                    - `{{ .projectTypeName }}` stores the name of the `ProjectType`.
+                    - `{{ .params }}` stores a dictionary of custom values, described in `.spec.openAPI` and defined in the `Project` `.spec.template` field.
+
+                    > **Note!** Specifying `.metadata.namespace` fields for objects is optional,
+                    > as they are automatically setted with the name of the created `Project` (see [Creating an isolated environment](usage.html#create-an-isolated-environment))).
+                  type: string
+                subjects:
+                  description:
+                    List of ServiceAccounts, Groups and Users to provide
+                    access to the created project (isolated environment).
+                  items:
+                    oneOf:
+                      - properties:
+                          kind:
+                            enum:
+                              - ServiceAccount
+                          name: {}
+                          namespace: {}
+                          role: {}
+                        required:
+                          - kind
+                          - name
+                          - namespace
+                          - role
+                      - properties:
+                          kind:
+                            enum:
+                              - User
+                              - Group
+                          name: {}
+                          role: {}
+                        required:
+                          - kind
+                          - name
+                          - role
+                    properties:
+                      kind:
+                        description:
+                          Kind of the target resource to apply access to
+                          project (`ServiceAccount`, `Group` or `User`).
+                        enum:
+                          - ServiceAccount
+                          - User
+                          - Group
+                        type: string
+                      name:
+                        description:
+                          The name of the target resource to apply access
+                          to the project.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description:
+                          The namespace of the target resource to apply Project
+                          access to. Required only when using `ServiceAccount` from
+                          another NS.
+                        minLength: 1
+                        pattern: "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
+                        type: string
+                      role:
+                        description: Role name from [user-authz module](../../modules/140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel)
+                        enum:
+                          - User
+                          - PrivilegedUser
+                          - Editor
+                          - Admin
+                        type: string
+                    type: object
+                  type: array
+              type: object
+            status:
+              properties:
+                statusSummary:
+                  description: Summary about ProjectType status.
+                  properties:
+                    message:
+                      description: Status message.
+                      type: string
+                    status:
+                      description: Summary of the status (ready or not ready).
+                      type: boolean
+                  type: object
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

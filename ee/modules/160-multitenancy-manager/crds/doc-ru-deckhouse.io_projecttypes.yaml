@@ -1,0 +1,73 @@
+spec:
+  Versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ""
+          properties:
+            apiVersion:
+              description: Api версия объекта
+            kind:
+              description: Kind объекта
+            metadata:
+              description: ""
+            spec:
+              description: ""
+              properties:
+                namespaceMetadata:
+                  description:
+                    Лейблы и аннотации, которые применяются к создаваемым
+                    пространствам имен Project'ов.
+                  properties:
+                    annotations:
+                      description: ""
+                    labels:
+                      description: ""
+                openAPI:
+                  description:
+                    Спецификация OpenAPI для значений (`values`) шаблона  в
+                    `resourcesTemplate`.
+                resourcesTemplate:
+                  description: |
+                    Темплейты ресурсов в формате `helm`, которые требуется создать при старте нового `Project` (окружения).
+                    Полная совместимость со всеми функциями `helm`.
+
+                    возможно использование нескольких типов `values`:
+                    - в `{{ .projectName }}` хранится имя `Project` (см [Создание изолированного окружения](usage.html#создание-изолированного-окружения)).
+                    - в `{{ .projectTypeName }}` хранится имя `ProjectType`.
+                    - в `{{ .params }}` хранится словарь пользовательских значений, описанных в `.spec.openAPI` и определенных в `Project` поле `.spec.template`.
+
+
+                    > **Внимание!** Указывать поля `.metadata.namespace` для объектов необязательно,
+                    > так как они автоматически проставятся из названия создаваемого `Project` (см [Создание изолированного окружения](usage.html#создание-изолированного-окружения)).
+                subjects:
+                  description:
+                    Список ServiceAccounts, Groups и Users для предоставления
+                    доступа к созданному проекту (изолированному окружению).
+                  items:
+                    description: ""
+                    properties:
+                      kind:
+                        description:
+                          Kind целевого ресурса для применения доступа к  проекту
+                          (ServiceAccount, Group или User).
+                      name:
+                        description: Имя целевого ресурса для применения доступа к проекту.
+                      namespace:
+                        description: |
+                          Пространство имен целевого ресурса для применения доступа Project.
+                          Требуется только при использовании `ServiceAccount` из другого NS.
+                      role:
+                        description:
+                          Уровень доступа из [модуля user-authz](../../modules/140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel),
+                          который выдается на окружение для целевого ресурса.
+            status:
+              description: ""
+              properties:
+                statusSummary:
+                  description: Сводная информация о статусе ProjectType
+                  properties:
+                    message:
+                      description: Сообщение о статусе
+                    status:
+                      description: Сводка статуса (готов или не готов).

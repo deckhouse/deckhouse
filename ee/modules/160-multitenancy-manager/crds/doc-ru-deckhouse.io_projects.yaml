@@ -1,0 +1,48 @@
+spec:
+  Versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ""
+          properties:
+            apiVersion:
+              description: Api версия объекта
+            kind:
+              description: Kind объекта
+            metadata:
+              description: ""
+            spec:
+              description: ""
+              properties:
+                description:
+                  description: Описание для Project
+                projectTypeName:
+                  description: |
+                    Имя ProjectType, который будет использоваться
+                    как шаблон для создания ресурсов Project.
+                template:
+                  description: |
+                    Значения для темплейтов ресурсов из ProjectType
+                    в формате helm values, которые соостносятся с
+                    OpenAPI спецификацией из openAPI поля ProjectType
+            status:
+              description: ""
+              properties:
+                conditions:
+                  description: Список состояний Project
+                  items:
+                    description: ""
+                    properties:
+                      message:
+                        description: ""
+                      name:
+                        description: ""
+                      status:
+                        description: ""
+                statusSummary:
+                  description: Сводная информация о статусе Project
+                  properties:
+                    message:
+                      description: Сообщение о статусе
+                    status:
+                      description: Сводка статуса (готов или не готов).
