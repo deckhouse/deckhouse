@@ -909,16 +909,17 @@ spec:
 
 ## Как интерпретировать состояния Node Group
 
-**Ready** - Node Group содержит минимально необходимое число Scheduled Nodes. Расчитываются по формуле:
+**Ready** - Node Group содержит минимально необходимое число Scheduled Nodes. Рассчитываются по формуле:
+
 ```go
 isReady := len(nodes) == 0
 
 if readySchedulableNodes > 0 {
-	isReady = readySchedulableNodes >= minPerAllZone
+  isReady = readySchedulableNodes >= minPerAllZone
 }
 ```
 
-**Updating** - Node Group содержит как минимум одну Node, в которой в анотации присутствует
+**Updating** - Node Group содержит как минимум одну Node, в которой в аннотации присутствует
 запись с префиксом ```update.node.deckhouse.io```
 
 **WaitingForDisruptiveApproval** - Node Group содержит как минимум одну Node, в которой
@@ -926,6 +927,7 @@ if readySchedulableNodes > 0 {
 отсутствует запись ```update.node.deckhouse.io/disruption-approved```
 
 **Scaling** - Расчитывается только для Node Group с типом ```CloudEphemeral``` по формуле:
+
 ```go
 inUpScale := ng.Desired > int32(len(nodes))
 inDownScale = inDownScale || ng.Desired < ng.Instances
@@ -937,5 +939,18 @@ isScaling := inDownScale || inUpScale
 ```ng.Instances``` - Число инстансов в Node Group
 ```inDownScale``` - начальное значение равно ```true``` если хотябы одна нода помечена к удалению
 
-**Error** -  При создании э в Node Group
+**Error** -  Содержит последнюю ошибку возникшую при создании инстанса в Node Group
+
+## Как заставить Werf игнорировать conditions.Ready в Node Group?
+
+Werf проверяет ```conditions.Ready```, и для больших Node Group могут возникнуть проблемы с тайм-аутами.
+Чтобы Werf игнорировал ```conditions.Ready``` необходимо в аннотацию Node Group добавить записи:
+
+```yaml
+metadata:
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    uwerf.io/track-termination-mode: NonBlocking
+```
+
 {% endraw %}

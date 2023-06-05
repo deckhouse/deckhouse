@@ -285,7 +285,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="5.15.0-53-generic"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -293,13 +293,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-apt-install "linux-image-${desired_version}"
 ```
@@ -333,7 +333,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="3.10.0-1160.42.2.el7.x86_64"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -341,13 +341,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-yum-install "kernel-${desired_version}"
 ```
@@ -904,5 +904,51 @@ If, after 30 minutes, another node needs to be deployed in the cluster, `cluster
 Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example above), the nodes will be provisioned from the `worker` NodeGroup.
 
 Note that node templates (labels/taints) for `worker` and `worker-spot` NodeGroups must be the same (or at least suitable for the load that triggers the cluster scaling process).
+
+## How to Interpret Node Group states
+
+**Ready** - Node Group contains the minimum required number of Scheduled Nodes. Calculated by the formula:
+
+```go
+isReady := len(nodes) == 0
+
+if readySchedulableNodes > 0 {
+  isReady = readySchedulableNodes >= minPerAllZone
+}
+```
+
+**Updating** - Node Group contains at least one Node in which the annotation contains
+an entry with the prefix ```update.node.deckhouse.io```
+
+**WaitingForDisruptiveApproval** - Node Group contains at least one Node in which
+the annotation contains the record ```update.node.deckhouse.io/disruption-required``` and
+there is no record ```update.node.deckhouse.io/disruption-approved```
+
+**Scaling** - Calculated only for Node Group with the type ```Cloud Ephemeral``` by the formula:
+
+```go
+inUpScale := ng.Desired > int32(len(nodes))
+inDownScale = inDownScale || ng.Desired < ng.Instances
+
+isScaling := inDownScale || inUpScale
+```
+
+```ng.Desired``` - Node Group parameter responsible for setting the desired number of Nodes in the group
+```ng.Instances``` - The number of instances in the Node Group
+```inDownScale``` - the initial value is ```true``` if at least one node is marked for deletion
+
+**Error** - Contains the last error that occurred when creating an instance in Node Group
+
+## How to make Werf ignore conditions.Ready in Node Group?
+
+Werf checks conditions.Ready and for large node groups can problems with timeouts.
+So that Werf ignores ```conditions.Ready``` it is necessary to add entries to the Node Group annotation:
+
+```yaml
+metadata:
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
+```
 
 {% endraw %}
