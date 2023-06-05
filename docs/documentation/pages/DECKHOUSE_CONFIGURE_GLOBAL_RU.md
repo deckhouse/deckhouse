@@ -12,4 +12,4 @@ lang: ru
 
 ## Параметры
 
-{{ site.data.schemas.global.config-values | format_module_configuration }}
+{{ site.data.schemas.global.config-values | format_module_configuration: "global" }}
