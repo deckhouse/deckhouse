@@ -153,6 +153,11 @@ common:
     en: Web interfaces associated with the module
     ru: Веб-интерфейсы, связанные с модулем
 
+comparison:
+  except_parameters:
+    en: "Except for the following parameters:<br />"
+    ru: "Кроме следующих параметров:<br />"
+
 features:
   experimental:
     en: This feature is actively developed. It might significantly change in the future.

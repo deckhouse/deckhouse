@@ -34,4 +34,4 @@ spec:
 ## Parameters
 {%- endif %}
 
-{{ site.data.schemas[moduleKebabName].config-values | format_module_configuration }}
+{{ site.data.schemas[moduleKebabName].config-values | format_module_configuration: moduleKebabName }}
