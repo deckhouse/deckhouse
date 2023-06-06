@@ -6,4 +6,4 @@ title: "The multitenancy-manager module: configuration"
 
 The module does not have any mandatory parameters.
 
-> **Attention!** When the module is disabled, all created environments will be deleted!
+> **Caution!** If you disable the module, all created environments will be deleted!

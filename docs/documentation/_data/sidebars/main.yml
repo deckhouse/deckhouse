@@ -925,9 +925,9 @@ entries:
                 ru: Описание
               url: /modules/160-multitenancy-manager/
             - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/160-multitenancy-manager/configuration.html
+                en: Usage
+                ru: Примеры
+              url: /modules/160-multitenancy-manager/usage.html
             - title:
                 en: Reference
                 ru: Справка
@@ -938,6 +938,8 @@ entries:
                   url: /modules/160-multitenancy-manager/configuration.html
                 - title: Custom Resources
                   url: /modules/160-multitenancy-manager/cr.html
+            - title: FAQ
+              url: /modules/160-multitenancy-manager/faq.html
         - title:
             en: Admission Policy
             ru: Политики контроля доступа

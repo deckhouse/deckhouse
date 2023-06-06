@@ -6,7 +6,7 @@ spec:
           description: ""
           properties:
             apiVersion:
-              description: Api версия объекта
+              description: api версия объекта
             kind:
               description: Kind объекта
             metadata:
