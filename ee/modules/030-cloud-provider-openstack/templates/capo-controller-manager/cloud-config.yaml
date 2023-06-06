@@ -16,6 +16,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: cloud-config
+  namespace: d8-cloud-provider-openstack
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
   clouds.yaml: {{ include "clouds_yaml_render" . | b64enc }}

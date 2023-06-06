@@ -82,8 +82,10 @@ spec:
         - /capi-kubeadm-bootstrap-controller-manager
         args:
         - --leader-elect
-        - --metrics-bind-addr=127.0.0.1:8083
+        - --metrics-bind-addr=127.0.0.1:8084
         - --feature-gates=MachinePool=true,KubeadmBootstrapFormatIgnition=false,LazyRestmapper=false
+        - --health-addr=$(HOST_IP):9444
+        - --webhook-port=9445
         livenessProbe:
           httpGet:
             path: /healthz
@@ -115,10 +117,10 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9444
-          name: webhook-server
-          protocol: TCP
-        - containerPort: 9441
           name: healthz
+          protocol: TCP
+        - containerPort: 9445
+          name: webhook-server
           protocol: TCP
         volumeMounts:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
@@ -128,7 +130,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8446"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8084"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -143,7 +145,7 @@ spec:
             excludePaths:
             - /healthz
             upstreams:
-            - upstream: http://127.0.0.1:8083/
+            - upstream: http://127.0.0.1:8084/
               path: /
               authorization:
                 resourceAttributes:
@@ -154,17 +156,17 @@ spec:
                   subresource: prometheus-metrics
                   name: capi-kubeadm-bootstrap-controller-manager
         ports:
-        - containerPort: 8446
+        - containerPort: 8084
           name: https-metrics
         livenessProbe:
           httpGet:
             path: /livez
-            port: 8446
+            port: 8084
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 8446
+            port: 8084
             scheme: HTTPS
         resources:
           requests:
