@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# This script outputs alphabetically sorted modules list including path and revision in the YAML format.
+# Example:
+# ...
+# modules:
+#   admission-policy-engine:
+#     path: modules/015-admission-policy-engine/
+#     revision: ce
+#   ceph-csi:
+#     path: modules/031-ceph-csi/
+#     revision: ce
+#     parameters-ee:
+#
+
 if [[ -z ${MODULES_DIR} ]]; then
   MODULES_DIR=/src
 fi
