@@ -488,6 +488,7 @@ entries:
     - title:
         en: Delivery
         ru: Доставка
+      modulename: delivery
       d8Revision: ee
       folders:
         - title:
@@ -937,6 +938,7 @@ entries:
         - title:
             en: Audit
             ru: Аудит
+          moduleName: runtime-audit-engine
           d8Revision: ee
           featureStatus: experimental
           folders:
