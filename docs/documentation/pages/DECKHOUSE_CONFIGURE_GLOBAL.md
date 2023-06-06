@@ -11,4 +11,4 @@ The global Deckhouse settings are stored in the `ModuleConfig/global` resource (
 
 ## Parameters
 
-{{ site.data.schemas.global.config-values | format_module_configuration }}
+{{ site.data.schemas.global.config-values | format_module_configuration: "global" }}
