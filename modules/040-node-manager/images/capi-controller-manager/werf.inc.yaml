@@ -1,18 +1,30 @@
 {{- $version := "1.4.2" }}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}
+image: {{ .ModuleName }}/capi-controller-manager
 from: {{ .Images.BASE_SCRATCH }}
 docker:
   ENV:
     WORKDIR: /
     ENTRYPOINT: "/capi-controller-manager"
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- artifact: {{ .ModuleName }}/capi-artifact
   add: /src/bin/manager
   to: /capi-controller-manager
   before: setup
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+image: {{ .ModuleName }}/capi-kubeadm-bootstrap-controller-manager
+from: {{ .Images.BASE_SCRATCH }}
+docker:
+  ENV:
+    WORKDIR: /
+    ENTRYPOINT: "/capi-kubeadm-bootstrap-controller-manager"
+import:
+  - artifact: {{ .ModuleName }}/capi-artifact
+    add: /src/bin/kubeadm-bootstrap-manager
+    to: /capi-kubeadm-bootstrap-controller-manager
+    before: setup
+---
+artifact: {{ $.ModuleName }}/capi-artifact
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache

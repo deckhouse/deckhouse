@@ -96,10 +96,10 @@ spec:
                 fieldPath: status.hostIP
         ports:
         - name: healthz
-          containerPort: 9441
+          containerPort: 9442
           protocol: TCP
         - name: webhook-server
-          containerPort: 9444
+          containerPort: 9445
           protocol: TCP
         livenessProbe:
           httpGet:
@@ -136,7 +136,7 @@ spec:
               excludePaths:
               - /healthz
               upstreams:
-              - upstream: http://127.0.0.1:8081/
+              - upstream: http://127.0.0.1:8082/
                 path: /
                 authorization:
                   resourceAttributes:

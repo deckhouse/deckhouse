@@ -1,0 +1,20 @@
+{{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "bootstrap-kubeadm")) | nindent 2 }}
+  name: capi-kubeadm-bootstrap-serving-cert
+  namespace: d8-cloud-instance-manager
+spec:
+  dnsNames:
+    - capi-kubeadm-bootstrap-webhook-service.d8-cloud-instance-manager.svc
+    - capi-kubeadm-bootstrap-webhook-service.d8-cloud-instance-manager.svc.cluster.local
+  issuerRef:
+    kind: ClusterIssuer
+    name: selfsigned
+  secretName: capi-kubeadm-bootstrap-webhook-service-cert
+  subject:
+    organizations:
+      - k8s-sig-cluster-lifecycle
+  {{- end }}
