@@ -5,14 +5,14 @@ kind: ServiceAccount
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
   name: capi-controller-manager
-  namespace: d8-capi-system
+  namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
   name: capi-controller-manager:capi-leader-election-role
-  namespace: d8-capi-system
+  namespace: d8-cloud-instance-manager
 rules:
   - apiGroups:
       - ""
@@ -371,7 +371,7 @@ kind: RoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
   name: capi-controller-manager:capi-leader-election-rolebinding
-  namespace: d8-capi-system
+  namespace: d8-cloud-instance-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -379,7 +379,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: capi-controller-manager
-    namespace: d8-capi-system
+    namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -393,5 +393,5 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: capi-controller-manager
-    namespace: d8-capi-system
+    namespace: d8-cloud-instance-manager
 {{- end }}

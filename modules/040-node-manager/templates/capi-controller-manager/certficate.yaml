@@ -5,11 +5,11 @@ kind: Certificate
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
   name: capi-serving-cert
-  namespace: d8-capi-system
+  namespace: d8-cloud-instance-manager
 spec:
   dnsNames:
-    - capi-webhook-service.d8-capi-system.svc
-    - capi-webhook-service.d8-capi-system.svc.cluster.local
+    - capi-webhook-service.d8-cloud-instance-manager.svc
+    - capi-webhook-service.d8-cloud-instance-manager.svc.cluster.local
   issuerRef:
     kind: ClusterIssuer
     name: selfsigned

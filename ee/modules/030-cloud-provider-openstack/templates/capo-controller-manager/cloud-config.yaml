@@ -6,6 +6,7 @@ clouds:
       username: {{ .Values.cloudProviderOpenstack.internal.connection.username | quote }}
       project_name: {{ .Values.cloudProviderOpenstack.internal.connection.tenantName | quote }}
       user_domain_name: {{ .Values.cloudProviderOpenstack.internal.connection.domainName | quote }}
+      project_domain_name: {{ .Values.cloudProviderOpenstack.internal.connection.domainName | quote }}
     region_name: {{ .Values.cloudProviderOpenstack.internal.connection.region | quote }}
     interface: "public"
     identity_api_version: 3

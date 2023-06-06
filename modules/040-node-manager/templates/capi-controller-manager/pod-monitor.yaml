@@ -29,5 +29,5 @@ spec:
       app: capi-controller-manager
   namespaceSelector:
     matchNames:
-    - d8-capi-system
+    - d8-cloud-instance-manager
 {{- end }}

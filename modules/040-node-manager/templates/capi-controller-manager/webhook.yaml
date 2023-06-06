@@ -4,7 +4,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: d8-capi-system/capi-serving-cert
+    cert-manager.io/inject-ca-from: d8-cloud-instance-manager/capi-serving-cert
   {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
   name: capi-mutating-webhook-configuration
 webhooks:
@@ -14,7 +14,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta1-machine
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -36,7 +36,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta1-machinedeployment
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -58,7 +58,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta1-machinehealthcheck
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -80,7 +80,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta1-machineset
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -102,7 +102,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta1-cluster
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -124,7 +124,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta1-clusterclass
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -146,7 +146,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /mutate-runtime-cluster-x-k8s-io-v1alpha1-extensionconfig
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -168,7 +168,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /mutate-cluster-x-k8s-io-v1beta1-machinepool
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -190,7 +190,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /mutate-addons-cluster-x-k8s-io-v1beta1-clusterresourceset
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -211,7 +211,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: d8-capi-system/capi-serving-cert
+    cert-manager.io/inject-ca-from: d8-cloud-instance-manager/capi-serving-cert
   {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
   name: capi-validating-webhook-configuration
 webhooks:
@@ -221,7 +221,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta1-machine
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -243,7 +243,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta1-machinedeployment
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -265,7 +265,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta1-machinehealthcheck
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -287,7 +287,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta1-machineset
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -309,7 +309,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta1-cluster
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -332,7 +332,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta1-clusterclass
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -355,7 +355,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-runtime-cluster-x-k8s-io-v1alpha1-extensionconfig
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -377,7 +377,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-cluster-x-k8s-io-v1beta1-machinepool
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -399,7 +399,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-addons-cluster-x-k8s-io-v1beta1-clusterresourceset
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -421,7 +421,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-addons-cluster-x-k8s-io-v1beta1-clusterresourcesetbinding
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -443,7 +443,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-ipam-cluster-x-k8s-io-v1alpha1-ipaddress
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -466,7 +466,7 @@ webhooks:
     clientConfig:
       service:
         name: capi-webhook-service
-        namespace: d8-capi-system
+        namespace: d8-cloud-instance-manager
         path: /validate-ipam-cluster-x-k8s-io-v1alpha1-ipaddressclaim
     failurePolicy: Fail
     matchPolicy: Equivalent

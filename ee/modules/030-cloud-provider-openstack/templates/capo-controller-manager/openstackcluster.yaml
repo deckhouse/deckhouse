@@ -1,0 +1,13 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
+kind: OpenStackCluster
+metadata:
+  name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
+  namespace: d8-cloud-provider-openstack
+spec:
+  cloudName: {{ .Values.global.clusterConfiguration.cloud.prefix }}
+  controlPlaneEndpoint: {}
+  identityRef:
+    kind: Secret
+    name: cloud-config
+  controlPlaneAvailabilityZones: {{ .Values.cloudProviderOpenstack.internal.zones }}

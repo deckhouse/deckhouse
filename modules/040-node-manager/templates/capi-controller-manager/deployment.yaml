@@ -10,7 +10,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: capi-controller-manager
-  namespace: d8-capi-system
+  namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
@@ -34,7 +34,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: capi-controller-manager
-  namespace: d8-capi-system
+  namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 spec:
   maxUnavailable: 1
@@ -46,7 +46,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: capi-controller-manager
-  namespace: d8-capi-system
+  namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager" "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
@@ -147,7 +147,7 @@ spec:
               path: /
               authorization:
                 resourceAttributes:
-                  namespace: d8-capi-system
+                  namespace: d8-cloud-instance-manager
                   apiGroup: apps
                   apiVersion: v1
                   resource: deployments
