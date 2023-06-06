@@ -1,5 +1,13 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
-  {{- if .Values.istio.internal.applicationNamespaces }}
+  {{- $applicationNamespaces := list }}
+  {{- range $namespace := $.Values.istio.internal.applicationNamespaces }}
+    {{- range $regex := $.Values.istio.monitoring.excludeApplicationNamespaceRegexes }}
+      {{- if not (regexMatch $regex $namespace) }}
+        {{- $applicationNamespaces = append $applicationNamespaces $namespace }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if $applicationNamespaces }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -39,14 +47,6 @@ spec:
       operator: Exists
   namespaceSelector:
     matchNames:
-    {{- $applicationNamespaces := list }}
-    {{- range $namespace := $.Values.istio.internal.applicationNamespaces }}
-      {{- range $regex := $.Values.istio.monitoring.excludeApplicationNamespaceRegexes }}
-        {{- if not (regexMatch $regex $namespace) }}
-          {{- $applicationNamespaces = append $applicationNamespaces $namespace }}
-        {{- end }}
-      {{- end }}
-    {{- end }}
     {{- $applicationNamespaces | toYaml | nindent 4 }}
   {{- end }}
 {{- end }}
