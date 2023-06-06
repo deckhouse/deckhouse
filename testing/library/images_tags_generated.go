@@ -294,11 +294,12 @@ var DefaultImagesDigests = map[string]interface{}{
 		"iptablesLoop": "imageHash-nodeLocalDns-iptablesLoop",
 	},
 	"nodeManager": map[string]interface{}{
-		"bashibleApiserver":        "imageHash-nodeManager-bashibleApiserver",
-		"capiControllerManager":    "imageHash-nodeManager-capiControllerManager",
-		"clusterAutoscaler":        "imageHash-nodeManager-clusterAutoscaler",
-		"earlyOom":                 "imageHash-nodeManager-earlyOom",
-		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
+		"bashibleApiserver":                     "imageHash-nodeManager-bashibleApiserver",
+		"capiControllerManager":                 "imageHash-nodeManager-capiControllerManager",
+		"capiKubeadmBootstrapControllerManager": "imageHash-nodeManager-capiKubeadmBootstrapControllerManager",
+		"clusterAutoscaler":                     "imageHash-nodeManager-clusterAutoscaler",
+		"earlyOom":                              "imageHash-nodeManager-earlyOom",
+		"machineControllerManager":              "imageHash-nodeManager-machineControllerManager",
 	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",
