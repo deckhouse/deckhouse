@@ -113,6 +113,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.uid
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         imagePullPolicy: IfNotPresent
         ports:

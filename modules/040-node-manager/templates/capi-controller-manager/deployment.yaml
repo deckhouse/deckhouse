@@ -86,11 +86,6 @@ spec:
         - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false,LazyRestmapper=false
         - --health-addr=$(HOST_IP):9442
         - --webhook-port=9443
-        env:
-          - name: HOST_IP
-            valueFrom:
-              fieldRef:
-                fieldPath: status.hostIP
         livenessProbe:
           httpGet:
             path: /healthz
@@ -118,6 +113,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.uid
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         imagePullPolicy: IfNotPresent
         ports:

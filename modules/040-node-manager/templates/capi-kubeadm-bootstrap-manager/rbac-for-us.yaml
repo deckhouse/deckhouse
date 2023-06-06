@@ -11,7 +11,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "bootstrap-kubeadm")) | nindent 2 }}
-  name: capi-kubeadm-bootstrap:leader-election-role
+  name: capi-kubeadm-bootstrap-manager:leader-election-role
   namespace: d8-cloud-instance-manager
 rules:
   - apiGroups:
@@ -37,7 +37,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-  name: d8:node-manager:capi-kubeadm-bootstrap:manager-role
+  name: d8:node-manager:capi-kubeadm-bootstrap-manager:manager-role
 rules:
   - apiGroups:
       - ""
@@ -86,12 +86,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "bootstrap-kubeadm")) | nindent 2 }}
-  name: capi-kubeadm-bootstrap:leader-election-rolebinding
+  name: capi-kubeadm-bootstrap-manager:leader-election-rolebinding
   namespace: d8-cloud-instance-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: capi-kubeadm-bootstrap:leader-election-role
+  name: capi-kubeadm-bootstrap-manager:leader-election-role
 subjects:
   - kind: ServiceAccount
     name: capi-kubeadm-bootstrap-manager
@@ -101,11 +101,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "bootstrap-kubeadm")) | nindent 2 }}
-  name: d8:node-manager:capi-kubeadm-bootstrap:manager-rolebinding
+  name: d8:node-manager:capi-kubeadm-bootstrap-manager:manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:node-manager:capi-kubeadm-bootstrap:manager-role
+  name: d8:node-manager:capi-kubeadm-bootstrap-manager:manager-role
 subjects:
   - kind: ServiceAccount
     name: capi-kubeadm-bootstrap-manager
