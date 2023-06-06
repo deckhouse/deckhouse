@@ -969,7 +969,6 @@ status:
     type: Ready
 ```
 
-
 **Updating** - Группа узлов содержит как минимум один узел, в которой в аннотации присутствует значение с префиксом ```update.node.deckhouse.io```
 
 **WaitingForDisruptiveApproval** - Группа узлов содержит как минимум один узел, в анотации которого присутствует ```update.node.deckhouse.io/disruption-required``` и
