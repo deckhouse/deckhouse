@@ -907,44 +907,122 @@ spec:
 
 Шаблоны узлов (labels/taints) для NodeGroup `worker` и `worker-spot` должны быть одинаковыми, или, как минимум, подходить для той нагрузки, которая запускает процесс увеличения кластера.
 
-## Как интерпретировать состояния Node Group
+## Как интерпретировать состояния группы узлов
 
-**Ready** - Node Group содержит минимально необходимое число Scheduled Nodes. Рассчитываются по формуле:
+**Ready** - Группа узлов содержит минимально необходимое число запланированный узлов с состоянием ```Ready``` для всех зон.
 
-```go
-isReady := len(nodes) == 0
+Пример 1. Группа узлов в состоянии ```Ready```:
 
-if readySchedulableNodes > 0 {
-  isReady = readySchedulableNodes >= minPerAllZone
-}
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 ```
 
-**Updating** - Node Group содержит как минимум одну Node, в которой в аннотации присутствует
-запись с префиксом ```update.node.deckhouse.io```
+Пример 2. Группа узлов в состоянии ```Not Ready```:
 
-**WaitingForDisruptiveApproval** - Node Group содержит как минимум одну Node, в которой
-в анотации присутствует запись ```update.node.deckhouse.io/disruption-required``` и
-отсутствует запись ```update.node.deckhouse.io/disruption-approved```
-
-**Scaling** - Расчитывается только для Node Group с типом ```CloudEphemeral``` по формуле:
-
-```go
-inUpScale := ng.Desired > int32(len(nodes))
-inDownScale = inDownScale || ng.Desired < ng.Instances
-
-isScaling := inDownScale || inUpScale
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+  conditions:
+  - status: "False"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 ```
 
-```ng.Desired``` - Node Group параметр отвечающий за настройку желаемого числа Node в группе
-```ng.Instances``` - Число инстансов в Node Group
-```inDownScale``` - начальное значение равно ```true``` если хотябы одна нода помечена к удалению
 
-**Error** -  Содержит последнюю ошибку возникшую при создании инстанса в Node Group
+**Updating** - Группа узлов содержит как минимум один узел, в которой в аннотации присутствует значение с префиксом ```update.node.deckhouse.io```
 
-## Как заставить Werf игнорировать conditions.Ready в Node Group?
+**WaitingForDisruptiveApproval** - Группа узлов содержит как минимум один узел, в анотации которого присутствует ```update.node.deckhouse.io/disruption-required``` и
+отсутствует ```update.node.deckhouse.io/disruption-approved```
 
-Werf проверяет ```conditions.Ready```, и для больших Node Group могут возникнуть проблемы с тайм-аутами.
-Чтобы Werf игнорировал ```conditions.Ready``` необходимо в аннотацию Node Group добавить записи:
+**Scaling** - Расчитывается только для групп узлов с типом ```CloudEphemeral```. Может быть два варианта этого состояния.
+
+1. Когда число узлов меньше желаемого числа узлов в группе, т.е. когда нужно увеличить число узлов в группе.
+1. Когда какой-то узел помечается к удалению или число узлов больше желаемого числа узлов, т.е. когда нужно уменьшить число узлов в группе.
+
+Желаемое число узлов это сумма всех реплик входящих в группу узлов.
+
+Пример. Желаемое число узлов равно 3
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: md1
+  labels:
+    node-group: ng1
+...
+spec:
+  replicas: 2
+...
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: md2
+  labels:
+    node-group: ng1
+...
+spec:
+  replicas: 1
+...
+```
+
+**Error** - Содержит последнюю ошибку возникшую при создании узла в группе узлов.
+
+## Как заставить Werf игнорировать состояние Ready в группе узлов?
+
+Werf проверяет сотояние ```Ready``` у ресурсов и в случаи его наличия дожедается пока значение станет ```True```. Если в группе узлов запланированно большое количество узлов, то может потребоваться значительное время на их развертывание. В результате чего Werf может завершить свою работу с ошибкой тайм-аута. Чтобы Werf проигнорировал состояние ```Ready``` у группы узлов необходимо добавить аннотацию группе узлов:
 
 ```yaml
 metadata:

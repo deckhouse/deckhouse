@@ -219,11 +219,8 @@ func CalculateNodeGroupConditions(
 			isWaitingDisruptiveApproval = true
 		}
 	}
-	isReady := len(nodes) == 0
 
-	if readySchedulableNodes > 0 {
-		isReady = readySchedulableNodes >= minPerAllZone
-	}
+	isReady := readySchedulableNodes >= minPerAllZone
 
 	errorCondition := calcErrorCondition(&ng, currentConditions, errors)
 
