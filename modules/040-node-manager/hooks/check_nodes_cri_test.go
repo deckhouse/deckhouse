@@ -159,7 +159,7 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 		})
 	})
 
-	Context("Node with containerD and docker and unknownVersion and node without status.nodeInfo.containerRuntimeVersion set", func() {
+	Context("Node with containerd and docker and unknownVersion and node without status.nodeInfo.containerRuntimeVersion set", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.KubeStateSet(
