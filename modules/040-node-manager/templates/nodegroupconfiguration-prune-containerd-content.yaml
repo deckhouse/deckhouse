@@ -32,14 +32,13 @@ spec:
     #
     # Prune content to save disk space
     {{- if eq .cri "Containerd" }}
-    if [ ! -f /var/lib/bashible/containerd_content_store_is_cleared ] ; then
+    if [ -f /var/lib/bashible/containerd_content_store_is_cleared ] ; then
+      exit 0
+    fi
     bb-log-info "Removing compressed image layers from containerd's content store"
-
-    ctr -n k8s.io content prune references
-    if [ $? -eq 0 ]; then
+    if ctr -n k8s.io content prune references; then
         touch /var/lib/bashible/containerd_content_store_is_cleared
     else
         bb-log-warning "Failed to clean up containerd's content store. Skip this for now"
-    fi
     fi
     {{- end }}
