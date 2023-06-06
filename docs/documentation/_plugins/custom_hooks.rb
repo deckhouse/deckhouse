@@ -3,7 +3,13 @@ require 'json'
 def parse_module_data(input, site)
     if input.has_key?("featureStatus")
        featureStatus = input["featureStatus"]
-       moduleName = input["title"]
+       if input.has_key?("moduleName")
+         moduleName = input["moduleName"]
+       elsif input["title"].is_a?(Hash) && input["title"].has_key?('en')
+         moduleName = input["title"]['en']
+       else
+         moduleName = input["title"]
+       end
        if ! site.data["modulesFeatureStatus"]
           site.data["modulesFeatureStatus"] = {}
        end
