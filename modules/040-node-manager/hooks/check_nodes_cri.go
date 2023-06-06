@@ -31,17 +31,19 @@ import (
 )
 
 const (
-	hasNodesOtherThanContainerD = "nodeManager:hasNodesOtherThanContainerD"
+	hasNodesOtherThanContainerd = "nodeManager:hasNodesOtherThanContainerd"
 	containerUnknownVersion     = "unknownVersion"
+	snapName                    = "check_nodes_cri"
 )
 
-var isContainerDRegexp = regexp.MustCompile(`^containerd.*?`)
+var isContainerdRegexp = regexp.MustCompile(`^containerd.*?`)
 
+// TODO: Remove this hook after 1.47 release
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "check_containerd_nodes",
+			Name:                         snapName,
 			WaitForSynchronization:       pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(true),
 			ExecuteHookOnEvents:          pointer.Bool(true),
@@ -55,12 +57,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					},
 				},
 			},
-			FilterFunc: applyNodesContainerVersionFilter,
+			FilterFunc: applyNodesCRIVersionFilter,
 		},
 	},
-}, discoverNodesContainerVersion)
+}, discoverNodesCRIVersion)
 
-func applyNodesContainerVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyNodesCRIVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	containerVersion, ok, err := unstructured.NestedString(obj.Object, "status", "nodeInfo", "containerRuntimeVersion")
 	if !ok {
 		return containerUnknownVersion, err
@@ -68,19 +70,19 @@ func applyNodesContainerVersionFilter(obj *unstructured.Unstructured) (go_hook.F
 	return containerVersion, err
 }
 
-func discoverNodesContainerVersion(input *go_hook.HookInput) error {
-	snap := input.Snapshots["check_containerd_nodes"]
+func discoverNodesCRIVersion(input *go_hook.HookInput) error {
+	snap := input.Snapshots[snapName]
 	if len(snap) == 0 {
 		return nil
 	}
 
 	for _, s := range snap {
-		if !isContainerDRegexp.MatchString(s.(string)) {
-			requirements.SaveValue(hasNodesOtherThanContainerD, true)
+		if !isContainerdRegexp.MatchString(s.(string)) {
+			requirements.SaveValue(hasNodesOtherThanContainerd, true)
 			return nil
 		}
 	}
 
-	requirements.SaveValue(hasNodesOtherThanContainerD, false)
+	requirements.SaveValue(hasNodesOtherThanContainerd, false)
 	return nil
 }

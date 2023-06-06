@@ -33,7 +33,7 @@ metadata:
     node.deckhouse.io/group: group
 `
 
-	nodeContainerD = `
+	nodeContainerd = `
 ---
 apiVersion: v1
 kind: Node
@@ -80,9 +80,9 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 			f.RunHook()
 		})
 
-		It("Should have no a container engine type check", func() {
+		It(hasNodesOtherThanContainerd+" should not exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			_, exists := requirements.GetValue(hasNodesOtherThanContainerD)
+			_, exists := requirements.GetValue(hasNodesOtherThanContainerd)
 			Expect(exists).To(BeFalse())
 		})
 	})
@@ -93,9 +93,9 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 			f.RunHook()
 		})
 
-		It("Should have a container engine type check true", func() {
+		It(hasNodesOtherThanContainerd+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerD)
+			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
@@ -103,13 +103,13 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 
 	Context("One node with containerD", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeContainerD))
+			f.BindingContexts.Set(f.KubeStateSet(nodeContainerd))
 			f.RunHook()
 		})
 
-		It("Should have a container engine type check false", func() {
+		It(hasNodesOtherThanContainerd+" should exist and false", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerD)
+			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeFalse())
 		})
@@ -117,13 +117,13 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 
 	Context("Node with containerD and unknownVersion", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeContainerD + nodeWithoutContainerVersion))
+			f.BindingContexts.Set(f.KubeStateSet(nodeContainerd + nodeWithoutContainerVersion))
 			f.RunHook()
 		})
 
-		It("Should have a container engine type check true", func() {
+		It(hasNodesOtherThanContainerd+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerD)
+			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
@@ -131,13 +131,13 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 
 	Context("Node with containerD and docker", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeContainerD + nodeDocker))
+			f.BindingContexts.Set(f.KubeStateSet(nodeContainerd + nodeDocker))
 			f.RunHook()
 		})
 
-		It("Should have a container engine type check true", func() {
+		It(hasNodesOtherThanContainerd+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerD)
+			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
@@ -146,14 +146,14 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 	Context("Node with containerD and docker and unknownVersion", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(
-				f.KubeStateSet(nodeContainerD + nodeDocker + nodeUnknownVersion),
+				f.KubeStateSet(nodeContainerd + nodeDocker + nodeUnknownVersion),
 			)
 			f.RunHook()
 		})
 
-		It("Should have a container engine type check true", func() {
+		It(hasNodesOtherThanContainerd+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerD)
+			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
@@ -163,7 +163,7 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.KubeStateSet(
-					nodeContainerD +
+					nodeContainerd +
 						nodeDocker +
 						nodeUnknownVersion +
 						nodeWithoutContainerVersion,
@@ -172,9 +172,9 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 			f.RunHook()
 		})
 
-		It("Should have a container engine type check true", func() {
+		It(hasNodesOtherThanContainerd+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerD)
+			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})

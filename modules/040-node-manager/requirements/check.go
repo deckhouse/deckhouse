@@ -28,8 +28,8 @@ import (
 const (
 	minUbuntuVersionValuesKey      = "nodeManager:nodesMinimalOSVersionUbuntu"
 	requirementsKey                = "nodesMinimalOSVersionUbuntu"
-	containerDRequirementsKey      = "containerdOnAllNodes"
-	hasNodesOtherThanContainerDKey = "nodeManager:hasNodesOtherThanContainerD"
+	containerdRequirementsKey      = "containerdOnAllNodes"
+	hasNodesOtherThanContainerdKey = "nodeManager:hasNodesOtherThanContainerd"
 )
 
 func init() {
@@ -54,23 +54,23 @@ func init() {
 		return true, nil
 	}
 
-	checkContainerDRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkContainerdRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		requirementValue = strings.TrimSpace(requirementValue)
 		if requirementValue == "false" || requirementValue == "" {
 			return true, nil
 		}
 
-		hasNodesOtherThanContainerD, exists := getter.Get(hasNodesOtherThanContainerDKey)
+		hasNodesOtherThanContainerd, exists := getter.Get(hasNodesOtherThanContainerdKey)
 		if !exists {
 			return true, nil
 		}
 
-		if hasNodesOtherThanContainerD.(bool) {
+		if hasNodesOtherThanContainerd.(bool) {
 			return false, errors.New("has nodes other than containerd")
 		}
 
 		return true, nil
 	}
 	requirements.RegisterCheck(requirementsKey, checkRequirementFunc)
-	requirements.RegisterCheck(containerDRequirementsKey, checkContainerDRequirementFunc)
+	requirements.RegisterCheck(containerdRequirementsKey, checkContainerdRequirementFunc)
 }
