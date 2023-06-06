@@ -13,6 +13,8 @@
 
 
  - **[admission-policy-engine]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
+ - **[candi]** Add deckhouse release requirements about docker presence. [#4816](https://github.com/deckhouse/deckhouse/pull/4816)
+    It will be impossible to update Deckhouse until docker is replaced with containerd.
  - **[ceph-csi]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[cert-manager]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[chrony]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
@@ -87,6 +89,7 @@
  - **[cloud-data-crd]** The `cluster-autoscaler-crd module has been renamed to the `cloud-data-crd` module. [#4497](https://github.com/deckhouse/deckhouse/pull/4497)
  - **[cni-flannel]** flannel's entrypoint now correctly passes arguments to the flannel itself. [#4837](https://github.com/deckhouse/deckhouse/pull/4837)
  - **[cni-flannel]** Fix cleanup flannel used IPs on migration from docker to containerd. [#4306](https://github.com/deckhouse/deckhouse/pull/4306)
+ - **[common]** Prevent usage of vulnerable TLS ciphers in `kube-rbac-proxy`. [#4825](https://github.com/deckhouse/deckhouse/pull/4825)
  - **[control-plane-manager]** Fix errors in control-plane-manager converge and preflight checks. [#4822](https://github.com/deckhouse/deckhouse/pull/4822)
     control-plane-manager will restart.
  - **[deckhouse]** Add `prometheus.deckhouse.io/rules-watcher-enabled` on the `d8-system` namespace. [#4752](https://github.com/deckhouse/deckhouse/pull/4752)
@@ -108,6 +111,7 @@
  - **[monitoring-kubernetes]** Fixed path to hostPath in thresholds-exporter. [#4736](https://github.com/deckhouse/deckhouse/pull/4736)
  - **[monitoring-kubernetes]** Remove duplicates of memory graphs on namespace dashboard [#4701](https://github.com/deckhouse/deckhouse/pull/4701)
  - **[node-local-dns]** Added logs if changed state iptables. [#4613](https://github.com/deckhouse/deckhouse/pull/4613)
+ - **[node-manager]** Prevent usage of vulnerable TLS ciphers in `bashible-apiserver`. [#4827](https://github.com/deckhouse/deckhouse/pull/4827)
  - **[node-manager]** Fix draining hook queue flooding. [#4770](https://github.com/deckhouse/deckhouse/pull/4770)
  - **[node-manager]** Fix bashible-apiserver altlinux docker containerd version (otherwise, bashible-apiserver will not work). [#4553](https://github.com/deckhouse/deckhouse/pull/4553)
  - **[node-manager]** Fix the error node group condition. [#4367](https://github.com/deckhouse/deckhouse/pull/4367)
