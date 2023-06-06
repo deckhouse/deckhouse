@@ -127,7 +127,8 @@ properties:
         type: array
         description: List of Regular expressions to exclude application Namespaces from metrics scraping.
         x-doc-deprecated: true
-        x-examples: ['^review-.*','^stage$']
+        x-examples:
+        - ['^review-.*','^stage$']
         default: []
         items:
           type: string
