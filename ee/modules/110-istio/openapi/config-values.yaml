@@ -118,6 +118,19 @@ properties:
                   type: string
             x-examples:
             - [{"operator": "Exists"}]
+  monitoring:
+    type: object
+    description: Monitoring parameters.
+    default: {}
+    properties:
+      excludeApplicationNamespaceRegexes:
+        type: array
+        description: List of Regular expressions to exclude application Namespaces from metrics scraping.
+        x-doc-deprecated: true
+        x-examples: ['^review-.*','^stage$']
+        default: []
+        items:
+          type: string
   tracing:
     type: object
     description: Tracing parameters.

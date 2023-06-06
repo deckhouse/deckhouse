@@ -780,4 +780,30 @@ updatePolicy:
 			Expect(ingressSvc.Field("spec.type").String()).To(Equal("ClusterIP"))
 		})
 	})
+
+	Context("monitoring.excludeApplicationNamespaceRegexes is configured", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.applicationNamespaces", `
+- "myns"
+- "review-123"
+- "notreview-123"
+`)
+			f.ValuesSetFromYaml("istio.monitoring.excludeApplicationNamespaceRegexes", `
+- "^review-.*"
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			podMonitor := f.KubernetesResource("podmonitor", "d8-monitoring", "istio-sidecars")
+
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.namespaceSelector.matchNames")).To(MatchJSON(`["myns","notreview-123"]`))
+		})
+	})
 })
