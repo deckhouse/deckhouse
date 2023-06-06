@@ -58,22 +58,60 @@ spec:
         matchLabels:
           operation-policy.deckhouse.io/enabled: "true"
   policies:
-    allowHostIPC: false
     allowHostNetwork: false
-    allowHostPID: false
-    allowHostPath: false
-    allowHostPorts: false
+    allowPrivilegeEscalation: false
     allowPrivileged: false
     allowedCapabilities: []
-    allowedFlexVolumes: []
-    allowedUnsafeSysctls: []
+    allowedFlexVolumes:
+    - driver: vmware
+    allowedProcMount: Unmasked
+    allowedUnsafeSysctls:
+    - user/huyser
     allowedVolumes:
     - '*'
-    defaultAddCapabilities: []
     forbiddenSysctls:
-    - '*'
+    - user/huyser
+    fsGroup:
+      rule: RunAsAny
     readOnlyRootFilesystem: false
+    runAsGroup:
+      ranges:
+      - max: 500
+        min: 300
+      rule: RunAsAny
+    runAsUser:
+      ranges:
+      - max: 500
+        min: 300
+      rule: MustRunAs
+    supplementalGroups:
+      rangres:
+      - max: 1000
+        min: 500
+      rule: MustRunAs
+    seLinux:
+    - role: role
+      user: user
+    - level: level
+      type: type
+    allowHostIPC: true
+    allowHostPID: false
+    allowedHostPath:
+    - pathPrefix: /dev
+      readOnly: true
+    allowedHostPorts:
+    - min: 10
+      max: 100
+    allowedUnsafeSysctls: ["*"]
+    forbiddenSysctls:
+    - user/example
     requiredDropCapabilities:
     - ALL
-    seccompProfiles: []
+    seccompProfiles:
+      alowedProfiles:
+      - RuntimeDefault
+      - Localhost
+      allowedLocalhostFiles:
+      - '*'
+
 `

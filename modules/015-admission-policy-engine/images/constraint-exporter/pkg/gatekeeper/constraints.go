@@ -134,6 +134,9 @@ func GetConstraints(cClient controllerClient.Client, client *kubernetes.Clientse
 
 				case f("security.deckhouse.io/operation-policy"):
 					constraint.Meta.SourceType = "OperationPolicy"
+
+				case f("security.deckhouse.io/security-policy"):
+					constraint.Meta.SourceType = "SecurityPolicy"
 				}
 
 				constraints = append(constraints, constraint)

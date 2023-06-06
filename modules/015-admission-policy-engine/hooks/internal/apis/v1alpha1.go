@@ -56,30 +56,37 @@ type SecurityPolicySpec struct {
 		AllowedHostPaths []struct {
 			PathPrefix string `json:"pathPrefix"`
 			ReadOnly   bool   `json:"readOnly"`
-		} `json:"allowedHostPath,omitempty"`
-		AllowHostIPC             bool     `json:"allowHostIPC,omitempty"`
-		AllowHostNetwork         bool     `json:"allowHostNetwork,omitempty"`
-		AllowHostPorts           bool     `json:"allowHostPorts,omitempty"`
-		AllowHostPID             bool     `json:"allowHostPID,omitempty"`
-		AllowPrivileged          bool     `json:"allowPrivileged,omitempty"`
-		AllowPrivilegeEscalation bool     `json:"allowPrivilegeEscalation,omitempty"`
-		AllowedCapabilities      []string `json:"allowedCapabilities,omitempty"`
+		} `json:"allowedHostPaths,omitempty"`
+		AllowHostIPC             *bool     `json:"allowHostIPC,omitempty"`
+		AllowHostPID             *bool     `json:"allowHostPID,omitempty"`
+		AllowPrivileged          *bool     `json:"allowPrivileged,omitempty"`
+		AllowPrivilegeEscalation *bool     `json:"allowPrivilegeEscalation,omitempty"`
+		AllowedProcMount         string    `json:"allowedProcMount,omitempty"`
+		AllowedCapabilities      []string  `json:"allowedCapabilities,omitempty"`
+		RequiredDropCapabilities []string  `json:"requiredDropCapabilities,omitempty"`
+		AllowHostNetwork         *bool     `json:"allowHostNetwork,omitempty"`
+		AllowedHostPorts         []IDRange `json:"allowedHostPorts,omitempty"`
 		AllowedFlexVolumes       []struct {
 			Driver string `json:"driver"`
 		} `json:"allowedFlexVolumes,omitempty"`
-		AllowedUnsafeSysctls     []string          `json:"allowedUnsafeSysctls,omitempty"`
-		DefaultAddCapabilities   []string          `json:"defaultAddCapabilities,omitempty"`
-		ForbiddenSysctls         []string          `json:"forbiddenSysctls,omitempty"`
-		FsGroup                  ContextIDSettings `json:"fsGroup,omitempty"`
-		ReadOnlyRootFilesystem   bool              `json:"readOnlyRootFilesystem"`
-		RequiredDropCapabilities []string          `json:"requiredDropCapabilities,omitempty"`
-		RunAsUser                ContextIDSettings `json:"runAsUser,omitempty"`
-		SeccompProfiles          []string          `json:"seccompProfiles"`
-		SeLinuxContext           struct {
-			Type string `json:"type"`
-		} `json:"selinuxContext,omitempty"`
-		SupplementalGroups ContextIDSettings `json:"supplementalGroups,omitempty"`
-		AllowedVolumes     []string          `json:"allowedVolumes"`
+		AllowedVolumes         []string           `json:"allowedVolumes,omitempty"`
+		ReadOnlyRootFilesystem bool               `json:"readOnlyRootFilesystem,omitempty"`
+		FsGroup                *SelectUIDStrategy `json:"fsGroup,omitempty"`
+		RunAsUser              *SelectUIDStrategy `json:"runAsUser,omitempty"`
+		RunAsGroup             *SelectUIDStrategy `json:"runAsGroup,omitempty"`
+		SupplementalGroups     *SelectUIDStrategy `json:"supplementalGroups,omitempty"`
+		AllowedUnsafeSysctls   []string           `json:"allowedUnsafeSysctls,omitempty"`
+		ForbiddenSysctls       []string           `json:"forbiddenSysctls,omitempty"`
+		SeccompProfiles        struct {
+			AllowedProfiles       []string `json:"allowedProfiles,omitempty"`
+			AllowedLocalhostFiles []string `json:"allowedLocalhostFiles,omitempty"`
+		} `json:"seccompProfiles,omitempty"`
+		SeLinux []struct {
+			Level string `json:"level,omitempty"`
+			Role  string `json:"role,omitempty"`
+			Type  string `json:"type,omitempty"`
+			User  string `json:"user,omitempty"`
+		} `json:"seLinux,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
@@ -87,13 +94,14 @@ type SecurityPolicySpec struct {
 	} `json:"match"`
 }
 
-type ContextIDSettings struct {
-	Type   string `json:"type"`
-	ID     int    `json:"id,omitempty"`
-	Ranges []struct {
-		Min int `json:"min,omitempty"`
-		Max int `json:"max,omitempty"`
-	} `json:"ranges,omitempty"`
+type SelectUIDStrategy struct {
+	Ranges []IDRange `json:"ranges,omitempty"`
+	Rule   string    `json:"rule,omitempty"`
+}
+
+type IDRange struct {
+	Min int `json:"min"`
+	Max int `json:"max"`
 }
 
 type OperationPolicySpec struct {

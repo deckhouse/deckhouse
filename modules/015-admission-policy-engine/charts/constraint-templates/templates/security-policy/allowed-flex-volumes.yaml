@@ -1,13 +1,14 @@
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
-  name: d8psscallowedflexvolumes
+  name: d8spallowedflexvolumes
   labels:
     heritage: deckhouse
     module: admission-policy-engine
-    security.deckhouse.io: pod-security-standard
+    security.deckhouse.io: security-policy
   annotations:
     metadata.gatekeeper.sh/title: "List of allowed flex volume drivers"
+    metadata.gatekeeper.sh/version: 1.0.0
     description: >-
       Controls the allowlist of FlexVolume drivers. Corresponds to the
       `allowedFlexVolumes` field in PodSecurityPolicy. For more information,
@@ -17,7 +18,7 @@ spec:
   crd:
     spec:
       names:
-        kind: D8PSSAllowedFlexVolumes
+        kind: D8SPAllowedFlexVolumes
       validation:
         # Schema for the `parameters` field
         openAPIV3Schema:
@@ -39,7 +40,7 @@ spec:
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
-        package k8spspflexvolumes
+        package d8.security_policies
 
         violation[{"msg": msg, "details": {}}] {
             volume := input_flexvolumes[_]

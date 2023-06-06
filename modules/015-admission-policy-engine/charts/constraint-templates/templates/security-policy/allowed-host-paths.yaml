@@ -1,20 +1,21 @@
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
-  name: d8pssallowedhostpaths
+  name: d8spallowedhostpaths
   labels:
     heritage: deckhouse
     module: admission-policy-engine
-    security.deckhouse.io: pod-security-standard
+    security.deckhouse.io: security-policy
   annotations:
     metadata.gatekeeper.sh/title: "Allowed Host Paths"
+    metadata.gatekeeper.sh/version: 1.0.0
     description: >-
       Controls what host paths are allowed to be mount inside a container. 
 spec:
   crd:
     spec:
       names:
-        kind: D8PSSAllowedHostPaths
+        kind: D8SPAllowedHostPaths
       validation:
         openAPIV3Schema:
           type: object
@@ -34,7 +35,7 @@ spec:
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
-        package d8.pod_security_standards
+        package d8.security_policies
 
         violation[{"msg": msg, "details": {}}] {
             volume := input_hostpath_volumes[_]

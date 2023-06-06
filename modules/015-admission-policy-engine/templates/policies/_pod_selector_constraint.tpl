@@ -28,7 +28,7 @@
   {{- $parameters = index . 2}}
   {{- end}}
 
-{{- include "pod_security_standard_base" (list $context "security_policy" $policyCRDName $parameters ) }}
+{{- include "pod_security_standard_base" (list $context "security-policy" $policyCRDName $parameters ) }}
 {{- end }}
 
 {{- define "pod_security_standard_base" }}

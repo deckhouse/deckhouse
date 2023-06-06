@@ -66,6 +66,72 @@ spec:
 To apply the policy, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
 The above policy is generic and recommended by Deckhouse team. Similarly, you can configure your own policy with the necessary settings.
 
+### Security policies
+
+Also, the module allows defining security policies, making sure the workload running in the cluster meets certain security requirements.
+Following is an example of a security policy:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: mypolicy
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          name: mynamespace
+  policies:
+    allowHostIPC: true
+    allowHostNetwork: true
+    allowHostPID: false
+    allowPrivileged: false
+    allowedFlexVolumes:
+    - driver: vmware
+    allowedHostPorts:
+    - max: 4000
+      min: 2000
+    allowedProcMount: Unmasked
+    allowedUnsafeSysctls:
+    - kernel.*
+    allowedVolumes:
+    - hostPath
+    - projected
+    fsGroup:
+      ranges:
+      - max: 200
+        min: 100
+      rule: MustRunAs
+    readOnlyRootFilesystem: true
+    requiredDropCapabilities:
+    - ALL
+    runAsGroup:
+      ranges:
+      - max: 500
+        min: 300
+      rule: RunAsAny
+    runAsUser:
+      ranges:
+      - max: 200
+        min: 100
+      rule: MustRunAs
+    seccompProfiles:
+      allowedLocalhostFiles:
+      - my_profile.json
+      allowedProfiles:
+      - Localhost
+    supplementalGroups:
+      ranges:
+      - max: 133
+        min: 129
+      rule: MustRunAs
+```
+
+In order to have that policy applied, the target namespace should be labeled with the `enforce: "mypolicy"` label.
+
 ### Modifying Kubernetes resources
 
 The module also allows you to use the Gatekeeper's Custom Resources to easily modify objects in the cluster, such as

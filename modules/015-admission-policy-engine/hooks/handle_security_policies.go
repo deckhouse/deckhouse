@@ -44,6 +44,7 @@ func handleSP(input *go_hook.HookInput) error {
 
 	for _, sn := range snap {
 		sp := sn.(*securityPolicy)
+		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
 	}
 
@@ -63,6 +64,78 @@ func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	return &sp, nil
+}
+
+func setTrue() *bool {
+	b := true
+	return &b
+}
+
+func hasItem(slice []string, value string) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+func (sp *securityPolicy) preprocesSecurityPolicy() {
+	// Some default settings so as to make an empty SP friendlier
+	if sp.Spec.Policies.AllowHostPID == nil {
+		sp.Spec.Policies.AllowHostPID = setTrue()
+	}
+	if sp.Spec.Policies.AllowHostIPC == nil {
+		sp.Spec.Policies.AllowHostIPC = setTrue()
+	}
+	if sp.Spec.Policies.AllowHostNetwork == nil {
+		sp.Spec.Policies.AllowHostNetwork = setTrue()
+	}
+	if sp.Spec.Policies.AllowPrivileged == nil {
+		sp.Spec.Policies.AllowPrivileged = setTrue()
+	}
+	if sp.Spec.Policies.AllowPrivilegeEscalation == nil {
+		sp.Spec.Policies.AllowPrivilegeEscalation = setTrue()
+	}
+	// Check if we really need to create a constraint
+	// AllowedCapabilities with 'ALL' and empty RequiredDropCapabilities list result in a sensless constraint
+	if hasItem(sp.Spec.Policies.AllowedCapabilities, "ALL") && len(sp.Spec.Policies.RequiredDropCapabilities) == 0 {
+		sp.Spec.Policies.AllowedCapabilities = nil
+	}
+	// AllowedUnsafeSysctls with '*' and empty ForbiddenSysctls list result in a sensless constraint
+	if hasItem(sp.Spec.Policies.AllowedUnsafeSysctls, "*") && len(sp.Spec.Policies.ForbiddenSysctls) == 0 {
+		sp.Spec.Policies.AllowedUnsafeSysctls = nil
+	}
+	// The rules set to 'RunAsAny' should be ignored
+	if sp.Spec.Policies.FsGroup != nil {
+		if sp.Spec.Policies.FsGroup.Rule == "RunAsAny" {
+			sp.Spec.Policies.FsGroup = nil
+		}
+	}
+	if sp.Spec.Policies.RunAsUser != nil {
+		if sp.Spec.Policies.RunAsUser.Rule == "RunAsAny" {
+			sp.Spec.Policies.RunAsUser = nil
+		}
+	}
+	if sp.Spec.Policies.RunAsGroup != nil {
+		if sp.Spec.Policies.RunAsGroup.Rule == "RunAsAny" {
+			sp.Spec.Policies.RunAsGroup = nil
+		}
+	}
+	if sp.Spec.Policies.SupplementalGroups != nil {
+		if sp.Spec.Policies.SupplementalGroups.Rule == "RunAsAny" {
+			sp.Spec.Policies.SupplementalGroups = nil
+		}
+	}
+	// Having rules allowing '*' volumes make no sense
+	if hasItem(sp.Spec.Policies.AllowedVolumes, "*") {
+		sp.Spec.Policies.AllowedVolumes = nil
+	}
+	// Having all seccomp profiles allowed also isn't worth creating a constraint
+	if hasItem(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItem(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
+		sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
+		sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
+	}
 }
 
 type securityPolicy struct {

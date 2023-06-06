@@ -68,10 +68,64 @@ spec:
   parameters:
     repos:
       - "mycompany.registry.com"
- ```
+```
 
 Пример демонстрирует настройку проверки адреса репозитория в поле `image` у всех Pod'ов, создающихся в пространстве имен, имеющих label `security.deckhouse.io/pod-policy: restricted`. Если адрес в поле `image` создаваемого Pod'а начинается не с `mycompany.registry.com`, Pod создан не будет.
 
 Подробнее о шаблонах и языке политик можно узнать в [документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/).
 
 Больше примеров описания проверок для расширения политики можно найти в [библиотеке](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general) Gatekeeper.
+
+## Что если несколько политик (операционных или безопасности) применяются на один объект?
+
+> В таком случае необходимо что бы конфигурация объекта соответствовала всем политикам, которые на него распространяются.
+
+Пример - для выполнения требований двух политик безопасности следующего вида
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          name: test
+  policies:
+    readOnlyRootFilesystem: true
+    requiredDropCapabilities:
+    - MKNOD
+```
+
+и
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: bar
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          name: test
+  policies:
+    requiredDropCapabilities:
+    - NET_BIND_SERVICE
+```
+
+в спецификации контейнера потребуется указать:
+
+```yaml
+    securityContext:
+      capabilities:
+        drop:
+          - MKNOD
+          - NET_BIND_SERVICE
+      readOnlyRootFilesystem: true
+```

@@ -48,7 +48,6 @@ spec:
                     allowedHostPaths:
                       type: array
                       description: "The list of allowed hostpath prefixes. An empty list means any path can be used."
-                      default: []
                       example: [{"pathPrefix":"/dev", "readOnly": true}]
                       items:
                         type: object
@@ -62,35 +61,45 @@ spec:
                           readOnly:
                             type: boolean
                             default: false
-                            description: "When set to true, will allow host volumes matching the pathPrefix only if all volume mounts are readOnly."
+                            description: "When set to true, will allow host volumes matching the pathPrefix only if all the volume mounts are readOnly."
                     allowHostIPC:
                       type: boolean
                       description: "Allows sharing the host's IPC namespace with containers."
-                      default: false
-                    allowHostNetwork:
-                      type: boolean
-                      description: "Allows containers to use the host's network."
-                      default: false
-                    allowHostPorts:
-                      type: boolean
-                      description: "Allows containers' ports to be exposed to the host's external network."
-                      default: false
                     allowHostPID:
                       type: boolean
                       description: "Allows sharing the host's PID namespace with containers."
-                      default: false
+                    allowHostNetwork:
+                      type: boolean
+                      description: "Allows containers to use the host's network."
+                    allowedHostPorts:
+                      type: array
+                      description: "The list of hostPort ranges allowed by the rule."
+                      items:
+                        type: object
+                        description: "The range of hostPorts allowed by the rule."
+                        properties:
+                          min:
+                            type: integer
+                            description: "Min value for the hostPort"
+                          max:
+                            type: integer
+                            description: "Max value for the hostPort"
                     allowPrivileged:
                       type: boolean
-                      description: "Allows almost completely unrestricted access to the host from the container."
-                      default: false
+                      description: "Allows running containers in privileged mode."
                     allowPrivilegeEscalation:
                       type: boolean
                       description: "Allows container processes to gain more privileges than its parent process." 
-                      default: false
+                    allowedProcMount:
+                      type: string
+                      description: "The allowed proc mount type for containers."
+                      example: "Unmasked."
+                      enum:
+                        - Default
+                        - Unmasked
                     allowedCapabilities:
                       type: array
-                      description: "List of capabilities that containers are able to use. To allow all capabilities you may use '*'."
-                      default: []
+                      description: "List of capabilities that containers are able to use. To allow all capabilities you may use 'ALL'."
                       example: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
@@ -134,59 +143,122 @@ spec:
                           - SETFCAP
                           - WAKE_ALARM
                           - BLOCK_SUSPEND
+                    requiredDropCapabilities:
+                      type: array
+                      description: "The set of capabilities that have to be dropped from containers. To exclude all capabilities you may use 'ALL'."
+                      example: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
+                      items:
+                        type: string
+                        description: "Linux capabilities to drop from containers' specs."
+                        enum: *caps
                     allowedFlexVolumes:
                       type: array
                       description: "Whitelist of allowed Flex Volume drivers."
-                      default: []
                       items:
                         type: object
                         properties:
                           driver:
                             type: string
-                            default: ""
                             description: "A driver name."
                     allowedUnsafeSysctls:
                       type: array
-                      description: "List of explicitly allowed unsafe sysctls. To allow all unsafe sysctls you may use '*'."
-                      default: []
+                      description: "The list of explicitly allowed unsafe sysctls. To allow all unsafe sysctls you may use '*'."
                       example: ["kernel.msg*", "net.core.somaxconn"]
                       items:
                         type: string
-                    defaultAddCapabilities:
-                      type: array
-                      description: "Set of capabilities that will be added to containers."
-                      default: []
-                      example: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
-                      items:
-                        type: string
-                        description: "Specifies linux capabilities to add."
-                        enum: *caps
                     forbiddenSysctls:
                       type: array
-                      description: "List of forbidden sysctls."
-                      default: ["*"]
-                      example: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
+                      description: "The list of forbidden sysctls. Takes precedence over allowed unsafe sysctls."
+                      example: ["kernel.msg*", "net.core.somaxconn"]
                       items:
                         type: string
                     fsGroup:
                       type: object
-                      description: "Specifies what fs group is used by the security context."
-                      required: ["type"]
+                      description: "Specifies what fs group is allowed to be used by the security context."
+                      required: ["rule"]
                       properties:
-                        type:
+                        rule:
                           type: string
                           description: "Specifes the strategy of the fs group selection."
                           enum:
                             - MustRunAs
-                            - MustRunAsRange
+                            - MayRunAs
                             - RunAsAny
-                          default: "MustRunAs"
-                        id:
-                          type: integer
-                          description: "Specifies fs group ID to use with MustRunAs strategy."
                         ranges:
                           type: array
-                          description: "List of acceptable ranges for the fs group ID to use with MustRunAsRange."
+                          description: "List of acceptable ranges for the fs group ID to use with MustRunAs."
+                          items:
+                            type: object
+                            properties:
+                              min:
+                                type: integer
+                                description: "Min ID value."
+                              max:
+                                type: integer
+                                description: "Max ID value."
+                    runAsUser:
+                      type: object
+                      description: "Specifies what runAsUser value is allowed to be used by the security context."
+                      required: ["rule"]
+                      properties:
+                        rule:
+                          type: string
+                          description: "Specifies the strategy of the user ID selection."
+                          enum:
+                            - MustRunAs
+                            - MustRunAsNonRoot
+                            - RunAsAny
+                        ranges:
+                          type: array
+                          description: "List of acceptable ranges for the user ID to use with MustRunAs."
+                          items:
+                            type: object
+                            properties:
+                              min:
+                                type: integer
+                                description: "Min ID value."
+                              max:
+                                type: integer
+                                description: "Max ID value."
+                    runAsGroup:
+                      type: object
+                      description: "Specifies what runAsGroup value is allowed to be used by the security context."
+                      required: ["rule"]
+                      properties:
+                        rule:
+                          type: string
+                          description: "Specifies the strategy of the group ID selection."
+                          enum:
+                            - MustRunAs
+                            - MayRunAs
+                            - RunAsAny
+                        ranges:
+                          type: array
+                          description: "List of acceptable ranges for the group ID to use with MustRunAs."
+                          items:
+                            type: object
+                            properties:
+                              min:
+                                type: integer
+                                description: "Min ID value."
+                              max:
+                                type: integer
+                                description: "Max ID value."
+                    supplementalGroups:
+                      type: object
+                      description: "Specifies what supplemental groups are allowed to be used by the security context."
+                      required: ["rule"]
+                      properties:
+                        rule:
+                          type: string
+                          description: "Specifies the strategy of the supplemental group ID selection."
+                          enum:
+                            - MustRunAs
+                            - MayRunAs
+                            - RunAsAny
+                        ranges:
+                          type: array
+                          description: "List of acceptable ranges for the supplemental group ID to use with MustRunAs."
                           items:
                             type: object
                             properties:
@@ -198,97 +270,44 @@ spec:
                                 description: "Max ID value."
                     readOnlyRootFilesystem:
                       type: boolean
-                      description: "Defines if it's possible to run the container with non-read only file system."
-                      default: false
-                    requiredDropCapabilities:
-                      type: array
-                      description: "The set of capabilities that have to be dropped from the container."
-                      default: ["ALL"]
-                      example: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
-                      items:
-                        type: string
-                        description: "Linux capabilities to drop from the pod spec."
-                        enum: *caps
-                    runAsUser:
-                      type: object
-                      description: "Specifies what runAsUser value is used by the security context."
-                      required: ["type"]
-                      properties:
-                        type:
-                          type: string
-                          description: "Specifies the strategy of the user ID selection."
-                          enum:
-                            - MustRunAs
-                            - MustRunAsRange
-                            - MustRunAsNonRoot
-                            - RunAsAny
-                          default: "MustRunAsNonRoot"
-                        id:
-                          type: integer
-                          description: "Specifies user ID to use with MustRunAs strategy."
-                        ranges:
-                          type: array
-                          description: "List of acceptable ranges for the user ID to use with MustRunAsRange."
-                          items:
-                            type: object
-                            properties:
-                              min:
-                                type: integer
-                                description: "Min ID value."
-                              max:
-                                type: integer
-                                description: "Max ID value."
+                      description: "Defines if it's possible to run containers with non-read only file system."
                     seccompProfiles:
-                      type: array
-                      description: "The list of allowed profiles that may be set for the pod or container’s seccomp annotations."
-                      default: []
-                      example: ["docker/default"]
-                      items:
-                        type: string
-                    seLinuxContext:
                       type: object
-                      description: "Specifies what SElinux labels to set in the security context."
-                      required: ["type"]
+                      description: "This field specifies the list of allowed profiles that may be set for the pod or container’s seccomp annotations."
                       properties:
-                        type:
-                          type: string
-                          description: "Specifes the strategy of the SElinux labels selection."
-                          enum:
-                            - MustRunAs
-                            - RunAsAny
-                          default: "RunAsAny"
-                    supplementalGroups:
-                      type: object
-                      description: "Specifies what supplemental group is used by the security context."
-                      required: ["type"]
-                      properties:
-                        type:
-                          type: string
-                          description: "Specifies the strategy of the supplemental group ID selection."
-                          enum:
-                            - MustRunAs
-                            - MustRunAsRange
-                            - RunAsAny
-                          default: "MustRunAs"
-                        id:
-                          type: integer
-                          description: "Specifies supplemental group ID to use with MustRunAs strategy."
-                        ranges:
+                        allowedProfiles:
                           type: array
-                          description: "List of acceptable ranges for the supplemental group ID to use with MustRunAsRange."
+                          description: "The list of allowed profile values for seccomp on Pods/Containers."
                           items:
-                            type: object
-                            properties:
-                              min:
-                                type: integer
-                                description: "Min ID value."
-                              max:
-                                type: integer
-                                description: "Max ID value."
+                            type: string
+                        allowedLocalhostFiles:
+                          type: array
+                          description: |
+                            When using securityContext naming scheme for seccomp and including `Localhost` this array holds
+                            the allowed profile JSON files.
+                          items: 
+                            type: string
+                    seLinux:
+                      type: array
+                      description: "Specifies what SElinux labels are allowed to be set in the security context."
+                      items:
+                        type: object
+                        properties:
+                          level:
+                            type: string
+                            description: "Level is SELinux level label that applies to the container."
+                          role:
+                            type: string
+                            description: "Role is SELinux role label that applies to the container."
+                          type:
+                            type: string
+                            description: "Type is SELinux type label that applies to the container."
+                          user:
+                            type: string
+                            description: "User is SELinux user label that applies to the container."
                     allowedVolumes:
                       type: array
                       description: "The set of volume plugins allowed to use."
-                      default: ["*"]
                       example: ["hostPath", "persistentVolumeClaim"]
                       items:
                         type: string
