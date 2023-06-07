@@ -223,7 +223,7 @@ func (r *Runner) switchTerraformIsRunning() {
 }
 
 func (r *Runner) checkTerraformIsRunning() bool {
-	return (r.terraformRunningCounter % 2) > 0
+	return (atomic.LoadInt32(&r.terraformRunningCounter) % 2) > 0
 }
 
 func (r *Runner) Init() error {
