@@ -2,16 +2,16 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: capo-mutating-webhook-configuration
+  name: capi-openstack-mutating-webhook-configuration
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
   annotations:
-    cert-manager.io/inject-ca-from: d8-cloud-provider-openstack/capo-serving-cert
+    cert-manager.io/inject-ca-from: d8-cloud-provider-openstack/capi-openstack-serving-cert
 webhooks:
   - admissionReviewVersions:
       - v1beta1
     clientConfig:
       service:
-        name: capo-webhook-service
+        name: capi-openstack-webhook-service
         namespace: d8-cloud-provider-openstack
         path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackcluster
     failurePolicy: Fail
@@ -32,7 +32,7 @@ webhooks:
       - v1beta1
     clientConfig:
       service:
-        name: capo-webhook-service
+        name: capi-openstack-webhook-service
         namespace: d8-cloud-provider-openstack
         path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackclustertemplate
     failurePolicy: Fail
@@ -53,7 +53,7 @@ webhooks:
       - v1beta1
     clientConfig:
       service:
-        name: capo-webhook-service
+        name: capi-openstack-webhook-service
         namespace: d8-cloud-provider-openstack
         path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackmachine
     failurePolicy: Fail
@@ -74,16 +74,16 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: capo-validating-webhook-configuration
+  name: capi-openstack-validating-webhook-configuration
   annotations:
-    cert-manager.io/inject-ca-from: d8-cloud-provider-openstack/capo-serving-cert
+    cert-manager.io/inject-ca-from: d8-cloud-provider-openstack/capi-openstack-serving-cert
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 webhooks:
   - admissionReviewVersions:
       - v1beta1
     clientConfig:
       service:
-        name: capo-webhook-service
+        name: capi-openstack-webhook-service
         namespace: d8-cloud-provider-openstack
         path: /validate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackcluster
     failurePolicy: Fail
@@ -104,7 +104,7 @@ webhooks:
       - v1beta1
     clientConfig:
       service:
-        name: capo-webhook-service
+        name: capi-openstack-webhook-service
         namespace: d8-cloud-provider-openstack
         path: /validate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackclustertemplate
     failurePolicy: Fail
@@ -125,7 +125,7 @@ webhooks:
       - v1beta1
     clientConfig:
       service:
-        name: capo-webhook-service
+        name: capi-openstack-webhook-service
         namespace: d8-cloud-provider-openstack
         path: /validate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackmachine
     failurePolicy: Fail
@@ -146,7 +146,7 @@ webhooks:
       - v1beta1
     clientConfig:
       service:
-        name: capo-webhook-service
+        name: capi-openstack-webhook-service
         namespace: d8-cloud-provider-openstack
         path: /validate-infrastructure-cluster-x-k8s-io-v1alpha6-openstackmachinetemplate
     failurePolicy: Fail

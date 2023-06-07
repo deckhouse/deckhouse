@@ -3,13 +3,13 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-  name: capo-serving-cert
+  name: capi-openstack-serving-cert
   namespace: d8-cloud-provider-openstack
 spec:
   dnsNames:
-    - capo-webhook-service.d8-cloud-provider-openstack.svc
-    - capo-webhook-service.d8-cloud-provider-openstack.local
+    - capi-openstack-webhook-service.d8-cloud-provider-openstack.svc
+    - capi-openstack-webhook-service.d8-cloud-provider-openstack.local
   issuerRef:
     kind: ClusterIssuer
     name: selfsigned
-  secretName: capo-webhook-service-cert
+  secretName: capi-openstack-webhook-service-cert

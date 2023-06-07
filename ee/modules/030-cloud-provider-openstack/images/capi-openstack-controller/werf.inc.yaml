@@ -6,11 +6,11 @@ docker:
   ENV:
     WORKDIR: /
     USER: 65534
-  ENTRYPOINT: ["/capo-controller-manager"]
+  ENTRYPOINT: ["/capi-openstack-controller"]
 import:
   - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /src/manager
-    to: /capo-controller-manager
+    to: /capi-openstack-controller
     before: setup
 shell:
   beforeInstall:
@@ -26,6 +26,6 @@ shell:
     - apk add --no-cache make bash git patch rsync gcc musl-dev
   install:
     - mkdir /src
-    - wget https://github.com/kubernetes-sigs/cluster-api-provider-openstack/archive/refs/tags/v0.7.3.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+    - wget https://github.com/kubernetes-sigs/cluster-api-provider-openstack/archive/refs/tags/v{{ $version }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags \"-static\"" -o manager .

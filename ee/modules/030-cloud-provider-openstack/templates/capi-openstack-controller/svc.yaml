@@ -3,11 +3,11 @@ apiVersion: v1
 kind: Service
 metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-  name: capo-webhook-service
+  name: capi-openstack-webhook-service
   namespace: d8-cloud-provider-openstack
 spec:
   ports:
     - port: 443
       targetPort: webhook-server
   selector:
-    app: capo-controller-manager
+    app: capi-openstack-controller
