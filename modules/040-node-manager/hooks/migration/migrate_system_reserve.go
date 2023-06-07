@@ -95,9 +95,9 @@ func systemReserve(input *go_hook.HookInput) error {
 	}
 
 	ngsSnapshot := input.Snapshots["ngs"]
-	for _, nodeRaw := range ngsSnapshot {
-		node := nodeRaw.(*NodeGroup)
-		input.PatchCollector.MergePatch(patch, "v1", "Node", "", node.Name, object_patch.IgnoreMissingObject())
+	for _, ngRaw := range ngsSnapshot {
+		ng := ngRaw.(*NodeGroup)
+		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", ng.Name)
 	}
 
 	input.PatchCollector.Create(&corev1.ConfigMap{
