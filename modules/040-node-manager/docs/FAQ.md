@@ -905,44 +905,103 @@ Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example abo
 
 Note that node templates (labels/taints) for `worker` and `worker-spot` NodeGroups must be the same (or at least suitable for the load that triggers the cluster scaling process).
 
-## How to Interpret Node Group states
+## How to interpret Node Group states?
 
-**Ready** - Node Group contains the minimum required number of Scheduled Nodes. Calculated by the formula:
+**Ready** - the node group contains the minimum required number of scheduled nodes with the status ```Ready``` for all zones.
 
-```go
-isReady := len(nodes) == 0
+Example 1. A group of nodes in the ``Ready`` state:
 
-if readySchedulableNodes > 0 {
-  isReady = readySchedulableNodes >= minPerAllZone
-}
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 ```
 
-**Updating** - Node Group contains at least one Node in which the annotation contains
-an entry with the prefix ```update.node.deckhouse.io```
+Example 2. A group of nodes in the ``Not Ready`` state:
 
-**WaitingForDisruptiveApproval** - Node Group contains at least one Node in which
-the annotation contains the record ```update.node.deckhouse.io/disruption-required``` and
-there is no record ```update.node.deckhouse.io/disruption-approved```
-
-**Scaling** - Calculated only for Node Group with the type ```Cloud Ephemeral``` by the formula:
-
-```go
-inUpScale := ng.Desired > int32(len(nodes))
-inDownScale = inDownScale || ng.Desired < ng.Instances
-
-isScaling := inDownScale || inUpScale
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+  conditions:
+  - status: "False"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 ```
 
-```ng.Desired``` - Node Group parameter responsible for setting the desired number of Nodes in the group
-```ng.Instances``` - The number of instances in the Node Group
-```inDownScale``` - the initial value is ```true``` if at least one node is marked for deletion
+**Updating** - a node group contains at least one node in which there is an annotation with the prefix ```update.node.deckhouse.io```, for example, ```update.node.deckhouse.io/waiting-for-approval```
 
-**Error** - Contains the last error that occurred when creating an instance in Node Group
+**WaitingForDisruptiveApproval** - a node group contains at least one node that has an annotation ```update.node.deckhouse.io/disruption-required``` and
+there is no annotation ```update.node.deckhouse.io/disruption-approved```
 
-## How to make Werf ignore conditions.Ready in Node Group?
+**Scaling** - calculated only for node groups with the type ```CloudEphemeral```. The state ```True``` can be in two cases:
 
-Werf checks conditions.Ready and for large node groups can problems with timeouts.
-So that Werf ignores ```conditions.Ready``` it is necessary to add entries to the Node Group annotation:
+1. When the number of nodes is less than the desired number of nodes in the group, i.e. when it is necessary to increase the number of nodes in the group.
+1. When a node is marked for deletion or the number of nodes is greater than the desired number of nodes, i.e. when it is necessary to reduce the number of nodes in the group.
+
+The desired number of nodes is the sum of all replicas in the node group.
+
+Example. The desired number of nodes is 2
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+...
+  desired: 2
+...
+```
+
+**Error** - contains the last error that occurred when creating a node in a node group
+
+## How do I make Werf ignore the Ready conditions in a node group?
+
+Werf checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```. If a large number of nodes are planned in a node group, it may take considerable time to deploy them. As a result, Werf may terminate its work with a timeout error. In order for Werf to ignore the ```Ready``` state of a node group, annotations must be added:
 
 ```yaml
 metadata:
