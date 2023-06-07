@@ -11,7 +11,6 @@ clouds:
     region_name: {{ .Values.cloudProviderOpenstack.internal.connection.region | quote }}
     interface: "public"
     identity_api_version: 3
-    verify: false
 {{- end }}
 ---
 apiVersion: v1
