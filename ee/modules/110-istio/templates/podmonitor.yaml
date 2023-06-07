@@ -1,9 +1,9 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
-  {{- $applicationNamespaces := list }}
-  {{- range $namespace := $.Values.istio.internal.applicationNamespaces }}
+  {{- $applicationNamespaces := $.Values.istio.internal.applicationNamespaces }}
+  {{- range $namespace := $applicationNamespaces }}
     {{- range $regex := $.Values.istio.monitoring.excludeApplicationNamespaceRegexes }}
-      {{- if not (regexMatch $regex $namespace) }}
-        {{- $applicationNamespaces = append $applicationNamespaces $namespace }}
+      {{- if regexMatch $regex $namespace }}
+        {{- $applicationNamespaces = without $applicationNamespaces $namespace }}
       {{- end }}
     {{- end }}
   {{- end }}
