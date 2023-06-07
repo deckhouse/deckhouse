@@ -98,12 +98,11 @@ func systemReserve(input *go_hook.HookInput) error {
 	for _, ngRaw := range ngsSnapshot {
 		ng := ngRaw.(*NodeGroup)
 		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-			objCopy := u.DeepCopy()
-			err := unstructured.SetNestedField(objCopy.Object, v1.KubeletResourceReservationModeOff, "spec", "kubelet", "resourceReservationMode")
+			err := unstructured.SetNestedField(u.Object, v1.KubeletResourceReservationModeOff, "spec", "kubelet", "resourceReservationMode")
 			if err != nil {
 				return nil, err
 			}
-			return objCopy, nil
+			return u, nil
 		}, "deckhouse.io/v1", "NodeGroup", "", ng.Name)
 	}
 
