@@ -97,7 +97,14 @@ func systemReserve(input *go_hook.HookInput) error {
 	ngsSnapshot := input.Snapshots["ngs"]
 	for _, ngRaw := range ngsSnapshot {
 		ng := ngRaw.(*NodeGroup)
-		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", ng.Name)
+		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+			objCopy := u.DeepCopy()
+			err := unstructured.SetNestedField(objCopy.Object, v1.KubeletResourceReservationModeOff, "spec", "kubelet", "resourceReservationMode")
+			if err != nil {
+				return nil, err
+			}
+			return objCopy, nil
+		}, "deckhouse.io/v1", "NodeGroup", "", ng.Name)
 	}
 
 	input.PatchCollector.Create(&corev1.ConfigMap{
@@ -113,12 +120,4 @@ func systemReserve(input *go_hook.HookInput) error {
 	}, object_patch.IgnoreIfExists())
 
 	return nil
-}
-
-var patch = v1.NodeGroup{
-	Spec: v1.NodeGroupSpec{
-		Kubelet: v1.Kubelet{
-			ResourceReservationMode: v1.KubeletResourceReservationModeOff,
-		},
-	},
 }
