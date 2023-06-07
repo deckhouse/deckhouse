@@ -997,7 +997,7 @@ status:
 ...
 ```
 
-**Error** - contains the last error that occurred when creating a node in a node group
+**Error** — contains the last error that occurred when creating a node in a node group.
 
 ## How do I make Werf ignore the Ready conditions in a node group?
 
