@@ -974,10 +974,10 @@ there is no annotation ```update.node.deckhouse.io/disruption-approved```.
 
 **Scaling** - calculated only for node groups with the type ```CloudEphemeral```. The state ```True``` can be in two cases:
 
-1. When the number of nodes is less than the _desired number of nodes_ in the group, i.e. when it is necessary to increase the number of nodes in the group.
-1. When a node is marked for deletion or the number of nodes is greater than the _desired number of nodes_, i.e. when it is necessary to reduce the number of nodes in the group.
+1. When the number of nodes is less than the *desired number of nodes* in the group, i.e. when it is necessary to increase the number of nodes in the group.
+1. When a node is marked for deletion or the number of nodes is greater than the *desired number of nodes*, i.e. when it is necessary to reduce the number of nodes in the group.
 
-The _desired number of nodes_ is the sum of all replicas in the node group.
+The *desired number of nodes* is the sum of all replicas in the node group.
 
 Example. The desired number of nodes is 2:
 
