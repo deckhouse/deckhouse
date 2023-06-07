@@ -4,6 +4,7 @@ clouds:
     auth:
       auth_url: {{ .Values.cloudProviderOpenstack.internal.connection.authURL | quote }}
       username: {{ .Values.cloudProviderOpenstack.internal.connection.username | quote }}
+      password: {{ .Values.cloudProviderOpenstack.internal.connection.password | quote }}
       project_name: {{ .Values.cloudProviderOpenstack.internal.connection.tenantName | quote }}
       user_domain_name: {{ .Values.cloudProviderOpenstack.internal.connection.domainName | quote }}
       project_domain_name: {{ .Values.cloudProviderOpenstack.internal.connection.domainName | quote }}
