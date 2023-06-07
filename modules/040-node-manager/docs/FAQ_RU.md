@@ -971,7 +971,7 @@ status:
 
 **Updating** — группа узлов содержит как минимум один узел, в которой в аннотации присутствует значение с префиксом ```update.node.deckhouse.io```
 
-**WaitingForDisruptiveApproval** — группа узлов содержит как минимум один узел, в анотации которого присутствует ```update.node.deckhouse.io/disruption-required``` и
+**WaitingForDisruptiveApproval** — группа узлов содержит как минимум один узел, в котором присутствует аннотация ```update.node.deckhouse.io/disruption-required``` и
 отсутствует ```update.node.deckhouse.io/disruption-approved```
 
 **Scaling** — рассчитывается только для групп узлов с типом ```CloudEphemeral```. Может быть два положительных варианта этого состояния.
