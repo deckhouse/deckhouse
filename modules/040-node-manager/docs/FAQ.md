@@ -999,7 +999,7 @@ status:
 
 **Error** — contains the last error that occurred when creating a node in a node group.
 
-## How do I make Werf ignore the Ready conditions in a node group?
+## How do I make werf ignore the Ready conditions in a node group?
 
 Werf checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```. If a large number of nodes are planned in a node group, it may take considerable time to deploy them. As a result, Werf may terminate its work with a timeout error. In order for Werf to ignore the ```Ready``` state of a node group, annotations must be added:
 
