@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.1.3
+	github.com/flant/addon-operator v1.1.4-0.20230606220703-208d2a39ae0c // revert mergo for v1.1.3
 	github.com/flant/kube-client v0.26.1
 	github.com/flant/shell-operator v1.2.0
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -161,7 +161,7 @@ require (
 	github.com/openshift/custom-resource-status v1.1.2 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/peterbourgon/mergemap v0.0.0-20130613134717-e21c03b7a721 // indirect
+	github.com/peterbourgon/mergemap v0.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
