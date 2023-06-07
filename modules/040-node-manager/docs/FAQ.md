@@ -970,7 +970,7 @@ status:
 **Updating** - a node group contains at least one node in which there is an annotation with the prefix ```update.node.deckhouse.io``` (for example, ```update.node.deckhouse.io/waiting-for-approval```).
 
 **WaitingForDisruptiveApproval** - a node group contains at least one node that has an annotation ```update.node.deckhouse.io/disruption-required``` and
-there is no annotation ```update.node.deckhouse.io/disruption-approved```
+there is no annotation ```update.node.deckhouse.io/disruption-approved```.
 
 **Scaling** - calculated only for node groups with the type ```CloudEphemeral```. The state ```True``` can be in two cases:
 
