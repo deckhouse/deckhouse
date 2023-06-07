@@ -5,6 +5,7 @@
 
  - An alert will be generated for each instance of an object with a deprecated `extended-monitoring.flant.com` annotation. **Pay attention** that you must change deprecated annotations to `extended-monitoring.deckhouse.io` label ASAP.
  - Control plane components and kubelet will restart.
+ - Ingress controller Pods will restart.
  - Linux Kernel >= 5.8 is required to run the `runtime-audit-engine` module.
  - OpenVPN will be restarted and connections will be terminated.
  - Removed write permissions on `namespace`, `limitrange`, `resourcequota`, `role` and `clusterrole` resources for the `Editor`, `Admin`, and `ClusterEditor` access levels. Read the [issue](https://github.com/deckhouse/deckhouse/pull/4494) description If you want to return the permissions.
@@ -92,6 +93,7 @@
  - **[cni-flannel]** flannel's entrypoint now correctly passes arguments to the flannel itself. [#4837](https://github.com/deckhouse/deckhouse/pull/4837)
  - **[cni-flannel]** Fix cleanup flannel used IPs on migration from docker to containerd. [#4306](https://github.com/deckhouse/deckhouse/pull/4306)
  - **[common]** Prevent usage of vulnerable TLS ciphers in `kube-rbac-proxy`. [#4825](https://github.com/deckhouse/deckhouse/pull/4825)
+    Ingress controller Pods will restart.
  - **[control-plane-manager]** Fix errors in control-plane-manager converge and preflight checks. [#4822](https://github.com/deckhouse/deckhouse/pull/4822)
     control-plane-manager will restart.
  - **[deckhouse]** Add `prometheus.deckhouse.io/rules-watcher-enabled` on the `d8-system` namespace. [#4752](https://github.com/deckhouse/deckhouse/pull/4752)
