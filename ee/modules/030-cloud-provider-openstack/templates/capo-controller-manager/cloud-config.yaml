@@ -1,5 +1,4 @@
-{{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
-  {{- define "clouds_yaml_render" }}
+{{- define "clouds_yaml_render" }}
 clouds:
   openstack:
     auth:
@@ -11,7 +10,8 @@ clouds:
     region_name: {{ .Values.cloudProviderOpenstack.internal.connection.region | quote }}
     interface: "public"
     identity_api_version: 3
-  {{- end }}
+{{- end }}
+{{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
 ---
 apiVersion: v1
 kind: Secret
