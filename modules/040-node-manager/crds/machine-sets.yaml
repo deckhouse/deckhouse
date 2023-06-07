@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: d8-cloud-provider-openstack/capo-serving-cert
+    cert-manager.io/inject-ca-from: d8-cloud-instance-manager/capi-serving-cert
     controller-gen.kubebuilder.io/version: v0.11.4
   labels:
     heritage: deckhouse
@@ -18,7 +18,7 @@ spec:
         caBundle: Cg==
         service:
           name: capi-webhook-service
-          namespace: d8-cloud-provider-openstack
+          namespace: d8-cloud-instance-manager
           path: /convert
       conversionReviewVersions:
         - v1
