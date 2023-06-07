@@ -20,6 +20,6 @@ spec:
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
     kind: {{ printf "%sCluster" .Values.global.clusterConfiguration.cloud.provider }}
-    namespace: d8-cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}
+    namespace: d8-cloud-instance-manager
     name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
 {{- end }}
