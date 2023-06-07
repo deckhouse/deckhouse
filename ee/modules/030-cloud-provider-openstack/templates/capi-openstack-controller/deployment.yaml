@@ -1,4 +1,4 @@
-{{- define "capi-openstack_controller_resources" }}
+{{- define "capi_openstack_controller_resources" }}
 cpu: 25m
 memory: 50Mi
 {{- end }}
@@ -22,7 +22,7 @@ spec:
     containerPolicies:
     - containerName: "capi-openstack-controller"
       minAllowed:
-        {{- include "capi-openstack_controller_resources" . | nindent 8 }}
+        {{- include "capi_openstack_controller_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 50Mi
@@ -77,7 +77,7 @@ spec:
       containers:
       - name: capi-openstack-controller
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "capi-openstackControllerManager") }}
+        image: {{ include "helm_lib_module_image" (list . "capiOpenstackController") }}
         args:
         - --leader-elect
         - --v=2
@@ -113,7 +113,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "openstack_cloud_controller_resources" . | nindent 12 }}
+            {{- include "capi_openstack_controller_resources" . | nindent 12 }}
   {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
