@@ -967,7 +967,7 @@ status:
     type: Ready
 ```
 
-**Updating** - a node group contains at least one node in which there is an annotation with the prefix ```update.node.deckhouse.io```, for example, ```update.node.deckhouse.io/waiting-for-approval```
+**Updating** - a node group contains at least one node in which there is an annotation with the prefix ```update.node.deckhouse.io``` (for example, ```update.node.deckhouse.io/waiting-for-approval```).
 
 **WaitingForDisruptiveApproval** - a node group contains at least one node that has an annotation ```update.node.deckhouse.io/disruption-required``` and
 there is no annotation ```update.node.deckhouse.io/disruption-approved```
