@@ -364,7 +364,7 @@ func (h *Handler) affectedDirs(r *WebhookRequest) []DirectoryEntry {
 }
 
 // getsthe map of namespaces matching specific label selector from k8s api client
-func (h *Handler)getNamespacesByLabelSelector(namespaceSelector NamespaceSelector) (map[string]struct{}, error) {
+func (h *Handler) getNamespacesByLabelSelector(namespaceSelector NamespaceSelector) (map[string]struct{}, error) {
 	namespaces := make(map[string]struct{})
 
 	getNamespaces, err := h.kubeclient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{LabelSelector: metav1.FormatLabelSelector(namespaceSelector.LabelSelector)})

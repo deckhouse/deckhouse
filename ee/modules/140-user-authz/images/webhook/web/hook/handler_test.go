@@ -253,12 +253,12 @@ func TestAuthorizeRequest(t *testing.T) {
 				Group:     "test",
 				Version:   "v1",
 				Resource:  "object1",
-				Namespace: "namespaceSelector-test",
+				Namespace: "namespace-selector-test",
 			},
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -277,12 +277,12 @@ func TestAuthorizeRequest(t *testing.T) {
 				Group:     "test",
 				Version:   "v1",
 				Resource:  "object1",
-				Namespace: "namespaceSelector-test",
+				Namespace: "namespace-selector-test",
 			},
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "false",
 						},
@@ -306,7 +306,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "false",
 						},
@@ -325,12 +325,12 @@ func TestAuthorizeRequest(t *testing.T) {
 				Group:     "test",
 				Version:   "v1",
 				Resource:  "object1",
-				Namespace: "namespaceSelector-test",
+				Namespace: "namespace-selector-test",
 			},
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -354,7 +354,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -378,7 +378,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -410,7 +410,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -434,7 +434,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -453,12 +453,12 @@ func TestAuthorizeRequest(t *testing.T) {
 				Group:     "test",
 				Version:   "v1",
 				Resource:  "object1",
-				Namespace: "namespaceSelector-test",
+				Namespace: "namespace-selector-test",
 			},
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -482,7 +482,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespaceSelector-test",
+						Name:   "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},

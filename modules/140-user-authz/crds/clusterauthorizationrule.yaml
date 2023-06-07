@@ -223,10 +223,18 @@ spec:
 
                          If both matchExpressions and matchLabels parameters are set, their requirements are ANDed together -- they must all be satisfied in order to match.
                       type: object
+                      anyOf:
+                        - required: [ matchLabels ]
+                        - required: [ matchExpressions ]
                       properties:
                         matchExpressions:
-                          description: An array of set-based requirements.
+                          type: array
+                          description: An array of set-based expressions.
                           items:
+                            type: object
+                            required:
+                              - key
+                              - operator
                             properties:
                               key:
                                 description: A label name.
@@ -236,26 +244,22 @@ spec:
                                 type: string
                                 enum: [In,NotIn,Exists,DoesNotExist]
                               values:
-                                description: A label value.
                                 type: array
+                                description: A label value.
                                 items:
                                   type: string
                                   pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
                                   minLength: 1
                                   maxLength: 63
-                            required:
-                              - key
-                              - operator
-                            type: object
-                          type: array
                         matchLabels:
-                          description: A set of labels to match/not match.
+                          type: object
+                          description: A set of labels a namespace must have to match.
+                          example: { "foo": "bar", "baz": "who" }
                           additionalProperties:
                             type: string
                             pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
                             minLength: 1
                             maxLength: 63
-                          type: object
                 limitNamespaces:
                   type: array
                   x-doc-deprecated: true
