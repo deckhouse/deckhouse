@@ -83,7 +83,7 @@ spec:
         - --v=2
         - --metrics-bind-addr=127.0.0.1:8086
         - --health-addr=$(HOST_IP):9440
-        - --namespace=d8-capi-system
+        - --namespace=d8-cloud-instance-manager
         - --webhook-port=9441
         volumeMounts:
           - mountPath: /tmp/k8s-webhook-server/serving-certs

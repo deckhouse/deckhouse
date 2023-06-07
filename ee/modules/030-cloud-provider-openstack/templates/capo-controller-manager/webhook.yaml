@@ -2,7 +2,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: mutating-webhook-configuration
+  name: capo-mutating-webhook-configuration
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
   annotations:
     cert-manager.io/inject-ca-from: d8-cloud-provider-openstack/capo-serving-cert
@@ -74,7 +74,7 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: validating-webhook-configuration
+  name: capo-validating-webhook-configuration
   annotations:
     cert-manager.io/inject-ca-from: d8-cloud-provider-openstack/capo-serving-cert
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
