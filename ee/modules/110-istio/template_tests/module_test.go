@@ -782,18 +782,14 @@ updatePolicy:
 		})
 	})
 
-	Context("monitoring.excludeApplicationNamespaceRegexes is configured", func() {
+	Context("applicationNamespacesToMonitor are set", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.applicationNamespaces", `
+			f.ValuesSetFromYaml("istio.internal.applicationNamespacesToMonitor", `
 - "myns"
 - "review-123"
-- "notreview-123"
-`)
-			f.ValuesSetFromYaml("istio.monitoring.excludeApplicationNamespaceRegexes", `
-- "^review-.*"
 `)
 			f.HelmRender()
 		})
@@ -804,7 +800,7 @@ updatePolicy:
 			podMonitor := f.KubernetesResource("podmonitor", "d8-monitoring", "istio-sidecars")
 
 			Expect(podMonitor.Exists()).To(BeTrue())
-			Expect(podMonitor.Field("spec.namespaceSelector.matchNames")).To(MatchJSON(`["myns","notreview-123"]`))
+			Expect(podMonitor.Field("spec.namespaceSelector.matchNames")).To(MatchJSON(`["myns","review-123"]`))
 		})
 	})
 })

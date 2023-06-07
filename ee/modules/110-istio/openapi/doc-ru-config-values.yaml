@@ -54,11 +54,6 @@ properties:
               tolerations для DaemonSet'а ingressgateway.
 
               Структура, аналогичная `spec.tolerations` Kubernetes pod.
-  monitoring:
-    description: Параметры мониторинга.
-    properties:
-      excludeApplicationNamespaceRegexes:
-        description: Список регулярных выражений для исключений прикладных Namespace из процесса сбора метрик.
   tracing:
     description: Параметры трассировки.
     properties:

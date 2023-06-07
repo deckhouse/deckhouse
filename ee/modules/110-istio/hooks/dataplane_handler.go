@@ -29,6 +29,7 @@ const (
 	istioPodMetadataMetricName   = "d8_istio_dataplane_metadata"
 	metadataExporterMetricsGroup = "metadata"
 	autoUpgradeLabelName         = "istio.deckhouse.io/auto-upgrade"
+	discardMetricsLabelName      = "istio.deckhouse.io/discard-metrics"
 	patchTemplate                = `{ "spec": { "template": { "metadata": { "annotations": { "istio.deckhouse.io/full-version": "%s" } } } } }`
 )
 
