@@ -151,19 +151,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applicationNamespacesDiscovery(input *go_hook.HookInput) error {
 	var applicationNamespaces = make([]string, 0)
 	var applicationNamespacesToMonitor = make([]string, 0)
-	var dataPlaneNamespaces = make([]go_hook.FilterResult, 0)
-	namespacesMap := make(map[string]IstioNamespaceFilterResult)
+	var namespacesSnapshots = make([]go_hook.FilterResult, 0)
+	var namespacesMap = make(map[string]IstioNamespaceFilterResult)
 
 	for _, ns := range input.Snapshots["all_namespaces"] {
 		nsInfo := ns.(IstioNamespaceFilterResult)
 		namespacesMap[nsInfo.Name] = nsInfo
 	}
 
-	dataPlaneNamespaces = append(dataPlaneNamespaces, input.Snapshots["namespaces_definite_revision"]...)
-	dataPlaneNamespaces = append(dataPlaneNamespaces, input.Snapshots["namespaces_global_revision"]...)
-	dataPlaneNamespaces = append(dataPlaneNamespaces, input.Snapshots["istio_pod_global_rev"]...)
-	dataPlaneNamespaces = append(dataPlaneNamespaces, input.Snapshots["istio_pod_definite_rev"]...)
-	for _, ns := range dataPlaneNamespaces {
+	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["namespaces_definite_revision"]...)
+	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["namespaces_global_revision"]...)
+	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["istio_pod_global_rev"]...)
+	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["istio_pod_definite_rev"]...)
+	for _, ns := range namespacesSnapshots {
 		nsInfo := ns.(IstioNamespaceFilterResult)
 		if nsInfo.DeletionTimestampExists {
 			continue
