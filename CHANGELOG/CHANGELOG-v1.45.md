@@ -1,11 +1,5 @@
 # Changelog v1.45
 
-## [MALFORMED]
-
-
- - #4016 unknown section "deckhouse-web"
- - #4624 unknown section "deckhouse-web"
-
 ## Know before update
 
 
