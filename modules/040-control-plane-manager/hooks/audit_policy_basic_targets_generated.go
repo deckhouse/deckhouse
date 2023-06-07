@@ -50,7 +50,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"alliance-ingressgateway",
 	"alliance-metadata-exporter",
 	"cainjector",
-	"capo-controller-manager",
+	"capi-openstack-controller",
 	"cert-exporter",
 	"cert-manager",
 	"cloud-controller-manager",
