@@ -11,7 +11,6 @@ clouds:
     interface: "public"
     identity_api_version: 3
 {{- end }}
-{{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
 ---
 apiVersion: v1
 kind: Secret
@@ -21,4 +20,3 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
   clouds.yaml: {{ include "clouds_yaml_render" . | b64enc }}
-{{- end }}
