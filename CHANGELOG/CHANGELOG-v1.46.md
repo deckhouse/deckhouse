@@ -45,6 +45,8 @@
  - **[ingress-nginx]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[istio]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[keepalived]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
+ - **[linstor]** Added params for enabled SELinux support. [#4849](https://github.com/deckhouse/deckhouse/pull/4849)
+    linstor satellite Pods will be restarted.
  - **[linstor]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[local-path-provisioner]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[log-shipper]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
@@ -96,6 +98,7 @@
  - **[deckhouse]** Remove Deckhouse release naming transformation. [#4568](https://github.com/deckhouse/deckhouse/pull/4568)
  - **[deckhouse]** Change liveness probe for `webhook-handler` to prevent EOF log spamming. [#4562](https://github.com/deckhouse/deckhouse/pull/4562)
     The `webhook-handler` Pod will restart.
+ - **[deckhouse-controller]** Reverted "mergo" library update. Fixed an issue where Deckhouse might panic on concurrent map access. [#4872](https://github.com/deckhouse/deckhouse/pull/4872)
  - **[docs]** Update the description of the global `storageClass` parameter. [#4424](https://github.com/deckhouse/deckhouse/pull/4424)
  - **[extended-monitoring]** Send one `ExtendedMonitoringDeprecatatedAnnotation` alert per cluster. [#4829](https://github.com/deckhouse/deckhouse/pull/4829)
  - **[global-hooks]** Fix cluster DNS address discovery. [#4521](https://github.com/deckhouse/deckhouse/pull/4521)
