@@ -979,7 +979,7 @@ there is no annotation ```update.node.deckhouse.io/disruption-approved```.
 
 The _desired number of nodes_ is the sum of all replicas in the node group.
 
-Example. The desired number of nodes is 2
+Example. The desired number of nodes is 2:
 
 ```yaml
 apiVersion: deckhouse.io/v1
