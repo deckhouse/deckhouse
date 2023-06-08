@@ -1,4 +1,4 @@
-{{- $commit := "094b5c3d5578d6fc670f46b5f969579ff639fa97" }}
+{{- $version := "0.7.3" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ .Images.BASE_ALPINE}}
@@ -28,6 +28,7 @@ shell:
   install:
     - git clone https://github.com/kubernetes-sigs/cluster-api-provider-openstack.git /src
     - cd /src
-    - git checkout {{ $commit }}
+    - git checkout v{{ $commit }}
     - git config --global user.email "builder@deckhouse.io"
+    - git cherry-pick 6c4ba61f68fe67a52490e780c9dd932179a98d25
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags \"-static\"" -o manager .
