@@ -1,11 +1,35 @@
 spec:
   versions:
     - name: v1alpha1
-      schema:
+      schema: &schema
         openAPIV3Schema:
           properties:
             spec:
-              properties: &properties
+              properties:
+                annotations:
+                  description: |
+                    Пользовательские аннотации для DaemonSet Ingress Controller.
+
+                    **Внимание!** Вы несете полную ответственность за применение этих параметров.
+                labels:
+                  description: |
+                    Пользовательские лэйблы для DaemonSet Ingress Controller.
+
+                    **Внимание!** Вы несете полную ответственность за применение этих параметров.
+                pods:
+                  description: |
+                    Раздел параметров pods, создаваемых DaemonSet Ingress Controller.
+                  properties:
+                    annotations:
+                      description: |
+                        Пользовательские аннотации для стручков DaemonSet Ingress Controlle.
+
+                        **Внимание!** Вы несете полную ответственность за применение этих параметров.
+                    labels:
+                      description: |
+                        Пользовательские лэйблы для стручков DaemonSet Ingress Controlle.
+
+                        **Внимание!** Вы несете полную ответственность за применение этих параметров.
                 ingressClass:
                   description: |
                     Имя Ingress-класса для обслуживания Ingress NGINX controller.
@@ -304,33 +328,4 @@ spec:
     - name: v1
       served: true
       storage: false
-      schema:
-        openAPIV3Schema:
-          properties:
-            spec:
-              properties:
-                <<: *properties
-                annotations:
-                  description: |
-                    Пользовательские аннотации для DaemonSet Ingress Controller.
-
-                    **Внимание!** Вы несете полную ответственность за применение этих параметров.
-                labels:
-                  description: |
-                    Пользовательские лэйблы для DaemonSet Ingress Controller.
-
-                    **Внимание!** Вы несете полную ответственность за применение этих параметров.
-                pods:
-                  description: |
-                    Раздел параметров pods, создаваемых DaemonSet Ingress Controller.
-                  properties:
-                    annotations:
-                      description: |
-                        Пользовательские аннотации для стручков DaemonSet Ingress Controlle.
-
-                        **Внимание!** Вы несете полную ответственность за применение этих параметров.
-                    labels:
-                      description: |
-                        Пользовательские лэйблы для стручков DaemonSet Ingress Controlle.
-
-                        **Внимание!** Вы несете полную ответственность за применение этих параметров.
+      schema: *schema
