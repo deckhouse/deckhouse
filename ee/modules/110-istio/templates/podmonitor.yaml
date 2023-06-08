@@ -1,5 +1,5 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
-  {{- if .Values.istio.internal.applicationNamespaces }}
+  {{- if $.Values.istio.internal.applicationNamespacesToMonitor }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -39,6 +39,6 @@ spec:
       operator: Exists
   namespaceSelector:
     matchNames:
-    {{- .Values.istio.internal.applicationNamespaces | toYaml | nindent 4 }}
+    {{- $.Values.istio.internal.applicationNamespacesToMonitor | toYaml | nindent 4 }}
   {{- end }}
 {{- end }}

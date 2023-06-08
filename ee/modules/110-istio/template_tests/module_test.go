@@ -780,4 +780,26 @@ updatePolicy:
 			Expect(ingressSvc.Field("spec.type").String()).To(Equal("ClusterIP"))
 		})
 	})
+
+	Context("applicationNamespacesToMonitor are set", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.applicationNamespacesToMonitor", `
+- "myns"
+- "review-123"
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			podMonitor := f.KubernetesResource("podmonitor", "d8-monitoring", "istio-sidecars")
+
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.namespaceSelector.matchNames")).To(MatchJSON(`["myns","review-123"]`))
+		})
+	})
 })

@@ -79,6 +79,69 @@ spec: {}
 		})
 	})
 
+	Context("Application namespaces with and without discard-metrics labels", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns-0
+  labels: {}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns-1
+  labels:
+    istio.deckhouse.io/discard-metrics: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns-2
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns-3
+  labels:
+    istio-injection: enabled
+    istio.deckhouse.io/discard-metrics: "true"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-0
+  namespace: ns-0
+  labels:
+    sidecar.istio.io/inject: "true"
+spec: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-1
+  namespace: ns-1
+  labels:
+    sidecar.istio.io/inject: "true"
+spec: {}
+---
+`))
+
+			f.RunHook()
+		})
+
+		It("Should count all pods namespaces properly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-0", "ns-1", "ns-2", "ns-3"}))
+			Expect(f.ValuesGet("istio.internal.applicationNamespacesToMonitor").AsStringSlice()).To(Equal([]string{"ns-0", "ns-2"}))
+		})
+	})
+
 	Context("Application namespaces with labels and IstioOperator", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`

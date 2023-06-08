@@ -23,6 +23,7 @@ type IstioNamespaceFilterResult struct {
 	RevisionRaw             string // for dataplane_metadata_exporter.go
 	Revision                string
 	AutoUpgradeLabelExists  bool // for dataplane_metadata_exporter.go
+	DiscardMetrics          bool
 }
 
 func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -43,6 +44,10 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		namespaceInfo.RevisionRaw = "global"
 	}
 
+	if discardMetrics, ok := obj.GetLabels()[discardMetricsLabelName]; ok {
+		namespaceInfo.DiscardMetrics = discardMetrics == "true"
+	}
+
 	return namespaceInfo, nil
 }
 
@@ -56,6 +61,21 @@ func applyDiscoveryAppIstioPodFilter(obj *unstructured.Unstructured) (go_hook.Fi
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("discovery"),
 	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "all_namespaces",
+			ApiVersion: "v1",
+			Kind:       "Namespace",
+			FilterFunc: applyNamespaceFilter,
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "heritage",
+						Operator: metav1.LabelSelectorOpNotIn,
+						Values:   []string{"upmeter"},
+					},
+				},
+			},
+		},
 		{
 			Name:          "namespaces_global_revision",
 			ApiVersion:    "v1",
@@ -130,24 +150,37 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func applicationNamespacesDiscovery(input *go_hook.HookInput) error {
 	var applicationNamespaces = make([]string, 0)
-	var namespaces = make([]go_hook.FilterResult, 0)
-	namespaces = append(namespaces, input.Snapshots["namespaces_definite_revision"]...)
-	namespaces = append(namespaces, input.Snapshots["namespaces_global_revision"]...)
-	namespaces = append(namespaces, input.Snapshots["istio_pod_global_rev"]...)
-	namespaces = append(namespaces, input.Snapshots["istio_pod_definite_rev"]...)
-	for _, ns := range namespaces {
+	var applicationNamespacesToMonitor = make([]string, 0)
+	var namespacesSnapshots = make([]go_hook.FilterResult, 0)
+	var namespacesMap = make(map[string]IstioNamespaceFilterResult)
+
+	for _, ns := range input.Snapshots["all_namespaces"] {
+		nsInfo := ns.(IstioNamespaceFilterResult)
+		namespacesMap[nsInfo.Name] = nsInfo
+	}
+
+	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["namespaces_definite_revision"]...)
+	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["namespaces_global_revision"]...)
+	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["istio_pod_global_rev"]...)
+	namespacesSnapshots = append(namespacesSnapshots, input.Snapshots["istio_pod_definite_rev"]...)
+	for _, ns := range namespacesSnapshots {
 		nsInfo := ns.(IstioNamespaceFilterResult)
 		if nsInfo.DeletionTimestampExists {
 			continue
 		}
 		if !internal.Contains(applicationNamespaces, nsInfo.Name) {
 			applicationNamespaces = append(applicationNamespaces, nsInfo.Name)
+			if !namespacesMap[nsInfo.Name].DiscardMetrics {
+				applicationNamespacesToMonitor = append(applicationNamespacesToMonitor, nsInfo.Name)
+			}
 		}
 	}
 
 	sort.Strings(applicationNamespaces)
+	sort.Strings(applicationNamespacesToMonitor)
 
 	input.Values.Set("istio.internal.applicationNamespaces", applicationNamespaces)
+	input.Values.Set("istio.internal.applicationNamespacesToMonitor", applicationNamespacesToMonitor)
 
 	return nil
 }
