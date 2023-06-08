@@ -12,7 +12,7 @@ RUN \
     && curl -s https://falco.org/repo/falcosecurity-packages.asc | apt-key add - \
     && echo "deb https://download.falco.org/packages/deb stable main" | tee -a /etc/apt/sources.list.d/falcosecurity.list \
     && apt update -y \
-    && apt install -yq tini falco='0.34.1' python3='3.10.6-1~22.04' python3-pip \
+    && apt install -yq tini falco='0.35.0' python3='3.10.6-1~22.04' python3-pip \
     && pip3 install -r requirements.txt \
     # cleanup
     && apt-get clean autoclean \
