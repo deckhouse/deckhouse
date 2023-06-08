@@ -8,7 +8,7 @@ metadata:
   annotations:
     cluster.x-k8s.io/paused: "true"
 spec:
-  cloudName: {{ .Values.global.clusterConfiguration.cloud.prefix }}
+  cloudName: openstack
   controlPlaneEndpoint:
     host: ""
     port: 0

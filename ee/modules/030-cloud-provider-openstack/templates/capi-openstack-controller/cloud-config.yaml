@@ -1,6 +1,6 @@
 {{- define "clouds_yaml_render" }}
 clouds:
-  {{ .Values.global.clusterConfiguration.cloud.prefix }}:
+  openstack:
     auth:
       auth_url: {{ .Values.cloudProviderOpenstack.internal.connection.authURL | quote }}
       username: {{ .Values.cloudProviderOpenstack.internal.connection.username | quote }}
