@@ -1,5 +1,7 @@
 .github/                    @name212
 002-deckhouse/              @yalosev
+010-operator-prometheus-crd/ @nabokihms
+010-prometheus-crd/         @nabokihms
 021-cni-cilium/             @zuzzas @RomanenkoDenys @kvaps
 030-cloud-provider-openstack/ @konstantin-axenov
 030-cloud-provider-vsphere/ @RomanenkoDenys
@@ -12,8 +14,12 @@
 110-istio/                  @apolovov
 140-user-authz/             @nabokihms @apolovov
 150-user-authn/             @nabokihms
+200-operator-prometheus/    @nabokihms
 340-extended-monitoring/    @nabokihms @zuzzas
 340-monitoring-*/           @nabokihms
+300-prometheus/             @nabokihms
+301-prometheus-*/           @nabokihms
+303-prometheus-*/           @nabokihms
 350-node-local-dns/         @zuzzas
 380-metallb/                @RomanenkoDenys @kvaps
 402-ingress-nginx/          @nabokihms @yalosev
@@ -26,6 +32,7 @@
 502-delivery/               @shvgn
 600-flant-integration/      @shvgn
 650-runtime-audit-engine/   @nabokihms
+810-documentation/          @z9r5 @nabokihms @konstantin-axenov
 bashible-apiserver/         @yalosev
 candi/                      @RomanenkoDenys
 cloud-controller-manager/   @zuzzas
