@@ -95,7 +95,6 @@ const istioValues = `
       ingressGateway:
         inlet: LoadBalancer
         nodePort: {}
-    monitoring: {}
     tracing: {}
     proxyConfig: {}
     controlPlane:
