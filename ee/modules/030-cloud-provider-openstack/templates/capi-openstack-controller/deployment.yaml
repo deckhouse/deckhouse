@@ -85,6 +85,7 @@ spec:
         - --health-addr=$(HOST_IP):9440
         - --namespace=d8-cloud-instance-manager
         - --webhook-port=9441
+        - --ca-certs=/etc/ssl/certs/ca-certificates.crt
         volumeMounts:
           - mountPath: /tmp/k8s-webhook-server/serving-certs
             name: cert

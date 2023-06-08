@@ -1,4 +1,4 @@
-{{- $version := "0.7.3" }}
+{{- $commit := "094b5c3d5578d6fc670f46b5f969579ff639fa97" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ .Images.BASE_ALPINE}}
@@ -15,6 +15,7 @@ import:
 shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
+    - update-ca-certificates
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
@@ -25,7 +26,8 @@ shell:
   beforeInstall:
     - apk add --no-cache make bash git patch rsync gcc musl-dev
   install:
-    - mkdir /src
-    - wget https://github.com/kubernetes-sigs/cluster-api-provider-openstack/archive/refs/tags/v{{ $version }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+    - git clone https://github.com/kubernetes-sigs/cluster-api-provider-openstack.git /src
     - cd /src
+    - git checkout {{ $commit }}
+    - git config --global user.email "builder@deckhouse.io"
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags \"-static\"" -o manager .
