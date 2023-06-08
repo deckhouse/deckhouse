@@ -146,7 +146,7 @@ spec:
 {{-     range $key, $value := $crd.spec.pods.annotations }}
         {{ $key }}: {{ $value | quote }}
 {{-     end }}
-{{-     end }}
+{{-   end }}
     spec:
   {{- if $crd.spec.nodeSelector }}
       nodeSelector:
