@@ -80,10 +80,16 @@ metadata:
     ingress-nginx-failover: ""
     {{- end }}
   {{- end }}
+  {{- range $key, $value := $crd.spec.labels }}
+    {{ $key }}: {{ $value | quote }}
+  {{- end }}
   annotations:
     ingress-nginx-controller.deckhouse.io/controller-version: {{ $controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
+{{- range $key, $value := $crd.spec.annotations }}
+    {{ $key }}: {{ $value | quote }}
+{{- end }}
 spec:
   revisionHistoryLimit: 3
   {{- if $loadBalancer }}
@@ -126,11 +132,21 @@ spec:
       {{- end }}
         app: controller
         name: {{ $name }}
-      {{- if $crd.spec.enableIstioSidecar }}
+{{-     if $crd.spec.pods }}
+{{-       range $key, $value := $crd.spec.pods.labels }}
+        {{ $key }}: {{ $value | quote }}
+{{-       end }}
+{{-     end }}
+{{-   if $crd.spec.enableIstioSidecar or $crd.spec.pods }}
       annotations:
+{{-     if $crd.spec.enableIstioSidecar }}
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
-      {{- end }}
+{{-     end }}
+{{-     range $key, $value := $crd.spec.pods.annotations }}
+        {{ $key }}: {{ $value | quote }}
+{{-     end }}
+{{-     end }}
     spec:
   {{- if $crd.spec.nodeSelector }}
       nodeSelector:

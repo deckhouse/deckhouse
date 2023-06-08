@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: false
-      schema: &schema
+      schema:
         openAPIV3Schema:
           type: object
           required: ['spec']
@@ -25,7 +25,7 @@ spec:
             spec:
               type: object
               required: ['ingressClass', 'inlet']
-              properties:
+              properties: &properties
                 ingressClass:
                   type: string
                   description: |
@@ -533,5 +533,56 @@ spec:
     - name: v1
       served: true
       storage: true
-      schema: *schema
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          properties:
+            spec:
+              type: object
+              required: ['ingressClass', 'inlet']
+              properties:
+                <<: *properties
+                annotations:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    Custom annotations for DaemonSet Ingress Controller.
+
+                    **Caution!** You are solely responsible for applying these parameters.
+                  additionalProperties:
+                    type: string
+                labels:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    Custom labels for DaemonSet Ingress Controller.
+
+                    **Caution!** You are solely responsible for applying these parameters.
+                  additionalProperties:
+                    type: string
+                pods:
+                  type: object
+                  x-doc-required: false
+                  description: |
+                    A section of parameters of the pods that are created by DaemonSet Ingress Controller.
+                  properties:
+                    annotations:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Custom annotations for pods of DaemonSet Controller configuration.
+
+                        **Caution!** You are solely responsible for applying these parameters.
+                      additionalProperties:
+                        type: string
+                    labels:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Custom labels for pods of DaemonSet Controller configuration.
+
+                        **Caution!** You are solely responsible for applying these parameters.
+                      additionalProperties:
+                        type: string
       additionalPrinterColumns: *additionalPrinterColumns
