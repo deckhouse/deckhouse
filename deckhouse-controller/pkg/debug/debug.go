@@ -129,6 +129,11 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-c", "kubectl -n $(kubectl get ns -o custom-columns=NAME:metadata.name | grep d8-cloud-provider) logs -l app=cloud-controller-manager --tail=3000"},
 		},
 		{
+			File: "cluster-autoscaler-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=cluster-autoscaler", "--tail", "3000", "-c", "cluster-autoscaler"},
+		},
+		{
 			File: "vpa-admission-controller-logs.txt",
 			Cmd:  "kubectl",
 			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-admission-controller", "--tail", "3000", "-c", "admission-controller"},

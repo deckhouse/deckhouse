@@ -57,9 +57,10 @@ Data that will be collected:
 * Deckhouse logs
 * machine controller manager logs
 * cloud controller manager logs
-* vertical-pod-autoscaler admission controller logs
-* vertical-pod-autoscaler recommender logs
-* vertical-pod-autoscaler updater logs
+* cluster autoscaler logs
+* Vertical Pod Autoscaler admission controller logs
+* Vertical Pod Autoscaler recommender logs
+* Vertical Pod Autoscaler updater logs
 * all firing alerts from Prometheus
 * terraform-state-exporter metrics
 
