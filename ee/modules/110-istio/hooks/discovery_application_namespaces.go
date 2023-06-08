@@ -170,7 +170,7 @@ func applicationNamespacesDiscovery(input *go_hook.HookInput) error {
 		}
 		if !internal.Contains(applicationNamespaces, nsInfo.Name) {
 			applicationNamespaces = append(applicationNamespaces, nsInfo.Name)
-			if namespacesMap[nsInfo.Name].DiscardMetrics == false {
+			if !namespacesMap[nsInfo.Name].DiscardMetrics {
 				applicationNamespacesToMonitor = append(applicationNamespacesToMonitor, nsInfo.Name)
 			}
 		}
