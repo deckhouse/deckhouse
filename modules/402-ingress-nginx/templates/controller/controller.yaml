@@ -137,7 +137,7 @@ spec:
         {{ $key }}: {{ $value | quote }}
 {{-       end }}
 {{-     end }}
-{{-   if $crd.spec.enableIstioSidecar or $crd.spec.pods }}
+{{-   if or $crd.spec.enableIstioSidecar $crd.spec.pods }}
       annotations:
 {{-     if $crd.spec.enableIstioSidecar }}
         traffic.sidecar.istio.io/includeInboundPorts: ""

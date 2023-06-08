@@ -36,7 +36,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.21.0")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.22.0")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
@@ -55,7 +55,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 	Context("With ingress nginx controller in values", func() {
 		BeforeEach(func() {
 			var certificates string
-			for _, ingressName := range []string{"test", "test-lbwpp", "test-next", "solid"} {
+			for _, ingressName := range []string{"test", "test-lbwpp", "test-next", "solid", "al"} {
 				certificates += fmt.Sprintf(`
 - controllerName: %s
   ingressClass: nginx
@@ -153,6 +153,20 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       secretRef:
         name: custom-secret
         namespace: default
+- name: al
+  spec:
+    ingressClass: test
+    controllerVersion: "1.1"
+    inlet: LoadBalancer
+    annotations:
+      test: "A"
+    labels:
+      test: "L"
+    pods:
+      annotations:
+        test: "pA"
+      labels:
+        test: "pL"
 `)
 			hec.HelmRender()
 		})
@@ -292,6 +306,20 @@ memory: 500Mi`))
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-solid-auth-tls").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "controller-solid-failover").Exists()).To(BeTrue())
+
+			// annotations and labels
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-al").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-al").Field("metadata.annotations")).To(MatchJSON(
+				`{ "ingress-nginx-controller.deckhouse.io/checksum": "0169397abaf1589c70479ad199932c943a7e7b9859d275a39d78ab9e2cb5f621",
+                        "ingress-nginx-controller.deckhouse.io/controller-version": "1.1",
+						"ingress-nginx-controller.deckhouse.io/inlet": "LoadBalancer",
+                        "test":"A"}`))
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-al").Field("metadata.labels")).To(MatchJSON(
+				`{ "app": "controller", "heritage": "deckhouse", "module": "ingress-nginx", "name": "al", "test":"L"}`))
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-al").Field(
+				"spec.template.metadata.annotations")).To(MatchJSON(`{ "test":"pA"}`))
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-al").Field(
+				"spec.template.metadata.labels")).To(MatchJSON(`{"app": "controller","name": "al", "test": "pL" }`))
 		})
 
 		Context("Vertical pod autoscaler CRD is disabled", func() {

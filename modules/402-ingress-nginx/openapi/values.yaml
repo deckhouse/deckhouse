@@ -66,6 +66,21 @@ properties:
                 - ingressClass
                 - inlet
               properties:
+                annotations:
+                  type: object
+                  additionalProperties: true
+                labels:
+                  type: object
+                  additionalProperties: true
+                pods:
+                  type: object
+                  properties:
+                    annotations:
+                      type: object
+                      additionalProperties: true
+                    labels:
+                      type: object
+                      additionalProperties: true
                 ingressClass:
                   type: string
                   x-examples: ["nginx"]
