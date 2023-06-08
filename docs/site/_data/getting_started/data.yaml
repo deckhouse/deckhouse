@@ -147,6 +147,10 @@ installTypes:
         template: getting_started/global/STEP_FINISH.md
   openstack:
     iconPath: images/icons/platforms/corp_cloud_open_stack.png
+    extraIcons:
+      vk: images/icons/platforms/vk.png
+      ovh: images/icons/platforms/ovh.png
+      selectel: images/icons/platforms/selectel.png
     ee_only: true
     layout:
       code: standard
