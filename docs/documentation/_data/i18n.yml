@@ -152,6 +152,12 @@ common:
   module_web_ifaces:
     en: Web interfaces associated with the module
     ru: Веб-интерфейсы, связанные с модулем
+  role:
+    en: role
+    ru: роль
+  all_rules_from:
+    en: and all rules from the role
+    ru: и все правила из роли
 
 comparison:
   except_parameters:

@@ -2,12 +2,12 @@
 {{- printf "* %s - `%s`" $alias.name (join "`, `" $alias.verbs) }}
 {{ end }}
 {{- range $role := .roles }}
-Role `{{ $role.name }}`
+{{`{{site.data.i18n.common.role[page.lang] | capitalize }}`}} `{{ $role.name }}`
 {{- if $role.additionalRoles }}
-{{- printf " (and all rules from `%s`)" (join "`, `" $role.additionalRoles) }}
+{{- printf " ({{site.data.i18n.common.all_rules_from[page.lang]}} `%s`)" (join "`, `" $role.additionalRoles) }}
 {{- end }}:
 
 ```yaml
-{{ $role.rules | toYaml | indent 4 }}
+{{ $role.rules | toYaml -}}
 ```
 {{ end }}
