@@ -106,6 +106,7 @@
  - **[global-hooks]** Fix cluster DNS address discovery. [#4521](https://github.com/deckhouse/deckhouse/pull/4521)
  - **[global-hooks]** Fix the Kubernetes version hook for `DigitalOcean`. [#4473](https://github.com/deckhouse/deckhouse/pull/4473)
  - **[ingress-nginx]** Fixed incorrect indentation of resources block in `kube-rbac-proxy` container of `kruise-controller-manager` deployment. [#4738](https://github.com/deckhouse/deckhouse/pull/4738)
+ - **[linstor]** Add disabling use of lvmetad service to NodeGroupConfiguration for LINSTOR module. [#4885](https://github.com/deckhouse/deckhouse/pull/4885)
  - **[linstor]** Support Debian 11. [#4724](https://github.com/deckhouse/deckhouse/pull/4724)
  - **[linstor]** Enable `WaitForFirstConsumer`. [#4681](https://github.com/deckhouse/deckhouse/pull/4681)
     - all auto-generated linstor storageclasses will be recreated with WaitForFirstConsumer option.
