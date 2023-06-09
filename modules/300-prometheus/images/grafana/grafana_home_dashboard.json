@@ -1100,7 +1100,7 @@
                   {
                     "targetBlank": true,
                     "title": "",
-                    "url": "http://${__data.fields.url}"
+                    "url": "${__data.fields.url}"
                   }
                 ]
               }
