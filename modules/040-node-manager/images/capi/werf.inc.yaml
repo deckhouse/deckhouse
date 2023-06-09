@@ -12,18 +12,6 @@ import:
   to: /capi-controller-manager
   before: setup
 ---
-image: {{ .ModuleName }}/capi-kubeadm-bootstrap-controller-manager
-from: {{ .Images.BASE_SCRATCH }}
-docker:
-  ENV:
-    WORKDIR: /
-    ENTRYPOINT: "/capi-kubeadm-bootstrap-controller-manager"
-import:
-  - artifact: {{ .ModuleName }}/capi-artifact
-    add: /src/bin/kubeadm-bootstrap-manager
-    to: /capi-kubeadm-bootstrap-controller-manager
-    before: setup
----
 artifact: {{ $.ModuleName }}/capi-artifact
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
 mount:
