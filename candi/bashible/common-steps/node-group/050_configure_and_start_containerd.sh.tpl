@@ -115,7 +115,7 @@ oom_score = 0
       default_runtime_name = "runc"
       no_pivot = false
       disable_snapshot_annotations = true
-      discard_unpacked_layers = false
+      discard_unpacked_layers = true
       [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
         runtime_type = ""
         runtime_engine = ""
