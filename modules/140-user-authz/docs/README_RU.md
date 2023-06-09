@@ -85,7 +85,7 @@ read:
     - storage.k8s.io/storageclasses
 ```
 
-{{site.data.i18n.common.role[page.lang] | capitalize }} `PrivilegedUser` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`):
+{{site.data.i18n.common.role[page.lang] | capitalize }} `PrivilegedUser` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`):
 
 ```text
 create,get:
@@ -97,7 +97,7 @@ read:
     - secrets
 ```
 
-{{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`, `PrivilegedUser`):
+{{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
 read-write:
@@ -121,7 +121,7 @@ write:
     - secrets
 ```
 
-{{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
+{{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
 create,patch,update:
@@ -131,7 +131,7 @@ delete,deletecollection:
     - extensions/replicasets
 ```
 
-{{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
+{{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
 read:
@@ -144,7 +144,7 @@ write:
     - storage.k8s.io/storageclasses
 ```
 
-{{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
+{{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
 read-write:

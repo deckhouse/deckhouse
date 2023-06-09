@@ -4,7 +4,7 @@
 {{- range $role := .roles }}
 {{`{{site.data.i18n.common.role[page.lang] | capitalize }}`}} `{{ $role.name }}`
 {{- if $role.additionalRoles }}
-{{- printf " ({{site.data.i18n.common.all_rules_from[page.lang]}} `%s`)" (join "`, `" $role.additionalRoles) }}
+{{- printf " ({{site.data.i18n.common.includes_rules_from[page.lang]}} `%s`)" (join "`, `" $role.additionalRoles) }}
 {{- end }}:
 
 ```text
