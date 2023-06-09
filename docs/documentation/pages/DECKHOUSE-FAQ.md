@@ -261,6 +261,8 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
    > Note! Please, refer to the documentation of your registry to properly specify the `--path` value. For example, for `Harbor` it can be `harbor.registry.com/deckhouse/deckhouse`, but not `harbor.registry.com/deckhouse`.
 
+1. After pushing images to an isolated private registry, use [the instruction](deckhouse-faq.html#how-to-bootstrap-a-cluster-and-run-deckhouse-without-the-usage-of-release-channels) to properly configure the installer and the `InitConfiguration` resource.
+
 ## How to bootstrap a cluster and run Deckhouse without the usage of release channels?
 
 This case is only valid if you don't have release channel images in your air-gapped registry.
