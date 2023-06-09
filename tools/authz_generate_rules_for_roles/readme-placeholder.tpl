@@ -7,7 +7,7 @@
 {{- printf " ({{site.data.i18n.common.all_rules_from[page.lang]}} `%s`)" (join "`, `" $role.additionalRoles) }}
 {{- end }}:
 
-```yaml
+```text
 {{ $role.rules | toYaml -}}
 ```
 {{ end }}

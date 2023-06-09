@@ -43,7 +43,7 @@ title: "Модуль user-authz"
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `User`:
 
-```yaml
+```text
 read:
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -87,7 +87,7 @@ read:
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `PrivilegedUser` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`):
 
-```yaml
+```text
 create,get:
     - pods/attach
     - pods/exec
@@ -99,7 +99,7 @@ read:
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
-```yaml
+```text
 read-write:
     - apps/deployments
     - apps/statefulsets
@@ -123,7 +123,7 @@ write:
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
-```yaml
+```text
 create,patch,update:
     - pods
 delete,deletecollection:
@@ -133,7 +133,7 @@ delete,deletecollection:
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
-```yaml
+```text
 read:
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
@@ -146,7 +146,7 @@ write:
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.all_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
-```yaml
+```text
 read-write:
     - deckhouse.io/clusterauthorizationrules
 write:
