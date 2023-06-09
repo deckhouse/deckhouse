@@ -35,114 +35,129 @@ title: "Модуль user-authz"
 
 ## Список доступа для каждой роли модуля по умолчанию
 
-сокращения для `verbs`:
+Сокращения для `verbs`:
 <!-- start user-authz roles placeholder -->
 * read - `get`, `list`, `watch`
 * read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
 * write - `create`, `delete`, `deletecollection`, `patch`, `update`
 
-```yaml
-Role `User`:
-    read:
-        - apiextensions.k8s.io/customresourcedefinitions
-        - apps/daemonsets
-        - apps/deployments
-        - apps/replicasets
-        - apps/statefulsets
-        - autoscaling.k8s.io/verticalpodautoscalers
-        - autoscaling/horizontalpodautoscalers
-        - batch/cronjobs
-        - batch/jobs
-        - configmaps
-        - discovery.k8s.io/endpointslices
-        - endpoints
-        - events
-        - events.k8s.io/events
-        - extensions/daemonsets
-        - extensions/deployments
-        - extensions/ingresses
-        - extensions/replicasets
-        - extensions/replicationcontrollers
-        - limitranges
-        - metrics.k8s.io/nodes
-        - metrics.k8s.io/pods
-        - namespaces
-        - networking.k8s.io/ingresses
-        - networking.k8s.io/networkpolicies
-        - nodes
-        - persistentvolumeclaims
-        - persistentvolumes
-        - pods
-        - pods/log
-        - policy/poddisruptionbudgets
-        - rbac.authorization.k8s.io/rolebindings
-        - rbac.authorization.k8s.io/roles
-        - replicationcontrollers
-        - resourcequotas
-        - serviceaccounts
-        - services
-        - storage.k8s.io/storageclasses
-    
-Role `PrivilegedUser` (and all rules from `User`):
-    create,get:
-        - pods/attach
-        - pods/exec
-    delete,deletecollection:
-        - pods
-    read:
-        - secrets
-    
-Role `Editor` (and all rules from `User`, `PrivilegedUser`):
-    read-write:
-        - apps/deployments
-        - apps/statefulsets
-        - autoscaling.k8s.io/verticalpodautoscalers
-        - autoscaling/horizontalpodautoscalers
-        - batch/cronjobs
-        - batch/jobs
-        - configmaps
-        - discovery.k8s.io/endpointslices
-        - endpoints
-        - extensions/deployments
-        - extensions/ingresses
-        - networking.k8s.io/ingresses
-        - persistentvolumeclaims
-        - policy/poddisruptionbudgets
-        - serviceaccounts
-        - services
-    write:
-        - secrets
-    
-Role `Admin` (and all rules from `User`, `PrivilegedUser`, `Editor`):
-    create,patch,update:
-        - pods
-    delete,deletecollection:
-        - apps/replicasets
-        - extensions/replicasets
-    
-Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
-    read:
-        - rbac.authorization.k8s.io/clusterrolebindings
-        - rbac.authorization.k8s.io/clusterroles
-    write:
-        - apiextensions.k8s.io/customresourcedefinitions
-        - apps/daemonsets
-        - extensions/daemonsets
-        - storage.k8s.io/storageclasses
-    
-Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
-    read-write:
-        - deckhouse.io/clusterauthorizationrules
-    write:
-        - limitranges
-        - namespaces
-        - networking.k8s.io/networkpolicies
-        - rbac.authorization.k8s.io/clusterrolebindings
-        - rbac.authorization.k8s.io/clusterroles
-        - rbac.authorization.k8s.io/rolebindings
-        - rbac.authorization.k8s.io/roles
-        - resourcequotas
-    
+{{site.data.i18n.common.role[page.lang] | capitalize }} `User`:
+
+```text
+read:
+    - apiextensions.k8s.io/customresourcedefinitions
+    - apps/daemonsets
+    - apps/deployments
+    - apps/replicasets
+    - apps/statefulsets
+    - autoscaling.k8s.io/verticalpodautoscalers
+    - autoscaling/horizontalpodautoscalers
+    - batch/cronjobs
+    - batch/jobs
+    - configmaps
+    - discovery.k8s.io/endpointslices
+    - endpoints
+    - events
+    - events.k8s.io/events
+    - extensions/daemonsets
+    - extensions/deployments
+    - extensions/ingresses
+    - extensions/replicasets
+    - extensions/replicationcontrollers
+    - limitranges
+    - metrics.k8s.io/nodes
+    - metrics.k8s.io/pods
+    - namespaces
+    - networking.k8s.io/ingresses
+    - networking.k8s.io/networkpolicies
+    - nodes
+    - persistentvolumeclaims
+    - persistentvolumes
+    - pods
+    - pods/log
+    - policy/poddisruptionbudgets
+    - rbac.authorization.k8s.io/rolebindings
+    - rbac.authorization.k8s.io/roles
+    - replicationcontrollers
+    - resourcequotas
+    - serviceaccounts
+    - services
+    - storage.k8s.io/storageclasses
+```
+
+{{site.data.i18n.common.role[page.lang] | capitalize }} `PrivilegedUser` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`):
+
+```text
+create,get:
+    - pods/attach
+    - pods/exec
+delete,deletecollection:
+    - pods
+read:
+    - secrets
+```
+
+{{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
+
+```text
+read-write:
+    - apps/deployments
+    - apps/statefulsets
+    - autoscaling.k8s.io/verticalpodautoscalers
+    - autoscaling/horizontalpodautoscalers
+    - batch/cronjobs
+    - batch/jobs
+    - configmaps
+    - discovery.k8s.io/endpointslices
+    - endpoints
+    - extensions/deployments
+    - extensions/ingresses
+    - networking.k8s.io/ingresses
+    - persistentvolumeclaims
+    - policy/poddisruptionbudgets
+    - serviceaccounts
+    - services
+write:
+    - secrets
+```
+
+{{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
+
+```text
+create,patch,update:
+    - pods
+delete,deletecollection:
+    - apps/replicasets
+    - extensions/replicasets
+```
+
+{{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
+
+```text
+read:
+    - rbac.authorization.k8s.io/clusterrolebindings
+    - rbac.authorization.k8s.io/clusterroles
+write:
+    - apiextensions.k8s.io/customresourcedefinitions
+    - apps/daemonsets
+    - extensions/daemonsets
+    - storage.k8s.io/storageclasses
+```
+
+{{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
+
+```text
+read-write:
+    - deckhouse.io/clusterauthorizationrules
+write:
+    - limitranges
+    - namespaces
+    - networking.k8s.io/networkpolicies
+    - rbac.authorization.k8s.io/clusterrolebindings
+    - rbac.authorization.k8s.io/clusterroles
+    - rbac.authorization.k8s.io/rolebindings
+    - rbac.authorization.k8s.io/roles
+    - resourcequotas
 ```
 <!-- end user-authz roles placeholder -->
 
