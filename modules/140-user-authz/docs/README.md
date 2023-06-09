@@ -33,7 +33,7 @@ In addition to the RBAC, you can use a set of high-level roles in the module:
 
 The `allowAccessToSystemNamespaces` and `limitNamespaces` options in the CR will no longer be applied if the authorization system's webhook is unavailable for some reason. As a result, users will have access to all namespaces. After the webhook availability is restored, the options will become relevant again.
 
-## Default access list for each role:
+## Default access list for each role
 
 `verbs` aliases:
 <!-- start user-authz roles placeholder -->
@@ -41,8 +41,9 @@ The `allowAccessToSystemNamespaces` and `limitNamespaces` options in the CR will
 * read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
 * write - `create`, `delete`, `deletecollection`, `patch`, `update`
 
-```yaml
 Role `User`:
+
+```yaml
     read:
         - apiextensions.k8s.io/customresourcedefinitions
         - apps/daemonsets
@@ -83,7 +84,11 @@ Role `User`:
         - services
         - storage.k8s.io/storageclasses
     
+```
+
 Role `PrivilegedUser` (and all rules from `User`):
+
+```yaml
     create,get:
         - pods/attach
         - pods/exec
@@ -92,7 +97,11 @@ Role `PrivilegedUser` (and all rules from `User`):
     read:
         - secrets
     
+```
+
 Role `Editor` (and all rules from `User`, `PrivilegedUser`):
+
+```yaml
     read-write:
         - apps/deployments
         - apps/statefulsets
@@ -113,14 +122,22 @@ Role `Editor` (and all rules from `User`, `PrivilegedUser`):
     write:
         - secrets
     
+```
+
 Role `Admin` (and all rules from `User`, `PrivilegedUser`, `Editor`):
+
+```yaml
     create,patch,update:
         - pods
     delete,deletecollection:
         - apps/replicasets
         - extensions/replicasets
     
+```
+
 Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
+
+```yaml
     read:
         - rbac.authorization.k8s.io/clusterrolebindings
         - rbac.authorization.k8s.io/clusterroles
@@ -130,7 +147,11 @@ Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
         - extensions/daemonsets
         - storage.k8s.io/storageclasses
     
+```
+
 Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
+
+```yaml
     read-write:
         - deckhouse.io/clusterauthorizationrules
     write:

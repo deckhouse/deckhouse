@@ -35,14 +35,15 @@ title: "Модуль user-authz"
 
 ## Список доступа для каждой роли модуля по умолчанию
 
-сокращения для `verbs`:
+Сокращения для `verbs`:
 <!-- start user-authz roles placeholder -->
 * read - `get`, `list`, `watch`
 * read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
 * write - `create`, `delete`, `deletecollection`, `patch`, `update`
 
-```yaml
 Role `User`:
+
+```yaml
     read:
         - apiextensions.k8s.io/customresourcedefinitions
         - apps/daemonsets
@@ -83,7 +84,11 @@ Role `User`:
         - services
         - storage.k8s.io/storageclasses
     
+```
+
 Role `PrivilegedUser` (and all rules from `User`):
+
+```yaml
     create,get:
         - pods/attach
         - pods/exec
@@ -92,7 +97,11 @@ Role `PrivilegedUser` (and all rules from `User`):
     read:
         - secrets
     
+```
+
 Role `Editor` (and all rules from `User`, `PrivilegedUser`):
+
+```yaml
     read-write:
         - apps/deployments
         - apps/statefulsets
@@ -113,14 +122,22 @@ Role `Editor` (and all rules from `User`, `PrivilegedUser`):
     write:
         - secrets
     
+```
+
 Role `Admin` (and all rules from `User`, `PrivilegedUser`, `Editor`):
+
+```yaml
     create,patch,update:
         - pods
     delete,deletecollection:
         - apps/replicasets
         - extensions/replicasets
     
+```
+
 Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
+
+```yaml
     read:
         - rbac.authorization.k8s.io/clusterrolebindings
         - rbac.authorization.k8s.io/clusterroles
@@ -130,7 +147,11 @@ Role `ClusterEditor` (and all rules from `User`, `PrivilegedUser`, `Editor`):
         - extensions/daemonsets
         - storage.k8s.io/storageclasses
     
+```
+
 Role `ClusterAdmin` (and all rules from `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
+
+```yaml
     read-write:
         - deckhouse.io/clusterauthorizationrules
     write:
