@@ -907,7 +907,7 @@ Note that node templates (labels/taints) for `worker` and `worker-spot` NodeGrou
 
 ## How to interpret Node Group states?
 
-**Ready** - the node group contains the minimum required number of scheduled nodes with the status ```Ready``` for all zones.
+**Ready** — the node group contains the minimum required number of scheduled nodes with the status ```Ready``` for all zones.
 
 Example 1. A group of nodes in the ``Ready`` state:
 
@@ -967,12 +967,12 @@ status:
     type: Ready
 ```
 
-**Updating** - a node group contains at least one node in which there is an annotation with the prefix ```update.node.deckhouse.io``` (for example, ```update.node.deckhouse.io/waiting-for-approval```).
+**Updating** — a node group contains at least one node in which there is an annotation with the prefix ```update.node.deckhouse.io``` (for example, ```update.node.deckhouse.io/waiting-for-approval```).
 
 **WaitingForDisruptiveApproval** - a node group contains at least one node that has an annotation ```update.node.deckhouse.io/disruption-required``` and
 there is no annotation ```update.node.deckhouse.io/disruption-approved```.
 
-**Scaling** - calculated only for node groups with the type ```CloudEphemeral```. The state ```True``` can be in two cases:
+**Scaling** — calculated only for node groups with the type ```CloudEphemeral```. The state ```True``` can be in two cases:
 
 1. When the number of nodes is less than the *desired number of nodes* in the group, i.e. when it is necessary to increase the number of nodes in the group.
 1. When a node is marked for deletion or the number of nodes is greater than the *desired number of nodes*, i.e. when it is necessary to reduce the number of nodes in the group.
