@@ -88,6 +88,8 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `PrivilegedUser` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`):
 
 ```text
+create:
+    - pods/eviction
 create,get:
     - pods/attach
     - pods/exec

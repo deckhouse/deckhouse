@@ -201,6 +201,12 @@
 - apiGroups:
   - ""
   resources:
+  - pods/eviction
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   {{- include "user_authz_verbs" "r" }}
