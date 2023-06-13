@@ -17,8 +17,6 @@ columns:
         url: '/products/enterprise_edition.html'
   - title: Services
     items:
-      - title: Managed Kubernetes
-        url: '/services/managed.html'
       - title: Training & Consulting
         url: '/services/training.html'
   - title: Resources
@@ -57,8 +55,6 @@ columns:
         url: '/how_to_buy.html'
   - title: Услуги
     items:
-      - title: Managed Kubernetes
-        url: '/services/managed.html'
       - title: Обучение и консалтинг
         url: '/services/training.html'
       - title: Переезд с OpenShift
