@@ -6,7 +6,7 @@ COPY "patches/daemonset-eviction.patch" /
 COPY "patches/scale-from-zero.patch" /
 
 RUN apk add --no-cache linux-headers build-base git mercurial patch && \
-    wget https://github.com/gardener/autoscaler/archive/v1.24.0.tar.gz -O - | tar -xz --strip-components=1 -C /go/src/github.com/gardener/autoscaler/ && \
+    wget https://github.com/gardener/autoscaler/archive/v1.23.4.tar.gz -O - | tar -xz --strip-components=1 -C /go/src/github.com/gardener/autoscaler/ && \
     patch -p1 < "/daemonset-eviction.patch" && \
     patch -p1 < "/scale-from-zero.patch" && \
     cd cluster-autoscaler && \
