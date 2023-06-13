@@ -1,0 +1,5 @@
+linstor:
+  fixes:
+    - summary: Add disabling use of lvmetad service to NodeGroupConfiguration for LINSTOR module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4885
+
