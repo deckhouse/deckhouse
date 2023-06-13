@@ -167,6 +167,13 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
         test: "pA"
       labels:
         test: "pL"
+- name: al-istio
+  spec:
+    enableIstioSidecar: true
+    controllerVersion: "1.1"
+    inlet: LoadBalancer
+    labels:
+      test: "L"
 `)
 			hec.HelmRender()
 		})
@@ -320,6 +327,12 @@ memory: 500Mi`))
 				"spec.template.metadata.annotations")).To(MatchJSON(`{ "test":"pA"}`))
 			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-al").Field(
 				"spec.template.metadata.labels")).To(MatchJSON(`{"app": "controller","name": "al", "test": "pL" }`))
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-al-istio").Field("metadata.annotations")).To(MatchJSON(
+				`{ "ingress-nginx-controller.deckhouse.io/checksum": "ffd682214c936faae5ea7769021320b9116efce201d5118f8d211f1df479718a",
+                        "ingress-nginx-controller.deckhouse.io/controller-version": "1.1",
+						"ingress-nginx-controller.deckhouse.io/inlet": "LoadBalancer" }`))
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-al-istio").Field("metadata.labels")).To(MatchJSON(
+				`{ "app": "controller", "heritage": "deckhouse", "module": "ingress-nginx", "name": "al-istio", "test":"L"}`))
 		})
 
 		Context("Vertical pod autoscaler CRD is disabled", func() {
