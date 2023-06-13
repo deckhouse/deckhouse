@@ -89,7 +89,6 @@ spec:
 {{/*  OpenKruise controller can handle minReadySeconds even for HostWithFailover inlet (while hook can't) */}}
 {{/*  We want to add some delay to avoid immediately pod rollout and give some time for traffic to be handled */}}
   minReadySeconds: 60
-  {{- end }}
   updateStrategy:
     type: RollingUpdate
     {{- if $loadBalancer }}
