@@ -95,8 +95,16 @@ func generateMetrics() error {
 		log.Fatal(err)
 	}
 
-	nodeFsBytesAvail, nodeFsInodesAvail, err := getBytesAndInodeStatsFromPath(filepath.Join(hostPath, kubeletRootDir))
-	imageFsBytesAvail, imageFsInodesAvail, err := getBytesAndInodeStatsFromPath(filepath.Join(hostPath, runtimeRootDir))
+	nodeFsBytesAvail, nodeFsInodesAvail, err := getBytesAndInodeStatsFromPath(realpath(filepath.Join(hostPath, kubeletRootDir)))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	imageFsBytesAvail, imageFsInodesAvail, err := getBytesAndInodeStatsFromPath(realpath(filepath.Join(hostPath, runtimeRootDir)))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	softEvictionMap := kubeletConfig.KubeletConfiguration.EvictionSoft
 	hardEvictionMap := kubeletConfig.KubeletConfiguration.EvictionHard
 
@@ -248,7 +256,10 @@ func getKubeletRootDir() (string, error) {
 	for _, p := range procs {
 		cmdLine, err := p.CmdlineSlice()
 		if err != nil {
-			return "", err
+			log.Println(err.Error())
+
+			// Skip errors, as they are likely due to the process having terminated
+			continue
 		}
 
 		if len(cmdLine) == 0 {
@@ -378,4 +389,16 @@ func getContainerRuntimeAndKubeletConfig() (string, *KubeletConfig, error) {
 	}
 
 	return containerRuntimeVersion, kubeletConfig, nil
+}
+
+func realpath(path string) string {
+	realpath, err := os.Readlink(path)
+	if err == nil {
+		// path is a symlink
+		realpath = filepath.Join(hostPath, realpath)
+	} else {
+		realpath = path
+	}
+
+	return realpath
 }
