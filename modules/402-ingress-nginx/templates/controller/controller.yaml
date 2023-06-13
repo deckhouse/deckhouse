@@ -86,13 +86,9 @@ metadata:
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
   revisionHistoryLimit: 3
-  {{- if $loadBalancer }}
-  minReadySeconds: 30
-  {{- else }}
-{{/*  OpenKruise controller can handle minReadySeconds even for HostWithFailover inlet (while hook can't)*/}}
-{{/*  We want to add some small delay for Bare-metal clusters to avoid immediately pod rollout and give some time for traffic to be handled */}}
-  minReadySeconds: 10
-  {{- end }}
+{{/*  OpenKruise controller can handle minReadySeconds even for HostWithFailover inlet (while hook can't) */}}
+{{/*  We want to add some delay to avoid immediately pod rollout and give some time for traffic to be handled */}}
+  minReadySeconds: 60
   updateStrategy:
     type: RollingUpdate
     {{- if $loadBalancer }}
