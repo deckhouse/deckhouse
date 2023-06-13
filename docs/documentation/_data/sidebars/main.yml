@@ -488,8 +488,9 @@ entries:
     - title:
         en: Delivery
         ru: Доставка
-      modulename: delivery
+      moduleName: delivery
       d8Revision: ee
+      featureStatus: experimental
       folders:
         - title:
             en: Description
