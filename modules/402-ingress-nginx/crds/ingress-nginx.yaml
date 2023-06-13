@@ -24,7 +24,7 @@ spec:
           properties:
             spec:
               type: object
-              required: ['ingressClass', 'inlet']
+              required: ['inlet']
               properties:
                 ingressClass:
                   type: string
@@ -35,6 +35,7 @@ spec:
 
                     **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
                   example: 'nginx'
+                  default: 'nginx'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                 inlet:
                   type: string
