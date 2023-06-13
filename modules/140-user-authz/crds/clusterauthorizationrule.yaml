@@ -219,9 +219,9 @@ spec:
                   properties:
                     labelSelector:
                       description: |
-                         Contains labelselector definitions. 
+                         Contains labelselector definitions.
 
-                         If both matchExpressions and matchLabels parameters are set, their requirements are ANDed together -- they must all be satisfied in order to match.
+                         If both matchExpressions and matchLabels parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
                       type: object
                       anyOf:
                         - required: [ matchLabels ]
