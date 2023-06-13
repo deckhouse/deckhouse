@@ -143,8 +143,10 @@ spec:
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
 {{-     end }}
-{{-     range $key, $value := $crd.spec.pods.annotations }}
+{{-     if $crd.spec.pods.annotations }}
+{{-       range $key, $value := $crd.spec.pods.annotations }}
         {{ $key }}: {{ $value | quote }}
+{{-       end }}
 {{-     end }}
 {{-   end }}
     spec:
