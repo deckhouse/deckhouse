@@ -233,7 +233,7 @@ spec:
    Пример скачивания образов Deckhouse EE v1.45.5 в директорию `/your/output-dir/`:
 
    ```shell
-   ./d8-pull.sh --license <DECKHOUSE_LICENSE_KEY> --release v1.45.5 --output-dir /your/output-dir/ 
+   ./d8-pull.sh --license <DECKHOUSE_LICENSE_KEY> --release v1.45.5 --output-dir /your/output-dir/
    ```
 
    > Для Deckhouse CE укажите параметр `--edition ce` и опустите параметр `--license`.
@@ -296,7 +296,7 @@ spec:
   auth_param basic realm proxy
   acl authenticated proxy_auth REQUIRED
   http_access allow authenticated
-  
+
   # Choose the port you want. Below we set it to default 3128.
   http_port 3128
   ```
@@ -343,24 +343,21 @@ proxy:
 
 Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
 
-* Измените поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry;
-* Скачайте скрипт на мастер-узел и запустите его с параметрами нового registry.
+* Запустите `deckhouse-controller helper change-registry` из пода `Deckhouse` с параметрами нового registry.
   * Пример запуска:
 
   ```shell
-  curl -fsSL -o change-registry.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh
-  chmod 700 change-registry.sh
-  ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
+  kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user my-user --password my-password registry.example.com/deckhouse
   ```
 
-  * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` возле скрипта и добавьте к вызову опцию `--ca-file ca.crt`.
+  * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` в поде deckhouse и добавьте к вызову опцию `--ca-file ca.crt`.
 * Дождитесь перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
 * Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
 * Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, то удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
 * Проверьте, не осталось ли в кластере Pod'ов с оригинальным адресом registry:
 
   ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) 
+  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
     | .metadata.namespace + "\t" + .metadata.name' -r
   ```
 
@@ -376,8 +373,7 @@ proxy:
 1. Выполните следующую команду:
 
    ```shell
-   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --registry-url https://registry.deckhouse.io/deckhouse/ce && \
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ce:" $2}')    
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry https://registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Дождитесь перехода Pod'а Deckhouse в статус `Ready`:
@@ -430,7 +426,7 @@ proxy:
 1. Проверьте, не осталось ли в кластере Pod'ов с адресом registry для Deckhouse EE:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee")))) 
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee"))))
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
@@ -444,7 +440,7 @@ proxy:
 
 ## Как переключить Deckhouse CE на EE?
 
-Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).  
+Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).
 
 > Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 
@@ -454,8 +450,7 @@ proxy:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --user license-token --password $LICENSE_TOKEN --registry-url https://registry.deckhouse.io/deckhouse/ee && \
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ee:" $2}') 
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN https://registry.deckhouse.io/deckhouse/ee
    ```
 
 1. Дождитесь перехода Pod'а Deckhouse в статус `Ready`:
@@ -508,7 +503,7 @@ proxy:
 1. Проверьте, не осталось ли в кластере Pod'ов с адресом registry для Deckhouse CE:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce")))) 
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce"))))
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 

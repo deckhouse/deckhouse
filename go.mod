@@ -63,6 +63,7 @@ require (
 
 require (
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
+	github.com/docker/distribution v2.8.2+incompatible
 	github.com/slok/kubewebhook/v2 v2.5.0
 	k8s.io/cli-runtime v0.25.5
 	k8s.io/kubectl v0.25.5
@@ -89,7 +90,6 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/docker/cli v20.10.17+incompatible // indirect
-	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v20.10.24+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect

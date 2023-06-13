@@ -163,7 +163,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 
 * Create a docker proxy repository pointing to the [Deckhouse registry](https://registry.deckhouse.io/):
   ![Create docker proxy repository](images/registry/nexus/nexus-repository.png)
-  
+
 * Fill in the fields on the Create page  as follows:
   * `Name` must contain the name of the repository you created earlier, e.g., `d8-proxy`.
   * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` must contain a dedicated port for the created repository, e.g., `8123` or other.
@@ -292,7 +292,7 @@ This case is only valid if you don't have release channel images in your air-gap
   auth_param basic realm proxy
   acl authenticated proxy_auth REQUIRED
   http_access allow authenticated
-  
+
   # Choose the port you want. Below we set it to default 3128.
   http_port 3128
   ```
@@ -300,7 +300,7 @@ This case is only valid if you don't have release channel images in your air-gap
 * Create a user for proxy-server authentication:
 
   Example for the user `test` with the password `test` (be sure to change):
-  
+
   ```shell
   echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
   ```
@@ -339,24 +339,21 @@ proxy:
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
-* Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry;
-* Download script to the master node and run it with parameters for a new registry.
+* Run `deckhouse-controller helper change-registry` inside `Deckhouse` pod with the new registry settings.
   * Example:
 
   ```shell
-  curl -fsSL -o change-registry.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh
-  chmod 700 change-registry.sh
-  ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
+  kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user my-user --password my-password registry.example.com/deckhouse
   ```
-  
-  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` near the script and add the `--ca-file ca.crt` option to the script.
+
+  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` in the deckhouse pod and add the `--ca-file ca.crt` option to the script.
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * If you want to disable Deckhouse automatic updates, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
 * Check if there are Pods with original registry in cluster (if there are — restart them):
 
   ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) 
+  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
     | .metadata.namespace + "\t" + .metadata.name' -r
   ```
 
@@ -372,8 +369,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Run the following command:
 
    ```shell
-   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --registry-url https://registry.deckhouse.io/deckhouse/ce && \
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ce:" $2}')
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry https://registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -426,7 +422,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Check if there are any Pods left in the cluster with the Deckhouse EE registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee")))) 
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee"))))
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
@@ -450,8 +446,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --user license-token --password $LICENSE_TOKEN --registry-url https://registry.deckhouse.io/deckhouse/ee && \
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ee:" $2}') 
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN https://registry.deckhouse.io/deckhouse/ee
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -504,7 +499,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 1. Check if there are any Pods left in the cluster with the Deckhouse CE registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce")))) 
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce"))))
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
