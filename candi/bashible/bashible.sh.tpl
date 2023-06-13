@@ -300,11 +300,9 @@ function main() {
       echo ===
       echo === Step: $step
       echo ===
-      {{- if eq .runType "ClusterBootstrap" }}
       if [ "$attempt" -gt 2 ]; then
         sx=x
       fi
-      {{- end }}
       {{- if ne .runType "ClusterBootstrap" }}
       bb-event-error-create "$step"
       {{- end }}
