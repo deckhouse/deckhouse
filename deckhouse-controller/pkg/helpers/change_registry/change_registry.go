@@ -51,7 +51,7 @@ const (
 )
 
 func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag string, insecure bool) error {
-	ctx := context.TODO()
+	ctx := context.Background()
 	logEntry := log.WithField("operator.component", "ChangeRegistry")
 
 	nameOpts := newNameOptions(insecure)
