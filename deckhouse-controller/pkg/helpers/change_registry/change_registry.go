@@ -353,19 +353,15 @@ func checkBearerSupport(ctx context.Context, reg name.Registry) error {
 		if challenges := authchallenge.ResponseChallenges(resp); len(challenges) != 0 {
 			// If we hit more than one, I'm not even sure what to do.
 			wac := challenges[0]
-			if toChallenge(wac.Scheme) == bearer {
+			if strings.ToLower(wac.Scheme) == bearer {
 				return nil
 			}
 		}
-		if toChallenge(resp.Header.Get(wwwAuthHeader)) == bearer {
+		if strings.ToLower(resp.Header.Get(wwwAuthHeader)) == bearer {
 			return nil
 		}
 		return fmt.Errorf("can't use bearer token auth with registry %s", reg.Name())
 	}
 
 	return errors.New(strings.Join(errs, "; "))
-}
-
-func toChallenge(s string) string {
-	return strings.ToLower(s)
 }
