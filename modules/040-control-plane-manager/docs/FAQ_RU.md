@@ -516,7 +516,7 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 По итогам этой фазы выбирается нода с наибольшей оценкой. Если нод с одинаковой оценкой несколько - random.
 К выбранной ноде и биндится Pod.
 
-**Документация**
+#### Документация
 
 - [Общее описание scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/)
 - [Система плагинов](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
