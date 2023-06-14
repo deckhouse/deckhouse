@@ -91,12 +91,12 @@ spec:
   minReadySeconds: 60
   updateStrategy:
     type: RollingUpdate
+    rollingUpdate:
+      rollingUpdateType: InPlaceIfPossible
     {{- if $loadBalancer }}
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+      maxUnavailable: 1
+      maxSurge: 0
     {{- else }}
-    rollingUpdate:
       maxUnavailable: 1
       maxSurge: 0
     {{- end }}
