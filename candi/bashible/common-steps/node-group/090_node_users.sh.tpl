@@ -47,7 +47,7 @@ function put_user_ssh_key() {
   local ssh_dir="$base_path/$user_name/.ssh"
 
   tmp_file="$(mktemp -u)"
-  sed "s/\,/\n/g" <<< "$ssh_keys" | sort -u > "$tmp_file"
+  sed "s/\;/\n/g" <<< "$ssh_keys" | sort -u > "$tmp_file"
 
   if ! diff -q "$ssh_dir/authorized_keys" "$tmp_file" >/dev/null 2>/dev/null ; then
     mkdir -p "$ssh_dir"
@@ -77,7 +77,7 @@ mkdir -p $home_base_path
 for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
   user_name="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .name' <<< "$node_users_json")"
   password_hash="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .spec.passwordHash' <<< "$node_users_json")"
-  ssh_public_keys="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.sshPublicKeys[]?] + (if .spec.sshPublicKey then [.spec.sshPublicKey] else [] end) | join(",")' <<< "$node_users_json")"
+  ssh_public_keys="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.sshPublicKeys[]?] + (if .spec.sshPublicKey then [.spec.sshPublicKey] else [] end) | join(";")' <<< "$node_users_json")"
   extra_groups="$(jq --arg uid "$uid" --arg sudo_group "$sudo_group" -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.extraGroups[]?] + (if .spec.isSudoer then [$sudo_group] else [] end) | join(",")' <<< "$node_users_json")"
 
   # check for uid > 1000
