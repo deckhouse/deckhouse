@@ -358,7 +358,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
   -----END CERTIFICATE-----
   EOF
   )
-  $ kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password YUvio925tyxFNBnqhfcx89nABwcnTP1K registry.deckhouse.io/deckhou --ca-file <(cat <<<$CA_CONTENT)
+  $ kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password YUvio925tyxFNBnqhfcx89nABwcnTP1K registry.deckhouse.io/deckhouse --ca-file <(cat <<<$CA_CONTENT)
   ```
 
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
