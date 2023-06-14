@@ -105,8 +105,9 @@
  - **[extended-monitoring]** Send one `ExtendedMonitoringDeprecatatedAnnotation` alert per cluster. [#4829](https://github.com/deckhouse/deckhouse/pull/4829)
  - **[global-hooks]** Fix cluster DNS address discovery. [#4521](https://github.com/deckhouse/deckhouse/pull/4521)
  - **[global-hooks]** Fix the Kubernetes version hook for `DigitalOcean`. [#4473](https://github.com/deckhouse/deckhouse/pull/4473)
+ - **[ingress-nginx]** Increase `minReadySeconds` for all inlets. [#4919](https://github.com/deckhouse/deckhouse/pull/4919)
  - **[ingress-nginx]** Fixed incorrect indentation of resources block in `kube-rbac-proxy` container of `kruise-controller-manager` deployment. [#4738](https://github.com/deckhouse/deckhouse/pull/4738)
- - **[linstor]** Add disabling use of lvmetad service to NodeGroupConfiguration for LINSTOR module. [#4885](https://github.com/deckhouse/deckhouse/pull/4885)
+ - **[linstor]** Add disabling the `lvmetad` service to `NodeGroupConfiguration` for the `linstor` module. [#4885](https://github.com/deckhouse/deckhouse/pull/4885)
  - **[linstor]** Support Debian 11. [#4724](https://github.com/deckhouse/deckhouse/pull/4724)
  - **[linstor]** Enable `WaitForFirstConsumer`. [#4681](https://github.com/deckhouse/deckhouse/pull/4681)
     - all auto-generated linstor storageclasses will be recreated with WaitForFirstConsumer option.
@@ -114,6 +115,7 @@
  - **[linstor]** Disable the `auto-resync-after` option. [#4501](https://github.com/deckhouse/deckhouse/pull/4501)
  - **[log-shipper]** Add host label and the doc about labels. [#4383](https://github.com/deckhouse/deckhouse/pull/4383)
  - **[metallb]** Fix MetalLB speaker tolerations. [#4435](https://github.com/deckhouse/deckhouse/pull/4435)
+ - **[monitoring-kubernetes]** Resolve symbolic links before getting file system statistics in `kubelet-eviction-thresholds-exporter`. [#4923](https://github.com/deckhouse/deckhouse/pull/4923)
  - **[monitoring-kubernetes]** Fixed path to hostPath in thresholds-exporter. [#4736](https://github.com/deckhouse/deckhouse/pull/4736)
  - **[monitoring-kubernetes]** Remove duplicates of memory graphs on namespace dashboard [#4701](https://github.com/deckhouse/deckhouse/pull/4701)
  - **[node-local-dns]** Added logs if changed state iptables. [#4613](https://github.com/deckhouse/deckhouse/pull/4613)
