@@ -4,19 +4,16 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Определяется конфигурацию модуля Deckhouse.
-      subresources:
-        status: {}
-      additionalPrinterColumns:
-        - name: weight
-          jsonPath: .properties.weight
-          type: integer
-          description: 'Очередность применения модуля.'
-        - name: state
-          jsonPath: .properties.state
-          type: string
-          description: 'Статус модуля - включен или выключен.'
-        - name: source
-          jsonPath: .properties.source
-          type: string
-          description: 'Источник модуля.'
+            Отображает базовую информацию о модуле Deckhouse.
+
+            > Ресурс Module нельзя изменить, он предназначен только для получения информации о модуле (только для чтения).
+          properties:
+            properties:
+              properties:
+                weight:
+                  description: |
+                    _Вес_ (приоритет) модуля.
+                state:
+                  description: 'Состояние модуля (включен или выключен).'
+                source:
+                  description: 'Адрес репозитория для внешнего модуля, либо `Embedded` — для внутреннего.'
