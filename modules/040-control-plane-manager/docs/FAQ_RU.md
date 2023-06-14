@@ -483,23 +483,27 @@ done
 
 Scheduler состоит из плагинов, которые работают в вышеуказанные фазы. Плагины могут работать в одной фазе, а могут и в обеих.
 Примеры плагинов:
-- **_ImageLocality_** - отдает предпочтение узлам, на которых уже есть образы контейнеров, запускаемых Pod. Фаза: **Scoring**
-- **_TaintToleration_** - имплементирует [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Фазы: **Filtering, Scoring**
-- **_NodePorts_** - проверяет, есть ли у узла свободные порты для запрашиваемых Pod-портов. Фаза: **Filtering**
+- **ImageLocality** - отдает предпочтение узлам, на которых уже есть образы контейнеров, запускаемых Pod. Фаза: **Scoring**
+- **TaintToleration** - имплементирует [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Фазы: **Filtering, Scoring**
+- **NodePorts** - проверяет, есть ли у узла свободные порты для запрашиваемых Pod-портов. Фаза: **Filtering**
 
 Полный список плагинов можно посмотреть по [ссылке](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
 
 ### Логика работы
 
-Сначала идет фаза фильтрации (**Filtering**). В этот момент работают _filter_ плагины, которые из всего массива нод, выбирают попадающие под условия фильтров (taints, nodePorts, nodeName, unschedulable, etc). Если узлы лежат в разных зонах, то выборка идет по очереди между зонами, чтобы не размещать все Pod'ы в одной зоне.
+Сначала идет фаза фильтрации (**Filtering**). В этот момент работают `filter` плагины, которые из всего массива нод, выбирают попадающие под условия фильтров (taints, nodePorts, nodeName, unschedulable, etc). Если узлы лежат в разных зонах, то выборка идет по очереди между зонами, чтобы не размещать все Pod'ы в одной зоне.
 Например, при таком распределении по зонам
-```
+
+```text
 Zone 1: Node 1, Node 2, Node 3, Node 4
 Zone 2: Node 5, Node 6
 ```
 
 Узлы будут выбраны в следующем порядке:
-`Node 1, Node 5, Node 2, Node 6, Node 3, Node 4`
+
+```text
+Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
+```
 
 А также здесь есть одна маленькая хитрость. Выбираются не все попадающие под условия узлы, а только их часть. Это нужно для оптимизации, чтобы потом не проверять все выбранные ноды.
 

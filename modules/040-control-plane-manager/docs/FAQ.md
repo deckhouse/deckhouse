@@ -482,23 +482,25 @@ While there are additional phases such as pre-filtering, post-filtering and so o
 ### General structure of the scheduler
 
 The Scheduler comprises plugins that function in either or both phases. These plugins include:
-- **_ImageLocality_** - gives preference to nodes that already have images of containers running Pod. Phase: **Scoring**.
-- **_TaintToleration_** - implements [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Phases: **Filtering, Scoring**.
-- **_NodePorts_** - checks if the node has free ports for the requested Pod ports. Phase: **Filtering**.
+- **ImageLocality** - gives preference to nodes that already have images of containers running Pod. Phase: **Scoring**.
+- **TaintToleration** - implements [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Phases: **Filtering, Scoring**.
+- **NodePorts** - checks if the node has free ports for the requested Pod ports. Phase: **Filtering**.
 
 You can see the full list of plugins at [link](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
 
 ### Working logic
 
-The filtering phase (**Filtering**) is executed first. At this stage, _filter_ plugins select nodes that satisfy filtering conditions such as taints, nodePorts, nodeName, unschedulable, among others.
+The filtering phase (**Filtering**) is executed first. At this stage, `filter` plugins select nodes that satisfy filtering conditions such as taints, nodePorts, nodeName, unschedulable, among others.
 If the nodes belong to different zones, they are selected alternately to avoid placing all Pods in a single zone. For instance, if there are two zones with nodes as follows:
-```
+
+```text
 Zone 1: Node 1, Node 2, Node 3, Node 4
 Zone 2: Node 5, Node 6
 ```
 
 The nodes will be selected in the following order:
-```
+
+```text
 Node 1, Node 5, Node 2, Node 6, Node 3, Node 4.
 ```
 
