@@ -101,8 +101,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: FALCO_BPF_PROBE
-          value: ""
         - name: SKIP_DRIVER_LOADER
           value: ""
         livenessProbe:
