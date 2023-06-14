@@ -11,6 +11,7 @@ properties:
         description: 'Setting it to `true` will create an Ingress resource in the `d8-user-authn` namespace in the cluster (it exposes the Kubernetes API).'
       ingressClass:
         type: string
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: 'The Ingress class that will be used to expose the Kubernetes API via Ingress.'
       whitelistSourceRanges:
         type: array
@@ -132,6 +133,7 @@ properties:
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   ingressClass:
     type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     description: |
       The class of the Ingress controller of the documentation web UI.
 

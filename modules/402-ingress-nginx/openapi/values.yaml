@@ -37,6 +37,7 @@ properties:
             ingressClass:
               type: string
               x-examples: ["nginx"]
+              pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
             data:
               type: object
               default: {}
@@ -69,6 +70,7 @@ properties:
                 ingressClass:
                   type: string
                   x-examples: ["nginx"]
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 inlet:
                   type: string
                   x-examples: ["HostWithFailover"]
