@@ -256,7 +256,7 @@ func updateDeployment(ctx context.Context, kubeCl kclient.KubeClient, deploy *ap
 	return nil
 }
 
-func updateImageRepoForContainers(containers []v1.Container, newRepository string, nameOpts []name.Option, remoteOpts []remote.Option, newTagsForContainer map[string]string /* map[<container name>]>newTag> */) ([]v1.Container, error) {
+func updateImageRepoForContainers(containers []v1.Container, newRepository string, nameOpts []name.Option, remoteOpts []remote.Option, newTagsForContainer map[string]string /* map[<container name>]<newTag> */) ([]v1.Container, error) {
 	for i, container := range containers {
 		oldImage, err := name.ParseReference(container.Image)
 		if err != nil {
