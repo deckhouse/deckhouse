@@ -339,14 +339,14 @@ proxy:
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
-* Run `deckhouse-controller helper change-registry` inside `Deckhouse` pod with the new registry settings.
+* Run `deckhouse-controller helper change-registry` inside the `deckhouse` Pod with the new registry settings.
   * Example:
 
   ```shell
   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user my-user --password my-password registry.example.com/deckhouse
   ```
 
-  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` in the deckhouse pod and add the `--ca-file ca.crt` option to the script.
+  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` in the `deckhouse` Pod and add the `--ca-file ca.crt` option to the script.
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * If you want to disable Deckhouse automatic updates, remove the `releaseChannel` parameter from the `deckhouse` module configuration.

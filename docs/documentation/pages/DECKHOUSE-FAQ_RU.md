@@ -343,14 +343,14 @@ proxy:
 
 Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
 
-* Запустите `deckhouse-controller helper change-registry` из пода `Deckhouse` с параметрами нового registry.
+* Выполните команду `deckhouse-controller helper change-registry` из Пода `deckhouse` с параметрами нового registry.
   * Пример запуска:
 
   ```shell
   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user my-user --password my-password registry.example.com/deckhouse
   ```
 
-  * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` в поде deckhouse и добавьте к вызову опцию `--ca-file ca.crt`.
+  * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` в Поде `deckhouse` и добавьте к вызову опцию `--ca-file ca.crt`.
 * Дождитесь перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
 * Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
 * Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, то удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
