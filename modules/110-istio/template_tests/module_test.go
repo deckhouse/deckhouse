@@ -555,7 +555,7 @@ resourcePolicy:
 		})
 	})
 
-	Context("istiod with custom static resourcesManagement configuration", func() {
+	Context("istiod with controlPlane custom static resourcesManagement configuration", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -595,6 +595,53 @@ targetRef:
   name: istiod-v1x13x7
 updatePolicy:
   updateMode: "Off"
+`))
+		})
+	})
+
+	Context("istiod with sidecar not use custom static resourcesManagement configuration", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13.7"]`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			iopV13 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x13x7")
+			Expect(iopV13.Field("spec.values.global.proxy.resources").String()).To(MatchYAML(`{}`))
+		})
+	})
+
+	Context("istiod with sidecar custom static resourcesManagement configuration", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13.7"]`)
+			f.ValuesSetFromYaml("istio.sidecar.resourcesManagement", `
+mode: Static
+static:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    memory: 2Gi
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			iopV13 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x13x7")
+			Expect(iopV13.Field("spec.values.global.proxy.resources").String()).To(MatchYAML(`
+requests:
+  cpu: 200m
+  memory: 256Mi
+limits:
+  memory: 2Gi
 `))
 		})
 	})
