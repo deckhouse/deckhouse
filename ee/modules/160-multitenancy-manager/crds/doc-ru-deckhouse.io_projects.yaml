@@ -1,30 +1,30 @@
 spec:
-  Versions:
+  versions:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
           description: ""
           properties:
             apiVersion:
-              description: api версия объекта
+              description: Версия API объекта.
             kind:
-              description: Kind объекта
+              description: Kind объекта.
             metadata:
               description: ""
             spec:
               description: ""
               properties:
                 description:
-                  description: Описание для Project
+                  description: Произвольное описание назначения окружения.
                 projectTypeName:
                   description: |
-                    Имя ProjectType, который будет использоваться
-                    как шаблон для создания ресурсов Project.
+                    Имя CR [ProjectType](cr.html#projecttype), который будет использоваться
+                    как шаблон для создания ресурсов окружения.
                 template:
                   description: |
-                    Значения для темплейтов ресурсов из ProjectType
-                    в формате helm values, которые соостносятся с
-                    OpenAPI спецификацией из openAPI поля ProjectType
+                    Значения для [темплейтов ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) из шаблона окружения (CR [ProjectType](cr.html#projecttype))
+                    в формате helm values, которые соотносятся с
+                    OpenAPI-спецификацией (поле [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) шаблона окружения).
             status:
               description: ""
               properties:

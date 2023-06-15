@@ -1,14 +1,17 @@
 spec:
-  Versions:
+  versions:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: ""
+          description: |
+            Описывает шаблон окружения.
+
+            Этот на этот ресурс ссылается ресурс [Project](cr.html#project).
           properties:
             apiVersion:
-              description: Api версия объекта
+              description: Версия API объекта.
             kind:
-              description: Kind объекта
+              description: Kind объекта.
             metadata:
               description: ""
             spec:
@@ -17,7 +20,7 @@ spec:
                 namespaceMetadata:
                   description:
                     Лейблы и аннотации, которые применяются к создаваемым
-                    пространствам имен Project'ов.
+                    пространствам имен при настройке окружения.
                   properties:
                     annotations:
                       description: ""
@@ -25,47 +28,48 @@ spec:
                       description: ""
                 openAPI:
                   description:
-                    Спецификация OpenAPI для значений (`values`) шаблона  в
-                    `resourcesTemplate`.
+                    Спецификация OpenAPI для значений (`values`) шаблона (параметр [resourcesTemplate](#projecttype-v1alpha1-spec-resourcestemplate)).
                 resourcesTemplate:
                   description: |
-                    Темплейты ресурсов в формате `helm`, которые требуется создать при старте нового `Project` (окружения).
-                    Полная совместимость со всеми функциями `helm`.
+                    Шаблоны ресурсов в формате `helm`, которые требуется создать при настройке нового (окружения).
 
-                    возможно использование нескольких типов `values`:
-                    - в `{{ .projectName }}` хранится имя `Project` (см [Создание изолированного окружения](usage.html#создание-изолированного-окружения)).
-                    - в `{{ .projectTypeName }}` хранится имя `ProjectType`.
-                    - в `{{ .params }}` хранится словарь пользовательских значений, описанных в `.spec.openAPI` и определенных в `Project` поле `.spec.template`.
+                    Шаблоны совместимы со всеми функциями `helm`.
+
+                    В шаблонах доступны также следующие параметры (`values`):
+                    - `{{ .projectName }}` — имя `Project` (окружения), для которого рендерится шаблон.
+                    - `{{ .projectTypeName }}` — имя `ProjectType`.
+                    - `{{ .params }}` — словарь пользовательских значений, описанных в параметре [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) и определенных в параметре [.spec.template](cr.html#project-v1alpha1-spec-template).
 
 
                     > **Внимание!** Указывать поля `.metadata.namespace` для объектов необязательно,
-                    > так как они автоматически проставятся из названия создаваемого `Project` (см [Создание изолированного окружения](usage.html#создание-изолированного-окружения)).
+                    > так как они автоматически проставятся из названия окружения (CR `Project`).
                 subjects:
                   description:
-                    Список ServiceAccounts, Groups и Users для предоставления
-                    доступа к созданному проекту (изолированному окружению).
+                    Список ServiceAccount'ов, групп (`Group`) и пользователей (`User`) для предоставления
+                    доступа к созданному окружению.
                   items:
                     description: ""
                     properties:
                       kind:
                         description:
-                          Kind целевого ресурса для применения доступа к  проекту
-                          (ServiceAccount, Group или User).
+                          Kind целевого ресурса для применения доступа к окружению.
+                          (`ServiceAccount`, `Group` или `User`).
                       name:
-                        description: Имя целевого ресурса для применения доступа к проекту.
+                        description: Имя целевого ресурса для применения доступа к окружению.
                       namespace:
                         description: |
-                          Пространство имен целевого ресурса для применения доступа Project.
-                          Требуется только при использовании `ServiceAccount` из другого NS.
+                          Пространство имен (`namespace`) целевого ресурса для применения доступа окружению.
+
+                          Требуется только при использовании ServiceAccount'а из другого пространства имен (`namespace`).
                       role:
                         description:
-                          Уровень доступа из [модуля user-authz](../../modules/140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel),
+                          Уровень доступа из [модуля user-authz](../140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel),
                           который выдается на окружение для целевого ресурса.
             status:
               description: ""
               properties:
                 statusSummary:
-                  description: Сводная информация о статусе ProjectType
+                  description: Сводная информация о статусе ProjectType.
                   properties:
                     message:
                       description: Сообщение о статусе

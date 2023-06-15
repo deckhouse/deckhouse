@@ -48,8 +48,8 @@ spec:
               properties:
                 namespaceMetadata:
                   description:
-                    Labels and annotations that apply to the generated Project
-                    namespaces.
+                    Labels and annotations that apply to created
+                    namespaces when setting up the environment..
                   properties:
                     annotations:
                       additionalProperties:

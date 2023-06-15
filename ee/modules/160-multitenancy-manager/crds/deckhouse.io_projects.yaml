@@ -50,24 +50,24 @@ spec:
             spec:
               properties:
                 description:
-                  description: Description of the Project
+                  description: Arbitrary description of the purpose of the environment.
                   type: string
                 projectTypeName:
-                  description: Name of ProjectType to use to create Project
+                  description: |
+                    Name of CR [ProjectType](cr.html#project type) to be used
+                    as a template for creating resources for the environment.
                   type: string
                 template:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
                   description:
-                    Values for resource templates from ProjectType in helm
-                    values format that map to the open-api specification from the openAPI
-                    ProjectType field
+                    Values for [resource templates](cr.html#projecttype-v1alpha1-spec-resourcestemplate) from the environment template (CR [ProjectType](cr.html#projecttype) in helm values format that map to the OpenAPI specification (the [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) parameter of the environment template).
                   type: object
               type: object
             status:
               properties:
                 conditions:
-                  description: A list of Project conditions
+                  description: A list of Project conditions.
                   items:
                     properties:
                       message:
@@ -79,7 +79,7 @@ spec:
                     type: object
                   type: array
                 statusSummary:
-                  description: Summary for the Project status
+                  description: Summary for the Project status.
                   properties:
                     message:
                       description: Status message.

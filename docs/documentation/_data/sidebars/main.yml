@@ -919,6 +919,7 @@ entries:
         - title: Multitenancy
           d8Revision: ee
           featureStatus: experimental
+          moduleName: multitenancy-manager
           folders:
             - title:
                 en: Description
@@ -938,8 +939,6 @@ entries:
                   url: /modules/160-multitenancy-manager/configuration.html
                 - title: Custom Resources
                   url: /modules/160-multitenancy-manager/cr.html
-            - title: FAQ
-              url: /modules/160-multitenancy-manager/faq.html
         - title:
             en: Admission Policy
             ru: Политики контроля доступа
