@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: nodeManager :: hooks :: handle_capi_clusters ::", func() {
+var _ = Describe("Modules :: nodeManager :: hooks :: handle_capi_clusters ::", func() {
 	var (
 		initialState = `
 ---

@@ -22,6 +22,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -38,12 +39,15 @@ func filterClusters(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
 		Queue:        "/modules/node-manager",
-		OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
 				Name:       "clusters",
 				ApiVersion: apiVersion,
 				Kind:       "Cluster",
+				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnSynchronization: pointer.Bool(true),
+				ExecuteHookOnEvents:          pointer.Bool(true),
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{
 						MatchNames: []string{clusterNamespace},
