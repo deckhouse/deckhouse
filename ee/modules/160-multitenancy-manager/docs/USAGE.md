@@ -3,6 +3,7 @@ title: "The multitenancy-manager module: usage"
 ---
 
 {% raw %}
+
 ## Create an isolated environment
 
 To create an isolated environment inside a kubernetes cluster, the following steps are required:
@@ -250,4 +251,5 @@ To create an isolated environment inside a kubernetes cluster, the following ste
   NAME                          CREATED AT
   test-project-all-containers   2023-06-01T14:37:42Z
   ```
+
 {% endraw %}

@@ -2,6 +2,7 @@
 title: "Модуль multitenancy-manager: примеры конфигурации"
 ---
 {% raw %}
+
 ## Создание изолированного окружения
 
 Выполните следующие шаги, для создания изолированного окружения в кластере Kubernetes:
@@ -35,20 +36,21 @@ title: "Модуль multitenancy-manager: примеры конфигураци
      groups:
        - admins
    ```
-   
-   Выполните следующую команду, для создания пользователей: 
-   
+
+   Выполните следующую команду, для создания пользователей:
+
    ```shell
    kubectl create -f users.yaml
    ```
 
-   Проверьте что пользователи успешно создались, выполнив следующую команду: 
+   Проверьте что пользователи успешно создались, выполнив следующую команду:
 
-   ```shell   
+   ```shell
    kubectl get users.deckhouse.io
    ```
-   
+
    Пример вывода:
+
    ```shell
    NAME    EMAIL           GROUPS       EXPIRE_AT
    admin   admin@cluster   ["admins"]
@@ -61,10 +63,11 @@ title: "Модуль multitenancy-manager: примеры конфигураци
    - в [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) опишите шаблоны ресурсов, которые требуется создать при настройке изолированных окружений;
    - в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) опишите спецификацию OpenAPI для значений (`values`), которые используются в описанных шаблонах ([.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate));
    - в [.spec.namespaceMetadata](cr.html#projecttype-v1alpha1-spec-namespacemetadata) опишите лейблы и аннотации, которые необходимо проставить на `Namespace` при настройке окружения.
- 
+
    В параметре [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) шаблона описаны [роли](../../modules/150-user-authn/cr.html#user), которые требуется выдать созданным выше пользователям для новых окружений. В параметре [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) шаблона описываются три ресурса: `NetworkPolicy` (ограничивает сетевую доступность Подов вне создаваемого `Namespace`, кроме `kube-dns`), `LimitRange` и `ResourceQuota`. В шаблоне реурсов используются параметры, описанные в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
- 
+
    Сохраните следующее содержимое (описание ресурса `ProjectType`) в файл `project-type.yaml`:
+
    ```yaml
    # project-type.yaml
    ---
@@ -182,19 +185,21 @@ title: "Модуль multitenancy-manager: примеры конфигураци
                - protocol: UDP
                  port: 53
    ```
-   
-   Выполните следующую команду, для создания шаблона окружения: 
+
+   Выполните следующую команду, для создания шаблона окружения:
+
    ```shell
    kubectl create -f project-type.yaml
    ```
-   
-   Проверьте что шаблон окружения успешно создался, выполнив следующую команду: 
-   
+
+   Проверьте что шаблон окружения успешно создался, выполнив следующую команду:
+
    ```shell
    kubectl get projecttypes.deckhouse.io
    ```
-   
+
    Пример вывода:
+
    ```text
    NAME                READY   MESSAGE
    test-project-type   true
@@ -203,6 +208,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
 1. Создайте окружение с помощью ресурса [Project](cr.html#project), указав в поле [.spec.projectTypeName](cr.html#project-v1alpha1-spec-projecttypename) имя созданного ранее шаблона окружения. Поле [.spec.template](cr.html#project-v1alpha1-spec-template) заполните значениями, которые подходят для [.spec.openAPI ProjectType](cr.html#projecttype-v1alpha1-spec-openapi).
 
    Сохраните следующее содержимое (описание ресурса `Project`) в файл `project.yaml`:
+
    ```yaml
    # project.yaml
    ---
@@ -223,18 +229,18 @@ title: "Модуль multitenancy-manager: примеры конфигураци
          memory: 5Gi
    ```
 
-   Выполните следующую команду, для создания окружения: 
-   
+   Выполните следующую команду, для создания окружения:
+
    ```shell
    kubectl create -f project.yaml
    ```
-   
+
    Проверьте что окружение успешно создалось, выполнив следующую команду:
 
    ```shell
    kubectl get projects.deckhouse.io
    ```
-   
+
    Пример вывода:
 
    ```shell
@@ -284,4 +290,5 @@ title: "Модуль multitenancy-manager: примеры конфигураци
    NAME                          CREATED AT
    test-project-all-containers   2023-06-01T14:37:42Z
    ```
+
 {% endraw %}
