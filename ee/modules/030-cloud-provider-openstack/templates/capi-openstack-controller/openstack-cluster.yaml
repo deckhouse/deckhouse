@@ -7,10 +7,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   cloudName: openstack
+  network:
+    name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
   controlPlaneEndpoint:
     host: ""
     port: 0
   identityRef:
     kind: Secret
     name: cloud-config
-  controlPlaneAvailabilityZones: {{ .Values.cloudProviderOpenstack.internal.zones }}

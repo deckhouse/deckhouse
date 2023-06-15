@@ -38,13 +38,13 @@ func filterClusters(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 // This hook discovers nodegroup names for dynamic probes in upmeter
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
-		Queue:        "/modules/node-manager",
+		Queue: "/modules/node-manager",
 
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
-				Name:       "clusters",
-				ApiVersion: apiVersion,
-				Kind:       "Cluster",
+				Name:                         "clusters",
+				ApiVersion:                   apiVersion,
+				Kind:                         "Cluster",
 				WaitForSynchronization:       pointer.Bool(false),
 				ExecuteHookOnSynchronization: pointer.Bool(true),
 				ExecuteHookOnEvents:          pointer.Bool(true),
