@@ -24,8 +24,8 @@ import (
 )
 
 var _ = Describe("Modules :: nodeManager :: hooks :: handle_capi_clusters ::", func() {
-	var (
-		initialState = `
+	const (
+		clusterWithoutInfrastructureRef = `
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
@@ -34,17 +34,70 @@ metadata:
   namespace: d8-cloud-instance-manager
 status:
   infrastructureReady: false
+`
+		cluster1 = `
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: dev1
+  namespace: d8-cloud-instance-manager
+  uid: 123-456-789
+spec:
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
+    kind: OpenStackCluster
+    name: dev1
+    namespace: d8-cloud-instance-manager
+status:
+  infrastructureReady: false
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
+kind: OpenStackCluster
+metadata:
+  name: dev1
+  namespace: d8-cloud-instance-manager
+`
+		cluster2 = `
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: dev2
   namespace: d8-cloud-instance-manager
+  uid: 123-456-789
+spec:
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
+    kind: OpenStackCluster
+    name: dev2
+    namespace: d8-cloud-instance-manager
 status:
   infrastructureReady: true
 ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
+kind: OpenStackCluster
+metadata:
+  name: dev2
+  namespace: d8-cloud-instance-manager
+`
+		cluster3 = `
+---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
+metadata:
+  name: dev3
+  namespace: d8-cloud-instance-manager
+  uid: 123-456-789
+spec:
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
+    kind: OpenStackCluster
+    name: dev3
+    namespace: d8-cloud-instance-manager
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
+kind: OpenStackCluster
 metadata:
   name: dev3
   namespace: d8-cloud-instance-manager
@@ -53,6 +106,7 @@ metadata:
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Cluster", true)
+	f.RegisterCRD("infrastructure.cluster.x-k8s.io", "v1alpha6", "OpenStackCluster", true)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -65,9 +119,31 @@ metadata:
 		})
 	})
 
-	Context("update statuses", func() {
+	Context("more than one cluster resource", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(initialState))
+			f.BindingContexts.Set(f.KubeStateSet(cluster1 + cluster2))
+			f.RunHook()
+		})
+
+		It("Hook should fail", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+		})
+	})
+
+	Context("cluster resource without infrastructureRef field", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(clusterWithoutInfrastructureRef))
+			f.RunHook()
+		})
+
+		It("Hook should fail", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+		})
+	})
+
+	Context("update statuses (infrastructureReady = false)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(cluster1))
 			f.RunHook()
 		})
 
@@ -75,20 +151,77 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("clusters status infrastructure state should be true in all cases", func() {
+		It("clusters status infrastructure state should be true in all cases and ownerRef on infrastructure cluster should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			dev1 := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev1")
-			dev2 := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev2")
-			dev3 := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev3")
+			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev1")
+			infraCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "dev1")
 
-			Expect(dev1.Exists()).To(BeTrue())
-			Expect(dev2.Exists()).To(BeTrue())
-			Expect(dev3.Exists()).To(BeTrue())
-			Expect(dev1.Field("status.infrastructureReady").Bool()).To(BeTrue())
-			Expect(dev2.Field("status.infrastructureReady").Bool()).To(BeTrue())
-			Expect(dev3.Field("status.infrastructureReady").Bool()).To(BeTrue())
+			Expect(cluster.Exists()).To(BeTrue())
+			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
+			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`
+- apiVersion: cluster.x-k8s.io/v1beta1
+  kind: Cluster
+  name: dev1
+  namespace: d8-cloud-instance-manager
+  uid: 123-456-789
+`))
+
+		})
+	})
+
+	Context("update statuses (infrastructureReady = true)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(cluster2))
+			f.RunHook()
 		})
 
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("clusters status infrastructure state should be true in all cases and ownerRef on infrastructure cluster should be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev2")
+			infraCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "dev2")
+
+			Expect(cluster.Exists()).To(BeTrue())
+			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
+			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`
+- apiVersion: cluster.x-k8s.io/v1beta1
+  kind: Cluster
+  name: dev2
+  namespace: d8-cloud-instance-manager
+  uid: 123-456-789
+`))
+		})
+	})
+
+	Context("update statuses (infrastructureReady is absent)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(cluster3))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("clusters status infrastructure state should be true in all cases and ownerRef on infrastructure cluster should be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev3")
+			infraCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "dev3")
+
+			Expect(cluster.Exists()).To(BeTrue())
+			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
+			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`
+- apiVersion: cluster.x-k8s.io/v1beta1
+  kind: Cluster
+  name: dev3
+  namespace: d8-cloud-instance-manager
+  uid: 123-456-789
+`))
+
+		})
 	})
 
 })
