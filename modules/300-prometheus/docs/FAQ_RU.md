@@ -425,6 +425,7 @@ spec:
 Решение сводится к настройке маршрутизации алертов в вашем Alertmanager.
 
 Потребуется:
+
 1. Завести получателя без параметров.
 1. Смаршрутизировать лишние алерты в этого получателя.
 
@@ -437,14 +438,19 @@ receivers:
 - name: some-other-receiver
   # ...
 route:
+  # receiver по умолчанию
+  receiver: some-other-receiver
   routes:
-  - match:
-      alertname: DeadMansSwitch
-    receiver: blackhole
-  - match_re:
-      service: ^(foo1|foo2|baz)$
-    receiver: blackhole
-  - receiver: some-other-receiver
+    - matchers:
+        - matchType: =
+          name: alertname
+          value: DeadMansSwitch
+      receiver: blackhole
+    - matchers:
+        - matchType: =~
+          name: service
+          value: ^(foo|bar|baz)$
+      receiver: some-other-receiver
 ```
 
 С подробным описанием всех параметров можно ознакомиться в [официальной документации](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file).

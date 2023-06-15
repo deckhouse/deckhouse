@@ -428,6 +428,7 @@ Refer to the description of the [CustomAlertmanager](cr.html#customalertmanager)
 The solution comes down to configuring alert routing in the Alertmanager.
 
 You will need to:
+
 1. Create a parameterless receiver.
 1. Route unwanted alerts to this receiver.
 
@@ -440,14 +441,19 @@ receivers:
 - name: some-other-receiver
   # ...
 route:
+  # default receiver
+  receiver: some-other-receiver
   routes:
-  - match:
-      alertname: DeadMansSwitch
-    receiver: blackhole
-  - match_re:
-      service: ^(foo1|foo2|baz)$
-    receiver: blackhole
-  - receiver: some-other-receiver
+    - matchers:
+        - matchType: =
+          name: alertname
+          value: DeadMansSwitch
+      receiver: blackhole
+    - matchers:
+        - matchType: =~
+          name: service
+          value: ^(foo|bar|baz)$
+      receiver: some-other-receiver
 ```
 
 A detailed description of all parameters can be found in the [official documentation](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file).
