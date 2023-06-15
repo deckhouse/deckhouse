@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	namespace  = "d8-cloud-instance-manager"
-	apiVersion = "cluster.x-k8s.io/v1beta1"
+	clusterNamespace = "d8-cloud-instance-manager"
+	apiVersion       = "cluster.x-k8s.io/v1beta1"
 )
 
 // filterDynamicProbeNodeGroups returns the name of a nodegroup to consider or emptystring if it should be skipped
@@ -46,7 +46,7 @@ var _ = sdk.RegisterFunc(
 				Kind:       "Cluster",
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{
-						MatchNames: []string{namespace},
+						MatchNames: []string{clusterNamespace},
 					},
 				},
 				FilterFunc: filterClusters,
@@ -66,7 +66,7 @@ func updateClusterStatus(input *go_hook.HookInput) error {
 
 	snap := input.Snapshots["clusters"]
 	for _, sn := range snap {
-		input.PatchCollector.MergePatch(statusPatch, apiVersion, "Cluster", namespace, sn.(string), object_patch.IgnoreMissingObject())
+		input.PatchCollector.MergePatch(statusPatch, apiVersion, "Cluster", clusterNamespace, sn.(string), object_patch.IgnoreMissingObject(), object_patch.WithSubresource("/status"))
 	}
 	return nil
 }
