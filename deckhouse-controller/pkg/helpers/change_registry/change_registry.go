@@ -365,24 +365,10 @@ func authHeaderWithBearer(header http.Header) bool {
 	)
 
 	for _, h := range header[http.CanonicalHeaderKey(wwwAuthHeader)] {
-		if v := strings.ToLower(expectToken(h)); v == bearer {
+		if strings.HasPrefix(strings.ToLower(h), bearer) {
 			return true
 		}
 	}
 
 	return strings.ToLower(header.Get(wwwAuthHeader)) == bearer
-}
-
-func expectToken(s string) string {
-	i := 0
-	for ; i < len(s); i++ {
-		if !isTokenChar(s[i]) {
-			break
-		}
-	}
-	return s[:i]
-}
-
-func isTokenChar(c byte) bool {
-	return c > 31 && c <= 126 && !strings.ContainsRune(" \t\"(),/:;<=>?@[]\\{}", rune(c))
 }
