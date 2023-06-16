@@ -74,6 +74,3 @@ spec:
     {{- range $k, $v := $tags }}
       - "{{ $k }}: {{ $v }}"
     {{- end }}
-        # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
-      - "kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}: 1"
-      - "kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: 1"
