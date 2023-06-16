@@ -38,7 +38,8 @@ spec:
         {{ cat "No mainNetwork provided neither in cloud provider configuration nor in OpenStackInstanceClass" .nodeGroup.cloudInstances.classReference.name | fail }}
       {{- end }}
       {{- range $networks | uniq }}
-      - name: {{ . | quote }}
+      - filter:
+          name: {{ . | quote }}
       {{- end }}
     {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack "instances" }}
       {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "sshKeyPairName" }}
@@ -54,7 +55,7 @@ spec:
       {{- if gt (len $securityGroups) 0 }}
       securityGroups:
         {{- range $securityGroups | uniq }}
-      - {{ . }}
+      - name: {{ . }}
         {{- end }}
       {{- end }}
     {{- end }}
@@ -71,8 +72,8 @@ spec:
       {{- $tags = mergeOverwrite $tags .nodeGroup.instanceClass.additionalTags }}
     {{- end }}
     {{- range $k, $v := $tags }}
-        {{ $k }}: {{ $v | quote }}
+      - {{ $k }}: {{ $v | quote }}
     {{- end }}
         # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
-        kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}: "1"
-        kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
+      - kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}: "1"
+      - kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
