@@ -101,11 +101,14 @@ func GetClusterStateFromCluster(kubeCl *client.KubernetesClient) ([]byte, error)
 
 // Create secret for node with group settings only.
 func CreateNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, settings []byte) error {
+	secret, err := manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, nil, settings)
+	if err != nil {
+		return err
+	}
+
 	task := actions.ManifestTask{
-		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-		Manifest: func() interface{} {
-			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, nil, settings)
-		},
+		Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
+		Manifest: func() interface{} { return secret },
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
@@ -123,11 +126,14 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 		return ErrNoTerraformState
 	}
 
+	secret, err := manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, tfState, settings)
+	if err != nil {
+		return err
+	}
+
 	task := actions.ManifestTask{
-		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-		Manifest: func() interface{} {
-			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, tfState, settings)
-		},
+		Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
+		Manifest: func() interface{} { return secret },
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
@@ -145,8 +151,13 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 		return ErrNoTerraformState
 	}
 
+	secretWithNodeTerraformState, err := manifests.SecretWithNodeTerraformState(nodeName, MasterNodeGroupName, tfState, nil)
+	if err != nil {
+		return err
+	}
+
 	getTerraformStateManifest := func() interface{} {
-		return manifests.SecretWithNodeTerraformState(nodeName, MasterNodeGroupName, tfState, nil)
+		return secretWithNodeTerraformState
 	}
 	getDevicePathManifest := func() interface{} {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)
@@ -356,12 +367,14 @@ func (s *NodeStateSaver) SaveState(outputs *terraform.PipelineOutputs) error {
 	if outputs == nil || len(outputs.TerraformState) == 0 {
 		return nil
 	}
+	secret, err := manifests.SecretWithNodeTerraformState(s.nodeName, s.nodeGroup, outputs.TerraformState, s.nodeGroupSettings)
+	if err != nil {
+		return err
+	}
 
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, s.nodeName),
-		Manifest: func() interface{} {
-			return manifests.SecretWithNodeTerraformState(s.nodeName, s.nodeGroup, outputs.TerraformState, s.nodeGroupSettings)
-		},
+		Manifest: func() interface{} { return secret },
 		CreateFunc: func(manifest interface{}) error {
 			_, err := s.kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
@@ -370,15 +383,18 @@ func (s *NodeStateSaver) SaveState(outputs *terraform.PipelineOutputs) error {
 			return manifests.PatchWithNodeTerraformState(outputs.TerraformState)
 		},
 		PatchFunc: func(patchData []byte) error {
-			secretName := manifests.SecretNameForNodeTerraformState(s.nodeName)
+			secretName, err := manifests.SecretNameForNodeTerraformState(s.nodeName)
+			if err != nil {
+				return err
+			}
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := s.kubeCl.CoreV1().Secrets("d8-system").Patch(context.TODO(), secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
+			_, err = s.kubeCl.CoreV1().Secrets("d8-system").Patch(context.TODO(), secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
 			return err
 		},
 	}
 	taskName := fmt.Sprintf("Save intermediate Terraform state for Node %q", s.nodeName)
 	log.DebugF("Intermediate save state for node %s in cluster...\n", s.nodeName)
-	err := retry.NewSilentLoop(taskName, 45, 10*time.Second).Run(task.PatchOrCreate)
+	err = retry.NewSilentLoop(taskName, 45, 10*time.Second).Run(task.PatchOrCreate)
 	msg := fmt.Sprintf("Intermediate state for node %s was saved in cluster\n", s.nodeName)
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate state for node %s was not saved in cluster: %v\n", s.nodeName, err)

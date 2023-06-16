@@ -611,17 +611,40 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 	return generateSecret("d8-static-cluster-configuration", "kube-system", data, nil)
 }
 
-func SecretNameForNodeTerraformState(nodeName string) string {
-	return "d8-node-terraform-state-" + nodeName
+const maxLenSecretName = 63
+
+func SecretNameForNodeTerraformState(nodeName string) (string, error) {
+	builder := strings.Builder{}
+	builder.WriteString("d8-node-terraform-state-")
+	builder.WriteString(nodeName)
+
+	if builder.Len() > maxLenSecretName {
+		return "", fmt.Errorf("the length of the secret name %s must be less than %d",
+			builder.String(),
+			maxLenSecretName,
+		)
+	}
+	return builder.String(), nil
 }
 
-func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
+func SecretWithNodeTerraformState(
+	nodeName,
+	nodeGroup string,
+	data,
+	settings []byte,
+) (*apiv1.Secret, error) {
 	body := map[string][]byte{"node-tf-state.json": data}
 	if settings != nil {
 		body["node-group-settings.json"] = settings
 	}
+
+	secretName, err := SecretNameForNodeTerraformState(nodeName)
+	if err != nil {
+		return nil, err
+	}
+
 	return generateSecret(
-		SecretNameForNodeTerraformState(nodeName),
+		secretName,
 		"d8-system",
 		body,
 		map[string]string{
@@ -629,7 +652,7 @@ func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []b
 			"node.deckhouse.io/node-name":       nodeName,
 			"node.deckhouse.io/terraform-state": "",
 		},
-	)
+	), nil
 }
 
 func PatchWithNodeTerraformState(stateData []byte) interface{} {

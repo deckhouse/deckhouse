@@ -226,10 +226,14 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 	}
 
 	for nodeName, tfState := range cfg.NodesTerraformState {
-		getManifest := func() interface{} { return manifests.SecretWithNodeTerraformState(nodeName, "master", tfState, nil) }
+		secret, err := manifests.SecretWithNodeTerraformState(nodeName, "master", tfState, nil)
+		if err != nil {
+			return err
+		}
+
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-			Manifest: getManifest,
+			Manifest: func() interface{} { return secret },
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
@@ -379,7 +383,6 @@ func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode stri
 					WaitPodBecomeReady().
 					WithExcludeNode(excludeNode).
 					Print(ctx)
-
 				if err != nil {
 					if errors.Is(err, ErrTimedOut) {
 						return err
