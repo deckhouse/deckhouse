@@ -17,7 +17,7 @@ package hooks
 import (
 	"strings"
 
-	v1core "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
@@ -49,12 +49,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, migrationRemoveDeprecatedConfigmapDeckhouse)
 
 func applyDeckhouseConfigmapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var cm v1core.ConfigMap
+	var cm v1.ConfigMap
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
 		return "", err
 	}
-	for labelName, _ := range cm.Labels {
+	for labelName := range cm.Labels {
 		if strings.Contains(labelName, "argocd") {
 			return true, nil
 		}
