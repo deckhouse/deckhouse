@@ -226,14 +226,15 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 	}
 
 	for nodeName, tfState := range cfg.NodesTerraformState {
-		secret, err := manifests.SecretWithNodeTerraformState(nodeName, "master", tfState, nil)
-		if err != nil {
-			return err
+		getManifest := func() interface{} {
+			return manifests.NewManifestWrapper(
+				manifests.SecretWithNodeTerraformState(nodeName, "master", tfState, nil),
+				manifests.SecretNameLenghtValidator,
+			)
 		}
-
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-			Manifest: func() interface{} { return secret },
+			Manifest: getManifest,
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err

@@ -20,6 +20,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -36,9 +37,12 @@ type ManifestTask struct {
 // exists, it updates the resource with the UpdateFunc.
 func (task *ManifestTask) CreateOrUpdate() error {
 	log.InfoF("Manifest for %s\n", task.Name)
-	manifest := task.Manifest()
+	manifest, err := task.GetValidManifest()
+	if err != nil {
+		return err
+	}
 
-	err := task.CreateFunc(manifest)
+	err = task.CreateFunc(manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
 			return fmt.Errorf("create resource: %v", err)
@@ -90,10 +94,25 @@ func (task *ManifestTask) PatchOrCreate() error {
 	}
 
 	log.DebugF("%s is not found. Trying to create ... \n", task.Name)
-	manifest := task.Manifest()
+	manifest, err := task.GetValidManifest()
+	if err != nil {
+		return err
+	}
+
 	err = task.CreateFunc(manifest)
 	if err != nil {
 		return fmt.Errorf("Create '%s': %v", task.Name, err)
 	}
 	return nil
+}
+
+func (task *ManifestTask) GetValidManifest() (interface{}, error) {
+	if mw, ok := task.Manifest().(manifests.Manifest); ok {
+		err := mw.IsValid()
+		if err != nil {
+			return nil, fmt.Errorf("validate manifest: %w", err)
+		}
+		return mw.GetManifest(), nil
+	}
+	return task.Manifest(), nil
 }
