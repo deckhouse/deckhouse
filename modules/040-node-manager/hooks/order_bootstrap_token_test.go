@@ -157,43 +157,45 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 		It("A new token for NG static-0 must have generated.", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
 
-			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
-			Expect(bootstrapToken).To(HaveLen(23))
+			for _, ng := range []string{"static-0", "cloud0"} {
+				bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens." + ng).String()
+				Expect(bootstrapToken).To(HaveLen(23))
 
-			tokenSlice := strings.Split(bootstrapToken, ".")
-			tokenID := tokenSlice[0]
-			tokenSecret := tokenSlice[1]
+				tokenSlice := strings.Split(bootstrapToken, ".")
+				tokenID := tokenSlice[0]
+				tokenSecret := tokenSlice[1]
 
-			tokenResource := f.KubernetesResource("Secret", "kube-system", "bootstrap-token-"+tokenID)
-			Expect(tokenResource.Exists()).To(BeTrue())
+				tokenResource := f.KubernetesResource("Secret", "kube-system", "bootstrap-token-"+tokenID)
+				Expect(tokenResource.Exists()).To(BeTrue())
 
-			tokenIDBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-id").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(tokenIDBytes)).To(Equal(tokenID))
+				tokenIDBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-id").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(tokenIDBytes)).To(Equal(tokenID))
 
-			tokenSecretBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-secret").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(tokenSecretBytes)).To(Equal(tokenSecret))
+				tokenSecretBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-secret").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(tokenSecretBytes)).To(Equal(tokenSecret))
 
-			authExtraGroupsBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.auth-extra-groups").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:d8-node-manager"))
+				authExtraGroupsBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.auth-extra-groups").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:d8-node-manager"))
 
-			usageBootstrapAuthenticationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-authentication").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(usageBootstrapAuthenticationBytes)).To(Equal("true"))
+				usageBootstrapAuthenticationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-authentication").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(usageBootstrapAuthenticationBytes)).To(Equal("true"))
 
-			usageBootstrapSigningBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-signing").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(usageBootstrapSigningBytes)).To(Equal("true"))
+				usageBootstrapSigningBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-signing").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(usageBootstrapSigningBytes)).To(Equal("true"))
 
-			experationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.expiration").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			t, err := time.Parse(time.RFC3339, string(experationBytes))
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(t).Should(BeTemporally("~", time.Now().UTC().Add(time.Hour*4), time.Minute))
+				experationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.expiration").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				t, err := time.Parse(time.RFC3339, string(experationBytes))
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(t).Should(BeTemporally("~", time.Now().UTC().Add(time.Hour*4), time.Minute))
+			}
 		})
 	})
 
@@ -209,43 +211,45 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-aaaaaa").Exists()).To(BeFalse())
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
 
-			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
-			Expect(bootstrapToken).To(HaveLen(23))
+			for _, ng := range []string{"static-0", "cloud0"} {
+				bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens." + ng).String()
+				Expect(bootstrapToken).To(HaveLen(23))
 
-			tokenSlice := strings.Split(bootstrapToken, ".")
-			tokenID := tokenSlice[0]
-			tokenSecret := tokenSlice[1]
+				tokenSlice := strings.Split(bootstrapToken, ".")
+				tokenID := tokenSlice[0]
+				tokenSecret := tokenSlice[1]
 
-			tokenResource := f.KubernetesResource("Secret", "kube-system", "bootstrap-token-"+tokenID)
-			Expect(tokenResource.Exists()).To(BeTrue())
+				tokenResource := f.KubernetesResource("Secret", "kube-system", "bootstrap-token-"+tokenID)
+				Expect(tokenResource.Exists()).To(BeTrue())
 
-			tokenIDBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-id").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(tokenIDBytes)).To(Equal(tokenID))
+				tokenIDBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-id").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(tokenIDBytes)).To(Equal(tokenID))
 
-			tokenSecretBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-secret").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(tokenSecretBytes)).To(Equal(tokenSecret))
+				tokenSecretBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-secret").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(tokenSecretBytes)).To(Equal(tokenSecret))
 
-			authExtraGroupsBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.auth-extra-groups").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:d8-node-manager"))
+				authExtraGroupsBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.auth-extra-groups").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:d8-node-manager"))
 
-			usageBootstrapAuthenticationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-authentication").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(usageBootstrapAuthenticationBytes)).To(Equal("true"))
+				usageBootstrapAuthenticationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-authentication").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(usageBootstrapAuthenticationBytes)).To(Equal("true"))
 
-			usageBootstrapSigningBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-signing").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(usageBootstrapSigningBytes)).To(Equal("true"))
+				usageBootstrapSigningBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-signing").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(usageBootstrapSigningBytes)).To(Equal("true"))
 
-			experationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.expiration").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			t, err := time.Parse(time.RFC3339, string(experationBytes))
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(t).Should(BeTemporally("~", time.Now().UTC().Add(time.Hour*4), time.Minute))
+				experationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.expiration").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				t, err := time.Parse(time.RFC3339, string(experationBytes))
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(t).Should(BeTemporally("~", time.Now().UTC().Add(time.Hour*4), time.Minute))
+			}
 		})
 	})
 
@@ -263,44 +267,45 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-aaaaaa").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-kkkkkk").Exists()).To(BeTrue())
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
+			for _, ng := range []string{"static-0", "cloud0"} {
+				bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens." + ng).String()
+				Expect(len(bootstrapToken)).To(Equal(23))
+				Expect(bootstrapToken).ToNot(Equal("kkkkkk.kkkkkkkkkkkkkkkk"))
 
-			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
-			Expect(len(bootstrapToken)).To(Equal(23))
-			Expect(bootstrapToken).ToNot(Equal("kkkkkk.kkkkkkkkkkkkkkkk"))
+				tokenSlice := strings.Split(bootstrapToken, ".")
+				tokenID := tokenSlice[0]
+				tokenSecret := tokenSlice[1]
 
-			tokenSlice := strings.Split(bootstrapToken, ".")
-			tokenID := tokenSlice[0]
-			tokenSecret := tokenSlice[1]
+				tokenResource := f.KubernetesResource("Secret", "kube-system", "bootstrap-token-"+tokenID)
+				Expect(tokenResource.Exists()).To(BeTrue())
 
-			tokenResource := f.KubernetesResource("Secret", "kube-system", "bootstrap-token-"+tokenID)
-			Expect(tokenResource.Exists()).To(BeTrue())
+				tokenIDBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-id").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(tokenIDBytes)).To(Equal(tokenID))
 
-			tokenIDBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-id").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(tokenIDBytes)).To(Equal(tokenID))
+				tokenSecretBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-secret").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(tokenSecretBytes)).To(Equal(tokenSecret))
 
-			tokenSecretBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.token-secret").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(tokenSecretBytes)).To(Equal(tokenSecret))
+				authExtraGroupsBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.auth-extra-groups").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:d8-node-manager"))
 
-			authExtraGroupsBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.auth-extra-groups").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(authExtraGroupsBytes)).To(Equal("system:bootstrappers:d8-node-manager"))
+				usageBootstrapAuthenticationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-authentication").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(usageBootstrapAuthenticationBytes)).To(Equal("true"))
 
-			usageBootstrapAuthenticationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-authentication").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(usageBootstrapAuthenticationBytes)).To(Equal("true"))
+				usageBootstrapSigningBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-signing").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(usageBootstrapSigningBytes)).To(Equal("true"))
 
-			usageBootstrapSigningBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.usage-bootstrap-signing").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(usageBootstrapSigningBytes)).To(Equal("true"))
-
-			experationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.expiration").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			t, err := time.Parse(time.RFC3339, string(experationBytes))
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(t).Should(BeTemporally("~", time.Now().UTC().Add(time.Hour*4), time.Minute))
+				experationBytes, err := base64.StdEncoding.DecodeString(tokenResource.Field("data.expiration").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				t, err := time.Parse(time.RFC3339, string(experationBytes))
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(t).Should(BeTemporally("~", time.Now().UTC().Add(time.Hour*4), time.Minute))
+			}
 		})
 	})
 
@@ -330,10 +335,9 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 				Group:    "",
 				Resource: "secrets",
 			}).List(context.Background(), v1.ListOptions{})
-			Expect(len(slist.Items)).To(Equal(3))
+			Expect(len(slist.Items)).To(Equal(4))
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
-
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
 			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(Equal("ssssss.ssssssssssssssss"))
 		})
@@ -366,10 +370,9 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 				Group:    "",
 				Resource: "secrets",
 			}).List(context.Background(), v1.ListOptions{})
-			Expect(len(slist.Items)).To(Equal(3))
+			Expect(len(slist.Items)).To(Equal(4))
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
-
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
 			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(Equal("ssssss.ssssssssssssssss"))
 		})

@@ -118,26 +118,7 @@ func bootstrapTokenFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.Filt
 
 	err := sdk.FromUnstructured(obj, &ng)
 
-	var needToken bool
-	switch ng.Spec.NodeType {
-	case ngv1.NodeTypeStatic, ngv1.NodeTypeCloudPermanent, ngv1.NodeTypeCloudStatic:
-		needToken = true
-
-	// migration at 25.06.2021, this case have to be deleted after 01.09.2021
-	case "Hybrid":
-		// to avoid race on migration
-		needToken = true
-	}
-
-	return bootstrapTokenNG{
-		Name:      ng.Name,
-		NeedToken: needToken,
-	}, err
-}
-
-type bootstrapTokenNG struct {
-	Name      string
-	NeedToken bool
+	return ng.Name, err
 }
 
 type bootstrapTokenSecret struct {
@@ -180,26 +161,23 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 
 	snap = input.Snapshots["ngs"]
 	for _, sn := range snap {
-		ng := sn.(bootstrapTokenNG)
-		if !ng.NeedToken {
-			continue
-		}
+		ng := sn.(string)
 
-		latestToken := tokensByNg[ng.Name]
+		latestToken := tokensByNg[ng]
 
 		if latestToken.ValidFor > 3*time.Hour {
 			// token is valid for more than 3 hours — we can use it
-			input.Values.Set("nodeManager.internal.bootstrapTokens."+ng.Name, latestToken.BootstrapToken)
+			input.Values.Set("nodeManager.internal.bootstrapTokens."+ng, latestToken.BootstrapToken)
 		} else {
 			// token is not valid for more than 3 hours or doesn't exist — we must generate the new one
 			tokenID := pwgen.AlphaNumLowerCase(6)
 			tokenSecret := pwgen.AlphaNumLowerCase(16)
 			tokenExpiration := time.Now().Add(4 * time.Hour)
 
-			newSecret := bootstrapTokenGenerateSecret(tokenID, tokenSecret, ng.Name, tokenExpiration)
+			newSecret := bootstrapTokenGenerateSecret(tokenID, tokenSecret, ng, tokenExpiration)
 			input.PatchCollector.Create(newSecret)
 
-			input.Values.Set("nodeManager.internal.bootstrapTokens."+ng.Name, fmt.Sprintf("%s.%s", tokenID, tokenSecret))
+			input.Values.Set("nodeManager.internal.bootstrapTokens."+ng, fmt.Sprintf("%s.%s", tokenID, tokenSecret))
 		}
 	}
 
