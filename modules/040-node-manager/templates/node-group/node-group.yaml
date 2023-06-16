@@ -5,6 +5,7 @@
         {{- include "node_group_machine_class" (list $ $ng $zone_name) }}
         {{- include "node_group_machine_template" (list $ $ng $zone_name) }}
         {{- include "node_group_machine_class_secret" (list $ $ng $zone_name) }}
+        {{- include "capi_node_group_machine_deployment_secret" (list $ $ng $zone_name) }}
         {{- include "node_group_machine_deployment" (list $ $ng $zone_name) }}
       {{- end }}
     {{- end }}
