@@ -19,7 +19,7 @@ module Jekyll
         item = Hash.new
         item['linkAnchor'] = linkAnchor
         item['resourceType'] = resourceType
-        item['title'] = %Q(#{if resourceName then resourceName + ":&nbsp;" end}#{parameterName})
+        item['title'] = %Q(#{if resourceType == 'crd' and  resourceName then resourceName + ":&nbsp;" end}#{parameterName})
         if get_hash_value(@context.registers[:site].data['modules'], 'modules', moduleName, %Q(parameters-#{revision})) == nil then
           @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})] = Hash.new
         end
