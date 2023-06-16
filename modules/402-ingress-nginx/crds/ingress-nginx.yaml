@@ -36,7 +36,7 @@ spec:
                     **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
                   example: 'nginx'
                   default: 'nginx'
-                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 inlet:
                   type: string
                   description: |
@@ -488,7 +488,7 @@ spec:
                           description: |
                             Name of Secret containing SSL—certificate.
                           type: string
-                          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                         namespace:
                           description: |
                             Namespace, where the Secret is located.
