@@ -61,6 +61,7 @@ require (
 
 require (
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
+	github.com/docker/distribution v2.8.2+incompatible
 	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-openapi/validate v0.19.12
 	github.com/slok/kubewebhook/v2 v2.5.0
