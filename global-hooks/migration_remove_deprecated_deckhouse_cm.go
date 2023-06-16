@@ -16,11 +16,13 @@ package hooks
 
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
+	"strings"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -50,11 +52,27 @@ func applyDeckhouseConfigmapFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	if err != nil {
 		return "", err
 	}
-	return "", nil
+	for labelName, _ := range cm.Labels {
+		if strings.Contains(labelName, "argocd") {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error {
 	deckhouseConfigSnap := input.Snapshots["deckhouse_cm"]
+	if deckhouseConfigSnap[0].(bool) {
+		input.MetricsCollector.Set(
+			"d8_deprecated_configmap_managed_by_argocd",
+			1,
+			map[string]string{
+				"namespace": "d8-system",
+				"configmap": "deckhouse",
+			},
+			metrics.WithGroup("migration_remove_deprecated_deckhouse_cm"),
+		)
+	}
 	if len(deckhouseConfigSnap) > 0 {
 		input.PatchCollector.Delete("v1", "Configmap", "d8-system", "deckhouse")
 	}

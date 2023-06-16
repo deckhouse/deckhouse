@@ -1,0 +1,15 @@
+- name: d8.deckhouse
+  rules:
+  - alert: DeprecatedDeckhouseConfigmapManagedByArgocd
+    expr: |
+      d8_deprecated_configmap_managed_by_argocd > 0
+    labels:
+      tier: cluster
+      severity_level: "4"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      for: "10m"
+      summary: Deprecated deckhouse configmap managed by argocd
+      description: |
+        The deckhouse configmap is no longer used.

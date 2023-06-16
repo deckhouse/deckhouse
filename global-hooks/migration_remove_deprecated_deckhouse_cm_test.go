@@ -29,6 +29,8 @@ kind: ConfigMap
 metadata:
   name: deckhouse
   namespace: d8-system
+  labels:
+    argocd.argoproj.io/instance: aaa
 `
 )
 
@@ -43,6 +45,7 @@ var _ = Describe("Global hooks :: migration_remove_deprecated_deckhouse_cm ", fu
 
 		It("ExecuteSuccessfully", func() {
 			Expect(f.KubernetesResource("Configmap", "d8-system", "deckhouse").Exists()).Should(BeFalse())
+			Expect(*f.MetricsCollector.CollectedMetrics()[0].Value).Should(Equal(1.0))
 		})
 	})
 
