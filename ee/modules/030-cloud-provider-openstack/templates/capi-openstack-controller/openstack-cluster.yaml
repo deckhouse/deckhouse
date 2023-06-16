@@ -15,3 +15,5 @@ spec:
   identityRef:
     kind: Secret
     name: cloud-config
+  # Remove this hardcode in the future !!!
+  externalNetworkId: 528841b2-620a-4368-8958-e0c6472ecd9c

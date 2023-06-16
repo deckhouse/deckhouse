@@ -30,12 +30,12 @@ import (
 )
 
 type cluster struct {
-	apiVersion        string
-	kind              string
-	name              string
-	namespace         string
-	uid               string
-	infrastructureRef *corev1.ObjectReference
+	APIVersion        string
+	Kind              string
+	Name              string
+	Namespace         string
+	UID               string
+	InfrastructureRef *corev1.ObjectReference
 }
 
 type capiCluster struct {
@@ -58,12 +58,12 @@ func filterClusters(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}
 
 	return cluster{
-		apiVersion:        c.APIVersion,
-		kind:              c.Kind,
-		name:              c.Name,
-		namespace:         c.Namespace,
-		uid:               string(c.UID),
-		infrastructureRef: c.Spec.InfrastructureRef,
+		APIVersion:        c.APIVersion,
+		Kind:              c.Kind,
+		Name:              c.Name,
+		Namespace:         c.Namespace,
+		UID:               string(c.UID),
+		InfrastructureRef: c.Spec.InfrastructureRef,
 	}, nil
 }
 
@@ -112,7 +112,7 @@ func updateCluster(input *go_hook.HookInput) error {
 
 	c := snap[0].(cluster)
 
-	if c.infrastructureRef == nil {
+	if c.InfrastructureRef == nil {
 		return fmt.Errorf("cluster resource does not have infrastructureRef field: %v", c)
 	}
 
@@ -120,20 +120,20 @@ func updateCluster(input *go_hook.HookInput) error {
 		"metadata": map[string]interface{}{
 			"ownerReferences": []map[string]interface{}{
 				{
-					"apiVersion": c.apiVersion,
-					"kind":       c.kind,
-					"name":       c.name,
-					"namespace":  c.namespace,
-					"uid":        c.uid,
+					"apiVersion": c.APIVersion,
+					"kind":       c.Kind,
+					"name":       c.Name,
+					"namespace":  c.Namespace,
+					"uid":        c.UID,
 				},
 			},
 		},
 	}
 	// patch infrastructure cluster ownerRef
-	input.PatchCollector.MergePatch(ownerRefPatch, c.infrastructureRef.APIVersion, c.infrastructureRef.Kind, c.infrastructureRef.Namespace, c.infrastructureRef.Name, object_patch.IgnoreMissingObject())
+	input.PatchCollector.MergePatch(ownerRefPatch, c.InfrastructureRef.APIVersion, c.InfrastructureRef.Kind, c.InfrastructureRef.Namespace, c.InfrastructureRef.Name, object_patch.IgnoreMissingObject())
 
 	// patch ready status
-	input.PatchCollector.MergePatch(statusPatch, c.apiVersion, c.kind, c.namespace, c.name, object_patch.IgnoreMissingObject(), object_patch.WithSubresource("/status"))
+	input.PatchCollector.MergePatch(statusPatch, c.APIVersion, c.Kind, c.Namespace, c.Name, object_patch.IgnoreMissingObject(), object_patch.WithSubresource("/status"))
 
 	return nil
 }
