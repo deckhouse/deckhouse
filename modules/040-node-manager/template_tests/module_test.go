@@ -112,6 +112,8 @@ internal:
         zoneToSubnetIdMap:
           zonea: mysubnetida
           zoneb: mysubnetidb
+  bootstrapTokens:
+    worker: myworker
   nodeGroups:
   - name: worker
     instanceClass:
@@ -158,6 +160,8 @@ internal:
       urn: urn
       diskType: diskType
       additionalTags: []
+  bootstrapTokens:
+    worker: myworker
   nodeGroups:
   - name: worker
     instanceClass:
@@ -205,6 +209,8 @@ internal:
       labels:
         test: test
       serviceAccountJSON: '{"client_email":"client_email"}'
+  bootstrapTokens:
+    worker: myworker
   nodeGroups:
   - name: worker
     instanceClass: # maximum filled
@@ -256,6 +262,8 @@ internal:
       internalSubnet: "10.0.0.1/24"
       internalNetworkNames: [mynetwork, mynetwork2]
       externalNetworkNames: [shared]
+  bootstrapTokens:
+    worker: myworker
   nodeGroups:
   - name: worker
     instanceClass:
@@ -307,6 +315,8 @@ internal:
       tags:
         yyy: zzz
         aaa: xxx
+  bootstrapTokens:
+    worker: myworker
   nodeGroups:
   - name: worker
     instanceClass:
@@ -373,6 +383,8 @@ internal:
       region: myreg
       sshKeys: [key1, key2] #
       vmFolderPath: dev/test
+  bootstrapTokens:
+    worker: myworker
   nodeGroups:
   - name: worker
     instanceClass:
@@ -454,6 +466,8 @@ internal:
       zoneToSubnetIdMap:
         zonea: subneta
         zoneb: subnetb
+  bootstrapTokens:
+    worker: myworker
   nodeGroups:
   - name: worker
     instanceClass:

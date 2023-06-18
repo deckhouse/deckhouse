@@ -34,5 +34,6 @@ kind: Secret
 metadata:
   name: {{ .Values.global.clusterConfiguration.cloud.prefix }}-kubeconfig
   namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: Opaque
 {{- end }}
