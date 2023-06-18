@@ -25,4 +25,14 @@ spec:
     kind: {{ printf "%sCluster" .Values.global.clusterConfiguration.cloud.provider }}
     namespace: d8-cloud-instance-manager
     name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
+---
+# empy kubeconfig secret for cluster
+apiVersion: v1
+data:
+  value: Cg==
+kind: Secret
+metadata:
+  name: {{ .Values.global.clusterConfiguration.cloud.prefix }}-kubeconfig
+  namespace: d8-cloud-instance-manager
+type: Opaque
 {{- end }}
