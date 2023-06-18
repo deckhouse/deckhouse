@@ -4,6 +4,7 @@
   <nav class="sidebar__container">
     <ul class="sidebar" id="mysidebar">
 
+<div>
 {%- for sidebar_tab in include.sidebars %}
   {%- if site.data.sidebars[sidebar_tab].entries %}
     {%- assign sidebar = site.data.sidebars[sidebar_tab].entries %}
@@ -12,11 +13,11 @@
     {%- assign sidebar = site.data.sidebars[sidebar_tab][lang] %}
     {%- assign sidebar_title = site.data.sidebars[sidebar_tab][lang]["title"] %}
   {%- endif %}
-  <a class='tabs__btn tabs__btn_sidebars'  href='javascript:void(0)' id='tab__sidebars_{{ sidebar_title | slugify: "latin" }}'
-     latinonclick="openTabAndSaveStatus(event, 'tabs__btn_sidebars', 'tabs__content_sidebars', 'block__sidebars_{{ sidebar_title | slugify: "" }}', 'sidebar_tab', '{{ sidebar_title | slugify: "latin" }}');" >
+  <a class='tabs__btn tabs__btn_sidebars'  href='javascript:void(0)' id='tab__sidebars_{{ sidebar_title | slugify: "latin" }}' onclick="openTabAndSaveStatus(event, 'tabs__btn_sidebars', 'tabs__content_sidebars', 'block__sidebars_{{ sidebar_title | slugify: "latin" }}', 'sidebar_tab', '{{ sidebar_title | slugify: "latin" }}');" >
     {{ sidebar_title }}
   </a>
 {%- endfor %}
+</div>
 
 {%- for sidebar_tab in include.sidebars %}
   {%- if site.data.sidebars[sidebar_tab].entries %}

@@ -1,10 +1,6 @@
 en:
   title: Kubernetes
   folders:
-  - title: Deckhouse Documentation
-    url: /
 ru:
   title: Kubernetes
   folders:
-  - title: Документация Deckhouse
-    url: /

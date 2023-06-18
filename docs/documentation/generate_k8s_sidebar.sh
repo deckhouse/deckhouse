@@ -10,7 +10,9 @@ function print_item {
 
   for item in $list ; do
     echo $item | grep -Eq '^[./]?images$' && continue
-    #echo "${DIR},${item}, ${list}"
+    echo ${DIR}$item | grep -Eq '^[./]?reference/generated' && continue
+    echo ${DIR}$item | grep -Eq '^[./]?reference/glossary' && continue
+
     local title=$(grep -s 'title:' $DIR$item/index.html | head -n 1 | sed 's/^title: //')
     if [[ -z "${title}" ]] ; then
       title=$(echo "$item" | sed "s|^.*/||; s|'|''|g" )
