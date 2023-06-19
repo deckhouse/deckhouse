@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -84,27 +85,27 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	err = iptablesMgr.Insert("nat", chainName, 1, socketExistsRule...)
+	err = insertUnique(iptablesMgr, "nat", chainName, socketExistsRule, 1)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 2, markHttpRule...)
+	err = insertUnique(iptablesMgr, "nat", chainName, markHttpRule, 2)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 3, markHttpsRule...)
+	err = insertUnique(iptablesMgr, "nat", chainName, markHttpsRule, 3)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 4, saveMarkRule...)
+	err = insertUnique(iptablesMgr, "nat", chainName, saveMarkRule, 4)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 5, dnatHttpRule...)
+	err = insertUnique(iptablesMgr, "nat", chainName, dnatHttpRule, 5)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 6, dnatHttpsRule...)
+	err = insertUnique(iptablesMgr, "nat", chainName, dnatHttpsRule, 6)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -124,7 +125,7 @@ func main() {
 			return
 		case <-ticker.C:
 			err := loop(iptablesMgr)
-			if err != nil {
+			if err != nil && !errors.Is(err, syscall.ECONNREFUSED) {
 				log.Fatal(err)
 			}
 		}
@@ -133,16 +134,22 @@ func main() {
 
 func loop(iptablesMgr *iptables.IPTables) error {
 	resp, err := http.Get("http://127.0.0.1:10254/healthz")
-	defer resp.Body.Close()
+
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
 	if err != nil {
-		return err
+		log.Println(err)
+		return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
 	}
 
-	if resp.StatusCode == http.StatusOK {
-		return insertUnique(iptablesMgr, "nat", chainName, socketExistsRule, 1)
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Got %d status code", resp.StatusCode)
+		return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
 	}
 
-	return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
+	return insertUnique(iptablesMgr, "nat", chainName, socketExistsRule, 1)
 }
 
 func insertUnique(iptablesMgr *iptables.IPTables, table, chain string, rule []string, pos int) error {
