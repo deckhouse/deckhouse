@@ -24,7 +24,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the configuration.
+            Defines the configuration of a source of Deckhouse modules.
           x-doc-examples:
             - apiVersion: deckhouse.io/v1alpha1
               kind: ModuleSource

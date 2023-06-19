@@ -7,7 +7,7 @@ properties:
     default: null
     description: |
       The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-        * If not defined, components use `cluster.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `cluster.defaultStorageClass` isn't defined).
+        * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
   highAvailability:
