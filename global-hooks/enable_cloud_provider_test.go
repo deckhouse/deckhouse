@@ -125,7 +125,7 @@ podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 192.168.0.0/16
 kubernetesVersion: "1.23"
 clusterDomain: cluster.local
-defaultCRI: Docker
+defaultCRI: Containerd
 
 `
 		BeforeEach(func() {

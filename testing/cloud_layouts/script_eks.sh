@@ -32,7 +32,7 @@ Name                  Description
 ---------------------+---------------------------------------------------------
 \$PREFIX               A unique prefix to run several tests simultaneously.
 \$KUBERNETES_VERSION   A version of Kubernetes to install.
-\$CRI                  Docker or Containerd.
+\$CRI                  Containerd.
 
 Provider specific environment variables:
 

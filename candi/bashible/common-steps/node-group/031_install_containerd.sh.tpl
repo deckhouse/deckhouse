@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Docker" }}
-if [[ "${FIRST_BASHIBLE_RUN}" != "yes" ]]; then
-  exit 0
-fi
+{{- if eq .cri "Containerd" }}
 
-pause_container="registry.k8s.io/pause:3.2"
-if [[ "$(docker image ls -q "${pause_container}" | wc -l)" -eq "0" ]]; then
-  if ! docker pull "${pause_container}" >/dev/null 2>/dev/null; then
-    docker pull registry.deckhouse.io/deckhouse/ce:pause-3.2
-    docker tag registry.deckhouse.io/deckhouse/ce:pause-3.2 "${pause_container}"
-  fi
-fi
+bb-event-on 'bb-package-installed' 'post-install'
+post-install() {
+  systemctl daemon-reload
+  systemctl enable containerd.service
+{{ if ne .runType "ImageBuilding" -}}
+  bb-flag-set containerd-need-restart
+{{- end }}
+}
+
+bb-rp-install "containerd:{{- index $.images.registrypackages "containerd1620" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 {{- end }}

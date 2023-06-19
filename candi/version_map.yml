@@ -1,92 +1,25 @@
 bashible: &bashible
-  ubuntu: &ubuntu
+  ubuntu:
     '18.04':
-      docker:
-        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-bionic"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
     '20.04':
-      docker:
-        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-focal"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
     '22.04':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.14~3-0~ubuntu-jammy"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.5.11-1"
-          allowedPattern: "containerd.io=1.[56]"
   debian:
-    '9': &debian9
-      docker:
-        desiredVersion: "docker-ce=5:19.03.15~3-0~debian-stretch"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.3-1"
-          allowedPattern: "containerd.io=1.[234]"
+    '9':
     '10':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
     '11':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-bullseye"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
   centos:
     '7':
-      docker:
-        desiredVersion: "docker-ce-19.03.15-3.el7.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
     '8':
-      docker:
-        desiredVersion: "docker-ce-19.03.15-3.el8.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
     '9':
-      docker:
-        desiredVersion: "docker-ce-20.10.17-3.el9.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.6.7-3.1.el9.x86_64"
-          allowedPattern: "containerd.io-1.6"
   altlinux:
     'p10':
-      docker:
-        desiredVersion: "docker-engine=23.0.1-alt1.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd-1.6.19"
-          allowedPattern: ""
     '10.1':
-      docker:
-        desiredVersion: "docker-engine=23.0.1-alt1.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd-1.6.19"
-          allowedPattern: ""
 k8s:
   '1.23':
     status: available
     patch: 17
     cniVersion: 1.2.0
-    bashible: &bashible_k8s_ge_1_23
-      !!merge <<: *bashible
+    bashible: *bashible
     ccm:
       openstack: v1.23.1
       yandex: v0.23.0
@@ -105,7 +38,7 @@ k8s:
   '1.24':
     status: available
     patch: 15
-    bashible: *bashible_k8s_ge_1_23
+    bashible: *bashible
     ccm:
       openstack: v1.24.2
       yandex: v0.24.0
@@ -124,7 +57,7 @@ k8s:
   '1.25':
     status: available
     patch: 11
-    bashible: *bashible_k8s_ge_1_23
+    bashible: *bashible
     ccm:
       openstack: v1.25.3
       yandex: v0.25.2
@@ -143,7 +76,7 @@ k8s:
   '1.26':
     status: available
     patch: 6
-    bashible: *bashible_k8s_ge_1_23
+    bashible: *bashible
     ccm:
       openstack: v1.26.1
       yandex: v0.26.1
@@ -162,7 +95,7 @@ k8s:
   '1.27':
     status: preview
     patch: 3
-    bashible: *bashible_k8s_ge_1_23
+    bashible: *bashible
     ccm:
       openstack: v1.27.1
       yandex: v0.27.0

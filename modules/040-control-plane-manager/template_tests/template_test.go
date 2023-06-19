@@ -36,7 +36,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
       provider: vSphere
     clusterDomain: cluster.local
     clusterType: Cloud
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
     kubernetesVersion: "Automatic"
     podSubnetCIDR: 10.111.0.0/16

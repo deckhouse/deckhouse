@@ -75,7 +75,3 @@ metadata:
   namespace: kube-system
 spec:
   dnsPolicy: ClusterFirstWithHostNet
-# TODO remove after Docker support is dropped
-  securityContext:
-    seccompProfile:
-      type: Unconfined
