@@ -72,6 +72,11 @@ properties:
       Класс Ingress-контроллера, который используется для Grafana/Prometheus.
 
       Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
+  externalLabels:
+    description: |
+      Набор дополнительных меток для маркировки метрик.
+
+      Допускается использование [переменных окружения](https://prometheus.io/docs/prometheus/latest/feature_flags/#expand-environment-variables-in-external-labels) в качестве значений.
   https:
     description: |
       Тип сертификата используемого для Grafana/Prometheus.
