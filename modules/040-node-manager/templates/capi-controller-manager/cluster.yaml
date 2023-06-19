@@ -29,7 +29,7 @@ spec:
 # empy kubeconfig secret for cluster
 apiVersion: v1
 data:
-  value: Cg=
+  value: Cg==
 kind: Secret
 metadata:
   name: {{ .Values.global.clusterConfiguration.cloud.prefix }}-kubeconfig
