@@ -135,14 +135,12 @@ func main() {
 func loop(iptablesMgr *iptables.IPTables) error {
 	resp, err := http.Get("http://127.0.0.1:10254/healthz")
 
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-
 	if err != nil {
 		log.Println(err)
 		return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
 	}
+
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Got %d status code", resp.StatusCode)
