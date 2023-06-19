@@ -118,18 +118,6 @@ sections:
         revision: ee
         url: /documentation/v1/modules/380-metallb/
       - description:
-          en: Instant autoscaling
-          ru: Мгновенное автомасштабирование
-        revision:
-          ce: false
-          ee: partial
-        hint:
-          ee:
-            en: |
-              (coming soon) Accelerated new Pods/nodes adding thanks to fully prebuilt images
-            ru: |
-              (скоро появится) Добавление новых Pod'ов/узлов ускоряется благодаря предварительно собранным образам
-      - description:
           en: Local DNS caching
           ru: Локальное DNS-кэширование
         revision: ee
