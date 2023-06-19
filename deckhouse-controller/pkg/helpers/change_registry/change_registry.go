@@ -338,6 +338,8 @@ func checkBearerSupport(ctx context.Context, reg name.Registry) error {
 			continue
 		}
 
+		defer resp.Body.Close()
+
 		return checkResponseForBearerSupport(resp, reg.Name())
 	}
 
@@ -345,8 +347,6 @@ func checkBearerSupport(ctx context.Context, reg name.Registry) error {
 }
 
 func checkResponseForBearerSupport(resp *http.Response, registryHost string) error {
-	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusUnauthorized {
 		return transport.CheckError(resp, http.StatusUnauthorized)
 	}
