@@ -196,7 +196,7 @@ func createMadisonPayload(domainTemplate string, schema string) madisonRequestDa
 func getPrometheusHTTPSMode(input *go_hook.HookInput) string {
 	snap := input.Snapshots[prometheusSecretBinding]
 	if len(snap) == 0 {
-		return ""
+		return "http"
 	}
 
 	return snap[0].(string)
