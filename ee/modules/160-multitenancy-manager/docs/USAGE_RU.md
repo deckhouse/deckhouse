@@ -9,7 +9,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
 
 1. Создайте двух [статичных пользователей](../150-user-authn/usage.html#пример-создания-статического-пользователя), которым требуется дать доступ до изолированного окружения.
 
-   Сохраните следующее содержимое (описание ресурсов `User`) в файл `users.yaml`:
+   Создайте файл `users.yaml` со следующим содержимым (описание ресурсов `User`):
 
    ```yaml
    # users.yaml
@@ -59,14 +59,14 @@ title: "Модуль multitenancy-manager: примеры конфигураци
 
 1. Создайте шаблон окружения с помощью ресурса [ProjectType](cr.html#projecttype):
 
-   - в [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) опишите [роли](../../modules/140-user-authz/cr.html#authorizationrule-v1alpha1-spec-accesslevel), которые нужно выдать пользователям/группам/`ServiceAccount`'ам;
+   - в [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) опишите [роли](../140-user-authz/cr.html#authorizationrule-v1alpha1-spec-accesslevel), которые нужно выдать пользователям/группам/`ServiceAccount`'ам;
    - в [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) опишите шаблоны ресурсов, которые требуется создать при настройке изолированных окружений;
    - в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) опишите спецификацию OpenAPI для значений (`values`), которые используются в описанных шаблонах ([.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate));
    - в [.spec.namespaceMetadata](cr.html#projecttype-v1alpha1-spec-namespacemetadata) опишите лейблы и аннотации, которые необходимо проставить на `Namespace` при настройке окружения.
 
-   В параметре [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) шаблона описаны [роли](../../modules/150-user-authn/cr.html#user), которые требуется выдать созданным выше пользователям для новых окружений. В параметре [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) шаблона описываются три ресурса: `NetworkPolicy` (ограничивает сетевую доступность Подов вне создаваемого `Namespace`, кроме `kube-dns`), `LimitRange` и `ResourceQuota`. В шаблоне реурсов используются параметры, описанные в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
+   В примере ниже, в параметре [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) шаблона описаны [роли](../150-user-authn/cr.html#user), которые требуется выдать созданным выше пользователям для новых окружений. В параметре [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) шаблона описываются три ресурса: `NetworkPolicy` (ограничивает сетевую доступность Подов вне создаваемого `Namespace`, кроме `kube-dns`), `LimitRange` и `ResourceQuota`. В шаблоне реурсов используются параметры, описанные в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
 
-   Сохраните следующее содержимое (описание ресурса `ProjectType`) в файл `project-type.yaml`:
+   Создайте файл `project-type.yaml` со следующим содержимым (описание ресурсов `ProjectType`):
 
    ```yaml
    # project-type.yaml
