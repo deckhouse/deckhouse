@@ -1,5 +1,5 @@
 ---
-title: "Module runtime-audit-engine: examples"
+title: "The runtime-audit-engine module: examples"
 ---
 
 ## Adding a single rule
@@ -79,3 +79,10 @@ spec:
         (command=%proc.cmdline pid=%proc.pid connection=%fd.name sport=%fd.sport user=%user.name %container.info image=%container.image)
       priority: Notice
 ```
+
+## More examples
+
+If you need more examples of rules, you can follow the links below:
+
+- [falco rules repository](https://github.com/falcosecurity/rules/blob/32b635394c40a56f8bdeb334c60a46e2edd9908c/rules/application_rules.yaml)
+- [artifacthub falco rules](https://artifacthub.io/packages/search?kind=1&sort=relevance&page=1)
