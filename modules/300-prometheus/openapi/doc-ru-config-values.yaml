@@ -74,9 +74,9 @@ properties:
       Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
   externalLabels:
     description: |
-      Набор дополнительных меток для маркировки метрик.
+      Набор внешних меток для маркировки метрик.
 
-      Допускается использование [переменных окружения](https://prometheus.io/docs/prometheus/latest/feature_flags/#expand-environment-variables-in-external-labels) в качестве значений.
+      Допускается использование значений переменных окружения (например: `HOSTNAME`, `POD_NAME`, `SHARD`) в качестве значений меток.
   https:
     description: |
       Тип сертификата используемого для Grafana/Prometheus.

@@ -55,9 +55,6 @@ spec:
   enableRemoteWriteReceiver: true
   enableFeatures:
   - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
-{{- if .Values.prometheus.externalLabels }}
-  - expand-external-labels # https://prometheus.io/docs/prometheus/latest/feature_flags/#expand-environment-variables-in-external-labels
-{{- end }}
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
@@ -137,10 +134,9 @@ spec:
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   externalLabels:
+    prometheus: deckhouse
 {{- with .Values.prometheus.externalLabels }}
     {{- . | toYaml | nindent 4 }}
-{{- else }}
-    prometheus: deckhouse
 {{- end }}
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""

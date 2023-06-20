@@ -115,16 +115,15 @@ properties:
   externalLabels:
     type: object
     x-examples:
-      - prometheus: dev
-        prometheus_replica: ${HOSTNAME}
-        env: $MY_ENV
+      - prometheus_replica: $(POD_NAME)
+        shard: $(SHARD)
+        hostname: $(HOSTNAME)
     description: |
       The set of external labels to add to the metrics.
       
-      It is possible to expand [environment variables](https://prometheus.io/docs/prometheus/latest/feature_flags/#expand-environment-variables-in-external-labels) in external labels.
+      It is possible to expand environment variables (for example: `HOSTNAME`, `POD_NAME`, `SHARD`) in external labels.
     additionalProperties:
       type: string
-      maxLength: 63
   https:
     type: object
     x-examples:
