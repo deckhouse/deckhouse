@@ -155,6 +155,10 @@ spec:
         env:
         - name: LISTENADDRESS
           value: "127.0.0.1"
+        {{- if .Values.runtimeAuditEngine.debugLogging }}
+        - name: DEBUG
+          value: "true"
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /sidekick/ping
