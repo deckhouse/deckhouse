@@ -107,6 +107,7 @@ func filterPrometheusSecret(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 func registrationHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	// Remove madisonAuthKey if license is not set.
+	input.LogEntry.Errorf("domain %v, mode %v", input.Values.Get("global.modules.publicDomainTemplate").String(), getPrometheusHTTPSMode(input))
 	licenseKey, ok := input.Values.GetOk(internalLicenseKeyPath)
 	if !ok {
 		input.Values.Remove(internalMadisonKeyPath)
