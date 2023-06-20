@@ -137,8 +137,8 @@ spec:
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   externalLabels:
-{{- if .Values.prometheus.externalLabels }}
-    {{- .Values.prometheus.externalLabels | toYaml | nindent 4 }}
+{{- with .Values.prometheus.externalLabels }}
+    {{- . | toYaml | nindent 4 }}
 {{- else }}
     prometheus: deckhouse
 {{- end }}
