@@ -30,3 +30,13 @@ bb-is-astra-version?() {
     return 1
   fi
 }
+
+bb-is-altlinux-version?() {
+  local ALTLINUX_VERSION=$1
+  source /etc/os-release
+  if [[ "${VERSION_ID}" =~ ^${ALTLINUX_VERSION}.*$ ]] ; then
+    return 0
+  else
+    return 1
+  fi
+}
