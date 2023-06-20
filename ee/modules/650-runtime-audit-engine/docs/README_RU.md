@@ -5,7 +5,8 @@ title: "Модуль runtime-audit-engine"
 ## Описание
 
 Модуль предназначен для поиска угроз безопасности.
-Он собирает события ядра Linux и итоги аудита API Kubernetes, обогащает их метаданными о Pod'ах Kubernetes и генерирует события аудита безопасности по установленным правилам.
+
+Модуль собирает события ядра Linux и итоги аудита API Kubernetes (с помощью плагина `k8saudit`), обогащает их метаданными о Pod'ах Kubernetes и генерирует события аудита безопасности по установленным правилам.
 
 Модуль runtime-audit-engine:
 * Находит угрозы в окружениях, анализируя приложения и контейнеры.
@@ -32,7 +33,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 1. `falco` — собирает события, обогащает их метаданными и отправляет их в stdout.
 2. `rules-loader` — собирает custom resourcе'ы ([FalcoAuditRules](cr.html#falcoauditrules)) из Kubernetes и сохраняет их в общую папку.
-3. `falcosidekick` — экспортирует события как метрики, по которым потом можно настроить алерты.
+3. `falcosidekick` — принимает события от `Falco` и перенаправляет их разными способами. По умолчанию экспортирует события как метрики, по которым потом можно настроить алерты. [Исходный код Falcosidekick](https://github.com/falcosecurity/falcosidekick).
 4. `kube-rbac-proxy` — защищает endpoint метрик `falcosidekick` (запрещает неавторизованный доступ).
 
 ## Правила аудита
@@ -54,7 +55,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 Добавить пользовательские правила можно с помощью custom resource [FalcoAuditRules](cr.html#falcoauditrules).
 У каждого агента Falco есть sidecar-контейнер с экземпляром [shell-operator](https://github.com/flant/shell-operator).
-Этот экземпляр считывает правила из custom resource'ов Kubernetes и сохраняет их в директорию `/etc/falco/rules.d/` Pod'а.
+Этот экземпляр считывает правила из custom resource'ов Kubernetes, конвертирует их в правила Falco и сохраняет правила Falco в директорию `/etc/falco/rules.d/` Pod'а.
 При добавлении нового правила Falco автоматически обновляет конфигурацию.
 
 ![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.svg)
@@ -108,3 +109,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 > **Внимание!** Не забудьте настроить audit policy, поскольку Deckhouse по умолчанию собирает только события аудита Kubernetes для системных пространств имен.
 > Пример конфигурации можно найти в документации модуля [control-plane-manager](../040-control-plane-manager/).
+
+## Алерты
+
+Если несколько Подов `runtime-audit-engine` не назначены на узлы планировщиком, то будет сгенерирован алерт `D8RuntimeAuditEngineNotScheduledInCluster`.

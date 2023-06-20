@@ -4,8 +4,9 @@ title: "The runtime-audit-engine module"
 
 ## Overview
 
-The module implements a runtime threats detection engine. 
-It can collect Linux kernel system calls and Kubernetes API audit events(by k8saudit plugin), enrich them with metadata from Kubernetes Pods and generate security audit events according to conditional rules.
+The module implements a runtime threats detection engine.
+
+The module collects Linux kernel system calls and Kubernetes API audit events (by `k8saudit` plugin), enrich them with metadata from Kubernetes Pods and generate security audit events according to conditional rules.
 
 This module:
 * Detects threats at runtime by observing the behavior of your applications and containers.
@@ -33,7 +34,7 @@ There are four different containers in a single agent Pod:
 
 1. `falco` — collects events, enriches them with metadata and sends them to stdout.
 2. `rules-loader` — collects ([FalcoAuditRules](cr.html#falcoauditrules)) CRs from Kubernetes and saves them in a shared directory (empty dir).
-3. `falcosidekick` — it takes a `Falco` events and forward them to different outputs in a fan-out way. By default, it exports events as metrics on which alerts can be generated. [Falcosidekick source code](https://github.com/falcosecurity/falcosidekick). 
+3. `falcosidekick` — it takes a `Falco` events and forward them to different outputs in a fan-out way. By default, it exports events as metrics on which alerts can be generated. [Falcosidekick source code](https://github.com/falcosecurity/falcosidekick).
 4. `kube-rbac-proxy` — protects the `falcosidekick` metric's endpoint.
 
 ## Audit Rules
