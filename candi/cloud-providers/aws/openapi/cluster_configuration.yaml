@@ -78,7 +78,7 @@ apiVersions:
             required: [instanceType, ami]
             description: |
               Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
-            properties: &instanceClassProperties
+            properties:
               instanceType:
                 type: string
                 description: |
@@ -219,7 +219,40 @@ apiVersions:
               description: |
                 Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
               properties:
-                <<: *instanceClassProperties
+                instanceType:
+                  type: string
+                  description: |
+                    Instance type of AWS instance.
+
+                    **Caution!** Ensure that this type is present in all zones specified in the `zones` parameter.
+                  example: t3.large
+                ami:
+                  type: string
+                  description: |
+                    The Amazon Machine Image (AMI ID) to use in provisioned instances.
+
+                    Here is how you can find the required AMI (each region has its own set of AMIs):
+                    ```shell
+                    aws ec2 --region <REGION> describe-images \
+                    --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                    jq '.Images[].ImageId'
+                    ```
+                  example: ami-040a1551f9c9d11ad
+                additionalSecurityGroups:
+                  type: array
+                  description: |
+                    The additional security groups to add to provisioned instances of the specific InstanceClass.
+                  items:
+                    type: string
+                diskType:
+                  description: Instance EBS disk type.
+                  example: "gp2"
+                  type: string
+                  enum: [ gp3, gp2, io2, io1, st1, sc1 ]
+                diskSizeGb:
+                  description: Instance disk size in gigabytes.
+                  example: 20
+                  type: integer
             zones:
               type: array
               items:
@@ -281,7 +314,7 @@ apiVersions:
                 required: [instanceType, ami]
                 description: |
                   Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
-                properties: &instanceClassProperties
+                properties:
                   instanceType:
                     type: string
                     description: |
