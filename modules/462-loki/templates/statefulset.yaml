@@ -59,7 +59,7 @@ spec:
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
               upstreams:
-              - upstream: http://127.0.0.1:3100/
+              - upstream: http://127.0.0.1:3099/
                 path: /
                 authorization:
                   resourceAttributes:
@@ -90,7 +90,7 @@ spec:
             mountPath: /loki
         ports:
           - name: http-metrics
-            containerPort: 3100
+            containerPort: 3099
             protocol: TCP
         livenessProbe:
           httpGet:
