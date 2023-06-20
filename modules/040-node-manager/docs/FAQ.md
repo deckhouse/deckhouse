@@ -285,7 +285,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="5.15.0-53-generic"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -293,13 +293,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-apt-install "linux-image-${desired_version}"
 ```
@@ -333,7 +333,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="3.10.0-1160.42.2.el7.x86_64"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -341,13 +341,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-yum-install "kernel-${desired_version}"
 ```
@@ -904,5 +904,112 @@ If, after 30 minutes, another node needs to be deployed in the cluster, `cluster
 Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example above), the nodes will be provisioned from the `worker` NodeGroup.
 
 Note that node templates (labels/taints) for `worker` and `worker-spot` NodeGroups must be the same (or at least suitable for the load that triggers the cluster scaling process).
+
+## How to interpret Node Group states?
+
+**Ready** — the node group contains the minimum required number of scheduled nodes with the status ```Ready``` for all zones.
+
+Example 1. A group of nodes in the ``Ready`` state:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+```
+
+Example 2. A group of nodes in the ``Not Ready`` state:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+  conditions:
+  - status: "False"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+```
+
+**Updating** — a node group contains at least one node in which there is an annotation with the prefix ```update.node.deckhouse.io``` (for example, ```update.node.deckhouse.io/waiting-for-approval```).
+
+**WaitingForDisruptiveApproval** - a node group contains at least one node that has an annotation ```update.node.deckhouse.io/disruption-required``` and
+there is no annotation ```update.node.deckhouse.io/disruption-approved```.
+
+**Scaling** — calculated only for node groups with the type ```CloudEphemeral```. The state ```True``` can be in two cases:
+
+1. When the number of nodes is less than the *desired number of nodes* in the group, i.e. when it is necessary to increase the number of nodes in the group.
+1. When a node is marked for deletion or the number of nodes is greater than the *desired number of nodes*, i.e. when it is necessary to reduce the number of nodes in the group.
+
+The *desired number of nodes* is the sum of all replicas in the node group.
+
+Example. The desired number of nodes is 2:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+...
+  desired: 2
+...
+```
+
+**Error** — contains the last error that occurred when creating a node in a node group.
+
+## How do I make werf ignore the Ready conditions in a node group?
+
+[werf](werf.io) checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```.
+
+Creating (updating) a [nodeGroup](cr.html#nodegroup) resource in a cluster can take a significant amount of time to create the required number of nodes. When deploying such a resource in a cluster using werf (e.g., as part of a CI/CD process), deployment may terminate when resource readiness timeout is exceeded. To make werf ignore the nodeGroup status, the following `nodeGroup` annotations must be added:
+
+```yaml
+metadata:
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
+```
 
 {% endraw %}
