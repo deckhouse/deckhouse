@@ -6,6 +6,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -17,6 +18,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -28,6 +30,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -39,6 +42,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -50,6 +54,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -61,6 +66,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -72,6 +78,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -83,6 +90,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -94,17 +102,139 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/110-istio
-  to: /deckhouse/modules/110-istio
+- add: /ee/modules/110-istio/templates/alliance
+  to: /deckhouse/modules/110-istio/templates/alliance
   excludePaths:
     - docs
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/templates/control-plane-ee
+  to: /deckhouse/modules/110-istio/templates/control-plane-ee
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/templates/federation
+  to: /deckhouse/modules/110-istio/templates/federation
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/templates/multicluster
+  to: /deckhouse/modules/110-istio/templates/multicluster
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/crds/doc-ru-istiofederation.yaml
+  to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
+  to: /deckhouse/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/crds/istiofederation.yaml
+  to: /deckhouse/modules/110-istio/crds/istiofederation.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/crds/istiomulticluster.yaml
+  to: /deckhouse/modules/110-istio/crds/istiomulticluster.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/federation.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/federation.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -116,6 +246,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -127,6 +258,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -138,6 +270,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -149,6 +282,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -160,6 +294,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -171,6 +306,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -182,6 +318,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -193,6 +330,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
@@ -204,6 +342,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml

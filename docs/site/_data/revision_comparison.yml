@@ -93,7 +93,15 @@ sections:
       - description:
           en: Istio service mesh
           ru: Istio service mesh
-        revision: ee
+        revision:
+          ce: true
+          ee: true
+        hint:
+          ee:
+            en: |
+              Additional tools for automating multicluster and federation building, as well as a tool for automating data-plane updates
+            ru: |
+              Дополнительные средства для автоматизации построения мультикластера и федерации, а также инструмент для автоматизации обновления data-plane
         url: /documentation/v1/modules/110-istio/
       - description:
           en: Multitenancy

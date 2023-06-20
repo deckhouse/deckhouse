@@ -44,8 +44,63 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/110-istio
-  to: /deckhouse/modules/110-istio
+- add: /ee/modules/110-istio/templates/alliance
+  to: /deckhouse/modules/110-istio/templates/alliance
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/templates/control-plane-ee
+  to: /deckhouse/modules/110-istio/templates/control-plane-ee
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/templates/federation
+  to: /deckhouse/modules/110-istio/templates/federation
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/templates/multicluster
+  to: /deckhouse/modules/110-istio/templates/multicluster
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/hooks/ee
+  to: /deckhouse/modules/110-istio/hooks/ee
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/crds/doc-ru-istiofederation.yaml
+  to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
+  to: /deckhouse/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/crds/istiofederation.yaml
+  to: /deckhouse/modules/110-istio/crds/istiofederation.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/crds/istiomulticluster.yaml
+  to: /deckhouse/modules/110-istio/crds/istiomulticluster.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/federation.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/federation.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   stageDependencies:
     setup:
         - '**/*.go'

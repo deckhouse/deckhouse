@@ -194,6 +194,10 @@ git:
   - modules/*/template_tests
   - modules/*/.namespace
   - modules/*/values_matrix_test.yaml
+  - modules/*/apis/**/*.go
+  - modules/*/requirements/**/*.go
+  - modules/*/settings-conversion/**/*.go
+  - modules/*/hack/**/*.go
   - global-hooks/**/*.go
   - candi/cloud-providers/*/layouts
   - candi/cloud-providers/*/terraform-modules

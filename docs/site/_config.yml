@@ -130,11 +130,6 @@ defaults:
     values:
       d8Revision: ee
   - scope:
-      path: "*/110-istio"
-      type: "pages"
-    values:
-      d8Revision: ee
-  - scope:
       path: "*/450-keepalived"
       type: "pages"
     values:
