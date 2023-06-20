@@ -54,5 +54,5 @@
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "instance,pod"
       description: |
-        Some targets are down because of a sample limit exceeded.
-      summary: Scrapes are exceding sample limit
+        Target are down because of a sample limit exceeded.
+      summary: Scrapes are exceeding sample limit
