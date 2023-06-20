@@ -22,17 +22,17 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strings"
 
-	authchallenge "github.com/docker/distribution/registry/client/auth/challenge"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/hashicorp/go-multierror"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -108,15 +108,10 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 }
 
 func newAuthConfig(username, password string) authn.AuthConfig {
-	var cfg authn.AuthConfig
-	if username != "" && password != "" {
-		cfg = authn.AuthConfig{
-			Username: username,
-			Password: password,
-			Auth:     base64.StdEncoding.EncodeToString([]byte(username + ":" + password)),
-		}
+	return authn.AuthConfig{
+		Username: username,
+		Password: password,
 	}
-	return cfg
 }
 
 func newRemoteOptions(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig) ([]remote.Option, error) {
@@ -175,10 +170,14 @@ func updateImagePullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSe
 }
 
 func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caFile string) (map[string]string, error) {
+	var authCfg authn.AuthConfig
+	if authConfig.Username != "" && authConfig.Password != "" {
+		authCfg.Auth = base64.StdEncoding.EncodeToString([]byte(authConfig.Username + ":" + authConfig.Password))
+	}
 	authConfBytes, err := json.Marshal(
 		map[string]map[string]authn.AuthConfig{
 			"auths": {
-				newRepo.RegistryStr(): authn.AuthConfig{Auth: authConfig.Auth},
+				newRepo.RegistryStr(): authCfg,
 			},
 		},
 	)
@@ -218,7 +217,7 @@ func getCAContent(caFile string) (string, error) {
 	if _, err := x509.ParseCertificate(keyBlock.Bytes); err != nil {
 		return "", err
 	}
-	return strings.Trim(string(caBytes), "\n "), nil
+	return strings.TrimSpace(string(caBytes)), nil
 }
 
 func deckhouseDeployment(ctx context.Context, kubeCl kclient.KubeClient) (*appsv1.Deployment, error) {
@@ -311,11 +310,6 @@ func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
 // This is modified "ping" func from
 // https://github.com/google/go-containerregistry/blob/v0.5.1/pkg/v1/remote/transport/ping.go
 func checkBearerSupport(ctx context.Context, reg name.Registry) error {
-	const (
-		bearer        = "bearer"
-		wwwAuthHeader = "WWW-Authenticate"
-	)
-
 	client := http.Client{Transport: http.DefaultTransport}
 
 	// This first attempts to use "https" for every request, falling back to http
@@ -326,42 +320,55 @@ func checkBearerSupport(ctx context.Context, reg name.Registry) error {
 		schemes = append(schemes, "http")
 	}
 
-	var errs []string
+	var errs *multierror.Error
 	for _, scheme := range schemes {
-		url := fmt.Sprintf("%s://%s/v2/", scheme, reg.Name())
-		req, err := http.NewRequest(http.MethodGet, url, nil)
+		u, err := url.Parse(fmt.Sprintf("%s://%s/v2/", scheme, reg.Name()))
 		if err != nil {
 			return err
 		}
-		resp, err := client.Do(req.WithContext(ctx))
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 		if err != nil {
-			errs = append(errs, err.Error())
+			return err
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			errs = multierror.Append(errs, err)
 			// Potentially retry with http.
 			continue
 		}
-		defer func() {
-			// By draining the body, make sure to reuse the connection made by
-			// the ping for the following access to the registry
-			defer resp.Body.Close()
-			io.Copy(io.Discard, resp.Body)
-		}()
 
-		if resp.StatusCode != http.StatusUnauthorized {
-			return transport.CheckError(resp, http.StatusUnauthorized)
-		}
+		defer resp.Body.Close()
 
-		if challenges := authchallenge.ResponseChallenges(resp); len(challenges) != 0 {
-			// If we hit more than one, I'm not even sure what to do.
-			wac := challenges[0]
-			if strings.ToLower(wac.Scheme) == bearer {
-				return nil
-			}
-		}
-		if strings.ToLower(resp.Header.Get(wwwAuthHeader)) == bearer {
-			return nil
-		}
-		return fmt.Errorf("can't use bearer token auth with registry %s", reg.Name())
+		return checkResponseForBearerSupport(resp, reg.Name())
 	}
 
-	return errors.New(strings.Join(errs, "; "))
+	return errs.ErrorOrNil()
+}
+
+func checkResponseForBearerSupport(resp *http.Response, registryHost string) error {
+	if resp.StatusCode != http.StatusUnauthorized {
+		return transport.CheckError(resp, http.StatusUnauthorized)
+	}
+
+	if authHeaderWithBearer(resp.Header) {
+		return nil
+	}
+
+	return fmt.Errorf("can't use bearer token auth with registry %s", registryHost)
+}
+
+func authHeaderWithBearer(header http.Header) bool {
+	const (
+		wwwAuthHeader = "WWW-Authenticate"
+		bearer        = "bearer"
+	)
+
+	for _, h := range header[http.CanonicalHeaderKey(wwwAuthHeader)] {
+		if strings.HasPrefix(strings.ToLower(h), bearer) {
+			return true
+		}
+	}
+
+	return strings.ToLower(header.Get(wwwAuthHeader)) == bearer
 }
