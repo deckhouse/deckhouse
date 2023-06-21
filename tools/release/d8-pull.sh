@@ -177,7 +177,7 @@ check_requirements
 
 echo "Saving Deckhouse $EDITION $RELEASE."
 REGISTRY_PATH="$REGISTRY/$EDITION"
-IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
+IMAGES=$(docker --config $D8_DOCKER_CONFIG_DIR run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
 
 
 docker run \
