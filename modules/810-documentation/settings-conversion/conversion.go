@@ -20,7 +20,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 )
 
-const moduleName = "documentation"
+const moduleName = "deckhouse-web"
 
 var _ = conversion.RegisterFunc(moduleName, 1, 2, convertV1ToV2)
 
