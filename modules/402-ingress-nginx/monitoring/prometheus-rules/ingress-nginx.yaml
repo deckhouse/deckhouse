@@ -76,7 +76,7 @@
       plk_protocol_version: "1"
       summary: Too many nginx ingress restarts have been detected.
 
-  - alert: D8KruiseControllerPodIsRestartingTooOften
+  - alert: D8NginxIngressKruiseControllerPodIsRestartingTooOften
     expr: |
       max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}) > 5
     labels:
@@ -85,12 +85,12 @@
       description: |-
         The number of restarts in the last hour: {{ $value }}.
         Excessive kruise controller restarts indicate that something is wrong. Normally, it should be up and running all the time.
-      plk_create_group_if_not_exists__d8_kruise_controller_malfunctioning: D8KruiseControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes
-      plk_grouped_by__d8_kruise_controller_malfunctioning: D8KruiseControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__d8_kruise_controller_malfunctioning: D8NginxIngressKruiseControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_kruise_controller_malfunctioning: D8NginxIngressKruiseControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes
       plk_labels_as_annotations: "pod"
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: Too many kruise controller restarts have been detected.
+      summary: Too many kruise controller restarts have been detected in d8-ingress-nginx namespace.
 
   - alert: NginxIngressDaemonSetReplicasUnavailable
     expr: kruise_daemonset_status_number_unavailable{namespace="d8-ingress-nginx"} > 0
