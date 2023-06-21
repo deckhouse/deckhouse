@@ -22,9 +22,11 @@ kubectl get mc global -o yaml
 
 ## Как найти документацию по установленной у меня версии?
 
-> Документация доступна внутри кластера при включенном модуле [documentation](modules/810-documentation/) (включен по умолчанию, кроме [варианта поставки](modules/002-deckhouse/configuration.html#parameters-bundle) `Minimal`).
+Документация запущенной в кластере версии Deckhouse доступна по адресу `documentation.<cluster_domain>`, где `<cluster_domain>` — DNS имя в соответствии с шаблоном из параметра [modules.publicDomainTemplate](deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобальной конфигурации.
 
-Документация запущенной в кластере версии Deckhouse доступна по адресу `deckhouse.<cluster_domain>`, где `<cluster_domain>` — DNS имя в соответствии с шаблоном из параметра `global.modules.publicDomainTemplate` конфигурации.
+{% alert level="warning" %}
+Документация доступна, если в кластере включен модуль [documentation](modules/810-documentation/). Он включен по умолчанию, кроме [варианта поставки](modules/002-deckhouse/configuration.html#parameters-bundle) `Minimal`.
+{% endalert %}
 
 ## Как установить желаемый канал обновлений?
 
@@ -51,7 +53,9 @@ spec:
 
 В этом случае Deckhouse не проверяет обновления, и даже обновление на patch-релизы не выполняется.
 
-> Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
+{% alert level="danger" %}
+Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
+{% endalert %}
 
 ## Как работает автоматическое обновление Deckhouse?
 
@@ -67,7 +71,9 @@ spec:
 kubectl get deckhousereleases
 ```
 
-> Patch-релизы (например, обновление на версию `1.30.2` при установленной версии `1.30.1`) устанавливаются без учета режима и окон обновления, т.е. при появлении на канале обновления patch-релиза, он всегда будет установлен.
+{% alert %}
+Patch-релизы (например, обновление на версию `1.30.2` при установленной версии `1.30.1`) устанавливаются без учета режима и окон обновления, т.е. при появлении на канале обновления patch-релиза, он всегда будет установлен.
+{% endalert %}
 
 ### Что происходит при смене канала обновлений?
 
@@ -86,7 +92,9 @@ kubectl get deckhousereleases
 
 Для запуска Deckhouse на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/002-deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`.  Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
 
-> **Внимание!** Используйте для запуска Deckhouse только узлы с типом **CloudStatic** или **Static**. Также избегайте использования для запуска Deckhouse группы узлов (`NodeGroup`), содержащей только один узел.
+{% alert level="warning" %}
+Используйте для запуска Deckhouse только узлы с типом **CloudStatic** или **Static**. Также избегайте использования для запуска Deckhouse группы узлов (`NodeGroup`), содержащей только один узел.
+{% endalert %}
 
 Пример конфигурации модуля:
 
@@ -103,6 +111,16 @@ spec:
 ```
 
 ## Как установить Deckhouse из стороннего registry?
+
+{% alert level="warning" %}
+Deckhouse поддерживает работу только с Bearer token-схемой авторизации в container registry.
+
+Протестирована и гарантируется работа со следующими container registry:
+{%- for registry in site.data.supported_versions.registries %}
+[{{- registry[1].shortname }}]({{- registry[1].url }})
+{%- unless forloop.last %}, {% endunless %}
+{%- endfor %}.
+{% endalert %}
 
 При установке Deckhouse можно настроить на работу со сторонним registry (например, проксирующий registry внутри закрытого контура).
 
@@ -142,8 +160,6 @@ spec:
 * `registryScheme` — протокол доступа к registry (`HTTP` или `HTTPS`). По умолчанию - `HTTPS`.
 
 ### Особенности настройки сторонних registry
-
-> **Внимание!** Deckhouse поддерживает работу только с Bearer token-схемой авторизации в registry.
 
 #### Nexus
 
@@ -377,13 +393,18 @@ proxy:
 
 ## Как переключить Deckhouse EE на CE?
 
-> Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+{% alert %}
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+{% endalert %}
+
+{% alert level="warning" %}
+В Deckhouse CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
+{% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Community Edition выполните следующие действия:
 
 1. Убедитесь, что используемые в кластере модули [поддерживаются в версии CE](revision-comparison.html). Отключите модули, которые не поддерживаются в Deckhouse CE.
 
-   > Обратите внимание, что в Deckhouse CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
 1. Выполните следующую команду:
 
    ```shell
@@ -456,7 +477,9 @@ proxy:
 
 Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).
 
-> Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+{% alert %}
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+{% endalert %}
 
 Для переключения кластера Deckhouse Community Edition на Enterprise Edition выполните следующие действия:
 
