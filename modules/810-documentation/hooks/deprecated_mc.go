@@ -38,7 +38,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			ExecuteHookOnEvents:          pointer.Bool(true),
 			ExecuteHookOnSynchronization: pointer.Bool(true),
-			WaitForSynchronization:       pointer.Bool(true),
 			FilterFunc:                   filterMC,
 		},
 	},
