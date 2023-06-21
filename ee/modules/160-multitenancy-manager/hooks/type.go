@@ -54,9 +54,6 @@ func filterProjectTypes(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 func handleProjectTypes(input *go_hook.HookInput) error {
 	ptSnapshots := input.Snapshots[projectTypesQueue]
-	if len(ptSnapshots) < 1 {
-		return nil
-	}
 
 	projectTypesValues := make(map[string]v1alpha1.ProjectTypeSpec)
 	for _, ptSnapshot := range ptSnapshots {

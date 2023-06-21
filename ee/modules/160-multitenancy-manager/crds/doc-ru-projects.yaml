@@ -29,7 +29,7 @@ spec:
               description: ""
               properties:
                 conditions:
-                  description: Список состояний Project
+                  description: Список состояний Project.
                   items:
                     description: ""
                     properties:
@@ -40,9 +40,9 @@ spec:
                       status:
                         description: ""
                 statusSummary:
-                  description: Сводная информация о статусе Project
+                  description: Сводная информация о статусе Project.
                   properties:
                     message:
-                      description: Сообщение о статусе
+                      description: Сообщение о статусе.
                     status:
                       description: Сводка статуса (готов или не готов).

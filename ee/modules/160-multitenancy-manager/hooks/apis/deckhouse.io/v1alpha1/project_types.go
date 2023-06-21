@@ -3,15 +3,9 @@ Copyright 2023 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-// +kubebuilder:object:generate=true
-// +kubebuilder:validation:Required
-// +groupName=deckhouse.io
-// +versionName=v1alpha1
-
 package v1alpha1
 
 import (
-	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,7 +19,7 @@ type ProjectSpec struct {
 	// Values for resource templates from ProjectType
 	// in helm values format that map to the open-api specification
 	// from the openAPI ProjectType field
-	Template map[string]*apiext.JSON `json:"template,omitempty"`
+	Template map[string]interface{} `json:"template,omitempty"`
 }
 
 type ProjectStatus struct {
@@ -41,13 +35,6 @@ type Condition struct {
 	Message string `json:"message,omitempty"`
 }
 
-// +kubebuilder:subresource:status
-// +kubebuilder:metadata:labels=module=deckhouse;heritage=deckhouse
-// +kubebuilder:resource:shortName=project,scope=Cluster
-// +kubebuilder:object:root=true
-// +kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.statusSummary.status`
-// +kubebuilder:printcolumn:name="Description",type=string,JSONPath=`.spec.description`
-// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.statusSummary.message`
 type Project struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -56,7 +43,6 @@ type Project struct {
 	Status ProjectStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
 type ProjectList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

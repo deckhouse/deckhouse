@@ -6,7 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -15,7 +14,6 @@ import (
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
-	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
@@ -49,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 type projectSnapshot struct {
 	Name            string
-	Template        map[string]*apiext.JSON
+	Template        map[string]interface{}
 	ProjectTypeName string
 	Conditions      []v1alpha1.Condition
 }
@@ -85,9 +83,6 @@ type projectValues struct {
 
 func handleProjects(input *go_hook.HookInput) error {
 	projectSnapshots := input.Snapshots[projectsQueue]
-	if len(projectSnapshots) < 1 {
-		return nil
-	}
 
 	values := make([]projectValues, 0, len(projectSnapshots))
 	for _, projectSnap := range projectSnapshots {
@@ -125,18 +120,11 @@ func handleProjects(input *go_hook.HookInput) error {
 			continue
 		}
 
-		projectTemplateValues, err := mapStringJSONToMapStringInterface(project.Template)
-		if err != nil {
-			errMsg := fmt.Sprintf("can't convert map[string]*apiext.JSON to map[string]interface{} for template values: %v", err)
-			errStatusProject(errMsg)
-			continue
-		}
-
 		if schema.AdditionalProperties == nil {
 			schema.AdditionalProperties = &spec.SchemaOrBool{Allows: false}
 		}
-		if err := validate.AgainstSchema(schema, projectTemplateValues, strfmt.Default); err != nil {
-			errMsg := fmt.Sprintf("template data didn't match OpenAPI schema for '%s' ProjectType: %v", project.ProjectTypeName, err)
+		if err := validate.AgainstSchema(schema, project.Template, strfmt.Default); err != nil {
+			errMsg := fmt.Sprintf("template data doesn't match the OpenAPI schema for '%s' ProjectType: %v", project.ProjectTypeName, err)
 			errStatusProject(errMsg)
 			continue
 		}
@@ -144,7 +132,7 @@ func handleProjects(input *go_hook.HookInput) error {
 		values = append(values, projectValues{
 			ProjectTypeName: project.ProjectTypeName,
 			ProjectName:     project.Name,
-			Params:          projectTemplateValues,
+			Params:          project.Template,
 		})
 
 		setSyncStatusProject(input.PatchCollector, project.Name, project.Conditions)
@@ -176,17 +164,4 @@ func setSyncStatusProject(patcher *object_patch.PatchCollector, projectName stri
 		Status: true,
 	})
 	internal.SetProjectStatus(patcher, projectName, true, "", conditions)
-}
-
-func mapStringJSONToMapStringInterface(m map[string]*apiext.JSON) (map[string]interface{}, error) {
-	mm, err := json.Marshal(m)
-	if err != nil {
-		return nil, err
-	}
-
-	var resultMap map[string]interface{}
-	if err := json.Unmarshal(mm, &resultMap); err != nil {
-		return nil, err
-	}
-	return resultMap, nil
 }
