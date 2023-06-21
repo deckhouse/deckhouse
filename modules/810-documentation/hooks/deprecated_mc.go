@@ -25,6 +25,8 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+// TODO: remove after release 1.50
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
