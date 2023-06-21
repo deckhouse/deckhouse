@@ -1,5 +1,5 @@
 ---
-title: "Module log-shipper: расширенная конфигурация"
+title: "Module log-shipper: advanced usage"
 ---
 
 ## Как включить debug-логи?
