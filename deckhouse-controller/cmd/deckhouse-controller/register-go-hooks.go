@@ -9,7 +9,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	_ "github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"

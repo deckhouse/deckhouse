@@ -258,6 +258,7 @@
     - README.md
     - images
     - hooks/**/*.go
+    - hooks/*.go
     - template_tests
     - .namespace
     - values_matrix_test.yaml
