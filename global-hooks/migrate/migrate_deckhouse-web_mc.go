@@ -57,7 +57,7 @@ func mcMigration(_ *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	unstructured.RemoveNestedField(mc.Object, "auth", "password")
-	err = unstructured.SetNestedField(mc.Object, 1, "spec", "version")
+	err = unstructured.SetNestedField(mc.Object, int64(1), "spec", "version")
 	if err != nil {
 		return err
 	}
