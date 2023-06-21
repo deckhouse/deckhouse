@@ -175,7 +175,8 @@ for path in $PATHS; do
   if [[ "$image" == "trivy-db" ]]; then
     push_image "$SOURCE_DIR/trivy-db" "$REGISTRY_PATH/security/trivy-db:2"
   elif [[ "$image" == "sha256:"* ]]; then
-    push_image "$path" "$REGISTRY_PATH@$image"
+    tag_from_sha=${image#sha256:}
+    push_image "$path" "$REGISTRY_PATH:$tag_from_sha"
   elif [[ "$image" == *":"* ]]; then
     push_image "$path" "$REGISTRY_PATH/$image"
   else

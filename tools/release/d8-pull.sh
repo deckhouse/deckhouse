@@ -180,6 +180,7 @@ echo "Saving Deckhouse $EDITION $RELEASE."
 REGISTRY_PATH="$REGISTRY/$EDITION"
 IMAGES=$(docker --config $D8_DOCKER_CONFIG_DIR run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
 
+docker pull "$SKOPEO_IMAGE"
 docker save -o "$OUTPUT_DIR/skopeo.tar" "$SKOPEO_IMAGE"
 
 docker run \
