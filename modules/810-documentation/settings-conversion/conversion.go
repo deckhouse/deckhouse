@@ -20,7 +20,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 )
 
-const moduleName = "documentation"
+// this conversion was needed by deckhouse-web, but the new module does not have version 2
+// TODO: this conversion could be removed after Deckhouse release 1.50
+
+const moduleName = "deckhouse-web"
 
 var _ = conversion.RegisterFunc(moduleName, 1, 2, convertV1ToV2)
 
