@@ -2,25 +2,17 @@ ARG BASE_UBUNTU
 
 FROM $BASE_UBUNTU as builder
 ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
-ARG DRBD_VERSION=9.2.3
+ARG DRBD_VERSION=9.2.4
 
 RUN apt-get update \
  && apt-get install -y make git \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy patches
-COPY ./patches /patches
-
 # Using source code from GitHub repository
 RUN git clone ${DRBD_GITREPO} /drbd \
  && cd /drbd \
  && git reset --hard drbd-${DRBD_VERSION} \
- && git apply /patches/*.patch \
- && git config --global user.email "builder@deckhouse.io" \
- && git config --global user.name "builder" \
- && git add docker/entry.sh \
- && git commit -m "changes in entry.sh for SELinux support" \
  && make tarball \
  && mv ./drbd-*.tar.gz /drbd.tar.gz
 
