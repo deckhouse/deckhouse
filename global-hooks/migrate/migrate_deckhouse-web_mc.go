@@ -20,16 +20,21 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
+
+// TODO: remove this hook after Deckhouse 1.50
+
+// this hook reads ModuleConfig/deckhouse-web if exists and creates new ModuleConfig/documentation for renamed module
+// it creates the prometheus alert to warn users about CI migrations to be done
 
 var (
 	mcGVR = schema.GroupVersionResource{
@@ -40,9 +45,11 @@ var (
 )
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
-}, dependency.WithExternalDependencies(mcMigration))
+}, dependency.WithExternalDependencies(documentationMCMigration))
 
-func mcMigration(_ *go_hook.HookInput, dc dependency.Container) error {
+func documentationMCMigration(input *go_hook.HookInput, dc dependency.Container) error {
+	input.MetricsCollector.Expire("d8_mc")
+
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
@@ -56,11 +63,13 @@ func mcMigration(_ *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	unstructured.RemoveNestedField(mc.Object, "auth", "password")
+	unstructured.RemoveNestedField(mc.Object, "spec", "settings", "auth", "password")
 	unstructured.RemoveNestedField(mc.Object, "metadata", "creationTimestamp")
 	unstructured.RemoveNestedField(mc.Object, "metadata", "generation")
 	unstructured.RemoveNestedField(mc.Object, "metadata", "resourceVersion")
 	unstructured.RemoveNestedField(mc.Object, "metadata", "uid")
+	unstructured.RemoveNestedField(mc.Object, "status")
+
 	err = unstructured.SetNestedField(mc.Object, int64(1), "spec", "version")
 	if err != nil {
 		return err
@@ -76,5 +85,7 @@ func mcMigration(_ *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	return kubeCl.Dynamic().Resource(mcGVR).Delete(context.TODO(), "deckhouse-web", v1.DeleteOptions{})
+	input.MetricsCollector.Set("d8_mc_deprecated", 1, map[string]string{"module": "deckhouse-web"}, metrics.WithGroup("d8_mc"))
+
+	return nil
 }
