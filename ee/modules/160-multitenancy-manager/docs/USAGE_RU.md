@@ -5,9 +5,9 @@ title: "Модуль multitenancy-manager: примеры конфигураци
 
 ## Создание изолированного окружения
 
-Выполните следующие шаги, для создания изолированного окружения в кластере Kubernetes:
+Выполните следующие шаги для создания изолированного окружения в кластере Kubernetes:
 
-1. Создайте двух [статичных пользователей](../150-user-authn/usage.html#пример-создания-статического-пользователя), которым требуется дать доступ до изолированного окружения.
+1. Создайте двух [статичных пользователей](../150-user-authn/usage.html#пример-создания-статического-пользователя) с доступом до изолированного окружения.
 
    Создайте файл `users.yaml` со следующим содержимым (описание ресурсов `User`):
 
@@ -37,13 +37,13 @@ title: "Модуль multitenancy-manager: примеры конфигураци
        - admins
    ```
 
-   Выполните следующую команду, для создания пользователей:
+   Выполните следующую команду, чтобы создать пользователей:
 
    ```shell
    kubectl create -f users.yaml
    ```
 
-   Проверьте что пользователи успешно создались, выполнив следующую команду:
+   Проверьте, что пользователи успешно создались, выполнив следующую команду:
 
    ```shell
    kubectl get users.deckhouse.io
@@ -139,7 +139,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
            {{ with .params.limits.memory }}limits.memory: {{ . }}{{ end }}
        ---
        # Max requests and limits for resource consumption per pod in namespace.
-       # All containers in a namespace must have requests and limits.
+       # All the containers in a namespace must have requests and limits specified.
        # Refer to https://kubernetes.io/docs/concepts/policy/limit-range/
        apiVersion: v1
        kind: LimitRange
@@ -186,13 +186,13 @@ title: "Модуль multitenancy-manager: примеры конфигураци
                  port: 53
    ```
 
-   Выполните следующую команду, для создания шаблона окружения:
+   Чтобы создать шаблон окружения, выполните следующую команду:
 
    ```shell
    kubectl create -f project-type.yaml
    ```
 
-   Проверьте что шаблон окружения успешно создался, выполнив следующую команду:
+   Проверьте, что шаблон окружения успешно создался, выполнив следующую команду:
 
    ```shell
    kubectl get projecttypes.deckhouse.io
@@ -229,13 +229,13 @@ title: "Модуль multitenancy-manager: примеры конфигураци
          memory: 5Gi
    ```
 
-   Выполните следующую команду, для создания окружения:
+   С помощью команды ниже создайте окружение:
 
    ```shell
    kubectl create -f project.yaml
    ```
 
-   Проверьте что окружение успешно создалось, выполнив следующую команду:
+   Проверьте, что окружение успешно создалось, выполнив следующую команду:
 
    ```shell
    kubectl get projects.deckhouse.io
@@ -250,7 +250,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
 
 1. Проверьте ресурсы, созданные в рамках изолированного окружения.
 
-   Пример команд и результата их работы:
+   Примеры команд и результатов их работы:
 
    ```shell
    $ kubectl get -n test-project namespaces test-project
@@ -279,7 +279,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
 
 1. Проверьте наличие доступа у созданных пользователей с помощью сгенерированного kubeconfig.
 
-   Пример команд и результата их работы:
+   Примеры команд и результатов их работы:
 
    ```shell
    $ kubectl get limitranges -n test-project --kubeconfig admin-kubeconfig.yaml

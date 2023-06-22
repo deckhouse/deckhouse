@@ -1,30 +1,30 @@
 ---
 title: "The multitenancy-manager module"
 search: multitenancy
-description: Модуль multitenancy-manager Deckhouse помогает удобно создавать шаблонизированные окружения в кластере Kubernetes с помощью ресурсов (Custom Resources). Рендеринг шаблонов окружения с помощью helm позволяет использовать в шаблоне окружения любые объекты Kubernetes.  
+description: The multitenancy-manager Deckhouse module helps to conveniently create templated environments in a Kubernetes cluster using Custom Resources. Rendering environment templates with Helm makes it possible to use any Kubernetes objects in an environment template.   
 ---
 
 The module allows you to create isolated environments in a Kubernetes cluster.
 
-По подготовленному [шаблону](cr.html#projecttype), с помощью custom resource [Project](cr.html#project) можно получить в кластере Kubernetes одинаковые, изолированные друг от друга окружения, с настроенными доступами пользователей (подробнее, в разделе [Примеры](usage.html)).
+You can use the pre-made [template](cr.html#projecttype) and a [Project](cr.html#project) custom resource to create identical, isolated environments in a Kubernetes cluster, each with users with access rights set up (see [Examples](usage.html) for more details).
 
-Создание изолированных окружений с помощью модуля `multitenancy-manager` может быть удобно, например, в следующих случая:
-- В рамках процесса CI/CD, для создания окружений разработчика при тестировании или демонстрации работы кода.
-- При развертывании приложений, с предоставлением ограниченного доступа в кластер разработчику.
-- При предоставлении услуг по аренде ресурсов кластера.
+Creating isolated environments using the `multitenancy-manager` module can be handy in the following cases:
+- As part of the CI/CD process — creating developer environments for testing or showcasing code.
+- When deploying applications — providing limited access to the cluster to the developer.
+- When cluster resources are shared between multiple tenants.
 
-## Возможности модуля
+## Module features
 
-- Управление доступом пользователей и групп на базе механизма RBAC Kubernetes (на основе модуля [user-authz](../140-user-authz/)).
-- Управление уровнем изоляции конкретных окружений.
-- Создание шаблонов для нескольких окружений и кастомизациях параметрами по OpenAPI-спецификации.
-- Полная совместимость с `helm` в темплейтах ресурсов.
+- Managing user and group access via the RBAC Kubernetes mechanism (based on the [user-authz](../140-user-authz/) module).
+- Managing isolation levels of particular environments.
+- Creating templates for multiple environments and customizing by parameters according to OpenAPI specification.
+- Fully `Helm`-compatible resource templates.
 
-## Принцип работы
+## How the module works
 
-При создании ресурса [Project](cr.html#project) происходит следующее:
-- Создается `Namespace` с именем из ресурса [Project](cr.html#project).
-- Создается [AuthorizationRule](../140-user-authz/cr.html#authorizationrule) из приведенных данных в поле [subjects](cr.htlm#projecttype-v1alpha1-spec-subjects) ресурса [ProjectType](cr.htlm#projecttype).
-- Выполняется рендеринг шаблонов (параметр [resourcesTemplate](cr.htlm#projecttype-v1alpha1-spec-resourcestemplate) ресурса [ProjectType](cr.htlm#projecttype)) с помощью [helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [template](cr.htlm#project-v1alpha1-spec-template) ресурса [Project](cr.html#project). При рендеринге выполняется валидация значений согласно OpenAPI-спецификации (параметр [openAPI](cr.htlm#projecttype-v1alpha1-spec-openapi) ресурса [ProjectType](cr.htlm#projecttype)).
+When a [Project](cr.html#project) resource is being created, the following things happen:
+- A `Namespace` is created with the name from the [Project](cr.html#project) resource.
+- An [AuthorizationRule](../140-user-authz/cr.html#authorizationrule) is created with the data specified in the [subjects](cr.htlm#projecttype-v1alpha1-spec-subjects) field of the [ProjectType](cr.htlm#projecttype) resource.
+- Templates (parameter [resourcesTemplate](cr.htlm#projecttype-v1alpha1-spec-resourcestemplate) of the [ProjectType](cr.htlm#projecttype) resource) are rendered using [Helm](https://helm.sh/docs/). The values used for rendering are derived from the [template](cr.htlm#project-v1alpha1-spec-template) parameter of the [Project](cr.html#project) resource. During rendering, values are validated against the OpenAPI specification (parameter [openAPI](cr.htlm#projecttype-v1alpha1-spec-openapi) of the [ProjectType](cr.htlm#projecttype) resource).
 
-Так как рендеринг [шаблонов](cr.htlm#projecttype-v1alpha1-spec-resourcestemplate) выполняется с помощью `helm`, в шаблоне можно описать любые необходимые объекты Kubernetes, например `NetworkPolicy`, `LimitRange`, `ResourceQuota` и т.п.
+Since [templates](cr.htlm#projecttype-v1alpha1-spec-resourcestemplate) are rendered using `Helm`, you can define any necessary Kubernetes objects, such as `NetworkPolicy`, `LimitRange`, `ResourceQuota`, etc. in them.

@@ -9,7 +9,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
 
 1. Create two [static users](../150-user-authn/usage.html#an-example-of-creating-a-static-user) who need to be given access to the isolated environment:
 
-   Create the `users.yaml` file with the following content (the `User` CR):
+   Create a `users.yaml` file with the following contents (CR `User`):
 
    ```yaml
    # users.yaml
@@ -49,7 +49,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    kubectl get users.deckhouse.io
    ```
 
-   Example of the output:
+   Below is an example of its output:
 
    ```shell
    NAME    EMAIL           GROUPS       EXPIRE_AT
@@ -61,12 +61,12 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
 
    - in the [.spec.subjects](cr.htlm#projecttype-v1alpha1-spec-subjects) field, describe [roles](../140-user-authz/cr.html#authorizationrule-v1alpha1-spec-accesslevel) to be given to users/groups/`ServiceAccount`s;
    - in the [.spec.resourcesTemplate](cr.htlm#projecttype-v1alpha1-spec-resourcestemplate) field, describe the resource templates that you want to create when setting up isolated environments;
-   - in the [.spec.openAPI](cr.htlm#projecttype-v1alpha1-spec-openapi) field, define the OpenAPI specification for `values`, that are used in the template ([.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate));
+   - in the [.spec.openAPI](cr.htlm#projecttype-v1alpha1-spec-openapi) field, define the OpenAPI specification for `values` used in the template ([.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate));
    - in the [.spec.namespaceMetadata](cr.htlm#projecttype-v1alpha1-spec-namespacemetadata) field, describe labels and annotations that need to be set for the `Namespace` when setting up the environment.
 
-   For the example below, the [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) field of the template contains [roles](../150-user-authn/cr.html#user), to be asigned to the users created above for new environments. The [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) field contains three resources: `NetworkPolicy` (limits the network accessibility of Pods outside the created `Namespace`, except for the `kube-dns`), `LimitRange` and `ResourceQuota`. The resource template uses the parameters described in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) field (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
+   In the example below, the [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) field of the template contains [roles](../150-user-authn/cr.html#user) to be assigned to the users created above in the new environments. The [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) field contains three resources: `NetworkPolicy` (limits network accessibility of Pods outside the created `Namespace`, except for the `kube-dns`), `LimitRange` and `ResourceQuota`. The resource template uses the parameters described in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) field (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
 
-   Create the `project-type.yaml` file with the following content (the `ProjectType` CR):
+   Create a `project-type.yaml` file with the following contents (CR `ProjectType`):
 
    ```yaml
    # project-type.yaml
@@ -138,8 +138,8 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
            {{ with .params.limits.cpu }}limits.cpu: {{ . }}{{ end }}
            {{ with .params.limits.memory }}limits.memory: {{ . }}{{ end }}
        ---
-       # Max requests and limits for resource consumption per pod in namespace.
-       # All containers in a namespace must have requests and limits.
+       # Max requests and limits for resource consumption per pod in a namespace.
+       # All containers in a namespace must have requests and limits specified.
        # Refer to https://kubernetes.io/docs/concepts/policy/limit-range/
        apiVersion: v1
        kind: LimitRange
@@ -186,7 +186,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
                  port: 53
    ```
 
-   Run the following command to create the environment template:
+   Run the following command to create an environment template:
 
    ```shell
    kubectl create -f project-type.yaml
@@ -198,7 +198,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    kubectl get projecttypes.deckhouse.io
    ```
 
-   Example of the output:
+   The following is an example of the command output:
 
    ```text
    NAME                READY   MESSAGE
@@ -207,7 +207,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
 
 1. Create an environment using the [Project](cr.html#project) CR, specifying the name of the environment template you created earlier in the [.spec.projectTypeName](cr.html#project-v1alpha1-spec-projecttypename) field. Fill in the [.spec.template](cr.html#project-v1alpha1-spec-template) field with values suitable for [.spec.openAPI ProjectType](cr.html#projecttype-v1alpha1-spec-openapi).
 
-   Create the `project.yaml` file with the following content (the `Project` CR):
+   Create a `project.yaml` file with the following contents (CR `Project`):
 
    ```yaml
    # project.yaml
@@ -229,7 +229,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
          memory: 5Gi
    ```
 
-   Run the following command to create environment:
+   Run the following command to create an environment:
 
    ```shell
    kubectl create -f project.yaml
@@ -241,7 +241,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    kubectl get projects.deckhouse.io
    ```
 
-   Example of the output:
+   Below is an example of the command output:
 
    ```shell
    NAME           READY   DESCRIPTION                              MESSAGE
@@ -250,7 +250,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
 
 1. Check the resources created within the isolated environment.
 
-   Example of commands and the result of their work:
+   Examples of commands and their output:
 
    ```shell
    $ kubectl get -n test-project namespaces test-project
@@ -275,11 +275,11 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    test-project-deny-all-except-current-namespace   <none>         5m
    ```
 
-1. [Generate a kubeconfig](../150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api) for the created users to access the API server.
+1. [Generate a kubeconfig](../150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api) to enable created users to access the API server.
 
-1. Check whether the created users have access using the generated kubeconfig.
+1. Check whether the created users can access the API server using the generated kubeconfig.
 
-   Example of commands and the result of their work:
+   Examples of commands and their output:
 
    ```shell
    $ kubectl get limitranges -n test-project --kubeconfig admin-kubeconfig.yaml
