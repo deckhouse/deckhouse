@@ -138,7 +138,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
            {{ with .params.limits.cpu }}limits.cpu: {{ . }}{{ end }}
            {{ with .params.limits.memory }}limits.memory: {{ . }}{{ end }}
        ---
-       # Max requests and limits for resource consumption per pod in namespace.
+       # Max requests and limits for resource consumption per pod in a namespace.
        # All the containers in a namespace must have requests and limits specified.
        # Refer to https://kubernetes.io/docs/concepts/policy/limit-range/
        apiVersion: v1
