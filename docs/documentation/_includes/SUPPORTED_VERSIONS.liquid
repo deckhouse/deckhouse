@@ -75,3 +75,34 @@
 </tbody>
 </table>
 </div>
+
+## Container registry
+
+{% alert level="warning" %}
+{%- if page.lang == 'ru' %}
+Deckhouse поддерживает работу только с Bearer token-схемой авторизации в container registry.
+{%- else %}
+Deckhouse only supports Bearer authentication for container registries.
+{%- endif %}
+{% endalert %}
+
+<div markdown="0">
+<table class="supported_versions__kubernetes">
+<thead>
+<tr><th>
+{%- if page.lang == 'ru' %}
+Поддерживаемые container registry
+{%- else %}
+Supported container registries
+{%- endif %}
+</th></tr>
+</thead>
+<tbody>
+{%- for registry in site.data.supported_versions.registries %}
+<tr><td style="text-align: left">
+<p><a href="{{ registry[1].url }}" target="_blank">{{ registry[1].longname }}</a></p>
+</td></tr>
+{%- endfor %}
+</tbody>
+</table>
+</div>
