@@ -78,7 +78,7 @@ var _ = sdk.RegisterFunc(
 				ApiVersion:                   "cluster.x-k8s.io/v1beta1",
 				Kind:                         "Cluster",
 				WaitForSynchronization:       pointer.Bool(false),
-				ExecuteHookOnSynchronization: pointer.Bool(true),
+				ExecuteHookOnSynchronization: pointer.Bool(false),
 				ExecuteHookOnEvents:          pointer.Bool(true),
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{
