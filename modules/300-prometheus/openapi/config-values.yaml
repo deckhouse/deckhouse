@@ -121,7 +121,10 @@ properties:
     description: |
       The set of external labels to add to the metrics.
       
-      It is possible to expand environment variables (for example: `HOSTNAME`, `POD_NAME`, `SHARD`) in external labels.
+      It's possible to expand the environment variables of the `config-reloader` container in external labels
+      such as:
+      * `HOSTNAME`/`POD_NAME` - contains the name of the pod (for example `prometheus-main-0`, `prometheus-main-1`, etc.).
+      * `SHARD` - contains the [shard](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/shards-and-replicas.md) number.
     additionalProperties:
       type: string
   https:

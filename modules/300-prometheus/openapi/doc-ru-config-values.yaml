@@ -76,7 +76,10 @@ properties:
     description: |
       Набор внешних меток для маркировки метрик.
 
-      Допускается использование значений переменных окружения (например: `HOSTNAME`, `POD_NAME`, `SHARD`) в качестве значений меток.
+      Допускается использование значений переменных окружения контейнера `config-reloader` в качестве значений меток,
+      например:
+      * `HOSTNAME`/`POD_NAME` - содержит наименование пода (пример `prometheus-main-0`, `prometheus-main-1`, etc.).
+      * `SHARD` - содержит номер [шарда](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/shards-and-replicas.md).
   https:
     description: |
       Тип сертификата используемого для Grafana/Prometheus.
