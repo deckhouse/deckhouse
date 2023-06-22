@@ -78,9 +78,9 @@ Find more examples of checks for policy extension in the [Gatekeeper Library](ht
 
 ## What if there are multiple policies (operational or security) that are applied to the same object?
 
-> In that case the object's specification have to fulfil all the requirements imposed by the policies.
+In that case the object's specification have to fulfil all the requirements imposed by the policies.
 
-For example - to fulfil the requirements of two security policies list below
+For example, consider the following two security policies:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -98,11 +98,7 @@ spec:
     readOnlyRootFilesystem: true
     requiredDropCapabilities:
     - MKNOD
-```
-
-and
-
-```yaml
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -119,7 +115,7 @@ spec:
     - NET_BIND_SERVICE
 ```
 
-the following settings must be set in a container specification:
+Then, in order to fulfill the requirements of the above security policies, the following settings must be set in a container specification: 
 
 ```yaml
     securityContext:

@@ -68,8 +68,9 @@ The above policy is generic and recommended by Deckhouse team. Similarly, you ca
 
 ### Security policies
 
-Also, the module allows defining security policies, making sure the workload running in the cluster meets certain security requirements.
-Following is an example of a security policy:
+The module allows for defining security policies and making sure the workload running in the cluster meets certain security requirements.
+
+An example of a security policy:
 
 ```yaml
 ---
@@ -130,7 +131,7 @@ spec:
       rule: MustRunAs
 ```
 
-In order to have that policy applied, the target namespace should be labeled with the `enforce: "mypolicy"` label.
+To apply the policy, it will be sufficient to set the label `enforce: "mypolicy"` on the desired namespace.
 
 ### Modifying Kubernetes resources
 
