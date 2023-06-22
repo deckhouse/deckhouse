@@ -511,7 +511,7 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4.
 Additionally, only a portion of prerequisite nodes are selected to optimize the process and avoid checking all selected nodes later.
 By default, the percentage of nodes selected is linear. For clusters with less than or equal to 50 nodes, 100% of nodes are selected; for clusters with 100 nodes, 50% are selected; and for clusters with 5000 nodes, 10% are selected. The minimum value is 5% for clusters with more than 5000 nodes. Therefore, even if all conditions are met, a node may not be included in the list of possible nodes when using the default settings. However, this setting can be overridden by setting the `percentageOfNodesToScore` flag to the scheduler.
 
-The Scoring phase follows once the nodes that meet the conditions are selected. Each plugin evaluates the filtered node list and assigns a score to each node based on available resources, Pod capacity, affinity, volume provisioning, and other factors. The scores from different plugins are summed up, and the node with the highest score is chosen at the end of this phase. If there is more than one node with the same score, it is selected randomly. 
+The Scoring phase follows once the nodes that meet the conditions are selected. Each plugin evaluates the filtered node list and assigns a score to each node based on available resources, Pod capacity, affinity, volume provisioning, and other factors. The scores from different plugins are summed up, and the node with the highest score is chosen at the end of this phase. If there is more than one node with the same score, it is selected randomly.
 
 Finally, the selected node is bound to the Pod.
 
