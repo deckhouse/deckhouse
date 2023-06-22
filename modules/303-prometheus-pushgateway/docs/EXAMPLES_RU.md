@@ -40,7 +40,7 @@ test_metric{instance="10.244.1.155:9091",job="app",pushgateway="first"} 3.14
 ## Удаление всех метрик группы `{instance="10.244.1.155:9091",job="app"}` через curl
 
 ```shell
-# curl -X DELETE http://first.kube-prometheus-pushgateway:9091/metrics/job/app/instance/10.244.1.155:9091
+curl -X DELETE http://first.kube-prometheus-pushgateway:9091/metrics/job/app/instance/10.244.1.155:9091
 ```
 
 Т.к. PushGateway хранит полученные метрики в памяти, **при рестарте pod-а все метрики будут утеряны**.

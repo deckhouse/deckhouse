@@ -44,8 +44,8 @@ apiVersions:
         type: string
         description: |
           Type of the cluster infrastructure:
-          - `Static` — a bare metal cluster (physical servers);
-          - `Cloud` — a cluster, deployed on the resources of a cloud provider.
+          - `Static` — a cluster on bare metal (physical servers) or virtual machines. In the case of virtual machines, it is assumed that Deckhouse doesn't have access to the API for managing virtual machines (they are managed by the administrator using the usual cloud infrastructure tools);
+          - `Cloud` — a cluster deployed on the resources of a cloud infrastructure. This type implies that Deckhouse has access to the cloud infrastructure API for managing virtual machines.
         enum: [Cloud, Static]
       cloud:
         type: object

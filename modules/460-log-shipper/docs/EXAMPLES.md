@@ -1,5 +1,5 @@
 ---
-title: "Module log-shipper: examples"
+title: "The log-shipper module: examples"
 ---
 
 {% raw %}
