@@ -475,23 +475,27 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 
 ## How is the Node selected on which the Pod will run?
 
-The selection of the node on which the pod will run is determined by the Kubernetes scheduler component.
+The selection of the node on which the Pod will run is determined by the Kubernetes scheduler component.
 The scheduler performs two phases, namely Filtering and Scoring, which are designed to distribute the Pods to the Nodes effectively.
-While there are additional phases such as pre-filtering, post-filtering and so on, they serve to enhance flexibility and optimization, and can be reduced to the aforementioned two phases.
+While there are additional phases, such as pre-filtering, post-filtering, and so on, they enhance flexibility and optimization and can be reduced to these two phases.
 
-### General structure of the scheduler
+### General structure of the Kubernetes scheduler
 
-The Scheduler comprises plugins that function in either or both phases. These plugins include:
-- **ImageLocality** - gives preference to nodes that already have images of containers running Pod. Phase: **Scoring**.
-- **TaintToleration** - implements [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Phases: **Filtering, Scoring**.
+The Scheduler comprises plugins that function in either or both phases.
+
+Example of plugins:
+- **ImageLocality** — favors nodes that already have the container images that the Pod runs. Phase: **Scoring**.
+- **TaintToleration** — implements [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Phases: **Filtering, Scoring**.
 - **NodePorts** - checks if the node has free ports for the requested Pod ports. Phase: **Filtering**.
 
-You can see the full list of plugins at [link](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
+You can see the full list of plugins at the [Kubernetes documentation](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
 
 ### Working logic
 
-The filtering phase (**Filtering**) is executed first. At this stage, `filter` plugins select nodes that satisfy filtering conditions such as taints, nodePorts, nodeName, unschedulable, among others.
-If the nodes belong to different zones, they are selected alternately to avoid placing all Pods in a single zone. For instance, if there are two zones with nodes as follows:
+The filtering phase (**Filtering**) is executed first. At this stage, `filter` plugins select nodes that satisfy filtering conditions such as `taints`, `nodePorts`, `nodeName`, `unschedulable`, among others.
+If the nodes belong to different zones, they are selected alternately to avoid placing all Pods in a single zone.
+
+For instance, if there are two zones with nodes as follows:
 
 ```text
 Zone 1: Node 1, Node 2, Node 3, Node 4
@@ -506,11 +510,14 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4.
 
 Additionally, only a portion of prerequisite nodes are selected to optimize the process and avoid checking all selected nodes later.
 By default, the percentage of nodes selected is linear. For clusters with less than or equal to 50 nodes, 100% of nodes are selected; for clusters with 100 nodes, 50% are selected; and for clusters with 5000 nodes, 10% are selected. The minimum value is 5% for clusters with more than 5000 nodes. Therefore, even if all conditions are met, a node may not be included in the list of possible nodes when using the default settings. However, this setting can be overridden by setting the `percentageOfNodesToScore` flag to the scheduler.
-The Scoring phase follows once the nodes that meet the conditions are selected. Each plugin evaluates the filtered node list and assigns a score to each node based on available resources, pod capacity, affinity, volume provisioning, and other factors. The scores from different plugins are summed up, and the node with the highest score is chosen at the end of this phase. If there is more than one node with the same score, it is selected randomly. Finally, the selected node is bound to the Pod.
+
+The Scoring phase follows once the nodes that meet the conditions are selected. Each plugin evaluates the filtered node list and assigns a score to each node based on available resources, Pod capacity, affinity, volume provisioning, and other factors. The scores from different plugins are summed up, and the node with the highest score is chosen at the end of this phase. If there is more than one node with the same score, it is selected randomly. 
+
+Finally, the selected node is bound to the Pod.
 
 #### Documentation
 
 - [General description of the scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/)
 - [Plugin system](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
 - [Node Filtering Details](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)
-- [Sources](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)
+- [Scheduler source code](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)
