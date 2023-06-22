@@ -5,6 +5,7 @@
 
  - An alert will be generated for each instance of an object with a deprecated `extended-monitoring.flant.com` annotation. **Pay attention** that you must change deprecated annotations to `extended-monitoring.deckhouse.io` label ASAP.
  - Control plane components and kubelet will restart.
+ - If you deploy the `deckhouse-web` moduleConfig via a CI/CD process, then you have to replace it with the `documentation` moduleConfig (run `kubectl get mc documentation -o yaml` to get its content).
  - Ingress controller Pods will restart.
  - Linux Kernel >= 5.8 is required to run the `runtime-audit-engine` module.
  - OpenVPN will be restarted and connections will be terminated.
@@ -102,6 +103,8 @@
     The `webhook-handler` Pod will restart.
  - **[deckhouse-controller]** Reverted "mergo" library update. Fixed an issue where Deckhouse might panic on concurrent map access. [#4872](https://github.com/deckhouse/deckhouse/pull/4872)
  - **[docs]** Update the description of the global `storageClass` parameter. [#4424](https://github.com/deckhouse/deckhouse/pull/4424)
+ - **[documentation]** Add migration for the `documentation` module (former name - `deckhouse-web`). [#4982](https://github.com/deckhouse/deckhouse/pull/4982)
+    If you deploy the `deckhouse-web` moduleConfig via a CI/CD process, then you have to replace it with the `documentation` moduleConfig (run `kubectl get mc documentation -o yaml` to get its content).
  - **[extended-monitoring]** Send one `ExtendedMonitoringDeprecatatedAnnotation` alert per cluster. [#4829](https://github.com/deckhouse/deckhouse/pull/4829)
  - **[global-hooks]** Fix cluster DNS address discovery. [#4521](https://github.com/deckhouse/deckhouse/pull/4521)
  - **[global-hooks]** Fix the Kubernetes version hook for `DigitalOcean`. [#4473](https://github.com/deckhouse/deckhouse/pull/4473)
