@@ -82,15 +82,23 @@
     labels:
       severity_level: "8"
     annotations:
-      description: |-
-        The number of restarts in the last hour: {{ $value }}.
-        Excessive kruise controller restarts indicate that something is wrong. Normally, it should be up and running all the time.
       plk_create_group_if_not_exists__d8_kruise_controller_malfunctioning: D8NginxIngressKruiseControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_kruise_controller_malfunctioning: D8NginxIngressKruiseControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes
       plk_labels_as_annotations: "pod"
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       summary: Too many kruise controller restarts have been detected in d8-ingress-nginx namespace.
+      description: |-
+        The number of restarts in the last hour: {{ $value }}.
+        Excessive kruise controller restarts indicate that something is wrong. Normally, it should be up and running all the time.
+
+        The recommended course of action:
+        1. Check any events regarding kruise-controller-manager in d8-ingress-nginx namespace
+        in case there were some issues there related to the nodes the manager runs on or memory shortage (OOM):  `kubectl -n d8-ingress-nginx get events | grep kruise-controller-manager`
+        2. Analyze the controller's pods' descriptions to check which containers were restarted
+        and what were the possible reasons (exit codes, etc.): `kubectl -n d8-ingress-nginx describe pod -lapp=kruise,control-plane=controller-manager`
+        3. In case `kruise` container was restarted, list relevant logs of the container to check
+        if there were some meaningful errors there: `kubectl -n d8-ingress-nginx logs -lapp=kruise,control-plane=controller-manager -c kruise`
 
   - alert: NginxIngressDaemonSetReplicasUnavailable
     expr: kruise_daemonset_status_number_unavailable{namespace="d8-ingress-nginx"} > 0
