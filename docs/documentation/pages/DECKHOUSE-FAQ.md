@@ -21,9 +21,11 @@ kubectl get mc global -o yaml
 
 ## How do I find the documentation for the version installed?
 
-> Documentation in the cluster is available when the [documentation](modules/810-documentation/) module is enabled (it is enabled by default except the `Minimal` [bundle](modules/002-deckhouse/configuration.html#parameters-bundle)).
+The documentation for the Deckhouse version running in the cluster is available at `documentation.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the [modules.publicDomainTemplate](deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter.
 
-The documentation for the Deckhouse version running in the cluster is available at `deckhouse.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the `global.modules.publicDomainTemplate` parameter.
+{% alert level="warning" %}
+Documentation is available when the [documentation](modules/810-documentation/) module is enabled. It is enabled by default except the `Minimal` [bundle](modules/002-deckhouse/configuration.html#parameters-bundle).
+{% endalert %}
 
 ## How do I set the desired release channel?
 
@@ -50,7 +52,9 @@ To completely disable the Deckhouse update mechanism, remove the `releaseChannel
 
 In this case, Deckhouse does not check for updates and even doesn't apply patch releases.
 
-> It is highly not recommended to disable automatic updates! It will block updates to patch releases that may contain critical vulnerabilities and bugs fixes.
+{% alert level="danger" %}
+It is highly not recommended to disable automatic updates! It will block updates to patch releases that may contain critical vulnerabilities and bugs fixes.
+{% endalert %}
 
 ## How does automatic Deckhouse update work?
 
@@ -66,7 +70,9 @@ To get list and status of all releases use the following command:
 kubectl get deckhousereleases
 ```
 
-> Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignore update windows settings and apply as soon as they are available.
+{% alert %}
+Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignore update windows settings and apply as soon as they are available.
+{% endalert %}
 
 ### Change the release channel
 
@@ -85,7 +91,9 @@ kubectl get deckhousereleases
 
 Set the `nodeSelector` [parameter](modules/002-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
 
-> **Cation!** Use only nodes with the **CloudStatic** or **Static** type to run Deckhouse. Also, avoid using a `NodeGroup` containing only one node to run Deckhouse.
+{% alert level="warning" %}
+Use only nodes with the **CloudStatic** or **Static** type to run Deckhouse. Also, avoid using a `NodeGroup` containing only one node to run Deckhouse.
+{% endalert %}
 
 Here is an example of the module configuration:
 
@@ -102,6 +110,16 @@ spec:
 ```
 
 ## How do I configure Deckhouse to use a third-party registry?
+
+{% alert level="warning" %}
+Deckhouse only supports Bearer authentication for container registries.
+
+Tested and guaranteed to work with the following container registries:
+{%- for registry in site.data.supported_versions.registries %}
+[{{- registry[1].shortname }}]({{- registry[1].url }})
+{%- unless forloop.last %}, {% endunless %}
+{%- endfor %}.
+{% endalert %}
 
 Deckhouse can be configured to work with a third-party registry (e.g., a proxy registry inside private environments).
 
@@ -139,8 +157,6 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 * `registryScheme` - registry scheme (`HTTP` or `HTTPS`). The default value is `HTTPS`.
 
 ### Tips for configuring the third-party registry
-
-> **Note!** Deckhouse only supports Bearer authentication for registries.
 
 #### Nexus
 
@@ -373,13 +389,18 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
 ## How to switch Deckhouse EE to CE?
 
-> The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+{% alert %}
+The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+{% endalert %}
+
+{% alert level="warning" %}
+Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
+{% endalert %}
 
 To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 
 1. Make sure that the modules used in the cluster [are supported in Deckhouse CE](revision-comparison.html). Disable modules that are not supported in Deckhouse CE.
 
-   > Please note that Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
 1. Run the following command:
 
    ```shell
@@ -452,7 +473,9 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 
 You will need a valid license key (you can [request a trial license key](https://deckhouse.io/products/enterprise_edition.html) if necessary).
 
-> The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+{% alert %}
+The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+{% endalert %}
 
 To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
