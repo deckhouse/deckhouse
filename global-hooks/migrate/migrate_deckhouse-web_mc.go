@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,11 +80,9 @@ func documentationMCMigration(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	_, err = kubeCl.Dynamic().Resource(mcGVR).Create(context.TODO(), mc, v1.CreateOptions{})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
 
-	input.MetricsCollector.Set("d8_mc_deprecated", 1, map[string]string{"module": "deckhouse-web"}, metrics.WithGroup("d8_mc"))
-
-	return nil
+	return kubeCl.Dynamic().Resource(mcGVR).Delete(context.TODO(), "deckhouse-web", v1.DeleteOptions{})
 }

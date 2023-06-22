@@ -2,7 +2,7 @@
   rules:
   - alert: ModuleConfigDeprecated
     expr: |
-      max(d8_mc_deprecated{module="deckhouse-web"}) > 0
+      max(d8_mc_deprecated{module="documentation"}) > 0
     labels:
       severity_level: "9"
       tier: cluster
@@ -14,6 +14,4 @@
       description: |-
         The module `deckhouse-web` was renamed to the `documentation`.
 
-        The new ModuleConfig was generated automatically. Please, remove deprecated ModuleConfig via the command: `kubectl delete mc deckhouse-web`
-        and remove it from the CI deploy process.
-        You can get the new module config with the command: `kubectl get mc documentation -o yaml`.
+        The new ModuleConfig `documentation` was generated automatically. Please, remove deprecated ModuleConfig `deckhouse-web` from the CI deploy process and delete it: `kubectl delete mc deckhouse-web`.
