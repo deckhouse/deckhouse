@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
@@ -105,16 +106,24 @@ var _ = Describe("Global :: migrate_mc :: deckhouse-web", func() {
 
 		It("Hook should create new MC", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			migrated := getDocumentationMC()
+			migrated := getModuleConfig("documentation")
 			dd, _ := yaml.Marshal(migrated)
 			Expect(dd).To(MatchYAML(documentationMC))
+
+			// should delete old MC
+			old := getModuleConfig("deckhouse-web")
+			Expect(old).To(BeNil())
 		})
 	})
 })
 
-func getDocumentationMC() *unstructured.Unstructured {
-	un, err := dependency.TestDC.MustGetK8sClient().Dynamic().Resource(mcGVR).Get(context.TODO(), "documentation", metav1.GetOptions{})
+func getModuleConfig(name string) *unstructured.Unstructured {
+	un, err := dependency.TestDC.MustGetK8sClient().Dynamic().Resource(mcGVR).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+
 		panic(err)
 	}
 
