@@ -12,7 +12,6 @@ spec:
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "dex") }}
-  - {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
