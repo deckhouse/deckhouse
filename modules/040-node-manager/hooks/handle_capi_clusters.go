@@ -71,7 +71,7 @@ func filterClusters(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
 		Queue: "/modules/node-manager",
-
+		OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
 				Name:                         "clusters",
