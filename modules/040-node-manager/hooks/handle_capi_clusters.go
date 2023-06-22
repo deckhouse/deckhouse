@@ -71,14 +71,13 @@ func filterClusters(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
 		Queue: "/modules/node-manager/cluster-api",
-		OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
 				Name:                         "clusters",
 				ApiVersion:                   "cluster.x-k8s.io/v1beta1",
 				Kind:                         "Cluster",
 				WaitForSynchronization:       pointer.Bool(false),
-				ExecuteHookOnSynchronization: pointer.Bool(false),
+				ExecuteHookOnSynchronization: pointer.Bool(true),
 				ExecuteHookOnEvents:          pointer.Bool(true),
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{
