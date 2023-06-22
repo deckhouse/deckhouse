@@ -115,7 +115,7 @@ spec:
     - NET_BIND_SERVICE
 ```
 
-Then, in order to fulfill the requirements of the above security policies, the following settings must be set in a container specification: 
+Then, in order to fulfill the requirements of the above security policies, the following settings must be set in a container specification:
 
 ```yaml
     securityContext:
