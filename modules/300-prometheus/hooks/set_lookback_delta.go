@@ -28,7 +28,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/prometheus/set_lookback_delta",
 }, setLookbackDelta)
 
-const minLookbackDelta = (time.Duration(10) * time.Second)
+const minLookbackDelta = 10 * time.Second
 
 func setLookbackDelta(input *go_hook.HookInput) error {
 	var lookBackDelta time.Duration
