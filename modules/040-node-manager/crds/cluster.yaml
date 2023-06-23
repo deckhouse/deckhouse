@@ -11,18 +11,6 @@ metadata:
     cluster.x-k8s.io/provider: cluster-api
   name: clusters.cluster.x-k8s.io
 spec:
-  conversion:
-    strategy: Webhook
-    webhook:
-      clientConfig:
-        caBundle: Cg==
-        service:
-          name: capi-webhook-service
-          namespace: d8-cloud-instance-manager
-          path: /convert
-      conversionReviewVersions:
-        - v1
-        - v1beta1
   group: cluster.x-k8s.io
   names:
     categories:
