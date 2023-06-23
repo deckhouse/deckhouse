@@ -9,7 +9,8 @@ request-access:
   success-message:
     ru:
       title: "Запрос получен"
-      text: "Мы отправили инструкцию с дальнейшими шагами вам на почту."
+      text: "Спасибо за ваш интерес к платформе Deckhouse Kubernetes Platform!<br/>В течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей запроса - будьте на связи!
+"
     en:
       title: "Thank you"
       text: "Check your email for details."
