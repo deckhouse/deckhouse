@@ -37,7 +37,7 @@ func setLookbackDelta(input *go_hook.HookInput) error {
 	if err != nil {
 		return nil
 	}
-	if scrapeInterval < minLookbackDelta {
+	if scrapeInterval * 2 < minLookbackDelta {
 		lookBackDelta = minLookbackDelta
 	} else {
 		lookBackDelta = scrapeInterval * 2
