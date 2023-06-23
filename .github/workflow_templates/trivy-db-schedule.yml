@@ -24,8 +24,9 @@ on:
 concurrency:
   group: trivy-db-download
 
+{!{ $registries := coll.Slice "${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-db" "${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db" "${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/deckhouse/security/trivy-db" -}!}
 jobs:
-  download-and-repush-images:
+  download-and-repush-images: # TODO (alex123012): remove after 1.47 in RockSolid
     name: Download and repush images
     runs-on: [self-hosted, regular]
     steps:
@@ -34,6 +35,25 @@ jobs:
       - name: Download crane and copy image
         run: |
           curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.13.0/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - && chmod +x crane
-          ./crane copy ghcr.io/aquasecurity/trivy-db:2 ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-db:2
-          ./crane copy ghcr.io/aquasecurity/trivy-db:2 ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db:2
-          ./crane copy ghcr.io/aquasecurity/trivy-db:2 ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/deckhouse/security/trivy-db:2
+{!{- range $registry := $registries }!}
+          ./crane copy ghcr.io/aquasecurity/trivy-db:2 {!{ $registry }!}:2
+{!{- end }!}
+
+  create-oci-compatible-trivy-db:
+    name: Create OCI compatible trivy-db
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
+      - name: Install oras
+        run: |
+          # install ORAS 1.0.0
+
+      - name: Upload trivy-db to registries
+        run: |
+          git clone https://github.com/aquasecurity/trivy-db.git && cd trivy-db
+          curl -sSfL https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz | tar -xzf - oras && chmod +x oras
+          make db-all
+{!{- range $registry := $registries }!}
+          ./oras push --artifact-type application/vnd.oci.image.config.v1+json {!{ $registry }!}-oci:2 assets/db.tar.gz:application/vnd.oci.image.layer.v1.tar+gzip
+{!{- end }!}

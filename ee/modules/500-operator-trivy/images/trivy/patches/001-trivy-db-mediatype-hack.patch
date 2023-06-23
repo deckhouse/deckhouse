@@ -1,0 +1,26 @@
+diff --git a/pkg/db/db.go b/pkg/db/db.go
+index 6b69ccbe7..7baa9f561 100644
+--- a/pkg/db/db.go
++++ b/pkg/db/db.go
+@@ -18,7 +18,7 @@ import (
+ )
+ 
+ const (
+-	dbMediaType         = "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
++	dbMediaType         = "application/vnd.oci.image.layer.v1.tar+gzip"
+ 	defaultDBRepository = "ghcr.io/aquasecurity/trivy-db"
+ )
+ 
+diff --git a/pkg/db/db_test.go b/pkg/db/db_test.go
+index ef1537087..56b59b38e 100644
+--- a/pkg/db/db_test.go
++++ b/pkg/db/db_test.go
+@@ -22,7 +22,7 @@ import (
+ 	"github.com/aquasecurity/trivy/pkg/oci"
+ )
+ 
+-const mediaType = "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
++const mediaType = "application/vnd.oci.image.layer.v1.tar+gzip"
+ 
+ type fakeLayer struct {
+ 	v1.Layer
