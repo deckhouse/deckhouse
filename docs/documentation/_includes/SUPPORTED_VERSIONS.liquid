@@ -78,11 +78,11 @@
 
 ## Container registry
 
-{% alert level="warning" %}
+{% alert level="info" %}
 {%- if page.lang == 'ru' %}
-Deckhouse поддерживает работу только с Bearer token-схемой авторизации в container registry.
+Deckhouse должен работать с любыми container registry, поддерживающими работу с Bearer token-схемой авторизации.
 {%- else %}
-Deckhouse only supports Bearer authentication for container registries.
+Deckhouse should work with any container registry supporting Bearer authentication.
 {%- endif %}
 {% endalert %}
 
@@ -91,9 +91,9 @@ Deckhouse only supports Bearer authentication for container registries.
 <thead>
 <tr><th>
 {%- if page.lang == 'ru' %}
-Поддерживаемые container registry
+Container registry, с которыми Deckhouse гарантированно работает
 {%- else %}
-Supported container registries
+Сontainer registries that Deckhouse is guaranteed to work with
 {%- endif %}
 </th></tr>
 </thead>
