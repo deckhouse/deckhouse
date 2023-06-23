@@ -60,6 +60,7 @@ spec:
   listenLocal: true
   query:
     maxSamples: 100000000
+    loopbackDelta: {{ .Values.prometheus.internal.loopbackDelta }}
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
