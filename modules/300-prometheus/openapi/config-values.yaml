@@ -112,6 +112,21 @@ properties:
       The class of the Ingress controller used for Grafana/Prometheus.
 
       An optional parameter. By default, the `modules.ingressClass` global value is used.
+  externalLabels:
+    type: object
+    x-examples:
+      - prometheus_replica: $(POD_NAME)
+        shard: $(SHARD)
+        hostname: $(HOSTNAME)
+    description: |
+      The set of external labels to add to the metrics.
+      
+      It's possible to expand the environment variables of the `config-reloader` container in external labels
+      such as:
+      * `HOSTNAME`/`POD_NAME` - contains the name of the pod (for example `prometheus-main-0`, `prometheus-main-1`, etc.).
+      * `SHARD` - contains the [shard](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/shards-and-replicas.md) number.
+    additionalProperties:
+      type: string
   https:
     type: object
     x-examples:
