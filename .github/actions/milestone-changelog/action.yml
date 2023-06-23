@@ -50,6 +50,7 @@ runs:
         allowed_sections: |
           ${{ steps.sections.outputs.result }}
           ci:low
+          dependabot:low
           testing:low
           tools:low
 
