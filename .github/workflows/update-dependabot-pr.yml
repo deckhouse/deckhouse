@@ -22,7 +22,18 @@ on: pull_request
 
 jobs:
   dependabot-pr-update:
-    if: ${{ github.actor.id == 'dependabot' }}
+    if: |
+      (
+        github.event.pull_request.user.login == 'dependabot[bot]' ||
+        github.event.pull_request.user.login == 'dependabot' ||
+        github.event.pull_request.user.login == 'dependabot-preview[bot]' ||
+        github.event.pull_request.user.login == 'dependabot-preview'
+      ) && (
+        github.actor == 'dependabot[bot]' ||
+        github.actor == 'dependabot' ||
+        github.actor == 'dependabot-preview[bot]' ||
+        github.actor == 'dependabot-preview'
+      )
     runs-on: ubuntu-latest
     steps:
     - uses: tzkhan/pr-update-action@v2
