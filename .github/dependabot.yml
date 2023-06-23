@@ -34,24 +34,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/110-istio/images/api-proxy"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/ee/modules/110-istio/images/metadata-exporter"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/ee/modules/140-user-authz/images/webhook"
   labels:
   - "type/dependencies"
@@ -251,6 +233,24 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/110-istio/images/api-proxy"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/110-istio/images/metadata-exporter"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
