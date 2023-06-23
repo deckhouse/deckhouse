@@ -45,10 +45,6 @@ jobs:
     steps:
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
-      - name: Install oras
-        run: |
-          # install ORAS 1.0.0
-
       - name: Upload trivy-db to registries
         run: |
           git clone https://github.com/aquasecurity/trivy-db.git && cd trivy-db

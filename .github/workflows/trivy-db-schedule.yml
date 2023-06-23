@@ -140,10 +140,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
-      - name: Install oras
-        run: |
-          # install ORAS 1.0.0
-
       - name: Upload trivy-db to registries
         run: |
           git clone https://github.com/aquasecurity/trivy-db.git && cd trivy-db
