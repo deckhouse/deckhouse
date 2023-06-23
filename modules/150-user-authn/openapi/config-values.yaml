@@ -71,11 +71,11 @@ properties:
             * delete old API server certificates: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
             * reissue new certificates: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
             * restart the API server's container: `docker ps -a | grep 'kube-apiserver' | grep -v pause| awk '{print $1}' | xargs docker restart`;
-            * repeat this step for all master nodes;
+            * repeat this step for all master nodes.
         description:
           type: string
           description: |
-            A couple of words how this authentication metod differs from others.
+            A couple of words how this authentication method differs from others.
         masterCA:
           type: string
           description: |
@@ -133,7 +133,7 @@ properties:
   ingressClass:
     type: string
     description: |
-      The class of the Ingress controller of the documentation web UI.
+      The class of the Ingress controller that will be used for Dex/kubeconfig-generator.
 
       An optional parameter; by default, the `modules.ingressClass` global value is used.
   https:
