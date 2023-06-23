@@ -75,8 +75,8 @@ const (
 	internalLicenseKeyPath = "flantIntegration.internal.licenseKey"
 
 	prometheusSecretNS      = "d8-monitoring"
-	prometheusSecretName    = "prometheus-https-mode"
-	prometheusSecretField   = "https_mode"
+	prometheusSecretName    = "prometheus-url-schema"
+	prometheusSecretField   = "url_schema"
 	prometheusSecretBinding = prometheusSecretName
 
 	madisonSecretNS      = "d8-monitoring"
@@ -135,11 +135,11 @@ func registrationHandler(input *go_hook.HookInput, dc dependency.Container) erro
 
 	// No auth key set in configuration, no auth key stored in the Secret — register in madison.
 	domainTemplate := input.Values.Get("global.modules.publicDomainTemplate").String()
-	prometheusHTTPSMode := getPrometheusHTTPSMode(input)
+	prometheusURLSchema := getPrometheusURLSchema(input)
 
 	// Create payload for Madison with Prometheus and Grafana URLs.
 	// Use https mode calculated in 300-prometheus module.
-	payload := createMadisonPayload(domainTemplate, prometheusHTTPSMode)
+	payload := createMadisonPayload(domainTemplate, prometheusURLSchema)
 
 	// Create http request to d8-connect proxy.
 	req, err := newRegistrationRequest(registrationURL, payload, licenseKey.String())
@@ -192,8 +192,8 @@ func createMadisonPayload(domainTemplate string, schema string) madisonRequestDa
 	return data
 }
 
-// getPrometheusHTTPSMode returns https mode from Secret.
-func getPrometheusHTTPSMode(input *go_hook.HookInput) string {
+// getPrometheusURLSchema returns the Prometheus module url schema from Secret.
+func getPrometheusURLSchema(input *go_hook.HookInput) string {
 	snap := input.Snapshots[prometheusSecretBinding]
 	if len(snap) == 0 {
 		return "http"
