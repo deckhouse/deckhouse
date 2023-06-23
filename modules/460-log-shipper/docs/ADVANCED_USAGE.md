@@ -1,5 +1,5 @@
 ---
-title: "Module log-shipper: advanced usage"
+title: "The log-shipper module: advanced usage"
 ---
 
 ## How to enable debugging logs?
