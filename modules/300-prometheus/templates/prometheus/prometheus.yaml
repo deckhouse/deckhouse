@@ -134,10 +134,10 @@ spec:
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   externalLabels:
-    prometheus: deckhouse
 {{- with .Values.prometheus.externalLabels }}
     {{- . | toYaml | nindent 4 }}
 {{- end }}
+    prometheus: deckhouse
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
   serviceAccountName: prometheus
