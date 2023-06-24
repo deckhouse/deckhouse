@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -364,13 +363,4 @@ func IsNodeExistsInCluster(kubeCl *client.KubernetesClient, nodeName string) (bo
 	})
 
 	return exists, err
-}
-
-func getIndexFromNodeName(name string) (int64, bool) {
-	index, err := strconv.ParseInt(name[strings.LastIndex(name, "-")+1:], 10, 64)
-	if err != nil {
-		log.ErrorLn(err)
-		return 0, false
-	}
-	return index, true
 }
