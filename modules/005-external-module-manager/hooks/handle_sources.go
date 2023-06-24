@@ -361,6 +361,10 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 			continue
 		}
 
+		if !strings.Contains(hdr.Name, "..") {
+			continue // CWE-22 check, prevents path traversal
+		}
+
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0700); err != nil {
