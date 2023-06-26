@@ -24,7 +24,12 @@ spec:
 
     # DRBD check drbd version.
 
-    current_version="$(cat /proc/drbd | grep 'version:' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')" || exit 0
+    # Temporary fix for an error during the compilation of DRBD version 9.2.4 on Alt Linux. 
+    if [ ! -e "/proc/drbd" ]; then
+      exit 0
+    fi
+
+    current_version="$(cat /proc/drbd | grep 'version:' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
     desired_version="{{ $.Values.linstor.internal.drbdVersion }}"
 
     if [ "${current_version}" != "${desired_version}" ]; then

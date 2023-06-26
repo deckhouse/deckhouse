@@ -21,6 +21,9 @@ set -Eeo pipefail
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
 
+
+# This is temporarily commented out because DRBD version 9.2.4 doesn't currently compile on Astra with a hardened kernel.
+
 # if ! uname -a | grep -q hardened; then
 #   apt update && \
 #   apt install --allow-change-held-packages --allow-downgrades -y linux-latest-hardened && \
