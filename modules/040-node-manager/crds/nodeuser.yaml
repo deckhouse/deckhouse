@@ -63,7 +63,7 @@ spec:
                     Node user SSH public keys.
 
                     Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
-                  example: [ 'ssh-rsa AAABBB', 'ssh-rsa BBBCCC' ]
+                  example: [ 'ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC' ]
                 passwordHash:
                   type: string
                   description: |
