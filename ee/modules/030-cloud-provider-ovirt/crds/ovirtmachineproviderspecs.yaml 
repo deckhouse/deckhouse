@@ -1,0 +1,188 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: (unknown)
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-ovirt
+  name: ovirtmachineproviderspecs.ovirtproviderconfig.machine.openshift.io
+spec:
+  group: ovirtproviderconfig.machine.openshift.io
+  names:
+    kind: OvirtMachineProviderSpec
+    listKind: OvirtMachineProviderSpecList
+    plural: ovirtmachineproviderspecs
+    singular: ovirtmachineproviderspec
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OvirtMachineProviderSpec is the type that will be embedded in
+          a Machine.Spec.ProviderSpec field for an Ovirt VM. It is used by the Ovirt
+          machine actuator to create a single machine instance.
+        properties:
+          affinity_groups_names:
+            description: VMAffinityGroup contains the name of the OpenShift cluster
+              affinity groups It will be used to add the newly created machine to
+              the affinity groups
+            items:
+              type: string
+            type: array
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          auto_pinning_policy:
+            description: AutoPinningPolicy defines the policy to automatically set
+              the CPU and NUMA including pinning to the host for the instance. One
+              of "none, resize_and_pin"
+            type: string
+          clone:
+            description: "Clone makes sure that the disks are cloned from the template
+              and are not linked. Defaults to true for high performance and server
+              VM types, false for desktop types. \n Note: this option is not documented
+              in the OpenShift documentation. This is intentional as it has sane defaults
+              that shouldn't be changed unless needed for debugging or resolving issues
+              in cooperation with Red Hat support."
+            type: boolean
+          cluster_id:
+            description: the oVirt cluster this VM instance belongs too.
+            type: string
+          cpu:
+            description: CPU defines the VM CPU.
+            properties:
+              cores:
+                description: Cores is the number of cores per socket. Total CPUs is
+                  (Sockets * Cores * Threads)
+                format: int32
+                type: integer
+              sockets:
+                description: Sockets is the number of sockets for a VM. Total CPUs
+                  is (Sockets * Cores * Threads)
+                format: int32
+                type: integer
+              threads:
+                description: Thread is the number of thread per core. Total CPUs is
+                  (Sockets * Cores * Threads)
+                format: int32
+                type: integer
+            required:
+            - cores
+            - sockets
+            - threads
+            type: object
+          credentialsSecret:
+            description: CredentialsSecret is a reference to the secret with oVirt
+              credentials.
+            properties:
+              name:
+                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                  TODO: Add other useful fields. apiVersion, kind, uid?'
+                type: string
+            type: object
+          format:
+            description: Format is the disk format that the disks are in. Can be "cow"
+              or "raw". "raw" disables several features that may be needed, such as
+              incremental backups. Defaults to "cow".
+            enum:
+            - ""
+            - raw
+            - cow
+            type: string
+          guaranteed_memory_mb:
+            description: GuaranteedMemoryMB is the size of a VM's guaranteed memory
+              in MiBs.
+            format: int32
+            type: integer
+          hugepages:
+            description: Hugepages is the size of a VM's hugepages to use in KiBs.
+              Only 2048 and 1048576 supported.
+            format: int32
+            type: integer
+          id:
+            description: Id is the UUID of the VM
+            type: string
+          instance_type_id:
+            description: InstanceTypeId defines the VM instance type and overrides
+              the hardware parameters of the created VM, including cpu and memory.
+              If InstanceTypeId is passed, all memory and cpu variables will be ignored.
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          memory_mb:
+            description: MemoryMB is the size of a VM's memory in MiBs.
+            format: int32
+            type: integer
+          metadata:
+            type: object
+          name:
+            description: Name is the VM name
+            type: string
+          network_interfaces:
+            description: NetworkInterfaces defines the list of the network interfaces
+              of the VM. All network interfaces from the template are discarded and
+              new ones will be created, unless the list is empty or nil
+            items:
+              description: NetworkInterface defines a VM network interface
+              properties:
+                vnic_profile_id:
+                  description: VNICProfileID the id of the vNic profile
+                  type: string
+              required:
+              - vnic_profile_id
+              type: object
+            type: array
+          os_disk:
+            description: OSDisk is the the root disk of the node.
+            properties:
+              size_gb:
+                description: SizeGB size of the bootable disk in GiB.
+                format: int64
+                type: integer
+            required:
+            - size_gb
+            type: object
+          sparse:
+            description: Sparse indicates that sparse provisioning should not be used
+              and disks should be preallocated. Defaults to true.
+            type: boolean
+          storage_domain_id:
+            description: "StorageDomainId defines the VM disk Storage Domain ID type
+              and overrides the template Disk storage Domain ID. if StorageDomainId
+              is different then template Storage ID the disk will be copied between
+              Domains. \n Note: this option supported only work when Clone is set
+              to true (default)"
+            type: string
+          template_name:
+            description: The VM template this instance will be created from.
+            type: string
+          type:
+            description: VMType defines the workload type the instance will be used
+              for and this effects the instance parameters. One of "desktop, server,
+              high_performance"
+            type: string
+          userDataSecret:
+            description: UserDataSecret contains a local reference to a secret that
+              contains the UserData to apply to the instance
+            properties:
+              name:
+                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                  TODO: Add other useful fields. apiVersion, kind, uid?'
+                type: string
+            type: object
+        required:
+        - cluster_id
+        - id
+        - name
+        - template_name
+        type: object
+    served: true
+    storage: true

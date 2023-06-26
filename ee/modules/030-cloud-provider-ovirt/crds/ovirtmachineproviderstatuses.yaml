@@ -1,0 +1,46 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: (unknown)
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-ovirt
+  name: ovirtmachineproviderstatuses.ovirtproviderconfig.machine.openshift.io
+spec:
+  group: ovirtproviderconfig.machine.openshift.io
+  names:
+    kind: OvirtMachineProviderStatus
+    listKind: OvirtMachineProviderStatusList
+    plural: ovirtmachineproviderstatuses
+    singular: ovirtmachineproviderstatus
+  scope: Namespaced
+  versions:
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          description: OvirtMachineProviderStatus
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            instanceId:
+              description: InstanceID is the ID of the instance in oVirt
+              type: string
+            instanceState:
+              description: InstanceState is the provisioning state of the oVirt Instance.
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+          type: object
+      served: true
+      storage: true

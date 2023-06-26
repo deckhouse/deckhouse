@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  name: capi-ovirt-webhook-service
+  namespace: d8-cloud-provider-ovirt
+spec:
+  ports:
+    - port: 443
+  selector:
+    app: capi-ovirt-controller

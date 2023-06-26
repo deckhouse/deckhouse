@@ -15,6 +15,7 @@ webhooks:
       values:
       - kube-basic-auth
       - d8-cloud-provider-openstack
+      - d8-cloud-provider-ovirt
       - d8-cloud-provider-vsphere
       - kube-system
       - d8-metallb

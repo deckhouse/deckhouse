@@ -14,6 +14,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/030-cloud-provider-ovirt
+  to: /deckhouse/modules/030-cloud-provider-ovirt
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/030-cloud-provider-vsphere
   to: /deckhouse/modules/030-cloud-provider-vsphere
   stageDependencies:

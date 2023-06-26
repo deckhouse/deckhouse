@@ -1,0 +1,107 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: capi-ovirt-controller
+  namespace: d8-cloud-provider-ovirt
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-ovirt-controller")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cloud-provider-ovirt:capi-ovirt-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-ovirt-controller")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ovirtprovider.k8s.io
+    resources:
+      - ovirtproviders
+      - ovirtmachineproviderconfigs
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - cluster.k8s.io
+    resources:
+      - clusters
+      - clusters/status
+      - machines
+      - machinedeployments
+      - machinesets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+---
+# permissions to do leader election.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-ovirt-controller")) | nindent 2 }}
+  name: capi-ovirt-controller:capi-manage-secrets-role
+  namespace: d8-cloud-provider-ovirt
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-ovirt-controller")) | nindent 2 }}
+  name: capi-ovirt-controller:capi-manage-secrets
+  namespace: d8-cloud-provider-ovirt
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: capi-ovirt-controller:capi-manage-secrets-role
+subjects:
+  - kind: ServiceAccount
+    name: capi-ovirt-controller
+    namespace: d8-cloud-provider-ovirt
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-ovirt:capi-ovirt-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-ovirt-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cloud-provider-ovirt:capi-ovirt-controller
+subjects:
+- kind: ServiceAccount
+  name: capi-ovirt-controller
+  namespace: d8-cloud-provider-ovirt

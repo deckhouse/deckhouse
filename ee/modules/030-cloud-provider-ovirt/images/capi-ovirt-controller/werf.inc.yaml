@@ -1,0 +1,33 @@
+{{- $version := "22d89b3fd9e2e395a62f71092487d26c8940052e" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ .Images.BASE_ALPINE}}
+docker:
+  ENV:
+    WORKDIR: /
+    USER: 65534
+  ENTRYPOINT: ["/capi-ovirt-controller"]
+import:
+  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+    add: /src/machine-controller-manager
+    to: /capi-ovirt-controller
+    before: setup
+shell:
+  beforeInstall:
+    - apk add --no-cache ca-certificates
+    - update-ca-certificates
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apk add --no-cache make bash git patch rsync gcc musl-dev
+  install:
+    - git clone https://github.com/openshift/cluster-api-provider-ovirt.git /src
+    - cd /src
+    - git checkout {{ $version }}
+    - git config --global user.email "builder@deckhouse.io"
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags \"-static\"" -o machine-controller-manager cmd/manager/main.go
