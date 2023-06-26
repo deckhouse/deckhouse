@@ -19,7 +19,6 @@
 package hooks
 
 import (
-	"errors"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
@@ -49,8 +48,9 @@ type nodeGroupCRIType struct {
 }
 
 type nodeCRIVersion struct {
-	CloudInstanceGroup      string
+	NodeGroup               string
 	ContainerRuntimeVersion string
+	KubeletVersion          string
 }
 
 var isContainerdRegexp = regexp.MustCompile(`^containerd.*?`)
@@ -94,16 +94,18 @@ func applyNodesCRIVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		return nil, err
 	}
 
-	cloudInstanceGroup := node.Labels["node.deckhouse.io/group"]
+	nodeGroup := node.Labels["node.deckhouse.io/group"]
 	containerRuntimeVersion := node.Status.NodeInfo.ContainerRuntimeVersion
+	kubeletVersion := node.Status.NodeInfo.KubeletVersion
 
 	if containerRuntimeVersion == "" {
 		containerRuntimeVersion = containerUnknownVersion
 	}
 
 	return nodeCRIVersion{
-		CloudInstanceGroup:      cloudInstanceGroup,
+		NodeGroup:               nodeGroup,
 		ContainerRuntimeVersion: containerRuntimeVersion,
+		KubeletVersion:          kubeletVersion,
 	}, nil
 }
 
@@ -142,11 +144,6 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 	ngSnap := input.Snapshots[nodeGroupSnapName]
 	ngCRITypeMap := make(map[string]string)
 
-	maxKubeVersion, ok := getMaxKubeVersion(input)
-	if !ok {
-		return errors.New("unknown kubernetes version")
-	}
-
 	notManagedCriKubeVersion, err := semver.NewVersion(notManagedCriMaxKubeVersion)
 	if err != nil {
 		return err
@@ -164,7 +161,12 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 
 	for _, item := range nSnap {
 		n := item.(nodeCRIVersion)
-		criType, ok := ngCRITypeMap[n.CloudInstanceGroup]
+		criType, ok := ngCRITypeMap[n.NodeGroup]
+
+		kubeVersion, err := semver.NewVersion(n.KubeletVersion)
+		if err != nil {
+			return err
+		}
 
 		if isContainerdRegexp.MatchString(n.ContainerRuntimeVersion) {
 			continue
@@ -176,10 +178,10 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 			return nil
 		}
 
-		// skip if NodeGroup CRI Type == NotManaget and max Kube ver < notManagedCriKubeVersion
+		// skip if NodeGroup CRI Type == NotManaget and node kube ver < notManagedCriKubeVersion
 		if !isContainerdRegexp.MatchString(n.ContainerRuntimeVersion) &&
 			criType == criTypeNotManaged &&
-			maxKubeVersion.LessThan(notManagedCriKubeVersion) {
+			kubeVersion.LessThan(notManagedCriKubeVersion) {
 			continue
 		}
 

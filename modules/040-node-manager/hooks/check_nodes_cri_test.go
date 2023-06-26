@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	ngCriNotManaged = `
+	ngCriNotManagedKubeVer1_23 = `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -41,6 +41,49 @@ metadata:
 status:
   nodeInfo:
     containerRuntimeVersion: docker
+    kubeletVersion: v1.23.0
+`
+
+	ngCriNotManagedKubeVer1_24 = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ngNotManaged
+spec:
+  cri:
+    type: NotManaged
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ngNotManaged
+status:
+  nodeInfo:
+    containerRuntimeVersion: docker
+    kubeletVersion: v1.24.0
+`
+
+	ngCriNotManagedKubeVer1_25 = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ngNotManaged
+spec:
+  cri:
+    type: NotManaged
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ngNotManaged
+status:
+  nodeInfo:
+    containerRuntimeVersion: docker
+    kubeletVersion: v1.25.0
 `
 
 	nodeWithoutContainerVersion = `
@@ -51,6 +94,9 @@ metadata:
   name: node1
   labels:
     node.deckhouse.io/group: group
+status:
+  nodeInfo:
+    kubeletVersion: v1.23.17
 `
 
 	nodeContainerd = `
@@ -64,6 +110,7 @@ metadata:
 status:
   nodeInfo:
     containerRuntimeVersion: containerd
+    kubeletVersion: v1.23.17
 `
 	nodeDocker = `
 ---
@@ -76,6 +123,7 @@ metadata:
 status:
   nodeInfo:
     containerRuntimeVersion: docker
+    kubeletVersion: v1.23.17
 `
 	nodeUnknownVersion = `
 ---
@@ -88,11 +136,12 @@ metadata:
 status:
   nodeInfo:
     containerRuntimeVersion: foo
+    kubeletVersion: v1.23.17
 `
 )
 
 var _ = Describe("node-manager :: check_containerd_nodes ", func() {
-	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.23.1", "kubernetesVersions":["1.23.1"]}}}`, `{}`)
+	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Nodes objects are not found", func() {
@@ -201,12 +250,10 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 		})
 	})
 
-	Context("NodeGroup with CRI NotManaged, max kube ver 1.23.0", func() {
+	Context("NodeGroup with CRI NotManaged, node kube ver 1.23.0", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.discovery.kubernetesVersions", []string{"1.23.1", "1.20.0", "1.21.0"})
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.20.0")
 			f.BindingContexts.Set(
-				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManaged, 1),
+				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_23, 1),
 			)
 			f.RunHook()
 		})
@@ -220,10 +267,8 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 	})
 	Context("NodeGroup with CRI NotManaged, max kube ver 1.24.0", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.discovery.kubernetesVersions", []string{"1.24.0", "1.23.0", "1.21.0"})
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.24.0")
 			f.BindingContexts.Set(
-				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManaged, 1),
+				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_24, 1),
 			)
 			f.RunHook()
 		})
@@ -234,12 +279,10 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 			Expect(value).To(BeTrue())
 		})
 	})
-	Context("NodeGroup with CRI NotManaged, max kube ver 1.27.0", func() {
+	Context("NodeGroup with CRI NotManaged, max kube ver 1.25.0", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.discovery.kubernetesVersions", []string{"1.27.0", "1.25.0", "1.26.0"})
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.25.0")
 			f.BindingContexts.Set(
-				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManaged, 1),
+				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_25, 1),
 			)
 			f.RunHook()
 		})
