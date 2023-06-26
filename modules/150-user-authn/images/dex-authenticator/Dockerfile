@@ -8,8 +8,9 @@ RUN apk --update add make git build-base curl bash ca-certificates wget \
  && update-ca-certificates
 RUN git clone https://github.com/oauth2-proxy/oauth2-proxy.git . \
  && git checkout v7.2.0
-ADD patches/cookie-refresh.patch /
+ADD patches/cookie-refresh.patch patches/remove-groups.patch /
 RUN patch -p1 < /cookie-refresh.patch \
+  && patch -p1 < /remove-groups.patch \
   && make build
 
 FROM $BASE_ALPINE
