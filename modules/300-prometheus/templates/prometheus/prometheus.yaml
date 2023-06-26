@@ -60,6 +60,7 @@ spec:
   listenLocal: true
   query:
     maxSamples: 100000000
+    lookbackDelta: {{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms

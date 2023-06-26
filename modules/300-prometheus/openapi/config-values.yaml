@@ -246,6 +246,7 @@ properties:
       Sets the interval for scraping metrics from targets.
 
       Evaluation Interval is always equal to scrapeInterval.
+    pattern: '^([\d]*y)?([\d]*w)?([\d]*d)?([\d]*h)?([\d]*m)?([\d]*s)?$'
   longtermScrapeInterval:
     type: string
     default: "5m"
