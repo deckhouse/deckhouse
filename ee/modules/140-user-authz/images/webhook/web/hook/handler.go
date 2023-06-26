@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -14,12 +15,11 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"context"
 
-	"user-authz-webhook/cache"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"user-authz-webhook/cache"
 )
 
 const (
@@ -97,26 +97,24 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 		return request
 	}
 
-	// If the limit namespaces option missed at least for one directory, requests for all namespaces are allowed
-	// except the system namespaces.
-	if entry.LimitNamespacesAbsent {
-		request.Status.Denied = false
-
+	// Check if the request Namespace is in the system namespaces list
+	if namespaceIsSystem(request.Spec.ResourceAttributes.Namespace, systemNamespacesRegex) {
+		// Deny request if there is no AllowAccessToSystemNamespaces
 		if !entry.AllowAccessToSystemNamespaces {
-			// Deny if matching one of system namespaces regexps
-			if namespaceIsSystem(request.Spec.ResourceAttributes.Namespace, systemNamespacesRegex) {
-				request.Status.Denied = true
-				request.Status.Reason = noNamespaceAccessReason
-			}
+			request.Status.Denied = true
+			request.Status.Reason = noNamespaceAccessReason
+			// Allow request if there is AllowAccessToSystemNamespaces
+		} else {
+			request.Status.Denied = false
+			request.Status.Reason = ""
 		}
-
 		return request
 	}
 
-	// If the limit namespaces option is enabled, we must check that user requests only affect these namespaces.
-	// If the system namespaces access option is enabled, we should also count system namespaces as the allowed ones.
-	if entry.AllowAccessToSystemNamespaces {
-		entry.LimitNamespaces = append(entry.LimitNamespaces, systemNamespacesRegex...)
+	// If the limit namespaces option missed at least for one directory, requests for all remaining (non-system) namespaces are allowed
+	if entry.LimitNamespacesAbsent {
+		request.Status.Denied = false
+		return request
 	}
 
 	// All namespaces are denied
@@ -143,12 +141,8 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 			}
 			// check if the requested namespace is in the map of namespaces by labels
 			if _, ok := namespaces[request.Spec.ResourceAttributes.Namespace]; ok {
-				// if namespace is found, check whether it isn't a system one
-				if !namespaceIsSystem(request.Spec.ResourceAttributes.Namespace, systemNamespacesRegex) {
-					request.Status.Denied = false
-					request.Status.Reason = ""
-				}
-				// the requested namespace is a system one, deny the request
+				request.Status.Denied = false
+				request.Status.Reason = ""
 				break
 			}
 		}
@@ -220,7 +214,7 @@ func (h *Handler) authorizeRequest(request *WebhookRequest) *WebhookRequest {
 
 		// Aggregate namespace selectors and limitNamespaces into a single set of rules
 		if len(dirEntry.NamespaceSelectors) > 0 {
-			combinedDir.NamespaceSelectors=append(combinedDir.NamespaceSelectors, dirEntry.NamespaceSelectors...)
+			combinedDir.NamespaceSelectors = append(combinedDir.NamespaceSelectors, dirEntry.NamespaceSelectors...)
 		}
 		if len(dirEntry.LimitNamespaces) > 0 {
 			combinedDir.LimitNamespaces = append(combinedDir.LimitNamespaces, dirEntry.LimitNamespaces...)
@@ -300,7 +294,7 @@ func (h *Handler) renewDirectories() {
 					r, _ := regexp.Compile(wrapRegex(ln))
 					dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, r)
 				}
-			// if NamespaceSelector is not empty - drop limitNamespaces entries
+				// if NamespaceSelector is not empty - drop limitNamespaces entries
 			} else {
 				dirEntry.NamespaceSelectors = append(dirEntry.NamespaceSelectors, crd.Spec.NamespaceSelector)
 			}
@@ -388,7 +382,7 @@ func namespaceIsSystem(namespace string, systemNamespacesRegex []*regexp.Regexp)
 }
 
 func hasLimitedNamespaces(entry *DirectoryEntry) bool {
-	if ( len(entry.LimitNamespaces) == 0 && len(entry.NamespaceSelectors) == 0 ) || entry.LimitNamespacesAbsent {
+	if (len(entry.LimitNamespaces) == 0 && len(entry.NamespaceSelectors) == 0) || entry.LimitNamespacesAbsent {
 		// The limitNamespaces option has a priority over the allowAccessToSystemNamespaces option.
 		// If limited namespaces are not specified, check whether access to system namespaces is limited.
 		// If it is not - user has no limited namespaces.
