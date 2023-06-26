@@ -284,7 +284,7 @@ rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
-{{- $resourceReservationMode := dig "kubelet" "resourceReservationMode" "" .nodeGroup }}
+{{- $resourceReservationMode := dig "kubelet" "resourceReservation" "mode" "" .nodeGroup }}
 {{- if eq $resourceReservationMode "Auto" }}
 systemReserved:
   cpu: 70m
@@ -292,9 +292,9 @@ systemReserved:
   ephemeral-storage: 1Gi
 {{- else if eq $resourceReservationMode "Static" }}
 systemReserved:
-  cpu: {{ dig "kubelet" "staticResourceReservation" "cpu" 0 .nodeGroup }}
-  memory: {{ dig "kubelet" "staticResourceReservation" "memory" 0 .nodeGroup }}
-  ephemeral-storage: {{ dig "kubelet" "staticResourceReservation" "ephemeralStorage" 0 .nodeGroup }}
+  cpu: {{ dig "kubelet" "resourceReservation" "static" "cpu" 0 .nodeGroup }}
+  memory: {{ dig "kubelet" "resourceReservation" "static" "memory" 0 .nodeGroup }}
+  ephemeral-storage: {{ dig "kubelet" "resourceReservation" "static" "ephemeralStorage" 0 .nodeGroup }}
 {{- end }}
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
