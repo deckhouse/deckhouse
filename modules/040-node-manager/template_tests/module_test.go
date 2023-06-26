@@ -1390,7 +1390,7 @@ ccc: ddd
 				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "worker-02320933")
 				Expect(t.Exists()).To(BeTrue())
 				//checksum := mcdt.Field("spec.properties.networkProfile.acceleratedNetworking").String()
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").String()).To(Equal("true"))
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
 			})
 
 			It("spec.properties.networkProfile.acceleratedNetworking true", func() {
@@ -1398,8 +1398,7 @@ ccc: ddd
 
 				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "aaa-02320933")
 				Expect(t.Exists()).To(BeTrue())
-				//checksum := mc.Field("spec.properties.networkProfile.acceleratedNetworking").String()
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").String()).To(Equal("false"))
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(false))
 			})
 
 			It("spec.properties.networkProfile.acceleratedNetworking false", func() {
@@ -1407,8 +1406,7 @@ ccc: ddd
 
 				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "bbb-02320933")
 				Expect(t.Exists()).To(BeTrue())
-				//checksum := mc.Field("spec.properties.networkProfile.acceleratedNetworking").String()
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").String()).To(Equal("true"))
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
 			})
 
 			// Important! If checksum changes, the MachineDeployments will re-deploy!
