@@ -22,7 +22,8 @@ To add a new static node (e.g., VM or bare metal server) to the cluster, follow 
    Example of getting a Base64-encoded script code to add a node to the NodeGroup `worker`:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+   node_group=worker
+   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${node_group} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 3. Pre-configure the new node according to the specifics of your environment. For example:
