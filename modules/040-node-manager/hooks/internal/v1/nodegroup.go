@@ -285,9 +285,13 @@ type Kubelet struct {
 	// Default: '4'
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
 
-	ResourceReservationMode KubeletResourceReservationMode `json:"resourceReservationMode"`
+	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
+}
 
-	StaticResourceReservation *KubeletStaticResourceReservation `json:"staticResourceReservation,omitempty"`
+type KubeletResourceReservation struct {
+	Mode KubeletResourceReservationMode `json:"mode"`
+
+	Static *KubeletStaticResourceReservation `json:"static,omitempty"`
 }
 
 type KubeletStaticResourceReservation struct {
@@ -306,7 +310,7 @@ const (
 
 func (k Kubelet) IsEmpty() bool {
 	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 &&
-		k.ResourceReservationMode == "" && k.StaticResourceReservation == nil
+		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil
 }
 
 type NodeGroupConditionType string

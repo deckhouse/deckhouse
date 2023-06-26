@@ -51,7 +51,6 @@ type NodeSettings struct {
 	Labels                  map[string]string
 	Taints                  []v1.Taint
 	LastAppliedNodeTemplate *NodeSettings
-	MemoryReserved          bool
 }
 
 // Hook will be executed when NodeType or NodeTemplate are changed.
@@ -68,12 +67,6 @@ func desiredNodeSettingsFromNodeGroupFilter(obj *unstructured.Unstructured) (go_
 		Annotations: nodeGroup.Spec.NodeTemplate.Annotations,
 		Labels:      nodeGroup.Spec.NodeTemplate.Labels,
 		Taints:      nodeGroup.Spec.NodeTemplate.Taints,
-	}
-
-	if nodeGroup.Spec.Kubelet.ResourceReservationMode == ngv1.KubeletResourceReservationModeAuto ||
-		(nodeGroup.Spec.Kubelet.ResourceReservationMode == ngv1.KubeletResourceReservationModeAuto &&
-			!nodeGroup.Spec.Kubelet.StaticResourceReservation.Memory.IsZero()) {
-		settings.MemoryReserved = true
 	}
 
 	// base64 decoding is not needed in Go.
@@ -301,15 +294,6 @@ func applyNodeTemplate(nodeObj *v1.Node, node, nodeGroup NodeSettings) error {
 		labelsChanged = true
 	}
 	newLabels["node.deckhouse.io/type"] = nodeGroup.NodeType.String()
-
-	// 1.4 Add label that indicates that we've reserved memory
-	if nodeGroup.MemoryReserved {
-		_, ok = newLabels["node.deckhouse.io/memory-reserved"]
-		if !ok {
-			labelsChanged = true
-		}
-		newLabels["node.deckhouse.io/memory-reserved"] = ""
-	}
 
 	// 2. Annotations
 	// 2.1. Merge node.annotations with nodeTemplate.annotations and remove excess keys.
