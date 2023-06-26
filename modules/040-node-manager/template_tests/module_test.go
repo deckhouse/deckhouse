@@ -189,7 +189,7 @@ internal:
     cloudInstances:
       classReference:
         kind: AzureInstanceClass
-        name: test
+        name: aaa
       maxPerZone: 1
       minPerZone: 1
       zones:
@@ -203,7 +203,7 @@ internal:
     cloudInstances:
       classReference:
         kind: AzureInstanceClass
-        name: worker
+        name: bbb
       maxPerZone: 1
       minPerZone: 1
       zones:
@@ -1399,7 +1399,7 @@ ccc: ddd
 				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "aaa-02320933")
 				Expect(t.Exists()).To(BeTrue())
 				//checksum := mc.Field("spec.properties.networkProfile.acceleratedNetworking").String()
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").String()).To(Equal("true"))
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").String()).To(Equal("false"))
 			})
 
 			It("spec.properties.networkProfile.acceleratedNetworking false", func() {
@@ -1408,7 +1408,7 @@ ccc: ddd
 				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "bbb-02320933")
 				Expect(t.Exists()).To(BeTrue())
 				//checksum := mc.Field("spec.properties.networkProfile.acceleratedNetworking").String()
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").String()).To(Equal("false"))
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").String()).To(Equal("true"))
 			})
 
 			// Important! If checksum changes, the MachineDeployments will re-deploy!
