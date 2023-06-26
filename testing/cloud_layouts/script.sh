@@ -217,6 +217,7 @@ function prepare_environment() {
     return 1
   fi
 
+
   if [ -z "$bootstrap_log" ]; then
     bootstrap_log="$cwd/bootstrap.log"
   fi
