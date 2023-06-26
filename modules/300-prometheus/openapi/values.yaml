@@ -58,9 +58,6 @@ properties:
             type: number
           diskUsage:
             type: number
-          lookbackDelta:
-            type: string
-            pattern: '^([\d]*y)?([\d]*w)?([\d]*d)?([\d]*h)?([\d]*m)?([\d]*s)?$'
       prometheusLongterm:
         type: object
         default: {}
