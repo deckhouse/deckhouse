@@ -23,45 +23,6 @@ import (
 )
 
 const (
-	ngCriContainerd = `
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: ngContainerd
-spec:
-  cri:
-  	type: Containerd
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: node1
-  labels:
-    node.deckhouse.io/group: ngContainerd
-status:
-  nodeInfo:
-    containerRuntimeVersion: docker
-`
-
-	ngCriDefault = `
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: ngDefault
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: node1
-  labels:
-    node.deckhouse.io/group: ngDefault
-status:
-  nodeInfo:
-    containerRuntimeVersion: docker
-`
-
 	ngCriNotManaged = `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
