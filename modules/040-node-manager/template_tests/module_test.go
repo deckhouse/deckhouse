@@ -1396,17 +1396,17 @@ ccc: ddd
 			It("spec.properties.networkProfile.acceleratedNetworking true", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "aaa-02320933")
+				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "bbb-02320933")
 				Expect(t.Exists()).To(BeTrue())
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(false))
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
 			})
 
 			It("spec.properties.networkProfile.acceleratedNetworking false", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "bbb-02320933")
+				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "aaa-02320933")
 				Expect(t.Exists()).To(BeTrue())
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(false))
 			})
 
 			// Important! If checksum changes, the MachineDeployments will re-deploy!
