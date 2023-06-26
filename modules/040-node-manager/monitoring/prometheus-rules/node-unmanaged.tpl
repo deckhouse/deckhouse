@@ -21,7 +21,7 @@
     {{- else }}
         summary: The {{`{{ $labels.node }}`}} Node is not managed by the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module.
         description: |
-          The {{`{{ $labels.node }}`}} Node is not managed by the `node-manager` module.
+          The {{`{{ $labels.node }}`}} Node is not managed by the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module.
 
           The recommended actions are as follows:
           - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
