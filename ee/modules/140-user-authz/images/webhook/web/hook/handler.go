@@ -134,13 +134,12 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 
 	// Secondly, one namespace selector at a time, we get the lists of namespaces matching namespaceSelectors labels and check against them
 	if request.Status.Denied && len(entry.NamespaceSelectors) > 0 {
-		Loop:
 		for _, namespaceSelector := range entry.NamespaceSelectors {
 			namespaces, err := h.getNamespacesByLabelSelector(*namespaceSelector)
 			if err != nil {
 				request.Status.Reason = err.Error()
 				// not sure if we should stop processing the request in case there are some api's client-related issues
-				break
+				continue
 			}
 			// check if the requested namespace is in the map of namespaces by labels
 			if _, ok := namespaces[request.Spec.ResourceAttributes.Namespace]; ok {
@@ -150,7 +149,7 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 					request.Status.Reason = ""
 				}
 				// the requested namespace is a system one, deny the request
-				break Loop
+				break
 			}
 		}
 	}
