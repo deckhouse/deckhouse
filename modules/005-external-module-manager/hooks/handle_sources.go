@@ -361,8 +361,9 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 			continue
 		}
 
-		if !strings.Contains(hdr.Name, "..") {
-			continue // CWE-22 check, prevents path traversal
+		if strings.Contains(hdr.Name, "..") {
+			// CWE-22 check, prevents path traversal
+			return fmt.Errorf("path traversal detected in the module archive: malicious path %v", hdr.Name)
 		}
 
 		switch hdr.Typeflag {
