@@ -17,12 +17,12 @@
 cat > /usr/local/bin/is-instance-bootstrapped << EOF
 #!/bin/bash
 set -Eeo pipefail
-uname -a | grep -q hardened
+# uname -a | grep -q hardened
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
 
-if ! uname -a | grep -q hardened; then
-  apt update && \
-  apt install --allow-change-held-packages --allow-downgrades -y linux-latest-hardened && \
-  reboot
-fi
+# if ! uname -a | grep -q hardened; then
+#   apt update && \
+#   apt install --allow-change-held-packages --allow-downgrades -y linux-latest-hardened && \
+#   reboot
+# fi
