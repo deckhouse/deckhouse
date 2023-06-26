@@ -99,7 +99,7 @@ func systemReserve(input *go_hook.HookInput) error {
 		ng := ngRaw.(*NodeGroup)
 		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := u.DeepCopy()
-			err := unstructured.SetNestedField(objCopy.Object, "Off", "spec", "kubelet", "resourceReservationMode")
+			err := unstructured.SetNestedField(objCopy.Object, "Off", "spec", "kubelet", "resourceReservation", "mode")
 			if err != nil {
 				return nil, err
 			}
