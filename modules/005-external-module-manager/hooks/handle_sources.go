@@ -361,6 +361,11 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 			continue
 		}
 
+		if strings.Contains(hdr.Name, "..") {
+			// CWE-22 check, prevents path traversal
+			return fmt.Errorf("path traversal detected in the module archive: malicious path %v", hdr.Name)
+		}
+
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0700); err != nil {
