@@ -452,16 +452,16 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 	}
 
 	state := nodeGroup.State[nodeName]
-	index, ok := getIndexFromNodeName(nodeName)
-	if !ok {
-		log.ErrorF("can't extract index from terraform state secret, skip %s\n", nodeName)
+	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
+	if err != nil {
+		log.ErrorF("can't extract index from terraform state secret (%v), skip %s\n", err, nodeName)
 		return nil
 	}
 
 	checker := c.getNodeGroupReadinessChecker(nodeGroup, nodeName)
 
 	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
-		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
+		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, nodeIndex, nodeGroup.CloudConfig)).
 		WithSkipChangesOnDeny(true).
 		WithState(state).
 		WithName(nodeName).
@@ -537,14 +537,14 @@ func (c *NodeGroupController) deleteRedundantNodes(nodeGroup *NodeGroupGroupOpti
 			continue
 		}
 
-		index, ok := getIndexFromNodeName(name)
-		if !ok {
-			log.ErrorF("can't extract index from terraform state secret, skip %s\n", name)
-			continue
+		nodeIndex, err := config.GetIndexFromNodeName(name)
+		if err != nil {
+			log.ErrorF("can't extract index from terraform state secret (%v), skip %s\n", err, name)
+			return nil
 		}
 
 		nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
-			WithVariables(cfg.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
+			WithVariables(cfg.NodeGroupConfig(nodeGroup.Name, nodeIndex, nodeGroup.CloudConfig)).
 			WithState(state).
 			WithName(name).
 			WithAllowedCachedState(true).

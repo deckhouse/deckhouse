@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -649,4 +650,12 @@ func (i *imagesDigests) ConvertToMap() map[string]interface{} {
 		res[k] = v
 	}
 	return res
+}
+
+func GetIndexFromNodeName(name string) (int, error) {
+	index, err := strconv.Atoi(name[strings.LastIndex(name, "-")+1:])
+	if err != nil {
+		return 0, err
+	}
+	return index, nil
 }
