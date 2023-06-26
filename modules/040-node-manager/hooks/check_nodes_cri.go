@@ -123,23 +123,6 @@ func applyNodeGroupCRITypeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func getMaxKubeVersion(input *go_hook.HookInput) (semver.Version, bool) {
-	maxKubeVersion := semver.Version{}
-	exist := false
-	for _, item := range input.Values.Get("global.discovery.kubernetesVersions").Array() {
-		version, err := semver.NewVersion(item.String())
-		if err != nil {
-			continue
-		}
-		if maxKubeVersion.LessThan(version) {
-			maxKubeVersion = *version
-			exist = true
-		}
-	}
-
-	return maxKubeVersion, exist
-}
-
 func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 	ngSnap := input.Snapshots[nodeGroupSnapName]
 	ngCRITypeMap := make(map[string]string)
