@@ -124,6 +124,8 @@ node-manager:
     - summary: Change calculation of `condition.ready` in a `NodeGroup`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/4855
   fixes:
+    - summary: NodeUser fixed the ability to use parameters in sshPublicKeys
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4934
     - summary: Fix links in node-unmanaged rule for Prometheus.
       pull_request: https://github.com/deckhouse/deckhouse/pull/4542
 operator-trivy:
