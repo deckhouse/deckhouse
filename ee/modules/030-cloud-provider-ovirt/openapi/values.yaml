@@ -24,4 +24,4 @@ properties:
           password:
             type: string
           tlsInsecure:
-            type: bool
+            type: boolean
