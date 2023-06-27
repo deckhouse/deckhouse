@@ -161,7 +161,7 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 			return nil
 		}
 
-		// skip if NodeGroup CRI Type == NotManaget and node kube ver < notManagedCriKubeVersion
+		// skip if NodeGroup CRI Type == NotManaged and node kubernetes version < notManagedCriKubeVersion
 		if !isContainerdRegexp.MatchString(n.ContainerRuntimeVersion) &&
 			criType == criTypeNotManaged &&
 			kubeVersion.LessThan(notManagedCriKubeVersion) {
