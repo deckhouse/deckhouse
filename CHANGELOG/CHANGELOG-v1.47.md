@@ -45,6 +45,7 @@
  - **[ingress-nginx]** Pathch Kruse controller manager logic so that it doesn't delete more than `maxUnavailable` Pods during updates. [#5039](https://github.com/deckhouse/deckhouse/pull/5039)
     Kruise controller manager will be restarted.
  - **[monitoring-kubernetes]** Fix `kubelet-eviction-thresholds-exporter` Prometheus metric and `node-disk-usage` Prometheus rules. [#4888](https://github.com/deckhouse/deckhouse/pull/4888)
+ - **[node-manager]** NodeUser fixed the ability to use parameters in sshPublicKeys [#4934](https://github.com/deckhouse/deckhouse/pull/4934)
  - **[prometheus]** Fix scheme for web exported URL on Grafana main page. [#4895](https://github.com/deckhouse/deckhouse/pull/4895)
  - **[runtime-audit-engine]** Unset `FALCO_BPF_PROBE` environment variable for the Falco container. [#4931](https://github.com/deckhouse/deckhouse/pull/4931)
  - **[runtime-audit-engine]** Bump Falco version to `v0.35.0`. [#4894](https://github.com/deckhouse/deckhouse/pull/4894)
@@ -57,7 +58,7 @@
 
 
  - **[candi]** Bump patch versions of Kubernetes images: `v1.24.15`, `v1.25.11`, `v1.26.6` [#4975](https://github.com/deckhouse/deckhouse/pull/4975)
-    "Kubernetes control-plane components will restart, kubelet will restart"
+    Kubernetes control-plane components will restart, kubelet will restart.
  - **[candi]** Upgraded patch versions of Kubernetes images `1.24.14`, `1.25.10`, `1.26.5`. [#4725](https://github.com/deckhouse/deckhouse/pull/4725)
     Kubernetes control plane components will restart, kubelet will restart.
  - **[dashboard]** Add validations for the `ingressClass` field. [#4932](https://github.com/deckhouse/deckhouse/pull/4932)
