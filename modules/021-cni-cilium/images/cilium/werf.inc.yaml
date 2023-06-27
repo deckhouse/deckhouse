@@ -64,7 +64,7 @@ shell:
   - rm -rf /go
 docker:
   ENV:
-    HUBBLE_SERVER: "unix:///var/run/cilium/hubble:sock"
+    HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
     INITSYSTEM: SYSTEMD
     HUBBLE_COMPAT: legacy-json-output
   WORKDIR: "/home/cilium"
