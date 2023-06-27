@@ -1926,42 +1926,43 @@ spec:
                         required:
                           - static
                       - properties:
-                          nodeType:
+                          mode:
                             enum: ["Off", "Auto"]
-                      mode:
-                        type: string
-                        default: "Auto"
-                        description: |
-                          Specify whether to:
+                      properties:
+                        mode:
+                          type: string
+                          default: "Auto"
+                          description: |
+                            Specify whether to:
 
-                          * Disable resource reservation
-                          * Reserve resources based on the Node capacity.
-                          * Provide your own resource reservation values via the `static` field.
+                            * Disable resource reservation
+                            * Reserve resources based on the Node capacity.
+                            * Provide your own resource reservation values via the `static` field.
 
-                          More info: https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved
+                            More info: https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved
 
-                          Note that currently we do not use a dedicated cgroup for resource reservation (`-system-reserved-cgroup` is not used).
-                      static:
-                        type: object
-                        properties:
-                          cpu:
-                            x-kubernetes-int-or-string: true
-                            anyOf:
-                              - type: integer
-                              - type: string
-                            pattern: '\d+[m]'
-                          memory:
-                            x-kubernetes-int-or-string: true
-                            anyOf:
-                              - type: integer
-                              - type: string
-                            pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
-                          ephemeralStorage:
-                            x-kubernetes-int-or-string: true
-                            anyOf:
-                              - type: integer
-                              - type: string
-                            pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                            Note that currently we do not use a dedicated cgroup for resource reservation (`-system-reserved-cgroup` is not used).
+                        static:
+                          type: object
+                          properties:
+                            cpu:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: '\d+[m]'
+                            memory:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                            ephemeralStorage:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
                 update:
                   type: object
                   properties:
