@@ -23,6 +23,6 @@ properties:
         description: |
           The user's password.
       tlsInsecure:
-        type: bool
+        type: boolean
         description: |
           Use insecure tls connection to api.
