@@ -1,0 +1,28 @@
+type: object
+properties:
+  connection:
+    type: object
+    description: |
+      This section contains parameters required to connect to the cloud provider's API.
+    properties:
+      authURL:
+        type: string
+        description: |
+          An Ovirt API URL.
+      caBundle:
+        type: string
+        description: |
+          Specify the CA x509 certificate used for signing if the Ovirt API has a self-signed certificate;
+          The certificate must have a PEM format.
+      username:
+        type: string
+        description: |
+          The name of the user that has full project privileges.
+      password:
+        type: string
+        description: |
+          The user's password.
+      tlsInsecure:
+        type: bool
+        description: |
+          Use insecure tls connection to api.

@@ -1,0 +1,21 @@
+positive:
+  configValues:
+    - {}
+  values:
+    - internal:
+        connection:
+          authURL: http://my.cloud.lalla/1/
+          username: myuser
+          password: myPaSs
+          caBundle: mycacert
+    - internal:
+        connection:
+          authURL: http://my.cloud.lalla/2/
+          username: myuser
+          password: myPaSs
+          tslInsecure: true
+negative:
+  configValues:
+    - { somethingInConfig: yes }
+  values:
+    - { somethingInConfig: yes }
