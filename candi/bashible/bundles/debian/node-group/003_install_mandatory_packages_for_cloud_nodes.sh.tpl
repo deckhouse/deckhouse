@@ -1,0 +1,1 @@
+../../ubuntu-lts/node-group/003_install_mandatory_packages_for_cloud_nodes.sh.tpl
