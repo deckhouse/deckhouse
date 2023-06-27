@@ -69,15 +69,21 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: capi-ovirt-controller
       terminationGracePeriodSeconds: 10
-      volumes:
-        - name: cert
-          secret:
-            defaultMode: 420
-            secretName: capi-ovirt-webhook-service-cert
       containers:
       - name: capi-ovirt-controller
+        args:
+        - --leader-elect
+        - --v=2
+        - --metrics-addr=127.0.0.1:8086
+        - --health-addr=$(HOST_IP):9440
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "capiOvirtController") }}
+        env:
+        - name: OS_CLOUD
+          valueFrom:
+            secretKeyRef:
+              name: config
+              key: OS_CLOUD
         ports:
         - name: healthz
           containerPort: 9440
@@ -96,6 +102,10 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "capi_ovirt_controller_resources" . | nindent 12 }}
   {{- end }}
+        volumeMounts:
+        - mountPath: /etc/config
+          name: config
+          readOnly: true
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -133,3 +143,7 @@ spec:
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
+      volumes:
+      - name: config
+        secret:
+          secretName: capi-ovirt-controller
