@@ -19,15 +19,18 @@
 package hooks
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -39,7 +42,10 @@ const (
 	nodeSnapName                = "check_nodes_cri"
 	notManagedCriMaxKubeVersion = "1.24.0"
 	nodeGroupSnapName           = "node_group"
+	defaultCRISnapName          = "default_cri"
 	criTypeNotManaged           = "NotManaged"
+	criTypeDocker               = "Docker"
+	criTypeContainerd           = "Containerd"
 )
 
 type nodeGroupCRIType struct {
@@ -55,7 +61,7 @@ type nodeCRIVersion struct {
 
 var isContainerdRegexp = regexp.MustCompile(`^containerd.*?`)
 
-// TODO: Remove this hook after 1.47 release
+// TODO: Remove this hook after 1.47.1 release
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -82,6 +88,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:             "deckhouse.io/v1",
 			WaitForSynchronization: pointer.Bool(false),
 			FilterFunc:             applyNodeGroupCRITypeFilter,
+		},
+		{
+			Name:                   defaultCRISnapName,
+			WaitForSynchronization: pointer.Bool(false),
+			ApiVersion:             "v1",
+			Kind:                   "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-cluster-configuration"},
+			},
+			FilterFunc: applyDefaultCRISecretFilter,
 		},
 	},
 }, discoverNodesCRIVersion)
@@ -123,7 +144,42 @@ func applyNodeGroupCRITypeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
+func applyDefaultCRISecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var sec corev1.Secret
+
+	err := sdk.FromUnstructured(obj, &sec)
+	if err != nil {
+		return "", err
+	}
+	clusterConfig, ok := sec.Data["cluster-configuration.yaml"]
+	if !ok {
+		return "", nil
+	}
+
+	var parsedClusterConfig map[string]interface{}
+	if err := yaml.Unmarshal(clusterConfig, &parsedClusterConfig); err != nil {
+		return "", fmt.Errorf("cannot parse cluster configuration: %v", err)
+	}
+
+	if defaultCRI, ok := parsedClusterConfig["defaultCRI"]; ok {
+		return defaultCRI, nil
+	}
+	return "", nil
+}
+
 func discoverNodesCRIVersion(input *go_hook.HookInput) error {
+	defaultCRISnap := input.Snapshots[defaultCRISnapName]
+	defaultCRI := criTypeContainerd
+
+	if len(defaultCRISnap) > 0 {
+		defaultCRI = defaultCRISnap[0].(string)
+	}
+
+	if defaultCRI == criTypeDocker {
+		requirements.SaveValue(hasNodesOtherThanContainerd, true)
+		return nil
+	}
+
 	ngSnap := input.Snapshots[nodeGroupSnapName]
 	ngCRITypeMap := make(map[string]string)
 
@@ -145,6 +201,9 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 	for _, item := range nSnap {
 		n := item.(nodeCRIVersion)
 		criType, ok := ngCRITypeMap[n.NodeGroup]
+		if !ok {
+			criType = defaultCRI
+		}
 
 		kubeVersion, err := semver.NewVersion(n.KubeletVersion)
 		if err != nil {
@@ -155,23 +214,14 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 			continue
 		}
 
-		// not found NodeGroup CRI Type
-		if !isContainerdRegexp.MatchString(n.ContainerRuntimeVersion) && !ok {
-			requirements.SaveValue(hasNodesOtherThanContainerd, true)
-			return nil
-		}
-
 		// skip if NodeGroup CRI Type == NotManaged and node kubernetes version < notManagedCriKubeVersion
-		if !isContainerdRegexp.MatchString(n.ContainerRuntimeVersion) &&
-			criType == criTypeNotManaged &&
+		if criType == criTypeNotManaged &&
 			kubeVersion.LessThan(notManagedCriKubeVersion) {
 			continue
 		}
 
-		if !isContainerdRegexp.MatchString(n.ContainerRuntimeVersion) {
-			requirements.SaveValue(hasNodesOtherThanContainerd, true)
-			return nil
-		}
+		requirements.SaveValue(hasNodesOtherThanContainerd, true)
+		return nil
 	}
 
 	requirements.SaveValue(hasNodesOtherThanContainerd, false)

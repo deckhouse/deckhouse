@@ -66,7 +66,7 @@ func init() {
 		}
 
 		if hasNodesOtherThanContainerd.(bool) {
-			return false, errors.New("has nodes other than containerd")
+			return false, errors.New("has nodes with CRI other than containerd or defaultCRI is Docker")
 		}
 
 		return true, nil
