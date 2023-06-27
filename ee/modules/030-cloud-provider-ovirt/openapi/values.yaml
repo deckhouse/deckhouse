@@ -9,7 +9,7 @@ properties:
       connection:
         type: object
         x-examples:
-          - { "authURL": "http://my.cloud.lalla/3/", "caBundle": "mycacert",  "username": "myuser", "password": "mypass", "tlsInsecure": "false" }
+          - { "authURL": "http://my.cloud.lalla/3/", "caBundle": "mycacert",  "username": "myuser", "password": "mypass", "tlsInsecure": false }
         x-required-for-helm:
           - authURL
           - username
