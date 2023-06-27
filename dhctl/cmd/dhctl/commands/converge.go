@@ -16,8 +16,6 @@ package commands
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -30,31 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
-
-func getCacheIdentityFromKubeconfig(
-	kubeconfigPath string,
-	kubeconfigContext string,
-) (string, error) {
-	builder := strings.Builder{}
-	builder.WriteString("kubeconfig")
-
-	kubeconfigName := filepath.Base(kubeconfigPath)
-	if kubeconfigName == "." || kubeconfigName == ".." || kubeconfigName == "/" {
-		return "", fmt.Errorf("incorrect kubeconfig path")
-	}
-
-	builder.WriteString("-")
-	builder.WriteString(kubeconfigName)
-
-	if kubeconfigContext == "" {
-		return builder.String(), nil
-	}
-
-	builder.WriteString("-")
-	builder.WriteString(kubeconfigContext)
-
-	return builder.String(), nil
-}
 
 func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge", "Converge kubernetes cluster.")
@@ -78,13 +51,10 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		if app.KubeConfig != "" {
-			cacheIdentity, err = getCacheIdentityFromKubeconfig(
+			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
 				app.KubeConfig,
 				app.KubeConfigContext,
 			)
-			if err != nil {
-				return err
-			}
 		}
 
 		if cacheIdentity == "" {

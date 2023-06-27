@@ -15,9 +15,12 @@
 package cache
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -102,4 +105,31 @@ func Global() state.Cache {
 
 func Dummy() state.Cache {
 	return &cache.DummyCache{}
+}
+
+func GetCacheIdentityFromKubeconfig(
+	kubeconfigPath string,
+	kubeconfigContext string,
+) string {
+	if kubeconfigPath == "" {
+		return ""
+	}
+
+	builder := strings.Builder{}
+	builder.WriteString("kubeconfig")
+
+	h := sha256.New()
+	h.Write([]byte(kubeconfigPath))
+
+	builder.WriteString("-")
+
+	if kubeconfigContext == "" {
+		builder.WriteString(hex.EncodeToString(h.Sum(nil)))
+		return builder.String()
+	}
+
+	h.Write([]byte(kubeconfigContext))
+	builder.WriteString(hex.EncodeToString(h.Sum(nil)))
+
+	return builder.String()
 }
