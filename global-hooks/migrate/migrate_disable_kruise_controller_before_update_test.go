@@ -18,22 +18,23 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
-	"fmt"
-	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 const (
-	anotherDeployment = "test-nginx"
-	replicasBefore = 3
-	replicasAfter = 0
+	anotherDeployment          = "test-nginx"
+	replicasBefore             = 3
+	replicasAfter              = 0
 	kruiseControllerDefinition = `
 apiVersion: apps/v1
 kind: Deployment
@@ -101,7 +102,7 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 			return 0, err
 		}
 		return *deployment.Spec.Replicas, nil
-        }
+	}
 
 	assertScale := func(namespace, name string, replicas int32) {
 		r, err := getDeploymentReplicas(namespace, name)
