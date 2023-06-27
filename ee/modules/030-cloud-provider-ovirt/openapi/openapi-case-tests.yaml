@@ -13,7 +13,7 @@ positive:
           authURL: http://my.cloud.lalla/2/
           username: myuser
           password: myPaSs
-          tslInsecure: true
+          tlsInsecure: true
 negative:
   configValues:
     - { somethingInConfig: yes }

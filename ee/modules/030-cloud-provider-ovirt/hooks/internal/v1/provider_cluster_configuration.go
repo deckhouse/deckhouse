@@ -25,7 +25,7 @@ type provider struct {
 	CABundle    string `json:"caBundle,omitempty" yaml:"caBundle,omitempty"`
 	Username    string `json:"username,omitempty" yaml:"username,omitempty"`
 	Password    string `json:"password,omitempty" yaml:"password,omitempty"`
-	TlsInsecure bool   `json:"tlsInsecure,omitempty" yaml:"tlsInsecure,omitempty"`
+	TLSInsecure bool   `json:"tlsInsecure,omitempty" yaml:"tlsInsecure,omitempty"`
 }
 
 func (p provider) IsEmpty() bool {
