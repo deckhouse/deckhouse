@@ -39,6 +39,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: %s
+  annotations:
+    %s: ""
 spec:
   selector:
     matchLabels:
@@ -78,35 +80,61 @@ spec:
 `
 )
 
-func createMockDeployment(namespace, cfg string) {
+func createMockDeployment(cfg string) {
 	var dep *appsv1.Deployment
 
 	err := yaml.Unmarshal([]byte(cfg), &dep)
 	if err != nil {
 		panic(err)
 	}
-	_, err = dependency.TestDC.MustGetK8sClient().AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
+	_, err = dependency.TestDC.MustGetK8sClient().AppsV1().Deployments(targetNamespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 	if err != nil {
 		panic(err)
 	}
 }
 
 var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::", func() {
-	var kruiseDeploymentMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, replicasBefore)
+	var kruiseDeploymentMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, "some-annotation", replicasBefore)
+	var kruiseDeploymentAnnotatedMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, kruisePatchAnnotation, replicasBefore)
 	var anotherDeploymentMock = fmt.Sprintf(anotherDeploymentDefinition, anotherDeployment, replicasBefore)
 
-	getDeploymentReplicas := func(namespace, name string) (int32, error) {
+	getDeployment := func(namespace, name string) (*appsv1.Deployment, error) {
 		deployment, err := dependency.TestDC.MustGetK8sClient().AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		return deployment, err
+	}
+
+	getDeploymentReplicas := func(namespace, name string) (int32, error) {
+		deployment, err := getDeployment(namespace, name)
 		if err != nil {
 			return 0, err
 		}
 		return *deployment.Spec.Replicas, nil
 	}
 
+	getDeploymentAnnotations := func(namespace, name string) (map[string]string, error) {
+		deployment, err := getDeployment(namespace, name)
+		if err != nil {
+			return nil, err
+		}
+		return deployment.ObjectMeta.GetAnnotations(), nil
+	}
+
 	assertScale := func(namespace, name string, replicas int32) {
 		r, err := getDeploymentReplicas(namespace, name)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(r).To(Equal(replicas))
+	}
+
+	checkAnnotationInPlace := func(namespace, name string) {
+		annotations, err := getDeploymentAnnotations(namespace, name)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(annotations).To(HaveKey(kruisePatchAnnotation))
+	}
+
+	checkAnnotationNotInPlace := func(namespace, name string) {
+		annotations, err := getDeploymentAnnotations(namespace, name)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(annotations).ToNot(HaveKey(kruisePatchAnnotation))
 	}
 
 	Context("Empty cluster", func() {
@@ -129,8 +157,8 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
-			createMockDeployment(targetNamespace, kruiseDeploymentMock)
-			createMockDeployment(targetNamespace, anotherDeploymentMock)
+			createMockDeployment(kruiseDeploymentMock)
+			createMockDeployment(anotherDeploymentMock)
 		})
 
 		It(fmt.Sprintf("Before running the hook, both deployments should have replicas set to %d", replicasBefore), func() {
@@ -148,17 +176,70 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
-			createMockDeployment(targetNamespace, kruiseDeploymentMock)
-			createMockDeployment(targetNamespace, anotherDeploymentMock)
+			createMockDeployment(kruiseDeploymentMock)
+			createMockDeployment(anotherDeploymentMock)
 			f.RunHook()
 		})
 
-		It(fmt.Sprintf("After running the hook, %s deployment should have replicas set to %d, and %s deployment should be unchanged", targetDeployment, replicasAfter, anotherDeployment), func() {
+		It(fmt.Sprintf("After running the hook, %s deployment should have replicas set to %d and annotated with %s, and %s deployment should be unchanged", targetDeployment, replicasAfter, kruisePatchAnnotation, anotherDeployment), func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			assertScale(targetNamespace, targetDeployment, replicasAfter)
 
+			checkAnnotationInPlace(targetNamespace, targetDeployment)
+
 			assertScale(targetNamespace, anotherDeployment, replicasBefore)
+
+			checkAnnotationNotInPlace(targetNamespace, anotherDeployment)
+		})
+	})
+
+	Context("", func() {
+		f := HookExecutionConfigInit(`{}`, `{}`)
+
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			createMockDeployment(kruiseDeploymentMock)
+			createMockDeployment(anotherDeploymentMock)
+			f.RunHook()
+		})
+
+		It(fmt.Sprintf("After running the hook, %s deployment should have replicas set to %d and %s annotation, and %s deployment should be unchanged", targetDeployment, replicasAfter, kruisePatchAnnotation, anotherDeployment), func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			assertScale(targetNamespace, targetDeployment, replicasAfter)
+
+			checkAnnotationInPlace(targetNamespace, targetDeployment)
+
+			assertScale(targetNamespace, anotherDeployment, replicasBefore)
+
+			checkAnnotationNotInPlace(targetNamespace, anotherDeployment)
+		})
+	})
+
+	Context("", func() {
+		f := HookExecutionConfigInit(`{}`, `{}`)
+
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			createMockDeployment(kruiseDeploymentAnnotatedMock)
+			createMockDeployment(anotherDeploymentMock)
+			f.RunHook()
+		})
+
+		It(fmt.Sprintf("After running the hook, annotated %s deployment should be unchanged, and %s deployment should be unchanged", targetDeployment, anotherDeployment), func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			assertScale(targetNamespace, targetDeployment, replicasBefore)
+
+			checkAnnotationInPlace(targetNamespace, targetDeployment)
+
+			assertScale(targetNamespace, anotherDeployment, replicasBefore)
+
+			checkAnnotationNotInPlace(targetNamespace, anotherDeployment)
+
 		})
 	})
 })

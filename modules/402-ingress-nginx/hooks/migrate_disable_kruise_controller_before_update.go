@@ -25,16 +25,18 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-// TODO: remove this hook after Deckhouse 1.46.11, 1.47
+// TODO: remove this hook after Deckhouse 1.50
 
 // Scale in Kruise Controller manager to zero before update Ingress-Nginx module
 // so that it doesn't update ingress controllers before a new version of Kruise Controller is deployed.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 10},
+	Queue:       "/modules/ingress-nginx/safe_daemonset_update",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(disableKruiseControllerDeployment))
 
 const (
+	kruisePatchAnnotation = "ingress.deckhouse.io/force-max-unavailable"
 	targetNamespace  = "d8-ingress-nginx"
 	targetDeployment = "kruise-controller-manager"
 )
@@ -53,7 +55,18 @@ func disableKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Conta
 		return err
 	}
 
+	annotations := deployment.ObjectMeta.GetAnnotations()
+
+	if _, exists := annotations[kruisePatchAnnotation]; exists {
+		return nil
+	}
+
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations[kruisePatchAnnotation]=""
 	deployment.Spec.Replicas = int32Ptr(0)
+	deployment.ObjectMeta.SetAnnotations(annotations)
 
 	_, err = kubeCl.AppsV1().Deployments(targetNamespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
 	if err != nil {
