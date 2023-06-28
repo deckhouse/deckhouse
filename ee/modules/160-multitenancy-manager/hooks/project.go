@@ -9,9 +9,9 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/values/validation/schema"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -110,17 +110,16 @@ func handleProjects(input *go_hook.HookInput) error {
 			continue
 		}
 
-		schema, err := internal.LoadOpenAPISchema(ptValuesMap["openAPI"])
+		sc, err := internal.LoadOpenAPISchema(ptValuesMap["openAPI"])
 		if err != nil {
 			errMsg := fmt.Sprintf("can't load '%s' ProjectType OpenAPI schema: %v", project.ProjectTypeName, err)
 			errStatusProject(errMsg)
 			continue
 		}
 
-		if schema.AdditionalProperties == nil {
-			schema.AdditionalProperties = &spec.SchemaOrBool{Allows: false}
-		}
-		if err := validate.AgainstSchema(schema, project.Template, strfmt.Default); err != nil {
+		sc = schema.TransformSchema(sc, &schema.AdditionalPropertiesTransformer{})
+
+		if err := validate.AgainstSchema(sc, project.Template, strfmt.Default); err != nil {
 			errMsg := fmt.Sprintf("template data doesn't match the OpenAPI schema for '%s' ProjectType: %v", project.ProjectTypeName, err)
 			errStatusProject(errMsg)
 			continue
