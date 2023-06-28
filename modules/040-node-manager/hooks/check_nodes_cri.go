@@ -19,30 +19,27 @@
 package hooks
 
 import (
-	"fmt"
+	"errors"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (
-	hasNodesOtherThanContainerd = "nodeManager:hasNodesOtherThanContainerd"
+	hasNodesWithDocker          = "nodeManager:hasNodesWithDocker"
 	containerUnknownVersion     = "unknownVersion"
 	nodeSnapName                = "check_nodes_cri"
 	notManagedCriMaxKubeVersion = "1.24.0"
 	nodeGroupSnapName           = "node_group"
-	defaultCRISnapName          = "default_cri"
 	criTypeNotManaged           = "NotManaged"
 	criTypeDocker               = "Docker"
 	criTypeContainerd           = "Containerd"
@@ -50,7 +47,7 @@ const (
 
 type nodeGroupCRIType struct {
 	Name    string
-	CriType string
+	CRIType string
 }
 
 type nodeCRIVersion struct {
@@ -59,7 +56,7 @@ type nodeCRIVersion struct {
 	KubeletVersion          string
 }
 
-var isContainerdRegexp = regexp.MustCompile(`^containerd.*?`)
+var isDockerRegexp = regexp.MustCompile(`^docker.*?`)
 
 // TODO: Remove this hook after 1.47.1 release
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -88,21 +85,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:             "deckhouse.io/v1",
 			WaitForSynchronization: pointer.Bool(false),
 			FilterFunc:             applyNodeGroupCRITypeFilter,
-		},
-		{
-			Name:                   defaultCRISnapName,
-			WaitForSynchronization: pointer.Bool(false),
-			ApiVersion:             "v1",
-			Kind:                   "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-cluster-configuration"},
-			},
-			FilterFunc: applyDefaultCRISecretFilter,
 		},
 	},
 }, discoverNodesCRIVersion)
@@ -140,43 +122,19 @@ func applyNodeGroupCRITypeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 
 	return nodeGroupCRIType{
 		Name:    ng.GetName(),
-		CriType: ng.Spec.CRI.Type,
+		CRIType: ng.Spec.CRI.Type,
 	}, nil
 }
 
-func applyDefaultCRISecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var sec corev1.Secret
-
-	err := sdk.FromUnstructured(obj, &sec)
-	if err != nil {
-		return "", err
-	}
-	clusterConfig, ok := sec.Data["cluster-configuration.yaml"]
-	if !ok {
-		return "", nil
-	}
-
-	var parsedClusterConfig map[string]interface{}
-	if err := yaml.Unmarshal(clusterConfig, &parsedClusterConfig); err != nil {
-		return "", fmt.Errorf("cannot parse cluster configuration: %v", err)
-	}
-
-	if defaultCRI, ok := parsedClusterConfig["defaultCRI"]; ok {
-		return defaultCRI, nil
-	}
-	return "", nil
-}
-
 func discoverNodesCRIVersion(input *go_hook.HookInput) error {
-	defaultCRISnap := input.Snapshots[defaultCRISnapName]
-	defaultCRI := criTypeContainerd
-
-	if len(defaultCRISnap) > 0 {
-		defaultCRI = defaultCRISnap[0].(string)
+	defaultCRIValue, ok := input.Values.GetOk("global.clusterConfiguration.defaultCRI")
+	if !ok {
+		return errors.New("defaultCRI not setup in clusterConfiguration")
 	}
+	defaultCRI := defaultCRIValue.String()
 
 	if defaultCRI == criTypeDocker {
-		requirements.SaveValue(hasNodesOtherThanContainerd, true)
+		requirements.SaveValue(hasNodesWithDocker, true)
 		return nil
 	}
 
@@ -190,7 +148,7 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 
 	for _, item := range ngSnap {
 		ng := item.(nodeGroupCRIType)
-		ngCRITypeMap[ng.Name] = ng.CriType
+		ngCRITypeMap[ng.Name] = ng.CRIType
 	}
 
 	nSnap := input.Snapshots[nodeSnapName]
@@ -210,7 +168,7 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 			return err
 		}
 
-		if isContainerdRegexp.MatchString(n.ContainerRuntimeVersion) {
+		if !isDockerRegexp.MatchString(n.ContainerRuntimeVersion) {
 			continue
 		}
 
@@ -220,10 +178,10 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 			continue
 		}
 
-		requirements.SaveValue(hasNodesOtherThanContainerd, true)
+		requirements.SaveValue(hasNodesWithDocker, true)
 		return nil
 	}
 
-	requirements.SaveValue(hasNodesOtherThanContainerd, false)
+	requirements.SaveValue(hasNodesWithDocker, false)
 	return nil
 }

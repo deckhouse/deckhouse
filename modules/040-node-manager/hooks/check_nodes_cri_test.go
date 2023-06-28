@@ -15,8 +15,6 @@
 package hooks
 
 import (
-	"encoding/base64"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -143,75 +141,50 @@ status:
 )
 
 var _ = Describe("node-manager :: check_containerd_nodes ", func() {
-	secretManifest := func(content string) string {
-		return `
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(content))
-	}
-	clusterConfiguration := func(defaultCRI string) string {
-		return secretManifest(`
----
-apiVersion: deckhouse.io/v1
-cloud:
-  prefix: dev
-  provider: OpenStack
-clusterDomain: cluster.local
-clusterType: Cloud
-defaultCRI: ` + defaultCRI + `
-kind: ClusterConfiguration
-kubernetesVersion: "1.23"
-podSubnetCIDR: 10.111.0.0/16
-podSubnetNodeCIDRPrefix: "24"
-serviceSubnetCIDR: 10.222.0.0/16
-`)
-	}
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Nodes objects are not found", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
 			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.RunHook()
 		})
 
-		It(hasNodesOtherThanContainerd+" should not exist", func() {
+		It(hasNodesWithDocker+" should not exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			_, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			_, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeFalse())
 		})
 	})
 
 	Context("One node without status.nodeInfo.containerRuntimeVersion set and defaultCRI is "+criTypeContainerd, func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
 			f.BindingContexts.Set(
-				f.KubeStateSet(nodeWithoutContainerVersion + clusterConfiguration(criTypeContainerd)),
+				f.KubeStateSet(nodeWithoutContainerVersion),
 			)
 			f.RunHook()
 		})
 
-		It(hasNodesOtherThanContainerd+" should exist and true", func() {
+		It(hasNodesWithDocker+" should exist and false", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeTrue())
+			Expect(value).To(BeFalse())
 		})
 	})
 
 	Context("One node without status.nodeInfo.containerRuntimeVersion set and defaultCRI is "+criTypeDocker, func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeWithoutContainerVersion + clusterConfiguration(criTypeDocker)))
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeDocker)
+			f.BindingContexts.Set(f.KubeStateSet(nodeWithoutContainerVersion))
 			f.RunHook()
 		})
 
-		It(hasNodesOtherThanContainerd+" should exist and true", func() {
+		It(hasNodesWithDocker+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
@@ -219,13 +192,14 @@ serviceSubnetCIDR: 10.222.0.0/16
 
 	Context("One node with containerD", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeContainerd + clusterConfiguration(criTypeContainerd)))
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
+			f.BindingContexts.Set(f.KubeStateSet(nodeContainerd))
 			f.RunHook()
 		})
 
-		It(hasNodesOtherThanContainerd+" should exist and false", func() {
+		It(hasNodesWithDocker+" should exist and false", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeFalse())
 		})
@@ -233,29 +207,31 @@ serviceSubnetCIDR: 10.222.0.0/16
 
 	Context("Node with containerD and unknownVersion", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
 			f.BindingContexts.Set(
-				f.KubeStateSet(nodeContainerd + nodeWithoutContainerVersion + clusterConfiguration(criTypeContainerd)),
+				f.KubeStateSet(nodeContainerd + nodeWithoutContainerVersion),
 			)
 			f.RunHook()
 		})
 
-		It(hasNodesOtherThanContainerd+" should exist and true", func() {
+		It(hasNodesWithDocker+" should exist and false", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeTrue())
+			Expect(value).To(BeFalse())
 		})
 	})
 
 	Context("Node with containerD and docker", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeContainerd + nodeDocker + clusterConfiguration(criTypeContainerd)))
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
+			f.BindingContexts.Set(f.KubeStateSet(nodeContainerd + nodeDocker))
 			f.RunHook()
 		})
 
-		It(hasNodesOtherThanContainerd+" should exist and true", func() {
+		It(hasNodesWithDocker+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
@@ -263,15 +239,16 @@ serviceSubnetCIDR: 10.222.0.0/16
 
 	Context("Node with containerD and docker and unknownVersion", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
 			f.BindingContexts.Set(
-				f.KubeStateSet(nodeContainerd + nodeDocker + nodeUnknownVersion + clusterConfiguration(criTypeContainerd)),
+				f.KubeStateSet(nodeContainerd + nodeDocker + nodeUnknownVersion),
 			)
 			f.RunHook()
 		})
 
-		It(hasNodesOtherThanContainerd+" should exist and true", func() {
+		It(hasNodesWithDocker+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
@@ -279,21 +256,21 @@ serviceSubnetCIDR: 10.222.0.0/16
 
 	Context("Node with containerd and docker and unknownVersion and node without status.nodeInfo.containerRuntimeVersion set", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
 			f.BindingContexts.Set(
 				f.KubeStateSet(
 					nodeContainerd +
 						nodeDocker +
 						nodeUnknownVersion +
-						nodeWithoutContainerVersion +
-						clusterConfiguration(criTypeContainerd),
+						nodeWithoutContainerVersion,
 				),
 			)
 			f.RunHook()
 		})
 
-		It(hasNodesOtherThanContainerd+" should exist and true", func() {
+		It(hasNodesWithDocker+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
@@ -301,73 +278,78 @@ serviceSubnetCIDR: 10.222.0.0/16
 
 	Context("NodeGroup with CRI NotManaged, node kube ver 1.23.0", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
 			f.BindingContexts.Set(
-				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_23+clusterConfiguration(criTypeContainerd), 1),
+				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_23, 1),
 			)
 			f.RunHook()
 		})
 
 		It("Max kube version < "+notManagedCriMaxKubeVersion, func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeFalse())
 		})
 	})
 	Context("NodeGroup with CRI NotManaged, max kube ver 1.24.0", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
 			f.BindingContexts.Set(
-				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_24+clusterConfiguration(criTypeContainerd), 1),
+				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_24, 1),
 			)
 			f.RunHook()
 		})
 		It("Max kube version = "+notManagedCriMaxKubeVersion, func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
 	})
 	Context("NodeGroup with CRI NotManaged, max kube ver 1.25.0", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
 			f.BindingContexts.Set(
-				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_25+clusterConfiguration(criTypeContainerd), 1),
+				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_25, 1),
 			)
 			f.RunHook()
 		})
 		It("Max kube version > "+notManagedCriMaxKubeVersion, func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
 	})
 	Context("Node with docker and without NodeGroup, kubernetes version 1.23.0, defaultCRI is "+criTypeNotManaged, func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeNotManaged)
 			f.BindingContexts.Set(
-				f.KubeStateSetAndWaitForBindingContexts(nodeDocker+clusterConfiguration(criTypeNotManaged), 1),
+				f.KubeStateSetAndWaitForBindingContexts(nodeDocker, 1),
 			)
 			f.RunHook()
 		})
 
 		It("Max kube version = "+notManagedCriMaxKubeVersion, func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeFalse())
 		})
 	})
 	Context("Node with docker and without NodeGroup, kubernetes version 1.23.0, defaultCRI is "+criTypeContainerd, func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
 			f.BindingContexts.Set(
-				f.KubeStateSetAndWaitForBindingContexts(nodeDocker+clusterConfiguration(criTypeContainerd), 1),
+				f.KubeStateSetAndWaitForBindingContexts(nodeDocker, 1),
 			)
 			f.RunHook()
 		})
 
 		It("Max kube version = "+notManagedCriMaxKubeVersion, func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesOtherThanContainerd)
+			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeTrue())
 		})
