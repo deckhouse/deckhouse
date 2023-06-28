@@ -21,10 +21,14 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-const initialValues = `
+const (
+	initialValues = `
 projects: []
 projectTypes: {}
 `
+
+	userResourcesTemplate = "multitenancy-manager/templates/user-resources-templates.yaml"
+)
 
 var _ = Describe("Module :: multitenancy-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -65,9 +69,9 @@ var _ = Describe("Module :: multitenancy-manager :: helm template ::", func() {
 		})
 
 		It("Creates correct AuthorizationRules", func() {
-			ar1 := f.KubernetesResource("AuthorizationRule", "project-1", "project-1-user-user-test-2")
+			ar1 := f.KubernetesResource("AuthorizationRule", "project-1", "project-1-user-user-test-2-email-com")
 			Expect(ar1.Exists()).To(BeTrue())
-			Expect(ar1.Field("spec")).To(MatchJSON(`{"accessLevel":"User","subjects":[{"kind":"User","name":"test-2"}]}`))
+			Expect(ar1.Field("spec")).To(MatchJSON(`{"accessLevel":"User","subjects":[{"kind":"User","name":"test-2@email.com"}]}`))
 
 			ar2 := f.KubernetesResource("AuthorizationRule", "project-1", "project-1-admin-service-account-test-3")
 			Expect(ar2.Exists()).To(BeTrue())
@@ -135,14 +139,12 @@ func retrieveObjectNameByKindFromRender(kind string, manifests string) string {
 }
 
 const (
-	userResourcesTemplate = "multitenancy-manager/templates/user-resources-templates.yaml"
-
 	stateOneProjectTypeOneProject = `
 projectTypes:
   pt1:
     subjects:
     - kind: User
-      name: test-2
+      name: test-2@email.com
       role: User
     - kind: ServiceAccount
       name: test-3

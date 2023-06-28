@@ -106,12 +106,13 @@ metadata:
 {{- define "authorization.rule" }}
   {{- $projectName := index . 0 }}
   {{- $values := index . 1 }}
+  {{- $rootContext := index . 2 }}
   {{- $kebabCaseAuthName := printf "%s-%s-%s-%s" $projectName $values.role $values.kind $values.name | kebabcase }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
-  name: {{ $kebabCaseAuthName | replace "--" "-" }}
+  name: {{ list $kebabCaseAuthName $rootContext | include "slugify" | replace "--" "-" }}
   namespace: {{ $projectName }}
 spec:
   accessLevel: {{ $values.role }}
@@ -124,11 +125,12 @@ spec:
 {{- end }}
 
 {{- define "authorization.rules" }}
-    {{- $projectName := index . 0 }}
-    {{- $subjects := index . 1 }}
-    {{- range $ruleValues := $subjects }}
-        {{- include "authorization.rule" (list $projectName $ruleValues) }}
-    {{- end }}
+  {{- $projectName := index . 0 }}
+  {{- $subjects := index . 1 }}
+  {{- $rootContext := index . 2 }}
+  {{- range $ruleValues := $subjects }}
+    {{- include "authorization.rule" (list $projectName $ruleValues $rootContext) }}
+  {{- end }}
 {{- end }}
 
 {{- $moduleValues := $.Values.multitenancyManager }}
@@ -142,6 +144,6 @@ spec:
     {{- $templates := include "prepare.templates" ( list $projectTypeValues.resourcesTemplate $projectValues.projectName $) }}
     {{- tpl $templates $projectValues }}
 
-    {{- include "authorization.rules" (list $projectValues.projectName $projectTypeValues.subjects)}}
+    {{- include "authorization.rules" (list $projectValues.projectName $projectTypeValues.subjects $)}}
 
 {{- end }}
