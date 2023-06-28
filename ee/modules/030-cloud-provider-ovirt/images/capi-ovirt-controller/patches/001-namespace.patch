@@ -1,0 +1,18 @@
+Subject: [PATCH] namespace patch
+---
+Index: pkg/utils/constants.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/utils/constants.go b/pkg/utils/constants.go
+--- a/pkg/utils/constants.go	(revision 22d89b3fd9e2e395a62f71092487d26c8940052e)
++++ b/pkg/utils/constants.go	(date 1687950121855)
+@@ -4,6 +4,6 @@
+ 	OvirtIDAnnotationKey      = "VmId"
+ 	ProviderIDPrefix          = "ovirt://"
+ 	OvirtCloudCredsSecretName = "ovirt-credentials"
+-	NAMESPACE                 = "openshift-machine-api"
++	NAMESPACE                 = "d8-cloud-provider-ovirt"
+ 	UserAgent                 = "cluster-api-provider-ovirt"
+ )
