@@ -64,7 +64,7 @@ registries:
     shortname: Docker Registry
     url: https://docs.docker.com/registry/
   quay:
-    longname: Project Quay<sup>*</sup>
+    longname: Project Quay
     shortname: Quay
     url: https://quay.io/
     additionalInfo:
