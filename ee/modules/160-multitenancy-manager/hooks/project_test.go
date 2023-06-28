@@ -62,13 +62,13 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 				pr1 := f.KubernetesGlobalResource("Project", "test-1")
 				Expect(pr1.Exists()).To(BeTrue())
 
-				Expect(pr1.Field("status.conditions")).To(MatchJSON(`[{"name":"Deploying","status":false}]`))
+				Expect(pr1.Field("status.conditions")).To(MatchJSON(`[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`))
 				Expect(pr1.Field("status.statusSummary")).To(MatchJSON(`{"status":false}`))
 
 				pr2 := f.KubernetesGlobalResource("Project", "test-2")
 				Expect(pr2.Exists()).To(BeTrue())
 
-				Expect(pr2.Field("status.conditions")).To(MatchJSON(`[{"name":"Deploying","status":false}]`))
+				Expect(pr2.Field("status.conditions")).To(MatchJSON(`[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`))
 				Expect(pr2.Field("status.statusSummary")).To(MatchJSON(`{"status":false}`))
 			})
 
