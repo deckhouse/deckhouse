@@ -63,3 +63,22 @@ registries:
     longname: Docker Registry v2
     shortname: Docker Registry
     url: https://docs.docker.com/registry/
+  quay:
+    longname: Project Quay<sup>*</sup>
+    shortname: Quay
+    url: https://quay.io/
+    additionalInfo:
+      ru: |
+        Требуется добавить поддержку <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">дополнительных типов OCI артифактов</a>:
+
+        ALLOWED_OCI_ARTIFACT_TYPES:
+          ...
+          "application/vnd.aquasec.trivy.config.v1+json":
+            - "db.tar.gz:application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
+      en: |
+        Need to add support for <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">additional types of OCI artifacts</a>:'
+
+        ALLOWED_OCI_ARTIFACT_TYPES:
+          ...
+          "application/vnd.aquasec.trivy.config.v1+json":
+            - "db.tar.gz:application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
