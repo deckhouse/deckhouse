@@ -129,7 +129,7 @@ func applyNodeGroupCRITypeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 	defaultCRIValue, ok := input.Values.GetOk("global.clusterConfiguration.defaultCRI")
 	if !ok {
-		return errors.New("defaultCRI not setup in clusterConfiguration")
+		return errors.New("defaultCRI absent in clusterConfiguration")
 	}
 	defaultCRI := defaultCRIValue.String()
 
