@@ -31,14 +31,14 @@ import (
 // so that it doesn't update ingress controllers before a new version of Kruise Controller is deployed.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:       "/modules/ingress-nginx/safe_daemonset_update",
+	Queue:        "/modules/ingress-nginx/safe_daemonset_update",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(disableKruiseControllerDeployment))
 
 const (
 	kruisePatchAnnotation = "ingress.deckhouse.io/force-max-unavailable"
-	targetNamespace  = "d8-ingress-nginx"
-	targetDeployment = "kruise-controller-manager"
+	targetNamespace       = "d8-ingress-nginx"
+	targetDeployment      = "kruise-controller-manager"
 )
 
 func disableKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Container) error {
@@ -64,7 +64,7 @@ func disableKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Conta
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	annotations[kruisePatchAnnotation]=""
+	annotations[kruisePatchAnnotation] = ""
 	deployment.Spec.Replicas = int32Ptr(0)
 	deployment.ObjectMeta.SetAnnotations(annotations)
 
