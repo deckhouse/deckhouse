@@ -6,8 +6,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package internal
 
 import (
-	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+
+	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 )
 
 func SetErrorStatusProject(patcher *object_patch.PatchCollector, projectName, errMsg string, conditions []v1alpha1.Condition) {
