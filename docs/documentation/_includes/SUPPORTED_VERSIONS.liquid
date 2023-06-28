@@ -100,12 +100,30 @@ Container registry, с которыми Deckhouse гарантированно �
 <tbody>
 {%- for registry in site.data.supported_versions.registries %}
 <tr>
-  <td style="text-align: left"><p><a href="{{ registry[1].url }}" target="_blank">{{ registry[1].longname }}</a></p></td>
-{%- if registry[1].additionalInfo %}
-  <td style="text-align: center"><p>{{ registry[1].additionalInfo[page.lang] }}</p></td>
-{%- endif %}
+  <td style="text-align: left"
+  {%- if registry[1].additionalInfo %} table__hint_{{ registry[0] }}{% endif -%}>
+  <p><a href="{{ registry[1].url }}" target="_blank">{{ registry[1].longname }}</a></p>
+  </td>
 </tr>
 {%- endfor %}
 </tbody>
 </table>
 </div>
+
+<script type="text/javascript">
+$(document).ready(function () {
+{%- for registry in site.data.supported_versions.registries %}
+{%- if registry[1].additionalInfo %}
+    tippy('[table__hint_{{ registry[0] }}]', {
+        interactive: true,
+        interactiveDebounce: 10,
+        maxWidth: 600,
+        theme: 'custom',
+        allowHTML: true,
+        arrow: false,
+        content: `{{ registry[1].additionalInfo[page.lang] }}`
+      });
+{%- endif -%}
+{%- endfor %}
+});
+</script>
