@@ -58,7 +58,7 @@
         The reason is `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while sending logs to `{{ $labels.component_type }}`.
 
         Consider checking logs of the pod or follow advanced debug instructions.
-        `kubectl -n d8-log-shipper logs {{ $labels.host }}`
+        `kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
 
   - alert: D8LogShipperCollectLogErrors
     for: 10m
@@ -81,7 +81,7 @@
         The reason is `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while reading `{{ $labels.component_type }}`.
 
         Consider checking logs of the pod or follow advanced debug instructions.
-        `kubectl -n d8-log-shipper logs {{ $labels.host }}`
+        `kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
 
   - alert: D8LogShipperLogsDroppedByRateLimit
     for: 10m
