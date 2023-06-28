@@ -9,15 +9,7 @@ type: Opaque
 data:
   # obligatory
   type: {{ b64enc "ovirt" | quote }}
-
   # ovirt
-  ovirt_url: { { .Values.cloudProviderOvirt.internal.connection.authURL | b64enc | quote } }
-  ovirt_username: { { .Values.cloudProviderOvirt.internal.connection.username | b64enc | quote } }
-  ovirt_password: { { .Values.cloudProviderOvirt.internal.connection.password | b64enc | quote } }
-  ovirt_insecure: { { .Values.cloudProviderOvirt.internal.connection.tlsInsecure | toString | b64enc | quote } }
-  { { - if hasKey .Values.cloudProviderOvirt.internal.connection "caBundle" } }
-  ovirt_ca_bundle: { { .Values.cloudProviderOvirt.internal.connection.caBundle | b64enc | quote } }
-
   {{- $internal := .Values.cloudProviderOvirt.internal }}
   {{- $ovirtValues := dict "connection" dict }}
   {{- if and (hasKey $internal.connection "authURL") ($internal.connection.authURL) }}
@@ -25,7 +17,7 @@ data:
   {{- else }}
     {{ cat "No key authURL in module internal values" $internal.connection.authURL | fail }}
   {{- end }}
-  {{- if and (hasKey $internal.connection "username") ($internal.connection.username)}}
+  {{- if and (hasKey $internal.connection "username") ($internal.connection.username) }}
     {{- $_ := set $ovirtValues.connection "username" $internal.connection.username }}
   {{- else }}
     {{ cat "No key username in module internal values" $internal.connection.username | fail }}
@@ -35,7 +27,7 @@ data:
   {{- else }}
     {{ cat "No key password in module internal values" $internal.connection.password | fail }}
   {{- end }}
-  {{- if hasKey $internal.connection "caBundle" }}
+  {{- if hasKey $internal.connection "caBundle"}}
     {{- $_ := set $ovirtValues.connection "caBundle" $internal.connection.caBundle }}
   {{- end }}
   {{- if hasKey $internal.connection "tlsInsecure" }}
