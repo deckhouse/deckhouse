@@ -62,14 +62,14 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 				pr1 := f.KubernetesGlobalResource("Project", "test-1")
 				Expect(pr1.Exists()).To(BeTrue())
 
-				Expect(pr1.Field("status.conditions")).To(MatchJSON(`[{"name":"Sync","status":true}]`))
-				Expect(pr1.Field("status.statusSummary")).To(MatchJSON(`{"status":true}`))
+				Expect(pr1.Field("status.conditions")).To(MatchJSON(`[{"name":"Deploying","status":false}]`))
+				Expect(pr1.Field("status.statusSummary")).To(MatchJSON(`{"status":false}`))
 
 				pr2 := f.KubernetesGlobalResource("Project", "test-2")
 				Expect(pr2.Exists()).To(BeTrue())
 
-				Expect(pr2.Field("status.conditions")).To(MatchJSON(`[{"name":"Sync","status":true}]`))
-				Expect(pr2.Field("status.statusSummary")).To(MatchJSON(`{"status":true}`))
+				Expect(pr2.Field("status.conditions")).To(MatchJSON(`[{"name":"Deploying","status":false}]`))
+				Expect(pr2.Field("status.statusSummary")).To(MatchJSON(`{"status":false}`))
 			})
 
 			It("Invalid Project status with error", func() {
@@ -77,8 +77,8 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 				Expect(pr3.Exists()).To(BeTrue())
 
 				// Expect(len(pr3.Field("status.conditions").Array())).To(Equal(1))
-				Expect(pr3.Field("status.conditions")).To(MatchJSON(`[{"message":"template data didn't match OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`))
-				Expect(pr3.Field("status.statusSummary")).To(MatchJSON(`{"message":"template data didn't match OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`))
+				Expect(pr3.Field("status.conditions")).To(MatchJSON(`[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`))
+				Expect(pr3.Field("status.statusSummary")).To(MatchJSON(`{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`))
 			})
 		})
 	})
@@ -130,10 +130,10 @@ spec:
 status:
   conditions:
     - name: Error
-      message: "template data didn't match OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
+      message: "template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
       status: false
     - name: Error
-      message: "template data didn't match OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
+      message: "template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
       status: false
 `
 	expectedTwoProjects = `

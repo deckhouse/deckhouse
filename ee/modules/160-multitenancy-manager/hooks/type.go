@@ -16,18 +16,14 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
 )
 
-const (
-	projectTypesQueue = "project_types"
-)
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.ModuleQueue(projectTypesQueue),
+	Queue: internal.ModuleQueue(internal.ProjectTypesQueue),
 	OnBeforeHelm: &go_hook.OrderedConfig{
 		Order: 20,
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       projectTypesQueue,
+			Name:       internal.ProjectTypesQueue,
 			ApiVersion: internal.APIVersion,
 			Kind:       internal.ProjectTypeKind,
 			FilterFunc: filterProjectTypes,
@@ -53,7 +49,7 @@ func filterProjectTypes(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func handleProjectTypes(input *go_hook.HookInput) error {
-	ptSnapshots := input.Snapshots[projectTypesQueue]
+	ptSnapshots := input.Snapshots[internal.ProjectTypesQueue]
 
 	projectTypesValues := make(map[string]v1alpha1.ProjectTypeSpec)
 	for _, ptSnapshot := range ptSnapshots {

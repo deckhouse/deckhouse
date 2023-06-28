@@ -20,24 +20,21 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
 )
 
-const (
-	projectsQueue = "projects"
-)
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.ModuleQueue(projectsQueue),
+	Queue: internal.ModuleQueue(internal.ProjectsQueue),
 	OnBeforeHelm: &go_hook.OrderedConfig{
 		Order: 25,
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       projectsQueue,
+			Name:       internal.ProjectsQueue,
 			ApiVersion: internal.APIVersion,
 			Kind:       internal.ProjectKind,
 			FilterFunc: filterProjects,
 		},
 		{
-			Name:       projectTypesQueue,
+			// subscribe to ProjectTypes to update Projects when ProjectType changes
+			Name:       internal.ProjectTypesQueue,
 			ApiVersion: internal.APIVersion,
 			Kind:       internal.ProjectTypeKind,
 			FilterFunc: filterProjectTypesForUpdateProjects,
@@ -82,7 +79,7 @@ type projectValues struct {
 }
 
 func handleProjects(input *go_hook.HookInput) error {
-	projectSnapshots := input.Snapshots[projectsQueue]
+	projectSnapshots := input.Snapshots[internal.ProjectsQueue]
 
 	values := make([]projectValues, 0, len(projectSnapshots))
 	for _, projectSnap := range projectSnapshots {
@@ -135,7 +132,7 @@ func handleProjects(input *go_hook.HookInput) error {
 			Params:          project.Template,
 		})
 
-		setSyncStatusProject(input.PatchCollector, project.Name, project.Conditions)
+		internal.SetDeployingStatusProject(input.PatchCollector, project.Name, project.Conditions)
 	}
 
 	input.Values.Set(internal.ModuleValuePath(internal.ProjectValuesPath), values)
@@ -144,24 +141,6 @@ func handleProjects(input *go_hook.HookInput) error {
 
 func setErrorProjectWrap(patcher *object_patch.PatchCollector, projectName string, conditions []v1alpha1.Condition) func(errMsg string) {
 	return func(errMsg string) {
-		setErrorStatusProject(patcher, projectName, errMsg, conditions)
+		internal.SetErrorStatusProject(patcher, projectName, errMsg, conditions)
 	}
-}
-
-func setErrorStatusProject(patcher *object_patch.PatchCollector, projectName, errMsg string, conditions []v1alpha1.Condition) {
-	conditions = append(conditions, v1alpha1.Condition{
-		Name:    "Error",
-		Message: errMsg,
-		Status:  false,
-	})
-
-	internal.SetProjectStatus(patcher, projectName, false, errMsg, conditions)
-}
-
-func setSyncStatusProject(patcher *object_patch.PatchCollector, projectName string, conditions []v1alpha1.Condition) {
-	conditions = append(conditions, v1alpha1.Condition{
-		Name:   "Sync",
-		Status: true,
-	})
-	internal.SetProjectStatus(patcher, projectName, true, "", conditions)
 }
