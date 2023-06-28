@@ -23,6 +23,15 @@ import (
 )
 
 const (
+	ngCriDocker = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: group
+spec:
+  cri:
+    type: Docker
+`
 	ngCriNotManagedKubeVer1_23 = `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -357,6 +366,38 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 		})
 
 		It("Max kube version = "+notManagedCriMaxKubeVersion, func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(hasNodesWithDocker)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeTrue())
+		})
+	})
+	Context("NodeGroup with docker and without Nodes", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
+			f.BindingContexts.Set(
+				f.KubeStateSetAndWaitForBindingContexts(ngCriDocker, 1),
+			)
+			f.RunHook()
+		})
+
+		It(hasNodesWithDocker+" should exist and true", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(hasNodesWithDocker)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeTrue())
+		})
+	})
+	Context("NodeGroup with docker and Nodes with containerd", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
+			f.BindingContexts.Set(
+				f.KubeStateSetAndWaitForBindingContexts(ngCriDocker+nodeContainerd, 1),
+			)
+			f.RunHook()
+		})
+
+		It(hasNodesWithDocker+" should exist and true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			value, exists := requirements.GetValue(hasNodesWithDocker)
 			Expect(exists).To(BeTrue())

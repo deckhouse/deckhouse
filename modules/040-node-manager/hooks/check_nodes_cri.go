@@ -148,6 +148,10 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 
 	for _, item := range ngSnap {
 		ng := item.(nodeGroupCRIType)
+		if ng.CRIType == criTypeDocker {
+			requirements.SaveValue(hasNodesWithDocker, true)
+			return nil
+		}
 		ngCRITypeMap[ng.Name] = ng.CRIType
 	}
 
