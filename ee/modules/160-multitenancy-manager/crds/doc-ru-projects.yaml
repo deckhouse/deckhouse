@@ -5,12 +5,6 @@ spec:
         openAPIV3Schema:
           description: ""
           properties:
-            apiVersion:
-              description: Версия API объекта.
-            kind:
-              description: Kind объекта.
-            metadata:
-              description: ""
             spec:
               description: ""
               properties:

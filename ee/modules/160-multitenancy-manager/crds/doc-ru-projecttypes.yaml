@@ -8,12 +8,6 @@ spec:
 
             Этот на этот ресурс ссылается ресурс [Project](cr.html#project).
           properties:
-            apiVersion:
-              description: Версия API объекта.
-            kind:
-              description: Kind объекта.
-            metadata:
-              description: ""
             spec:
               description: ""
               properties:
@@ -28,7 +22,8 @@ spec:
                       description: ""
                 openAPI:
                   description:
-                    Спецификация OpenAPI для значений (`values`) шаблона (параметр [resourcesTemplate](#projecttype-v1alpha1-spec-resourcestemplate)).
+                    Спецификация OpenAPI для значений (`values`) шаблона
+                    (параметр [resourcesTemplate](#projecttype-v1alpha1-spec-resourcestemplate)).
                 resourcesTemplate:
                   description: |
                     Шаблоны ресурсов в формате `helm`, которые требуется создать при настройке нового окружения.
@@ -44,15 +39,15 @@ spec:
                     > так как они автоматически проставятся из названия окружения (CR `Project`).
                 subjects:
                   description:
-                    Список ServiceAccount'ов, групп (`Group`) и пользователей (`User`) для предоставления
-                    доступа к созданному окружению.
+                    Список ServiceAccount'ов, групп (`Group`) и пользователей
+                    (`User`) для предоставления доступа к созданному окружению.
                   items:
                     description: ""
                     properties:
                       kind:
                         description:
-                          Kind целевого ресурса для применения доступа к окружению.
-                          (`ServiceAccount`, `Group` или `User`).
+                          Kind целевого ресурса для применения доступа к
+                          окружению. (`ServiceAccount`, `Group` или `User`).
                       name:
                         description: Имя целевого ресурса для применения доступа к окружению.
                       namespace:
