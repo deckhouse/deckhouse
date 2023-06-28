@@ -41,4 +41,4 @@ data:
   {{- if hasKey $internal.connection "tlsInsecure" }}
     {{- $_ := set $ovirtValues.connection "tlsInsecure" $internal.connection.tlsInsecure }}
   {{- end }}
-  ovirt: {{ $openstackValues | toJson | b64enc | quote }}
+  ovirt: {{ $ovirtValues | toJson | b64enc | quote }}
