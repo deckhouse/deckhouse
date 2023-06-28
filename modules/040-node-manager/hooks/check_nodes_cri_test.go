@@ -149,15 +149,6 @@ status:
 `
 )
 
-const globalValues = `
-  apiVersion: deckhouse.io/v1
-  clusterType: Cloud
-  kind: ClusterConfiguration
-  kubernetesVersion: "1.23"
-  podSubnetCIDR: 10.111.0.0/16
-  serviceSubnetCIDR: 10.222.0.0/16
-`
-
 var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 	f := HookExecutionConfigInit(`{"global": {"clusterConfiguration": {"apiVersion": "deckhouse.io/v1", "clusterType": "Static", "kind": "ClusterConfiguration", "kubernetesVersion": "1.23", "podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16"}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
