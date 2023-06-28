@@ -22,8 +22,6 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
      email: user@cluster
      # passwordUser
      password: $2a$10$yROPLTTMTI.AkkAskKGiUuQW3asoGosGgppj1NYXUboHx/onpGE7q
-     groups:
-       - users
    ---
    apiVersion: deckhouse.io/v1
    kind: User
@@ -33,8 +31,6 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
      email: admin@cluster
      # passwordAdmin
      password: $2a$10$UpCxQCpMqJoVm53BvUyPluprS/mUtJ/yUoSuM8i3Z0TlbiBxGiB1q
-     groups:
-       - admins
    ```
 
    Run the following command to create users:
@@ -52,9 +48,9 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    Below is an example of its output:
 
    ```shell
-   NAME    EMAIL           GROUPS       EXPIRE_AT
-   admin   admin@cluster   ["admins"]
-   user    user@cluster    ["users"]
+   NAME    EMAIL           GROUPS   EXPIRE_AT
+   admin   admin@cluster
+   user    user@cluster
    ```
 
 1. Create an environment template using the [ProjectType](cr.html#projecttype) custom resource:
@@ -77,11 +73,11 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
      name: test-project-type
    spec:
      subjects:
-       - kind: Group
-         name: admins
+       - kind: User
+         name: admin@cluster
          role: Admin
-       - kind: Group
-         name: users
+       - kind: User
+         name: user@cluster
          role: User
      namespaceMetadata:
        annotations:
@@ -201,7 +197,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    The following is an example of the command output:
 
    ```text
-   NAME                READY   MESSAGE
+   NAME                READY
    test-project-type   true
    ```
 
@@ -244,7 +240,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    Below is an example of the command output:
 
    ```shell
-   NAME           READY   DESCRIPTION                              MESSAGE
+   NAME           READY   DESCRIPTION
    test-project   true    Test case from Deckhouse documentation
    ```
 
@@ -256,20 +252,20 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    $ kubectl get -n test-project namespaces test-project
    NAME           STATUS   AGE
    test-project   Active   5m
-   
+
    $ kubectl get authorizationrules.deckhouse.io -n test-project
-   NAME                            AGE
-   test-project-admin-user-admin   5m
-   test-project-user-user-user     5m
-   
+   NAME                                    AGE
+   test-project-admin-user-admin-cluster   5m
+   test-project-user-user-user-cluster     5m
+
    $ kubectl get -n test-project resourcequotas
    NAME                    AGE   REQUEST                                                              LIMIT
    test-project-all-pods   5m   requests.cpu: 0/5, requests.memory: 0/5Gi, requests.storage: 0/1Gi   limits.cpu: 0/5, limits.memory: 0/5Gi
-   
+
    $ kubectl get -n test-project limitranges
    NAME                          CREATED AT
    test-project-all-containers   2023-06-01T14:37:42Z
-   
+
    $ kubectl get -n test-project networkpolicies.networking.k8s.io
    NAME                                             POD-SELECTOR   AGE
    test-project-deny-all-except-current-namespace   <none>         5m
@@ -285,7 +281,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    $ kubectl get limitranges -n test-project --kubeconfig admin-kubeconfig.yaml
    NAME                          CREATED AT
    test-project-all-containers   2023-06-01T14:37:42Z
-   
+
    $ kubectl get limitranges -n test-project --kubeconfig user-kubeconfig.yaml
    NAME                          CREATED AT
    test-project-all-containers   2023-06-01T14:37:42Z
