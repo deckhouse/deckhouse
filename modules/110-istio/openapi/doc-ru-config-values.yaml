@@ -127,7 +127,7 @@ properties:
           pattern: '^[0-9]{1,5}$'
       resourcesManagement:
         description: |
-          Настройки управления ресурсами sidecar-контейнера Istio.
+          Управляет ресурсами sidecar-контейнера Istio.
 
           **Внимание!** Настройка применяется только для новых Pod'ов с `istio-proxy`.
         properties:
