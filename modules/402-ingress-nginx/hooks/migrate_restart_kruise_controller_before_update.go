@@ -81,6 +81,7 @@ func restartKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Conta
 	if err != nil {
 		return err
 	}
+	time.Sleep(5 * time.Second)
 
 	return nil
 }
