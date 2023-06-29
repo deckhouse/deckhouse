@@ -261,9 +261,9 @@ properties:
         - ["8080", "8443"]
       resourcesManagement:
         description: |
-          istio sidecar resources management options.
+          Manages Istio sidecar container resources.
 
-          **Caution!** The setting only applies to new pods with istio-proxy.
+          **Caution!** The setting only applies to new Pods with `istio-proxy`.
         default: {}
         x-examples:
           - static:
