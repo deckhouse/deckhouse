@@ -473,3 +473,49 @@ done
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
 
 О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+
+## Как выбирается узел, на котором будет запущен Pod?
+
+За распределение Pod’ов по узлам отвечает планировщик Kubernetes (компонент `scheduler`).
+У него есть 2 фазы — Filtering и Scoring (на самом деле их больше, и есть еще pre-filtering / post-filtering, но глобально можно свести к двум фазам).
+
+### Общее устройство планировщика Kubernetes
+
+Планировщик состоит из плагинов, которые работают в рамках какой-либо фазы (фаз).
+
+Примеры плагинов:
+- **ImageLocality** — отдает предпочтение узлам, на которых уже есть образы контейнеров, которые используются в запускаемом Pod'е. Фаза: **Scoring**
+- **TaintToleration** — реализует механизм [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Фазы: **Filtering, Scoring**
+- **NodePorts** — проверяет, есть ли у узла свободные порты, необходимые для запуска Pod'а. Фаза: **Filtering**
+
+Полный список плагинов можно посмотреть в [документации Kubernetes](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
+
+### Логика работы
+
+Сначала идет фаза фильтрации (**Filtering**). В этот момент работают `filter`-плагины, которые из всего списка узлов выбирают те, которые попадают под условия фильтров (`taints`, `nodePorts`, `nodeName`, `unschedulable`, и т. д.). Если узлы лежат в разных зонах, то при выборе зоны чередуются, чтобы не размещать все Pod'ы в одной зоне.
+
+Предположим, что узлы распределяются по зонам следующим образом:
+
+```text
+Zone 1: Node 1, Node 2, Node 3, Node 4
+Zone 2: Node 5, Node 6
+```
+
+В этом случае они будут выбираться в следующем порядке:
+
+```text
+Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
+```
+
+Обратите внимание, что с целью оптимизации выбираются не все попадающие под условия узлы, а только их часть. По умолчанию функция выбора количества узлов линейная. Для кластера из ≤ 50 узлов будут выбраны 100% узлов, для кластера из 100 узлов — 50%, а для кластера из 5000 узлов — 10%. Минимальное значение — 5% при количестве узлов более 5000. Таким образом, при настройках по умолчанию узел может не попасть в список возможных узлов для запуска. Эту логику можно изменить (см. подробнее про параметр `percentageOfNodesToScore` в [документации Kubernetes](https://kubernetes.io/docs/reference/config-api/kube-scheduler-config.v1/)), но Deckhouse не дает такой возможности.
+
+После того как выбраны узлы, подходящие под условия, запускается фаза **Scoring**. Каждый плагин анализирует список отфильтрованных узлов и назначает оценку (score) каждому узлу. Оценки от разных плагинов суммируются. На этой фазе оцениваются доступные ресурсы на узлах, pod capacity, affinity, volume provisioning, и так далее. По итогам этой фазы выбирается узел с наибольшей оценкой. Если сразу несколько узлов получили максимальную оценку, узел выбирается случайным образом.
+
+В итоге Pod запускается на выбранном узле.
+
+#### Документация
+
+- [Общее описание scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/)
+- [Система плагинов](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
+- [Подробности фильтрации узлов](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)
+- [Исходный код scheduler](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)
