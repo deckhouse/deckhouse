@@ -61,6 +61,12 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, fmt.Errorf("dex authenticator has no spec field")
 	}
 
+	if v, ok := spec["applicationIngressCertificateSecretName"]; ok {
+		if v.(string) == "" {
+			delete(spec, "applicationIngressCertificateSecretName")
+		}
+	}
+
 	name := obj.GetName()
 	namespace := obj.GetNamespace()
 
