@@ -78,6 +78,7 @@ spec:
   imagePullPolicy: IfNotPresent
   linstorHttpsClientSecret: linstor-client-https-cert
   linstorHttpsControllerSecret: linstor-controller-https-cert
+  securedMetricsPort: 3370
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
