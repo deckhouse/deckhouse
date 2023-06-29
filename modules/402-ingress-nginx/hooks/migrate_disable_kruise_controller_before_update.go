@@ -32,7 +32,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/ingress-nginx/safe_daemonset_update",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(disableKruiseControllerDeployment))
 
 const (
