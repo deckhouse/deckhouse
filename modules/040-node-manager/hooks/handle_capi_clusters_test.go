@@ -136,8 +136,12 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Hook should fail", func() {
-			Expect(f).To(Not(ExecuteSuccessfully()))
+		It("clusters status infrastructure state should be true", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev1")
+			Expect(cluster.Exists()).To(BeTrue())
+			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
 		})
 	})
 
@@ -147,15 +151,11 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Must be executed successfully", func() {
+		It("clusters status infrastructure state should be true and ownerRef on infrastructure cluster should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-		})
 
-		It("clusters status infrastructure state should be true in all cases and ownerRef on infrastructure cluster should be set", func() {
-			Expect(f).To(ExecuteSuccessfully())
 			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev1")
 			infraCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "dev1")
-
 			Expect(cluster.Exists()).To(BeTrue())
 			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
 			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`
@@ -175,15 +175,11 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Must be executed successfully", func() {
+		It("clusters status infrastructure state should be true and ownerRef on infrastructure cluster should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-		})
 
-		It("clusters status infrastructure state should be true in all cases and ownerRef on infrastructure cluster should be set", func() {
-			Expect(f).To(ExecuteSuccessfully())
 			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev2")
 			infraCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "dev2")
-
 			Expect(cluster.Exists()).To(BeTrue())
 			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
 			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`
@@ -202,15 +198,11 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Must be executed successfully", func() {
+		It("clusters status infrastructure state should be true and ownerRef on infrastructure cluster should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-		})
 
-		It("clusters status infrastructure state should be true in all cases and ownerRef on infrastructure cluster should be set", func() {
-			Expect(f).To(ExecuteSuccessfully())
 			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev3")
 			infraCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "dev3")
-
 			Expect(cluster.Exists()).To(BeTrue())
 			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
 			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`

@@ -49,7 +49,6 @@ type clusterSpec struct {
 	InfrastructureRef *corev1.ObjectReference `json:"infrastructureRef,omitempty"`
 }
 
-// filterDynamicProbeNodeGroups returns the name of a nodegroup to consider or emptystring if it should be skipped
 func filterClusters(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var c capiCluster
 	err := sdk.FromUnstructured(obj, &c)
@@ -110,9 +109,12 @@ func updateCluster(input *go_hook.HookInput) error {
 	}
 
 	c := snap[0].(cluster)
+	// patch ready status
+	input.PatchCollector.MergePatch(statusPatch, c.APIVersion, c.Kind, c.Namespace, c.Name, object_patch.IgnoreMissingObject(), object_patch.WithSubresource("/status"))
 
 	if c.InfrastructureRef == nil {
-		return fmt.Errorf("cluster resource does not have infrastructureRef field: %v", c)
+		input.LogEntry.Warnf("cluster resource does not have infrastructureRef field: %v", c)
+		return nil
 	}
 
 	ownerRefPatch := map[string]interface{}{
@@ -130,9 +132,5 @@ func updateCluster(input *go_hook.HookInput) error {
 	}
 	// patch infrastructure cluster ownerRef
 	input.PatchCollector.MergePatch(ownerRefPatch, c.InfrastructureRef.APIVersion, c.InfrastructureRef.Kind, c.InfrastructureRef.Namespace, c.InfrastructureRef.Name, object_patch.IgnoreMissingObject())
-
-	// patch ready status
-	input.PatchCollector.MergePatch(statusPatch, c.APIVersion, c.Kind, c.Namespace, c.Name, object_patch.IgnoreMissingObject(), object_patch.WithSubresource("/status"))
-
 	return nil
 }
