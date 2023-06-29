@@ -51,7 +51,7 @@ spec:
                   type: string
                   description: 'Name of TLS-certificate secret specified in your application Ingress object to add to dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
                   example: 'ingress-tls'
-                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                  pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
                 applicationIngressClassName:
                   type: string
                   description: 'Ingress class that serves your application ingress resource.'
