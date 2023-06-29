@@ -94,7 +94,7 @@ type DexGroupStatus struct {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue: "/modules/user-authn",
+	Queue:        "/modules/user-authn",
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: "cron", Crontab: "*/5 * * * *"},
 	},
@@ -118,6 +118,8 @@ var mapOfUsersToGroups map[string]map[string]bool
 
 func getDexUsers(input *go_hook.HookInput) error {
 	users := make([]DexUserInternalValues, 0, len(input.Snapshots["users"]))
+
+	input.LogEntry.Println("AAAAA")
 
 	mapOfUsersToGroups = map[string]map[string]bool{}
 	groups := input.Snapshots["groups"]
