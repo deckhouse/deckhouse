@@ -19,7 +19,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/sdk"
@@ -39,31 +38,28 @@ func decodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{
 		return nil, err
 	}
 
+	fmt.Println(secret.Data)
 	res := map[string]interface{}{}
 	for k, v := range secret.Data {
 		res[k] = string(v)
 		// Try to load JSON from value.
 		var jsonValue interface{}
 		err := json.Unmarshal(v, &jsonValue)
-		if err != nil {
-			return res, err
-		}
-
-		switch v := jsonValue.(type) {
-		case map[string]interface{}:
-			res[k] = v
-		case []interface{}:
-			res[k] = v
-		case string:
-			res[k] = v
-			// This default will convert numbers into float64. It seems not ok for secret data.
-			//default:
-			//	res[k] = jsonValue
-		default:
-			return res, fmt.Errorf("unexpected json value type: %v, value: %v", reflect.TypeOf(jsonValue), jsonValue)
+		if err == nil {
+			switch v := jsonValue.(type) {
+			case map[string]interface{}:
+				res[k] = v
+			case []interface{}:
+				res[k] = v
+			case string:
+				res[k] = v
+				// This default will convert numbers into float64. It seems not ok for secret data.
+				//default:
+				//	res[k] = jsonValue
+			}
 		}
 	}
-
+	fmt.Println(res)
 	return res, nil
 }
 
