@@ -23,6 +23,7 @@ spec:
     # limitations under the License.
 
     # DRBD kernel-module-injector requires the kernel sources to be installed.
+    # Test comment
 
     version_in_use="$(uname -r)"
     if bb-is-distro-like? centos; then
