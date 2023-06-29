@@ -32,8 +32,6 @@ import (
 
 const (
 	someDate                   = "2022-11-29T16:33:08+03:30"
-	replicasBefore             = 3
-	replicasAfter              = 0
 	kruiseControllerDefinition = `
 apiVersion: apps/v1
 kind: Deployment
