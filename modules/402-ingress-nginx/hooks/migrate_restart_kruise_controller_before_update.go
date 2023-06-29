@@ -16,6 +16,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -31,17 +32,18 @@ import (
 // so that it doesn't update ingress controllers before a new version of Kruise Controller is deployed.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/ingress-nginx/scale_kruise_controller",
+	Queue:        "/modules/ingress-nginx/restart_kruise_controller",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-}, dependency.WithExternalDependencies(disableKruiseControllerDeployment))
+}, dependency.WithExternalDependencies(restartKruiseControllerDeployment))
 
 const (
 	kruisePatchAnnotation = "ingress.deckhouse.io/force-max-unavailable"
+	restartAnnotation     = "ingress.deckhouse.io/restartedAt"
 	targetNamespace       = "d8-ingress-nginx"
 	targetDeployment      = "kruise-controller-manager"
 )
 
-func disableKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Container) error {
+func restartKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Container) error {
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
@@ -65,8 +67,15 @@ func disableKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Conta
 		annotations = make(map[string]string)
 	}
 	annotations[kruisePatchAnnotation] = ""
-	deployment.Spec.Replicas = int32Ptr(0)
+
+	templateAnnotations := deployment.Spec.Template.ObjectMeta.GetAnnotations()
+	if templateAnnotations == nil {
+		templateAnnotations = make(map[string]string)
+	}
+	templateAnnotations[restartAnnotation] = time.Now().Format(time.RFC3339)
+
 	deployment.ObjectMeta.SetAnnotations(annotations)
+	deployment.Spec.Template.ObjectMeta.SetAnnotations(templateAnnotations)
 
 	_, err = kubeCl.AppsV1().Deployments(targetNamespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
 	if err != nil {

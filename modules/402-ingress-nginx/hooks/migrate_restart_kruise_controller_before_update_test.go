@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	anotherDeployment          = "test-nginx"
+	someDate                   = "2022-11-29T16:33:08+03:30"
 	replicasBefore             = 3
 	replicasAfter              = 0
 	kruiseControllerDefinition = `
@@ -46,37 +46,20 @@ spec:
     matchLabels:
       app: kruise
       control-plane: controller-manager
-  replicas: %d
+  replicas: 1
   template:
     metadata:
       labels:
         app: kruise
         control-plane: controller-manager
+      annotations:
+        %s: %s
     spec:
       containers:
       - command:
         - /manager
         image: mockImage:latest
         name: kruise
-`
-	anotherDeploymentDefinition = `
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: %s
-spec:
-  selector:
-    matchLabels:
-      app: test-nginx
-  replicas: %d
-  template:
-    metadata:
-      labels:
-        app: test-nginx
-    spec:
-      containers:
-      - name: test-nginx
-        image: nginx:latest
 `
 )
 
@@ -94,21 +77,12 @@ func createMockDeployment(cfg string) {
 }
 
 var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::", func() {
-	var kruiseDeploymentMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, "some-annotation", replicasBefore)
-	var kruiseDeploymentAnnotatedMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, kruisePatchAnnotation, replicasBefore)
-	var anotherDeploymentMock = fmt.Sprintf(anotherDeploymentDefinition, anotherDeployment, replicasBefore)
+	var kruiseDeploymentMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, "some-annotation", "some-annotation", someDate)
+	var kruiseDeploymentAnnotatedMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, kruisePatchAnnotation, restartAnnotation, someDate)
 
 	getDeployment := func(namespace, name string) (*appsv1.Deployment, error) {
 		deployment, err := dependency.TestDC.MustGetK8sClient().AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		return deployment, err
-	}
-
-	getDeploymentReplicas := func(namespace, name string) (int32, error) {
-		deployment, err := getDeployment(namespace, name)
-		if err != nil {
-			return 0, err
-		}
-		return *deployment.Spec.Replicas, nil
 	}
 
 	getDeploymentAnnotations := func(namespace, name string) (map[string]string, error) {
@@ -119,22 +93,38 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 		return deployment.ObjectMeta.GetAnnotations(), nil
 	}
 
-	assertScale := func(namespace, name string, replicas int32) {
-		r, err := getDeploymentReplicas(namespace, name)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(r).To(Equal(replicas))
+	getDeploymentTemplateAnnotations := func(namespace, name string) (map[string]string, error) {
+		deployment, err := getDeployment(namespace, name)
+		if err != nil {
+			return nil, err
+		}
+		return deployment.Spec.Template.ObjectMeta.GetAnnotations(), nil
 	}
 
-	checkAnnotationInPlace := func(namespace, name string) {
+	assertDeploymentAnnotationInPlace := func(namespace, name string) {
 		annotations, err := getDeploymentAnnotations(namespace, name)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(annotations).To(HaveKey(kruisePatchAnnotation))
 	}
 
-	checkAnnotationNotInPlace := func(namespace, name string) {
+	assertDeploymentAnnotationNotInPlace := func(namespace, name string) {
 		annotations, err := getDeploymentAnnotations(namespace, name)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(annotations).ToNot(HaveKey(kruisePatchAnnotation))
+	}
+
+	assertTemplateAnnotationNotUpdated := func(namespace, name, annotation string) {
+		templateAnnotations, err := getDeploymentTemplateAnnotations(namespace, name)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(templateAnnotations).To(HaveKey(restartAnnotation))
+		Expect(templateAnnotations[restartAnnotation]).To(BeEquivalentTo(annotation))
+	}
+
+	assertTemplateAnnotationUpdated := func(namespace, name, annotation string) {
+		templateAnnotations, err := getDeploymentTemplateAnnotations(namespace, name)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(templateAnnotations).To(HaveKey(restartAnnotation))
+		Expect(templateAnnotations[restartAnnotation]).ToNot(BeEquivalentTo(annotation))
 	}
 
 	Context("Empty cluster", func() {
@@ -158,15 +148,12 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			createMockDeployment(kruiseDeploymentMock)
-			createMockDeployment(anotherDeploymentMock)
 		})
 
-		It(fmt.Sprintf("Before running the hook, both deployments should have replicas set to %d", replicasBefore), func() {
+		It(fmt.Sprintf("Before running the hook, %s deployments should't have %s annotation", targetDeployment, kruisePatchAnnotation), func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			assertScale(targetNamespace, targetDeployment, replicasBefore)
-
-			assertScale(targetNamespace, anotherDeployment, replicasBefore)
+			assertDeploymentAnnotationNotInPlace(targetNamespace, targetDeployment)
 		})
 	})
 
@@ -177,44 +164,15 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			createMockDeployment(kruiseDeploymentMock)
-			createMockDeployment(anotherDeploymentMock)
 			f.RunHook()
 		})
 
-		It(fmt.Sprintf("After running the hook, %s deployment should have replicas set to %d and annotated with %s, and %s deployment should be unchanged", targetDeployment, replicasAfter, kruisePatchAnnotation, anotherDeployment), func() {
+		It(fmt.Sprintf("After running the hook, %s deployment should have %s annotations and %s .spec.template annotation", targetDeployment, kruisePatchAnnotation, restartAnnotation), func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			assertScale(targetNamespace, targetDeployment, replicasAfter)
+			assertDeploymentAnnotationInPlace(targetNamespace, targetDeployment)
 
-			checkAnnotationInPlace(targetNamespace, targetDeployment)
-
-			assertScale(targetNamespace, anotherDeployment, replicasBefore)
-
-			checkAnnotationNotInPlace(targetNamespace, anotherDeployment)
-		})
-	})
-
-	Context("", func() {
-		f := HookExecutionConfigInit(`{}`, `{}`)
-
-		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateOnStartupContext())
-			createMockDeployment(kruiseDeploymentMock)
-			createMockDeployment(anotherDeploymentMock)
-			f.RunHook()
-		})
-
-		It(fmt.Sprintf("After running the hook, %s deployment should have replicas set to %d and %s annotation, and %s deployment should be unchanged", targetDeployment, replicasAfter, kruisePatchAnnotation, anotherDeployment), func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			assertScale(targetNamespace, targetDeployment, replicasAfter)
-
-			checkAnnotationInPlace(targetNamespace, targetDeployment)
-
-			assertScale(targetNamespace, anotherDeployment, replicasBefore)
-
-			checkAnnotationNotInPlace(targetNamespace, anotherDeployment)
+			assertTemplateAnnotationUpdated(targetNamespace, targetDeployment, someDate)
 		})
 	})
 
@@ -225,20 +183,15 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			createMockDeployment(kruiseDeploymentAnnotatedMock)
-			createMockDeployment(anotherDeploymentMock)
 			f.RunHook()
 		})
 
-		It(fmt.Sprintf("After running the hook, annotated %s deployment should be unchanged, and %s deployment should be unchanged", targetDeployment, anotherDeployment), func() {
+		It(fmt.Sprintf("After running the hook, annotated %s deployment shouldn't be restarted", targetDeployment), func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			assertScale(targetNamespace, targetDeployment, replicasBefore)
+			assertDeploymentAnnotationInPlace(targetNamespace, targetDeployment)
 
-			checkAnnotationInPlace(targetNamespace, targetDeployment)
-
-			assertScale(targetNamespace, anotherDeployment, replicasBefore)
-
-			checkAnnotationNotInPlace(targetNamespace, anotherDeployment)
+			assertTemplateAnnotationNotUpdated(targetNamespace, targetDeployment, someDate)
 
 		})
 	})
