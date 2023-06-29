@@ -93,6 +93,7 @@ type DexGroupStatus struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue: "/modules/user-authn",
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: "cron", Crontab: "*/5 * * * *"},

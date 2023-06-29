@@ -31,7 +31,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/user-authn",
+	Queue: "/modules/user-authn/migration",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "users",
