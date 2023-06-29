@@ -1,9 +1,10 @@
-{{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+{{- if hasKey .Values.nodeManager.internal "cloudProvider" }}
+  {{- $prefix := .Values.global.clusterConfiguration.cloud | dig "prefix" "default" }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
-  name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
+  name: {{ $prefix }}
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
   annotations:
@@ -20,19 +21,21 @@ spec:
       cidrBlocks:
         - {{ .Values.global.clusterConfiguration.serviceSubnetCIDR }}
     serviceDomain: {{ .Values.global.clusterConfiguration.clusterDomain }}
+  {{- if eq .Values.nodeManager.internal.cloudProvider "openstack" }}
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
-    kind: {{ printf "%sCluster" .Values.global.clusterConfiguration.cloud.provider }}
+    kind: OpenStackCluster
     namespace: d8-cloud-instance-manager
-    name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
+    name: {{ $prefix }}
+  {{- end }}
 ---
-# empy kubeconfig secret for cluster
+# empty kubeconfig secret for cluster
 apiVersion: v1
 data:
   value: Cg==
 kind: Secret
 metadata:
-  name: {{ .Values.global.clusterConfiguration.cloud.prefix }}-kubeconfig
+  name: {{ $prefix }}-kubeconfig
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: cluster.x-k8s.io/secret
