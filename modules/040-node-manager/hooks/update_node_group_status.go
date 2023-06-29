@@ -230,7 +230,10 @@ func updStatusFilterCpSecrets(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	var res []string
 
-	zonesDataBytes := sec.Data["zones"]
+	zonesDataBytes, ok := sec.Data["zones"]
+	if !ok {
+		return 0, nil
+	}
 
 	err = json.Unmarshal(zonesDataBytes, &res)
 	if err != nil {

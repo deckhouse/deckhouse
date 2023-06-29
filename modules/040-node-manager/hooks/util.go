@@ -38,7 +38,6 @@ func decodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{
 		return nil, err
 	}
 
-	fmt.Println(secret.Data)
 	res := map[string]interface{}{}
 	for k, v := range secret.Data {
 		res[k] = string(v)
@@ -59,7 +58,6 @@ func decodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{
 			}
 		}
 	}
-	fmt.Println(res)
 	return res, nil
 }
 
