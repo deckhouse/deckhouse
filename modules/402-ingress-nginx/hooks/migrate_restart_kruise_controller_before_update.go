@@ -84,5 +84,3 @@ func restartKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Conta
 
 	return nil
 }
-
-func int32Ptr(i int32) *int32 { return &i }
