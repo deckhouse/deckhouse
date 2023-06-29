@@ -31,7 +31,7 @@ import (
 // so that it doesn't update ingress controllers before a new version of Kruise Controller is deployed.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/ingress-nginx/safe_daemonset_update",
+	Queue:        "/modules/ingress-nginx/scale_kruise_controller",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(disableKruiseControllerDeployment))
 
