@@ -38,19 +38,25 @@
  - **[cilium-hubble]** Fix the error with the install if the [modules.https.mode](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-mode) global parameter is `OnlyInURI`. [#4846](https://github.com/deckhouse/deckhouse/pull/4846)
  - **[dashboard]** Fix the logout button (it doesn't appear). [#4929](https://github.com/deckhouse/deckhouse/pull/4929)
  - **[deckhouse-controller]** Add unit tests for change-registry. [#4949](https://github.com/deckhouse/deckhouse/pull/4949)
+ - **[dhctl]** Add cache identity for a `kubeconfig` parameter in the `converge` command. [#4961](https://github.com/deckhouse/deckhouse/pull/4961)
  - **[dhctl]** Fix parsing node index (CWE-190, CWE-681). [#5023](https://github.com/deckhouse/deckhouse/pull/5023)
  - **[dhctl]** Fix cut off terraform output. [#4800](https://github.com/deckhouse/deckhouse/pull/4800)
  - **[external-module-manager]** Prevent path traversal on zip unpacking [#5024](https://github.com/deckhouse/deckhouse/pull/5024)
  - **[global-hooks]** Delete `d8-deckhouse-validating-webhook-handler` validating webhook configurations [#5032](https://github.com/deckhouse/deckhouse/pull/5032)
+ - **[ingress-nginx]** Update the Kruise controller manager before updating Ingress Nginx so that an updated Kruise controller manager takes care of Ingress nginx demonsets. [#5050](https://github.com/deckhouse/deckhouse/pull/5050)
  - **[ingress-nginx]** Pathch Kruse controller manager logic so that it doesn't delete more than `maxUnavailable` Pods during updates. [#5039](https://github.com/deckhouse/deckhouse/pull/5039)
     Kruise controller manager will be restarted.
+ - **[linstor]** Update Linstor. Fix `D8LinstorControllerTargetDown` alert. [#4823](https://github.com/deckhouse/deckhouse/pull/4823)
  - **[monitoring-kubernetes]** Fix `kubelet-eviction-thresholds-exporter` Prometheus metric and `node-disk-usage` Prometheus rules. [#4888](https://github.com/deckhouse/deckhouse/pull/4888)
+ - **[node-manager]** Rework CRI requirements. Add ignoring `NodeGroup` with the `NotManaged` CRI type and Kubernetes version below `1.24`. [#5033](https://github.com/deckhouse/deckhouse/pull/5033)
+    In the next release (v1.48) it will be impossible to update Deckhouse until docker is replaced with containerd.
  - **[node-manager]** NodeUser fixed the ability to use parameters in sshPublicKeys [#4934](https://github.com/deckhouse/deckhouse/pull/4934)
  - **[prometheus]** Fix scheme for web exported URL on Grafana main page. [#4895](https://github.com/deckhouse/deckhouse/pull/4895)
  - **[runtime-audit-engine]** Unset `FALCO_BPF_PROBE` environment variable for the Falco container. [#4931](https://github.com/deckhouse/deckhouse/pull/4931)
  - **[runtime-audit-engine]** Bump Falco version to `v0.35.0`. [#4894](https://github.com/deckhouse/deckhouse/pull/4894)
     default
  - **[user-authn]** Do not send groups header from `DexAuthenticator`. [#5027](https://github.com/deckhouse/deckhouse/pull/5027)
+ - **[user-authn-crd]** Loosens the `applicationIngressCertificateSecretName` field's pattern to accept an empty string. [#5067](https://github.com/deckhouse/deckhouse/pull/5067)
  - **[user-authz]** Fix access for `PrivilegedUser` role. [#4903](https://github.com/deckhouse/deckhouse/pull/4903)
  - **[user-authz]** Forbid empty `.spec.subject` field in `ClusterAuthorizationRule`. [#4850](https://github.com/deckhouse/deckhouse/pull/4850)
 
