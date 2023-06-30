@@ -13,6 +13,18 @@
 #   vector_component_errors_total 3 - 3 errors occurred between scrapes
 #
 # This behavior makes the result of the rate function equal to zero.
+#
+#
+# We ignore error_code="annotation_failed" errors, because this is the expected behavior of the vector and we can't do anything about it.
+#
+# It works something like this:
+# 1. Vector collects metadata from pods while they are running.
+# 2. Vector collects logs from pods, enriching them with metadata.
+# 3. The pods go to Completed, Error, and Termination state.
+# 4. Vector no longer holds metadata.
+# 5. Vector has enrichment problems. Logs start shipping without metadata.
+#
+# If the cluster has frequent restarts, creation or deletion of pods, then these errors are expected behavior.
 
 - name: log-shipper-agent
   rules:
@@ -40,7 +52,7 @@
   - alert: D8LogShipperDestinationErrors
     for: 10m
     expr: |
-      sum by (error_type, stage, component_id, component_type, node) (
+      sum by (error_type, stage, component_id, component_type, host, node) (
         vector_component_errors_total{component_kind="sink", job="log-shipper-agent"}
       ) > 0
     labels:
@@ -54,17 +66,17 @@
       plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
-        Logs do not reach their destination, log-shipper agent on the {{ $labels.node }} node cannot send logs for more than 10 minutes.
-        The reason is '{{ $labels.error_type }}' errors occurred during the '{{ $labels.stage }}' stage while sending logs to '{{ $labels.component_type }}'..
+        Logs do not reach their destination, the `{{ $labels.host }}` log-shipper agent on the {{ $labels.node }} node cannot send logs for more than 10 minutes.
+        The reason is `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while sending logs to `{{ $labels.component_type }}`.
 
         Consider checking logs of the pod or follow advanced debug instructions.
-        `kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}`
+        `kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
 
   - alert: D8LogShipperCollectLogErrors
     for: 10m
     expr: |
-      sum by (error_type, stage, component_id, component_type, node) (
-        vector_component_errors_total{component_kind="source", job="log-shipper-agent"}
+      sum by (error_type, stage, component_id, component_type, host, node) (
+        vector_component_errors_total{component_kind="source", error_code!="annotation_failed", job="log-shipper-agent"}
       ) > 0
     labels:
       severity_level: "4"
@@ -73,15 +85,15 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Pods of log-shipper-agent cannot collect logs to the {{ $labels.component_id }} on the {{ $labels.node }} node.
+      summary: Pods of log-shipper-agent cannot collect logs to the `{{ $labels.component_id }}` on the `{{ $labels.node }}` node.
       plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
-        One of log-shipper agents on the {{ $labels.node }} node failed to collect metrics for more than 10 minutes.
-        The reason is '{{ $labels.error_type }}' errors occurred during the '{{ $labels.stage }}' stage while reading '{{ $labels.component_type }}'.
+        The `{{ $labels.host }}` log-shipper agent on the `{{ $labels.node }}` node failed to collect metrics for more than 10 minutes.
+        The reason is `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while reading `{{ $labels.component_type }}`.
 
         Consider checking logs of the pod or follow advanced debug instructions.
-        `kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}`
+        `kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
 
   - alert: D8LogShipperLogsDroppedByRateLimit
     for: 10m
