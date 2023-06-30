@@ -374,6 +374,55 @@ spec:
 			Expect(f.KubernetesGlobalResource("User", "admin").Field("status.expireAt").Exists()).To(BeFalse())
 
 		})
+
+	})
+
+	Context("Cluster with User and Group objects", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@example.com
+  password: password
+status:
+  groups:
+  - group-1
+  - group-2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: group-1
+spec:
+  name: group-1
+  members:
+  - kind: User
+    name: none
+`))
+			f.RunHook()
+		})
+		It("Should synchronize objects and fill internal values and status", func() {
+			Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchUnorderedJSON(`
+[
+  {
+    "name": "admin",
+    "spec": {
+      "email": "admin@example.com",
+      "password": "password",
+      "userID": "admin"
+    },
+    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "status": {}
+  }
+]`))
+			Expect(f.KubernetesGlobalResource("User", "admin").Field("status.groups").String()).To(MatchUnorderedJSON(`[]`))
+			Expect(f.KubernetesGlobalResource("User", "admin").Field("status.expireAt").Exists()).To(BeFalse())
+
+		})
 	})
 
 })
