@@ -28,7 +28,7 @@ import (
 
 // TODO: remove this hook after Deckhouse 1.50
 
-// Scale in Kruise Controller manager to zero before update Ingress-Nginx module
+// Restart Kruise Controller manager to before updating Ingress-Nginx module
 // so that it doesn't update ingress controllers before a new version of Kruise Controller is deployed.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
