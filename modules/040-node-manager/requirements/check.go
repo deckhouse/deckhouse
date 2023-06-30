@@ -26,10 +26,10 @@ import (
 )
 
 const (
-	minUbuntuVersionValuesKey      = "nodeManager:nodesMinimalOSVersionUbuntu"
-	requirementsKey                = "nodesMinimalOSVersionUbuntu"
-	containerdRequirementsKey      = "containerdOnAllNodes"
-	hasNodesOtherThanContainerdKey = "nodeManager:hasNodesOtherThanContainerd"
+	minUbuntuVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
+	requirementsKey           = "nodesMinimalOSVersionUbuntu"
+	containerdRequirementsKey = "containerdOnAllNodes"
+	hasNodesWithDocker        = "nodeManager:hasNodesWithDocker"
 )
 
 func init() {
@@ -60,13 +60,13 @@ func init() {
 			return true, nil
 		}
 
-		hasNodesOtherThanContainerd, exists := getter.Get(hasNodesOtherThanContainerdKey)
+		hasDocker, exists := getter.Get(hasNodesWithDocker)
 		if !exists {
 			return true, nil
 		}
 
-		if hasNodesOtherThanContainerd.(bool) {
-			return false, errors.New("has nodes other than containerd")
+		if hasDocker.(bool) {
+			return false, errors.New("has nodes with Docker CRI or defaultCRI is Docker")
 		}
 
 		return true, nil

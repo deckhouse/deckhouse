@@ -19,31 +19,51 @@
 package hooks
 
 import (
+	"errors"
 	"regexp"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (
-	hasNodesOtherThanContainerd = "nodeManager:hasNodesOtherThanContainerd"
+	hasNodesWithDocker          = "nodeManager:hasNodesWithDocker"
 	containerUnknownVersion     = "unknownVersion"
-	snapName                    = "check_nodes_cri"
+	nodeSnapName                = "check_nodes_cri"
+	notManagedCriMaxKubeVersion = "1.24.0"
+	nodeGroupSnapName           = "node_group"
+	criTypeNotManaged           = "NotManaged"
+	criTypeDocker               = "Docker"
+	criTypeContainerd           = "Containerd"
 )
 
-var isContainerdRegexp = regexp.MustCompile(`^containerd.*?`)
+type nodeGroupCRIType struct {
+	Name    string
+	CRIType string
+}
 
-// TODO: Remove this hook after 1.47 release
+type nodeCRIVersion struct {
+	NodeGroup               string
+	ContainerRuntimeVersion string
+	KubeletVersion          string
+}
+
+var isDockerRegexp = regexp.MustCompile(`^docker.*?`)
+
+// TODO: Remove this hook after 1.47.1 release
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         snapName,
+			Name:                         nodeSnapName,
 			WaitForSynchronization:       pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(true),
 			ExecuteHookOnEvents:          pointer.Bool(true),
@@ -59,30 +79,113 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyNodesCRIVersionFilter,
 		},
+		{
+			Name:                   nodeGroupSnapName,
+			Kind:                   "NodeGroup",
+			ApiVersion:             "deckhouse.io/v1",
+			WaitForSynchronization: pointer.Bool(false),
+			FilterFunc:             applyNodeGroupCRITypeFilter,
+		},
 	},
 }, discoverNodesCRIVersion)
 
 func applyNodesCRIVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	containerVersion, ok, err := unstructured.NestedString(obj.Object, "status", "nodeInfo", "containerRuntimeVersion")
-	if !ok {
-		return containerUnknownVersion, err
+	var node corev1.Node
+
+	err := sdk.FromUnstructured(obj, &node)
+	if err != nil {
+		return nil, err
 	}
-	return containerVersion, err
+
+	nodeGroup := node.Labels["node.deckhouse.io/group"]
+	containerRuntimeVersion := node.Status.NodeInfo.ContainerRuntimeVersion
+	kubeletVersion := node.Status.NodeInfo.KubeletVersion
+
+	if containerRuntimeVersion == "" {
+		containerRuntimeVersion = containerUnknownVersion
+	}
+
+	return nodeCRIVersion{
+		NodeGroup:               nodeGroup,
+		ContainerRuntimeVersion: containerRuntimeVersion,
+		KubeletVersion:          kubeletVersion,
+	}, nil
+}
+
+func applyNodeGroupCRITypeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ng ngv1.NodeGroup
+
+	err := sdk.FromUnstructured(obj, &ng)
+	if err != nil {
+		return nil, err
+	}
+
+	return nodeGroupCRIType{
+		Name:    ng.GetName(),
+		CRIType: ng.Spec.CRI.Type,
+	}, nil
 }
 
 func discoverNodesCRIVersion(input *go_hook.HookInput) error {
-	snap := input.Snapshots[snapName]
-	if len(snap) == 0 {
+	defaultCRIValue, ok := input.Values.GetOk("global.clusterConfiguration.defaultCRI")
+	if !ok {
+		return errors.New("defaultCRI absent in clusterConfiguration")
+	}
+	defaultCRI := defaultCRIValue.String()
+
+	if defaultCRI == criTypeDocker {
+		requirements.SaveValue(hasNodesWithDocker, true)
 		return nil
 	}
 
-	for _, s := range snap {
-		if !isContainerdRegexp.MatchString(s.(string)) {
-			requirements.SaveValue(hasNodesOtherThanContainerd, true)
-			return nil
-		}
+	ngSnap := input.Snapshots[nodeGroupSnapName]
+	ngCRITypeMap := make(map[string]string)
+
+	notManagedCriKubeVersion, err := semver.NewVersion(notManagedCriMaxKubeVersion)
+	if err != nil {
+		return err
 	}
 
-	requirements.SaveValue(hasNodesOtherThanContainerd, false)
+	for _, item := range ngSnap {
+		ng := item.(nodeGroupCRIType)
+		if ng.CRIType == criTypeDocker {
+			requirements.SaveValue(hasNodesWithDocker, true)
+			return nil
+		}
+		ngCRITypeMap[ng.Name] = ng.CRIType
+	}
+
+	nSnap := input.Snapshots[nodeSnapName]
+	if len(nSnap) == 0 {
+		return nil
+	}
+
+	for _, item := range nSnap {
+		n := item.(nodeCRIVersion)
+		criType, ok := ngCRITypeMap[n.NodeGroup]
+		if !ok {
+			criType = defaultCRI
+		}
+
+		kubeVersion, err := semver.NewVersion(n.KubeletVersion)
+		if err != nil {
+			return err
+		}
+
+		if !isDockerRegexp.MatchString(n.ContainerRuntimeVersion) {
+			continue
+		}
+
+		// skip if NodeGroup CRI Type == NotManaged and node kubernetes version < notManagedCriKubeVersion
+		if criType == criTypeNotManaged &&
+			kubeVersion.LessThan(notManagedCriKubeVersion) {
+			continue
+		}
+
+		requirements.SaveValue(hasNodesWithDocker, true)
+		return nil
+	}
+
+	requirements.SaveValue(hasNodesWithDocker, false)
 	return nil
 }
