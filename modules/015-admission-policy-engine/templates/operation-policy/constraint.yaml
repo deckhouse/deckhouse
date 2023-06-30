@@ -156,7 +156,7 @@ spec:
       {{- end }}
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    labels:
+    annotations:
       {{- $cr.spec.policies.requiredAnnotations.annotations | toYaml | nindent 6 }}
 {{- end }}
 

@@ -21,8 +21,6 @@ spec:
         openAPIV3Schema:
           type: object
           properties:
-            message:
-              type: string
             annotations:
               type: array
               description: >-
