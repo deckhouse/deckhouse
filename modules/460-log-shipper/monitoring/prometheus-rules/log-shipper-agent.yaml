@@ -13,6 +13,18 @@
 #   vector_component_errors_total 3 - 3 errors occurred between scrapes
 #
 # This behavior makes the result of the rate function equal to zero.
+#
+#
+# We ignore error_code="annotation_failed" errors, because this is the expected behavior of the vector and we can't do anything about it.
+#
+# It works something like this:
+# 1. Vector collects metadata from pods while they are running.
+# 2. Vector collects logs from pods, enriching them with metadata.
+# 3. The pods go to Completed, Error, and Termination state.
+# 4. Vector no longer holds metadata.
+# 5. Vector has enrichment problems. Logs start shipping without metadata.
+#
+# If the cluster has frequent restarts, creation or deletion of pods, then these errors are expected behavior.
 
 - name: log-shipper-agent
   rules:
@@ -64,7 +76,7 @@
     for: 10m
     expr: |
       sum by (error_type, stage, component_id, component_type, host, node) (
-        vector_component_errors_total{component_kind="source", error_code!~"annotation_failed", job="log-shipper-agent"}
+        vector_component_errors_total{component_kind="source", error_code!="annotation_failed", job="log-shipper-agent"}
       ) > 0
     labels:
       severity_level: "4"
