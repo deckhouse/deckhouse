@@ -133,7 +133,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 		}
 
 		var groups []string
-		groups = append(groups, dexUser.Spec.Groups...)
+		// groups = append(groups, dexUser.Spec.Groups...)
 		for g := range mapOfUsersToGroups[dexUser.Name] {
 			groups = append(groups, g)
 		}
