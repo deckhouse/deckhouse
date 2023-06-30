@@ -1,9 +1,12 @@
 {{- if hasKey .Values.nodeManager.internal "cloudProvider" }}
+  {{- $prefix := .Values.global.clusterConfiguration | dig "cloud" "prefix" "static" }}
+  {{- $provider := .Values.global.clusterConfiguration | dig "cloud" "provider" "static" }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
-  name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
+  name: {{ $prefix }}
+  {{- end }}
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
   annotations:
@@ -25,7 +28,7 @@ spec:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
     kind: OpenStackCluster
     namespace: d8-cloud-instance-manager
-    name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
+    name: {{ $prefix }}
   {{- end }}
   {{- if (.Values.global.enabledModules | has "cloud-provider-ovirt") }}
   infrastructureRef:
@@ -41,7 +44,7 @@ data:
   value: Cg==
 kind: Secret
 metadata:
-  name: {{ .Values.global.clusterConfiguration.cloud.prefix }}-kubeconfig
+  name: {{ $prefix }}-kubeconfig
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: cluster.x-k8s.io/secret
