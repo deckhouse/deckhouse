@@ -116,17 +116,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func getDexUsers(input *go_hook.HookInput) error {
 	users := make([]DexUserInternalValues, 0, len(input.Snapshots["users"]))
-
-	input.LogEntry.Println("AAAAA")
-
 	mapOfUsersToGroups := map[string]map[string]bool{}
-	input.LogEntry.Info("mapOfUsersToGroups: ", mapOfUsersToGroups)
 
 	groupsSnap := input.Snapshots["groups"]
 	for _, obj := range groupsSnap {
 		group := obj.(*DexGroup)
 		makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{}, mapOfUsersToGroups)
 	}
+
+	input.LogEntry.Info("mapOfUsersToGroups: ", mapOfUsersToGroups)
 
 	for _, user := range input.Snapshots["users"] {
 		dexUser, ok := user.(*DexUser)
