@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -123,8 +122,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 	input.LogEntry.Println("AAAAA")
 
 	mapOfUsersToGroups = map[string]map[string]bool{}
-	j, _ := json.Marshal(mapOfUsersToGroups)
-	input.LogEntry.Infof("mapOfUsersToGroups: %s", string(j))
+	input.LogEntry.Info("mapOfUsersToGroups", mapOfUsersToGroups)
 
 	groupsSnap := input.Snapshots["groups"]
 	for _, obj := range groupsSnap {
