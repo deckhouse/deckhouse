@@ -185,6 +185,8 @@ func getDexUsers(input *go_hook.HookInput) error {
 			}
 		}
 
+		input.LogEntry.Logf(5, "Update status for user %s. New status: %v", dexUser.Name, patch["status"])
+
 		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 
