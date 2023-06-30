@@ -28,8 +28,8 @@ import (
 
 // TODO: remove this hook after Deckhouse 1.50
 
-// Restart Kruise Controller manager to before updating Ingress-Nginx module
-// so that it doesn't update ingress controllers before a new version of Kruise Controller is deployed.
+// Update Kruise Controller manager image to a new version beforehand
+// so that the old one doesn't update ingress controllers before a new version of Kruise Controller is deployed.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/ingress-nginx/restart_kruise_controller",
@@ -38,12 +38,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 const (
 	kruisePatchAnnotation = "ingress.deckhouse.io/force-max-unavailable"
-	restartAnnotation     = "ingress.deckhouse.io/restartedAt"
 	targetNamespace       = "d8-ingress-nginx"
 	targetDeployment      = "kruise-controller-manager"
 )
 
-func restartKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Container) error {
+func restartKruiseControllerDeployment(input *go_hook.HookInput, dc dependency.Container) error {
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
@@ -59,6 +58,7 @@ func restartKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Conta
 
 	annotations := deployment.ObjectMeta.GetAnnotations()
 
+	// Annotations in place - we don't neet to patch kruise's image
 	if _, exists := annotations[kruisePatchAnnotation]; exists {
 		return nil
 	}
@@ -66,22 +66,42 @@ func restartKruiseControllerDeployment(_ *go_hook.HookInput, dc dependency.Conta
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	annotations[kruisePatchAnnotation] = ""
+	annotations[kruisePatchAnnotation] = time.Now().Format(time.RFC3339)
 
-	templateAnnotations := deployment.Spec.Template.ObjectMeta.GetAnnotations()
-	if templateAnnotations == nil {
-		templateAnnotations = make(map[string]string)
+	registry := input.Values.Get("global.modulesImages.registry.base").String()
+	if len(registry) == 0 {
+		return fmt.Errorf("Hook failed to get registry base")
 	}
-	templateAnnotations[restartAnnotation] = time.Now().Format(time.RFC3339)
+	kruiseImage := input.Values.Get("global.modulesImages.digests.ingressNginx.kruise").String()
+	if len(kruiseImage) == 0 {
+		return fmt.Errorf("Hook failed to get kruise image hash")
+	}
 
 	deployment.ObjectMeta.SetAnnotations(annotations)
-	deployment.Spec.Template.ObjectMeta.SetAnnotations(templateAnnotations)
-
+	for i, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == "kruise" {
+			deployment.Spec.Template.Spec.Containers[i].Image = fmt.Sprintf("%s:%s", registry, kruiseImage)
+			break
+		}
+	}
 	_, err = kubeCl.AppsV1().Deployments(targetNamespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
-	time.Sleep(10 * time.Second)
+
+	for i := 0; i < 10; i++ {
+		deployment, err := kubeCl.AppsV1().Deployments(targetNamespace).Get(context.TODO(), targetDeployment, metav1.GetOptions{})
+		if err != nil {
+			input.LogEntry.Warnf("Hook failed to get %s/%s deployment", targetNamespace, targetDeployment)
+		} else {
+			if *deployment.Spec.Replicas == deployment.Status.ReadyReplicas {
+				return nil
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	input.LogEntry.Warnf("Hook waiting for %s/%s deployment timed out", targetNamespace, targetDeployment)
 
 	return nil
 }

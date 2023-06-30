@@ -31,7 +31,9 @@ import (
 )
 
 const (
-	someDate                   = "2022-11-29T16:33:08+03:30"
+	base                       = "registry/kruise"
+	oldHash                    = "old"
+	newHash                    = "new"
 	kruiseControllerDefinition = `
 apiVersion: apps/v1
 kind: Deployment
@@ -50,14 +52,16 @@ spec:
       labels:
         app: kruise
         control-plane: controller-manager
-      annotations:
-        %s: %s
     spec:
       containers:
       - command:
         - /manager
-        image: mockImage:latest
+        image: %s
         name: kruise
+      - command:
+        - /metrics
+        image: metrics
+        name: metrics
 `
 )
 
@@ -75,54 +79,54 @@ func createMockDeployment(cfg string) {
 }
 
 var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::", func() {
-	var kruiseDeploymentMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, "some-annotation", "some-annotation", someDate)
-	var kruiseDeploymentAnnotatedMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, kruisePatchAnnotation, restartAnnotation, someDate)
+	var kruiseDeploymentMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, "some-annotation", fmt.Sprintf("%s:%s", base, oldHash))
+	var kruiseDeploymentAnnotatedMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, kruisePatchAnnotation, fmt.Sprintf("%s:%s", base, oldHash))
 
-	getDeployment := func(namespace, name string) (*appsv1.Deployment, error) {
-		deployment, err := dependency.TestDC.MustGetK8sClient().AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	getDeployment := func() (*appsv1.Deployment, error) {
+		deployment, err := dependency.TestDC.MustGetK8sClient().AppsV1().Deployments(targetNamespace).Get(context.TODO(), targetDeployment, metav1.GetOptions{})
 		return deployment, err
 	}
 
-	getDeploymentAnnotations := func(namespace, name string) (map[string]string, error) {
-		deployment, err := getDeployment(namespace, name)
+	getDeploymentAnnotations := func() (map[string]string, error) {
+		deployment, err := getDeployment()
 		if err != nil {
 			return nil, err
 		}
 		return deployment.ObjectMeta.GetAnnotations(), nil
 	}
 
-	getDeploymentTemplateAnnotations := func(namespace, name string) (map[string]string, error) {
-		deployment, err := getDeployment(namespace, name)
+	getKruiseImage := func() (string, error) {
+		var image string
+		deployment, err := getDeployment()
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-		return deployment.Spec.Template.ObjectMeta.GetAnnotations(), nil
+		for _, container := range deployment.Spec.Template.Spec.Containers {
+			if container.Name == "kruise" {
+				image = container.Image
+				break
+			}
+		}
+
+		return image, nil
 	}
 
-	assertDeploymentAnnotationInPlace := func(namespace, name string) {
-		annotations, err := getDeploymentAnnotations(namespace, name)
+	assertAnnotationInPlace := func() {
+		annotations, err := getDeploymentAnnotations()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(annotations).To(HaveKey(kruisePatchAnnotation))
 	}
 
-	assertDeploymentAnnotationNotInPlace := func(namespace, name string) {
-		annotations, err := getDeploymentAnnotations(namespace, name)
+	assertAnnotationNotInPlace := func() {
+		annotations, err := getDeploymentAnnotations()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(annotations).ToNot(HaveKey(kruisePatchAnnotation))
 	}
 
-	assertTemplateAnnotationNotUpdated := func(namespace, name, annotation string) {
-		templateAnnotations, err := getDeploymentTemplateAnnotations(namespace, name)
+	assertImage := func(image string) {
+		kruiseImage, err := getKruiseImage()
 		Expect(err).ToNot(HaveOccurred())
-		Expect(templateAnnotations).To(HaveKey(restartAnnotation))
-		Expect(templateAnnotations[restartAnnotation]).To(BeEquivalentTo(annotation))
-	}
-
-	assertTemplateAnnotationUpdated := func(namespace, name, annotation string) {
-		templateAnnotations, err := getDeploymentTemplateAnnotations(namespace, name)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(templateAnnotations).To(HaveKey(restartAnnotation))
-		Expect(templateAnnotations[restartAnnotation]).ToNot(BeEquivalentTo(annotation))
+		Expect(kruiseImage).To(Equal(image))
 	}
 
 	Context("Empty cluster", func() {
@@ -151,12 +155,12 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 		It(fmt.Sprintf("Before running the hook, %s deployments should't have %s annotation", targetDeployment, kruisePatchAnnotation), func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			assertDeploymentAnnotationNotInPlace(targetNamespace, targetDeployment)
+			assertAnnotationNotInPlace()
 		})
 	})
 
 	Context("", func() {
-		f := HookExecutionConfigInit(`{}`, `{}`)
+		f := HookExecutionConfigInit(fmt.Sprintf(`{"global": {"modulesImages":{"registry":{"base": "%s"},"digests":{"ingressNginx":{"kruise": "%s"}}}}}`, base, newHash), ``)
 
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -165,17 +169,17 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 			f.RunHook()
 		})
 
-		It(fmt.Sprintf("After running the hook, %s deployment should have %s annotations and %s .spec.template annotation", targetDeployment, kruisePatchAnnotation, restartAnnotation), func() {
+		It(fmt.Sprintf("After running the hook, %s deployment should have %s annotations and image set to %s", targetDeployment, kruisePatchAnnotation, fmt.Sprintf("%s:%s", base, newHash)), func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			assertDeploymentAnnotationInPlace(targetNamespace, targetDeployment)
+			assertAnnotationInPlace()
 
-			assertTemplateAnnotationUpdated(targetNamespace, targetDeployment, someDate)
+			assertImage(fmt.Sprintf("%s:%s", base, newHash))
 		})
 	})
 
 	Context("", func() {
-		f := HookExecutionConfigInit(`{}`, `{}`)
+		f := HookExecutionConfigInit(fmt.Sprintf(`{"global": {"modulesImages":{"registry":{"base": "%s"},"digests":{"ingressNginx":{"kruise": "%s"}}}}}`, base, newHash), ``)
 
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -184,12 +188,12 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 			f.RunHook()
 		})
 
-		It(fmt.Sprintf("After running the hook, annotated %s deployment shouldn't be restarted", targetDeployment), func() {
+		It(fmt.Sprintf("After running the hook, annotated %s deployment should have %s annotations and image unchanged", targetDeployment, kruisePatchAnnotation), func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			assertDeploymentAnnotationInPlace(targetNamespace, targetDeployment)
+			assertAnnotationInPlace()
 
-			assertTemplateAnnotationNotUpdated(targetNamespace, targetDeployment, someDate)
+			assertImage(fmt.Sprintf("%s:%s", base, oldHash))
 
 		})
 	})
