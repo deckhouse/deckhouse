@@ -35,7 +35,7 @@ metadata:
 status:
   infrastructureReady: false
 `
-		cluster1 = `
+		clusterOpenstack1 = `
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
@@ -58,7 +58,7 @@ metadata:
   name: dev1
   namespace: d8-cloud-instance-manager
 `
-		cluster2 = `
+		clusterOpenstack2 = `
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
@@ -81,7 +81,7 @@ metadata:
   name: dev2
   namespace: d8-cloud-instance-manager
 `
-		cluster3 = `
+		clusterOpenstack3 = `
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
@@ -102,11 +102,34 @@ metadata:
   name: dev3
   namespace: d8-cloud-instance-manager
 `
+
+		clusterOvirt1 = `
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: ovirt
+  namespace: d8-cloud-instance-manager
+  uid: 123-456-789
+spec:
+  infrastructureRef:
+    apiVersion: ovirtproviderconfig.machine.openshift.io/v1beta1
+    kind: OvirtClusterProviderSpec
+    name: ovirt
+    namespace: d8-cloud-instance-manager
+---
+apiVersion: ovirtproviderconfig.machine.openshift.io/v1beta1
+kind: OvirtClusterProviderSpec
+metadata:
+  name: ovirt
+  namespace: d8-cloud-instance-manager
+`
 	)
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Cluster", true)
 	f.RegisterCRD("infrastructure.cluster.x-k8s.io", "v1alpha6", "OpenStackCluster", true)
+	f.RegisterCRD("ovirtproviderconfig.machine.openshift.io", "v1beta1", "OvirtClusterProviderSpec", true)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -121,7 +144,7 @@ metadata:
 
 	Context("more than one cluster resource", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(cluster1 + cluster2))
+			f.BindingContexts.Set(f.KubeStateSet(clusterOpenstack1 + clusterOpenstack2))
 			f.RunHook()
 		})
 
@@ -136,26 +159,22 @@ metadata:
 			f.RunHook()
 		})
 
-		It("clusters status infrastructure state should be true", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev1")
-			Expect(cluster.Exists()).To(BeTrue())
-			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
+		It("Hook should fail", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
 		})
 	})
 
-	Context("update statuses (infrastructureReady = false)", func() {
+	Context("Openstack: update statuses (infrastructureReady = false)", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(cluster1))
+			f.BindingContexts.Set(f.KubeStateSet(clusterOpenstack1))
 			f.RunHook()
 		})
 
 		It("clusters status infrastructure state should be true and ownerRef on infrastructure cluster should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-
 			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev1")
 			infraCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "dev1")
+
 			Expect(cluster.Exists()).To(BeTrue())
 			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
 			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`
@@ -169,17 +188,21 @@ metadata:
 		})
 	})
 
-	Context("update statuses (infrastructureReady = true)", func() {
+	Context("Openstack: update statuses (infrastructureReady = true)", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(cluster2))
+			f.BindingContexts.Set(f.KubeStateSet(clusterOpenstack2))
 			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
 		})
 
 		It("clusters status infrastructure state should be true and ownerRef on infrastructure cluster should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-
 			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev2")
 			infraCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "dev2")
+
 			Expect(cluster.Exists()).To(BeTrue())
 			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
 			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`
@@ -192,23 +215,55 @@ metadata:
 		})
 	})
 
-	Context("update statuses (infrastructureReady is absent)", func() {
+	Context("Openstack: update statuses (infrastructureReady is absent)", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(cluster3))
+			f.BindingContexts.Set(f.KubeStateSet(clusterOpenstack3))
 			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
 		})
 
 		It("clusters status infrastructure state should be true and ownerRef on infrastructure cluster should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-
 			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "dev3")
 			infraCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "dev3")
+
 			Expect(cluster.Exists()).To(BeTrue())
 			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
 			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`
 - apiVersion: cluster.x-k8s.io/v1beta1
   kind: Cluster
   name: dev3
+  namespace: d8-cloud-instance-manager
+  uid: 123-456-789
+`))
+
+		})
+	})
+
+	Context("Ovirt: update statuses (infrastructureReady is absent)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(clusterOvirt1))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("clusters status infrastructure state should be true and ownerRef on infrastructure cluster should be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "ovirt")
+			infraCluster := f.KubernetesResource("OvirtClusterProviderSpec", "d8-cloud-instance-manager", "ovirt")
+
+			Expect(cluster.Exists()).To(BeTrue())
+			Expect(cluster.Field("status.infrastructureReady").Bool()).To(BeTrue())
+			Expect(infraCluster.Field("metadata.ownerReferences")).To(MatchYAML(`
+- apiVersion: cluster.x-k8s.io/v1beta1
+  kind: Cluster
+  name: ovirt
   namespace: d8-cloud-instance-manager
   uid: 123-456-789
 `))
