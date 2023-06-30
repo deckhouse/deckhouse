@@ -114,20 +114,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, getDexUsers)
 
-var mapOfUsersToGroups map[string]map[string]bool
-
 func getDexUsers(input *go_hook.HookInput) error {
 	users := make([]DexUserInternalValues, 0, len(input.Snapshots["users"]))
 
 	input.LogEntry.Println("AAAAA")
 
-	mapOfUsersToGroups = map[string]map[string]bool{}
-	input.LogEntry.Info("mapOfUsersToGroups", mapOfUsersToGroups)
+	mapOfUsersToGroups := map[string]map[string]bool{}
+	input.LogEntry.Info("mapOfUsersToGroups: ", mapOfUsersToGroups)
 
 	groupsSnap := input.Snapshots["groups"]
 	for _, obj := range groupsSnap {
 		group := obj.(*DexGroup)
-		makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{})
+		makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{}, mapOfUsersToGroups)
 	}
 
 	for _, user := range input.Snapshots["users"] {
@@ -224,7 +222,7 @@ func findGroup(groups []go_hook.FilterResult, groupName string) *DexGroup {
 	return nil
 }
 
-func makeUserGroupsMap(groups []go_hook.FilterResult, targetGroup string, accumulatedGroupList []string) {
+func makeUserGroupsMap(groups []go_hook.FilterResult, targetGroup string, accumulatedGroupList []string, mapOfUsersToGroups map[string]map[string]bool) {
 	if len(groups) == 0 {
 		return
 	}
@@ -250,7 +248,7 @@ func makeUserGroupsMap(groups []go_hook.FilterResult, targetGroup string, accumu
 				mapOfUsersToGroups[member.Name][g] = true
 			}
 		} else if member.Kind == "Group" {
-			makeUserGroupsMap(groups, member.Name, accumulatedGroupList)
+			makeUserGroupsMap(groups, member.Name, accumulatedGroupList, mapOfUsersToGroups)
 		}
 	}
 }
