@@ -122,14 +122,14 @@ func getDexUsers(input *go_hook.HookInput) error {
 
 	input.LogEntry.Println("AAAAA")
 
-	j, _ := json.Marshal(mapOfUsersToGroups)
-	input.LogEntry.Infof("MAP: %s", string(j))
-
 	mapOfUsersToGroups = map[string]map[string]bool{}
-	groups := input.Snapshots["groups"]
-	for _, obj := range groups {
+	j, _ := json.Marshal(mapOfUsersToGroups)
+	input.LogEntry.Infof("mapOfUsersToGroups: %s", string(j))
+
+	groupsSnap := input.Snapshots["groups"]
+	for _, obj := range groupsSnap {
 		group := obj.(*DexGroup)
-		makeUserGroupsMap(groups, group.Spec.Name, []string{})
+		makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{})
 	}
 
 	for _, user := range input.Snapshots["users"] {
