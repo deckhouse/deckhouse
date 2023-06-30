@@ -32,8 +32,8 @@ import (
 
 const (
 	base                       = "registry/kruise"
-	oldHash                    = "old"
-	newHash                    = "new"
+	oldHash                    = "sha256:80cf1b1973f6739e76a81b2b521bdd43c832be29b682feb9a94b2c10f268adab"
+	newHash                    = "sha256:9558d2ec1e8ac5f41c1a03f174d5e20920ce9637d957016043bcfa3d45169792"
 	kruiseControllerDefinition = `
 apiVersion: apps/v1
 kind: Deployment
@@ -79,8 +79,8 @@ func createMockDeployment(cfg string) {
 }
 
 var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::", func() {
-	var kruiseDeploymentMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, "some-annotation", fmt.Sprintf("%s:%s", base, oldHash))
-	var kruiseDeploymentAnnotatedMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, kruisePatchAnnotation, fmt.Sprintf("%s:%s", base, oldHash))
+	var kruiseDeploymentMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, "some-annotation", fmt.Sprintf("%s@%s", base, oldHash))
+	var kruiseDeploymentAnnotatedMock = fmt.Sprintf(kruiseControllerDefinition, targetDeployment, kruisePatchAnnotation, fmt.Sprintf("%s@%s", base, oldHash))
 
 	getDeployment := func() (*appsv1.Deployment, error) {
 		deployment, err := dependency.TestDC.MustGetK8sClient().AppsV1().Deployments(targetNamespace).Get(context.TODO(), targetDeployment, metav1.GetOptions{})
@@ -169,12 +169,12 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 			f.RunHook()
 		})
 
-		It(fmt.Sprintf("After running the hook, %s deployment should have %s annotations and image set to %s", targetDeployment, kruisePatchAnnotation, fmt.Sprintf("%s:%s", base, newHash)), func() {
+		It(fmt.Sprintf("After running the hook, %s deployment should have %s annotations and image set to %s", targetDeployment, kruisePatchAnnotation, fmt.Sprintf("%s@%s", base, newHash)), func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			assertAnnotationInPlace()
 
-			assertImage(fmt.Sprintf("%s:%s", base, newHash))
+			assertImage(fmt.Sprintf("%s@%s", base, newHash))
 		})
 	})
 
@@ -193,7 +193,7 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 
 			assertAnnotationInPlace()
 
-			assertImage(fmt.Sprintf("%s:%s", base, oldHash))
+			assertImage(fmt.Sprintf("%s@%s", base, oldHash))
 
 		})
 	})

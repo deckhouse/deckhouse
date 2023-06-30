@@ -80,7 +80,7 @@ func restartKruiseControllerDeployment(input *go_hook.HookInput, dc dependency.C
 	deployment.ObjectMeta.SetAnnotations(annotations)
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "kruise" {
-			deployment.Spec.Template.Spec.Containers[i].Image = fmt.Sprintf("%s:%s", registry, kruiseImage)
+			deployment.Spec.Template.Spec.Containers[i].Image = fmt.Sprintf("%s@%s", registry, kruiseImage)
 			break
 		}
 	}
@@ -93,10 +93,8 @@ func restartKruiseControllerDeployment(input *go_hook.HookInput, dc dependency.C
 		deployment, err := kubeCl.AppsV1().Deployments(targetNamespace).Get(context.TODO(), targetDeployment, metav1.GetOptions{})
 		if err != nil {
 			input.LogEntry.Warnf("Hook failed to get %s/%s deployment", targetNamespace, targetDeployment)
-		} else {
-			if *deployment.Spec.Replicas == deployment.Status.ReadyReplicas {
-				return nil
-			}
+		} else if *deployment.Spec.Replicas == deployment.Status.ReadyReplicas {
+			return nil
 		}
 		time.Sleep(1 * time.Second)
 	}
