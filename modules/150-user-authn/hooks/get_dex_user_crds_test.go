@@ -50,9 +50,6 @@ metadata:
   name: admin
 spec:
   email: admin@example.com
-  groups:
-  - Admins
-  - Everyone
   password: password
   ttl: 30m
 ---
@@ -95,7 +92,7 @@ spec:
     "name": "admin",
     "spec": {
       "email": "admin@example.com",
-      "groups": ["Admins", "Everyone", "Gods"],
+      "groups": ["Gods"],
       "password": "password",
       "userID": "admin"
     },
@@ -120,9 +117,6 @@ metadata:
   name: admin
 spec:
   email: admin@example.com
-  groups:
-  - Admins
-  - Everyone
   password: password
   ttl: 1h10m
 status:
@@ -165,9 +159,6 @@ metadata:
   name: admin
 spec:
   email: adminNext@example.com
-  groups:
-  - Admins
-  - Everyone
   password: password
 `)
 					f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
@@ -182,7 +173,6 @@ spec:
   "name": "admin",
   "spec": {
     "email": "adminNext@example.com",
-    "groups": ["Admins", "Everyone"],
     "password": "password",
     "userID": "admin"
   },
@@ -204,9 +194,6 @@ metadata:
   name: admin
 spec:
   email: admin@example.com
-  groups:
-  - Admins
-  - Everyone
   password: password
 ---
 apiVersion: deckhouse.io/v1
@@ -215,8 +202,6 @@ metadata:
   name: user
 spec:
   email: user@example.com
-  groups:
-  - Everyone
   password: passwordNext
 `))
 			f.RunHook()
@@ -228,10 +213,6 @@ spec:
     "name": "admin",
     "spec": {
       "email": "admin@example.com",
-      "groups": [
-        "Admins",
-        "Everyone"
-      ],
       "password": "password",
       "userID": "admin"
     },
@@ -242,9 +223,6 @@ spec:
     "name": "user",
     "spec": {
       "email": "user@example.com",
-      "groups": [
-        "Everyone"
-      ],
       "password": "passwordNext",
       "userID": "user"
     },
@@ -411,7 +389,7 @@ spec:
 
 	})
 
-	FContext("Cluster with User (with status.groups field filled) and Group objects", func() {
+	Context("Cluster with User (with status.groups field filled) and Group objects", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---

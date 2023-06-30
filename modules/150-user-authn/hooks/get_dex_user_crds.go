@@ -124,8 +124,6 @@ func getDexUsers(input *go_hook.HookInput) error {
 		makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{}, mapOfUsersToGroups)
 	}
 
-	input.LogEntry.Info("mapOfUsersToGroups: ", mapOfUsersToGroups)
-
 	for _, user := range input.Snapshots["users"] {
 		dexUser, ok := user.(*DexUser)
 		if !ok {
@@ -133,7 +131,6 @@ func getDexUsers(input *go_hook.HookInput) error {
 		}
 
 		var groups []string
-		// groups = append(groups, dexUser.Spec.Groups...)
 		for g := range mapOfUsersToGroups[dexUser.Name] {
 			groups = append(groups, g)
 		}
@@ -183,8 +180,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 			}
 		}
 
-		input.LogEntry.Infof("Update status for user %s. New status: %v", dexUser.Name, patch["status"])
-
+		input.LogEntry.Infof("Update groups in user status %s. Groups: %v", dexUser.Name, patch["status"].(expirePatch).Groups)
 		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 
