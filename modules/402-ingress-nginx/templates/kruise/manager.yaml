@@ -59,6 +59,8 @@ metadata:
   name: kruise-controller-manager
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list . (dict "app" "kruise" "control-plane" "controller-manager")) | nindent 2 }}
+  annotations:
+    ingress.deckhouse.io/force-max-unavailable: ""
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
