@@ -1,0 +1,7 @@
+---
+apiVersion: ovirtproviderconfig.machine.openshift.io/v1beta1
+kind: OvirtClusterProviderSpec
+metadata:
+  name: ovirt
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}

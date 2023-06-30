@@ -1,11 +1,9 @@
 {{- if hasKey .Values.nodeManager.internal "cloudProvider" }}
-  {{- $prefix := .Values.global.clusterConfiguration | dig "cloud" "prefix" "default" }}
-  {{- $provider := .Values.global.clusterConfiguration | dig "cloud" "provider" "empty" }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
-  name: {{ $prefix }}
+  name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
   annotations:
@@ -22,12 +20,19 @@ spec:
       cidrBlocks:
         - {{ .Values.global.clusterConfiguration.serviceSubnetCIDR }}
     serviceDomain: {{ .Values.global.clusterConfiguration.clusterDomain }}
-  {{- if eq $provider "openstack" }}
+  {{- if (.Values.global.enabledModules | has "cloud-provider-openstack") }}
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
     kind: OpenStackCluster
     namespace: d8-cloud-instance-manager
-    name: {{ $prefix }}
+    name: {{ .Values.global.clusterConfiguration.cloud.prefix }}
+  {{- end }}
+  {{- if (.Values.global.enabledModules | has "cloud-provider-ovirt") }}
+  infrastructureRef:
+    apiVersion: ovirtproviderconfig.machine.openshift.io/v1beta1
+    kind: OvirtClusterProviderSpec
+    namespace: d8-cloud-instance-manager
+    name: ovirt
   {{- end }}
 ---
 # empty kubeconfig secret for cluster
@@ -36,7 +41,7 @@ data:
   value: Cg==
 kind: Secret
 metadata:
-  name: {{ $prefix }}-kubeconfig
+  name: {{ .Values.global.clusterConfiguration.cloud.prefix }}-kubeconfig
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: cluster.x-k8s.io/secret
