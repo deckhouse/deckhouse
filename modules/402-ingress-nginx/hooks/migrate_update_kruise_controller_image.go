@@ -63,11 +63,6 @@ func restartKruiseControllerDeployment(input *go_hook.HookInput, dc dependency.C
 		return nil
 	}
 
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	annotations[kruisePatchAnnotation] = time.Now().Format(time.RFC3339)
-
 	registry := input.Values.Get("global.modulesImages.registry.base").String()
 	if len(registry) == 0 {
 		return fmt.Errorf("Hook failed to get registry base")
@@ -77,29 +72,51 @@ func restartKruiseControllerDeployment(input *go_hook.HookInput, dc dependency.C
 		return fmt.Errorf("Hook failed to get kruise image hash")
 	}
 
-	deployment.ObjectMeta.SetAnnotations(annotations)
+	// Find kruise container
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "kruise" {
+			// Check if kruise image needs to be updated
+			if container.Image == fmt.Sprintf("%s@%s", registry, kruiseImage) {
+				return nil
+			}
 			deployment.Spec.Template.Spec.Containers[i].Image = fmt.Sprintf("%s@%s", registry, kruiseImage)
 			break
 		}
 	}
+
+	// Update deployment image
 	_, err = kubeCl.AppsV1().Deployments(targetNamespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
 
-	for i := 0; i < 10; i++ {
+	// Wait up to 2 minutes if new deployment is up
+	for i := 0; i < 24; i++ {
 		deployment, err := kubeCl.AppsV1().Deployments(targetNamespace).Get(context.TODO(), targetDeployment, metav1.GetOptions{})
 		if err != nil {
 			input.LogEntry.Warnf("Hook failed to get %s/%s deployment", targetNamespace, targetDeployment)
+			// If deployment is up, annotate it with kruisePatchAnnotation and exit
 		} else if *deployment.Spec.Replicas == deployment.Status.ReadyReplicas {
+			deployment, err := kubeCl.AppsV1().Deployments(targetNamespace).Get(context.TODO(), targetDeployment, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			if annotations == nil {
+				annotations = make(map[string]string)
+			}
+
+			annotations[kruisePatchAnnotation] = time.Now().Format(time.RFC3339)
+			deployment.ObjectMeta.SetAnnotations(annotations)
+			_, err = kubeCl.AppsV1().Deployments(targetNamespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
 			return nil
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
-	input.LogEntry.Warnf("Hook waiting for %s/%s deployment timed out", targetNamespace, targetDeployment)
-
-	return nil
+	// Deployment failed to update - return error
+	return fmt.Errorf("Hook waiting for %s/%s deployment timed out", targetNamespace, targetDeployment)
 }

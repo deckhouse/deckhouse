@@ -95,6 +95,12 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 		return deployment.ObjectMeta.GetAnnotations(), nil
 	}
 
+	updateDeploymentStatus := func() {
+		deployment, _ := getDeployment()
+		deployment.Status.ReadyReplicas = *deployment.Spec.Replicas
+		_, _ = dependency.TestDC.MustGetK8sClient().AppsV1().Deployments(targetNamespace).UpdateStatus(context.TODO(), deployment, metav1.UpdateOptions{})
+	}
+
 	getKruiseImage := func() (string, error) {
 		var image string
 		deployment, err := getDeployment()
@@ -166,6 +172,7 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			createMockDeployment(kruiseDeploymentMock)
+			updateDeploymentStatus()
 			f.RunHook()
 		})
 
@@ -192,6 +199,26 @@ var _ = Describe("Global :: migrate_disable_kruise_controller_before_update ::",
 			Expect(f).To(ExecuteSuccessfully())
 
 			assertAnnotationInPlace()
+
+			assertImage(fmt.Sprintf("%s@%s", base, oldHash))
+
+		})
+	})
+
+	Context("", func() {
+		f := HookExecutionConfigInit(fmt.Sprintf(`{"global": {"modulesImages":{"registry":{"base": "%s"},"digests":{"ingressNginx":{"kruise": "%s"}}}}}`, base, oldHash), ``)
+
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			createMockDeployment(kruiseDeploymentMock)
+			f.RunHook()
+		})
+
+		It(fmt.Sprintf("After running the hook, not annotated %s deployment with correct image should have image unchanged", targetDeployment), func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			assertAnnotationNotInPlace()
 
 			assertImage(fmt.Sprintf("%s@%s", base, oldHash))
 
