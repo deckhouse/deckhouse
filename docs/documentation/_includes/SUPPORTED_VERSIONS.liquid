@@ -80,9 +80,9 @@
 
 {% alert level="info" %}
 {%- if page.lang == 'ru' %}
-Deckhouse должен работать с любыми container registry, поддерживающими работу с Bearer token-схемой авторизации.
+Deckhouse должен работать с любыми container registry, поддерживающими работу с Bearer token-схемой авторизации и с [OCI форматом образов](https://github.com/opencontainers/image-spec/blob/main/spec.md).
 {%- else %}
-Deckhouse should work with any container registry supporting Bearer authentication.
+Deckhouse should work with any container registry supporting Bearer authentication and [OCI image format specification](https://github.com/opencontainers/image-spec/blob/main/spec.md).
 {%- endif %}
 {% endalert %}
 
@@ -99,10 +99,31 @@ Container registry, с которыми Deckhouse гарантированно �
 </thead>
 <tbody>
 {%- for registry in site.data.supported_versions.registries %}
-<tr><td style="text-align: left">
-<p><a href="{{ registry[1].url }}" target="_blank">{{ registry[1].longname }}</a></p>
-</td></tr>
+<tr>
+  <td style="text-align: left"
+  {%- if registry[1].additionalInfo %} table__hint_{{ registry[0] }}{% endif -%}>
+  <p><a href="{{ registry[1].url }}" target="_blank">{{ registry[1].longname }}{% if registry[1].additionalInfo %}<sup>*</sup>{% endif %}</a></p>
+  </td>
+</tr>
 {%- endfor %}
 </tbody>
 </table>
 </div>
+
+<script type="text/javascript">
+$(document).ready(function () {
+{%- for registry in site.data.supported_versions.registries %}
+{%- if registry[1].additionalInfo %}
+    tippy('[table__hint_{{ registry[0] }}]', {
+        interactive: true,
+        interactiveDebounce: 10,
+        maxWidth: 600,
+        theme: 'custom',
+        allowHTML: true,
+        arrow: false,
+        content: `{{ registry[1].additionalInfo[page.lang] }}`
+      });
+{%- endif -%}
+{%- endfor %}
+});
+</script>
