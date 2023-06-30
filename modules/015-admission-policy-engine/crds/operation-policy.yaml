@@ -99,13 +99,43 @@ spec:
                               allowedRegex:
                                 type: string
                                 description: >-
-                                  If specified, a regular expression, the annotation's value
+                                  If specified, a regular expression, the label's value
                                   must match. The value must contain at least one match for
                                   the regular expression.
                         watchKinds:
                           type: array
                           description: |
                             The list of kubernetes objects in the format `$apiGroup/$kind` to watch the labels on.
+                          minItems: 1
+                          items:
+                            type: string
+                            pattern: '^[a-z]*/[a-zA-Z]+$'
+                            example: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
+                    requiredAnnotations:
+                      type: object
+                      description: |
+                        A list of annotations and values the object must specify.
+                      properties:
+                        annotations:
+                          type: array
+                          minItems: 1
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                                description: >-
+                                  The required annotation.
+                              allowedRegex:
+                                type: string
+                                description: >-
+                                  If specified, a regular expression, the annotation's value
+                                  must match. The value must contain at least one match for
+                                  the regular expression.
+                        watchKinds:
+                          type: array
+                          description: |
+                            The list of kubernetes objects in the format `$apiGroup/$kind` to watch the annotations on.
                           minItems: 1
                           items:
                             type: string
