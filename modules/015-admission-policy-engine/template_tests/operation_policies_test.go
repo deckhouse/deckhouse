@@ -48,7 +48,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 				"watchKinds": ["/Pod", "networking.k8s.io/Ingress"]
 			},
             "requiredAnnotations": {
-				"labels": [
+				"annotations": [
 					{ "key": "foo" },
 					{ "key": "bar", "allowedRegex": "^[a-zA-Z]+.myapp.demo$" }
 				],

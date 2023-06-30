@@ -51,7 +51,7 @@ spec:
                       description: |
                         Список аннотаций, которые должен указать объект.
                       properties:
-                        labels:
+                        annotations:
                           items:
                             properties:
                               key:
