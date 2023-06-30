@@ -47,6 +47,13 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 				],
 				"watchKinds": ["/Pod", "networking.k8s.io/Ingress"]
 			},
+            "requiredAnnotations": {
+				"labels": [
+					{ "key": "foo" },
+					{ "key": "bar", "allowedRegex": "^[a-zA-Z]+.myapp.demo$" }
+				],
+				"watchKinds": ["/Namespace"]
+			},
 			"requiredProbes":["livenessProbe","readinessProbe"],
 			"maxRevisionHistoryLimit":3,
 			"imagePullPolicy":"Always",
@@ -77,6 +84,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8PriorityClass", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8DNSPolicy", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8RequiredLabels", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8RequiredAnnotations", testPolicyName).Exists()).To(BeTrue())
 		})
 	})
 

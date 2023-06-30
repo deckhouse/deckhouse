@@ -68,6 +68,12 @@ spec:
         key: product-id
       watchKinds:
       - /Namespace
+    requiredAnnotations:
+      annotations:
+      - allowedRegex: ^P\d{4}$
+        key: foobar
+      watchKinds:
+      - /Namespace
     requiredProbes:
       - livenessProbe
       - readinessProbe
