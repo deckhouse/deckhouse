@@ -1384,7 +1384,7 @@ ccc: ddd
 				assertValues(mcls, "spec.tags")
 			})
 
-			It("spec.properties.networkProfile.acceleratedNetworking default true", func() {
+			It("spec.properties.networkProfile.acceleratedNetworking is not set (default true)", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "worker-02320933")
@@ -1392,7 +1392,7 @@ ccc: ddd
 				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
 			})
 
-			It("spec.properties.networkProfile.acceleratedNetworking true", func() {
+			It("spec.properties.networkProfile.acceleratedNetworking is set to true", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "bbb-02320933")
@@ -1400,7 +1400,7 @@ ccc: ddd
 				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
 			})
 
-			It("spec.properties.networkProfile.acceleratedNetworking false", func() {
+			It("spec.properties.networkProfile.acceleratedNetworking is set to false", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "aaa-02320933")
