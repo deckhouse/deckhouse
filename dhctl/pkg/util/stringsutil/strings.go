@@ -21,13 +21,12 @@ import (
 	"time"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano()) // TODO: remove this after moving to go 1.20, see https://pkg.go.dev/math/rand#Seed
+}
+
 func RandomStrElement(list []string) (string, int) {
-	// we silent gosec linter here
-	// because we do not need security random number
-	// for choice random element
-	s := rand.NewSource(time.Now().Unix())
-	r := rand.New(s) //nolint:gosec
-	indx := r.Intn(len(list))
+	indx := rand.Intn(len(list)) // this call is thread safe
 
 	return list[indx], indx
 }

@@ -65,8 +65,11 @@ func applyFilter(nodes []snapshot.Node, filter func(snapshot.Node) bool) []snaps
 // nodeShuffler shuffles the list of nodes, and does not filter any of
 type nodeShuffler struct{}
 
+func init() {
+	rand.Seed(time.Now().UnixNano()) // TODO: remove this after moving to go 1.20, see https://pkg.go.dev/math/rand#Seed
+}
+
 func (f nodeShuffler) Filter(nodes []snapshot.Node, _ string) []snapshot.Node {
-	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(nodes), func(i, j int) { nodes[i], nodes[j] = nodes[j], nodes[i] })
 	return nodes
 }

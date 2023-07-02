@@ -36,13 +36,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleRolloutEpoch)
 
+const tenDaysInSeconds = 864000
+
 func handleRolloutEpoch(input *go_hook.HookInput) error {
 	clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
 
-	var seed = binary.BigEndian.Uint64([]byte(clusterUUID))
-	rand.Seed(int64(seed))
+	seed := binary.BigEndian.Uint64([]byte(clusterUUID))
+	randomSource := rand.NewSource(int64(seed))
+	random := rand.New(randomSource) //nolint:gosec
 
-	epoch := ((rand.Int63() * 864000) + time.Now().Unix()) / 864000
+	// TODO ?? could not understand what is going on here as the result epoch can even be negative.
+	// Most likely this whole function has to be rewritten
+	epoch := ((random.Int63() * tenDaysInSeconds) + time.Now().Unix()) / tenDaysInSeconds
 
 	input.Values.Set("controlPlaneManager.internal.rolloutEpoch", epoch)
 
