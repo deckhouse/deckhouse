@@ -442,7 +442,9 @@ spec:
 
 В процессе подбора подходящих вам значений обращайте внимание на графики потребления ресурсов управляющих узлов. Будьте готовы к тому, что чем меньшие значения параметров вы выбираете, тем больше ресурсов может потребоваться выделить на эти узлы.
 
-## Как сделать бекап etcd?
+## Резервное копирование etcd и восстановление
+
+### Как сделать бекап etcd?
 
 Войдите на любой control-plane узел под пользователем `root` и используйте следующий bash-скрипт:
 
@@ -473,6 +475,106 @@ done
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
 
 О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+
+### Как восстановить объект Kubernetes из резервной копии etcd?
+
+Чтобы получить данные определенных объектов кластера из резервной копии etcd:
+1. Запустите временный экземпляр etcd.
+2. Наполните его данными из [резервной копии](#как-сделать-бекап-etcd).
+3. Получите описания нужных объектов с помощью `etcdhelper`.
+
+#### Пример шагов по восстановлению объектов из резервной копии etcd
+
+В примере далее, `etcd-snapshot.bin` — [резервная копия](#как-сделать-бекап-etcd) etcd (snapshot), `infra-production` — namespace, в котором нужно восстановить объекты.
+
+1. Запустите Под, с временным экземпляром etcd.
+   - Подготовьте файл `etcd.pod.yaml` шаблона Пода, выполнив следующий команды:
+
+     ```shell
+     cat <<EOF >etcd.pod.yaml 
+     apiVersion: v1
+     kind: Pod
+     metadata:
+       name: etcdrestore
+       namespace: default
+     spec:
+       containers:
+       - command:
+         - /bin/sh
+         - -c
+         - "sleep 96h"
+         image: IMAGE
+         imagePullPolicy: IfNotPresent
+         name: etcd
+         volumeMounts:
+         - name: etcddir
+           mountPath: /default.etcd
+       volumes:
+       - name: etcddir
+         emptyDir: {}
+     EOF
+     IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' '`
+     sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
+     ```
+
+   - Создайте Под:
+
+     ```shell
+     kubectl create -f etcd.pod.yaml
+     ```
+
+2. Скопируйте `etcdhelper` и снимок etcd в контейнер Пода.
+
+   `etcdhelper` можно собрать из [исходного кода](https://github.com/openshift/origin/tree/master/tools/etcdhelper) или скопировать из готового образа (например из [образа `etcdhelper` на Docker Hub](https://hub.docker.com/r/webner/etcdhelper/tags)).
+
+   Пример:
+
+   ```shell
+   kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
+   kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
+   ```
+
+3. В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
+
+   Пример:
+
+   ```console
+   ~ # kubectl -n default exec -it etcdrestore -- sh
+   / # chmod +x /usr/bin/etcdhelper
+   / # etcdctl snapshot restore /tmp/etcd-snapshot.bin
+   / # etcd &
+   ```
+
+4. Получите описания нужных объектов кластера, отфильтровав их с помощью `grep`.
+
+   Пример:
+
+   ```console
+   ~ # kubectl -n default exec -it etcdrestore -- sh
+   / # mkdir /tmp/restored_yaml
+   / # cd /tmp/restored_yaml
+   /tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
+   ```
+
+   Замена символов с помощью `sed` в примере позволяет сохранить описания объектов в файлы, именованные подобно структуре реестра etcd. Например: `/registry/deployments/infra-production/supercronic.yaml` → `deployments_infra-production_supercronic.yaml`.
+
+5. Скопируйте полученные описания объектов на master-узел:
+
+   ```shell
+   kubectl cp default/etcdrestore:/tmp/restored_yaml restored_yaml
+   ```
+
+6. Удалите из полученных описаний объектов информацию о времени создания, UID, status и прочие оперативные данные, после чего восстановите объекты:
+
+   ```shell
+   kubectl create -f restored_yaml/deployments_infra-production_supercronic.yaml
+   ```
+
+7. Удалите Под с временным экземпляром etcd:
+
+   ```shell
+   kubectl -n default delete pod etcdrestore
+   ```
 
 ## Как выбирается узел, на котором будет запущен Pod?
 
