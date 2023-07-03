@@ -24,18 +24,18 @@ import (
 )
 
 const (
-	DefaultLocalPort  = 20000
-	DefaultRemotePort = 20000
+	DefaultLocalPort  = 1234
+	DefaultRemotePort = 1234
 )
 
 func CheckSSHTunel(sess *session.Session, localPort, remotePort int) error {
-	log.DebugF("Checking ssh tunnel with remote port %s and local port %d\n", remotePort, localPort)
 	if localPort == 0 {
 		localPort = DefaultLocalPort
 	}
 	if remotePort == 0 {
 		remotePort = DefaultRemotePort
 	}
+	log.DebugF("Checking ssh tunnel with remote port %d and local port %d\n", remotePort, localPort)
 
 	builder := strings.Builder{}
 	builder.WriteString(strconv.Itoa(localPort))
