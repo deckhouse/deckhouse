@@ -108,6 +108,7 @@
  - **[extended-monitoring]** Send one `ExtendedMonitoringDeprecatatedAnnotation` alert per cluster. [#4829](https://github.com/deckhouse/deckhouse/pull/4829)
  - **[global-hooks]** Fix cluster DNS address discovery. [#4521](https://github.com/deckhouse/deckhouse/pull/4521)
  - **[global-hooks]** Fix the Kubernetes version hook for `DigitalOcean`. [#4473](https://github.com/deckhouse/deckhouse/pull/4473)
+ - **[ingress-nginx]** Update the Kruise controller manager before updating Ingress Nginx so that an updated Kruise controller manager takes care of Ingress nginx demonsets. [#5103](https://github.com/deckhouse/deckhouse/pull/5103)
  - **[ingress-nginx]** Fix `proxy-failover-iptables` panicking and `iptables` rules duplicating. [#4959](https://github.com/deckhouse/deckhouse/pull/4959)
  - **[ingress-nginx]** Increase `minReadySeconds` for all inlets. [#4919](https://github.com/deckhouse/deckhouse/pull/4919)
  - **[ingress-nginx]** Fixed incorrect indentation of resources block in `kube-rbac-proxy` container of `kruise-controller-manager` deployment. [#4738](https://github.com/deckhouse/deckhouse/pull/4738)
