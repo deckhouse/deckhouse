@@ -107,9 +107,10 @@ spec:
             - --statefulset-workers=0
             - --uniteddeployment-workers=0
             - --workloadspread-workers=0
-            - --leader-election-retry-period=13s
-            - --leader-election-lease-duration=40s
-            - --leader-election-renew-deadline=20s
+            - --leader-election-resource-lock=leases
+            - --leader-election-retry-period=10s
+            - --leader-election-lease-duration=35s
+            - --leader-election-renew-deadline=30s
           command:
             - /manager
           image: {{ include "helm_lib_module_image" (list . "kruise") }}
