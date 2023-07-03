@@ -750,7 +750,12 @@ END_SCRIPT
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
 
   if [[ "$PROVIDER" == "Static" ]]; then
-    run_linstor_tests || return $?
+    if ! run_linstor_tests; then
+      >&2 echo -n "Linstor tests failed"
+      >&2 echo -n "Fetch Deckhouse logs after test ..."
+      $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
+      return 1
+    fi
   fi
   echo "Linstor test suite: success"
 
