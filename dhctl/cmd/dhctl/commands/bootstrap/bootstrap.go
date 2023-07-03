@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -217,6 +218,11 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		printBanner()
 
 		showWarningAboutUsageDontUsePublicImagesFlagIfNeed()
+
+		err = preflight.PreflightCheck()
+		if err != nil {
+			return err
+		}
 
 		bootstrapState := bootstrap.NewBootstrapState(stateCache)
 
