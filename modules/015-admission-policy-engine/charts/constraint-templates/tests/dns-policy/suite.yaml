@@ -1,0 +1,19 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8dnspolicy
+tests:
+  - name: d8dnspolicy
+    template: ../../templates/operation/dns-policy.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: example-allowed
+        object: allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        object: disallowed.yaml
+        assertions:
+          - violations: yes
+            message: "Pod <disallowed> with hostNetwork must have 'ClusterFirstWithHostNet' dnsPolicy"
+

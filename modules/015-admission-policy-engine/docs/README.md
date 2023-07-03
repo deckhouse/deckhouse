@@ -68,7 +68,7 @@ The above policy is generic and recommended by Deckhouse team. Similarly, you ca
 
 ### Security policies
 
-The module allows for defining security policies and making sure the workload running in the cluster meets certain security requirements.
+The module allows defining security policies for making sure the workload running in the cluster meets certain security requirements.
 
 An example of a security policy:
 

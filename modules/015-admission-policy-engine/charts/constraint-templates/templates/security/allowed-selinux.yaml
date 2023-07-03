@@ -1,0 +1,104 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8selinux
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "SELinux V2"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Defines an allow-list of seLinuxOptions configurations for pod
+      containers. Corresponds to a PodSecurityPolicy requiring SELinux configs.
+      For more information, see
+      https://kubernetes.io/docs/concepts/policy/pod-security-policy/#selinux
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8SeLinux
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Defines an allow-list of seLinuxOptions configurations for pod
+            containers. Corresponds to a PodSecurityPolicy requiring SELinux configs.
+            For more information, see
+            https://kubernetes.io/docs/concepts/policy/pod-security-policy/#selinux
+          properties:
+            allowedSELinuxOptions:
+              type: array
+              description: "An allow-list of SELinux options configurations."
+              items:
+                type: object
+                description: "An allowed configuration of SELinux options for a pod container."
+                properties:
+                  level:
+                    type: string
+                    description: "An SELinux level."
+                  role:
+                    type: string
+                    description: "An SELinux role."
+                  type:
+                    type: string
+                    description: "An SELinux type."
+                  user:
+                    type: string
+                    description: "An SELinux user."
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        # Disallow top level custom SELinux options
+        violation[{"msg": msg, "details": {}}] {
+            has_field(input.review.object.spec.securityContext, "seLinuxOptions")
+            not input_seLinuxOptions_allowed(input.review.object.spec.securityContext.seLinuxOptions)
+            msg := sprintf("SELinux options is not allowed, pod: %v. Allowed options: %v", [input.review.object.metadata.name, input.parameters.allowedSELinuxOptions])
+        }
+        # Disallow container level custom SELinux options
+        violation[{"msg": msg, "details": {}}] {
+            c := input_security_context[_]
+            has_field(c.securityContext, "seLinuxOptions")
+            not input_seLinuxOptions_allowed(c.securityContext.seLinuxOptions)
+            msg := sprintf("SELinux options is not allowed, pod: %v, container %v. Allowed options: %v", [input.review.object.metadata.name, c.name, input.parameters.allowedSELinuxOptions])
+        }
+
+        input_seLinuxOptions_allowed(options) {
+            params := input.parameters.allowedSELinuxOptions[_]
+            field_allowed("level", options, params)
+            field_allowed("role", options, params)
+            field_allowed("type", options, params)
+            field_allowed("user", options, params)
+        }
+
+        field_allowed(field, options, params) {
+            count(options[field]) == 0
+        }
+        field_allowed(field, options, params) {
+            params[field] == options[field]
+        }
+        field_allowed(field, options, params) {
+            not has_field(options, field)
+        }
+
+        input_security_context[c] {
+            c := input.review.object.spec.containers[_]
+            has_field(c.securityContext, "seLinuxOptions")
+        }
+        input_security_context[c] {
+            c := input.review.object.spec.initContainers[_]
+            has_field(c.securityContext, "seLinuxOptions")
+        }
+        input_security_context[c] {
+            c := input.review.object.spec.ephemeralContainers[_]
+            has_field(c.securityContext, "seLinuxOptions")
+        }
+
+        # has_field returns whether an object has a field
+        has_field(object, field) = true {
+            object[field]
+        }

@@ -17,21 +17,29 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+const testRoot = "testdata/required_constraint_templates"
+
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handler", func() {
 	f := HookExecutionConfigInit(
 		`{"admissionPolicyEngine": {"internal": {"bootstrapped": false} } }`,
 		`{"admissionPolicyEngine":{}}`,
 	)
+	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", true)
 	Context("fresh cluster", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/empty/templates", testRoot))
+			Expect(err).To(BeNil())
 			f.RunHook()
 		})
 		It("should keep bootstrapped flag as false", func() {
@@ -44,6 +52,8 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 		BeforeEach(func() {
 			f.KubeStateSet(notReadyDeployment)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
 			f.RunHook()
 		})
 		It("should keep bootstrapped flag as false", func() {
@@ -52,10 +62,40 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 		})
 	})
 
-	Context("Deployment is ready ready", func() {
+	Context("Deployment is ready, no templates required", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(readyDeployment)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/empty/templates", testRoot))
+			Expect(err).To(BeNil())
+			f.RunHook()
+		})
+		It("should keep bootstrapped flag as true", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeTrue())
+		})
+	})
+
+	Context("Deployment is ready, some templates are missing", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(readyDeployment + constraintTemplate1)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
+			f.RunHook()
+		})
+		It("should keep bootstrapped flag as false", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeFalse())
+		})
+	})
+
+	Context("Deployment is ready, required templates are in place", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(readyDeployment + constraintTemplate1 + constraintTemplate2)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
 			f.RunHook()
 		})
 		It("should keep bootstrapped flag as true", func() {
@@ -64,6 +104,10 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 		})
 	})
 })
+
+func setTestChartPath(path string) error {
+	return os.Setenv("D8_TEST_CHART_PATH", path)
+}
 
 var readyDeployment = `
 apiVersion: apps/v1
@@ -108,4 +152,35 @@ status:
   readyReplicas: 0
   replicas: 1
   updatedReplicas: 1
+`
+
+var constraintTemplate1 = `
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8priorityclass
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Required Priority Class"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: "Required Priority Class"
+`
+
+var constraintTemplate2 = `
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8readonlyrootfilesystem
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Read Only Root Filesystem"
+    metadata.gatekeeper.sh/version: 1.0.0
 `

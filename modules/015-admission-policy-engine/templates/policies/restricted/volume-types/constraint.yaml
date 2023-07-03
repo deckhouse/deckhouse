@@ -1,2 +1,0 @@
-{{- $parameters := dict "volumes" (list "configMap" "csi" "downwardAPI" "emptyDir" "ephemeral" "persistentVolumeClaim" "projected" "secret") }}
-{{- include "pod_security_standard_restricted" (list . "D8PSSVolumeTypes" $parameters ) }}

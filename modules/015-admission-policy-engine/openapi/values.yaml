@@ -64,3 +64,8 @@ properties:
           # this spec is validated by CRD's openapi spec
           type: object
           additionalProperties: true
+      requiredTemplates:
+        type: array
+        default: []
+        items:
+          type: string

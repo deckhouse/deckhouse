@@ -1,0 +1,21 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AppArmor
+metadata:
+  name: pss-baseline
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaceSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/pod-policy
+          operator: In
+          values:
+          - baseline
+          - restricted
+  parameters:
+    allowedProfiles:
+    - runtime/default
+    - localhost/*

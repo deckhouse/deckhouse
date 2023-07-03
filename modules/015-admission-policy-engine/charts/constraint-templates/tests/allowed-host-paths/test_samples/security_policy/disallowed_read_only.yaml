@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: opa-allowed
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      resources:
+        limits:
+          cpu: "100m"
+          memory: "30Mi"
+      volumeMounts:
+      - mountPath: /proc/ro
+        name: hostmount
+  volumes:
+    - name: test
+      cephfs:
+        monitors:
+          - xxx
+    - name: hostmount
+      hostPath:
+        path: /proc/ro

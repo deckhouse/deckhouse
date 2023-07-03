@@ -127,7 +127,11 @@ func (sp *securityPolicy) preprocesSecurityPolicy() {
 			sp.Spec.Policies.SupplementalGroups = nil
 		}
 	}
-	// Having rules allowing '*' volumes make no sense
+	// 'Unmasked' procMount doesn't require a constraint
+	if sp.Spec.Policies.AllowedProcMount == "Unmasked" {
+		sp.Spec.Policies.AllowedProcMount = ""
+	}
+	// Having rules allowing '*' volumes makes no sense
 	if hasItem(sp.Spec.Policies.AllowedVolumes, "*") {
 		sp.Spec.Policies.AllowedVolumes = nil
 	}

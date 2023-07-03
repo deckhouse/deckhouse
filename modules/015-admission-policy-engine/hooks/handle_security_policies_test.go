@@ -73,7 +73,7 @@ spec:
     - user/huyser
     fsGroup:
       rule: RunAsAny
-    readOnlyRootFilesystem: false
+    readOnlyRootFilesystem: true
     runAsGroup:
       ranges:
       - max: 500
@@ -85,7 +85,7 @@ spec:
         min: 300
       rule: MustRunAs
     supplementalGroups:
-      rangres:
+      ranges:
       - max: 1000
         min: 500
       rule: MustRunAs
@@ -96,7 +96,7 @@ spec:
       type: type
     allowHostIPC: true
     allowHostPID: false
-    allowedHostPath:
+    allowedHostPaths:
     - pathPrefix: /dev
       readOnly: true
     allowedHostPorts:
@@ -108,7 +108,7 @@ spec:
     requiredDropCapabilities:
     - ALL
     seccompProfiles:
-      alowedProfiles:
+      allowedProfiles:
       - RuntimeDefault
       - Localhost
       allowedLocalhostFiles:

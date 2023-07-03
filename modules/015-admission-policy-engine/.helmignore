@@ -8,3 +8,4 @@ template_tests
 README.md
 test_suite.yaml
 test_samples/
+tests/

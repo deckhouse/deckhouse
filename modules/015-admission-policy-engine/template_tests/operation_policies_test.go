@@ -17,10 +17,6 @@ limitations under the License.
 package template_tests
 
 import (
-	"fmt"
-	"os/exec"
-	"strings"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -58,7 +54,8 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"maxRevisionHistoryLimit":3,
 			"imagePullPolicy":"Always",
 			"priorityClassNames":["foo","bar"],
-			"checkHostNetworkDNSPolicy":true
+			"checkHostNetworkDNSPolicy":true,
+			"checkContainerDuplicates":true
 		},
 		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
 		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
@@ -85,24 +82,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8DNSPolicy", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8RequiredLabels", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8RequiredAnnotations", testPolicyName).Exists()).To(BeTrue())
-		})
-	})
-
-	Context("Test policies", func() {
-		BeforeEach(func() {
-			if !gatorAvailable() {
-				Skip("gator binary is not available")
-			}
-		})
-
-		It("Should pass tests", func() {
-			gatorCLI := exec.Command("/deckhouse/bin/gator", "verify", "-v", "/deckhouse/modules/015-admission-policy-engine/charts/constraint-templates/templates/operation-policy/test_samples/...")
-			res, err := gatorCLI.CombinedOutput()
-			if err != nil {
-				output := strings.ReplaceAll(string(res), "deckhouse/modules/015-admission-policy-engine/charts/constraint-templates/templates/operation-policy/test_samples", "")
-				fmt.Println(output)
-				Fail("Gatekeeper policy tests failed:" + err.Error())
-			}
+			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 		})
 	})
 })
