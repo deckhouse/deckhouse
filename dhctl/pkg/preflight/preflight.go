@@ -14,11 +14,14 @@
 
 package preflight
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
+import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+)
 
-func PreflightCheck() error {
+func PreflightCheck(sshClient *ssh.Client) error {
 	err := log.Process("preflight-check", "Checking SSH tunnel", func() error {
-		return nil
+		return CheckSSHTunel(sshClient.Settings, 0, 0)
 	})
 	if err != nil {
 		return err

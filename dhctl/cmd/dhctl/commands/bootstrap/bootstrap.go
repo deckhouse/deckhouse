@@ -219,7 +219,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		showWarningAboutUsageDontUsePublicImagesFlagIfNeed()
 
-		err = preflight.PreflightCheck()
+		err = preflight.PreflightCheck(sshClient)
 		if err != nil {
 			return err
 		}
