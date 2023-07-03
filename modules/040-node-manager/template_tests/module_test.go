@@ -173,13 +173,41 @@ internal:
       type: "Docker"
     cloudInstances:
       classReference:
-        kind: GCPInstanceClass
+        kind: AzureInstanceClass
         name: worker
       maxPerZone: 5
       minPerZone: 2
       zones:
       - zonea
       - zoneb
+  - name: aaa
+    instanceClass:
+      acceleratedNetworking: false
+      machineSize: test
+      urn: test
+    nodeType: CloudEphemeral
+    cloudInstances:
+      classReference:
+        kind: AzureInstanceClass
+        name: aaa
+      maxPerZone: 1
+      minPerZone: 1
+      zones:
+      - zonea
+  - name: bbb
+    instanceClass:
+      acceleratedNetworking: true
+      machineSize: bbb
+      urn: zzz
+    nodeType: CloudEphemeral
+    cloudInstances:
+      classReference:
+        kind: AzureInstanceClass
+        name: bbb
+      maxPerZone: 1
+      minPerZone: 1
+      zones:
+      - zonea
   machineControllerManagerEnabled: true
 `
 
@@ -1354,6 +1382,30 @@ ccc: ddd
 
 				Expect(mcls.Exists()).To(BeTrue())
 				assertValues(mcls, "spec.tags")
+			})
+
+			It("spec.properties.networkProfile.acceleratedNetworking is not set (default true)", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "worker-02320933")
+				Expect(t.Exists()).To(BeTrue())
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
+			})
+
+			It("spec.properties.networkProfile.acceleratedNetworking is set to true", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "bbb-02320933")
+				Expect(t.Exists()).To(BeTrue())
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
+			})
+
+			It("spec.properties.networkProfile.acceleratedNetworking is set to false", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "aaa-02320933")
+				Expect(t.Exists()).To(BeTrue())
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(false))
 			})
 
 			// Important! If checksum changes, the MachineDeployments will re-deploy!
