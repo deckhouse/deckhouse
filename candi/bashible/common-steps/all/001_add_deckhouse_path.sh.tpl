@@ -15,3 +15,6 @@
 bb-sync-file /etc/profile.d/02-deckhouse-path.sh - << "EOF"
 export PATH="/opt/deckhouse/bin:$PATH"
 EOF
+
+
+env > /tmp/env.info
