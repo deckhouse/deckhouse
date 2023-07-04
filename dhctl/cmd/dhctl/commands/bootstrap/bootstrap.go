@@ -174,6 +174,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineDeckhouseFlags(cmd)
 	app.DefineDontUsePublicImagesFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)
+	app.DefinePreflight(cmd)
 
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)

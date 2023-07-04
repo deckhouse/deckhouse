@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
@@ -28,6 +29,11 @@ const (
 )
 
 func CheckSSHTunel(sshClient *ssh.Client, localPort, remotePort int) error {
+	if app.PreflightSkipSSHForword {
+		log.InfoLn("Skip SSH forward preflight check")
+		return nil
+	}
+
 	if localPort == 0 {
 		localPort = DefaultLocalPort
 	}
