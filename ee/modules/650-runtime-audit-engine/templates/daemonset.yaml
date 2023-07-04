@@ -146,8 +146,6 @@ spec:
           readOnly: true
         - name: rules-data
           mountPath: /etc/falco/rules.d
-        - name: dockersock
-          mountPath: /var/run/docker.sock
         - name: containerdsock
           mountPath: /run/containerd/containerd.sock
 
@@ -284,9 +282,6 @@ spec:
       - hostPath:
           path: /usr
         name: usr-fs
-      - hostPath:
-          path: /var/run/docker.sock
-        name: dockersock
       - hostPath:
           path: /run/containerd/containerd.sock
         name: containerdsock
