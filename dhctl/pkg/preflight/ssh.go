@@ -32,7 +32,6 @@ func (pc *PreflightCheck) CheckSSHTunel() error {
 		log.InfoLn("SSH forward preflight check was skipped")
 		return nil
 	}
-	log.DebugF("Checking ssh tunnel with remote port %d and local port %d\n", remotePort, localPort)
 
 	log.DebugF("Checking ssh tunnel with remote port %d and local port %d\n", DefaultTunnelRemotePort, DefaultTunnelLocalPort)
 
