@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
@@ -23,7 +24,7 @@ type RawRule map[string]interface{}
 
 // FalcoAuditRule is a structure to encode FalcoAuditRules custom resources.
 type FalcoAuditRule struct {
-	ApiVersion string
+	ApiVersion string `yaml:"apiVersion"`
 	Kind       string
 	Metadata   Metadata
 	Spec       FalcoAuditRuleSpec
@@ -86,12 +87,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	res, err := yaml.Marshal(convert(input, rules))
-	if err != nil {
+	buf := bytes.Buffer{}
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+
+	if err := enc.Encode(convert(input, rules)); err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(string(res))
+	fmt.Print(buf.String())
 }
 
 func convert(path string, rules []RawRule) FalcoAuditRule {

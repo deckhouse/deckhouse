@@ -387,4 +387,5 @@ data:
       chunk_wait_us: 1000
       # @ Watch frequency (in seconds) when fetching metadata from Kubernetes.
       watch_freq_sec: 1
+
 {{ (.Files.Glob "rules/*" ).AsConfig | indent 2 }}

@@ -85,7 +85,7 @@
   condition: ka.target.resource=secrets
 
 - macro: falcoauditrules
-  condition: ka.target.resource=secrets
+  condition: ka.target.resource=falcoauditrules
 
 # Endpoints
 - macro: health_endpoint
