@@ -365,11 +365,43 @@ function prepare_environment() {
   >&2 ls -la $cwd
 }
 
+function write_deckhouse_logs() {
+  testLog=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+kubectl -n d8-system logs deploy/deckhouse
+END_SCRIPT
+)
+  >&2 echo -n "Fetch Deckhouse logs if error test ..."
+
+  getDeckhouseLogsAttempts=5
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$getDeckhouseLogsAttempts" ]; then
+      >&2 echo "ERROR: getting deckhouse logs"
+      return 1
+    fi
+    >&2 echo "ERROR: getting deckhouse logs yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+}
+
 function run-test() {
   if [[ "$PROVIDER" == "Static" ]]; then
-    bootstrap_static || return $?
+    bootstrap_static
+    exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+      write_deckhouse_logs
+      return "$exit_code"
+    fi
   else
-    bootstrap || return $?
+    bootstrap
+    exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+      write_deckhouse_logs
+      return "$exit_code"
+    fi
   fi
 
   wait_deckhouse_ready || return $?
@@ -706,12 +738,6 @@ kubectl -n d8-system get pods -l app=deckhouse
 [[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
 END_SCRIPT
 )
-  testLog=$(cat <<"END_SCRIPT"
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-kubectl -n d8-system logs deploy/deckhouse
-END_SCRIPT
-)
 
   testRunAttempts=60
   for ((i=1; i<=$testRunAttempts; i++)); do
@@ -727,8 +753,9 @@ END_SCRIPT
       >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed."
     fi
   done
-  >&2 echo -n "Fetch Deckhouse logs if error test ..."
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
+
+  write_deckhouse_logs
+
   return 1
 }
 
@@ -739,12 +766,6 @@ END_SCRIPT
 #  - ssh_user
 #  - master_ip
 function wait_cluster_ready() {
-  testLog=$(cat <<"END_SCRIPT"
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-kubectl -n d8-system logs deploy/deckhouse
-END_SCRIPT
-)
   # Print deckhouse info and enabled modules.
   infoScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh")
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
@@ -775,8 +796,7 @@ END_SCRIPT
     fi
   done
 
-  >&2 echo -n "Fetch Deckhouse logs after test ..."
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
+  write_deckhouse_logs
 
   if [[ $test_failed == "true" ]] ; then
     return 1
