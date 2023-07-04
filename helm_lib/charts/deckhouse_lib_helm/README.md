@@ -41,6 +41,7 @@
 | [helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs) |
 | [helm_lib_module_pod_security_context_run_as_user_root](#helm_lib_module_pod_security_context_run_as_user_root) |
 | [helm_lib_module_container_security_context_not_allow_privilege_escalation](#helm_lib_module_container_security_context_not_allow_privilege_escalation) |
+| [helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux](#helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux) |
 | [helm_lib_module_container_security_context_read_only_root_filesystem](#helm_lib_module_container_security_context_read_only_root_filesystem) |
 | [helm_lib_module_container_security_context_privileged](#helm_lib_module_container_security_context_privileged) |
 | [helm_lib_module_container_security_context_privileged_read_only_root_filesystem](#helm_lib_module_container_security_context_privileged_read_only_root_filesystem) |
@@ -465,6 +466,19 @@ list:
 
 `{{ include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . }} `
 
+
+
+### helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux
+
+ returns SecurityContext parameters for Container with allowPrivilegeEscalation false and options for SELinux compatibility
+
+#### Usage
+
+`{{ include "helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_container_security_context_read_only_root_filesystem
