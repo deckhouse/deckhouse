@@ -19,8 +19,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
 const (
@@ -28,7 +27,7 @@ const (
 	DefaultRemotePort = 1234
 )
 
-func CheckSSHTunel(sess *session.Session, localPort, remotePort int) error {
+func CheckSSHTunel(sshClient *ssh.Client, localPort, remotePort int) error {
 	if localPort == 0 {
 		localPort = DefaultLocalPort
 	}
@@ -42,7 +41,7 @@ func CheckSSHTunel(sess *session.Session, localPort, remotePort int) error {
 	builder.WriteString(":localhost:")
 	builder.WriteString(strconv.Itoa(remotePort))
 
-	tun := frontend.NewTunnel(sess, "L", builder.String())
+	tun := sshClient.Tunnel("L", builder.String())
 	err := tun.Up()
 	if err != nil {
 		return err

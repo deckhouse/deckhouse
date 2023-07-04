@@ -21,7 +21,7 @@ import (
 
 func PreflightCheck(sshClient *ssh.Client) error {
 	err := log.Process("preflight-check", "Checking SSH tunnel", func() error {
-		return CheckSSHTunel(sshClient.Settings, 0, 0)
+		return CheckSSHTunel(sshClient, 0, 0)
 	})
 	if err != nil {
 		return err
