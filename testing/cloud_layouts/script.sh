@@ -106,7 +106,7 @@ bootstrap_log="${DHCTL_LOG_FILE}"
 terraform_state_file="/tmp/static-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.tfstate"
 # Logs dir
 logs=/tmp/logs
-mkdir $logs
+mkdir -p $logs
 
 # function generates temp ssh parameters file
 function set_common_ssh_parameters() {
