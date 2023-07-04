@@ -142,7 +142,7 @@ func (k *KubeProxy) tryToRestartFully(startID int) {
 }
 
 func (k *KubeProxy) proxyCMD(startID int) *Command {
-	command := fmt.Sprintf("kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", k.port)
+	command := fmt.Sprintf("/opt/deckhouse/bin/kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", k.port)
 
 	log.DebugF("[%d] Proxy command for start: %s\n", startID, command)
 
