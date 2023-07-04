@@ -20,15 +20,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
-const (
-	DefaultLocalPort  = 1234
-	DefaultRemotePort = 1234
-)
-
-func CheckSSHTunel(sshClient *ssh.Client, localPort, remotePort int) error {
+func (pc *preflightCheck) CheckSSHTunel(localPort, remotePort int) error {
 	if app.PreflightSkipSSHForword {
 		log.InfoLn("Skip SSH forward preflight check")
 		return nil
@@ -47,7 +41,7 @@ func CheckSSHTunel(sshClient *ssh.Client, localPort, remotePort int) error {
 	builder.WriteString(":localhost:")
 	builder.WriteString(strconv.Itoa(remotePort))
 
-	tun := sshClient.Tunnel("L", builder.String())
+	tun := pc.sshClient.Tunnel("L", builder.String())
 	err := tun.Up()
 	if err != nil {
 		return err

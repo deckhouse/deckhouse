@@ -220,10 +220,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		showWarningAboutUsageDontUsePublicImagesFlagIfNeed()
 
-		err = preflight.PreflightCheck(sshClient)
-		if err != nil {
-			return err
-		}
+		preflightCheck := preflight.NewPreflightCheck(sshClient)
 
 		bootstrapState := bootstrap.NewBootstrapState(stateCache)
 
@@ -247,6 +244,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		var resourcesTemplateData map[string]interface{}
 
 		if metaConfig.ClusterType == config.CloudClusterType {
+			err = preflightCheck.CloudCheck()
+			if err != nil {
+				return err
+			}
 			err = log.Process("bootstrap", "Cloud infrastructure", func() error {
 				baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
 					WithVariables(metaConfig.MarshalConfig()).
@@ -305,6 +306,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				return err
 			}
 		} else {
+			err = preflightCheck.StaticCheck()
+			if err != nil {
+				return err
+			}
 			var static struct {
 				NodeIP string `json:"nodeIP"`
 			}
@@ -312,7 +317,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			nodeIP = static.NodeIP
 		}
 
-		// next parse and check resources
+		// next parse and check resourcesDefineB
 		// do it after bootstrap cloud because resources can be template
 		// and we want to fail immediately if template has errors
 		var resourcesToCreate template.Resources

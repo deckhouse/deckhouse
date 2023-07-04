@@ -20,12 +20,35 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
-func PreflightCheck(sshClient *ssh.Client) error {
-	return log.Process("preflight-check", "Preflight Checks", func() error {
+type PreflightCheck interface {
+	CloudCheck() error
+	StaticCheck() error
+}
+
+type preflightCheck struct {
+	sshClient        *ssh.Client
+	tunnelLocalPort  int
+	tunnelRemotePort int
+}
+
+func NewPreflightCheck(sshClient *ssh.Client) PreflightCheck {
+	return &preflightCheck{
+		sshClient:        sshClient,
+		tunnelLocalPort:  DefaultTunnelLocalPort, // TODO: add cli param
+		tunnelRemotePort: DefaultTunnelRemotePort,
+	}
+}
+
+func (pc *preflightCheck) StaticCheck() error {
+	return log.Process("common", "Preflight Checks", func() error {
 		if app.PreflightSkipAll {
 			log.InfoLn("Skip all preflight checks")
 			return nil
 		}
-		return CheckSSHTunel(sshClient, 0, 0)
+		return pc.CheckSSHTunel(0, 0)
 	})
+}
+
+func (pc *preflightCheck) CloudCheck() error {
+	return nil
 }
