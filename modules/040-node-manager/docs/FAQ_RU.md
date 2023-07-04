@@ -22,7 +22,8 @@ search: добавить ноду в кластер, добавить узел �
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+   NODE_GROUP=worker
+   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 3. Выполните предварительную настройку нового узла, в соответствии с особенностями вашего окружения. Например:
