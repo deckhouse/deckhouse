@@ -53,7 +53,7 @@ func CheckSSHTunel(sshClient *ssh.Client, localPort, remotePort int) error {
 		return err
 	}
 
-	log.DebugLn("Checking ssh tunnel success")
+	log.InfoLn("Checking ssh tunnel success")
 	tun.Stop()
 	return nil
 }

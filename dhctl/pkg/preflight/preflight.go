@@ -21,16 +21,11 @@ import (
 )
 
 func PreflightCheck(sshClient *ssh.Client) error {
-	if app.PreflightSkipAll {
-		log.InfoLn("Skip all preflight checks")
-		return nil
-	}
-
-	err := log.Process("preflight-check", "Checking SSH tunnel", func() error {
+	return log.Process("preflight-check", "Preflight Checks", func() error {
+		if app.PreflightSkipAll {
+			log.InfoLn("Skip all preflight checks")
+			return nil
+		}
 		return CheckSSHTunel(sshClient, 0, 0)
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
