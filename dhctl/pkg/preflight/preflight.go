@@ -45,7 +45,7 @@ func (pc *preflightCheck) StaticCheck() error {
 			log.InfoLn("Skip all preflight checks")
 			return nil
 		}
-		return pc.CheckSSHTunel(0, 0)
+		return pc.CheckSSHTunel()
 	})
 }
 
