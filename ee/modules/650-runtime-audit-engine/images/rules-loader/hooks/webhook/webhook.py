@@ -11,6 +11,7 @@ from yaml import dump
 
 from lib.convert import convert_spec
 
+
 def main(ctx: hook.Context):
     try:
         request = ctx.binding_context["review"]["request"]
@@ -18,7 +19,7 @@ def main(ctx: hook.Context):
         ctx.output.validations.allow()
     except subprocess.CalledProcessError as e:
         print(e.output)
-        ctx.output.validations.deny("Spec validation error")
+        ctx.output.validations.deny(f"spec validation error: {e.output}")
     except Exception as e:
         ctx.output.validations.error(str(e))
 
