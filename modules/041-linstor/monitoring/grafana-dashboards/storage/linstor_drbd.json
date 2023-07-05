@@ -145,7 +145,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "((sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes{exported_node=~\"$node\"} != 0)-sum by (storage_pool)(linstor_storage_pool_capacity_free_bytes{exported_node=~\"$node\"}))*100/sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes{exported_node=~\"$node\"}))",
+          "expr": "((sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes{node=~\"$node\"} != 0)-sum by (storage_pool)(linstor_storage_pool_capacity_free_bytes{node=~\"$node\"}))*100/sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes{node=~\"$node\"}))",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -201,7 +201,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_total_bytes{exported_node=~\"$node\"} != 0)",
+          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_total_bytes{node=~\"$node\"} != 0)",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -258,7 +258,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_free_bytes{exported_node=~\"$node\"} != 0)",
+          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_free_bytes{node=~\"$node\"} != 0)",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -314,7 +314,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (storage_pool) ((linstor_storage_pool_capacity_total_bytes{exported_node=~\"$node\"} != 0) - (linstor_storage_pool_capacity_free_bytes{exported_node=~\"$node\"} != 0))",
+          "expr": "sum by (storage_pool) ((linstor_storage_pool_capacity_total_bytes{node=~\"$node\"} != 0) - (linstor_storage_pool_capacity_free_bytes{node=~\"$node\"} != 0))",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -370,7 +370,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(linstor_node_state{nodetype=\"SATELLITE\",exported_node=~\"$node\"} == 2) OR on() vector(0)",
+          "expr": "count(linstor_node_state{nodetype=\"SATELLITE\",node=~\"$node\"} == 2) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -425,7 +425,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(linstor_storage_pool_capacity_total_bytes{driver!=\"DISKLESS\",exported_node=~\"$node\"}) OR on() vector(0)",
+          "expr": "count(linstor_storage_pool_capacity_total_bytes{driver!=\"DISKLESS\",node=~\"$node\"}) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -535,7 +535,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(linstor_resource_state{exported_node=~\"$node\"}) OR on() vector(0)",
+          "expr": "count(linstor_resource_state{node=~\"$node\"}) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -741,7 +741,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(linstor_node_state{nodetype=\"SATELLITE\", exported_node=~\"$node\"} != 2) OR on() vector(0)",
+          "expr": "count(linstor_node_state{nodetype=\"SATELLITE\", node=~\"$node\"} != 2) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -800,7 +800,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(linstor_storage_pool_error_count{driver!=\"DISKLESS\", exported_node=~\"$node\"} != 0) OR on() vector(0)",
+          "expr": "count(linstor_storage_pool_error_count{driver!=\"DISKLESS\", node=~\"$node\"} != 0) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -859,7 +859,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count((linstor_volume_state{exported_node=~\"$node\"} != 1) != 4) OR on() vector(0)",
+          "expr": "count((linstor_volume_state{node=~\"$node\"} != 1) != 4) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
