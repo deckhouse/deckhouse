@@ -595,6 +595,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -603,6 +604,7 @@ jobs:
           name: test_output_yandex-cloud_docker_1_22
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -1046,6 +1048,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -1054,6 +1057,7 @@ jobs:
           name: test_output_yandex-cloud_docker_1_23
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -1497,6 +1501,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -1505,6 +1510,7 @@ jobs:
           name: test_output_yandex-cloud_docker_1_24
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -1948,6 +1954,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -1956,6 +1963,7 @@ jobs:
           name: test_output_yandex-cloud_docker_1_25
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -2399,6 +2407,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -2407,6 +2416,7 @@ jobs:
           name: test_output_yandex-cloud_docker_1_26
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -2850,6 +2860,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -2858,6 +2869,7 @@ jobs:
           name: test_output_yandex-cloud_docker_1_27
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -3301,6 +3313,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -3309,6 +3322,7 @@ jobs:
           name: test_output_yandex-cloud_containerd_1_22
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -3752,6 +3766,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -3760,6 +3775,7 @@ jobs:
           name: test_output_yandex-cloud_containerd_1_23
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -4203,6 +4219,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -4211,6 +4228,7 @@ jobs:
           name: test_output_yandex-cloud_containerd_1_24
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -4654,6 +4672,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -4662,6 +4681,7 @@ jobs:
           name: test_output_yandex-cloud_containerd_1_25
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -5105,6 +5125,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -5113,6 +5134,7 @@ jobs:
           name: test_output_yandex-cloud_containerd_1_26
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -5556,6 +5578,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -5564,6 +5587,7 @@ jobs:
           name: test_output_yandex-cloud_containerd_1_27
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
