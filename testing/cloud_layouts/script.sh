@@ -366,7 +366,6 @@ function prepare_environment() {
 }
 
 function write_deckhouse_logs() {
-  set -x
   testLog=$(cat <<"END_SCRIPT"
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
@@ -379,7 +378,6 @@ END_SCRIPT
   attempt=0
   for ((i=1; i<=$getDeckhouseLogsAttempts; i++)); do
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"; then
-      set +x
       return 0
     else
       >&2 echo "Getting deckhouse logs $i/$getDeckhouseLogsAttempts failed. Sleeping 5 seconds..."
@@ -388,7 +386,6 @@ END_SCRIPT
   done
 
   >&2 echo "ERROR: getting deckhouse logs after $getDeckhouseLogsAttempts)"
-  set +x
   return 1
 }
 
