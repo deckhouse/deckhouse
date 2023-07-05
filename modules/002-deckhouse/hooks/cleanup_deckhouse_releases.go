@@ -92,7 +92,8 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		}
 		// everything except the last Deployed release
 		for i := 1; i < len(deployedReleasesIndexes); i++ {
-			release := releases[i]
+			index := deployedReleasesIndexes[i]
+			release := releases[index]
 			input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
 		}
 	}
@@ -100,7 +101,8 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	// save only last 10 outdated releases
 	if len(outdatedReleasesIndexes) > 10 {
 		for i := 10; i < len(outdatedReleasesIndexes); i++ {
-			release := releases[i]
+			index := outdatedReleasesIndexes[i]
+			release := releases[index]
 			input.PatchCollector.Delete("deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.InBackground())
 		}
 	}
