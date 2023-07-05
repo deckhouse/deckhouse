@@ -50,12 +50,6 @@ case "$ID" in
     esac
     name_is_not_supported
   ;;
-  altlinux)
-    case "$VERSION_ID" in p10|10.1)
-      echo "altlinux" && exit 0 ;;
-    esac
-    name_is_not_supported
-  ;;
   "")
     >&2 echo "ERROR: Can't determine OS! No ID in /etc/os-release."
     exit 1
@@ -71,9 +65,6 @@ for ID in $ID_LIKE; do
     ;;
     debian)
       try_bundle "debian"
-    ;;
-    altlinux)
-      try_bundle "altlinux"
     ;;
   esac
 done
