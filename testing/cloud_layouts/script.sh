@@ -382,8 +382,7 @@ END_SCRIPT
       set +x
       return 0
     else
-      test_failed="true"
-      >&2 echo "Run test script via SSH: attempt $i/$getDeckhouseLogsAttempts failed. Sleeping 5 seconds..."
+      >&2 echo "Getting deckhouse logs $i/$getDeckhouseLogsAttempts failed. Sleeping 5 seconds..."
       sleep 5
     fi
   done
@@ -671,10 +670,16 @@ ENDSSH
 function bootstrap() {
   >&2 echo "Run dhctl bootstrap ..."
   dhctl bootstrap --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log" || return $?
+  --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
+
+  dhctl_exit_code=$?
 
   if ! master_ip="$(parse_master_ip_from_log)"; then
     return 1
+  fi
+
+  if [[ $dhctl_exit_code -ne 0 ]]; then
+    return "$dhctl_exit_code"
   fi
 
   >&2 echo "==============================================================
