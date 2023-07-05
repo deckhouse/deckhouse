@@ -1,0 +1,24 @@
+candi:
+  fixes:
+    - summary: >-
+        Fix the install `containerd` step for cases when `NodeGroup` CRI changes from `docker` to
+        `containerd`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5086
+deckhouse:
+  fixes:
+    - summary: Fix `DeckhouseRelease` cleanup hook. Mark superseded releases in the right order.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5113
+ingress-nginx:
+  features:
+    - summary: Tune Kruise controller's leader election and verbosity.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5092
+      impact: Kruise controller deployment will be updated and restarted.
+  fixes:
+    - summary: Fix Kruise controller update logic when reverting a failed update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5100
+      impact: Kruise controller manager will be restarted.
+linstor:
+  fixes:
+    - summary: Rename `exported_node` to `node` in PrometheusRule.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5121
+
