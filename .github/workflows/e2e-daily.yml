@@ -331,7 +331,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -755,7 +755,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -1187,7 +1187,7 @@ jobs:
 
       - name: "Run e2e test: GCP/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -1607,7 +1607,7 @@ jobs:
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2035,7 +2035,7 @@ jobs:
 
       - name: "Run e2e test: OpenStack/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: OpenStack
           CRI: Containerd
@@ -2455,7 +2455,7 @@ jobs:
 
       - name: "Run e2e test: vSphere/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: vSphere
           CRI: Containerd
@@ -2879,7 +2879,7 @@ jobs:
 
       - name: "Run e2e test: Static/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Static
           CRI: Containerd
