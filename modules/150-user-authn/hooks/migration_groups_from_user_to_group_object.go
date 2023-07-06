@@ -17,49 +17,65 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"fmt"
+	"hash/fnv"
+	"regexp"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
+)
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+const (
+	DexGroupKind       = "Group"
+	DexGroupGroup      = "deckhouse.io"
+	DexGroupVersion    = "v1alpha1"
+	DexGroupResource   = "groups"
+	DexGroupAPIVersion = DexGroupGroup + "/" + DexGroupVersion
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/user-authn/migration",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "users",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "User",
-			FilterFunc: applyDexUserFilter,
+			Name:                         "users",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "User",
+			FilterFunc:                   applyDexUserFilter,
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+		},
+		{
+			Name:       "migrated",
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"user-authn-groups-migrated"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				return obj.GetName(), nil
+			},
 		},
 	},
-}, dependency.WithExternalDependencies(migrationGroups))
+}, migrationGroups)
 
-func migrationGroups(input *go_hook.HookInput, dc dependency.Container) error {
-	kubeClient, err := dc.GetK8sClient()
-	if err != nil {
-		return err
-	}
-
-	const (
-		DexGroupKind       = "Group"
-		DexGroupGroup      = "deckhouse.io"
-		DexGroupVersion    = "v1alpha1"
-		DexGroupResource   = "groups"
-		DexGroupAPIVersion = "deckhouse.io/v1alpha1"
-	)
-
-	gvr := schema.GroupVersionResource{
-		Group:    DexGroupGroup,
-		Version:  DexGroupVersion,
-		Resource: DexGroupResource,
+func migrationGroups(input *go_hook.HookInput) error {
+	if len(input.Snapshots["migrated"]) > 0 {
+		// We need this hook to run only once
+		return nil
 	}
 
 	groupToUsersMap := make(map[string][]string)
@@ -75,13 +91,13 @@ func migrationGroups(input *go_hook.HookInput, dc dependency.Container) error {
 		for _, userName := range users {
 			members = append(members, DexGroupMember{Kind: "User", Name: userName})
 		}
-		newDexGroup := &DexGroup{
+		dexGroup := &DexGroup{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       DexGroupKind,
 				APIVersion: DexGroupAPIVersion,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: strings.ToLower(groupName),
+				Name: metadataNameify(groupName),
 			},
 			Spec: DexGroupSpec{
 				Name:    groupName,
@@ -89,19 +105,67 @@ func migrationGroups(input *go_hook.HookInput, dc dependency.Container) error {
 			},
 		}
 
-		obj, err := sdk.ToUnstructured(newDexGroup)
-		if err != nil {
-			return fmt.Errorf("converting DexGroup/%s to unstructured: %w", groupName, err)
-		}
-
-		input.LogEntry.Printf("Create Group %s with members %s", groupName, members)
-		_, err = kubeClient.Dynamic().Resource(gvr).Create(context.TODO(), obj, metav1.CreateOptions{})
-		if err != nil {
-			if !errors.IsAlreadyExists(err) {
-				return fmt.Errorf("create DexGroup %s: %w", groupName, err)
-			}
-		}
+		input.LogEntry.Printf("Create Group %s with members %s", dexGroup.Spec.Name, dexGroup.Spec.Members)
+		input.PatchCollector.Create(dexGroup, object_patch.IgnoreIfExists())
 	}
 
+	input.PatchCollector.Create(&corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "user-authn-groups-migrated",
+			Namespace: "d8-system",
+		},
+	}, object_patch.IgnoreIfExists())
+
 	return nil
+}
+
+const (
+	maxMetadataNameLength  = 63
+	hashLength             = 10
+	maxGeneratedNameLength = maxMetadataNameLength - hashLength - 1 // -1 is for the delimiter
+)
+
+const metadataNamePattern = "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+
+var metadataNameRe = regexp.MustCompile(metadataNamePattern)
+
+func metadataNameify(base string) string {
+	// if the name valid, we want to preserve it to not punish users with groups named properly
+	if metadataNameRe.MatchString(base) && len(base) <= maxMetadataNameLength {
+		return base
+	}
+
+	// This is required to avoid collisions when sanitized group names are equal, e.g., Admins and admins.
+	// Must go first before all changes.
+	hash := fnv.New32a()
+	hash.Write([]byte(base))
+
+	base = strings.ToLower(base)
+
+	// Only a-z, 0-9, . and - are allowed
+	runes := []rune(base)
+	for i, c := range runes {
+		alpha := c >= 'a' && c <= 'z'
+		digit := c >= '0' && c <= '9'
+		delimiter := c == '-'
+
+		if !alpha && !digit && !delimiter {
+			runes[i] = '-'
+		}
+	}
+	base = string(runes)
+
+	base = strings.Trim(base, "-")
+
+	if len(base) > maxGeneratedNameLength {
+		base = base[:maxGeneratedNameLength]
+	}
+
+	base = fmt.Sprintf("%s-%d", base, hash.Sum32())
+
+	return base
 }
