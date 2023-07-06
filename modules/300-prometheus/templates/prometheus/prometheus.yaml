@@ -63,6 +63,8 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
+    - name: enable-feature
+      value: extra-scrape-metrics
   containers:
   - name: prometheus
     startupProbe:
