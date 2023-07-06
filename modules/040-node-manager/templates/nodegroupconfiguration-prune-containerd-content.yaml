@@ -31,6 +31,7 @@ spec:
     # it will be removed automatically once they have been pulled and unpacked.
     #
     # Prune content to save disk space
+    {{- `
     {{- if eq .cri "Containerd" }}
     if [ -f /var/lib/bashible/containerd_content_store_is_cleared ] ; then
       exit 0
@@ -42,3 +43,4 @@ spec:
         bb-log-warning "Failed to clean up containerd's content store. Skip this for now"
     fi
     {{- end }}
+    `}}
