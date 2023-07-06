@@ -35,17 +35,23 @@
 
   - alert: TargetSampleLimitExceeded
     expr: |
-      sum without (
-        exported_instance, exported_job, exported_pod, scrape_source, tier, hook, module
-      ) (
-        label_replace(
-          label_replace(
-            label_replace(
-              d8_prometheus_target_limits_metrics,
-            "instance", "$1", "exported_instance", "(.*)"),
-          "pod", "$1", "exported_pod", "(.*)"),
-        "job", "$1", "exported_job", "(.*)")
-      ) > 0
+      scrape_samples_post_metric_relabeling / scrape_sample_limit > 1
+      and scrape_sample_limit !=0
+    for: __SCRAPE_INTERVAL_X_2__
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "instance,pod"
+      description: |
+        Target are down because of a sample limit exceeded.
+      summary: Scrapes are exceeding sample limit
+
+  - alert: TargetSampleLimitExceeded
+    expr: |
+      scrape_samples_post_metric_relabeling / scrape_sample_limit > 0.9
+      and scrape_sample_limit !=0
     for: __SCRAPE_INTERVAL_X_2__
     labels:
       severity_level: "7"
@@ -54,5 +60,5 @@
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "instance,pod"
       description: |
-        Target are down because of a sample limit exceeded.
-      summary: Scrapes are exceeding sample limit
+        The target is close to exceeding the sampling limit. less than 10% left to the limit
+      summary: The sampling limit is close.
