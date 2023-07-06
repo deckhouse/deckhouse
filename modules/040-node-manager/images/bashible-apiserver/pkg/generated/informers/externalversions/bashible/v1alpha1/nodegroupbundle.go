@@ -22,10 +22,10 @@ import (
 	"context"
 	time "time"
 
-	bashiblev1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
-	versioned "d8.io/bashible/pkg/generated/clientset/versioned"
-	internalinterfaces "d8.io/bashible/pkg/generated/informers/externalversions/internalinterfaces"
-	v1alpha1 "d8.io/bashible/pkg/generated/listers/bashible/v1alpha1"
+	bashiblev1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
+	versioned "bashible-apiserver/pkg/generated/clientset/versioned"
+	internalinterfaces "bashible-apiserver/pkg/generated/informers/externalversions/internalinterfaces"
+	v1alpha1 "bashible-apiserver/pkg/generated/listers/bashible/v1alpha1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"

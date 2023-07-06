@@ -105,12 +105,13 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 
-	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIConfig(
 		bashibleopenapi.GetOpenAPIDefinitions,
 		openapi.NewDefinitionNamer(apiserver.Scheme))
-	serverConfig.OpenAPIConfig.Info.Title = "Bashible"
-	serverConfig.OpenAPIConfig.Info.Version = "0.1"
+	serverConfig.OpenAPIV3Config.Info.Title = "Bashible"
+	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
 
+	o.RecommendedOptions.Authorization = nil
 	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
 		return nil, err
 	}

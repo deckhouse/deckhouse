@@ -42,12 +42,25 @@ type REST struct {
 	cache   cache.ThreadSafeStore
 }
 
+// RESTBootstrap implements RESTStorage without caching
+type RESTBootstrap struct {
+	REST
+}
+
 func RESTInPeace(storage TemplateStorage, err error, cache cache.ThreadSafeStore) *REST {
 	if err != nil {
 		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
 		panic(err)
 	}
 	return NewREST(storage, cache)
+}
+
+func RESTBootstrapInPeace(storage TemplateStorage, err error, cache cache.ThreadSafeStore) *RESTBootstrap {
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
+	return NewRESTBootstrap(storage, cache)
 }
 
 func NewREST(storage TemplateStorage, cache cache.ThreadSafeStore) *REST {
@@ -57,11 +70,22 @@ func NewREST(storage TemplateStorage, cache cache.ThreadSafeStore) *REST {
 	}
 }
 
+func NewRESTBootstrap(storage TemplateStorage, cache cache.ThreadSafeStore) *RESTBootstrap {
+	return &RESTBootstrap{
+		REST{
+			storage: storage,
+			cache:   cache,
+		},
+	}
+}
+
 // --------------------------------------------------------------------------------
 // Actually used methods
 //
 
-func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+func (r *REST) GetSingularName() string { return "" }
+
+func (r *REST) Get(_ context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
 	obj, exists := r.cache.Get(name)
 	if !exists {
 		var err error
@@ -71,6 +95,15 @@ func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions)
 			return nil, err // TODO form status error
 		}
 		r.cache.Add(name, obj)
+	}
+
+	return obj.(runtime.Object), nil
+}
+
+func (r *RESTBootstrap) Get(_ context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+	obj, err := r.storage.Render(name)
+	if err != nil {
+		return nil, err // TODO form status error
 	}
 
 	return obj.(runtime.Object), nil
@@ -87,6 +120,8 @@ func (r *REST) List(ctx context.Context, options *metainternalversion.ListOption
 func (r *REST) New() runtime.Object {
 	return r.storage.New()
 }
+
+func (r *REST) Destroy() {}
 
 func (r *REST) NamespaceScoped() bool {
 	return false

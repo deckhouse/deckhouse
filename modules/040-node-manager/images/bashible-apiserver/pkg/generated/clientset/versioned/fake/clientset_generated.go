@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "d8.io/bashible/pkg/generated/clientset/versioned"
-	bashiblev1alpha1 "d8.io/bashible/pkg/generated/clientset/versioned/typed/bashible/v1alpha1"
-	fakebashiblev1alpha1 "d8.io/bashible/pkg/generated/clientset/versioned/typed/bashible/v1alpha1/fake"
+	clientset "bashible-apiserver/pkg/generated/clientset/versioned"
+	bashiblev1alpha1 "bashible-apiserver/pkg/generated/clientset/versioned/typed/bashible/v1alpha1"
+	fakebashiblev1alpha1 "bashible-apiserver/pkg/generated/clientset/versioned/typed/bashible/v1alpha1/fake"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -75,7 +75,10 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+	_ testing.FakeClient  = &Clientset{}
+)
 
 // BashibleV1alpha1 retrieves the BashibleV1alpha1Client
 func (c *Clientset) BashibleV1alpha1() bashiblev1alpha1.BashibleV1alpha1Interface {

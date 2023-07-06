@@ -48,12 +48,13 @@ const (
 	registrySecretName = "deckhouse-registry"
 	nodeUserCRDName    = "nodeusers"
 
-	imageDigestsFile = "/var/files/images_digests.json"
-	versionMapFile   = "/var/files/version_map.yml"
+	imageDigestsFile = "/deckhouse/candi/images_digests.json"
+	versionMapFile   = "/deckhouse/candi/version_map.yml"
 )
 
 type Context interface {
 	Get(contextKey string) (map[string]interface{}, error)
+	GetBootstrapContext(ng string) (map[string]interface{}, error)
 }
 
 type UpdateHandler interface {
@@ -420,6 +421,36 @@ func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error)
 	return copied, nil
 }
 
+// Get retrieves a copy of context for the given secretKey.
+//
+// TODO In future, node group name will be passed instead of a secretKey.
+func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]interface{}, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	raw, ok := c.data[contextKey]
+	if !ok {
+		// log exists keys for debug purposes
+		keys := make([]string, 0, len(c.data))
+		for k := range c.data {
+			keys = append(keys, k)
+		}
+		return nil, fmt.Errorf("context not found for secretKey \"%s\". Have keys: %v", contextKey, keys)
+	}
+
+	converted, ok := raw.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("cannot convert context for secretKey \"%s\" to map[string]interface{}", contextKey)
+	}
+
+	copied := make(map[string]interface{})
+	for k, v := range converted {
+		copied[k] = v
+	}
+
+	return copied, nil
+}
+
 // secretMapFilter returns filtering function for single secret
 func secretMapFilter(name string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
@@ -436,7 +467,7 @@ type secretEventHandler struct {
 	bashibleContext *BashibleContext
 }
 
-func (x *secretEventHandler) OnAdd(obj interface{}) {
+func (x *secretEventHandler) OnAdd(obj interface{}, _ bool) {
 	secret := obj.(*corev1.Secret)
 
 	if x.lockApplied(secret) {

@@ -22,7 +22,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/apitesting/roundtrip"
 
-	bashiblefuzzer "d8.io/bashible/pkg/apis/bashible/fuzzer"
+	bashiblefuzzer "bashible-apiserver/pkg/apis/bashible/fuzzer"
 )
 
 func TestRoundTripTypes(t *testing.T) {
