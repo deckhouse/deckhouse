@@ -40,8 +40,6 @@ spec:
                 source:
                   type: string
                   description: 'Source repository address for an external module, or `Embedded` — for internal.'
-      subresources:
-        status: {}
       additionalPrinterColumns:
         - name: weight
           jsonPath: .properties.weight
