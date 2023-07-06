@@ -1,6 +1,5 @@
-{{- if hasKey .Values.nodeManager.internal "cloudProvider" }}
-  {{- $prefix := .Values.global.clusterConfiguration | dig "cloud" "prefix" "static" }}
-  {{- $provider := .Values.global.clusterConfiguration | dig "cloud" "provider" "static" }}
+{{- $prefix := "static" }}
+{{- $provider := "static" }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
@@ -22,20 +21,11 @@ spec:
       cidrBlocks:
         - {{ .Values.global.clusterConfiguration.serviceSubnetCIDR }}
     serviceDomain: {{ .Values.global.clusterConfiguration.clusterDomain }}
-  {{- if (.Values.global.enabledModules | has "cloud-provider-openstack") }}
-  infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha6
-    kind: OpenStackCluster
-    namespace: d8-cloud-instance-manager
-    name: {{ $prefix }}
-  {{- end }}
-  {{- if (.Values.global.enabledModules | has "cloud-provider-ovirt") }}
-  infrastructureRef:
-    apiVersion: ovirtproviderconfig.machine.openshift.io/v1beta1
-    kind: OvirtClusterProviderSpec
-    namespace: d8-cloud-instance-manager
-    name: ovirt
-  {{- end }}
+#  infrastructureRef:
+#    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+#    kind: StaticCluster
+#    namespace: d8-cloud-instance-manager
+#    name: {{ $prefix }}
 ---
 # empty kubeconfig secret for cluster
 apiVersion: v1
@@ -47,4 +37,3 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 type: cluster.x-k8s.io/secret
-{{- end }}

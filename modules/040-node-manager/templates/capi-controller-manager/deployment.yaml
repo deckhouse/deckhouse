@@ -3,8 +3,7 @@ cpu: 10m
 memory: 50Mi
 {{- end }}
 
-{{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -28,7 +27,6 @@ spec:
         cpu: 20m
         memory: 70Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
-    {{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
