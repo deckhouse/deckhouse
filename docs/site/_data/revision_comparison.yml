@@ -93,7 +93,15 @@ sections:
       - description:
           en: Istio service mesh
           ru: Istio service mesh
-        revision: ee
+        revision:
+          ce: partial
+          ee: true
+        hint:
+          ce:
+            en: |
+              Except for multicluster and federation capabilities as well as tools for automating data-plane upgrades
+            ru: |
+              Кроме функций мультикластера и федерации, а также инструментов автоматизации обновления data-plane
         url: /documentation/v1/modules/110-istio/
       - description:
           en: Multitenancy
@@ -117,18 +125,6 @@ sections:
           ru: Поддержка BGP
         revision: ee
         url: /documentation/v1/modules/380-metallb/
-      - description:
-          en: Instant autoscaling
-          ru: Мгновенное автомасштабирование
-        revision:
-          ce: false
-          ee: partial
-        hint:
-          ee:
-            en: |
-              (coming soon) Accelerated new Pods/nodes adding thanks to fully prebuilt images
-            ru: |
-              (скоро появится) Добавление новых Pod'ов/узлов ускоряется благодаря предварительно собранным образам
       - description:
           en: Local DNS caching
           ru: Локальное DNS-кэширование

@@ -21,14 +21,16 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the configuration for Deckhouse module.
+            Shows basic information about the Deckhouse module.
+
+            > The Module resource cannot be changed. It is intended only for getting information about the module (read-only).
           properties:
             properties:
               type: object
               properties:
                 weight:
                   type: integer
-                  description: 'Module weight.'
+                  description: 'Module weight (priority).'
                 state:
                   type: string
                   description: 'Module state.'
@@ -37,14 +39,14 @@ spec:
                     - Disabled
                 source:
                   type: string
-                  description: 'Module source repository.'
+                  description: 'Source repository address for an external module, or `Embedded` — for internal.'
       subresources:
         status: {}
       additionalPrinterColumns:
         - name: weight
           jsonPath: .properties.weight
           type: integer
-          description: 'Module weight.'
+          description: 'Module weight (priority).'
         - name: state
           jsonPath: .properties.state
           type: string
@@ -52,4 +54,4 @@ spec:
         - name: source
           jsonPath: .properties.source
           type: string
-          description: 'Module source repository.'
+          description: 'Source repository address for an external module, or Embedded — for internal.'

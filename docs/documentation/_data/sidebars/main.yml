@@ -488,7 +488,9 @@ entries:
     - title:
         en: Delivery
         ru: Доставка
+      moduleName: delivery
       d8Revision: ee
+      featureStatus: experimental
       folders:
         - title:
             en: Description
@@ -535,7 +537,6 @@ entries:
             - title: FAQ
               url: /modules/402-ingress-nginx/faq.html
         - title: istio
-          d8Revision: ee
           folders:
             - title:
                 en: Description
@@ -937,6 +938,7 @@ entries:
         - title:
             en: Audit
             ru: Аудит
+          moduleName: runtime-audit-engine
           d8Revision: ee
           featureStatus: experimental
           folders:

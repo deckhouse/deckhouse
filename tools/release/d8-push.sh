@@ -45,6 +45,7 @@ Usage: $0
 HAS_DOCKER="$(type "docker" &> /dev/null && echo true || echo false)"
 HAS_GNU_READLINK=$(type "readlink" &> /dev/null && readlink --version | grep -qi GNU && echo true || echo false)
 D8_DOCKER_CONFIG_DIR=~/.docker/deckhouse
+SKOPEO_IMAGE="registry.deckhouse.io/deckhouse/tools/skopeo:v1.11.2"
 SOURCE_DIR=""
 REGISTRY_PATH=""
 REGISTRY=""
@@ -145,6 +146,8 @@ trap cleanup ERR SIGINT SIGTERM SIGHUP SIGQUIT
 parse_args "$@"
 check_requirements
 
+docker load -i "$SOURCE_DIR/skopeo.tar"
+
 docker run \
   -v /etc/hosts:/etc/hosts \
   -v /etc/resolv.conf:/etc/resolv.conf \
@@ -156,7 +159,7 @@ docker run \
   --network host -ti --rm \
   --security-opt seccomp=unconfined \
   --entrypoint /bin/bash \
-  "quay.io/skopeo/stable:v1.11.2" -c '
+  "$SKOPEO_IMAGE" -c '
 
 set -Eeuo pipefail
 
@@ -172,7 +175,8 @@ for path in $PATHS; do
   if [[ "$image" == "trivy-db" ]]; then
     push_image "$SOURCE_DIR/trivy-db" "$REGISTRY_PATH/security/trivy-db:2"
   elif [[ "$image" == "sha256:"* ]]; then
-    push_image "$path" "$REGISTRY_PATH@$image"
+    tag_from_sha=${image#sha256:}
+    push_image "$path" "$REGISTRY_PATH:$tag_from_sha"
   elif [[ "$image" == *":"* ]]; then
     push_image "$path" "$REGISTRY_PATH/$image"
   else

@@ -5,6 +5,8 @@
 
  - An alert will be generated for each instance of an object with a deprecated `extended-monitoring.flant.com` annotation. **Pay attention** that you must change deprecated annotations to `extended-monitoring.deckhouse.io` label ASAP.
  - Control plane components and kubelet will restart.
+ - If you deploy the `deckhouse-web` moduleConfig via a CI/CD process, then you have to replace it with the `documentation` moduleConfig (run `kubectl get mc documentation -o yaml` to get its content).
+ - Ingress controller Pods will restart.
  - Linux Kernel >= 5.8 is required to run the `runtime-audit-engine` module.
  - OpenVPN will be restarted and connections will be terminated.
  - Removed write permissions on `namespace`, `limitrange`, `resourcequota`, `role` and `clusterrole` resources for the `Editor`, `Admin`, and `ClusterEditor` access levels. Read the [issue](https://github.com/deckhouse/deckhouse/pull/4494) description If you want to return the permissions.
@@ -13,6 +15,8 @@
 
 
  - **[admission-policy-engine]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
+ - **[candi]** Add deckhouse release requirements about docker presence. [#4816](https://github.com/deckhouse/deckhouse/pull/4816)
+    It will be impossible to update Deckhouse until docker is replaced with containerd.
  - **[ceph-csi]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[cert-manager]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[chrony]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
@@ -43,6 +47,8 @@
  - **[ingress-nginx]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[istio]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[keepalived]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
+ - **[linstor]** Added params for enabled SELinux support. [#4849](https://github.com/deckhouse/deckhouse/pull/4849)
+    linstor satellite Pods will be restarted.
  - **[linstor]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[local-path-provisioner]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
  - **[log-shipper]** Add support for `PrometheusRule`. [#4407](https://github.com/deckhouse/deckhouse/pull/4407)
@@ -87,17 +93,26 @@
  - **[cloud-data-crd]** The `cluster-autoscaler-crd module has been renamed to the `cloud-data-crd` module. [#4497](https://github.com/deckhouse/deckhouse/pull/4497)
  - **[cni-flannel]** flannel's entrypoint now correctly passes arguments to the flannel itself. [#4837](https://github.com/deckhouse/deckhouse/pull/4837)
  - **[cni-flannel]** Fix cleanup flannel used IPs on migration from docker to containerd. [#4306](https://github.com/deckhouse/deckhouse/pull/4306)
+ - **[common]** Prevent usage of vulnerable TLS ciphers in `kube-rbac-proxy`. [#4825](https://github.com/deckhouse/deckhouse/pull/4825)
+    Ingress controller Pods will restart.
  - **[control-plane-manager]** Fix errors in control-plane-manager converge and preflight checks. [#4822](https://github.com/deckhouse/deckhouse/pull/4822)
     control-plane-manager will restart.
  - **[deckhouse]** Add `prometheus.deckhouse.io/rules-watcher-enabled` on the `d8-system` namespace. [#4752](https://github.com/deckhouse/deckhouse/pull/4752)
  - **[deckhouse]** Remove Deckhouse release naming transformation. [#4568](https://github.com/deckhouse/deckhouse/pull/4568)
  - **[deckhouse]** Change liveness probe for `webhook-handler` to prevent EOF log spamming. [#4562](https://github.com/deckhouse/deckhouse/pull/4562)
     The `webhook-handler` Pod will restart.
+ - **[deckhouse-controller]** Reverted "mergo" library update. Fixed an issue where Deckhouse might panic on concurrent map access. [#4872](https://github.com/deckhouse/deckhouse/pull/4872)
  - **[docs]** Update the description of the global `storageClass` parameter. [#4424](https://github.com/deckhouse/deckhouse/pull/4424)
+ - **[documentation]** Add migration for the `documentation` module (former name - `deckhouse-web`). [#4982](https://github.com/deckhouse/deckhouse/pull/4982)
+    If you deploy the `deckhouse-web` moduleConfig via a CI/CD process, then you have to replace it with the `documentation` moduleConfig (run `kubectl get mc documentation -o yaml` to get its content).
  - **[extended-monitoring]** Send one `ExtendedMonitoringDeprecatatedAnnotation` alert per cluster. [#4829](https://github.com/deckhouse/deckhouse/pull/4829)
  - **[global-hooks]** Fix cluster DNS address discovery. [#4521](https://github.com/deckhouse/deckhouse/pull/4521)
  - **[global-hooks]** Fix the Kubernetes version hook for `DigitalOcean`. [#4473](https://github.com/deckhouse/deckhouse/pull/4473)
+ - **[ingress-nginx]** Update the Kruise controller manager before updating Ingress Nginx so that an updated Kruise controller manager takes care of Ingress nginx demonsets. [#5103](https://github.com/deckhouse/deckhouse/pull/5103)
+ - **[ingress-nginx]** Fix `proxy-failover-iptables` panicking and `iptables` rules duplicating. [#4959](https://github.com/deckhouse/deckhouse/pull/4959)
+ - **[ingress-nginx]** Increase `minReadySeconds` for all inlets. [#4919](https://github.com/deckhouse/deckhouse/pull/4919)
  - **[ingress-nginx]** Fixed incorrect indentation of resources block in `kube-rbac-proxy` container of `kruise-controller-manager` deployment. [#4738](https://github.com/deckhouse/deckhouse/pull/4738)
+ - **[linstor]** Add disabling the `lvmetad` service to `NodeGroupConfiguration` for the `linstor` module. [#4885](https://github.com/deckhouse/deckhouse/pull/4885)
  - **[linstor]** Support Debian 11. [#4724](https://github.com/deckhouse/deckhouse/pull/4724)
  - **[linstor]** Enable `WaitForFirstConsumer`. [#4681](https://github.com/deckhouse/deckhouse/pull/4681)
     - all auto-generated linstor storageclasses will be recreated with WaitForFirstConsumer option.
@@ -105,9 +120,11 @@
  - **[linstor]** Disable the `auto-resync-after` option. [#4501](https://github.com/deckhouse/deckhouse/pull/4501)
  - **[log-shipper]** Add host label and the doc about labels. [#4383](https://github.com/deckhouse/deckhouse/pull/4383)
  - **[metallb]** Fix MetalLB speaker tolerations. [#4435](https://github.com/deckhouse/deckhouse/pull/4435)
+ - **[monitoring-kubernetes]** Resolve symbolic links before getting file system statistics in `kubelet-eviction-thresholds-exporter`. [#4923](https://github.com/deckhouse/deckhouse/pull/4923)
  - **[monitoring-kubernetes]** Fixed path to hostPath in thresholds-exporter. [#4736](https://github.com/deckhouse/deckhouse/pull/4736)
  - **[monitoring-kubernetes]** Remove duplicates of memory graphs on namespace dashboard [#4701](https://github.com/deckhouse/deckhouse/pull/4701)
  - **[node-local-dns]** Added logs if changed state iptables. [#4613](https://github.com/deckhouse/deckhouse/pull/4613)
+ - **[node-manager]** Prevent usage of vulnerable TLS ciphers in `bashible-apiserver`. [#4827](https://github.com/deckhouse/deckhouse/pull/4827)
  - **[node-manager]** Fix draining hook queue flooding. [#4770](https://github.com/deckhouse/deckhouse/pull/4770)
  - **[node-manager]** Fix bashible-apiserver altlinux docker containerd version (otherwise, bashible-apiserver will not work). [#4553](https://github.com/deckhouse/deckhouse/pull/4553)
  - **[node-manager]** Fix the error node group condition. [#4367](https://github.com/deckhouse/deckhouse/pull/4367)

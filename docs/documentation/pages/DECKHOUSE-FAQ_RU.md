@@ -22,13 +22,58 @@ kubectl get mc global -o yaml
 
 ## Как найти документацию по установленной у меня версии?
 
-> Документация доступна внутри кластера при включенном модуле [documentation](modules/810-documentation/) (включен по умолчанию, кроме [варианта поставки](modules/002-deckhouse/configuration.html#parameters-bundle) `Minimal`).
+Документация запущенной в кластере версии Deckhouse доступна по адресу `documentation.<cluster_domain>`, где `<cluster_domain>` — DNS имя в соответствии с шаблоном из параметра [modules.publicDomainTemplate](deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобальной конфигурации.
 
-Документация запущенной в кластере версии Deckhouse доступна по адресу `deckhouse.<cluster_domain>`, где `<cluster_domain>` — DNS имя в соответствии с шаблоном из параметра `global.modules.publicDomainTemplate` конфигурации.
+{% alert level="warning" %}
+Документация доступна, если в кластере включен модуль [documentation](modules/810-documentation/). Он включен по умолчанию, кроме [варианта поставки](modules/002-deckhouse/configuration.html#parameters-bundle) `Minimal`.
+{% endalert %}
 
-## Как установить желаемый канал обновлений?
+## Обновление Deckhouse
 
-Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` изменить (установить) параметр `releaseChannel`.
+### Как понять, в каком режиме обновляется кластер?
+
+Посмотреть режим обновления кластера можно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
+
+```shell
+kubectl get mc deckhouse -oyaml
+```
+
+Пример вывода:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  creationTimestamp: "2022-12-14T11:13:03Z"
+  generation: 1
+  name: deckhouse
+  resourceVersion: "3258626079"
+  uid: c64a2532-af0d-496b-b4b7-eafb5d9a56ee
+spec:
+  settings:
+    releaseChannel: Stable
+    update:
+      windows:
+      - days:
+        - Mon
+        from: "19:00"
+        to: "20:00"
+  version: 1
+status:
+  state: Enabled
+  status: ""
+  type: Embedded
+  version: "1"
+```
+
+Существуют три возможных режима обновления:
+* **Автоматический + окна обновлений не заданы.** Кластер обновится сразу после появления новой версии на соответствующем [канале обновлений](https://deckhouse.ru/documentation/deckhouse-release-channels.html).
+* **Автоматический + заданы окна обновлений.** Кластер обновится в ближайшее доступное окно после появления новой версии на канале обновлений.
+* **Ручной режим.** Для применения обновления требуются [ручные действия](modules/002-deckhouse/usage.html#ручное-подтверждение-обновлений).
+
+### Как установить желаемый канал обновлений?
+
+Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse` изменить (установить) параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel).
 
 В этом случае включится механизм [автоматической стабилизации релизного канала](#как-работает-автоматическое-обновление-deckhouse).
 
@@ -45,19 +90,88 @@ spec:
     releaseChannel: Stable
 ```
 
-## Как отключить автоматическое обновление?
+### Как отключить автоматическое обновление?
 
-Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` параметр `releaseChannel`.
+Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse` параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel).
 
 В этом случае Deckhouse не проверяет обновления, и даже обновление на patch-релизы не выполняется.
 
-> Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
+{% alert level="danger" %}
+Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
+{% endalert %}
 
-## Как работает автоматическое обновление Deckhouse?
+### Как понять, какие изменения содержит обновление и как это повлияет на работу кластера?
+
+Информацию о всех версиях Deckhouse можно найти в [списке релизов](https://github.com/deckhouse/deckhouse/releases) Deckhouse.
+
+Сводную информацию о важных изменениях, об обновлении версий компонентов, а также о том, какие компоненты в кластере буду перезапущены в процессе обновления, можно найти в описании нулевой patch-версии релиза. Например, [v1.46.0](https://github.com/deckhouse/deckhouse/releases/tag/v1.46.0) для релиза v1.46 Deckhouse.
+
+Подробный список изменений можно найти в Changelog, ссылка на который есть в каждом [релизе](https://github.com/deckhouse/deckhouse/releases).
+
+### Как понять, что в кластере идет обновление?
+
+Во время обновления:
+- Горит алерт `DeckhouseUpdating`.
+- Под `deckhouse` не в статусе `Ready`. Если Под долго не переходит в статус `Ready`, то это может говорить о наличии проблем в работе Deckhouse. Необходима диагностика.
+
+### Как понять, что обновление прошло успешно?
+
+Если алерт `DeckhouseUpdating` погас, то обновление завершено.
+
+Вы также можете проверить состояние [релизов](modules/002-deckhouse/cr.html#deckhouserelease) Deckhouse.
+
+Пример:
+
+```console
+$ kubectl get deckhouserelease
+NAME       PHASE        TRANSITIONTIME   MESSAGE
+v1.46.8    Superseded   13d              
+v1.46.9    Superseded   11d              
+v1.47.0    Superseded   4h12m            
+v1.47.1    Deployed     4h12m            
+```
+
+Статус `Deployed` у соответствующей версии говорит о том, что переключение на соответствующую версию было выполнено (но это не значит, что оно закончилось успешно)
+
+Проверьте состояние Пода Deckhouse:
+
+```shell
+$ kubectl -n d8-system get pods -l app=deckhouse
+NAME                   READY  STATUS   RESTARTS  AGE
+deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
+```
+
+* Если статус Пода `Running`, и в колонке READY указано `1/1` — обновление закончилось успешно.
+* Если статус Пода `Running`, и в колонке READY указано `0/1` — обновление еще не закончилось. Если это продолжается более 20-30 минут, то это может говорить о наличии проблем в работе Deckhouse. Необходима диагностика.
+* Если статус Пода не `Running` - то это может говорить о наличии проблем в работе Deckhouse. Необходима диагностика.
+
+{% alert level="info" %}
+Возможные варианты действий, если что-то пошло не так:
+- Проверьте логи, используя следующую команду:
+
+  ```shell
+  kubectl -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
+  ```
+
+- Соберите [отладочную информацию](modules/002-deckhouse/faq.html#как-собрать-информацию-для-отладки) и свяжитесь с технической поддержкой.
+- Попросите помощи у [сообщества](https://deckhouse.ru/community/about.html).
+{% endalert %}
+
+### Как узнать, что для кластера доступна новая версия?
+
+Как только на установленном в кластере канале обновления появляется новая версия Deckhouse:
+- Загорается алерт `DeckhouseReleaseIsWaitingManualApproval`, если кластер использует ручной режим обновлений (параметр [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
+- Появляется новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Используйте команду `kubectl get deckhousereleases`, чтобы посмотреть список релизов.
+
+### Как узнать, какая версия Deckhouse находится на каком канале обновлений?
+
+Информацию о том, какая версия Deckhouse находится на каком канале обновлений, можно получить на <https://flow.deckhouse.io>.
+
+### Как работает автоматическое обновление Deckhouse?
 
 При указании в конфигурации модуля `deckhouse` параметра `releaseChannel`, Deckhouse будет каждую минуту проверять данные о релизе на канале обновлений.
 
-При появлении нового релиза Deckhouse скачивает его в кластер и создает custom resource `DeckhouseRelease`.
+При появлении нового релиза Deckhouse скачивает его в кластер и создает custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
 
 После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update) (по-умолчанию — автоматически, в любое время).
 
@@ -67,7 +181,9 @@ spec:
 kubectl get deckhousereleases
 ```
 
-> Patch-релизы (например, обновление на версию `1.30.2` при установленной версии `1.30.1`) устанавливаются без учета режима и окон обновления, т.е. при появлении на канале обновления patch-релиза, он всегда будет установлен.
+{% alert %}
+Patch-релизы (например, обновление на версию `1.30.2` при установленной версии `1.30.1`) устанавливаются без учета режима и окон обновления, т.е. при появлении на канале обновления patch-релиза, он всегда будет установлен.
+{% endalert %}
 
 ### Что происходит при смене канала обновлений?
 
@@ -82,31 +198,21 @@ kubectl get deckhousereleases
 ![Схема использования параметра releaseChannel при установке и в процессе работы Deckhouse](images/common/deckhouse-update-process.png)
 {% endofftopic %}
 
-## Как запускать Deckhouse на произвольном узле?
+## Закрытое окружение, работа через proxy и сторонние registry
 
-Для запуска Deckhouse на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/002-deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`.  Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
+### Как установить Deckhouse из стороннего registry?
 
-Также стоит избегать использования узлов **CloudEphemeral**. В противном случае может произойти ситуация, когда целевого узла нет в кластере, и его заказ по какой-то причине невозможен.
+{% alert level="warning" %}
+Deckhouse поддерживает работу только с Bearer token-схемой авторизации в container registry.
 
-Пример конфигурации модуля:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    nodeSelector:
-      node-role.deckhouse.io/deckhouse: ""
-```
-
-## Как установить Deckhouse из стороннего registry?
+Протестирована и гарантируется работа со следующими container registry:
+{%- for registry in site.data.supported_versions.registries %}
+[{{- registry[1].shortname }}]({{- registry[1].url }})
+{%- unless forloop.last %}, {% endunless %}
+{%- endfor %}.
+{% endalert %}
 
 При установке Deckhouse можно настроить на работу со сторонним registry (например, проксирующий registry внутри закрытого контура).
-
-### Подготовка конфигурации
 
 Установите следующие параметры в ресурсе `InitConfiguration`:
 
@@ -141,13 +247,7 @@ spec:
 * `registryCA` — корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты);
 * `registryScheme` — протокол доступа к registry (`HTTP` или `HTTPS`). По умолчанию - `HTTPS`.
 
-### Особенности настройки сторонних registry
-
-> **Внимание!** Deckhouse поддерживает работу только с Bearer token-схемой авторизации в registry.
-
-#### Nexus
-
-##### Требования
+### Особенности настройки Nexus
 
 При использовании менеджера репозиториев [Nexus](https://github.com/sonatype/nexus-public) должны быть выполнены следующие требования:
 
@@ -159,7 +259,7 @@ spec:
   * Создан пользователь Nexus с ролью, созданной выше.
 * Параметр `Maximum metadata age` созданного репозитория должен быть установлен в 0.
 
-##### Настройка
+Настройка:
 
 * Включите `Docker Bearer Token Realm`:
   ![Включение `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
@@ -185,11 +285,14 @@ spec:
 
 * Настройте контроль доступа Nexus для доступа Deckhouse к созданному репозиторию:
   * Создайте роль Nexus с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
+
     ![Создание роли Nexus](images/registry/nexus/nexus-role.png)
+
   * Создайте пользователя Nexus с ролью, созданной выше.
+
     ![Создание пользователя Nexus](images/registry/nexus/nexus-user.png)
 
-#### Harbor
+### Особенности настройки Harbor
 
 Необходимо использовать такой функционал [Harbor](https://github.com/goharbor/harbor), как Proxy Cache.
 
@@ -200,7 +303,7 @@ spec:
   * `Endpoint URL`: `https://registry.deckhouse.io`.
   * Укажите `Access ID` и `Access Secret`, если используете Deckhouse Enterprise Edition, иначе оставьте пустыми.
 
-![Настройка Registry](images/registry/harbor/harbor1.png)
+  ![Настройка Registry](images/registry/harbor/harbor1.png)
 
 * Создайте новый проект:
   * `Projects -> New Project`.
@@ -208,9 +311,9 @@ spec:
   * `Access Level`: `Public`.
   * `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге.
 
-![Создание нового проекта](images/registry/harbor/harbor2.png)
+  ![Создание нового проекта](images/registry/harbor/harbor2.png)
 
-В результате образы Deckhouse будут доступны по адресу, например, `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
+В результате образы Deckhouse будут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
 
 ### Ручная загрузка образов в изолированный приватный registry
 
@@ -233,7 +336,7 @@ spec:
    Пример скачивания образов Deckhouse EE v1.45.5 в директорию `/your/output-dir/`:
 
    ```shell
-   ./d8-pull.sh --license <DECKHOUSE_LICENSE_KEY> --release v1.45.5 --output-dir /your/output-dir/ 
+   ./d8-pull.sh --license <DECKHOUSE_LICENSE_KEY> --release v1.45.5 --output-dir /your/output-dir/
    ```
 
    > Для Deckhouse CE укажите параметр `--edition ce` и опустите параметр `--license`.
@@ -264,21 +367,58 @@ spec:
 
    > Внимание! Обратитесь к документации вашего регистри, чтобы правильно указать значение флага `--path`. Например, для `Harbor` значение может быть `harbor.registry.com/deckhouse/deckhouse`, но не `harbor.registry.com/deckhouse`.
 
-## Как создать кластер и запустить Deckhouse без использования каналов обновлений?
+1. После загрузки образов в изолированный приватный registry, для правильной настройки конфигурации установщика и ресурса `InitConfiguration` воспользуйтесь [инструкцией](deckhouse-faq.html#как-создать-кластер-и-запустить-deckhouse-без-использования-каналов-обновлений).
+
+### Как переключить работающий кластер Deckhouse на использование стороннего registry?
+
+Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
+
+* Выполните команду `deckhouse-controller helper change-registry` из Пода `deckhouse` с параметрами нового registry.
+  * Пример запуска:
+
+    ```shell
+    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry \
+      --user my-user --password my-password registry.example.com/deckhouse
+    ```
+
+  * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` в Поде `deckhouse` и добавьте к вызову опцию `--ca-file ca.crt` или вставьте содержимое CA в переменную:
+
+    ```shell
+    $ CA_CONTENT=$(cat <<EOF
+    -----BEGIN CERTIFICATE-----
+    CERTIFICATE
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    CERTIFICATE
+    -----END CERTIFICATE-----
+    EOF
+    )
+    $ kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password YUvio925tyxFNBnqhfcx89nABwcnTP1K registry.deckhouse.io/deckhouse --ca-file <(cat <<<$CA_CONTENT)
+    ```
+
+* Дождитесь перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
+* Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
+* Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, то удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
+* Проверьте, не осталось ли в кластере Pod'ов с оригинальным адресом registry:
+
+  ```shell
+  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
+    | .metadata.namespace + "\t" + .metadata.name' -r
+  ```
+
+### Как создать кластер и запустить Deckhouse без использования каналов обновлений?
 
 Данный способ следует использовать только в случае, если в изолированном приватном registry нет образов, содержащих информацию о каналах обновлений.
 
 * Если вы хотите установить Deckhouse с отключенным автоматическим обновлением:
   * Используйте тэг образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, то используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
-  * Укажите соответствующий номер версии в параметре [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) в ресурсе `InitConfiguration`.
-  * **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе `InitConfiguration`.
+  * Укажите соответствующий номер версии в параметре [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) в ресурсе [InitConfiguration](installing/configuration.html#initconfiguration).
+  * **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе [InitConfiguration](installing/configuration.html#initconfiguration).
 * Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), то удалите параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
-## Использование proxy-сервера
+### Использование proxy-сервера
 
-### Настройка proxy-сервера
-
-Пример шагов по настройке proxy-сервера на базе Squid:
+{% offtopic title="Пример шагов по настройке proxy-сервера на базе Squid..." %}
 * Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.
 * Установите Squid (здесь и далее примеры для Ubuntu):
 
@@ -294,7 +434,7 @@ spec:
   auth_param basic realm proxy
   acl authenticated proxy_auth REQUIRED
   http_access allow authenticated
-  
+
   # Choose the port you want. Below we set it to default 3128.
   http_port 3128
   ```
@@ -314,9 +454,9 @@ spec:
   systemctl enable squid
   ```
 
-### Настройка Deckhouse на использование proxy
+{% endofftopic %}
 
-Для настройки работы через proxy-сервер используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy) ресурса `ClusterConfiguration`.
+Для настройки Deckhouse на использование proxy используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy) ресурса `ClusterConfiguration`.
 
 Пример:
 
@@ -337,45 +477,58 @@ proxy:
   httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
-## Как переключить работающий кластер Deckhouse на использование стороннего registry?
+## Изменение конфигурации
 
-Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
+### Как изменить конфигурацию кластера?
 
-* Измените поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry;
-* Скачайте скрипт на мастер-узел и запустите его с параметрами нового registry.
-  * Пример запуска:
+Общие параметры кластера хранятся в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration).
 
-  ```shell
-  curl -fsSL -o change-registry.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh
-  chmod 700 change-registry.sh
-  ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
-  ```
+Чтобы изменить общие параметры кластера, выполните команду:
 
-  * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` возле скрипта и добавьте к вызову опцию `--ca-file ca.crt`.
-* Дождитесь перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
-* Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
-* Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, то удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
-* Проверьте, не осталось ли в кластере Pod'ов с оригинальным адресом registry:
+```shell
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+```
 
-  ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) 
-    | .metadata.namespace + "\t" + .metadata.name' -r
-  ```
+После сохранения изменений Deckhouse приведет конфигурацию кластера к измененному состоянию. В зависимости от размеров кластера это может занять какое-то время.
 
-## Как переключить Deckhouse EE на CE?
+### Как изменить конфигурацию облачного провайдера в кластере?
 
-> Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться [OpenStackClusterConfiguration]({% if site.mode == 'local' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
+
+Независимо от используемого облачного провайдера, его настройки можно изменить с помощью команды:
+
+```shell
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+```
+
+### Как изменить конфигурацию статического кластера?
+
+Настройки статического кластера хранятся в структуре [StaticClusterConfiguration](installing/configuration.html#staticclusterconfiguration).
+
+Чтобы изменить параметры статического кластера, выполните команду:
+
+```shell
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
+```
+
+### Как переключить Deckhouse EE на CE?
+
+{% alert %}
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+{% endalert %}
+
+{% alert level="warning" %}
+В Deckhouse CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
+{% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Community Edition выполните следующие действия:
 
 1. Убедитесь, что используемые в кластере модули [поддерживаются в версии CE](revision-comparison.html). Отключите модули, которые не поддерживаются в Deckhouse CE.
 
-   > Обратите внимание, что в Deckhouse CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
 1. Выполните следующую команду:
 
    ```shell
-   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --registry-url https://registry.deckhouse.io/deckhouse/ce && \
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ce:" $2}')    
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry https://registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Дождитесь перехода Pod'а Deckhouse в статус `Ready`:
@@ -428,7 +581,7 @@ proxy:
 1. Проверьте, не осталось ли в кластере Pod'ов с адресом registry для Deckhouse EE:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee")))) 
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee"))))
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
@@ -440,11 +593,13 @@ proxy:
 
    Вывод команды должен быть пуст.
 
-## Как переключить Deckhouse CE на EE?
+### Как переключить Deckhouse CE на EE?
 
-Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).  
+Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).
 
-> Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+{% alert %}
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+{% endalert %}
 
 Для переключения кластера Deckhouse Community Edition на Enterprise Edition выполните следующие действия:
 
@@ -452,8 +607,7 @@ proxy:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --user license-token --password $LICENSE_TOKEN --registry-url https://registry.deckhouse.io/deckhouse/ee && \
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ee:" $2}') 
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN https://registry.deckhouse.io/deckhouse/ee
    ```
 
 1. Дождитесь перехода Pod'а Deckhouse в статус `Ready`:
@@ -506,7 +660,7 @@ proxy:
 1. Проверьте, не осталось ли в кластере Pod'ов с адресом registry для Deckhouse CE:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce")))) 
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce"))))
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
@@ -518,39 +672,7 @@ proxy:
 
    Вывод команды должен быть пуст.
 
-## Как изменить конфигурацию кластера
-
-Общие параметры кластера хранятся в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration).
-
-Чтобы изменить общие параметры кластера, выполните команду:
-
-```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
-```
-
-После сохранения изменений Deckhouse приведет конфигурацию кластера к измененному состоянию. В зависимости от размеров кластера это может занять какое-то время.
-
-## Как изменить конфигурацию облачного провайдера в кластере?
-
-Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться [OpenStackClusterConfiguration]({% if site.mode == 'local' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
-
-Независимо от используемого облачного провайдера, его настройки можно изменить с помощью команды:
-
-```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
-```
-
-## Как изменить конфигурацию статического кластера?
-
-Настройки статического кластера хранятся в структуре [StaticClusterConfiguration](installing/configuration.html#staticclusterconfiguration).
-
-Чтобы изменить параметры статического кластера, выполните команду:
-
-```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
-```
-
-## Как обновить версию Kubernetes в кластере?
+### Как обновить версию Kubernetes в кластере?
 
 Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
 1. Выполните команду:
@@ -562,3 +684,25 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 1. Измените параметр `kubernetesVersion`.
 1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
 1. Дождитесь окончания обновления.  Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+
+### Как запускать Deckhouse на произвольном узле?
+
+Для запуска Deckhouse на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/002-deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`.  Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
+
+{% alert level="warning" %}
+Используйте для запуска Deckhouse только узлы с типом **CloudStatic** или **Static**. Также избегайте использования для запуска Deckhouse группы узлов (`NodeGroup`), содержащей только один узел.
+{% endalert %}
+
+Пример конфигурации модуля:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    nodeSelector:
+      node-role.deckhouse.io/deckhouse: ""
+```

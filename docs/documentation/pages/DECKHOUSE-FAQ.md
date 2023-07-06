@@ -21,13 +21,58 @@ kubectl get mc global -o yaml
 
 ## How do I find the documentation for the version installed?
 
-> Documentation in the cluster is available when the [documentation](modules/810-documentation/) module is enabled (it is enabled by default except the `Minimal` [bundle](modules/002-deckhouse/configuration.html#parameters-bundle)).
+The documentation for the Deckhouse version running in the cluster is available at `documentation.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the [modules.publicDomainTemplate](deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter.
 
-The documentation for the Deckhouse version running in the cluster is available at `deckhouse.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the `global.modules.publicDomainTemplate` parameter.
+{% alert level="warning" %}
+Documentation is available when the [documentation](modules/810-documentation/) module is enabled. It is enabled by default except the `Minimal` [bundle](modules/002-deckhouse/configuration.html#parameters-bundle).
+{% endalert %}
 
-## How do I set the desired release channel?
+## Deckhouse update
 
-Change (set) the `releaseChannel` parameter in the `deckhouse` module [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel) to automatically switch to another release channel.
+### How to find out in which mode the cluster is being updated?
+
+You can view the cluster update mode in the [configuration](modules/002-deckhouse/configuration.html) of the `deckhouse` module. To do this, run the following command:
+
+```shell
+kubectl get mc deckhouse -oyaml
+```
+
+Example of the output:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  creationTimestamp: "2022-12-14T11:13:03Z"
+  generation: 1
+  name: deckhouse
+  resourceVersion: "3258626079"
+  uid: c64a2532-af0d-496b-b4b7-eafb5d9a56ee
+spec:
+  settings:
+    releaseChannel: Stable
+    update:
+      windows:
+      - days:
+        - Mon
+        from: "19:00"
+        to: "20:00"
+  version: 1
+status:
+  state: Enabled
+  status: ""
+  type: Embedded
+  version: "1"
+```
+
+There are three possible update modes:
+* **Automatic + update windows are not set.** The cluster will be updated after the new version appears on the corresponding [release channel](deckhouse-release-channels.html).
+* **Automatic + update windows are set.** The cluster will be updated in the nearest available window after the new version appears on the release channel.
+* **Manual.** [Manual action](modules/002-deckhouse/usage.html#manual-update-confirmation) is required to apply the update.
+
+### How do I set the desired release channel?
+
+Change (set) the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter in the `deckhouse` module [configuration](modules/002-deckhouse/configuration.html) to automatically switch to another release channel.
 
 It will activate the mechanism of [automatic stabilization of the release channel](#how-does-automatic-deckhouse-update-work).
 
@@ -44,19 +89,88 @@ spec:
     releaseChannel: Stable
 ```
 
-## How do I disable automatic updates?
+### How do I disable automatic updates?
 
-To completely disable the Deckhouse update mechanism, remove the `releaseChannel` parameter in the `deckhouse' module [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel).
+To completely disable the Deckhouse update mechanism, remove the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter in the `deckhouse` module [configuration](modules/002-deckhouse/configuration.html).
 
 In this case, Deckhouse does not check for updates and even doesn't apply patch releases.
 
-> It is highly not recommended to disable automatic updates! It will block updates to patch releases that may contain critical vulnerabilities and bugs fixes.
+{% alert level="danger" %}
+It is highly not recommended to disable automatic updates! It will block updates to patch releases that may contain critical vulnerabilities and bugs fixes.
+{% endalert %}
 
-## How does automatic Deckhouse update work?
+### How to understand what changes the update contains and how it will affect the cluster?
 
-Every minute Deckhouse checks a new release appeared in the release channel specified by the `releaseChannel` parameter.
+You can find all the information about Deckhouse versions in the list of [Deckhouse releases](https://github.com/deckhouse/deckhouse/releases).
 
-When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource `DeckhouseRelease`.
+Summary information about important changes, component version updates, and which components in the cluster will be restarted during the update process can be found in the description of the zero patch version of the release. For example, [v1.46.0](https://github.com/deckhouse/deckhouse/releases/tag/v1.46.0) for the v1.46 Deckhouse release.
+
+A detailed list of changes can be found in the Changelog, which is referenced in each [release](https://github.com/deckhouse/deckhouse/releases).
+
+### How do I understand that the cluster is being updated?
+
+During the update:
+- The `DeckhouseUpdating` alert is firing.
+- The `deckhouse` Pod is not the `Ready` status. If the Pod does not go to the `Ready` status for a long time, then this may indicate that there are problems in the work of Deckhouse. Diagnosis is necessary.
+
+### How do I know that the update was successful?
+
+If the `DeckhouseUpdating` alert is resolved, then the update is complete.
+
+You can also check the status of Deckhouse [releases](modules/002-deckhouse/cr.html#deckhouserelease).
+
+An example:
+
+```console
+$ kubectl get deckhouserelease
+NAME       PHASE        TRANSITIONTIME   MESSAGE
+v1.46.8    Superseded   13d              
+v1.46.9    Superseded   11d              
+v1.47.0    Superseded   4h12m            
+v1.47.1    Deployed     4h12m            
+```
+
+The `Deployed` status of the corresponding version indicates that the switch to the corresponding version was performed (but this does not mean that it ended successfully).
+
+Check the status of the Deckhouse Pod:
+
+```shell
+$ kubectl -n d8-system get pods -l app=deckhouse
+NAME                   READY  STATUS   RESTARTS  AGE
+deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
+```
+
+* If the status of the Pod is `Running`, and `1/1` indicated in the READY column, the update was completed successfully.
+* If the status of the Pod is `Running`, and `0/1` indicated in the READY column, the update is not over yet. If this goes on for more than 20-30 minutes, then this may indicate that there are problems in the work of Deckhouse. Diagnosis is necessary.
+* If the status of the Pod is not `Running`, then this may indicate that there are problems in the work of Deckhouse. Diagnosis is necessary.
+
+{% alert level="info" %}
+Possible options for action if something went wrong:
+- Check Deckhouse logs using the following command:
+
+  ```shell
+  kubectl -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
+  ```
+
+- [Collect debugging information](modules/002-deckhouse/faq.html#how-to-collect-debug-info) and contact technical support.
+- Ask for help from the [community](https://deckhouse.ru/community/about.html).
+{% endalert %}
+
+### How do I know that a new version is available for the cluster?
+
+As soon as a new version of Deckhouse appears on the release channel installed in the cluster:
+- The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
+- There is a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases.
+
+### How do I find out which version of Deckhouse is on which release channel?
+
+Information about which version of Deckhouse is on which release channel can be obtained at <https://flow.deckhouse.io>.
+
+### How does automatic Deckhouse update work?
+
+Every minute Deckhouse checks a new release appeared in the release channel specified by the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter.
+
+When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
 
 After creating a `DeckhouseRelease` CR in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/002-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
 
@@ -66,13 +180,15 @@ To get list and status of all releases use the following command:
 kubectl get deckhousereleases
 ```
 
-> Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignore update windows settings and apply as soon as they are available.
+{% alert %}
+Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignore update windows settings and apply as soon as they are available.
+{% endalert %}
 
-### Change the release channel
+### What happens when the update channel changes?
 
 * When switching to a **more stable** release channel (e.g., from `Alpha` to `EarlyAccess`), Deckhouse downloads release data from the release channel (the `EarlyAccess` release channel in the example) and compares it with the existing `DeckhouseReleases`:
   * Deckhouse deletes *later* releases (by semver) that have not yet been applied (with the `Pending` status).
-  * if *the latest* releases have been already Deployed, then Deckhouse will hold the current release until a later release appears on the update channel (on the `EarlyAccess` release channel in the example).
+  * if *the latest* releases have been already Deployed, then Deckhouse will hold the current release until a later release appears on the release channel (on the `EarlyAccess` release channel in the example).
 * When switching to a less stable release channel (e.g., from `EarlyAcess` to `Alpha`), the following actions take place:
   * Deckhouse downloads release data from the release channel (the `Alpha` release channel in the example) and compares it with the existing `DeckhouseReleases`.
   * Then Deckhouse performs the update according to the [update parameters](modules/002-deckhouse/configuration.html#parameters-update).
@@ -81,31 +197,21 @@ kubectl get deckhousereleases
 ![The scheme of using the releaseChannel parameter during Deckhouse installation and operation](images/common/deckhouse-update-process.png)
 {% endofftopic %}
 
-## How do I run Deckhouse on a particular node?
+## Air-gapped environment; working via proxy and third-party registry
 
-Set the `nodeSelector` [parameter](modules/002-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
+### How do I configure Deckhouse to use a third-party registry?
 
-You should also avoid using **CloudEphemeral** nodes. Otherwise, a situation may occur when the target node is not in the cluster and node ordering for some reason is impossible.
+{% alert level="warning" %}
+Deckhouse only supports Bearer authentication for container registries.
 
-Here is an example of the module configuration:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    nodeSelector:
-      node-role.deckhouse.io/deckhouse: ""
-```
-
-## How do I configure Deckhouse to use a third-party registry?
+Tested and guaranteed to work with the following container registries:
+{%- for registry in site.data.supported_versions.registries %}
+[{{- registry[1].shortname }}]({{- registry[1].url }})
+{%- unless forloop.last %}, {% endunless %}
+{%- endfor %}.
+{% endalert %}
 
 Deckhouse can be configured to work with a third-party registry (e.g., a proxy registry inside private environments).
-
-### Configuring
 
 Define the following parameters in the `InitConfiguration` resource:
 
@@ -138,13 +244,7 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 * `registryCA` - root CA certificate to validate the third-party registry's HTTPS certificate (if self-signed certificates are used);
 * `registryScheme` - registry scheme (`HTTP` or `HTTPS`). The default value is `HTTPS`.
 
-### Tips for configuring the third-party registry
-
-> **Note!** Deckhouse only supports Bearer authentication for registries.
-
-#### Nexus
-
-##### Requirements
+### Tips for configuring Nexus
 
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
@@ -156,14 +256,14 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
   * The Nexus user must be created with the above role granted.
 * `Maximum metadata age` for the created repository must be set to 0.
 
-##### Configuration
+Configuration:
 
 * Enable `Docker Bearer Token Realm`:
   ![Enable `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
 
 * Create a docker proxy repository pointing to the [Deckhouse registry](https://registry.deckhouse.io/):
   ![Create docker proxy repository](images/registry/nexus/nexus-repository.png)
-  
+
 * Fill in the fields on the Create page  as follows:
   * `Name` must contain the name of the repository you created earlier, e.g., `d8-proxy`.
   * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` must contain a dedicated port for the created repository, e.g., `8123` or other.
@@ -182,11 +282,14 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 
 * Configure Nexus access control to allow Nexus access to the created repository:
   * Create a Nexus role with the `nx-repository-view-docker-<repo>-browse` and `nx-repository-view-docker-<repo>-read` permissions.
-  ![Create a Nexus role](images/registry/nexus/nexus-role.png)
-  * Create a Nexus user with the role above granted.
-  ![Create a Nexus user](images/registry/nexus/nexus-user.png)
 
-#### Harbor
+    ![Create a Nexus role](images/registry/nexus/nexus-role.png)
+
+  * Create a Nexus user with the role above granted.
+
+    ![Create a Nexus user](images/registry/nexus/nexus-user.png)
+
+### Tips for configuring Harbor
 
 You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbor/harbor).
 
@@ -197,7 +300,7 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
   * `Endpoint URL`: `https://registry.deckhouse.io`.
   * Specify the `Access ID` and `Access Secret` if you use Deckhouse Enterprise Edition; otherwise, leave them blank.
 
-![Create a Registry](images/registry/harbor/harbor1.png)
+  ![Create a Registry](images/registry/harbor/harbor1.png)
 
 * Create a new Project:
   * `Projects -> New Project`.
@@ -205,7 +308,7 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
   * `Access Level`: `Public`.
   * `Proxy Cache` — enable and choose the Registry, created in the previous step.
 
-![Create a new Project](images/registry/harbor/harbor2.png)
+  ![Create a new Project](images/registry/harbor/harbor2.png)
 
 Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
 
@@ -261,9 +364,47 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
    > Note! Please, refer to the documentation of your registry to properly specify the `--path` value. For example, for `Harbor` it can be `harbor.registry.com/deckhouse/deckhouse`, but not `harbor.registry.com/deckhouse`.
 
-## How to bootstrap a cluster and run Deckhouse without the usage of release channels?
+1. After pushing images to an isolated private registry, use [the instruction](deckhouse-faq.html#how-to-bootstrap-a-cluster-and-run-deckhouse-without-the-usage-of-release-channels) to properly configure the installer and the `InitConfiguration` resource.
 
-This case is only valid if you don't have release channel images in your air-gapped registry.
+### How do I switch a running Deckhouse cluster to use a third-party registry?
+
+To switch the Deckhouse cluster to using a third-party registry, follow these steps:
+
+* Run `deckhouse-controller helper change-registry` inside the `deckhouse` Pod with the new registry settings.
+  * Example:
+
+    ```shell
+    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user my-user --password my-password registry.example.com/deckhouse
+    ```
+
+  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` in the `deckhouse` Pod and add the `--ca-file ca.crt` option to the script or put the content of CA into a variable.
+
+    ```shell
+    $ CA_CONTENT=$(cat <<EOF
+    -----BEGIN CERTIFICATE-----
+    CERTIFICATE
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    CERTIFICATE
+    -----END CERTIFICATE-----
+    EOF
+    )
+    $ kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password YUvio925tyxFNBnqhfcx89nABwcnTP1K registry.deckhouse.io/deckhouse --ca-file <(cat <<<$CA_CONTENT)
+    ```
+
+* Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
+* Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
+* If you want to disable Deckhouse automatic updates, remove the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+* Check if there are Pods with original registry in cluster (if there are — restart them):
+
+  ```shell
+  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
+    | .metadata.namespace + "\t" + .metadata.name' -r
+  ```
+
+### How to bootstrap a cluster and run Deckhouse without the usage of release channels?
+
+Use this method only valid if you don't have release channel images in your air-gapped registry.
 
 * If you want to install Deckhouse with automatic updates disabled:
   * Use the tag of the installer image of the corresponding version. For example, use the image `your.private.registry.com/deckhouse/install:v1.44.3`, if you want to install release `v1.44.3`.
@@ -271,10 +412,9 @@ This case is only valid if you don't have release channel images in your air-gap
   * **Do not** set the [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) parameter of the `InitConfiguration` resource.
 * If you want to disable automatic updates for an already installed Deckhouse (including patch release updates), then delete the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
-## Using a proxy server
+### Using a proxy server
 
-### Setting up a proxy server
-
+{% offtopic title="Example of steps for configuring a Squid-based proxy server..." %}
 * Prepare the VM for setting up the proxy. The machine must be accessible to the nodes that will use it as a proxy and be connected to the Internet.
 * Install Squid on the server (here and further examples for Ubuntu):
 
@@ -290,7 +430,7 @@ This case is only valid if you don't have release channel images in your air-gap
   auth_param basic realm proxy
   acl authenticated proxy_auth REQUIRED
   http_access allow authenticated
-  
+
   # Choose the port you want. Below we set it to default 3128.
   http_port 3128
   ```
@@ -298,7 +438,7 @@ This case is only valid if you don't have release channel images in your air-gap
 * Create a user for proxy-server authentication:
 
   Example for the user `test` with the password `test` (be sure to change):
-  
+
   ```shell
   echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
   ```
@@ -310,7 +450,7 @@ This case is only valid if you don't have release channel images in your air-gap
   systemctl enable squid
   ```
 
-### Configuring proxy usage in Deckhouse
+{% endofftopic %}
 
 Use the [proxy](installing/configuration.html#clusterconfiguration-proxy) parameter of the `ClusterConfiguration` resource to configure proxy usage.
 
@@ -333,45 +473,58 @@ proxy:
   httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
-## How do I switch a running Deckhouse cluster to use a third-party registry?
+## Changing the configuration
 
-To switch the Deckhouse cluster to using a third-party registry, follow these steps:
+### How do I change the configuration of a cluster?
 
-* Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry;
-* Download script to the master node and run it with parameters for a new registry.
-  * Example:
+The general cluster parameters are stored in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure.
 
-  ```shell
-  curl -fsSL -o change-registry.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh
-  chmod 700 change-registry.sh
-  ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
-  ```
-  
-  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` near the script and add the `--ca-file ca.crt` option to the script.
-* Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
-* Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
-* If you want to disable Deckhouse automatic updates, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
-* Check if there are Pods with original registry in cluster (if there are — restart them):
+To change the general cluster parameters, run the command:
 
-  ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) 
-    | .metadata.namespace + "\t" + .metadata.name' -r
-  ```
+```shell
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+```
 
-## How to switch Deckhouse EE to CE?
+After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
 
-> The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+### How do I change the configuration of a cloud provider in a cluster?
+
+Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'local' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
+
+Regardless of the cloud provider used, its settings can be changed using the command:
+
+```shell
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+```
+
+### How do I change the configuration of a static cluster?
+
+Settings of a static cluster are stored in the [StaticClusterConfiguration](installing/configuration.html#staticclusterconfiguration) structure.
+
+To change the settings of a static cluster, run the command:
+
+```shell
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
+```
+
+### How to switch Deckhouse EE to CE?
+
+{% alert %}
+The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+{% endalert %}
+
+{% alert level="warning" %}
+Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
+{% endalert %}
 
 To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 
 1. Make sure that the modules used in the cluster [are supported in Deckhouse CE](revision-comparison.html). Disable modules that are not supported in Deckhouse CE.
 
-   > Please note that Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
 1. Run the following command:
 
    ```shell
-   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --registry-url https://registry.deckhouse.io/deckhouse/ce && \
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ce:" $2}')
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry https://registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -424,7 +577,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Check if there are any Pods left in the cluster with the Deckhouse EE registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee")))) 
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee"))))
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
@@ -436,11 +589,13 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 
    The output of the command should be empty.
 
-## How to switch Deckhouse CE to EE?
+### How to switch Deckhouse CE to EE?
 
 You will need a valid license key (you can [request a trial license key](https://deckhouse.io/products/enterprise_edition.html) if necessary).
 
-> The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+{% alert %}
+The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+{% endalert %}
 
 To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
@@ -448,8 +603,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --user license-token --password $LICENSE_TOKEN --registry-url https://registry.deckhouse.io/deckhouse/ee && \
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ee:" $2}') 
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN https://registry.deckhouse.io/deckhouse/ee
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -502,7 +656,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 1. Check if there are any Pods left in the cluster with the Deckhouse CE registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce")))) 
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce"))))
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
@@ -513,38 +667,6 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    ```
 
    The output of the command should be empty.
-
-## How do I change the configuration of a cluster?
-
-The general cluster parameters are stored in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure.
-
-To change the general cluster parameters, run the command:
-
-```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
-```
-
-After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
-
-## How do I change the configuration of a cloud provider in a cluster?
-
-Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'local' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
-
-Regardless of the cloud provider used, its settings can be changed using the command:
-
-```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
-```
-
-## How do I change the configuration of a static cluster?
-
-Settings of a static cluster are stored in the [StaticClusterConfiguration](installing/configuration.html#staticclusterconfiguration) structure.
-
-To change the settings of a static cluster, run the command:
-
-```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
-```
 
 ## How do I upgrade the Kubernetes version in a cluster?
 
@@ -558,3 +680,25 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 1. Change the `kubernetesVersion` field.
 1. Save the changes. Cluster nodes will start updating sequentially.
 1. Wait for the update to finish. You can track the progress of the update using the `kubectl get no` command. The update is completed when the new version appears in the command's output for each cluster node in the `VERSION` column.
+
+### How do I run Deckhouse on a particular node?
+
+Set the `nodeSelector` [parameter](modules/002-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
+
+{% alert level="warning" %}
+Use only nodes with the **CloudStatic** or **Static** type to run Deckhouse. Also, avoid using a `NodeGroup` containing only one node to run Deckhouse.
+{% endalert %}
+
+Here is an example of the module configuration:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    nodeSelector:
+      node-role.deckhouse.io/deckhouse: ""
+```

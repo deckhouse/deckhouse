@@ -17,8 +17,6 @@ package infrastructure
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -74,7 +72,12 @@ func (r *NodeGroupTerraformController) DestroyNode(name string, nodeState []byte
 		step = "master-node"
 	}
 
-	nodeIndex, _ := getIndexFromNodeName(name)
+	nodeIndex, err := config.GetIndexFromNodeName(name)
+	if err != nil {
+		log.ErrorF("can't extract index from terraform state secret (%v), skip %s\n", err, name)
+		return nil
+	}
+
 	nodeRunner := terraform.NewRunnerFromConfig(r.metaConfig, step, r.stateCache).
 		WithVariables(r.metaConfig.NodeGroupConfig(r.nodeGroupName, nodeIndex, "")).
 		WithName(name).
@@ -83,19 +86,9 @@ func (r *NodeGroupTerraformController) DestroyNode(name string, nodeState []byte
 
 	tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
-	err := terraform.DestroyPipeline(nodeRunner, name)
-	if err != nil {
+	if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
 		return fmt.Errorf("destroing of node %s failed: %v", name, err)
 	}
 
 	return nil
-}
-
-func getIndexFromNodeName(name string) (int, bool) {
-	index, err := strconv.ParseInt(name[strings.LastIndex(name, "-")+1:], 10, 64)
-	if err != nil {
-		log.ErrorLn(err)
-		return 0, false
-	}
-	return int(index), true
 }

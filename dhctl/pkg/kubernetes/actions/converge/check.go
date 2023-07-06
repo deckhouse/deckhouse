@@ -77,13 +77,13 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 }
 
 func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeName string) (int, error) {
-	index, ok := getIndexFromNodeName(nodeName)
-	if !ok {
-		return terraform.PlanHasNoChanges, fmt.Errorf("can't extract index from terraform state secret, skip %s", nodeName)
+	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
+	if err != nil {
+		return terraform.PlanHasNoChanges, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
 	}
 
 	nodeRunner := terraform.NewImmutableRunnerFromConfig(metaConfig, nodeGroup.Step).
-		WithVariables(metaConfig.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
+		WithVariables(metaConfig.NodeGroupConfig(nodeGroup.Name, nodeIndex, nodeGroup.CloudConfig)).
 		WithState(nodeGroup.State[nodeName]).
 		WithName(nodeName)
 	tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
@@ -247,12 +247,13 @@ func sortNodesByIndex(nodesState map[string][]byte) ([]string, error) {
 	order := make([]int, 0, len(nodesState))
 
 	for nodeName := range nodesState {
-		index, ok := getIndexFromNodeName(nodeName)
-		if !ok {
-			return nil, fmt.Errorf("cannot get index from node name %s", nodeName)
+		nodeIndex, err := config.GetIndexFromNodeName(nodeName)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get index from node name %s: %v", nodeName, err)
 		}
-		order = append(order, int(index))
-		nameByIndex[int(index)] = nodeName
+
+		order = append(order, nodeIndex)
+		nameByIndex[nodeIndex] = nodeName
 	}
 
 	sort.Ints(order)

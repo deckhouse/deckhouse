@@ -16,7 +16,6 @@ webhooks:
       - kube-basic-auth
       - d8-cloud-provider-openstack
       - d8-cloud-provider-vsphere
-      - d8-istio
       - kube-system
       - d8-metallb
       - d8-keepalived
@@ -40,6 +39,7 @@ webhooks:
       - d8-linstor
       - d8-snapshot-controller
       - d8-cert-manager
+      - d8-istio
       - d8-user-authz
       - d8-user-authn
       - d8-operator-prometheus

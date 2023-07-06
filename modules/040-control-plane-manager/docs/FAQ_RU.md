@@ -442,7 +442,9 @@ spec:
 
 В процессе подбора подходящих вам значений обращайте внимание на графики потребления ресурсов управляющих узлов. Будьте готовы к тому, что чем меньшие значения параметров вы выбираете, тем больше ресурсов может потребоваться выделить на эти узлы.
 
-## Как сделать бекап etcd?
+## Резервное копирование etcd и восстановление
+
+### Как сделать бекап etcd?
 
 Войдите на любой control-plane узел под пользователем `root` и используйте следующий bash-скрипт:
 
@@ -473,3 +475,149 @@ done
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
 
 О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+
+### Как восстановить объект Kubernetes из резервной копии etcd?
+
+Чтобы получить данные определенных объектов кластера из резервной копии etcd:
+1. Запустите временный экземпляр etcd.
+2. Наполните его данными из [резервной копии](#как-сделать-бекап-etcd).
+3. Получите описания нужных объектов с помощью `etcdhelper`.
+
+#### Пример шагов по восстановлению объектов из резервной копии etcd
+
+В примере далее, `etcd-snapshot.bin` — [резервная копия](#как-сделать-бекап-etcd) etcd (snapshot), `infra-production` — namespace, в котором нужно восстановить объекты.
+
+1. Запустите Под, с временным экземпляром etcd.
+   - Подготовьте файл `etcd.pod.yaml` шаблона Пода, выполнив следующий команды:
+
+     ```shell
+     cat <<EOF >etcd.pod.yaml 
+     apiVersion: v1
+     kind: Pod
+     metadata:
+       name: etcdrestore
+       namespace: default
+     spec:
+       containers:
+       - command:
+         - /bin/sh
+         - -c
+         - "sleep 96h"
+         image: IMAGE
+         imagePullPolicy: IfNotPresent
+         name: etcd
+         volumeMounts:
+         - name: etcddir
+           mountPath: /default.etcd
+       volumes:
+       - name: etcddir
+         emptyDir: {}
+     EOF
+     IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' '`
+     sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
+     ```
+
+   - Создайте Под:
+
+     ```shell
+     kubectl create -f etcd.pod.yaml
+     ```
+
+2. Скопируйте `etcdhelper` и снимок etcd в контейнер Пода.
+
+   `etcdhelper` можно собрать из [исходного кода](https://github.com/openshift/origin/tree/master/tools/etcdhelper) или скопировать из готового образа (например из [образа `etcdhelper` на Docker Hub](https://hub.docker.com/r/webner/etcdhelper/tags)).
+
+   Пример:
+
+   ```shell
+   kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
+   kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
+   ```
+
+3. В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
+
+   Пример:
+
+   ```console
+   ~ # kubectl -n default exec -it etcdrestore -- sh
+   / # chmod +x /usr/bin/etcdhelper
+   / # etcdctl snapshot restore /tmp/etcd-snapshot.bin
+   / # etcd &
+   ```
+
+4. Получите описания нужных объектов кластера, отфильтровав их с помощью `grep`.
+
+   Пример:
+
+   ```console
+   ~ # kubectl -n default exec -it etcdrestore -- sh
+   / # mkdir /tmp/restored_yaml
+   / # cd /tmp/restored_yaml
+   /tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
+   ```
+
+   Замена символов с помощью `sed` в примере позволяет сохранить описания объектов в файлы, именованные подобно структуре реестра etcd. Например: `/registry/deployments/infra-production/supercronic.yaml` → `deployments_infra-production_supercronic.yaml`.
+
+5. Скопируйте полученные описания объектов на master-узел:
+
+   ```shell
+   kubectl cp default/etcdrestore:/tmp/restored_yaml restored_yaml
+   ```
+
+6. Удалите из полученных описаний объектов информацию о времени создания, UID, status и прочие оперативные данные, после чего восстановите объекты:
+
+   ```shell
+   kubectl create -f restored_yaml/deployments_infra-production_supercronic.yaml
+   ```
+
+7. Удалите Под с временным экземпляром etcd:
+
+   ```shell
+   kubectl -n default delete pod etcdrestore
+   ```
+
+## Как выбирается узел, на котором будет запущен Pod?
+
+За распределение Pod’ов по узлам отвечает планировщик Kubernetes (компонент `scheduler`).
+У него есть 2 фазы — Filtering и Scoring (на самом деле их больше, и есть еще pre-filtering / post-filtering, но глобально можно свести к двум фазам).
+
+### Общее устройство планировщика Kubernetes
+
+Планировщик состоит из плагинов, которые работают в рамках какой-либо фазы (фаз).
+
+Примеры плагинов:
+- **ImageLocality** — отдает предпочтение узлам, на которых уже есть образы контейнеров, которые используются в запускаемом Pod'е. Фаза: **Scoring**
+- **TaintToleration** — реализует механизм [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Фазы: **Filtering, Scoring**
+- **NodePorts** — проверяет, есть ли у узла свободные порты, необходимые для запуска Pod'а. Фаза: **Filtering**
+
+Полный список плагинов можно посмотреть в [документации Kubernetes](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
+
+### Логика работы
+
+Сначала идет фаза фильтрации (**Filtering**). В этот момент работают `filter`-плагины, которые из всего списка узлов выбирают те, которые попадают под условия фильтров (`taints`, `nodePorts`, `nodeName`, `unschedulable`, и т. д.). Если узлы лежат в разных зонах, то при выборе зоны чередуются, чтобы не размещать все Pod'ы в одной зоне.
+
+Предположим, что узлы распределяются по зонам следующим образом:
+
+```text
+Zone 1: Node 1, Node 2, Node 3, Node 4
+Zone 2: Node 5, Node 6
+```
+
+В этом случае они будут выбираться в следующем порядке:
+
+```text
+Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
+```
+
+Обратите внимание, что с целью оптимизации выбираются не все попадающие под условия узлы, а только их часть. По умолчанию функция выбора количества узлов линейная. Для кластера из ≤ 50 узлов будут выбраны 100% узлов, для кластера из 100 узлов — 50%, а для кластера из 5000 узлов — 10%. Минимальное значение — 5% при количестве узлов более 5000. Таким образом, при настройках по умолчанию узел может не попасть в список возможных узлов для запуска. Эту логику можно изменить (см. подробнее про параметр `percentageOfNodesToScore` в [документации Kubernetes](https://kubernetes.io/docs/reference/config-api/kube-scheduler-config.v1/)), но Deckhouse не дает такой возможности.
+
+После того как выбраны узлы, подходящие под условия, запускается фаза **Scoring**. Каждый плагин анализирует список отфильтрованных узлов и назначает оценку (score) каждому узлу. Оценки от разных плагинов суммируются. На этой фазе оцениваются доступные ресурсы на узлах, pod capacity, affinity, volume provisioning, и так далее. По итогам этой фазы выбирается узел с наибольшей оценкой. Если сразу несколько узлов получили максимальную оценку, узел выбирается случайным образом.
+
+В итоге Pod запускается на выбранном узле.
+
+#### Документация
+
+- [Общее описание scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/)
+- [Система плагинов](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
+- [Подробности фильтрации узлов](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)
+- [Исходный код scheduler](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)

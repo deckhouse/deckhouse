@@ -24,8 +24,6 @@ topnav:
       - title: Services
         url: '#'
         items:
-        - title: Managed Deckhouse
-          url: /services/managed.html
         - title: Training & Consulting
           url: /services/training.html
       - title: Resources
@@ -69,8 +67,6 @@ topnav:
       - title: Услуги
         url: '#'
         items:
-        - title: Managed Deckhouse
-          url: /services/managed.html
         - title: Обучение и консультации
           url: /services/training.html
         - title: Переезд с OpenShift

@@ -179,8 +179,8 @@ github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5Kwzbycv
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/felixge/httpsnoop v1.0.3 h1:s/nj+GCswXYzN5v2DpNMuMQYe+0DDwt5WVCU6CWBdXk=
-github.com/flant/addon-operator v1.1.4 h1:rFe+3ub3e54ThYIC+iJ02k35lVzU/8bXj/94q5W7ysQ=
-github.com/flant/addon-operator v1.1.4/go.mod h1:YOJzSpqaUUT/EKwY8/oKUa11/hxLqaDpLy3FItiwqPc=
+github.com/flant/addon-operator v1.1.5-0.20230618220332-871f9192e42d h1:XXq3F3GM6wzk1CGhqS0ioTBTEd8J219OtbrBMX3Aii4=
+github.com/flant/addon-operator v1.1.5-0.20230618220332-871f9192e42d/go.mod h1:Fe4THlgkfl7NKNSJY76DzCtdM4FzaXMnVsFGJ7vfdjM=
 github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbLR5vJOUzKAK8p3nrD7mDk=
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v0.26.1 h1:QIT/Skmdv5Mpu8OWBzncmZdtlKXDKzkyhte7wlXnbVE=
@@ -581,6 +581,8 @@ github.com/pelletier/go-toml v1.7.0/go.mod h1:vwGMzjaWMwyfHwgIBhI2YUM4fB6nL6lVAv
 github.com/pelletier/go-toml v1.9.3/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
 github.com/peterbourgon/diskv v2.0.1+incompatible h1:UBdAOUP5p4RWqPBg048CAvpKN+vxiaj6gdUUzhl4XmI=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
+github.com/peterbourgon/mergemap v0.0.1 h1:5/brtSACv34REV0xoYjPQ8JXZnx3nurGt6WInLRwqX4=
+github.com/peterbourgon/mergemap v0.0.1/go.mod h1:jQyRpOpE/KbvPc0VKXjAqctYglwUO5W6zAcGcFfbvlo=
 github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5 h1:Ii+DKncOVM8Cu1Hc+ETb5K+23HdAMvESYE3ZJ5b5cMI=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

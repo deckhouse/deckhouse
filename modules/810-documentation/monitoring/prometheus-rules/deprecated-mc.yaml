@@ -1,0 +1,17 @@
+- name: d8.documentation.deprecations
+  rules:
+  - alert: ModuleConfigDeprecated
+    expr: |
+      max(d8_mc_deprecated{module="documentation"}) > 0
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: documentation
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Deprecated ModuleConfig was found.
+      description: |-
+        The module `deckhouse-web` was renamed to the `documentation`.
+
+        The new ModuleConfig `documentation` was generated automatically. Please, remove deprecated ModuleConfig `deckhouse-web` from the CI deploy process and delete it: `kubectl delete mc deckhouse-web`.

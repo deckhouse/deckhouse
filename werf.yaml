@@ -194,6 +194,10 @@ git:
   - modules/*/template_tests
   - modules/*/.namespace
   - modules/*/values_matrix_test.yaml
+  - modules/*/apis/**/*.go
+  - modules/*/requirements/**/*.go
+  - modules/*/settings-conversion/**/*.go
+  - modules/*/hack/**/*.go
   - global-hooks/**/*.go
   - candi/cloud-providers/*/layouts
   - candi/cloud-providers/*/terraform-modules
@@ -645,6 +649,17 @@ args:
   BASE_UBUNTU: {{ .Images.BASE_UBUNTU }}
   BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
+  {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless" "common/iptables-wrapper")) }}
+dependencies:
+- image: common/distroless
+  imports:
+  - type: ImageName
+    targetBuildArg: BASE_DISTROLESS
+- image: common/iptables-wrapper
+  imports:
+  - type: ImageName
+    targetBuildArg: BASE_IPTABLES_WRAPPER
+  {{- end }}
 {{- else }}
 {{ tpl .ImageBuildData . }}
 {{- end }}

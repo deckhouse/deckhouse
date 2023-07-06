@@ -32,7 +32,8 @@ kubernetes:
       {
         "name": .metadata.name,
         "email": .spec.email,
-        "userID": .spec.userID
+        "userID": .spec.userID,
+        "groups": .spec.groups
       }
 kubernetesValidating:
 - name: users-unique.deckhouse.io
@@ -47,20 +48,55 @@ EOF
 }
 
 function __main__() {
+  operation=$(context::jq -r '.review.request.operation')
   userName=$(context::jq -r '.review.request.object.metadata.name')
   email=$(context::jq -r '.review.request.object.spec.email')
   userID=$(context::jq -r '.review.request.object.spec.userID')
+  groups=$(context::jq -r '.review.request.object.spec.groups // ""')
 
   if userWithTheSameEmail="$(context::jq -er --arg name "$userName" --arg email "$email" '.snapshots.users[].filterResult | select(.name != $name) | select(.email == $email) | .name' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"Email must be unique. User '$userWithTheSameEmail' is already using email '$email'" }
+{"allowed":false, "message":"users.deckhouse.io \"$userName\", user \"$userWithTheSameEmail\" is already using email \"$email\"" }
 EOF
     return 0
   fi
 
   if userWithTheSameUserID="$(context::jq -er --arg name "$userName" --arg userid "$userID" '.snapshots.users[].filterResult | select(.name != $name) | select(.userID == $userid) | .name' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"UserID must be unique.  User '$userWithTheSameUserID' is already using userID '$userID'" }
+{"allowed":false, "message":"users.deckhouse.io \"$userName\", user \"$userWithTheSameUserID\" is already using userID '$userID'" }
+EOF
+    return 0
+  fi
+
+  if [ "$operation" == "CREATE" ] && [ "$groups" != "" ]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"\".spec.groups\" is deprecated, use the \"Group\" object." }
+EOF
+    return 0
+  fi
+
+  if context::jq -er --arg name "$userName" '
+        .review as $review |
+        if ($review.request.operation == "UPDATE") and ($review.request.object.spec.groups | length > 0)
+        then
+          .snapshots.users[].filterResult |
+          select(.name == $name) |
+          (($review.request.object.spec.groups | sort) - (.groups | sort)) |
+          length > 0
+        else
+          false
+        end
+        ' >/dev/null 2>&1
+  then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"\".spec.groups\" is deprecated, modification is forbidden, only removal of all elements is allowed" }
+EOF
+    return 0
+  fi
+
+  if context::jq -er '.review.request.object.spec.email | startswith("system:")' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"users.deckhouse.io \"$userName\", \".spec.email\" must not start with the \"system:\" prefix" }
 EOF
     return 0
   fi

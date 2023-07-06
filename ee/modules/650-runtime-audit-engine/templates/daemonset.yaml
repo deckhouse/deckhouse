@@ -101,8 +101,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: FALCO_BPF_PROBE
-          value: ""
         - name: SKIP_DRIVER_LOADER
           value: ""
         livenessProbe:
@@ -148,6 +146,8 @@ spec:
           readOnly: true
         - name: rules-data
           mountPath: /etc/falco/rules.d
+        - name: containerdsock
+          mountPath: /run/containerd/containerd.sock
 
       - name: falcosidekick
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
@@ -203,6 +203,8 @@ spec:
           mountPath: /etc/falco/rules.d
         - name: tmp
           mountPath: /tmp
+        - mountPath: /etc/falco
+          name: config-volume
         # Check that rules were uploaded successfully
         readinessProbe:
           exec:
@@ -280,6 +282,9 @@ spec:
       - hostPath:
           path: /usr
         name: usr-fs
+      - hostPath:
+          path: /run/containerd/containerd.sock
+        name: containerdsock
       - hostPath:
           path: /etc
         name: etc-fs

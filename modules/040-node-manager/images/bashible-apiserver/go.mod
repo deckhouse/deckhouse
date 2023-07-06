@@ -11,11 +11,11 @@ require (
 	github.com/flant/kube-client v0.0.6
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/go-openapi/spec v0.20.2
-	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.17.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.11.0 // indirect
+	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.7.0 // indirect

@@ -180,7 +180,13 @@ func calcErrorCondition(ng *NodeGroup, currentConditions []ngv1.NodeGroupConditi
 	return curError
 }
 
-func CalculateNodeGroupConditions(ng NodeGroup, nodes []*Node, currentConditions []ngv1.NodeGroupCondition, errors []string) []ngv1.NodeGroupCondition {
+func CalculateNodeGroupConditions(
+	ng NodeGroup,
+	nodes []*Node,
+	currentConditions []ngv1.NodeGroupCondition,
+	errors []string,
+	minPerAllZone int,
+) []ngv1.NodeGroupCondition {
 	var inDownScale, isWaitingDisruptiveApproval, isUpdating bool
 
 	schedulableNodes := 0
@@ -214,11 +220,7 @@ func CalculateNodeGroupConditions(ng NodeGroup, nodes []*Node, currentConditions
 		}
 	}
 
-	isReady := len(nodes) == 0
-
-	if schedulableNodes > 0 {
-		isReady = float64(readySchedulableNodes)/float64(schedulableNodes) > 0.9
-	}
+	isReady := readySchedulableNodes >= minPerAllZone
 
 	errorCondition := calcErrorCondition(&ng, currentConditions, errors)
 

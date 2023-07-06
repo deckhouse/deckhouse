@@ -24,9 +24,12 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -38,17 +41,19 @@ import (
 
 type Discoverer interface {
 	InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error)
+	DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error)
 }
 
 type Reconciler struct {
 	cloudRequestErrorMetric   *prometheus.GaugeVec
 	updateResourceErrorMetric *prometheus.GaugeVec
 
-	discoverer    Discoverer
-	checkInterval time.Duration
-	listenAddress string
-	logger        *log.Entry
-	k8sClient     dynamic.Interface
+	discoverer       Discoverer
+	checkInterval    time.Duration
+	listenAddress    string
+	logger           *log.Entry
+	k8sDynamicClient dynamic.Interface
+	k8sClient        *kubernetes.Clientset
 }
 
 func NewReconciler(
@@ -56,14 +61,16 @@ func NewReconciler(
 	listenAddress string,
 	interval time.Duration,
 	logger *log.Entry,
-	k8sClient dynamic.Interface,
+	k8sClient *kubernetes.Clientset,
+	k8sDynamicClient dynamic.Interface,
 ) *Reconciler {
 	return &Reconciler{
-		checkInterval: interval,
-		listenAddress: listenAddress,
-		discoverer:    discoverer,
-		logger:        logger,
-		k8sClient:     k8sClient,
+		checkInterval:    interval,
+		listenAddress:    listenAddress,
+		discoverer:       discoverer,
+		logger:           logger,
+		k8sClient:        k8sClient,
+		k8sDynamicClient: k8sDynamicClient,
 	}
 }
 
@@ -171,6 +178,14 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 	c.logger.Infoln("Start next data discovery")
 	defer c.logger.Infoln("Finish data discovery")
 
+	c.instanceTypesReconcile(ctx)
+	c.discoveryDataReconcile(ctx)
+}
+
+func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
+	c.logger.Infoln("Start instance type discovery step")
+	defer c.logger.Infoln("Finish instance type discovery step")
+
 	instanceTypes, err := c.discoverer.InstanceTypes(ctx)
 	if err != nil {
 		c.logger.Errorf("Getting instance types error: %v\n", err)
@@ -190,18 +205,18 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 		}
 
 		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		data, errGetting := c.k8sClient.Resource(v1alpha1.GVR).Get(cctx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
+		data, errGetting := c.k8sDynamicClient.Resource(v1alpha1.GVR).Get(cctx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
 		cancel()
 
 		if errors.IsNotFound(errGetting) {
-			o, err := c.cloudDiscoveryUnstructured(nil, instanceTypes)
+			o, err := c.instanceTypesCloudDiscoveryUnstructured(nil, instanceTypes)
 			if err != nil {
 				// return because we have error in conversion
 				return
 			}
 
 			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
-			_, err = c.k8sClient.Resource(v1alpha1.GVR).Create(cctx, o, metav1.CreateOptions{})
+			_, err = c.k8sDynamicClient.Resource(v1alpha1.GVR).Create(cctx, o, metav1.CreateOptions{})
 			cancel()
 
 			if err != nil {
@@ -211,14 +226,14 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 
 			errGetting = nil
 		} else {
-			o, err := c.cloudDiscoveryUnstructured(data, instanceTypes)
+			o, err := c.instanceTypesCloudDiscoveryUnstructured(data, instanceTypes)
 			if err != nil {
 				// return because we have error in conversion
 				return
 			}
 
 			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
-			_, err = c.k8sClient.Resource(v1alpha1.GVR).Update(cctx, o, metav1.UpdateOptions{})
+			_, err = c.k8sDynamicClient.Resource(v1alpha1.GVR).Update(cctx, o, metav1.UpdateOptions{})
 			cancel()
 
 			if err != nil {
@@ -240,7 +255,7 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
 }
 
-func (c *Reconciler) cloudDiscoveryUnstructured(o *unstructured.Unstructured, instanceTypes []v1alpha1.InstanceType) (*unstructured.Unstructured, error) {
+func (c *Reconciler) instanceTypesCloudDiscoveryUnstructured(o *unstructured.Unstructured, instanceTypes []v1alpha1.InstanceType) (*unstructured.Unstructured, error) {
 	data := v1alpha1.InstanceTypesCatalog{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: v1alpha1.CloudDiscoveryDataResourceName,
@@ -273,4 +288,100 @@ func (c *Reconciler) cloudDiscoveryUnstructured(o *unstructured.Unstructured, in
 	u := &unstructured.Unstructured{Object: content}
 
 	return u, nil
+}
+
+func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
+	c.logger.Infoln("Start cloud data discovery step")
+	defer c.logger.Infoln("Finish cloud data discovery step")
+
+	cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	secret, err := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-provider-cluster-configuration", metav1.GetOptions{})
+	if err != nil {
+		c.logger.Errorf("Failed to get 'd8-provider-cluster-configuration' secret: %v\n", err)
+		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(1.0)
+		return
+	}
+
+	cloudDiscoveryData := secret.Data["cloud-provider-discovery-data.json"]
+
+	discoveryData, err := c.discoverer.DiscoveryData(ctx, cloudDiscoveryData)
+	if err != nil {
+		c.logger.Errorf("Getting discovery data error: %v\n", err)
+		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(1.0)
+		return
+	}
+	c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
+
+	if discoveryData == nil {
+		return
+	}
+
+	for i := 1; i <= 3; i++ {
+		if i > 1 {
+			c.logger.Infoln("Waiting 3 seconds before next attempt")
+			time.Sleep(3 * time.Second)
+		}
+
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		secret, errGetting := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-cloud-provider-discovery-data", metav1.GetOptions{})
+		cancel()
+
+		if errors.IsNotFound(errGetting) {
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.CoreV1().Secrets("kube-system").Create(cctx, c.createSecretWithDiscoveryData(discoveryData), metav1.CreateOptions{})
+			cancel()
+
+			if err != nil {
+				c.logger.Errorf("Attempt %d. Cannot create cloud data resource: %v\n", i, err)
+				continue
+			}
+
+			errGetting = nil
+		} else {
+			secret.Data = map[string][]byte{
+				"discovery-data.json": discoveryData,
+			}
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.CoreV1().Secrets("kube-system").Update(cctx, secret, metav1.UpdateOptions{})
+			cancel()
+
+			if err != nil {
+				c.logger.Errorf("Attempt %d. Cannot update cloud data resource: %v\n", i, err)
+				continue
+			}
+		}
+
+		if errGetting != nil {
+			c.logger.Errorf("Attempt %d. Cannot get cloud data resource: %v", i, errGetting)
+			continue
+		}
+
+		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+		return
+	}
+
+	c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+}
+
+func (c *Reconciler) createSecretWithDiscoveryData(discoveryData []byte) *v1.Secret {
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "d8-cloud-provider-discovery-data",
+			Namespace: "kube-system",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+	}
+
+	secret.Data = map[string][]byte{
+		"discovery-data.json": discoveryData,
+	}
+
+	return secret
 }

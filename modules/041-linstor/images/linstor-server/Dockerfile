@@ -4,7 +4,7 @@ ARG BASE_GOLANG_19_BULLSEYE
 FROM $BASE_UBUNTU as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
-ARG LINSTOR_VERSION=1.22.1
+ARG LINSTOR_VERSION=1.23.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -79,7 +79,7 @@ RUN git clone ${K8S_AWAIT_ELECTION_GITREPO} /usr/local/go/k8s-await-election/ \
 FROM $BASE_UBUNTU as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.23.1
+ARG UTILS_VERSION=9.24.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -121,7 +121,7 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_UBUNTU
 ARG PIRAEUS_GITREPO=https://github.com/piraeusdatastore/piraeus
-ARG PIRAEUS_COMMIT_REF=b6ea08edc8c2199da1efdb6d6664af741a3eb287
+ARG PIRAEUS_COMMIT_REF=4fce0345892e4cefa906cbb09b8a9bb87ef956f3
 
 COPY --from=linstor-builder /linstor-common_*.deb /linstor-controller_*.deb /linstor-satellite_*.deb /packages/
 COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages/

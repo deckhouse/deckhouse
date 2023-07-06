@@ -11,6 +11,7 @@ properties:
         description: 'Setting it to `true` will create an Ingress resource in the `d8-user-authn` namespace in the cluster (it exposes the Kubernetes API).'
       ingressClass:
         type: string
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: 'The Ingress class that will be used to expose the Kubernetes API via Ingress.'
       whitelistSourceRanges:
         type: array
@@ -71,11 +72,11 @@ properties:
             * delete old API server certificates: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
             * reissue new certificates: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
             * restart the API server's container: `docker ps -a | grep 'kube-apiserver' | grep -v pause| awk '{print $1}' | xargs docker restart`;
-            * repeat this step for all master nodes;
+            * repeat this step for all master nodes.
         description:
           type: string
           description: |
-            A couple of words how this authentication metod differs from others.
+            A couple of words how this authentication method differs from others.
         masterCA:
           type: string
           description: |
@@ -132,8 +133,9 @@ properties:
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   ingressClass:
     type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     description: |
-      The class of the Ingress controller of the documentation web UI.
+      The class of the Ingress controller that will be used for Dex/kubeconfig-generator.
 
       An optional parameter; by default, the `modules.ingressClass` global value is used.
   https:

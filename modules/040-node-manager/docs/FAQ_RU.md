@@ -22,7 +22,8 @@ search: добавить ноду в кластер, добавить узел �
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+   NODE_GROUP=worker
+   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 3. Выполните предварительную настройку нового узла, в соответствии с особенностями вашего окружения. Например:
@@ -98,14 +99,14 @@ search: добавить ноду в кластер, добавить узел �
    [system]
    system-0
    system-1
-   
+
    [system:vars]
    node_group=system
-   
+
    [worker]
    worker-0
    worker-1
-   
+
    [worker:vars]
    node_group=worker
    ```
@@ -283,7 +284,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="5.15.0-53-generic"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -291,13 +292,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-apt-install "linux-image-${desired_version}"
 ```
@@ -331,7 +332,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="3.10.0-1160.42.2.el7.x86_64"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -339,13 +340,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-yum-install "kernel-${desired_version}"
 ```
@@ -906,5 +907,112 @@ spec:
 После того как NodeGroup `worker-spot` достигнет своего максимума (5 узлов в примере выше), узлы будут заказываться из NodeGroup `worker`.
 
 Шаблоны узлов (labels/taints) для NodeGroup `worker` и `worker-spot` должны быть одинаковыми, или, как минимум, подходить для той нагрузки, которая запускает процесс увеличения кластера.
+
+## Как интерпретировать состояние группы узлов?
+
+**Ready** — группа узлов содержит минимально необходимое число запланированный узлов с состоянием ```Ready``` для всех зон.
+
+Пример 1. Группа узлов в состоянии ```Ready```:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+```
+
+Пример 2. Группа узлов в состоянии ```Not Ready```:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+  conditions:
+  - status: "False"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+```
+
+**Updating** — группа узлов содержит как минимум один узел, в котором присутствует аннотация с префиксом ```update.node.deckhouse.io``` (например, ```update.node.deckhouse.io/waiting-for-approval```).
+
+**WaitingForDisruptiveApproval** — группа узлов содержит как минимум один узел, в котором присутствует аннотация ```update.node.deckhouse.io/disruption-required``` и
+отсутствует аннотация ```update.node.deckhouse.io/disruption-approved```.
+
+**Scaling** — рассчитывается только для групп узлов с типом ```CloudEphemeral```. Состояние ```True``` может быть в двух случаях:
+
+1. Когда число узлов меньше *желаемого числа узлов в группе, т.е. когда нужно увеличить число узлов в группе.*
+1. Когда какой-то узел помечается к удалению или число узлов больше *желаемого числа узлов*, т.е. когда нужно уменьшить число узлов в группе.
+
+*Желаемое число узлов* — это сумма всех реплик входящих в группу узлов.
+
+Пример. Желаемое число узлов равно 2:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+...
+  desired: 2
+...
+```
+
+**Error** — содержит последнюю ошибку, возникшую при создании узла в группе узлов.
+
+## Как заставить werf игнорировать состояние Ready в группе узлов?
+
+[werf](werf.io) проверяет состояние ```Ready``` у ресурсов и в случае его наличия дожидается пока значение станет ```True```.
+
+Создание (обновление) ресурса [nodeGroup](cr.html#nodegroup) в кластере может потребовать значительного времени на развертывание необходимого количества узлов. При развертывании такого ресурса в кластере с помощью werf (например, в рамках процесса CI/CD), развертывание может завершиться по превышению времени ожидания готовности ресурса. Чтобы заставить werf игнорировать состояние `nodeGroup`, необходимо добавить к nodeGroup следующие аннотации:
+
+```yaml
+metadata:
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    uwerf.io/track-termination-mode: NonBlocking
+```
 
 {% endraw %}

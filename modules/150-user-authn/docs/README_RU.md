@@ -11,7 +11,7 @@ webIfaces:
 Модуль состоит из следующих компонентов:
 - [dex](https://github.com/dexidp/dex) — федеративный OpenID Connect провайдер, который обеспечивает работу со статическими пользователями и может быть подключен к одному или нескольким внешним провайдерам аутентификации (например, он поддерживает SAML, Gitlab и Github);
 - kubeconfig-generator (на самом деле [dex-k8s-authenticator](https://github.com/mintel/dex-k8s-authenticator)) — веб-приложение, которое после авторизации в Dex генерирует команды для настройки локального kubectl;
-- dex-authenticator (на самом деле [oauth2-proxy](https://github.com/pusher/oauth2_proxy)) — приложение, которое принимает запросы от nginx ingress (auth_request) и производит их аутентификацию в dex.
+- dex-authenticator (на самом деле [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy)) — приложение, которое принимает запросы от nginx ingress (auth_request) и производит их аутентификацию в dex.
 
 Управление статическими пользователями осуществляется с помощью Custom Resource [`User`](cr.html#user), в котором содержится вся информация о пользователе, включая пароль.
 

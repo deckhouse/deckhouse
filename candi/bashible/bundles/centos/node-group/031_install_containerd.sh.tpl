@@ -43,6 +43,7 @@ if bb-yum-package? docker-ce; then
   umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
   bb-rp-remove docker-ce containerd-io
   bb-yum-remove docker.io docker-ce containerd-io
+  systemctl unmask containerd.service
   rm -rf /var/lib/containerd/ /etc/docker /etc/containerd/config.toml
   # Old version of pod kubelet-eviction-thresholds-exporter in cri=Docker mode mounts /var/run/containerd/containerd.sock, /var/run/containerd/containerd.sock will be a directory and newly installed containerd won't run. Same thing with crictl.
   rm -rf /var/run/containerd /usr/local/bin/crictl

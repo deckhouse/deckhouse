@@ -5,6 +5,32 @@ module Jekyll
     #
     # Return localised description
     # the source parameter is for object without i18n structure and for legacy support
+
+    @moduleName = ''
+    @resourceType = ''
+
+    # moduleName
+    # revision - Deckhouse revision
+    # resourceType - can be 'crd' or 'moduleConfig' or 'clusterConfig'
+    # resourceName - name of a CRD or an empty string
+    # parameterName - name of a parameter
+    # linkAnchor - HTML anchor for parameter
+    def addRevisionParameter(moduleName, revision, resourceType, resourceName, parameterName, linkAnchor)
+        item = Hash.new
+        item['linkAnchor'] = linkAnchor
+        item['resourceType'] = resourceType
+        item['title'] = %Q(#{if resourceType == 'crd' and  resourceName then resourceName + ":&nbsp;" end}#{parameterName})
+        if get_hash_value(@context.registers[:site].data['modules'], 'modules', moduleName, %Q(parameters-#{revision})) == nil then
+          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})] = Hash.new
+        end
+        if get_hash_value(@context.registers[:site].data['modules'], 'modules', moduleName, %Q(parameters-#{revision}), %Q(#{if resourceName then resourceName + "." end}#{parameterName})) == nil then
+          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{if resourceName then resourceName + "." end}#{parameterName})] = Hash.new
+          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{if resourceName then resourceName + "." end}#{parameterName})] = item
+        else
+          # Duplicate parameter. It may be because of the different api version on the same resource. Just skip it
+        end
+    end
+
     def get_i18n_description(primaryLanguage, fallbackLanguage, source=nil)
         if get_hash_value(primaryLanguage, "description") then
             result = primaryLanguage["description"]
@@ -412,6 +438,14 @@ module Jekyll
 
         result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
 
+        if attributes.has_key?('x-doc-d8Revision')
+          case attributes['x-doc-d8Revision']
+          when "ee"
+            addRevisionParameter(@moduleName, 'ee', @resourceType, resourceName, name, linkAnchor)
+          end
+        end
+
+
         if attributes.is_a?(Hash) and attributes.has_key?("properties")
             result.push('<ul>')
             attributes["properties"].sort.to_h.each do |key, value|
@@ -447,9 +481,12 @@ module Jekyll
         result.join
     end
 
-    def format_crd(input)
+    def format_crd(input, moduleName = "")
 
         return nil if !input
+
+        @moduleName = moduleName
+        @resourceType = "crd"
 
         if ( @context.registers[:page]["lang"] == 'en' )
             fallbackLanguageName = 'ru'
@@ -695,8 +732,11 @@ module Jekyll
         result.join
     end
 
-    def format_cluster_configuration(input)
+    def format_cluster_configuration(input, moduleName = "")
         result = []
+
+        @moduleName = moduleName
+        @resourceType = "clusterConfig"
 
         if ( @context.registers[:page]["lang"] == 'en' )
             fallbackLanguageName = 'ru'
@@ -740,7 +780,9 @@ module Jekyll
         result.join
     end
 
-    def format_module_configuration(input)
+    def format_module_configuration(input, moduleName = "")
+        @moduleName = moduleName
+        @resourceType = "moduleConfig"
         format_configuration(input, true)
     end
   end

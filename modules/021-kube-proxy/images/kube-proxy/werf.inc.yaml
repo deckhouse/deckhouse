@@ -1,3 +1,24 @@
+artifact: {{ .ModuleName }}/distroless-kube-proxy-artifact
+from: {{ .Images.BASE_ALPINE }}
+git:
+- add: /modules/021-kube-proxy/images/kube-proxy
+  to: /workdir/
+  includePaths:
+  - '**/file-filter'
+shell:
+  install:
+    - cd /workdir
+    - apk update
+    - apk add rsync
+    - apk fetch -R -o . iptables ip6tables conntrack-tools
+    - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
+    - mkdir /filtered-apk && rsync -av --include-from=file-filter --include='*/' --exclude '*' /apk/ /filtered-apk/
+    - |
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        ln -f -s /iptables-wrapper "/filtered-apk/sbin/${cmd}"
+      done
+      touch /iptables-wrapper
+
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
@@ -5,20 +26,20 @@
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
-git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-wrapper-installer.sh
-  to: /iptables-wrapper-installer.sh
+fromImage: common/distroless
 import:
+- artifact: {{ $.ModuleName }}/distroless-kube-proxy-artifact
+  add: /filtered-apk
+  to: /
+  before: setup
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
   to: /usr/local/bin/kube-proxy
   before: setup
-shell:
-  beforeInstall:
-    - apk add --no-cache iptables ip6tables conntrack-tools
-  setup:
-    - /iptables-wrapper-installer.sh
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /iptables-wrapper
+  before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/kube-proxy"]
 {{- end }}

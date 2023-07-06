@@ -60,6 +60,7 @@ spec:
   listenLocal: true
   query:
     maxSamples: 100000000
+    lookbackDelta: {{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
@@ -136,6 +137,9 @@ spec:
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   externalLabels:
+{{- with .Values.prometheus.externalLabels }}
+    {{- . | toYaml | nindent 4 }}
+{{- end }}
     prometheus: deckhouse
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""

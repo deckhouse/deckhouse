@@ -18,6 +18,7 @@ package requirements
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -27,6 +28,8 @@ import (
 const (
 	minUbuntuVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
 	requirementsKey           = "nodesMinimalOSVersionUbuntu"
+	containerdRequirementsKey = "containerdOnAllNodes"
+	hasNodesWithDocker        = "nodeManager:hasNodesWithDocker"
 )
 
 func init() {
@@ -51,5 +54,23 @@ func init() {
 		return true, nil
 	}
 
+	checkContainerdRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		requirementValue = strings.TrimSpace(requirementValue)
+		if requirementValue == "false" || requirementValue == "" {
+			return true, nil
+		}
+
+		hasDocker, exists := getter.Get(hasNodesWithDocker)
+		if !exists {
+			return true, nil
+		}
+
+		if hasDocker.(bool) {
+			return false, errors.New("has nodes with Docker CRI or defaultCRI is Docker")
+		}
+
+		return true, nil
+	}
 	requirements.RegisterCheck(requirementsKey, checkRequirementFunc)
+	requirements.RegisterCheck(containerdRequirementsKey, checkContainerdRequirementFunc)
 }

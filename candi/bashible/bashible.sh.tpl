@@ -88,7 +88,7 @@ function get_secret() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
-        if curl -s -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
           return 0
         else
@@ -125,7 +125,7 @@ function get_bundle() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-        if curl -s -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
          return 0
         else
@@ -300,11 +300,9 @@ function main() {
       echo ===
       echo === Step: $step
       echo ===
-      {{- if eq .runType "ClusterBootstrap" }}
       if [ "$attempt" -gt 2 ]; then
         sx=x
       fi
-      {{- end }}
       {{- if ne .runType "ClusterBootstrap" }}
       bb-event-error-create "$step"
       {{- end }}

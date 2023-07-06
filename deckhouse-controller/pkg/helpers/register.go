@@ -18,6 +18,7 @@ import (
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	changeregistry "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/change_registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/jwt"
 	dhctlapp "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 )
@@ -32,6 +33,22 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		ttl := genJWTCommand.Flag("ttl", "TTL duration (ex. 10s).").Required().Duration()
 		genJWTCommand.Action(func(c *kingpin.ParseContext) error {
 			return jwt.GenJWT(*privateKeyPath, *claims, *ttl)
+		})
+	}
+
+	{
+		changeRegistryCommand := helpersCommand.Command("change-registry", "Change registry for deckhouse images.")
+		newRegistry := changeRegistryCommand.Arg("new-registry", "Registry that will be used for deckhouse images (example: registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need http - provide '--insecure' flag").Required().String()
+
+		user := changeRegistryCommand.Flag("user", "User with pull access to registry.").String()
+		password := changeRegistryCommand.Flag("password", "Password/token for registry user.").String()
+		caFile := changeRegistryCommand.Flag("ca-file", "Path to registry CA.").ExistingFile()
+
+		insecure := changeRegistryCommand.Flag("insecure", "Use HTTP while connecting to new registry.").Bool()
+
+		newImageTag := changeRegistryCommand.Flag("new-deckhouse-tag", "New tag that will be used for deckhouse deployment image (by default current tag from deckhouse deployment will be used).").String()
+		changeRegistryCommand.Action(func(c *kingpin.ParseContext) error {
+			return changeregistry.ChangeRegistry(*newRegistry, *user, *password, *caFile, *newImageTag, *insecure)
 		})
 	}
 

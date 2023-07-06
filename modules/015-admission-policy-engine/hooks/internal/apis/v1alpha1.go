@@ -51,6 +51,13 @@ type OperationPolicySpec struct {
 			} `json:"labels,omitempty"`
 			WatchKinds []string `json:"watchKinds,omitempty"`
 		} `json:"requiredLabels,omitempty"`
+		RequiredAnnotations struct {
+			Annotations []struct {
+				Key          string `json:"key,omitempty"`
+				AllowedRegex string `json:"allowedRegex,omitempty"`
+			} `json:"annotations,omitempty"`
+			WatchKinds []string `json:"watchKinds,omitempty"`
+		} `json:"requiredAnnotations,omitempty"`
 		MaxRevisionHistoryLimit   *int     `json:"maxRevisionHistoryLimit,omitempty"`
 		ImagePullPolicy           string   `json:"imagePullPolicy,omitempty"`
 		PriorityClassNames        []string `json:"priorityClassNames,omitempty"`

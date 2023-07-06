@@ -56,6 +56,7 @@ OUTPUT_DIR=""
 D8_DOCKER_CONFIG_DIR=~/.docker/deckhouse
 REGISTRY_ROOT="registry.deckhouse.io"
 REGISTRY="${REGISTRY_ROOT}/deckhouse"
+SKOPEO_IMAGE="$REGISTRY/tools/skopeo:v1.11.2"
 RELEASE=$(curl -fsL https://api.github.com/repos/deckhouse/deckhouse/tags | jq -r ".[0].name")
 PULL_RELEASE_METADATA_IMAGES="yes"
 
@@ -177,8 +178,10 @@ check_requirements
 
 echo "Saving Deckhouse $EDITION $RELEASE."
 REGISTRY_PATH="$REGISTRY/$EDITION"
-IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
+IMAGES=$(docker --config $D8_DOCKER_CONFIG_DIR run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
 
+docker pull "$SKOPEO_IMAGE"
+docker save -o "$OUTPUT_DIR/skopeo.tar" "$SKOPEO_IMAGE"
 
 docker run \
   -v /etc/hosts:/etc/hosts \
@@ -197,7 +200,7 @@ docker run \
   --network host -ti --rm \
   --security-opt seccomp=unconfined \
   --entrypoint /bin/bash \
-  "quay.io/skopeo/stable:v1.11.2" -c '
+  "$SKOPEO_IMAGE" -c '
 
 set -Eeuo pipefail
 

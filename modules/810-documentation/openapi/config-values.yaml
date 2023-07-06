@@ -1,8 +1,8 @@
-x-config-version: 2
 type: object
 properties:
   ingressClass:
     type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     description: |
       The class of the Ingress controller of the documentation web UI.
 

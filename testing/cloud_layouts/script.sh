@@ -104,6 +104,9 @@ master_ip=
 # bootstrap log
 bootstrap_log="${DHCTL_LOG_FILE}"
 terraform_state_file="/tmp/static-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.tfstate"
+# Logs dir
+logs=/tmp/logs
+mkdir -p $logs
 
 # function generates temp ssh parameters file
 function set_common_ssh_parameters() {
@@ -362,11 +365,45 @@ function prepare_environment() {
   >&2 ls -la $cwd
 }
 
+function write_deckhouse_logs() {
+  testLog=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+kubectl -n d8-system logs deploy/deckhouse
+END_SCRIPT
+)
+  >&2 echo -n "Fetch Deckhouse logs if error test ..."
+
+  getDeckhouseLogsAttempts=5
+  attempt=0
+  for ((i=1; i<=$getDeckhouseLogsAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"; then
+      return 0
+    else
+      >&2 echo "Getting deckhouse logs $i/$getDeckhouseLogsAttempts failed. Sleeping 5 seconds..."
+      sleep 5
+    fi
+  done
+
+  >&2 echo "ERROR: getting deckhouse logs after $getDeckhouseLogsAttempts)"
+  return 1
+}
+
 function run-test() {
   if [[ "$PROVIDER" == "Static" ]]; then
-    bootstrap_static || return $?
+    bootstrap_static
+    exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+      write_deckhouse_logs
+      return "$exit_code"
+    fi
   else
-    bootstrap || return $?
+    bootstrap
+    exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+      write_deckhouse_logs
+      return "$exit_code"
+    fi
   fi
 
   wait_deckhouse_ready || return $?
@@ -630,10 +667,16 @@ ENDSSH
 function bootstrap() {
   >&2 echo "Run dhctl bootstrap ..."
   dhctl bootstrap --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log" || return $?
+  --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
+
+  dhctl_exit_code=$?
 
   if ! master_ip="$(parse_master_ip_from_log)"; then
     return 1
+  fi
+
+  if [[ $dhctl_exit_code -ne 0 ]]; then
+    return "$dhctl_exit_code"
   fi
 
   >&2 echo "==============================================================
@@ -718,6 +761,9 @@ END_SCRIPT
       >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed."
     fi
   done
+
+  write_deckhouse_logs
+
   return 1
 }
 
@@ -733,7 +779,12 @@ function wait_cluster_ready() {
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
 
   if [[ "$PROVIDER" == "Static" ]]; then
-    run_linstor_tests || return $?
+    if ! run_linstor_tests; then
+      >&2 echo -n "Linstor tests failed"
+      >&2 echo -n "Fetch Deckhouse logs after test ..."
+      $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
+      return 1
+    fi
   fi
   echo "Linstor test suite: success"
 
@@ -753,12 +804,7 @@ function wait_cluster_ready() {
     fi
   done
 
-  >&2 echo "Fetch Deckhouse logs after test ..."
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$cwd/deckhouse.json.log" <<"ENDSSH"
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-kubectl -n d8-system logs deploy/deckhouse
-ENDSSH
+  write_deckhouse_logs
 
   if [[ $test_failed == "true" ]] ; then
     return 1

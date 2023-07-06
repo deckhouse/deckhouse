@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	_ "github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -184,6 +185,31 @@ data:
 					GrafanaURL:    "https://grafana.one.two",
 					PrometheusURL: "https://grafana.one.two/prometheus",
 				},
+			),
+		)
+	})
+
+	Context("getPrometheusURLSchema", func() {
+
+		table.DescribeTable("getPrometheusURLSchema",
+			func(input *go_hook.HookInput, want string) {
+				p := getPrometheusURLSchema(input)
+				Expect(p).To(Equal(want))
+			},
+			table.Entry(
+				"an empty snapshot",
+				&go_hook.HookInput{Snapshots: go_hook.Snapshots{prometheusSecretBinding: []go_hook.FilterResult{}}},
+				"http",
+			),
+			table.Entry(
+				"a snapshot with http",
+				&go_hook.HookInput{Snapshots: go_hook.Snapshots{prometheusSecretBinding: []go_hook.FilterResult{"http"}}},
+				"http",
+			),
+			table.Entry(
+				"a snapshot with https",
+				&go_hook.HookInput{Snapshots: go_hook.Snapshots{prometheusSecretBinding: []go_hook.FilterResult{"https"}}},
+				"https",
 			),
 		)
 	})

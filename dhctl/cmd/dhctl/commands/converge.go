@@ -50,8 +50,15 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			cacheIdentity = sshClient.Check().String()
 		}
 
+		if app.KubeConfig != "" {
+			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
+				app.KubeConfig,
+				app.KubeConfigContext,
+			)
+		}
+
 		if cacheIdentity == "" {
-			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster")
+			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
 		err = cache.Init(cacheIdentity)

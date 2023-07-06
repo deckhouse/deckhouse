@@ -169,6 +169,7 @@ properties:
           Setting it to `false` forces the use of an emptyDir volume.
       ingressClass:
         type: string
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
           The class of the Ingress controller used for the smoke-mini.
 

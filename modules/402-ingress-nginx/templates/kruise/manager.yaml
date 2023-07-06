@@ -59,6 +59,8 @@ metadata:
   name: kruise-controller-manager
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list . (dict "app" "kruise" "control-plane" "controller-manager")) | nindent 2 }}
+  annotations:
+    ingress.deckhouse.io/force-max-unavailable: ""
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
@@ -87,7 +89,7 @@ spec:
             - --logtostderr=true
             - --leader-election-namespace=d8-ingress-nginx
             - --namespace=d8-ingress-nginx
-            - --v=2
+            - --v=5
             - --feature-gates=ResourcesDeletionProtection=true,PodWebhook=false
             - --sync-period=0
             - --advancedcronjob-workers=0
@@ -105,6 +107,10 @@ spec:
             - --statefulset-workers=0
             - --uniteddeployment-workers=0
             - --workloadspread-workers=0
+            - --leader-election-resource-lock=leases
+            - --leader-election-retry-period=10s
+            - --leader-election-lease-duration=35s
+            - --leader-election-renew-deadline=30s
           command:
             - /manager
           image: {{ include "helm_lib_module_image" (list . "kruise") }}

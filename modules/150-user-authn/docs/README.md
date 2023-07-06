@@ -11,7 +11,7 @@ The module sets up a unified authentication system integrated with Kubernetes an
 It consists of the following components:
 - [dex](https://github.com/dexidp/dex) — is a federated OpenID Connect provider that acts as an identity service for static users and can be linked to one or more ID providers (e.g., SAML providers, GitHub, and Gitlab);
 - kubeconfig-generator (in fact, [dex-k8s-authenticator](https://github.com/mintel/dex-k8s-authenticator)) — is a helper web application that (being authorized with dex) generates kubectl commands for creating and modifying a kubeconfig;
-- dex-authenticator (in fact, [oauth2-proxy](https://github.com/pusher/oauth2_proxy)) — is an application that gets nginx ingress (auth_request) requests and authenticates them with dex.
+- dex-authenticator (in fact, [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy)) — is an application that gets nginx ingress (auth_request) requests and authenticates them with dex.
 
 Static users are managed using the [`User`](cr.html#user) Custom Resource. It contains all the user-related data, including the password.
 

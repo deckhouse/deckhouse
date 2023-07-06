@@ -23,6 +23,8 @@ sed_regex=""
 targets="$(grep -rl '^ARG [A-Z_]*_\(VERSION\|COMMIT_REF\)=' $@)"
 versions=$(grep -r '^ARG [A-Z_]*_\(VERSION\|COMMIT_REF\)=' $targets | awk '{print $NF}' | sort -u)
 gitrepos=$(grep -r '^ARG [A-Z_]*_GITREPO=' $targets | awk '{print $NF}' | sort -u)
+drbd_version=
+piraeus_operator_major_ver=1
 
 if [ "$DRBDONLY" = 1 ]; then
   gitrepos=$(echo "$gitrepos" | grep '\(DRBD_GITREPO\|UTILS_GITREPO\|SPAAS_GITREPO\)')
@@ -35,6 +37,10 @@ while read name repo; do
     if [ "$name" = DRBD ]; then
       # Convert drbd-9.X.X to v9.X.X and select the latest 9 version
       current_tag=$(curl -fLsS "https://api.github.com/repos/${shortrepo}/tags" | jq -r '.[] | .name' | sed -n 's|drbd-9|v9|p' | sort -V | tail -n1)
+      # convert v9.X.X to 9.X.X
+      drbd_version=${current_tag#*v}
+    elif [ "$name" = PIRAEUS_OPERATOR ]; then
+      current_tag=$(curl -fLsS "https://api.github.com/repos/${shortrepo}/tags" | jq -r '.[] | .name' | grep "v${piraeus_operator_major_ver}.*" | sort -V | tail -n1)
     else
       current_tag=$(curl -fLsS "https://api.github.com/repos/${shortrepo}/tags" | jq -r '.[0].name')
     fi
@@ -50,5 +56,7 @@ while read name repo; do
 done < <(echo "$gitrepos" | sed -n 's|_GITREPO=| |p')
 
 echo "Applying changes:"
-set -x
-sed -e "$sed_regex" -i $targets
+(set -x; sed -e "$sed_regex" -i $targets)
+if [ -n "$drbd_version" ]; then
+  (set -x; sed -e "/^      drbdVersion:/,/default:/{/^\([[:space:]]*default: \).*/s//\1\"${drbd_version}\"/}" -i openapi/values.yaml)
+fi

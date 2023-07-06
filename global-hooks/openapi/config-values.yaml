@@ -30,6 +30,7 @@ properties:
         description: |
           The class of the Ingress controller ([Ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used for Deckhouse modules.
         x-examples: [ "nginx" ]
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
         type: string
         pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
