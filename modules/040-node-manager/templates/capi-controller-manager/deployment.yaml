@@ -181,5 +181,5 @@ spec:
       volumes:
       - name: cert
         secret:
-          secretName: capi-webhook-service-cert
+          secretName: capi-webhook-tls
 {{- end }}
