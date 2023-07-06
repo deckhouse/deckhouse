@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	cn = "capi-controller-webhook"
+	cn = "capi-controller-manager-webhook"
 )
 
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{

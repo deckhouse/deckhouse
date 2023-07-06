@@ -54,13 +54,13 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 			certCA, err := x509.ParseCertificate(blockCA.Bytes)
 			Expect(err).To(BeNil())
 			Expect(certCA.IsCA).To(BeTrue())
-			Expect(certCA.Subject.CommonName).To(Equal("cert-manager-webhook"))
+			Expect(certCA.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
 
 			block, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.webhookCert.crt").String()))
 			cert, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).To(BeNil())
 			Expect(cert.IsCA).To(BeFalse())
-			Expect(cert.Subject.CommonName).To(Equal("cert-manager-webhook"))
+			Expect(cert.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
 		})
 	})
 	Context("With secrets", func() {
