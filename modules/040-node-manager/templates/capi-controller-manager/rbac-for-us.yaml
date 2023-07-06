@@ -3,14 +3,14 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-controller-manager
   namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-controller-manager:leader-election-role
   namespace: d8-cloud-instance-manager
 rules:
@@ -40,14 +40,14 @@ aggregationRule:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: d8:node-manager:capi-controller-manager:aggregated-manager-role
 rules: []
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api" "cluster.x-k8s.io/aggregate-to-manager" "true")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: d8:node-manager:capi-controller-manager:manager-role
 rules:
   - apiGroups:
@@ -369,7 +369,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
+    {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-controller-manager:leader-election-rolebinding
   namespace: d8-cloud-instance-manager
 roleRef:
@@ -384,7 +384,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "cluster.x-k8s.io/provider" "cluster-api")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: d8:node-manager:capi-controller-manager:manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
