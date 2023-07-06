@@ -19,6 +19,10 @@ spec:
       storage: true
       subresources:
         status: {}
+      additionalPrinterColumns:
+      - jsonPath: .spec.name
+        name: Group
+        type: string
       schema:
         openAPIV3Schema:
           type: object

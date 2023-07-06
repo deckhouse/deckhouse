@@ -17,9 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
+	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -30,7 +37,8 @@ var _ = Describe("User Authn hooks :: migration to Group object ::", func() {
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("Should run", func() {
@@ -39,9 +47,28 @@ var _ = Describe("User Authn hooks :: migration to Group object ::", func() {
 		})
 	})
 
+	Context("Cluster with a configmap", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(`
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-authn-groups-migrated
+  namespace: d8-system
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+		It("Should run and do nothing", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			groups := getGroups(f)
+			Expect(groups).To(HaveLen(0))
+		})
+	})
+
 	Context("Cluster with User objects", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: User
@@ -61,55 +88,94 @@ metadata:
 spec:
   email: user@example.com
   groups:
+  - admins
   - Everyone
+  - -Test
+  - flant/auth
+  - /path/style
+  - longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname.longname
+  - "%$$flant////auth-das@3123@"
+
   password: passwordNext
-`))
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("Should synchronize objects and fill internal values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("Group", "admins").Parse().Raw).To(MatchJSON(`
-{
-  "apiVersion": "deckhouse.io/v1alpha1",
-  "kind": "Group",
-  "metadata": {
-    "creationTimestamp": null,
-    "name": "admins"
-  },
-  "spec": {
-    "members": [
-      {
-        "kind": "User",
-        "name": "admin"
-      }
-    ],
-    "name": "Admins"
-  },
-  "status": {}
-}`))
-			Expect(f.KubernetesGlobalResource("Group", "everyone").Parse().Raw).To(MatchJSON(`
-{
-  "apiVersion": "deckhouse.io/v1alpha1",
-  "kind": "Group",
-  "metadata": {
-    "creationTimestamp": null,
-    "name": "everyone"
-  },
-  "spec": {
-    "members": [
-      {
-        "kind": "User",
-        "name": "admin"
-      },
-      {
-        "kind": "User",
-        "name": "user"
-      }
-    ],
-    "name": "Everyone"
-  },
-  "status": {}
-}`))
+
+			groups := getGroups(f)
+
+			names := set.New()
+			nameToMembers := map[string][]string{}
+
+			for _, ugroup := range groups {
+				group := &DexGroup{}
+
+				err := sdk.FromUnstructured(&ugroup, group)
+				Expect(err).To(BeNil())
+
+				s := set.New()
+				for _, member := range group.Spec.Members {
+					if member.Kind == DexGroupKind {
+						Fail("Only Users can be members in the test")
+					}
+					s.Add(member.Name)
+				}
+
+				names.Add(group.Name)
+				nameToMembers[group.Name] = s.Slice()
+			}
+
+			Expect(names).To(HaveLen(8))
+			Expect(nameToMembers).To(HaveLen(8))
+
+			sanitizedNames := names.Slice()
+			Expect(sanitizedNames).To(Equal([]string{
+				"admins",
+				"admins-2909721157",
+				"everyone-622959000",
+				"flant----auth-das-3123-1790689325",
+				"flant-auth-2950615535",
+				"longname-longname-longname-longname-longname-longnam-4160692933",
+				"path-style-2010161443",
+				"test-3218847196",
+			}))
+
+			for _, name := range sanitizedNames {
+				Expect(name).To(MatchRegexp(metadataNamePattern))
+				Expect(len(names)).To(BeNumerically("<=", maxMetadataNameLength))
+			}
+
+			assertMembers := func(name string, members []string) {
+				By(name, func() {
+					Expect(nameToMembers[name]).To(Equal(members))
+				})
+			}
+
+			assertMembers("admins", []string{"user"})
+			assertMembers("admins-2909721157", []string{"admin"})
+			assertMembers("everyone-622959000", []string{"admin", "user"})
+			assertMembers("flant----auth-das-3123-1790689325", []string{"user"})
+			assertMembers("flant-auth-2950615535", []string{"user"})
+			assertMembers("longname-longname-longname-longname-longname-longnam-4160692933", []string{"user"})
+			assertMembers("path-style-2010161443", []string{"user"})
+			assertMembers("test-3218847196", []string{"user"})
+
+			Expect(f.KubernetesResource("ConfigMap", "d8-system", "user-authn-groups-migrated").Exists()).To(BeTrue())
 		})
 	})
 })
+
+func getGroups(f *HookExecutionConfig) []unstructured.Unstructured {
+	gvr := schema.GroupVersionResource{
+		Group:    DexGroupGroup,
+		Version:  DexGroupVersion,
+		Resource: DexGroupResource,
+	}
+
+	groups, err := f.KubeClient().Dynamic().Resource(gvr).List(context.TODO(), v1.ListOptions{})
+	Expect(err).To(BeNil())
+
+	return groups.Items
+}
