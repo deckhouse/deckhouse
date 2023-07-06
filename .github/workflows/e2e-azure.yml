@@ -414,7 +414,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Docker/1.22"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -871,7 +871,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Docker/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -1328,7 +1328,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Docker/1.24"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -1785,7 +1785,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Docker/1.25"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -2242,7 +2242,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Docker/1.26"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -2699,7 +2699,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Docker/1.27"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -3156,7 +3156,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Containerd/1.22"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -3613,7 +3613,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -4070,7 +4070,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Containerd/1.24"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -4527,7 +4527,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Containerd/1.25"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -4984,7 +4984,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Containerd/1.26"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -5441,7 +5441,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Containerd/1.27"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Containerd
