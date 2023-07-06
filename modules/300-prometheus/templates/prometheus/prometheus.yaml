@@ -55,7 +55,7 @@ spec:
   enableRemoteWriteReceiver: true
   enableFeatures:
   - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
-  - extra-scrape-metrics # https://prometheus.io/docs/prometheus/2.43/feature_flags/#extra-scrape-metrics
+  - extra-scrape-metrics # https://prometheus.io/docs/prometheus/2.43/feature_flags/#extra-scrape-metrics usage scrape_sample_limit
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
