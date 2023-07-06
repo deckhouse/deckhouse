@@ -21,7 +21,7 @@ package internalinterfaces
 import (
 	time "time"
 
-	versioned "d8.io/bashible/pkg/generated/clientset/versioned"
+	versioned "bashible-apiserver/pkg/generated/clientset/versioned"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"

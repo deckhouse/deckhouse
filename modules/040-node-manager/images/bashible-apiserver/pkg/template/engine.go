@@ -3,16 +3,24 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"text/template"
 
+	"github.com/mitchellh/copystructure"
 	"github.com/pkg/errors"
 )
 
 type Engine struct {
 	Name string
 	Data map[string]interface{}
+}
+
+// deepCopyData make a non-shallow copy of Data field
+func (e Engine) deepCopyData() map[string]interface{} {
+	ret := copystructure.Must(copystructure.Copy(e.Data))
+	return ret.(map[string]interface{})
 }
 
 // Render
@@ -85,12 +93,28 @@ func (e Engine) renderWithTemplate(tmpl string, t *template.Template) (out *byte
 		return nil, cleanupParseError(e.Name, err)
 	}
 
+	data := e.deepCopyData()
+	data["Files"] = Files{}
+
 	var buf bytes.Buffer
-	if err := t.ExecuteTemplate(&buf, e.Name, e.Data); err != nil {
+	if err := t.ExecuteTemplate(&buf, e.Name, data); err != nil {
 		return nil, cleanupExecError(e.Name, err)
 	}
 
 	return &buf, nil
+}
+
+// Mocking Helm's .Files.Get
+type Files struct {
+}
+
+func (_ Files) Get(path string) (string, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	return string(contents), nil
 }
 
 func cleanupParseError(filename string, err error) error {

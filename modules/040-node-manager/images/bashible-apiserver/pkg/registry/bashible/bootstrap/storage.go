@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package bashible
+package bootstrap
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ import (
 	"bashible-apiserver/pkg/template"
 )
 
-const templateName = "bashible.sh.tpl"
+const templateName = "bootstrap.sh.tpl"
 
 // NewStorage returns storage object that will work against API services.
 func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, error) {
@@ -56,21 +56,25 @@ type Storage struct {
 }
 
 // Render renders single script content by name
-func (s Storage) Render(name string) (runtime.Object, error) {
-	data, err := s.getContext(name)
+func (s Storage) Render(ng string) (runtime.Object, error) {
+	data, err := s.getContext(ng)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context: %v", err)
 	}
-	r, err := template.RenderTemplate(templateName, s.templateContent, data)
+	// FIXME
+	tplContent, err := os.ReadFile(path.Join("/home/zuzzas/projects/go/deckhouse-oss/candi", "bashible", templateName))
+	if err != nil {
+		return nil, fmt.Errorf("cannot read template: %v", err)
+	}
+	r, err := template.RenderTemplate(templateName, tplContent, data)
 	if err != nil {
 		return nil, fmt.Errorf("cannot render template: %v", err)
 	}
 
-	obj := bashible.Bashible{}
-	obj.ObjectMeta.Name = name
+	obj := bashible.Bootstrap{}
+	obj.ObjectMeta.Name = ng
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
-	obj.Data = map[string]string{}
-	obj.Data[r.FileName] = r.Content.String()
+	obj.Bootstrap = r.Content.String()
 
 	return &obj, nil
 }
@@ -81,7 +85,7 @@ func (s Storage) getContext(name string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("cannot get context key: %v", err)
 	}
 
-	context, err := s.bashibleContext.Get(contextKey)
+	context, err := s.bashibleContext.GetBootstrapContext(contextKey)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context data: %v", err)
 	}
@@ -90,9 +94,9 @@ func (s Storage) getContext(name string) (map[string]interface{}, error) {
 }
 
 func (s Storage) New() runtime.Object {
-	return &bashible.Bashible{}
+	return &bashible.Bootstrap{}
 }
 
 func (s Storage) NewList() runtime.Object {
-	return &bashible.BashibleList{}
+	return &bashible.BootstrapList{}
 }

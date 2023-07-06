@@ -1,5 +1,5 @@
 #!/bin/bash
-{{- /*
+
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-*/}}
+
 function name_is_not_supported() {
     >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
     exit 1
@@ -55,9 +55,8 @@ case "$ID" in
     exit 1
   ;;
 esac
-{{- /*
+
 # try to determine os by ID_LIKE
-*/}}
 for ID in $ID_LIKE; do
   case "$ID" in
     centos|rhel)
@@ -68,9 +67,9 @@ for ID in $ID_LIKE; do
     ;;
   esac
 done
-{{- /*
+
 # try to determine os by packet manager
-*/}}
+
 bundle="debian"
 if yum -q --version >/dev/null 2>/dev/null; then
   bundle="centos"

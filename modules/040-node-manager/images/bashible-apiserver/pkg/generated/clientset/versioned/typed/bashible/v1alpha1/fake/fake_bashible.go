@@ -19,13 +19,14 @@ limitations under the License.
 package fake
 
 import (
+	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
+	bashiblev1alpha1 "bashible-apiserver/pkg/generated/applyconfiguration/bashible/v1alpha1"
 	"context"
-
-	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	json "encoding/json"
+	"fmt"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +37,9 @@ type FakeBashibles struct {
 	Fake *FakeBashibleV1alpha1
 }
 
-var bashiblesResource = schema.GroupVersionResource{Group: "bashible.deckhouse.io", Version: "v1alpha1", Resource: "bashibles"}
+var bashiblesResource = v1alpha1.SchemeGroupVersion.WithResource("bashibles")
 
-var bashiblesKind = schema.GroupVersionKind{Group: "bashible.deckhouse.io", Version: "v1alpha1", Kind: "Bashible"}
+var bashiblesKind = v1alpha1.SchemeGroupVersion.WithKind("Bashible")
 
 // Get takes name of the bashible, and returns the corresponding bashible object, and an error if there is any.
 func (c *FakeBashibles) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Bashible, err error) {
@@ -100,7 +101,7 @@ func (c *FakeBashibles) Update(ctx context.Context, bashible *v1alpha1.Bashible,
 // Delete takes name of the bashible and deletes it. Returns an error if one occurs.
 func (c *FakeBashibles) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(bashiblesResource, name), &v1alpha1.Bashible{})
+		Invokes(testing.NewRootDeleteActionWithOptions(bashiblesResource, name, opts), &v1alpha1.Bashible{})
 	return err
 }
 
@@ -116,6 +117,27 @@ func (c *FakeBashibles) DeleteCollection(ctx context.Context, opts v1.DeleteOpti
 func (c *FakeBashibles) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Bashible, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(bashiblesResource, name, pt, data, subresources...), &v1alpha1.Bashible{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.Bashible), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied bashible.
+func (c *FakeBashibles) Apply(ctx context.Context, bashible *bashiblev1alpha1.BashibleApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.Bashible, err error) {
+	if bashible == nil {
+		return nil, fmt.Errorf("bashible provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(bashible)
+	if err != nil {
+		return nil, err
+	}
+	name := bashible.Name
+	if name == nil {
+		return nil, fmt.Errorf("bashible.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(bashiblesResource, *name, types.ApplyPatchType, data), &v1alpha1.Bashible{})
 	if obj == nil {
 		return nil, err
 	}

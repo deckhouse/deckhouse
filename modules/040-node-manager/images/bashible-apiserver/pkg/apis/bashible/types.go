@@ -75,3 +75,28 @@ type NodeGroupBundleList struct {
 
 	Items []NodeGroupBundle
 }
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// TODO
+type Bootstrap struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	// TODO
+	Bootstrap string
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// TODO
+type BootstrapList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	// TODO
+	Items []Bootstrap
+}

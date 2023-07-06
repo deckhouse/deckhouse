@@ -19,7 +19,7 @@ limitations under the License.
 package scheme
 
 import (
-	bashiblev1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	bashiblev1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -28,14 +28,12 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
-var (
-	Scheme             = runtime.NewScheme()
-	Codecs             = serializer.NewCodecFactory(Scheme)
-	ParameterCodec     = runtime.NewParameterCodec(Scheme)
-	localSchemeBuilder = runtime.SchemeBuilder{
-		bashiblev1alpha1.AddToScheme,
-	}
-)
+var Scheme = runtime.NewScheme()
+var Codecs = serializer.NewCodecFactory(Scheme)
+var ParameterCodec = runtime.NewParameterCodec(Scheme)
+var localSchemeBuilder = runtime.SchemeBuilder{
+	bashiblev1alpha1.AddToScheme,
+}
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition
 // of clientsets, like in:
