@@ -1,2 +1,14 @@
 type: object
-properties: {}
+properties:
+  dataNodes:
+    type: object
+    description: Настройки для узлов Linstor с данными
+    properties:
+      nodeSelector:
+        type: object
+        additionalProperties:
+          type: string
+        description: |
+          Настройка аналогична `spec.nodeSelector` в Kubernetes.
+
+          Если параметр не указан, pod'ы для Linstor будут запущены на всех узлах.
