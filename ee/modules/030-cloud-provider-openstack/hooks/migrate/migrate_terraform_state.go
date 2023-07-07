@@ -3,7 +3,7 @@ Copyright 2023 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-// TODO remove after 1.48 release
+// TODO remove after 1.49 release
 
 package hooks
 
@@ -137,10 +137,10 @@ func openstackTerraformStateMigration(input *go_hook.HookInput, dc dependency.Co
 
 func isSecretBackupExists(backupSecretName string, namespace string, kubeCl k8s.Client, input *go_hook.HookInput) (bool, error) {
 	input.LogEntry.Debugf("Function isSecretBackupExists: Starting function with parameters: backupSecretName=%s; namespace=%s", backupSecretName, namespace)
-	backupSecret, err := kubeCl.CoreV1().
+	_, err := kubeCl.CoreV1().
 		Secrets(namespace).
 		Get(context.TODO(), backupSecretName, metav1.GetOptions{})
-	input.LogEntry.Debugf("Function isSecretBackupExists: Get secret. Secret=%s; err=%s", backupSecret, err)
+	input.LogEntry.Debugf("Function isSecretBackupExists: Get secret. err=%s", err)
 
 	if errors.IsNotFound(err) {
 		input.LogEntry.Debugf("Function isSecretBackupExists: errors.IsNotFound(err) = %t. secret \"%s\" not found'. Return false and nil", errors.IsNotFound(err), backupSecretName)
