@@ -24,7 +24,6 @@ func SetErrorStatusProject(patcher *object_patch.PatchCollector, projectName, er
 func SetDeployingStatusProject(patcher *object_patch.PatchCollector, projectName string, conditions []v1alpha1.Condition) {
 	conditions = append(conditions, v1alpha1.Condition{
 		Name:    "Deploying",
-		Status:  false,
 		Message: "Deckhouse is creating the project, see deckhouse logs for more details",
 	})
 	setProjectStatus(patcher, projectName, false, "", conditions)

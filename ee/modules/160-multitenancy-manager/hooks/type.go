@@ -53,20 +53,14 @@ func handleProjectTypes(input *go_hook.HookInput) error {
 
 	projectTypesValues := make(map[string]v1alpha1.ProjectTypeSpec)
 	for _, ptSnapshot := range ptSnapshots {
-		if ptSnapshot == nil {
-			continue
-		}
-
 		pt, ok := ptSnapshot.(projectTypeSnapshot)
 		if !ok {
 			input.LogEntry.Errorf("can't convert snapshot to 'projectTypeSnapshot': %v", ptSnapshot)
 			continue
 		}
 
-		// TODO (alex123012): Add open-api spec validation
-		if _, err := internal.LoadOpenAPISchema(pt.Spec.OpenAPI); err != nil {
-			errMsg := fmt.Sprintf("can't load open api schema from '%s' ProjectType spec: %s", pt.Name, err)
-			internal.SetProjectTypeStatus(input.PatchCollector, pt.Name, false, errMsg)
+		if err := validateProjectType(pt); err != nil {
+			internal.SetProjectTypeStatus(input.PatchCollector, pt.Name, false, err.Error())
 			continue
 		}
 
@@ -76,5 +70,13 @@ func handleProjectTypes(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set(internal.ModuleValuePath(internal.PTValuesPath), projectTypesValues)
+	return nil
+}
+
+func validateProjectType(projectType projectTypeSnapshot) error {
+	// TODO (alex123012): Add open-api spec validation
+	if _, err := internal.LoadOpenAPISchema(projectType.Spec.OpenAPI); err != nil {
+		return fmt.Errorf("can't load open api schema from '%s' ProjectType spec: %s", projectType.Name, err)
+	}
 	return nil
 }

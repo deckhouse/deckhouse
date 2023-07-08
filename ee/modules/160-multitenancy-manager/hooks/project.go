@@ -11,7 +11,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/values/validation/schema"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -83,45 +82,14 @@ func handleProjects(input *go_hook.HookInput) error {
 
 	values := make([]projectValues, 0, len(projectSnapshots))
 	for _, projectSnap := range projectSnapshots {
-		if projectSnap == nil {
-			continue
-		}
-
 		project, ok := projectSnap.(projectSnapshot)
 		if !ok {
 			input.LogEntry.Errorf("can't convert snapshot to 'projectSnapshot': %v", project)
 			continue
 		}
 
-		errStatusProject := setErrorProjectWrap(input.PatchCollector, project.Name, project.Conditions)
-
-		ptSpecValues, ok := input.Values.GetOk(internal.ModuleValuePath(internal.PTValuesPath, project.ProjectTypeName))
-		if !ok {
-			errMsg := fmt.Sprintf("Can't find valid ProjectType '%s' for Project", project.ProjectTypeName)
-			errStatusProject(errMsg)
-			continue
-		}
-
-		ptValues := ptSpecValues.Value()
-		ptValuesMap, ok := ptValues.(map[string]interface{})
-		if !ok {
-			errMsg := fmt.Sprintf("can't convert '%s' ProjectType values to map[string]interface: %T", project.ProjectTypeName, ptValues)
-			errStatusProject(errMsg)
-			continue
-		}
-
-		sc, err := internal.LoadOpenAPISchema(ptValuesMap["openAPI"])
-		if err != nil {
-			errMsg := fmt.Sprintf("can't load '%s' ProjectType OpenAPI schema: %v", project.ProjectTypeName, err)
-			errStatusProject(errMsg)
-			continue
-		}
-
-		sc = schema.TransformSchema(sc, &schema.AdditionalPropertiesTransformer{})
-
-		if err := validate.AgainstSchema(sc, project.Template, strfmt.Default); err != nil {
-			errMsg := fmt.Sprintf("template data doesn't match the OpenAPI schema for '%s' ProjectType: %v", project.ProjectTypeName, err)
-			errStatusProject(errMsg)
+		if err := validateProject(input, project); err != nil {
+			internal.SetErrorStatusProject(input.PatchCollector, project.Name, err.Error(), project.Conditions)
 			continue
 		}
 
@@ -138,8 +106,26 @@ func handleProjects(input *go_hook.HookInput) error {
 	return nil
 }
 
-func setErrorProjectWrap(patcher *object_patch.PatchCollector, projectName string, conditions []v1alpha1.Condition) func(errMsg string) {
-	return func(errMsg string) {
-		internal.SetErrorStatusProject(patcher, projectName, errMsg, conditions)
+func validateProject(input *go_hook.HookInput, project projectSnapshot) error {
+	ptSpecValues, ok := input.Values.GetOk(internal.ModuleValuePath(internal.PTValuesPath, project.ProjectTypeName))
+	if !ok {
+		return fmt.Errorf("can't find valid ProjectType '%s' for Project", project.ProjectTypeName)
 	}
+
+	ptValues := ptSpecValues.Value()
+	ptValuesMap, ok := ptValues.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("can't convert '%s' ProjectType values to map[string]interface: %T", project.ProjectTypeName, ptValues)
+	}
+
+	sc, err := internal.LoadOpenAPISchema(ptValuesMap["openAPI"])
+	if err != nil {
+		return fmt.Errorf("can't load '%s' ProjectType OpenAPI schema: %v", project.ProjectTypeName, err)
+	}
+
+	sc = schema.TransformSchema(sc, &schema.AdditionalPropertiesTransformer{})
+	if err := validate.AgainstSchema(sc, project.Template, strfmt.Default); err != nil {
+		return fmt.Errorf("template data doesn't match the OpenAPI schema for '%s' ProjectType: %v", project.ProjectTypeName, err)
+	}
+	return nil
 }
