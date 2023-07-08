@@ -90,7 +90,7 @@ func handleProjects(input *go_hook.HookInput) error {
 
 		if err := validateProject(input, project); err != nil {
 			internal.SetErrorStatusProject(input.PatchCollector, project.Name, err.Error(), project.Conditions)
-			continue
+			return err
 		}
 
 		values = append(values, projectValues{
