@@ -13,9 +13,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
 )
 
@@ -25,51 +23,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		Order: 25,
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       internal.ProjectsQueue,
-			ApiVersion: internal.APIVersion,
-			Kind:       internal.ProjectKind,
-			FilterFunc: filterProjects,
-		},
-		{
-			// subscribe to ProjectTypes to update Projects when ProjectType changes
-			Name:       internal.ProjectTypesQueue,
-			ApiVersion: internal.APIVersion,
-			Kind:       internal.ProjectTypeKind,
-			FilterFunc: filterProjectTypesForUpdateProjects,
-		},
+		internal.ProjectHookKubeConfig,
+		// subscribe to ProjectTypes to update Projects when ProjectType changes
+		internal.ProjectTypeHookKubeConfig,
 	},
 }, handleProjects)
-
-type projectSnapshot struct {
-	Name            string
-	Template        map[string]interface{}
-	ProjectTypeName string
-	Conditions      []v1alpha1.Condition
-}
-
-func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	pt := &v1alpha1.Project{}
-	if err := sdk.FromUnstructured(obj, pt); err != nil {
-		return nil, err
-	}
-
-	return projectSnapshot{
-		Name:            pt.Name,
-		ProjectTypeName: pt.Spec.ProjectTypeName,
-		Template:        pt.Spec.Template,
-		Conditions:      pt.Status.Conditions,
-	}, nil
-}
-
-func filterProjectTypesForUpdateProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	pt := &v1alpha1.ProjectType{}
-	if err := sdk.FromUnstructured(obj, pt); err != nil {
-		return nil, err
-	}
-
-	return pt.Spec, nil
-}
 
 type projectValues struct {
 	Params          map[string]interface{} `json:"params"`
@@ -82,7 +40,7 @@ func handleProjects(input *go_hook.HookInput) error {
 
 	values := make([]projectValues, 0, len(projectSnapshots))
 	for _, projectSnap := range projectSnapshots {
-		project, ok := projectSnap.(projectSnapshot)
+		project, ok := projectSnap.(internal.ProjectSnapshot)
 		if !ok {
 			input.LogEntry.Errorf("can't convert snapshot to 'projectSnapshot': %v", project)
 			continue
@@ -90,7 +48,7 @@ func handleProjects(input *go_hook.HookInput) error {
 
 		if err := validateProject(input, project); err != nil {
 			internal.SetErrorStatusProject(input.PatchCollector, project.Name, err.Error(), project.Conditions)
-			return err
+			continue
 		}
 
 		values = append(values, projectValues{
@@ -106,7 +64,7 @@ func handleProjects(input *go_hook.HookInput) error {
 	return nil
 }
 
-func validateProject(input *go_hook.HookInput, project projectSnapshot) error {
+func validateProject(input *go_hook.HookInput, project internal.ProjectSnapshot) error {
 	ptSpecValues, ok := input.Values.GetOk(internal.ModuleValuePath(internal.PTValuesPath, project.ProjectTypeName))
 	if !ok {
 		return fmt.Errorf("can't find valid ProjectType '%s' for Project", project.ProjectTypeName)

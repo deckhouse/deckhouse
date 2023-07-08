@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("Multitenancy Manager hooks :: handle Projects ready status ::", func() {
-	f := HookExecutionConfigInit(`{"multitenancyManager":{"internal":{}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"multitenancyManager":{"internal":{"projects": []}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Project", false)
 
 	Context("Empty cluster", func() {
@@ -31,22 +31,38 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ready status ::"
 
 		Context("Cluster with two valid Projects", func() {
 			BeforeEach(func() {
+				f.ValuesSetFromYaml("multitenancyManager.internal.projects", stateTwoProjectsValues)
 				f.BindingContexts.Set(f.KubeStateSet(stateTwoProjectsWithDeployingStatus))
 				f.RunHook()
 			})
 
 			It("Valid Projects status Sync", func() {
-				pr1 := f.KubernetesGlobalResource("Project", "test-1")
-				Expect(pr1.Exists()).To(BeTrue())
+				conds := []struct {
+					name, conditions, status string
+				}{
+					{
+						name:       "test-1",
+						conditions: `[{"name":"Deploying","status":false},{"name":"Sync","status":true}]`,
+						status:     `{"status":true}`,
+					},
+					{
+						name:       "test-2",
+						conditions: `[{"name":"Deploying","status":false},{"name":"Sync","status":true}]`,
+						status:     `{"status":true}`,
+					},
+					{
+						name:       "test-3",
+						conditions: `[{"message":"Can't find valid ProjectType '' for Project","name":"Error","status":false}]`,
+						status:     `{"status":false}`,
+					},
+				}
+				for _, cond := range conds {
+					pr := f.KubernetesGlobalResource("Project", cond.name)
+					Expect(pr.Exists()).To(BeTrue())
 
-				Expect(pr1.Field("status.conditions")).To(MatchJSON(`[{"message":"Can't find valid ProjectType '' for Project","name":"Error","status":false},{"name":"Sync","status":true}]`))
-				Expect(pr1.Field("status.statusSummary")).To(MatchJSON(`{"status":true}`))
-
-				pr2 := f.KubernetesGlobalResource("Project", "test-2")
-				Expect(pr2.Exists()).To(BeTrue())
-
-				Expect(pr2.Field("status.conditions")).To(MatchJSON(`[{"name":"Deploying","status":false},{"name":"Sync","status":true}]`))
-				Expect(pr2.Field("status.statusSummary")).To(MatchJSON(`{"status":true}`))
+					Expect(pr.Field("status.conditions")).To(MatchJSON(cond.conditions))
+					Expect(pr.Field("status.statusSummary")).To(MatchJSON(cond.status))
+				}
 			})
 
 		})
@@ -62,8 +78,7 @@ metadata:
   name: test-1
 status:
   conditions:
-    - message: Can't find valid ProjectType '' for Project
-      name: Error
+    - name: Deploying
       status: false
   statusSummary:
     status: false
@@ -78,5 +93,24 @@ status:
       status: false
   statusSummary:
     status: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Project
+metadata:
+  name: test-3
+status:
+  conditions:
+    - message: Can't find valid ProjectType '' for Project
+      name: Error
+      status: false
+  statusSummary:
+    status: false
 `
+)
+
+var (
+	stateTwoProjectsValues = []byte(`
+- projectName: test-1
+- projectName: test-2
+`)
 )

@@ -10,7 +10,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
@@ -22,38 +21,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		Order: 20,
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       internal.ProjectTypesQueue,
-			ApiVersion: internal.APIVersion,
-			Kind:       internal.ProjectTypeKind,
-			FilterFunc: filterProjectTypes,
-		},
+		internal.ProjectTypeHookKubeConfig,
 	},
 }, handleProjectTypes)
-
-type projectTypeSnapshot struct {
-	Name string
-	Spec v1alpha1.ProjectTypeSpec
-}
-
-func filterProjectTypes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	pt := &v1alpha1.ProjectType{}
-	if err := sdk.FromUnstructured(obj, pt); err != nil {
-		return nil, err
-	}
-
-	return projectTypeSnapshot{
-		Name: pt.Name,
-		Spec: pt.Spec,
-	}, nil
-}
 
 func handleProjectTypes(input *go_hook.HookInput) error {
 	ptSnapshots := input.Snapshots[internal.ProjectTypesQueue]
 
 	projectTypesValues := make(map[string]v1alpha1.ProjectTypeSpec)
 	for _, ptSnapshot := range ptSnapshots {
-		pt, ok := ptSnapshot.(projectTypeSnapshot)
+		pt, ok := ptSnapshot.(internal.ProjectTypeSnapshot)
 		if !ok {
 			input.LogEntry.Errorf("can't convert snapshot to 'projectTypeSnapshot': %v", ptSnapshot)
 			continue
@@ -73,7 +50,7 @@ func handleProjectTypes(input *go_hook.HookInput) error {
 	return nil
 }
 
-func validateProjectType(projectType projectTypeSnapshot) error {
+func validateProjectType(projectType internal.ProjectTypeSnapshot) error {
 	// TODO (alex123012): Add open-api spec validation
 	if _, err := internal.LoadOpenAPISchema(projectType.Spec.OpenAPI); err != nil {
 		return fmt.Errorf("can't load open api schema from '%s' ProjectType spec: %s", projectType.Name, err)

@@ -1,0 +1,38 @@
+package internal
+
+import (
+	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+var (
+	ProjectHookKubeConfig = go_hook.KubernetesConfig{
+		Name:       ProjectsQueue,
+		ApiVersion: APIVersion,
+		Kind:       ProjectKind,
+		FilterFunc: filterProjects,
+	}
+)
+
+type ProjectSnapshot struct {
+	Name            string
+	Template        map[string]interface{}
+	ProjectTypeName string
+	Conditions      []v1alpha1.Condition
+}
+
+func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	pt := &v1alpha1.Project{}
+	if err := sdk.FromUnstructured(obj, pt); err != nil {
+		return nil, err
+	}
+
+	return ProjectSnapshot{
+		Name:            pt.Name,
+		ProjectTypeName: pt.Spec.ProjectTypeName,
+		Template:        pt.Spec.Template,
+		Conditions:      pt.Status.Conditions,
+	}, nil
+}
