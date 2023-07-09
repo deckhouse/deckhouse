@@ -9,7 +9,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -32,7 +32,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -55,7 +55,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -78,7 +78,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -101,7 +101,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -124,7 +124,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -147,7 +147,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -170,7 +170,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -193,7 +193,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -225,7 +225,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -248,7 +248,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -271,7 +271,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -294,7 +294,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -317,7 +317,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -341,7 +341,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -365,7 +365,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -388,7 +388,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -411,7 +411,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -434,7 +434,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -457,7 +457,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
@@ -481,7 +481,7 @@ webhooks:
       - v1
       - v1beta1
     clientConfig:
-      caBundle: {{ .Values.nodeManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.nodeManager.internal.capiWebhookCert.ca | b64enc }}
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager

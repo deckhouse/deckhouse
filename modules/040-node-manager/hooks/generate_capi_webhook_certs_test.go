@@ -30,11 +30,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{"webhookCert": {}}}}`, "")
+	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{"capiWebhookCert": {}}}}`, "")
 
 	Context("Without secret", func() {
 		BeforeEach(func() {
@@ -46,17 +47,17 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("nodeManager.internal.webhookCert.crt").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("nodeManager.internal.webhookCert.key").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("nodeManager.internal.webhookCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.key").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.crt").Exists()).To(BeTrue())
 
-			blockCA, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.webhookCert.ca").String()))
+			blockCA, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiWebhookCert.ca").String()))
 			certCA, err := x509.ParseCertificate(blockCA.Bytes)
 			Expect(err).To(BeNil())
 			Expect(certCA.IsCA).To(BeTrue())
 			Expect(certCA.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.webhookCert.crt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiWebhookCert.crt").String()))
 			cert, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).To(BeNil())
 			Expect(cert.IsCA).To(BeFalse())
@@ -90,9 +91,9 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("nodeManager.internal.webhookCert.ca").String()).To(Equal(caAuthority.Cert))
-			Expect(f.ValuesGet("nodeManager.internal.webhookCert.key").String()).To(Equal(tlsAuthority.Key))
-			Expect(f.ValuesGet("nodeManager.internal.webhookCert.crt").String()).To(Equal(tlsAuthority.Cert))
+			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.ca").String()).To(Equal(caAuthority.Cert))
+			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.key").String()).To(Equal(tlsAuthority.Key))
+			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.crt").String()).To(Equal(tlsAuthority.Cert))
 		})
 	})
 })
@@ -131,8 +132,10 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certif
 			S: 2048,
 		}),
 		certificate.WithSANs(
+			"capi-webhook-service.d8-cloud-instance-manager",
 			"capi-webhook-service.d8-cloud-instance-manager.svc",
-			"capi-webhook-service.d8-cloud-instance-manager.svc.cluster.local",
+			tls_certificate.ClusterDomainSAN("capi-webhook-service.d8-cloud-instance-manager"),
+			tls_certificate.ClusterDomainSAN("capi-webhook-service.d8-cloud-instance-manager.svc"),
 		),
 	)
 	if err != nil {

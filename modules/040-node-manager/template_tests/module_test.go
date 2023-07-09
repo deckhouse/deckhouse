@@ -82,7 +82,7 @@ mcmEmergencyBrake: false
 
 const nodeManagerValues = `
 internal:
-  webhookCert:
+  capiWebhookCert:
     ca: string
     key: string
     crt: string
@@ -90,7 +90,7 @@ internal:
 
 const nodeManagerAWS = `
 internal:
-  webhookCert:
+  capiWebhookCert:
     ca: string
     key: string
     crt: string
@@ -151,7 +151,7 @@ internal:
 
 const nodeManagerAzure = `
 internal:
-  webhookCert:
+  capiWebhookCert:
     ca: string
     key: string
     crt: string
@@ -230,7 +230,7 @@ internal:
 
 const nodeManagerGCP = `
 internal:
-  webhookCert:
+  capiWebhookCert:
     ca: string
     key: string
     crt: string
@@ -281,7 +281,7 @@ internal:
 
 const faultyNodeManagerOpenstack = `
 internal:
-  webhookCert:
+  capiWebhookCert:
     ca: string
     key: string
     crt: string
@@ -331,7 +331,7 @@ internal:
 
 const nodeManagerOpenstack = `
 internal:
-  webhookCert:
+  capiWebhookCert:
     ca: string
     key: string
     crt: string
@@ -412,7 +412,7 @@ internal:
 
 const nodeManagerVsphere = `
 internal:
-  webhookCert:
+  capiWebhookCert:
     ca: string
     key: string
     crt: string
@@ -494,7 +494,7 @@ internal:
 
 const nodeManagerYandex = `
 internal:
-  webhookCert:
+  capiWebhookCert:
     ca: string
     key: string
     crt: string
@@ -556,7 +556,7 @@ internal:
 
 const nodeManagerStatic = `
 internal:
-  webhookCert:
+  capiWebhookCert:
     ca: string
     key: string
     crt: string

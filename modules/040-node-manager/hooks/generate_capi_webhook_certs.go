@@ -26,13 +26,15 @@ const (
 
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	SANs: tls_certificate.DefaultSANs([]string{
+		"capi-webhook-service.d8-cloud-instance-manager",
 		"capi-webhook-service.d8-cloud-instance-manager.svc",
-		"capi-webhook-service.d8-cloud-instance-manager.svc.cluster.local",
+		tls_certificate.ClusterDomainSAN("capi-webhook-service.d8-cloud-instance-manager"),
+		tls_certificate.ClusterDomainSAN("capi-webhook-service.d8-cloud-instance-manager.svc"),
 	}),
 
 	CN: cn,
 
 	Namespace:            "d8-cloud-instance-manager",
 	TLSSecretName:        "capi-webhook-tls",
-	FullValuesPathPrefix: "nodeManager.internal.webhookCert",
+	FullValuesPathPrefix: "nodeManager.internal.capiWebhookCert",
 })
