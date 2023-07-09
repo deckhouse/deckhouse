@@ -1,12 +1,8 @@
-Index: pkg/providers/v1/aws.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
---- a/pkg/providers/v1/aws.go	(revision 3fff7b7fb33c29c09b49d7af79b073786f205a9a)
-+++ b/pkg/providers/v1/aws.go	(revision 7ce6508d2a9d02997aaaa02f4fe3dd1f7a4b5643)
-@@ -308,6 +308,13 @@
+index 39dab8f..af8217e 100644
+--- a/pkg/providers/v1/aws.go
++++ b/pkg/providers/v1/aws.go
+@@ -310,6 +310,13 @@ var backendProtocolMapping = map[string]string{
  	"tcp":   "ssl",
  }
 
@@ -20,7 +16,7 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
  // MaxReadThenCreateRetries sets the maximum number of attempts we will make when
  // we read to see if something exists and then try to create it if we didn't find it.
  // This can fail once in a consistent system if done in parallel
-@@ -4168,7 +4175,7 @@
+@@ -3992,7 +3999,7 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  			continue
  		}
 
@@ -29,7 +25,7 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
  			portMapping := nlbPortMapping{
  				FrontendPort:     int64(port.Port),
  				FrontendProtocol: string(port.Protocol),
-@@ -4179,7 +4186,11 @@
+@@ -4003,7 +4010,11 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  			if portMapping.HealthCheckConfig, err = c.buildNLBHealthCheckConfiguration(apiService); err != nil {
  				return nil, err
  			}
@@ -42,7 +38,7 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
  			certificateARN := annotations[ServiceAnnotationLoadBalancerCertificate]
  			if port.Protocol != v1.ProtocolUDP && certificateARN != "" && (sslPorts == nil || sslPorts.numbers.Has(int64(port.Port)) || sslPorts.names.Has(port.Name)) {
  				portMapping.FrontendProtocol = elbv2.ProtocolEnumTls
-@@ -4190,7 +4201,18 @@
+@@ -4014,7 +4025,18 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  					portMapping.TrafficProtocol = elbv2.ProtocolEnumTls
  				}
  			}
@@ -62,10 +58,10 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
  			v2Mappings = append(v2Mappings, portMapping)
  		} else {
  			listener, err := buildListener(port, annotations, sslPorts)
-@@ -4224,6 +4246,59 @@
+@@ -4047,7 +4069,58 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
+ 	} else if internalAnnotation != "" {
  		internalELB = true
  	}
-
 +	if isNone(annotations) {
 +		if path, healthCheckNodePort := servicehelpers.GetServiceHealthCheckPathPort(apiService); path != "" {
 +			for i := range v2Mappings {
@@ -77,7 +73,7 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +
 +		loadBalancerName := c.GetLoadBalancerName(ctx, clusterName, apiService)
 +		serviceName := types.NamespacedName{Namespace: apiService.Namespace, Name: apiService.Name}
-+
+
 +		instanceIDs := []string{}
 +		for id := range instances {
 +			instanceIDs = append(instanceIDs, string(id))
@@ -118,11 +114,10 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +		},
 +		}, nil
 +	}
-+
  	if isNLB(annotations) {
  		// Find the subnets that the ELB will live in
  		subnetIDs, err := c.getLoadBalancerSubnets(apiService, internalELB)
-@@ -4541,6 +4616,34 @@
+@@ -4365,7 +4438,34 @@ func (c *Cloud) GetLoadBalancer(ctx context.Context, clusterName string, service
  		return nil, false, nil
  	}
  	loadBalancerName := c.GetLoadBalancerName(ctx, clusterName, service)
@@ -135,7 +130,7 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +			if err != nil {
 +				return nil, false, err
 +			}
-+
+
 +			if tg != nil {
 +				tgCount++
 +			}
@@ -154,13 +149,13 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +			}, true, nil
 +		}
 +	}
-
  	if isNLB(service.Annotations) {
  		lb, err := c.describeLoadBalancerv2(loadBalancerName)
-@@ -4804,6 +4907,25 @@
- 		return nil
+ 		if err != nil {
+@@ -4629,6 +4729,25 @@ func (c *Cloud) EnsureLoadBalancerDeleted(ctx context.Context, clusterName strin
  	}
  	loadBalancerName := c.GetLoadBalancerName(ctx, clusterName, service)
+
 +	if isNone(service.Annotations) {
 +		for i, _ := range service.Spec.Ports {
 +			tgNameWithSuffix := generateTgName(loadBalancerName, strconv.Itoa(i))
@@ -180,10 +175,10 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +
 +		return nil
 +	}
-
  	if isNLB(service.Annotations) {
  		lb, err := c.describeLoadBalancerv2(loadBalancerName)
-@@ -4995,6 +5117,10 @@
+ 		if err != nil {
+@@ -4819,6 +4938,10 @@ func (c *Cloud) UpdateLoadBalancer(ctx context.Context, clusterName string, serv
  		return err
  	}
  	loadBalancerName := c.GetLoadBalancerName(ctx, clusterName, service)
@@ -194,7 +189,7 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
  	if isNLB(service.Annotations) {
  		lb, err := c.describeLoadBalancerv2(loadBalancerName)
  		if err != nil {
-@@ -5296,6 +5422,10 @@
+@@ -5183,6 +5306,10 @@ func getInitialAttachDetachDelay(status string) time.Duration {
  	return volumeAttachmentStatusInitialDelay
  }
 
@@ -205,15 +200,11 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
  // describeNetworkInterfaces returns network interface information for the given DNS name.
  func (c *Cloud) describeNetworkInterfaces(nodeName string) (*ec2.NetworkInterface, error) {
  	eniEndpoint := strings.TrimPrefix(nodeName, fargateNodeNamePrefix)
-Index: pkg/providers/v1/aws_loadbalancer.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbalancer.go
---- a/pkg/providers/v1/aws_loadbalancer.go	(revision 3fff7b7fb33c29c09b49d7af79b073786f205a9a)
-+++ b/pkg/providers/v1/aws_loadbalancer.go	(revision 7ce6508d2a9d02997aaaa02f4fe3dd1f7a4b5643)
-@@ -80,6 +80,13 @@
+index 8f9884c..280caf1 100644
+--- a/pkg/providers/v1/aws_loadbalancer.go
++++ b/pkg/providers/v1/aws_loadbalancer.go
+@@ -87,6 +87,13 @@ func isLBExternal(annotations map[string]string) bool {
  	return false
  }
 
@@ -224,10 +215,10 @@ diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbal
 +	return false
 +}
 +
- func isLBExternal(annotations map[string]string) bool {
- 	if val := annotations[ServiceAnnotationLoadBalancerType]; val == "nlb-ip" || val == "external" {
- 		return true
-@@ -137,6 +144,21 @@
+ type healthCheckConfig struct {
+ 	Port               string
+ 	Path               string
+@@ -137,6 +144,21 @@ func getKeyValuePropertiesFromAnnotation(annotations map[string]string, annotati
  	return additionalTags
  }
 
@@ -249,7 +240,7 @@ diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbal
  // ensureLoadBalancerv2 ensures a v2 load balancer is created
  func (c *Cloud) ensureLoadBalancerv2(namespacedName types.NamespacedName, loadBalancerName string, mappings []nlbPortMapping, instanceIDs, subnetIDs []string, internalELB bool, annotations map[string]string) (*elbv2.LoadBalancer, error) {
  	loadBalancer, err := c.describeLoadBalancerv2(loadBalancerName)
-@@ -567,7 +589,7 @@
+@@ -576,7 +598,7 @@ func (c *Cloud) deleteListenerV2(listener *elbv2.Listener) error {
  }
 
  // ensureTargetGroup creates a target group with a set of instances.
@@ -258,7 +249,7 @@ diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbal
  	dirty := false
  	expectedTargets := c.computeTargetGroupExpectedTargets(instances, mapping.TrafficPort)
  	if targetGroup == nil {
-@@ -588,6 +610,10 @@
+@@ -597,6 +619,10 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
  			// HealthCheckTimeoutSeconds:  Currently not configurable, 6 seconds for HTTP, 10 for TCP/HTTPS
  		}
 
@@ -269,7 +260,7 @@ diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbal
  		if mapping.HealthCheckConfig.Protocol != elbv2.ProtocolEnumTcp {
  			input.HealthCheckPath = aws.String(mapping.HealthCheckConfig.Path)
  		}
-@@ -624,6 +650,20 @@
+@@ -622,6 +648,21 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
  		return tg, nil
  	}
 
@@ -287,6 +278,7 @@ diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbal
 +			return c.ensureTargetGroup(targetGroup, serviceName, mapping, instances, vpcID, tags, targetGroupName)
 +		}
 +	}
++
  	// handle instances in service
  	{
  		tgARN := aws.StringValue(targetGroup.TargetGroupArn)

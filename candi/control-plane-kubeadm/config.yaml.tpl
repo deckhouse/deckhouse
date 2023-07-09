@@ -2,9 +2,12 @@
 RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
-{{- $featureGates := list "EndpointSliceTerminatingCondition=true" "DaemonSetUpdateSurge=true" "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
+{{- $featureGates := list "EndpointSliceTerminatingCondition=true" "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
 {{- if semverCompare "< 1.23" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "EphemeralContainers=true" | join "," }}
+{{- end }}
+{{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
 
 apiVersion: kubeadm.k8s.io/v1beta3
@@ -55,6 +58,10 @@ apiServer:
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
+  {{- end }}
+  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion) }}
+    default-not-ready-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
+    default-unreachable-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
   {{- end }}
 {{- end }}
 {{- if hasKey . "apiserver" }}
@@ -143,7 +150,7 @@ controllerManager:
     node-monitor-period: "{{ .arguments.nodeMonitorPeriod }}s"
     node-monitor-grace-period: "{{ .arguments.nodeMonitorGracePeriod }}s"
   {{- end }}
-  {{- if hasKey .arguments "podEvictionTimeout" }}
+  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion) }}
     pod-eviction-timeout: "{{ .arguments.podEvictionTimeout }}s"
   {{- end }}
 {{- end }}
