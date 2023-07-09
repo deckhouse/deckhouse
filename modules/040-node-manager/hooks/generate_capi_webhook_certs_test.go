@@ -22,20 +22,21 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"time"
 
-	"github.com/cloudflare/cfssl/csr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+const clusterDomain = "cluster.local"
+
 var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{"capiWebhookCert": {}}}}`, "")
+	f := HookExecutionConfigInit(`{"global": {"discovery": {"clusterDomain": "`+clusterDomain+`"}},"nodeManager":{"internal":{"capiWebhookCert": {}}}}`, "")
 
 	Context("Without secret", func() {
 		BeforeEach(func() {
@@ -99,20 +100,9 @@ data:
 })
 
 func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
-	const cn = "capi-controller-webhook"
-	ca, err := certificate.GenerateCA(logEntry, cn, func(r *csr.CertificateRequest) {
-		r.KeyRequest = &csr.KeyRequest{
-			A: "rsa",
-			S: 2048,
-		}
-		r.Hosts = []string{
-			"capi-webhook-service.d8-cloud-instance-manager.svc",
-			"capi-webhook-service.d8-cloud-instance-manager.svc.cluster.local",
-		}
-		r.Names = []csr.Name{
-			{O: "capi-controller-webhook.d8-cloud-instance-manager"},
-		}
-	})
+	ca, err := certificate.GenerateCA(logEntry, cn, certificate.WithKeyAlgo("ecdsa"),
+		certificate.WithKeySize(256),
+		certificate.WithCAExpiry("87600h"))
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate CA: %v", err)
 	}
@@ -124,18 +114,18 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certif
 	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
 		"capi-manager-webhook",
 		*ca,
-		certificate.WithGroups(
-			"cert-manager.d8-cert-manager",
-		),
-		certificate.WithKeyRequest(&csr.KeyRequest{
-			A: "rsa",
-			S: 2048,
+		certificate.WithKeyAlgo("ecdsa"),
+		certificate.WithKeySize(256),
+		certificate.WithSigningDefaultExpiry((24*time.Hour)*365*10),
+		certificate.WithSigningDefaultUsage([]string{"signing",
+			"key encipherment",
+			"requestheader-client",
 		}),
 		certificate.WithSANs(
 			"capi-webhook-service.d8-cloud-instance-manager",
 			"capi-webhook-service.d8-cloud-instance-manager.svc",
-			tls_certificate.ClusterDomainSAN("capi-webhook-service.d8-cloud-instance-manager"),
-			tls_certificate.ClusterDomainSAN("capi-webhook-service.d8-cloud-instance-manager.svc"),
+			"capi-webhook-service.d8-cloud-instance-manager."+clusterDomain,
+			"capi-webhook-service.d8-cloud-instance-manager.svc."+clusterDomain,
 		),
 	)
 	if err != nil {
