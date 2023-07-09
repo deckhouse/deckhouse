@@ -27,7 +27,10 @@ spec:
 #    namespace: d8-cloud-instance-manager
 #    name: {{ $prefix }}
 ---
-# empty kubeconfig secret for cluster
+# As described [here](https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/book/src/developer/architecture/controllers/cluster.md#secrets)
+# if we do not use kubeadm bootstrap provider, we should generate own kubeconfig and store it in the secret.
+# But we do not need to generate anything for the cluster, because capi cluster is fake and needed only for controller work.
+# So we generate secret with empty kubeconfig.
 apiVersion: v1
 data:
   value: Cg==
