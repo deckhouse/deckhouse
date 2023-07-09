@@ -14,7 +14,12 @@
 
 {{- if semverCompare ">=1.24" .kubernetesVersion }}
 
-bb-event-on 'old_csi_mount_cleaner' '_on_old_csi_mount_cleaner_changed'
+if mount | grep -q '/var/lib/kubelet/plugins/kubernetes.io/csi/pv' || true; then
+  echo "No mounts of form /var/lib/kubelet/plugins/kubernetes.io/csi/pv present. No-op..."
+  return 0
+fi
+
+bb-event-on 'old-csi-mount-cleaner' '_on_old_csi_mount_cleaner_changed'
 _on_old_csi_mount_cleaner_changed() {
 {{ if ne .runType "ImageBuilding" }}
   systemctl daemon-reload
