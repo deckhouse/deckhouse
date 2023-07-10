@@ -317,7 +317,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			nodeIP = static.NodeIP
 		}
 
-		// next parse and check resourcesDefineB
+		// next parse and check resources
 		// do it after bootstrap cloud because resources can be template
 		// and we want to fail immediately if template has errors
 		var resourcesToCreate template.Resources
