@@ -16,9 +16,9 @@ See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.h
 
 To add a new static node (e.g., VM or bare metal server) to the cluster, follow these steps:
 
-1. For [CloudStatic nodes](../040-node-manager/cr.html#nodegroup-v1-spec-nodetype), follow the steps described in the cloud provider documentation:
-   - [AWS](../030-cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
-   - [GCP](../030-cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+1. For [CloudStatic nodes](../040-node-manager/cr.html#nodegroup-v1-spec-nodetype) in the following cloud providers, follow the steps described in the documentation:
+   - [For AWS](../030-cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For GCP](../030-cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
 1. Use an existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource ([example](examples.html#an-example-of-the-static-nodegroup-configuration) of the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
 1. Get the Base64-encoded script code to add and configure the node.
 
