@@ -58,6 +58,8 @@ if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ]]; then
   cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
 fi
 
+mkdir -p /etc/kubernetes/manifests
+
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
 kind: Pod
