@@ -67,9 +67,9 @@ title: "Cloud provider — AWS: FAQ"
 
 ## Добавление CloudStatic узлов в кластер
 
-Для добавления инстанса в кластер требуется:
-1. Прикрепить группу безопасности `<prefix>-node`.
-2. Прописать теги (чтобы cloud-controller-manager мог найти инстансы в облаке):
+Для добавления виртуальной машины в качестве узла в кластер выполните следующие шаги:
+1. Прикрепите группу безопасности `<prefix>-node`.
+1. Укажите следующие теги у виртуальной машины (чтобы `cloud-controller-manager` смог найти виртуальные машины в облаке):
 
    ```text
    "kubernetes.io/cluster/<cluster_uuid>" = "shared"
@@ -85,7 +85,8 @@ title: "Cloud provider — AWS: FAQ"
    * Узнать `prefix` можно с помощью команды:
 
      ```shell
-     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
+     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+       | base64 -d | grep prefix
      ```
 
 ## Как увеличить размер volume в кластере?
