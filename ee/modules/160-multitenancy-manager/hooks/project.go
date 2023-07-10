@@ -6,15 +6,30 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/values/validation/schema"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
+)
+
+const (
+	oldValuesSecretQueue = "old_values_secret"
+	oldValuesSecretKey   = "multitenancyManagerValues"
+	oldValuesSecretName  = "deckhouse-multitenancy-manager"
+
+	d8SystemNS = "d8-system"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -26,8 +41,32 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		internal.ProjectHookKubeConfig,
 		// subscribe to ProjectTypes to update Projects when ProjectType changes
 		internal.ProjectTypeHookKubeConfig,
+		{
+			Name:       oldValuesSecretQueue,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			FilterFunc: filterOldValuesSecret,
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{oldValuesSecretName},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{d8SystemNS},
+				},
+			},
+		},
 	},
 }, handleProjects)
+
+func filterOldValuesSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert old_values Secret to v1.Secret struct: %w", err)
+	}
+
+	return secret.Data, nil
+}
 
 type projectValues struct {
 	Params          map[string]interface{} `json:"params"`
@@ -38,7 +77,7 @@ type projectValues struct {
 func handleProjects(input *go_hook.HookInput) error {
 	projectSnapshots := input.Snapshots[internal.ProjectsQueue]
 
-	values := make([]projectValues, 0, len(projectSnapshots))
+	newValues := make([]projectValues, 0, len(projectSnapshots))
 	for _, projectSnap := range projectSnapshots {
 		project, ok := projectSnap.(internal.ProjectSnapshot)
 		if !ok {
@@ -51,7 +90,7 @@ func handleProjects(input *go_hook.HookInput) error {
 			continue
 		}
 
-		values = append(values, projectValues{
+		newValues = append(newValues, projectValues{
 			ProjectTypeName: project.ProjectTypeName,
 			ProjectName:     project.Name,
 			Params:          project.Template,
@@ -60,7 +99,20 @@ func handleProjects(input *go_hook.HookInput) error {
 		internal.SetDeployingStatusProject(input.PatchCollector, project.Name, project.Conditions)
 	}
 
+	values, err := oldValuesCompare(input.Snapshots[oldValuesSecretQueue], newValues)
+	if err != nil {
+		return err
+	}
+
+	valuesSecret, err := newSecretFromValues(values)
+	if err != nil {
+		return err
+	}
+
+	input.PatchCollector.Create(valuesSecret, object_patch.UpdateIfExists())
+
 	input.Values.Set(internal.ModuleValuePath(internal.ProjectValuesPath), values)
+
 	return nil
 }
 
@@ -86,4 +138,67 @@ func validateProject(input *go_hook.HookInput, project internal.ProjectSnapshot)
 		return fmt.Errorf("template data doesn't match the OpenAPI schema for '%s' ProjectType: %v", project.ProjectTypeName, err)
 	}
 	return nil
+}
+
+func oldValuesCompare(oldValuesSecrets []go_hook.FilterResult, newValues []projectValues) ([]projectValues, error) {
+	if len(oldValuesSecrets) < 1 {
+		return newValues, nil
+	}
+
+	oldValues, err := oldValuesFromFilteredSecret(oldValuesSecrets[0])
+	if err != nil {
+		return nil, err
+	}
+
+	newValuesMapper := make(map[string]projectValues, len(newValues))
+	for _, pr := range newValues {
+		newValuesMapper[pr.ProjectName] = pr
+	}
+
+	values := make([]projectValues, 0, len(oldValues)+len(newValues))
+	for _, oldValue := range oldValues {
+		value := oldValue
+		if newValue, ok := newValuesMapper[oldValue.ProjectName]; ok {
+			value = newValue
+		}
+		values = append(values, value)
+	}
+
+	return values, nil
+}
+
+func newSecretFromValues(values []projectValues) (*v1.Secret, error) {
+	marshalledValues, err := json.Marshal(values)
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      oldValuesSecretName,
+			Namespace: d8SystemNS,
+		},
+		Data: map[string][]byte{
+			oldValuesSecretKey: marshalledValues,
+		},
+	}, nil
+}
+
+func oldValuesFromFilteredSecret(filter go_hook.FilterResult) ([]projectValues, error) {
+	oldValuesSecret, ok := filter.(map[string][]byte)
+	if !ok {
+		return nil, errors.New("can't convert old values secret data snapshot to *v1.Secret")
+	}
+
+	oldValuesData, ok := oldValuesSecret[oldValuesSecretKey]
+	if !ok {
+		return nil, fmt.Errorf(`can't find "%s" key from old values secret`, oldValuesSecretKey)
+	}
+
+	var oldValues []projectValues
+	if err := json.Unmarshal(oldValuesData, &oldValues); err != nil {
+		return nil, err
+	}
+
+	return oldValues, nil
 }

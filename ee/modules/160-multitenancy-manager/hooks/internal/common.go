@@ -24,9 +24,6 @@ const (
 
 	PTValuesPath      = "projectTypes"
 	ProjectValuesPath = "projects"
-
-	ProjectsQueue     = "projects"
-	ProjectTypesQueue = "project_types"
 )
 
 func ModuleQueue(q string) string {

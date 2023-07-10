@@ -12,6 +12,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+const (
+	ProjectTypesQueue = "project_types"
+)
+
 var (
 	ProjectTypeHookKubeConfig = go_hook.KubernetesConfig{
 		Name:       ProjectTypesQueue,
