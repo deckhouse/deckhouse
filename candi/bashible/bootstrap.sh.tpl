@@ -20,7 +20,7 @@ function get_bundle() {
 }
 
 function basic_bootstrap_{{ .bundle }} {
-  {{- $contents := (.Files.Get (printf "/deckhouse/candi/bashible/bundles/%s/bootstrap.sh.tpl" .bundle)) | default (.Files.Get (printf "/bashible/templates/bashible/bundles/%s/bootstrap.sh.tpl" .bundle)) }}
+  {{- $contents := .Files.Get (printf "/bashible/templates/bashible/bundles/%s/bootstrap.sh.tpl" .bundle) }}
   {{- tpl $contents . | nindent 2 }}
 }
 
