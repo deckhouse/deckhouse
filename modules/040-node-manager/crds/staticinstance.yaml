@@ -1,0 +1,98 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: staticinstances.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: staticinstances
+    singular: staticinstance
+    kind: StaticInstance
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the static instance. Static instance helps to bootstrap and join to cluster bare metal or standalone virtual machine.
+          properties:
+            spec:
+              type: object
+              required: ["address", "credentialsRef"]
+              description: Specification of the desired behavior of the static instance
+              properties:
+                address:
+                  type: string
+                  description: Address for connect to instance
+                credentialsRef:
+                  type: object
+                  required: [ "name" ]
+                  description: Reference to credentials for connection to the static instance
+                  properties:
+                    name:
+                      type: string
+                      description: StaticInstanceCredentials name
+            status:
+              type: object
+              description: Most recently observed status of the static instance
+              properties:
+                nodeGroupRef:
+                  type: object
+                  description: Reference to the node group object.
+                  properties:
+                    name:
+                      type: string
+                      description: Node group name
+                nodeRef:
+                  type: object
+                  description: Reference to the kubernetes node object.
+                  properties:
+                    name:
+                      type: string
+                      description: Node name
+                currentStatus:
+                  type: object
+                  description: Current status of the static instance object.
+                  properties:
+                    lastUpdateTime:
+                      description: Last update time of current status.
+                      format: date-time
+                      type: string
+                    phase:
+                      description: |
+                        The phase of a static instance is a simple, high-level summary of where the static instance is in its lifecycle.
+                        There are possible phase values:
+                        Pending - waiting for bootstrap and join instance to the cluster.
+                        Bootstrapping - bashible process successful run in the instance.
+                        Running - bashible successful finished and instance joined to the cluster.
+                        Cleaning - cleaning node and remove instance from the cluster.
+                        Lifecycle:
+                        Create object -> Pending -> Bootstrapping -> Running -> Cleaning -> Pending -> ...
+                      type: string
+                      enum: ["Pending", "Bootstrapping", "Running", "Cleaning"]
+      additionalPrinterColumns:
+        - name: Status
+          type: string
+          description: Current status of the instance.
+          jsonPath: .status.currentStatus.phase
+        - name: Address
+          type: string
+          description: Address for connect to the instance.
+          jsonPath: .spec.address
+        - name: Age
+          type: date
+          description: >
+            CreationTimestamp is a timestamp representing the server time when this object was created.
+            It is not guaranteed to be set in happens-before order across separate operations.
+            Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+            Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+          jsonPath: .metadata.creationTimestamp
