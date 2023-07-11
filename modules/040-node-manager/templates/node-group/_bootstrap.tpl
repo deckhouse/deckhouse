@@ -12,7 +12,7 @@ function get_bootstrap() {
   bundle="$(detect_bundle)"
   node_group_name="{{ .nodeGroupName }}"
 
-  bootstrap_bundle_name="$bundle-$node_group_name"
+  bootstrap_bundle_name="$bundle.$node_group_name"
 
   while true; do
     for server in {{ .apiserverEndpoints | join " " }}; do
