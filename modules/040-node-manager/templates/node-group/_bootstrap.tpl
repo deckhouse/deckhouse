@@ -4,7 +4,7 @@
 set -Eeuo pipefail
 
 function detect_bundle() {
-  {{- .Files.Get "/bashible/templates/bashible/detect_bundle.sh" | nindent 2 }}
+  {{- .Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
 }
 
 function get_bootstrap() {
