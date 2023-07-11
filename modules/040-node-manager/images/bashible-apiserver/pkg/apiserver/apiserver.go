@@ -128,7 +128,7 @@ func (c completedConfig) New() (*BashibleServer, error) {
 
 	// Config hardcode, could be put to `ExtraConfig`
 	const (
-		templatesRootDir = "/home/zuzzas/projects/go/deckhouse-oss/candi"
+		templatesRootDir = "/bashible/templates"
 		resyncTimeout    = 30 * time.Minute
 	)
 
