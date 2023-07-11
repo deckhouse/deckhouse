@@ -92,6 +92,8 @@ spec:
     - max: 4000
       min: 2000
     allowedProcMount: Unmasked
+    allowedAppArmor:
+    - unconfined
     allowedUnsafeSysctls:
     - kernel.*
     allowedVolumes:

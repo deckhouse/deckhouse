@@ -160,6 +160,14 @@ spec:
                         type: string
                         description: "Linux capabilities to drop from containers' specs."
                         enum: *caps
+                    allowedAppArmor:
+                      type: array
+                      description: |
+                        List of allowed AppArmor profiles for use by containers.
+                      example: ["runtime/default", "unconfined"]
+                      items:
+                        type: string
+                        description: "AppArmor profiles to allow."
                     allowedFlexVolumes:
                       type: array
                       description: "Whitelist of allowed Flex Volume drivers."

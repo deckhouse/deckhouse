@@ -62,6 +62,8 @@ spec:
     allowPrivilegeEscalation: false
     allowPrivileged: false
     allowedCapabilities: []
+    allowedAppArmor:
+    - runtime/default
     allowedFlexVolumes:
     - driver: vmware
     allowedProcMount: Unmasked

@@ -42,6 +42,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security p
 				"allowedProcMount": "default",
 				"allowedVolumes": {"volumes": ["csi"]},
 				"requiredDropCapabilities": ["ALL"],
+				"allowedAppArmor": ["unconfined"],
 				"readOnlyRootFilesystem": "true",
 				"runAsUser": {"ranges": [{"max": 500,"min": 300}],"rule": "MustRunAs"},
 				"seLinux": [{"role": "role","user": "user"},{"level": "level","type": "type"}],
@@ -77,6 +78,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security p
 			Expect(f.KubernetesGlobalResource("D8PrivilegedContainer", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReadOnlyRootFilesystem", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8SeLinux", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8AppArmor", testPolicyName).Exists()).To(BeTrue())
 		})
 	})
 })

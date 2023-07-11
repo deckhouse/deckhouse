@@ -63,6 +63,13 @@ spec:
                         Список привилегий (linux capabilities) обязательных к исключению.
 
                         Используйте 'ALL' для исключения всех привилегий.
+                    allowedAppArmor:
+                      type: array
+                      description: |
+                        Список допустимых к использованию контейнерами профилей AppArmor.
+                      example: ["runtime/default", "unconfined"]
+                      items:
+                        type: string
                     allowedFlexVolumes:
                       description: "Список допустимых к использованию драйверов Flex Volumes."
                       items:
