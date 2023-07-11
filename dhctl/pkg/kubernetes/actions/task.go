@@ -107,12 +107,16 @@ func (task *ManifestTask) PatchOrCreate() error {
 }
 
 func (task *ManifestTask) GetValidManifest() (interface{}, error) {
-	if mw, ok := task.Manifest().(manifests.Manifest); ok {
+	manifest := task.Manifest()
+	log.DebugF("Manifest: %v\n", manifest)
+	if mw, ok := manifest.(manifests.Manifest); ok {
+		log.DebugLn("Found Manifest interface")
 		err := mw.IsValid()
 		if err != nil {
 			return nil, fmt.Errorf("validate manifest: %w", err)
 		}
+		log.DebugLn("Manifest is valid")
 		return mw.GetManifest(), nil
 	}
-	return task.Manifest(), nil
+	return manifest, nil
 }
