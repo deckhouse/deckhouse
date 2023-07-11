@@ -8,9 +8,10 @@ package hooks_test
 import (
 	"testing"
 
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 func Test(t *testing.T) {
