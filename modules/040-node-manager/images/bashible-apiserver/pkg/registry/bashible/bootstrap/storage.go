@@ -19,7 +19,7 @@ package bootstrap
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,16 +33,8 @@ const templateName = "bootstrap.sh.tpl"
 
 // NewStorage returns storage object that will work against API services.
 func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, error) {
-	templatePath := path.Join(rootDir, "bashible", templateName)
-
-	tplContent, err := os.ReadFile(templatePath)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read template: %v", err)
-	}
-
 	storage := &Storage{
-		templateContent: tplContent,
-		templateName:    templateName,
+		templatePath:    filepath.Join(rootDir, "bashible", templateName),
 		bashibleContext: bashibleContext,
 	}
 
@@ -50,8 +42,7 @@ func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, err
 }
 
 type Storage struct {
-	templateContent []byte
-	templateName    string
+	templatePath    string
 	bashibleContext template.Context
 }
 
@@ -62,7 +53,7 @@ func (s Storage) Render(ng string) (runtime.Object, error) {
 		return nil, fmt.Errorf("cannot get context: %v", err)
 	}
 	// FIXME
-	tplContent, err := os.ReadFile(path.Join("/home/zuzzas/projects/go/deckhouse-oss/candi", "bashible", templateName))
+	tplContent, err := os.ReadFile(s.templatePath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read template: %v", err)
 	}
