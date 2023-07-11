@@ -82,7 +82,7 @@ apiVersions:
             description: |
               Словарь типов дисков для хранения данных etcd и конфигурационных файлов Kubernetes.
 
-              Указывается в формате `<availability zone name>: <volume type name>`
+              Указывается в формате `availability-zone-name: volume-type-name`
 
               Получить список зон доступности: `openstack availability zone list`
 
