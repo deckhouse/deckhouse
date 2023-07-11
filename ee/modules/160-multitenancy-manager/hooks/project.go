@@ -158,17 +158,12 @@ func projectValuesCompare(oldValuesSecrets []go_hook.FilterResult, newValues map
 		newValue, newExists := newValues[projectName]
 		oldValue, oldExists := oldValues[projectName]
 
-		var value projectValues
 		switch {
 		case newExists:
-			value = newValue
+			values[projectName] = newValue
 		case oldExists:
-			value = oldValue
-		default:
-			return nil, fmt.Errorf("can't find Project '%s' in new and old values", projectName)
+			values[projectName] = oldValue
 		}
-
-		values[projectName] = value
 	}
 
 	return values, nil
