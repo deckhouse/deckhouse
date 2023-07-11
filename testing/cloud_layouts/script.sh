@@ -210,6 +210,7 @@ function cleanup() {
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
+set -x
 
 export GOVC_URL=p-vc-3.${VSPHERE_BASE_DOMAIN}
 export GOVC_USERNAME=dvadm@vsphere.local
