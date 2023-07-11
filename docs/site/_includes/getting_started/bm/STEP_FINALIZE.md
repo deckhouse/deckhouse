@@ -10,7 +10,7 @@ For real-world conditions (production and test environments), you need to add ad
 <p>If you install Deckhouse for <strong>evaluation purposes</strong> and one node in  the cluster is enough for you, allow Deckhouse components to work on the master node. To do this, remove the taint from the master node by running the following command:</p>
 {% snippetcut %}
 ```bash
-sudo kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
 </blockquote>
@@ -24,7 +24,7 @@ After that, there will be three more actions.
   <p>Apply it using the following command on the <strong>master node</strong>>:</p>
 {% snippetcut %}
 ```shell
-sudo kubectl create -f ingress-nginx-controller.yml
+kubectl create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 </li>
@@ -36,7 +36,7 @@ sudo kubectl create -f ingress-nginx-controller.yml
 <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
-sudo kubectl create -f user.yml
+kubectl create -f user.yml
 ```
 {% endsnippetcut %}
 </li>
@@ -54,7 +54,7 @@ sudo kubectl create -f user.yml
 argocd.example.com
 cdi-uploadproxy.example.com
 dashboard.example.com
-deckhouse.example.com
+documentation.example.com
 dex.example.com
 grafana.example.com
 hubble.example.com
@@ -79,7 +79,7 @@ $PUBLIC_IP api.example.com
 $PUBLIC_IP argocd.example.com
 $PUBLIC_IP cdi-uploadproxy.example.com
 $PUBLIC_IP dashboard.example.com
-$PUBLIC_IP deckhouse.example.com
+$PUBLIC_IP documentation.example.com
 $PUBLIC_IP dex.example.com
 $PUBLIC_IP grafana.example.com
 $PUBLIC_IP hubble.example.com
