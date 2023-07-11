@@ -86,7 +86,7 @@ apiVersions:
 
               Получить список зон доступности: `openstack availability zone list`
 
-              Получить список список типов дисков: `openstack volume type list`
+              Получить список типов дисков: `openstack volume type list`
 
               Если указан параметр `rootDiskSize`, то этот же тип диска будет использован в качестве загрузочного диска виртуальной машины.
 
