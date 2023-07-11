@@ -48,8 +48,8 @@ const (
 	registrySecretName = "deckhouse-registry"
 	nodeUserCRDName    = "nodeusers"
 
-	imageDigestsFile = "/var/files/candi/images_digests.json"
-	versionMapFile   = "/var/files/candi/version_map.yml"
+	imageDigestsFile = "/var/files/images_digests.json"
+	versionMapFile   = "/var/files/version_map.yml"
 )
 
 type Context interface {
