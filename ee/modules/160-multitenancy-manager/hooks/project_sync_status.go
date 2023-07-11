@@ -42,9 +42,10 @@ func handleReadyStatusForProjectsAndProjectTypes(input *go_hook.HookInput) error
 		projectSnapshots[project.Name] = project
 	}
 
-	values, ok := input.Values.GetOk(internal.ModuleValuePath(internal.ProjectValuesPath))
+	valuesPath := internal.ModuleValuePath(internal.ProjectValuesPath)
+	values, ok := input.Values.GetOk(valuesPath)
 	if !ok {
-		return fmt.Errorf("can't find project values path: %s", internal.ModuleValuePath(internal.ProjectValuesPath))
+		return fmt.Errorf("can't find project values path: %s", valuesPath)
 	}
 
 	for _, value := range values.Array() {
@@ -53,13 +54,13 @@ func handleReadyStatusForProjectsAndProjectTypes(input *go_hook.HookInput) error
 			return errors.New("can't convert Project values to map[string]interface")
 		}
 		projectName, ok := projectValue["projectName"].(string)
-		if !ok {
+		if !ok || projectName == "" {
 			return errors.New("can't get Project name from values")
 		}
 
 		projectSnap, ok := projectSnapshots[projectName]
 		if !ok {
-			return errors.New("can't find Project in cluster from values by name")
+			return fmt.Errorf("can't find Project '%s' in cluster from values", projectName)
 		}
 
 		internal.SetSyncStatusProject(input.PatchCollector, projectSnap.Name, projectSnap.Conditions)

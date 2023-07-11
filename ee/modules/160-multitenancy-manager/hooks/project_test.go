@@ -3,7 +3,7 @@ Copyright 2023 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package hooks
+package hooks_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -58,29 +58,32 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON(expectedTwoProjects))
 			})
 
-			It("Valid Projects status without error", func() {
-				pr1 := f.KubernetesGlobalResource("Project", "test-1")
-				Expect(pr1.Exists()).To(BeTrue())
-
-				Expect(pr1.Field("status.conditions")).To(MatchJSON(`[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`))
-				Expect(pr1.Field("status.statusSummary")).To(MatchJSON(`{"status":false}`))
-
-				pr2 := f.KubernetesGlobalResource("Project", "test-2")
-				Expect(pr2.Exists()).To(BeTrue())
-
-				Expect(pr2.Field("status.conditions")).To(MatchJSON(`[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`))
-				Expect(pr2.Field("status.statusSummary")).To(MatchJSON(`{"status":false}`))
-			})
-
-			It("Invalid Project status with error", func() {
-				pr3 := f.KubernetesGlobalResource("Project", "test-3")
-				Expect(pr3.Exists()).To(BeTrue())
-
-				// Expect(len(pr3.Field("status.conditions").Array())).To(Equal(1))
-				Expect(pr3.Field("status.conditions")).To(MatchJSON(`[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`))
-				Expect(pr3.Field("status.statusSummary")).To(MatchJSON(`{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`))
+			It("Projects with valid status and conditions", func() {
+				for _, tc := range testCasesForProjectStatuses {
+					checkProjectStatus(f, tc)
+				}
 			})
 		})
+
+		Context("Cluster with two valid and one invalid OpenAPI Project with old values from secret", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateTwoProjects + stateInvalidOpenAPIProject + stateOldValuesProjectSecret))
+				f.RunHook()
+			})
+
+			It("Projects must be stored in values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON(expectedThreeProjects))
+			})
+
+			It("Projects with valid status and conditions", func() {
+				for _, tc := range testCasesForProjectStatuses {
+					checkProjectStatus(f, tc)
+				}
+			})
+
+		})
+
 	})
 })
 
@@ -136,6 +139,19 @@ status:
       message: "template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
       status: false
 `
+
+	stateOldValuesProjectSecret = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-multitenancy-manager
+  namespace: d8-system
+data:
+  # echo '{"test-1":{"projectName":"test-1"},"test-2":{"projectName":"test-2"},"test-3":{"projectName":"test-3","params":{"limits":{"cpu":5},"requests":{"cpu":5}},"projectTypeName":"pt3"},"test-4":{"projectName":"test-4"},"test-4":{"projectName":"test-4"}}' | base64 -w0 && echo
+  projectValues: eyJ0ZXN0LTEiOnsicHJvamVjdE5hbWUiOiJ0ZXN0LTEifSwidGVzdC0yIjp7InByb2plY3ROYW1lIjoidGVzdC0yIn0sInRlc3QtMyI6eyJwcm9qZWN0TmFtZSI6InRlc3QtMyIsInBhcmFtcyI6eyJsaW1pdHMiOnsiY3B1Ijo1fSwicmVxdWVzdHMiOnsiY3B1Ijo1fX0sInByb2plY3RUeXBlTmFtZSI6InB0MyJ9LCJ0ZXN0LTQiOnsicHJvamVjdE5hbWUiOiJ0ZXN0LTQifSwidGVzdC00Ijp7InByb2plY3ROYW1lIjoidGVzdC00In19Cg==
+`
+
 	expectedTwoProjects = `
 [
   {
@@ -160,6 +176,46 @@ status:
     },
     "projectTypeName": "pt2",
     "projectName": "test-2"
+  }
+]
+`
+
+	expectedThreeProjects = `
+[
+  {
+    "params": {
+      "cpuRequests": 1,
+      "memoryRequests": "200Gi"
+    },
+    "projectTypeName": "pt1",
+    "projectName": "test-1"
+  },
+  {
+    "params": {
+      "limits": {
+        "cpu": 5,
+        "memory": "5Gi"
+      },
+      "requests": {
+        "cpu": 5,
+        "memory": "5Gi",
+        "storage": "1Gi"
+      }
+    },
+    "projectTypeName": "pt2",
+    "projectName": "test-2"
+  },
+  {
+    "params": {
+      "limits": {
+        "cpu": 5
+      },
+      "requests": {
+        "cpu": 5
+      }
+    },
+    "projectTypeName": "pt3",
+    "projectName": "test-3"
   }
 ]
 `
@@ -302,4 +358,34 @@ subjects:
     name: multitenancy-user
     role: User
 `)
+
+	testCasesForProjectStatuses = []testProjectStatus{
+		{
+			name:       "test-1",
+			exists:     true,
+			conditions: `[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`,
+			status:     `{"status":false}`,
+		},
+		{
+			name:       "test-2",
+			exists:     true,
+			conditions: `[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`,
+			status:     `{"status":false}`,
+		},
+		{
+			name:       "test-3",
+			exists:     true,
+			conditions: `[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`,
+			status:     `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`,
+		},
+		{
+			name:   "test-4",
+			exists: false,
+		},
+
+		{
+			name:   "test-5",
+			exists: false,
+		},
+	}
 )

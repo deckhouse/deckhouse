@@ -3,7 +3,7 @@ Copyright 2023 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package hooks
+package hooks_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -32,36 +32,33 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ready status ::"
 		Context("Cluster with two valid Projects", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("multitenancyManager.internal.projects", stateTwoProjectsValues)
-				f.BindingContexts.Set(f.KubeStateSet(stateTwoProjectsWithDeployingStatus))
+				f.BindingContexts.Set(f.KubeStateSet(stateTwoProjectsWithDeployingStatusAndOneWithError))
 				f.RunHook()
 			})
 
 			It("Valid Projects status Sync", func() {
-				conds := []struct {
-					name, conditions, status string
-				}{
+				conds := []testProjectStatus{
 					{
 						name:       "test-1",
+						exists:     true,
 						conditions: `[{"name":"Deploying","status":false},{"name":"Sync","status":true}]`,
 						status:     `{"status":true}`,
 					},
 					{
 						name:       "test-2",
+						exists:     true,
 						conditions: `[{"name":"Deploying","status":false},{"name":"Sync","status":true}]`,
 						status:     `{"status":true}`,
 					},
 					{
 						name:       "test-3",
+						exists:     true,
 						conditions: `[{"message":"Can't find valid ProjectType '' for Project","name":"Error","status":false}]`,
 						status:     `{"status":false}`,
 					},
 				}
-				for _, cond := range conds {
-					pr := f.KubernetesGlobalResource("Project", cond.name)
-					Expect(pr.Exists()).To(BeTrue())
-
-					Expect(pr.Field("status.conditions")).To(MatchJSON(cond.conditions))
-					Expect(pr.Field("status.statusSummary")).To(MatchJSON(cond.status))
+				for _, tc := range conds {
+					checkProjectStatus(f, tc)
 				}
 			})
 
@@ -70,7 +67,7 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ready status ::"
 })
 
 const (
-	stateTwoProjectsWithDeployingStatus = `
+	stateTwoProjectsWithDeployingStatusAndOneWithError = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Project

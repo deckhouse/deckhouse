@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/values/validation/schema"
@@ -26,10 +28,9 @@ import (
 
 const (
 	oldValuesSecretQueue = "old_values_secret"
-	oldValuesSecretKey   = "multitenancyManagerValues"
+	oldValuesSecretKey   = "projectValues"
 	oldValuesSecretName  = "deckhouse-multitenancy-manager"
-
-	d8SystemNS = "d8-system"
+	d8SystemNS           = "d8-system"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -77,7 +78,8 @@ type projectValues struct {
 func handleProjects(input *go_hook.HookInput) error {
 	projectSnapshots := input.Snapshots[internal.ProjectsQueue]
 
-	newValues := make([]projectValues, 0, len(projectSnapshots))
+	allProjectsFromCluster := make(map[string]bool, len(projectSnapshots))
+	newValues := make(map[string]projectValues)
 	for _, projectSnap := range projectSnapshots {
 		project, ok := projectSnap.(internal.ProjectSnapshot)
 		if !ok {
@@ -85,33 +87,34 @@ func handleProjects(input *go_hook.HookInput) error {
 			continue
 		}
 
+		allProjectsFromCluster[project.Name] = true
+
 		if err := validateProject(input, project); err != nil {
 			internal.SetErrorStatusProject(input.PatchCollector, project.Name, err.Error(), project.Conditions)
 			continue
 		}
 
-		newValues = append(newValues, projectValues{
+		newValues[project.Name] = projectValues{
 			ProjectTypeName: project.ProjectTypeName,
 			ProjectName:     project.Name,
 			Params:          project.Template,
-		})
+		}
 
 		internal.SetDeployingStatusProject(input.PatchCollector, project.Name, project.Conditions)
 	}
 
-	values, err := oldValuesCompare(input.Snapshots[oldValuesSecretQueue], newValues)
+	values, err := projectValuesCompare(input.Snapshots[oldValuesSecretQueue], newValues, allProjectsFromCluster)
 	if err != nil {
 		return err
 	}
 
-	valuesSecret, err := newSecretFromValues(values)
+	valuesSecret, err := newSecretFromProjectValues(values)
 	if err != nil {
 		return err
 	}
 
 	input.PatchCollector.Create(valuesSecret, object_patch.UpdateIfExists())
-
-	input.Values.Set(internal.ModuleValuePath(internal.ProjectValuesPath), values)
+	input.Values.Set(internal.ModuleValuePath(internal.ProjectValuesPath), projectValuesmapToSlice(values))
 
 	return nil
 }
@@ -140,40 +143,48 @@ func validateProject(input *go_hook.HookInput, project internal.ProjectSnapshot)
 	return nil
 }
 
-func oldValuesCompare(oldValuesSecrets []go_hook.FilterResult, newValues []projectValues) ([]projectValues, error) {
+func projectValuesCompare(oldValuesSecrets []go_hook.FilterResult, newValues map[string]projectValues, allProjectsFromCluster map[string]bool) (map[string]projectValues, error) {
 	if len(oldValuesSecrets) < 1 {
 		return newValues, nil
 	}
 
-	oldValues, err := oldValuesFromFilteredSecret(oldValuesSecrets[0])
+	oldValues, err := oldProjectValuesFromFilteredSecret(oldValuesSecrets[0])
 	if err != nil {
 		return nil, err
 	}
 
-	newValuesMapper := make(map[string]projectValues, len(newValues))
-	for _, pr := range newValues {
-		newValuesMapper[pr.ProjectName] = pr
-	}
+	values := make(map[string]projectValues, len(oldValues)+len(newValues))
+	for projectName := range allProjectsFromCluster {
+		newValue, newExists := newValues[projectName]
+		oldValue, oldExists := oldValues[projectName]
 
-	values := make([]projectValues, 0, len(oldValues)+len(newValues))
-	for _, oldValue := range oldValues {
-		value := oldValue
-		if newValue, ok := newValuesMapper[oldValue.ProjectName]; ok {
+		var value projectValues
+		switch {
+		case newExists:
 			value = newValue
+		case oldExists:
+			value = oldValue
+		default:
+			return nil, fmt.Errorf("can't find Project '%s' in new and old values", projectName)
 		}
-		values = append(values, value)
+
+		values[projectName] = value
 	}
 
 	return values, nil
 }
 
-func newSecretFromValues(values []projectValues) (*v1.Secret, error) {
+func newSecretFromProjectValues(values map[string]projectValues) (*v1.Secret, error) {
 	marshalledValues, err := json.Marshal(values)
 	if err != nil {
 		return nil, err
 	}
 
 	return &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      oldValuesSecretName,
 			Namespace: d8SystemNS,
@@ -184,7 +195,7 @@ func newSecretFromValues(values []projectValues) (*v1.Secret, error) {
 	}, nil
 }
 
-func oldValuesFromFilteredSecret(filter go_hook.FilterResult) ([]projectValues, error) {
+func oldProjectValuesFromFilteredSecret(filter go_hook.FilterResult) (map[string]projectValues, error) {
 	oldValuesSecret, ok := filter.(map[string][]byte)
 	if !ok {
 		return nil, errors.New("can't convert old values secret data snapshot to *v1.Secret")
@@ -195,10 +206,22 @@ func oldValuesFromFilteredSecret(filter go_hook.FilterResult) ([]projectValues, 
 		return nil, fmt.Errorf(`can't find "%s" key from old values secret`, oldValuesSecretKey)
 	}
 
-	var oldValues []projectValues
+	var oldValues map[string]projectValues
 	if err := json.Unmarshal(oldValuesData, &oldValues); err != nil {
 		return nil, err
 	}
 
 	return oldValues, nil
+}
+
+func projectValuesmapToSlice(values map[string]projectValues) []projectValues {
+	valuesList := make([]projectValues, 0, len(values))
+	for _, value := range values {
+		valuesList = append(valuesList, value)
+	}
+	sort.Slice(valuesList, func(i, j int) bool {
+		return strings.Compare(valuesList[i].ProjectName, valuesList[j].ProjectName) < 0
+	})
+
+	return valuesList
 }

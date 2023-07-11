@@ -64,17 +64,18 @@ func setProjectStatus(patcher *object_patch.PatchCollector, projectName string, 
 }
 
 func uniqueConditions(conds []v1alpha1.Condition) []v1alpha1.Condition {
-	uniqueConds := make(map[v1alpha1.Condition]bool)
+	uniqueConds := make(map[v1alpha1.Condition]int)
+
 	for _, c := range conds {
-		if uniqueConds[c] {
+		if _, ok := uniqueConds[c]; ok {
 			continue
 		}
-		uniqueConds[c] = true
+		uniqueConds[c] = len(uniqueConds)
 	}
 
-	result := make([]v1alpha1.Condition, 0, len(uniqueConds))
-	for c := range uniqueConds {
-		result = append(result, c)
+	result := make([]v1alpha1.Condition, len(uniqueConds))
+	for c, i := range uniqueConds {
+		result[i] = c
 	}
 	return result
 }

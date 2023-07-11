@@ -6,8 +6,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ $name }}
-  {{- if $metadata }}
-  {{- $metadata | toYaml | nindent 2 }}
+  {{- with $metadata }}
+  {{- . | toYaml | nindent 2 }}
   {{- end }}
 {{- end }}
 
@@ -137,7 +137,11 @@ spec:
 {{- range $projectValues := $moduleValues.internal.projects }}
 
     {{- $_ := set $projectValues "Template" $.Template }}
-    {{- $projectTypeValues := $moduleValues | dig "internal" "projectTypes" $projectValues.projectTypeName (dict) }}
+    {{- $projectTypeValues := index $moduleValues.internal.projectTypes $projectValues.projectTypeName }}
+
+    {{- if not $projectTypeValues }}
+      {{- printf "No ProjectType with name '%s' found for Project '%s'." $projectValues.projectTypeName $projectValues.projectName | fail }}
+    {{- end }}
 
     {{- include "project.namespace" ( list $projectValues.projectName $projectTypeValues.namespaceMetadata ) }}
 

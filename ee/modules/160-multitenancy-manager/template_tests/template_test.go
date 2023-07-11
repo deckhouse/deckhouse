@@ -47,10 +47,24 @@ var _ = Describe("Module :: multitenancy-manager :: helm template ::", func() {
 		})
 	})
 
+	Context("One Project without ProjectType", func() {
+		render := make(map[string]string)
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("multitenancyManager.internal", stateOneProject+stateEmptyProjectTypes)
+			f.HelmRender(WithRenderOutput(render))
+		})
+
+		It("Should return error", func() {
+			Expect(f.RenderError).Should(HaveOccurred())
+			Expect(f.RenderError.Error()).Should(ContainSubstring("No ProjectType with name 'pt1' found for Project 'project-1'."))
+		})
+
+	})
+
 	Context("One Project and one ProjectType cluster", func() {
 		render := make(map[string]string)
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("multitenancyManager.internal", stateOneProjectTypeOneProject)
+			f.ValuesSetFromYaml("multitenancyManager.internal", stateOneProjectType+stateOneProject)
 			f.HelmRender(WithRenderOutput(render))
 		})
 
@@ -139,7 +153,7 @@ func retrieveObjectNameByKindFromRender(kind string, manifests string) string {
 }
 
 const (
-	stateOneProjectTypeOneProject = `
+	stateOneProjectType = `
 projectTypes:
   pt1:
     subjects:
@@ -199,6 +213,9 @@ projectTypes:
       kind: Replicaset
       metadata:
         name: very-very-very-very-very-very-very-very-very-very-long-pod-test-name-1
+`
+
+	stateOneProject = `
 projects:
   - projectName: project-1
     projectTypeName: pt1
@@ -206,5 +223,9 @@ projects:
       requests:
         cpu: 1
         memory: 100Mi
+`
+
+	stateEmptyProjectTypes = `
+projectTypes: {}
 `
 )
