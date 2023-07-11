@@ -323,6 +323,12 @@ apiVersions:
               description: |
                 A dictionary of disk types for root drive.
 
+                Specifies as <availability zone name>: <volume type name>
+
+                Get list of availability zones: `openstack availability zone list`
+
+                Get list of volume types: `openstack volume type list`
+
                 If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then worker-0, worker-2, worker-4 will have the `eu-1a` disk type, while worker-1, worker-3 will have the `eu-1b` disk type.
 
                 Useful commands:
