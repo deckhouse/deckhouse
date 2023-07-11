@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: allowed
+  name: disallowed-dep
   namespace: default
   annotations:
     bar: xxx.example.com

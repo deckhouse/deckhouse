@@ -29,6 +29,8 @@ import (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: pod security policies ::", func() {
+	var gatorPath string
+	var gatorFound bool
 	f := SetupHelmConfig(`
 admissionPolicyEngine:
   internal:
@@ -51,7 +53,7 @@ admissionPolicyEngine:
 
 	Context("Test rego policies", func() {
 		BeforeEach(func() {
-			if !gatorAvailable() {
+			if gatorPath, gatorFound = gatorAvailable(); !gatorFound {
 				Skip("gator binary is not available")
 			}
 
@@ -73,10 +75,12 @@ admissionPolicyEngine:
 	})
 })
 
-//const gatorPath = "/deckhouse/bin/gator"
-const gatorPath = "/usr/local/bin/gator"
+func gatorAvailable() (string, bool) {
+	gatorPath, err := exec.LookPath("gator")
+	if err != nil {
+		return "", false
+	}
 
-func gatorAvailable() bool {
 	info, err := os.Lstat(gatorPath)
-	return err == nil && (info.Mode().Perm()&0111 != 0)
+	return gatorPath, err == nil && (info.Mode().Perm()&0111 != 0)
 }
