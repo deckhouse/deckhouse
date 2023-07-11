@@ -20,6 +20,15 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Project", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ProjectType", false)
 
+	secretCreatedWithProjectValues := func(secretProjectValues string) {
+		secret := f.KubernetesResource("Secret", "d8-system", "deckhouse-multitenancy-manager")
+		Expect(secret.Exists()).To(BeTrue())
+
+		decoded, err := base64.StdEncoding.DecodeString(secret.Field("data.projectValues").String())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(decoded).To(MatchJSON(secretProjectValues))
+	}
+
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -29,6 +38,10 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 		It("Projects map must be empty", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON(`[]`))
+		})
+
+		It("Must create secret", func() {
+			secretCreatedWithProjectValues(`{}`)
 		})
 	})
 
@@ -46,7 +59,11 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 
 			It("Projects must be stored in values", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON(expectedTwoProjects))
+				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON("[" + expectedProject1 + "," + expectedProject2 + "]"))
+			})
+
+			It("Must create secret", func() {
+				secretCreatedWithProjectValues(`{"test-1":` + expectedProject1 + `,"test-2":` + expectedProject2 + "}")
 			})
 		})
 
@@ -58,13 +75,17 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 
 			It("Projects must be stored in values", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON(expectedTwoProjects))
+				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON("[" + expectedProject1 + "," + expectedProject2 + "]"))
 			})
 
 			It("Projects with valid status and conditions", func() {
 				for _, tc := range testCasesForProjectStatuses {
 					checkProjectStatus(f, tc)
 				}
+			})
+
+			It("Must create secret", func() {
+				secretCreatedWithProjectValues(`{"test-1":` + expectedProject1 + `,"test-2":` + expectedProject2 + "}")
 			})
 		})
 
@@ -76,7 +97,7 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 
 			It("Projects must be stored in values", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON(expectedThreeProjects))
+				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON("[" + expectedProject1 + "," + expectedProject2 + "," + expectedProject3 + "]"))
 			})
 
 			It("Projects with valid status and conditions", func() {
@@ -85,6 +106,9 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 				}
 			})
 
+			It("Must update project values secret data", func() {
+				secretCreatedWithProjectValues(`{"test-1":` + expectedProject1 + `,"test-2":` + expectedProject2 + `,"test-3":` + expectedProject3 + "}")
+			})
 		})
 
 	})
@@ -153,77 +177,86 @@ spec:
     cpuRequests: 1
     memoryTest: 200Gi
 `
+	expectedProject1 = `{
+  "params": {
+    "cpuRequests": 1,
+    "memoryRequests": "200Gi"
+  },
+  "projectTypeName": "pt1",
+  "projectName": "test-1"
+}`
 
-	expectedTwoProjects = `
-[
-  {
-    "params": {
-      "cpuRequests": 1,
-      "memoryRequests": "200Gi"
+	expectedProject2 = `{
+  "params": {
+    "limits": {
+      "cpu": 5,
+      "memory": "5Gi"
     },
-    "projectTypeName": "pt1",
-    "projectName": "test-1"
+    "requests": {
+      "cpu": 5,
+      "memory": "5Gi",
+      "storage": "1Gi"
+    }
   },
-  {
-    "params": {
-      "limits": {
-        "cpu": 5,
-        "memory": "5Gi"
-      },
-      "requests": {
-        "cpu": 5,
-        "memory": "5Gi",
-        "storage": "1Gi"
-      }
-    },
-    "projectTypeName": "pt2",
-    "projectName": "test-2"
-  }
-]
-`
+  "projectTypeName": "pt2",
+  "projectName": "test-2"
+}`
 
-	expectedThreeProjects = `
-[
-  {
-    "params": {
-      "cpuRequests": 1,
-      "memoryRequests": "200Gi"
+	expectedProject3 = `{
+  "params": {
+    "limits": {
+      "cpu": 5
     },
-    "projectTypeName": "pt1",
-    "projectName": "test-1"
+    "requests": {
+      "cpu": 5
+    }
   },
-  {
-    "params": {
-      "limits": {
-        "cpu": 5,
-        "memory": "5Gi"
-      },
-      "requests": {
-        "cpu": 5,
-        "memory": "5Gi",
-        "storage": "1Gi"
-      }
-    },
-    "projectTypeName": "pt2",
-    "projectName": "test-2"
-  },
-  {
-    "params": {
-      "limits": {
-        "cpu": 5
-      },
-      "requests": {
-        "cpu": 5
-      }
-    },
-    "projectTypeName": "pt3",
-    "projectName": "test-3"
-  }
-]
-`
+  "projectTypeName": "pt3",
+  "projectName": "test-3"
+}`
 )
 
 var (
+	stateOldValuesProjectSecret = fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-multitenancy-manager
+  namespace: d8-system
+data:
+  projectValues: %s
+`, base64.StdEncoding.EncodeToString([]byte(
+		`{"test-1":{"projectName":"test-1"},"test-2":{"projectName":"test-2"},"test-3":{"projectName":"test-3","params":{"limits":{"cpu":5},"requests":{"cpu":5}},"projectTypeName":"pt3"}}`,
+	)))
+
+	testCasesForProjectStatuses = []testProjectStatus{
+		{
+			name:       "test-1",
+			exists:     true,
+			conditions: `[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`,
+			status:     `{"status":false}`,
+		},
+		{
+			name:       "test-2",
+			exists:     true,
+			conditions: `[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`,
+			status:     `{"status":false}`,
+		},
+		{
+			name:       "test-3",
+			exists:     true,
+			conditions: `[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`,
+			status:     `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`,
+		},
+		{
+			name:       "test-4",
+			exists:     true,
+			conditions: `[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`,
+			status:     `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`,
+		},
+	}
+
 	firstValidPT = []byte(`
 openAPI:
   cpuRequests:
@@ -360,44 +393,4 @@ subjects:
     name: multitenancy-user
     role: User
 `)
-
-	stateOldValuesProjectSecret = fmt.Sprintf(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: deckhouse-multitenancy-manager
-  namespace: d8-system
-data:
-  projectValues: %s
-`, base64.StdEncoding.EncodeToString([]byte(
-		`{"test-1":{"projectName":"test-1"},"test-2":{"projectName":"test-2"},"test-3":{"projectName":"test-3","params":{"limits":{"cpu":5},"requests":{"cpu":5}},"projectTypeName":"pt3"}}`,
-	)))
-
-	testCasesForProjectStatuses = []testProjectStatus{
-		{
-			name:       "test-1",
-			exists:     true,
-			conditions: `[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`,
-			status:     `{"status":false}`,
-		},
-		{
-			name:       "test-2",
-			exists:     true,
-			conditions: `[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`,
-			status:     `{"status":false}`,
-		},
-		{
-			name:       "test-3",
-			exists:     true,
-			conditions: `[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`,
-			status:     `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`,
-		},
-		{
-			name:       "test-4",
-			exists:     true,
-			conditions: `[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`,
-			status:     `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`,
-		},
-	}
 )
