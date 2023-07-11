@@ -323,7 +323,7 @@ apiVersions:
               description: |
                 A dictionary of disk types for root drive.
 
-                Specifies as <availability zone name>: <volume type name>
+                Specifies as `<availability zone name>: <volume type name>`
 
                 Get list of availability zones: `openstack availability zone list`
 
