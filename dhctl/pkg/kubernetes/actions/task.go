@@ -111,6 +111,7 @@ func (task *ManifestTask) GetValidManifest() (interface{}, error) {
 	if mw, ok := manifest.(manifests.Manifest); ok {
 		log.DebugLn("Found Manifest interface")
 		err := mw.IsValid()
+		log.DebugF("Validation result: ", err)
 		if err != nil {
 			return nil, err
 		}
