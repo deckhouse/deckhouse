@@ -110,7 +110,7 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIV3Config.Info.Title = "Bashible"
 	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
-
+	// FIXME
 	o.RecommendedOptions.Authorization = nil
 	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
 		return nil, err
