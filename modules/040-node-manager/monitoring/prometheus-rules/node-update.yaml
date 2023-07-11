@@ -186,7 +186,8 @@
       plk_grouped_by__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node is stuck in draining.
       description: |
-        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }}group. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.
+        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.
+        You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'`
 
   - alert: D8BashibleApiserverLocked
     expr: d8_bashible_apiserver_locked == 1
