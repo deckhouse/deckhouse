@@ -88,7 +88,7 @@ provider:
   region: RegionOne
   # [<en>] You might need to specify tenantName instead of tenantID.
   # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
-  # [<ru>] Возможно, вам нужно указать tenantName вместе tenantID.
+  # [<ru>] Возможно вам нужно указать tenantName вместо tenantID.
   # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
   #tenantName: *!CHANGE_PROJECT_NAME*
   tenantID: *!CHANGE_PROJECT_ID*
