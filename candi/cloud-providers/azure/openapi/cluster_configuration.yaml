@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+    x-doc-search: |
+      ProviderClusterConfiguration
     x-examples:
       - apiVersion: deckhouse.io/v1
         kind: AzureClusterConfiguration

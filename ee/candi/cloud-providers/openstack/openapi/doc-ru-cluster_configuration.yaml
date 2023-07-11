@@ -12,6 +12,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+    x-doc-search: |
+      ProviderClusterConfiguration
     properties:
       sshPublicKey:
         description: |
