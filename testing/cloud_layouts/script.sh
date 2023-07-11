@@ -212,9 +212,11 @@ export LANG=C
 set -Eeuo pipefail
 set -x
 
-export GOVC_URL=p-vc-3.${VSPHERE_BASE_DOMAIN}
+export GOVC_URL="p-vc-3.${LAYOUT_VSPHERE_BASE_DOMAIN}"
 export GOVC_USERNAME=dvadm@vsphere.local
-export GOVC_PASSWORD=${VSPHERE_PASSWORD}
+set +x
+export GOVC_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")"
+set -x
 export GOVC_INSECURE=1
 
 mapfile machines < <(kubectl -n d8-cloud-instance-manager get machine -o json | jq -r '.items[].metadata.name')
