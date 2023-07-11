@@ -90,7 +90,7 @@ provider:
   # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
   # [<ru>] Возможно вам нужно указать tenantName вместо tenantID.
   # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
-  #  tenantName: *!CHANGE_PROJECT_NAME*
+  # tenantName: PROJECT_NAME
   tenantID: *!CHANGE_PROJECT_ID*
   username: *!CHANGE_USERNAME*
 masterNodeGroup:
