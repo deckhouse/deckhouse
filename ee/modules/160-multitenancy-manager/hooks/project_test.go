@@ -6,6 +6,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks_test
 
 import (
+	"encoding/base64"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -47,9 +50,9 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 			})
 		})
 
-		Context("Cluster with two valid and one invalid OpenAPI Project", func() {
+		Context("Cluster with two valid and two invalid OpenAPI Project", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateTwoProjects + stateInvalidOpenAPIProject))
+				f.BindingContexts.Set(f.KubeStateSet(stateTwoProjects + stateInvalidOpenAPIProjects))
 				f.RunHook()
 			})
 
@@ -65,9 +68,9 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 			})
 		})
 
-		Context("Cluster with two valid and one invalid OpenAPI Project with old values from secret", func() {
+		Context("Cluster with two valid and two invalid OpenAPI Project with old values from secret", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateTwoProjects + stateInvalidOpenAPIProject + stateOldValuesProjectSecret))
+				f.BindingContexts.Set(f.KubeStateSet(stateTwoProjects + stateInvalidOpenAPIProjects + stateOldValuesProjectSecret))
 				f.RunHook()
 			})
 
@@ -118,7 +121,7 @@ spec:
       memory: 5Gi
 `
 
-	stateInvalidOpenAPIProject = `
+	stateInvalidOpenAPIProjects = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Project
@@ -138,18 +141,17 @@ status:
     - name: Error
       message: "template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
       status: false
-`
-
-	stateOldValuesProjectSecret = `
 ---
-apiVersion: v1
-kind: Secret
+apiVersion: deckhouse.io/v1alpha1
+kind: Project
 metadata:
-  name: deckhouse-multitenancy-manager
-  namespace: d8-system
-data:
-  # echo '{"test-1":{"projectName":"test-1"},"test-2":{"projectName":"test-2"},"test-3":{"projectName":"test-3","params":{"limits":{"cpu":5},"requests":{"cpu":5}},"projectTypeName":"pt3"},"test-4":{"projectName":"test-4"},"test-4":{"projectName":"test-4"}}' | base64 -w0 && echo
-  projectValues: eyJ0ZXN0LTEiOnsicHJvamVjdE5hbWUiOiJ0ZXN0LTEifSwidGVzdC0yIjp7InByb2plY3ROYW1lIjoidGVzdC0yIn0sInRlc3QtMyI6eyJwcm9qZWN0TmFtZSI6InRlc3QtMyIsInBhcmFtcyI6eyJsaW1pdHMiOnsiY3B1Ijo1fSwicmVxdWVzdHMiOnsiY3B1Ijo1fX0sInByb2plY3RUeXBlTmFtZSI6InB0MyJ9LCJ0ZXN0LTQiOnsicHJvamVjdE5hbWUiOiJ0ZXN0LTQifSwidGVzdC00Ijp7InByb2plY3ROYW1lIjoidGVzdC00In19Cg==
+  name: test-4
+spec:
+  description: abracadabra
+  projectTypeName: pt1
+  template:
+    cpuRequests: 1
+    memoryTest: 200Gi
 `
 
 	expectedTwoProjects = `
@@ -359,6 +361,19 @@ subjects:
     role: User
 `)
 
+	stateOldValuesProjectSecret = fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-multitenancy-manager
+  namespace: d8-system
+data:
+  projectValues: %s
+`, base64.StdEncoding.EncodeToString([]byte(
+		`{"test-1":{"projectName":"test-1"},"test-2":{"projectName":"test-2"},"test-3":{"projectName":"test-3","params":{"limits":{"cpu":5},"requests":{"cpu":5}},"projectTypeName":"pt3"}}`,
+	)))
+
 	testCasesForProjectStatuses = []testProjectStatus{
 		{
 			name:       "test-1",
@@ -379,13 +394,10 @@ subjects:
 			status:     `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`,
 		},
 		{
-			name:   "test-4",
-			exists: false,
-		},
-
-		{
-			name:   "test-5",
-			exists: false,
+			name:       "test-4",
+			exists:     true,
+			conditions: `[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`,
+			status:     `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`,
 		},
 	}
 )

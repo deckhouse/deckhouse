@@ -120,6 +120,10 @@ func handleProjects(input *go_hook.HookInput) error {
 }
 
 func validateProject(input *go_hook.HookInput, project internal.ProjectSnapshot) error {
+	if project.ProjectTypeName == "" {
+		return fmt.Errorf("ProjectType not set for Project '%s'", project.Name)
+	}
+
 	ptSpecValues, ok := input.Values.GetOk(internal.ModuleValuePath(internal.PTValuesPath, project.ProjectTypeName))
 	if !ok {
 		return fmt.Errorf("can't find valid ProjectType '%s' for Project", project.ProjectTypeName)
