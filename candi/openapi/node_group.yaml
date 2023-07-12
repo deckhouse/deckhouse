@@ -1496,6 +1496,22 @@ spec:
                     - properties:
                         type:
                           enum: [NotManaged]
+                staticInstances:
+                  description: |
+                    Parameter for provisioning static VMs to the cluster.
+                  type: object
+                  required:
+                    - infrastructureTemplateReference
+                  properties:
+                    infrastructureTemplateReference:
+                      description: |
+                        The reference to the `StaticMachineTemplate` object.
+                      type: object
+                      properties:
+                        name:
+                          description: |
+                            The name of the required `StaticMachineTemplate` object.
+                          type: string
                 cloudInstances:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
@@ -1930,3 +1946,5 @@ spec:
                         - CloudPermanent
                         - CloudStatic
                         - Static
+              # TODO: add required staticInstances field for CloudStatic and Static node types
+              # TODO: after migration to cluster api static provisioning
