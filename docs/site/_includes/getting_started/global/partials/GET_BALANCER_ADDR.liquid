@@ -2,14 +2,14 @@
 {% if include.mode == 'hosts' %}
 {% snippetcut %}
 ```shell
-BALANCER_HOSTNAME=$(sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') && \
+BALANCER_HOSTNAME=$(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') && \
 BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1) && echo "Balancer IP is ${BALANCER_IP}"
 ```
 {% endsnippetcut %}
 {% else %}
 {% snippetcut %}
 ```shell
-sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname'
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname'
 ```
 {% endsnippetcut %}
 {%- endif -%}
@@ -17,13 +17,13 @@ sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.s
 {% if include.mode == 'hosts' %}
 {% snippetcut %}
 ```shell
-BALANCER_IP=$(sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
+BALANCER_IP=$(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
 ```
 {% endsnippetcut %}
 {% else %}
 {% snippetcut %}
 ```shell
-sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip'
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip'
 ```
 {% endsnippetcut %}
 {%- endif -%}

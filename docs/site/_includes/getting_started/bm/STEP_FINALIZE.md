@@ -10,10 +10,29 @@ For real-world conditions (production and test environments), you need to add ad
 <p>If you install Deckhouse for <strong>evaluation purposes</strong> and one node in  the cluster is enough for you, allow Deckhouse components to work on the master node. To do this, remove the taint from the master node by running the following command:</p>
 {% snippetcut %}
 ```bash
-kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
 </blockquote>
+
+It may take some time to start the Ingress controller after installing Deckhouse. Make sure that the Ingress controller has started before continuing:
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+```
+{% endsnippetcut %}
+
+Wait for the Pods to switch to `Ready` state.
+
+{% offtopic title="Example of the output..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+NAME                                       READY   STATUS    RESTARTS   AGE
+controller-nginx-r6hxc                     3/3     Running   0          16h
+kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
+```
+{%- endofftopic %}
 
 After that, there will be three more actions.
 <ul><li><p><strong>Setup Ingress controller</strong></p>
@@ -24,7 +43,7 @@ After that, there will be three more actions.
   <p>Apply it using the following command on the <strong>master node</strong>>:</p>
 {% snippetcut %}
 ```shell
-kubectl create -f ingress-nginx-controller.yml
+sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 </li>
@@ -36,7 +55,7 @@ kubectl create -f ingress-nginx-controller.yml
 <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
-kubectl create -f user.yml
+sudo /opt/deckhouse/bin/kubectl create -f user.yml
 ```
 {% endsnippetcut %}
 </li>
