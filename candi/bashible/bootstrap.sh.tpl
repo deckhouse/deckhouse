@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# FIXME
+set -x
+
 function get_bundle() {
   resource="$1"
   name="$2"
