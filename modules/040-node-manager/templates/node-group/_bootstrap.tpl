@@ -1,5 +1,5 @@
-{{- define "bootstrap_script" }}
-#!/bin/bash
+{{- define "bootstrap_script" -}}
+#!/usr/bin/env bash
 
 set -Eeuo pipefail
 
