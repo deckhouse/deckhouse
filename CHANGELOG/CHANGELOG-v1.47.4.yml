@@ -1,0 +1,11 @@
+candi:
+  fixes:
+    - summary: >-
+        Create a `systemd` unit that manually unmounts `pre-1.24` CSI mounts. That should stop stuck
+        Pods while upgrading `kubelet` without draining a node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5153
+linstor:
+  fixes:
+    - summary: Fix in bashible step in case of installed `drbd-utils`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5161
+
