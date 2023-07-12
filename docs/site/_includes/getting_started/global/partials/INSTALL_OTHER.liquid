@@ -138,9 +138,9 @@ The `--ssh-user` parameter here refers to the default user for the relevant VM i
 
 The installation process may take about 15-30 minutes with a good connection.
 
-{%- if page.platform_type == "baremetal" %}
+{% if page.platform_type == "baremetal" %}
 Example of output upon successful completion of the installation:
-...
+```
 ...
 │ │ No more converge tasks found in Deckhouse queue.
 │ │ Deckhouse pod is Ready!
@@ -152,7 +152,7 @@ Example of output upon successful completion of the installation:
 │ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
 └ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
 ```
-{%- else  %}
+{% else  %}
 After the installation is complete, the installer will output the IP of the **master node** (you will need it further). Example output:
 ```
 ...
@@ -160,7 +160,7 @@ After the installation is complete, the installer will output the IP of the **ma
 │ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@1.2.3.4
 └ 🎈 ~ Common: Kubernetes Master Node addresses for SSH (0.00 seconds)
 ```
-{%- endif %}
+{% endif %}
 
 {%- if page.platform_code == "kind" %}
 
