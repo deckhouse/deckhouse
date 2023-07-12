@@ -181,6 +181,7 @@ rules:
     resources:
       - bashibles
       - nodegroupbundles
+      - bootstraps
     verbs:
       - get
 ---
