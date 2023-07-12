@@ -66,14 +66,14 @@ func (m *Module) SetWeight(weight int) {
 	m.Properties.Weight = weight
 }
 
-func (m *Module) SetLabels(labels []string) {
-	if len(labels) == 0 {
+func (m *Module) SetTags(tags []string) {
+	if len(tags) == 0 {
 		m.calculateLabels()
 		return
 	}
 
-	for _, label := range labels {
-		m.Labels["module.deckhouse.io/"+label] = ""
+	for _, tag := range tags {
+		m.Labels["module.deckhouse.io/"+tag] = ""
 	}
 }
 
