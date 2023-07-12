@@ -1,6 +1,9 @@
 {{- define "bootstrap_script" -}}
 #!/usr/bin/env bash
 
+# FIXME
+set -x
+
 set -Eeuo pipefail
 
 function detect_bundle() {
