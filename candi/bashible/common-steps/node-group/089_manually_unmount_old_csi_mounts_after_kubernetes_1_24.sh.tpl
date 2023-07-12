@@ -35,14 +35,14 @@ return 0
 {{- if semverCompare "<1.24" .kubernetesVersion }}
 
 disable_systemd_units
-return 0
+exit 0
 
 {{- else }}
 
 if ! mount | grep -q '/var/lib/kubelet/plugins/kubernetes.io/csi/pv/'; then
   echo 'No mounts of form "/var/lib/kubelet/plugins/kubernetes.io/csi/pv/" present. No-op...'
   disable_systemd_units
-  return 0
+  exit 0
 fi
 
 bb-event-on 'old-csi-mount-cleaner' '_on_old_csi_mount_cleaner_changed'
