@@ -60,11 +60,21 @@ func (m *Module) GetObjectKind() schema.ObjectKind {
 
 func (m *Module) SetName(name string) {
 	m.Name = name
-	m.calculateLabels()
 }
 
 func (m *Module) SetWeight(weight int) {
 	m.Properties.Weight = weight
+}
+
+func (m *Module) SetLabels(labels []string) {
+	if len(labels) == 0 {
+		m.calculateLabels()
+		return
+	}
+
+	for _, label := range labels {
+		m.Labels["module.deckhouse.io/"+label] = ""
+	}
 }
 
 func (m *Module) SetSource(source string) {
