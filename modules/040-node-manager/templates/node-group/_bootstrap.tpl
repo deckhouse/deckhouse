@@ -31,5 +31,5 @@ function get_bootstrap() {
   done
 }
 
-bash <<< "$(get_bootstrap)"
+bash <<< "$(get_bootstrap | jq -r .bootstrap)"
 {{- end }}
