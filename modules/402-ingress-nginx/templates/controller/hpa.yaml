@@ -19,12 +19,7 @@ spec:
 {{- $name := index . 2 }}
 
 ---
-# Remove apiVersion selection after dropping support of 1.22
-  {{- if semverCompare ">= 1.23" $context.Values.global.discovery.kubernetesVersion }}
 apiVersion: autoscaling/v2
-  {{- else }}
-apiVersion: autoscaling/v2beta2
-  {{- end }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: hpa-scaler-{{ $name }}
