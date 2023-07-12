@@ -64,6 +64,8 @@ spec:
           value: {{ .Values.global.discovery.podSubnet | quote }}
         - name: CONTROL_PLANE_ADDRESS
           value: {{ .Values.kubeProxy.internal.clusterMasterAddresses | required "clusterMasterAddresses not discovered" | first | quote }}
+        - name: KUBERNETES_VERSION
+          value: {{ .Values.global.discovery.kubernetesVersion }}
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
           name: config

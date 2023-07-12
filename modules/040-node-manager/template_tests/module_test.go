@@ -72,11 +72,11 @@ allowedBundles:
   - "centos"
   - "debian"
 allowedKubernetesVersions:
-  - "1.22"
   - "1.23"
   - "1.24"
   - "1.25"
   - "1.26"
+  - "1.27"
 mcmEmergencyBrake: false
 `
 

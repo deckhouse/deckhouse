@@ -91,7 +91,9 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
 {{- if hasKey .nodeGroup "kubelet" }}
     --root-dir={{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }} \\
 {{- end }}
+{{- if semverCompare "<1.27" .kubernetesVersion }}
     ${cri_config} \\
+{{- end }}
     --v=2
 EOF
 
