@@ -12,20 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if semverCompare ">=1.24" .kubernetesVersion }}
+function disable_systemd_units() {
+{{- if ne .runType "ImageBuilding" }}
+  if [[ -f "/etc/systemd/system/old-csi-mount-cleaner.service" ]]; then
+    systemctl stop old-csi-mount-cleaner.service
+    systemctl disable old-csi-mount-cleaner.service
+    rm -f /etc/systemd/system/old-csi-mount-cleaner.service
+    systemctl daemon-reload
+    systemctl reset-failed
+  fi
 
-if mount | grep -q '/var/lib/kubelet/plugins/kubernetes.io/csi/pv' || true; then
-  echo "No mounts of form /var/lib/kubelet/plugins/kubernetes.io/csi/pv present. No-op..."
+  if [[ -f "/etc/systemd/system/old-csi-mount-cleaner.timer" ]]; then
+    systemctl stop old-csi-mount-cleaner.timer
+    systemctl disable old-csi-mount-cleaner.timer
+    rm -f /etc/systemd/system/old-csi-mount-cleaner.timer
+  fi
+{{- end }}
+}
+
+{{- if semverCompare "<1.24" .kubernetesVersion }}
+
+disable_systemd_units
+return 0
+
+{{- else }}
+
+if ! mount | grep -q '/var/lib/kubelet/plugins/kubernetes.io/csi/pv/'; then
+  echo 'No mounts of form "/var/lib/kubelet/plugins/kubernetes.io/csi/pv/" present. No-op...'
+  disable_systemd_units
   return 0
 fi
 
 bb-event-on 'old-csi-mount-cleaner' '_on_old_csi_mount_cleaner_changed'
 _on_old_csi_mount_cleaner_changed() {
-{{ if ne .runType "ImageBuilding" }}
+  {{- if ne .runType "ImageBuilding" }}
   systemctl daemon-reload
   systemctl restart old-csi-mount-cleaner.timer
   systemctl restart old-csi-mount-cleaner
-{{ end }}
+  {{- end }}
   systemctl enable old-csi-mount-cleaner.timer
   systemctl enable old-csi-mount-cleaner
 }
@@ -82,23 +106,5 @@ ExecStart=/var/lib/bashible/old-csi-mount-cleaner.sh
 [Install]
 WantedBy=multi-user.target
 EOF
-{{- else }}
 
-  {{- if ne .runType "ImageBuilding" }}
-
-if [[ -f "/etc/systemd/system/old-csi-mount-cleaner.service" ]]; then
-  systemctl stop old-csi-mount-cleaner.service
-  systemctl disable old-csi-mount-cleaner.service
-  rm -f /etc/systemd/system/old-csi-mount-cleaner.service
-  systemctl daemon-reload
-  systemctl reset-failed
-fi
-
-if [[ -f "/etc/systemd/system/old-csi-mount-cleaner.timer" ]]; then
-  systemctl stop old-csi-mount-cleaner.timer
-  systemctl disable old-csi-mount-cleaner.timer
-  rm -f /etc/systemd/system/old-csi-mount-cleaner.timer
-fi
-
-  {{- end }}
 {{- end }}
