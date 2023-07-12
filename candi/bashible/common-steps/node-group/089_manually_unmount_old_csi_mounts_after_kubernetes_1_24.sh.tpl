@@ -28,6 +28,8 @@ function disable_systemd_units() {
     rm -f /etc/systemd/system/old-csi-mount-cleaner.timer
   fi
 {{- end }}
+
+return 0
 }
 
 {{- if semverCompare "<1.24" .kubernetesVersion }}
