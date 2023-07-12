@@ -31,7 +31,7 @@ function get_bootstrap() {
   done
 }
 
-bootstrap_object="$(get_bootstrap)"
+bootstrap_script="$(get_bootstrap)"
 
-bash <<< "$(echo "$bootstrap_object" | jq -r .bootstrap)"
+bash <<< "$bootstrap_script"
 {{- end }}
