@@ -37,6 +37,7 @@
 ## Fixes
 
 
+ - **[candi]** Create a `systemd` unit that manually unmounts `pre-1.24` CSI mounts. That should stop stuck Pods while upgrading `kubelet` without draining a node. [#5153](https://github.com/deckhouse/deckhouse/pull/5153)
  - **[candi]** Fix the install `containerd` step for cases when `NodeGroup` CRI changes from `docker` to `containerd`. [#5086](https://github.com/deckhouse/deckhouse/pull/5086)
  - **[cilium-hubble]** Fix the error with the install if the [modules.https.mode](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-mode) global parameter is `OnlyInURI`. [#4846](https://github.com/deckhouse/deckhouse/pull/4846)
  - **[dashboard]** Fix the logout button (it doesn't appear). [#4929](https://github.com/deckhouse/deckhouse/pull/4929)
@@ -54,6 +55,7 @@
  - **[ingress-nginx]** Update the Kruise controller manager before updating Ingress Nginx so that an updated Kruise controller manager takes care of Ingress nginx demonsets. [#5050](https://github.com/deckhouse/deckhouse/pull/5050)
  - **[ingress-nginx]** Pathch Kruse controller manager logic so that it doesn't delete more than `maxUnavailable` Pods during updates. [#5039](https://github.com/deckhouse/deckhouse/pull/5039)
     Kruise controller manager will be restarted.
+ - **[linstor]** Fix in bashible step in case of installed `drbd-utils`. [#5161](https://github.com/deckhouse/deckhouse/pull/5161)
  - **[linstor]** Rename `exported_node` to `node` in PrometheusRule. [#5121](https://github.com/deckhouse/deckhouse/pull/5121)
  - **[linstor]** Update Linstor. Fix `D8LinstorControllerTargetDown` alert. [#4823](https://github.com/deckhouse/deckhouse/pull/4823)
  - **[monitoring-kubernetes]** Fix `kubelet-eviction-thresholds-exporter` Prometheus metric and `node-disk-usage` Prometheus rules. [#4888](https://github.com/deckhouse/deckhouse/pull/4888)
@@ -78,6 +80,7 @@
     Kubernetes control plane components will restart, kubelet will restart.
  - **[dashboard]** Add validations for the `ingressClass` field. [#4932](https://github.com/deckhouse/deckhouse/pull/4932)
  - **[deckhouse]** Add cluster-autoscaler logs into debug logs collector. [#4848](https://github.com/deckhouse/deckhouse/pull/4848)
+ - **[deckhouse-controller]** Fix DaemonSet panic on draining. [#5164](https://github.com/deckhouse/deckhouse/pull/5164)
  - **[documentation]** Add validations for the `ingressClass` field. [#4932](https://github.com/deckhouse/deckhouse/pull/4932)
  - **[flant-integration]** Set default schema for Grafana URL to 'http' in case there is problem to fetch data from the cluster. [#4978](https://github.com/deckhouse/deckhouse/pull/4978)
  - **[flant-integration]** Bump the `requests` dependency library from `2.28.1` to `2.31.0`. [#4899](https://github.com/deckhouse/deckhouse/pull/4899)
