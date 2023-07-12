@@ -10,10 +10,29 @@
 <p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на master-узле. Для этого, снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
 {% snippetcut %}
 ```bash
-sudo kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
 </blockquote>
+
+Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился:
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+```
+{% endsnippetcut %}
+
+Дождитесь перехода Pod'ов в статус `Ready`.
+
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+NAME                                       READY   STATUS    RESTARTS   AGE
+controller-nginx-r6hxc                     3/3     Running   0          16h
+kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
+```
+{%- endofftopic %}
 
 Далее, остается выполнить следующие три действия.
 <ul><li><p><strong>Установка Ingress-контроллера</strong></p>
@@ -24,7 +43,7 @@ sudo kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo kubectl create -f ingress-nginx-controller.yml
+sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 </li>
@@ -36,7 +55,7 @@ sudo kubectl create -f ingress-nginx-controller.yml
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo kubectl create -f user.yml
+sudo /opt/deckhouse/bin/kubectl create -f user.yml
 ```
 {% endsnippetcut %}
 </li>
