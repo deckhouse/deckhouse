@@ -20,7 +20,7 @@ function get_bootstrap() {
   while true; do
     for server in {{ .apiserverEndpoints | join " " }}; do
       url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
-      if curl -s -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+      if curl -s -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "/var/lib/bashible/ca.crt"
       then
         return 0
       else
