@@ -39,7 +39,7 @@ func (task *ManifestTask) CreateOrUpdate() error {
 	log.InfoF("Manifest for %s\n", task.Name)
 	manifest, err := task.GetValidManifest()
 	if err != nil {
-		return fmt.Errorf("manifest validation: %v", err)
+		return fmt.Errorf("manifest validation: %w", err)
 	}
 
 	err = task.CreateFunc(manifest)
@@ -96,7 +96,7 @@ func (task *ManifestTask) PatchOrCreate() error {
 	log.DebugF("%s is not found. Trying to create ... \n", task.Name)
 	manifest, err := task.GetValidManifest()
 	if err != nil {
-		return fmt.Errorf("manifest validation '%s': %v", task.Name, err)
+		return fmt.Errorf("manifest validation '%s': %w", task.Name, err)
 	}
 
 	err = task.CreateFunc(manifest)
@@ -111,7 +111,6 @@ func (task *ManifestTask) GetValidManifest() (interface{}, error) {
 	if mw, ok := manifest.(manifests.Manifest); ok {
 		log.DebugLn("Found Manifest interface")
 		err := mw.IsValid()
-		log.DebugF("Validation result: ", err)
 		if err != nil {
 			return nil, err
 		}
