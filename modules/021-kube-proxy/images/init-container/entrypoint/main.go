@@ -190,7 +190,7 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 	var firstInternalAddress string
 	for _, addr := range node.Status.Addresses {
 		if addr.Type == corev1.NodeInternalIP {
-			firstInternalAddress = addr.Address + "/32"
+			firstInternalAddress = addr.Address
 			break
 		}
 	}
@@ -199,7 +199,7 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 		return "", fmt.Errorf("failed to found InternalIP for Node %s", node.GetName())
 	}
 
-	return firstInternalAddress, nil
+	return firstInternalAddress + "/32", nil
 }
 
 func getApiProxyAddress() (string, error) {
