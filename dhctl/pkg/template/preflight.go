@@ -18,7 +18,7 @@ import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 
 const checkPortsScriptPath = candiBashibleDir + "/check_ports.sh"
 
-func RenderAndSavePreflightCheckPorts() (string, error) {
+func RenderAndSavePreflightCheckPortsScript() (string, error) {
 	log.DebugLn("Start render check ports script")
 
 	return RenderAndSaveTemplate("check_ports.sh", checkPortsScriptPath, nil)
