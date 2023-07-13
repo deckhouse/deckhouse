@@ -10,6 +10,7 @@
  - Linux Kernel >= 5.8 is required to run the `runtime-audit-engine` module.
  - OpenVPN will be restarted and connections will be terminated.
  - Removed write permissions on `namespace`, `limitrange`, `resourcequota`, `role` and `clusterrole` resources for the `Editor`, `Admin`, and `ClusterEditor` access levels. Read the [issue](https://github.com/deckhouse/deckhouse/pull/4494) description If you want to return the permissions.
+ - NodePort services on a nodes without annotation were open to the world.
 
 ## Features
 
