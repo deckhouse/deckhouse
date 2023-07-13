@@ -1,11 +1,11 @@
 request-access:
   header:
     ru:
-      title: "Запросить пробный доступ на 30 дней"
-      text: "Заполните форму и мы отправим данные для доступа вам на почту."
+      title: "Запросить пробный доступ"
+      text: "Заполните форму и в течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей - будьте на связи!"
     en:
-      title: "Request 30 days access"
-      text: "Fill out this form and we will send you access credentials via email."
+      title: " Request trial access"
+      text: "Fill out the form, and we will contact you within the next business day — please stay in touch!"
   success-message:
     ru:
       title: "Запрос получен"

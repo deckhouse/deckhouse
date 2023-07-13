@@ -392,7 +392,8 @@
     margin-left: 5px;
 }
 
-.sidebar__item_parent.active > a:after {
+.sidebar__item_parent.active > a:after,
+.sidebar__submenu-item_parent.active > a:after {
     transform: rotate(-180deg);
 }
 
