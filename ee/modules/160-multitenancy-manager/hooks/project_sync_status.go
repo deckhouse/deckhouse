@@ -63,7 +63,7 @@ func handleReadyStatusForProjectsAndProjectTypes(input *go_hook.HookInput) error
 			return fmt.Errorf("can't find Project '%s' in cluster from values", projectName)
 		}
 
-		internal.SetSyncStatusProject(input.PatchCollector, projectSnap.Name, projectSnap.Conditions)
+		internal.SetSyncStatusProject(input.PatchCollector, projectSnap.Name)
 	}
 	return nil
 }

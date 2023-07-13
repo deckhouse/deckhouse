@@ -29,11 +29,11 @@ func SetDeployingStatusProject(patcher *object_patch.PatchCollector, projectName
 	setProjectStatus(patcher, projectName, false, "", conditions)
 }
 
-func SetSyncStatusProject(patcher *object_patch.PatchCollector, projectName string, conditions []v1alpha1.Condition) {
-	conditions = append(conditions, v1alpha1.Condition{
+func SetSyncStatusProject(patcher *object_patch.PatchCollector, projectName string) {
+	conditions := []v1alpha1.Condition{{
 		Name:   "Sync",
 		Status: true,
-	})
+	}}
 	setProjectStatus(patcher, projectName, true, "", conditions)
 }
 
