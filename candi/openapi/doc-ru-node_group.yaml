@@ -236,7 +236,7 @@ spec:
 
                             * `Off` — Отключить резервирование системных ресурсов.
                             * `Auto` — Автоматически подсчитать резервирование через алгоритм, основанный на размере узла.
-                            * `Static` — Впишите статические значения через поле `static`.
+                            * `Static` — Указать статические значения через поле `static`.
 
                             Больше информации: https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved
 
