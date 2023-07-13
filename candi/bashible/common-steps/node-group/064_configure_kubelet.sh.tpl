@@ -30,15 +30,12 @@ cri_type="Containerd"
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
 # TODO remove after removing support of kubernetes 1.23
-    {{- if semverCompare "<1.24" .kubernetesVersion }}
-if [[ -S /var/run/docker.sock ]]; then
-  cri_socket_path=/var/run/docker.sock
-fi
-    {{- end }}
-if [[ -S /run/containerd/containerd.sock ]]; then
-  cri_socket_path=/run/containerd/containerd.sock
-fi
-  {{- end }}
+for socket_path in {{ if semverCompare "<1.24" .kubernetesVersion }}/var/run/docker.sock{{ end }} /run/containerd/containerd.sock; do
+  if [[ -S "${socket_path}" ]]; then
+    cri_socket_path="${socket_path}"
+    break
+  fi
+done
 
 if [[ -z "${cri_socket_path}" ]]; then
   bb-log-error 'CRI socket is not found, need to manually set "nodeGroup.cri.notManaged.criSocketPath"'
