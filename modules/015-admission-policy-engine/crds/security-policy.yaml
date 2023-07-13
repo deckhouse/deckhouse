@@ -76,20 +76,19 @@ spec:
                       description: "Allows containers to use the host's network."
                     allowedHostPorts:
                       type: array
-                      description: "The list of hostPort ranges allowed by the rule."
+                      description: "The list of `hostPort` ranges allowed by the rule."
                       items:
                         type: object
-                        description: "The range of hostPorts allowed by the rule."
                         properties:
                           min:
                             type: integer
-                            description: "Min value for the hostPort"
+                            description: "Min value for the `hostPort`"
                           max:
                             type: integer
-                            description: "Max value for the hostPort"
+                            description: "Max value for the `hostPort`"
                     allowPrivileged:
                       type: boolean
-                      description: "Allows running containers in privileged mode."
+                      description: "Allows running containers in a privileged mode."
                     allowPrivilegeEscalation:
                       type: boolean
                       description: "Allows container processes to gain more privileges than its parent process."
@@ -105,7 +104,7 @@ spec:
                       description: |
                         List of capabilities that containers are able to use.
 
-                        To allow all capabilities you may use 'ALL'.
+                        To allow all capabilities you may use `ALL`.
                       example: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
@@ -154,7 +153,7 @@ spec:
                       description: |
                         The set of capabilities that have to be dropped from containers.
 
-                        To exclude all capabilities you may use 'ALL'.
+                        To exclude all capabilities you may use `ALL`'.
                       example: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
@@ -167,7 +166,7 @@ spec:
                       example: ["runtime/default", "unconfined"]
                       items:
                         type: string
-                        description: "AppArmor profiles to allow."
+                        description: "AppArmor profile."
                     allowedFlexVolumes:
                       type: array
                       description: "Whitelist of allowed Flex Volume drivers."
@@ -182,7 +181,7 @@ spec:
                       description: |
                         The list of explicitly allowed unsafe sysctls.
 
-                        To allow all unsafe sysctls you may use '*'.
+                        To allow all unsafe sysctls you may use `*`.
                       example: ["kernel.msg*", "net.core.somaxconn"]
                       items:
                         type: string
@@ -221,7 +220,7 @@ spec:
                                 description: "Max ID value."
                     runAsUser:
                       type: object
-                      description: "Specifies what runAsUser value is allowed to be used by the security context."
+                      description: "Specifies what `runAsUser` value is allowed to be used by the security context."
                       required: ["rule"]
                       properties:
                         rule:
@@ -233,7 +232,7 @@ spec:
                             - RunAsAny
                         ranges:
                           type: array
-                          description: "List of acceptable ranges for the user ID to use with MustRunAs."
+                          description: "List of acceptable ranges for the user ID to use with `MustRunAs`."
                           items:
                             type: object
                             properties:
@@ -245,7 +244,7 @@ spec:
                                 description: "Max ID value."
                     runAsGroup:
                       type: object
-                      description: "Specifies what runAsGroup value is allowed to be used by the security context."
+                      description: "Specifies what `runAsGroup` value is allowed to be used by the security context."
                       required: ["rule"]
                       properties:
                         rule:
@@ -257,7 +256,7 @@ spec:
                             - RunAsAny
                         ranges:
                           type: array
-                          description: "List of acceptable ranges for the group ID to use with MustRunAs."
+                          description: "List of acceptable ranges for the group ID to use with `MustRunAs`."
                           items:
                             type: object
                             properties:

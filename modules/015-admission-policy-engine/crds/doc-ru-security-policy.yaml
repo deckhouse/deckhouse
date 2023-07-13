@@ -40,7 +40,7 @@ spec:
                     allowHostNetwork:
                       description: "Разрешает контейнерам доступ к Network-пространству имен хоста."
                     allowedHostPorts:
-                      description: "Определяет список диапазонов портов хоста, доступных для использования в качестве 'hostPort'."
+                      description: "Определяет список диапазонов портов хоста, доступных для использования в качестве `hostPort`."
                       items:
                         properties:
                           min:
@@ -57,12 +57,12 @@ spec:
                       description: |
                         Список привилегий (linux capabilities) доступных контейнеру.
 
-                        Используйте 'ALL' для разрешения всех привилегий.
+                        Используйте `ALL` для разрешения всех привилегий.
                     requiredDropCapabilities:
                       description: |
                         Список привилегий (linux capabilities) обязательных к исключению.
 
-                        Используйте 'ALL' для исключения всех привилегий.
+                        Используйте `ALL` для исключения всех привилегий.
                     allowedAppArmor:
                       type: array
                       description: |
@@ -70,6 +70,7 @@ spec:
                       example: ["runtime/default", "unconfined"]
                       items:
                         type: string
+                        description: "Профиль AppArmor."
                     allowedFlexVolumes:
                       description: "Список допустимых к использованию драйверов Flex Volumes."
                       items:
@@ -80,19 +81,19 @@ spec:
                       description: |
                         Список небезопасных ключей sysctl, доступных к использованию.
 
-                        Используйте '*' для разрешения всех ключей.
+                        Используйте `*` для разрешения всех ключей.
                     forbiddenSysctls:
                       description: |
                         Список запрещенных к использованию ключей sysctl.
 
                         Имеет преимущество перед [allowedUnsafeSysctls](#securitypolicy-v1alpha1-spec-policies-allowedunsafesysctls).
                     fsGroup:
-                      description: "Определяет допустимые к использованию значения fsGroup."
+                      description: "Определяет допустимые к использованию значения `fsGroup`."
                       properties:
                         rule:
-                          description: "Правило определения доступных значений fsGroup."
+                          description: "Правило определения доступных значений `fsGroup`."
                         ranges:
-                          description: "Список диапазонов ID для fsGroup, доступных к использованию в режиме MustRunAs."
+                          description: "Список диапазонов ID для `fsGroup`, доступных к использованию в режиме `MustRunAs`."
                           items:
                             properties:
                               min:
@@ -100,12 +101,12 @@ spec:
                               max:
                                 description: "Максимальное значение диапазона."
                     runAsUser:
-                      description: "Определяет допустимые к использованию значения runAsUser."
+                      description: "Определяет допустимые к использованию значения `runAsUser`."
                       properties:
                         rule:
-                          description: "Правило определения доступных значений runAsUser."
+                          description: "Правило определения доступных значений `runAsUser`."
                         ranges:
-                          description: "Список диапазонов ID для runAsUser, доступных к использованию в режиме MustRunAs."
+                          description: "Список диапазонов ID для `runAsUser`, доступных к использованию в режиме `MustRunAs`."
                           items:
                             properties:
                               min:
@@ -113,12 +114,12 @@ spec:
                               max:
                                 description: "Максимальное значение диапазона."
                     runAsGroup:
-                      description: "Определяет допустимые к использованию значения runAsGroup."
+                      description: "Определяет допустимые к использованию значения `runAsGroup`."
                       properties:
                         rule:
-                          description: "Правило определения доступных значений runAsGroup."
+                          description: "Правило определения доступных значений `runAsGroup`."
                         ranges:
-                          description: "Список диапазонов ID для runAsGroup, доступных к использованию в режиме MustRunAs."
+                          description: "Список диапазонов ID для `runAsGroup`, доступных к использованию в режиме `MustRunAs`."
                           items:
                             properties:
                               min:
@@ -126,12 +127,12 @@ spec:
                               max:
                                 description: "Максимальное значение диапазона."
                     supplementalGroups:
-                      description: "Определяет допустимые к использованию значения supplementalGroups."
+                      description: "Определяет допустимые к использованию значения `supplementalGroups`."
                       properties:
                         rule:
-                          description: "Правило определения доступных значений supplementalGroups."
+                          description: "Правило определения доступных значений `supplementalGroups`."
                         ranges:
-                          description: "Список диапазонов ID для supplementalGroups, доступных к использованию в режиме MustRunAs."
+                          description: "Список диапазонов ID для `supplementalGroups`, доступных к использованию в режиме `MustRunAs`."
                           items:
                             properties:
                               min:
@@ -141,13 +142,13 @@ spec:
                     readOnlyRootFilesystem:
                       description: "Определяет необходимость запуска контейнеров с корневой файловой системой, доступной только для чтения"
                     seccompProfiles:
-                      description: "Определяет список доступных к использованию seccomp профилей."
+                      description: "Определяет список доступных к использованию seccomp-профилей."
                       properties:
                         allowedProfiles:
-                          description: "Список seccomp профилей, доступных к использованию."
+                          description: "Список seccomp-профилей, доступных к использованию."
                         allowedLocalhostFiles:
                           description: |
-                            Определяет локальные профили seccomp (в формате JSON) доступные к использованию, в случае указания 'Localhost' в поле 'allowedProfiles'.
+                            Определяет локальные профили seccomp (в формате JSON) доступные к использованию, в случае указания `Localhost` в поле `allowedProfiles`.
 
                             Пустой список запрещает использование любых локальных профилей.
                     seLinux:
