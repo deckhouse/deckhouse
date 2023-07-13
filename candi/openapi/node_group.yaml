@@ -1935,7 +1935,7 @@ spec:
                           description: |
                             Specify whether to:
 
-                            * Disable resource reservation
+                            * Disable resource reservation.
                             * Reserve resources based on the Node capacity.
                             * Provide your own resource reservation values via the `static` field.
 
