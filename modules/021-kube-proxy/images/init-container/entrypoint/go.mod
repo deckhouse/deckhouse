@@ -3,7 +3,9 @@ module init-container
 go 1.20
 
 require (
+	github.com/Masterminds/semver v1.5.0
 	k8s.io/api v0.26.3
+
 	k8s.io/apimachinery v0.26.3
 	k8s.io/client-go v0.26.3
 	k8s.io/component-base v0.26.3

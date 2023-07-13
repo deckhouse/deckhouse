@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -165,7 +166,12 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 		return "", err
 	}
 
-	if v, ok := node.GetAnnotations()[bindInternalIPAnnotationKey]; !ok || v == "false" || os.Getenv("CLOUD_PROVIDER") == "gcp" {
+	if os.Getenv("CLOUD_PROVIDER") == "gcp" {
+		return "0.0.0.0/0", nil
+	}
+
+	v, ok := node.GetAnnotations()[bindInternalIPAnnotationKey]
+	if ok && v == "false" {
 		return "0.0.0.0/0", nil
 	}
 
@@ -181,7 +187,7 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 		return "", fmt.Errorf("failed to found InternalIP for Node %s", node.GetName())
 	}
 
-	return firstInternalAddress, nil
+	return firstInternalAddress + "/32", nil
 }
 
 func getApiProxyAddress() (string, error) {
