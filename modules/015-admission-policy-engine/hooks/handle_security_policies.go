@@ -66,11 +66,6 @@ func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return &sp, nil
 }
 
-func setTrue() *bool {
-	b := true
-	return &b
-}
-
 func hasItem(slice []string, value string) bool {
 	for _, v := range slice {
 		if v == value {
@@ -81,22 +76,6 @@ func hasItem(slice []string, value string) bool {
 }
 
 func (sp *securityPolicy) preprocesSecurityPolicy() {
-	// Some default settings so as to make an empty SP friendlier
-	if sp.Spec.Policies.AllowHostPID == nil {
-		sp.Spec.Policies.AllowHostPID = setTrue()
-	}
-	if sp.Spec.Policies.AllowHostIPC == nil {
-		sp.Spec.Policies.AllowHostIPC = setTrue()
-	}
-	if sp.Spec.Policies.AllowHostNetwork == nil {
-		sp.Spec.Policies.AllowHostNetwork = setTrue()
-	}
-	if sp.Spec.Policies.AllowPrivileged == nil {
-		sp.Spec.Policies.AllowPrivileged = setTrue()
-	}
-	if sp.Spec.Policies.AllowPrivilegeEscalation == nil {
-		sp.Spec.Policies.AllowPrivilegeEscalation = setTrue()
-	}
 	// Check if we really need to create a constraint
 	// AllowedCapabilities with 'ALL' and empty RequiredDropCapabilities list result in a sensless constraint
 	if hasItem(sp.Spec.Policies.AllowedCapabilities, "ALL") && len(sp.Spec.Policies.RequiredDropCapabilities) == 0 {

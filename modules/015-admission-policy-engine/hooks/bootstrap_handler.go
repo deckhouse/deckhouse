@@ -23,9 +23,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"gopkg.in/yaml.v2"
-	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -40,20 +38,6 @@ const (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "gatekeeper_deployment",
-			ApiVersion: "apps/v1",
-			Kind:       "Deployment",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-admission-policy-engine"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"gatekeeper-controller-manager"},
-			},
-			FilterFunc: filterGatekeeperDeployment,
-		},
 		{
 			Name:       "gatekeeper_templates",
 			ApiVersion: "templates.gatekeeper.sh/v1",
@@ -71,24 +55,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 	var existingTemplates = make(map[string]struct{})
-	snap := input.Snapshots["gatekeeper_deployment"]
-	if len(snap) == 0 {
-		input.Values.Set("admissionPolicyEngine.internal.bootstrapped", false)
-		return nil
-	}
+	var bootstrapped bool
 
-	flag, ok := input.Values.GetOk("admissionPolicyEngine.internal.bootstrapped")
-	if ok {
-		if flag.Bool() {
-			// to prevent flapping
-			return nil
-		}
-	}
-
-	// check if deployment is ready
-	bootstrapped := snap[0].(bool)
-
-	if bootstrapped {
+	if len(input.Snapshots["gatekeeper_templates"]) != 0 {
+		bootstrapped = true
 		requiredTemplates, err := getRequiredTemplates()
 		if err != nil {
 			return err
@@ -110,17 +80,6 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 	input.Values.Set("admissionPolicyEngine.internal.bootstrapped", bootstrapped)
 
 	return nil
-}
-
-func filterGatekeeperDeployment(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var dep v1.Deployment
-
-	err := sdk.FromUnstructured(obj, &dep)
-	if err != nil {
-		return nil, err
-	}
-
-	return dep.Status.ReadyReplicas > 0, nil
 }
 
 func filterGatekeeperTemplates(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {

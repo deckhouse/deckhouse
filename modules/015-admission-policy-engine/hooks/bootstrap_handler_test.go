@@ -48,9 +48,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 		})
 	})
 
-	Context("Deployment not ready", func() {
+	Context("Some constraint templates are missing", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(notReadyDeployment)
+			f.KubeStateSet(constraintTemplate1)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
 			Expect(err).To(BeNil())
@@ -62,37 +62,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 		})
 	})
 
-	Context("Deployment is ready, no templates required", func() {
+	Context("Required constraint templates are in place", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(readyDeployment)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			err := setTestChartPath(fmt.Sprintf("%s/empty/templates", testRoot))
-			Expect(err).To(BeNil())
-			f.RunHook()
-		})
-		It("should keep bootstrapped flag as true", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeTrue())
-		})
-	})
-
-	Context("Deployment is ready, some templates are missing", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(readyDeployment + constraintTemplate1)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
-			Expect(err).To(BeNil())
-			f.RunHook()
-		})
-		It("should keep bootstrapped flag as false", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeFalse())
-		})
-	})
-
-	Context("Deployment is ready, required templates are in place", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(readyDeployment + constraintTemplate1 + constraintTemplate2)
+			f.KubeStateSet(constraintTemplate1 + constraintTemplate2)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
 			Expect(err).To(BeNil())
@@ -108,51 +80,6 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 func setTestChartPath(path string) error {
 	return os.Setenv("D8_TEST_CHART_PATH", path)
 }
-
-var readyDeployment = `
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  labels:
-    app: gatekeeper
-    app.kubernetes.io/managed-by: Helm
-    control-plane: controller-manager
-    heritage: deckhouse
-    module: admission-policy-engine
-  name: gatekeeper-controller-manager
-  namespace: d8-admission-policy-engine
-spec:
-  progressDeadlineSeconds: 600
-  replicas: 1
-status:
-  availableReplicas: 1
-  observedGeneration: 1
-  readyReplicas: 1
-  replicas: 1
-  updatedReplicas: 1
-`
-
-var notReadyDeployment = `
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  labels:
-    app: gatekeeper
-    app.kubernetes.io/managed-by: Helm
-    control-plane: controller-manager
-    heritage: deckhouse
-    module: admission-policy-engine
-  name: gatekeeper-controller-manager
-  namespace: d8-admission-policy-engine
-spec:
-  progressDeadlineSeconds: 600
-  replicas: 1
-status:
-  availableReplicas: 0
-  readyReplicas: 0
-  replicas: 1
-  updatedReplicas: 1
-`
 
 var constraintTemplate1 = `
 ---
