@@ -73,7 +73,7 @@ locals {
 resource "yandex_compute_disk" "kubernetes_data" {
   name        = join("-", [local.prefix, "kubernetes-data", var.nodeIndex])
   description = "volume for etcd and kubernetes certs"
-  size        = 10
+  size        = local.etcd_disk_size_gb
   zone        = local.internal_subnet.zone
   type        = "network-ssd"
 

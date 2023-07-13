@@ -47,7 +47,12 @@ apiVersions:
                   Идентификатор образа, который будет установлен в заказанные инстансы.
               diskSizeGB:
                 description: |
-                  Размер диска (в гигабайтах) у инстансов.
+                  Размер диска у инстансов. Значение указывается в `ГиБ`.
+              etcdDiskSizeGb:
+                description: |
+                  Размер диска для etcd. Значение указывается в `ГиБ`.
+                  
+                  При изменении этого параметра необходимо вручную расширить каждый диск для etcd в интерфейсе Yandex Cloud. См issue https://github.com/yandex-cloud/terraform-provider-yandex/issues/226
               externalIPAddresses:
                 description: |
                   Список внешних IP-адресов. Количество элементов массива должно соответствовать `replicas`.

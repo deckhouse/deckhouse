@@ -46,6 +46,7 @@ locals {
   ssh_public_key         = var.providerClusterConfiguration.sshPublicKey
   disk_type              = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskType", "StandardSSD_LRS")
   disk_size_gb           = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 50)
+  etcd_disk_size_gb      = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   enable_external_ip     = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "enableExternalIP", false)
   urn                    = split(":", var.providerClusterConfiguration.masterNodeGroup.instanceClass.urn)
   image_publisher        = local.urn[0]

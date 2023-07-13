@@ -25,6 +25,11 @@ data "azurerm_subnet" "kube" {
 locals {
   zones_count = length(local.zones)
   zone        = local.zones[var.nodeIndex % local.zones_count]
+  default_cloud_config = <<-EOF
+  #cloud-config
+  mounts:
+  - [ ephemeral0, /mnt/resource ]
+  EOF
 }
 
 resource "azurerm_public_ip" "node" {
@@ -85,7 +90,7 @@ resource "azurerm_linux_virtual_machine" "node" {
     version   = local.image_version
   }
 
-  custom_data = var.cloudConfig
+  custom_data = var.cloudConfig != "" ? var.cloudConfig : base64encode(local.default_cloud_config)
 
   lifecycle {
     ignore_changes = [

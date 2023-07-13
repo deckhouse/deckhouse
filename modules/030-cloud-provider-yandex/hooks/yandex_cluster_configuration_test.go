@@ -82,6 +82,7 @@ layout: WithNATInstance
 masterNodeGroup:
   instanceClass:
     cores: 2
+    etcdDiskSizeGb: 10
     imageID: test
     memory: 4096
     platform: standard-v2
