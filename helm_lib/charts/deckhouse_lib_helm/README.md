@@ -11,6 +11,8 @@
 | [helm_lib_ha_enabled](#helm_lib_ha_enabled) |
 | **Kube Rbac Proxy** |
 | [helm_lib_kube_rbac_proxy_ca_certificate](#helm_lib_kube_rbac_proxy_ca_certificate) |
+| **Module Documentation Uri** |
+| [helm_lib_module_documentation_uri](#helm_lib_module_documentation_uri) |
 | **Module Ephemeral Storage** |
 | [helm_lib_module_ephemeral_storage_logs_with_extra](#helm_lib_module_ephemeral_storage_logs_with_extra) |
 | [helm_lib_module_ephemeral_storage_only_logs](#helm_lib_module_ephemeral_storage_only_logs) |
@@ -152,6 +154,17 @@ list:
 list:
 -  Template context with .Values, .Chart, etc 
 -  Namespace where CA configmap will be created  
+
+## Module Documentation Uri
+
+### helm_lib_module_documentation_uri
+
+ returns rendered documentation uri using publicDomainTemplate or deckhouse.io domains
+
+#### Usage
+
+`{{ include "helm_lib_module_documentation_uri" (list . "<path_to_document>") }} `
+
 
 ## Module Ephemeral Storage
 
