@@ -10,6 +10,8 @@ function detect_bundle() {
   {{- .Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
 }
 
+bundle="$(detect_bundle)"
+
 function install_jq() {
   case "$1" in
     ubuntu-lts|debian|altlinux|astra)
@@ -28,7 +30,6 @@ function install_jq() {
 
 function get_bootstrap() {
   token="$(</var/lib/bashible/bootstrap-token)"
-  bundle="$(detect_bundle)"
   node_group_name="{{ .nodeGroupName }}"
 
   bootstrap_bundle_name="$bundle.$node_group_name"
