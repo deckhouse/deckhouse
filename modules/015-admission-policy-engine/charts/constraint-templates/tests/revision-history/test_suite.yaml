@@ -1,0 +1,19 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-revision-history-limit
+tests:
+  - name: d8-revision-history-limit
+    template: ../../templates/operation/max-revision-history-limit.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: example-allowed
+        object: allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        object: disallowed.yaml
+        assertions:
+          - violations: yes
+            message: "Deployment <disallowed> has .spec.revisionHistoryLimit: 10, required: 3"
+

@@ -1,0 +1,50 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-host-network-ports
+tests:
+  - name: pos-security-standards-baseline
+    template: ../../templates/security/allow-host-network.yaml
+    constraint: constraint_pss_baseline.yaml
+    cases:
+      - name: example-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/example_allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-allowed-2
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/example_allowed2.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/example_disallowed.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-2
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/example_disallowed2.yaml
+        assertions:
+          - violations: yes
+
+  - name: security-policy
+    template: ../../templates/security/allow-host-network.yaml
+    constraint: constraint_security_policy.yaml
+    cases:
+      - name: example-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy/example_allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy/example_disallowed.yaml
+        assertions:
+          - violations: yes

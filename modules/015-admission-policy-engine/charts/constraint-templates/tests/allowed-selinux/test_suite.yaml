@@ -1,0 +1,50 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-allowed-selinux
+tests:
+  - name: pod-security-standards-baseline
+    template: ../../templates/security/allowed-selinux.yaml
+    constraint: constraint_pss_baseline.yaml
+    cases:
+      - name: example-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-allowed-with-user
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed_with_user.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-ephemeral
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed_ephemeral.yaml
+        assertions:
+          - violations: yes
+
+  - name: security-policy
+    template: ../../templates/security/allowed-selinux.yaml
+    constraint: constraint_security_policy.yaml
+    cases:
+      - name: example-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy/allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy/disallowed.yaml
+        assertions:
+          - violations: yes

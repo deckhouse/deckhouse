@@ -17,21 +17,29 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+const testRoot = "testdata/required_constraint_templates"
+
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handler", func() {
 	f := HookExecutionConfigInit(
 		`{"admissionPolicyEngine": {"internal": {"bootstrapped": false} } }`,
 		`{"admissionPolicyEngine":{}}`,
 	)
+	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", true)
 	Context("fresh cluster", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/empty/templates", testRoot))
+			Expect(err).To(BeNil())
 			f.RunHook()
 		})
 		It("should keep bootstrapped flag as false", func() {
@@ -40,10 +48,12 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 		})
 	})
 
-	Context("Deployment not ready", func() {
+	Context("Some constraint templates are missing", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(notReadyDeployment)
+			f.KubeStateSet(constraintTemplate1)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
 			f.RunHook()
 		})
 		It("should keep bootstrapped flag as false", func() {
@@ -52,10 +62,12 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 		})
 	})
 
-	Context("Deployment is ready ready", func() {
+	Context("Required constraint templates are in place", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(readyDeployment)
+			f.KubeStateSet(constraintTemplate1 + constraintTemplate2)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
 			f.RunHook()
 		})
 		It("should keep bootstrapped flag as true", func() {
@@ -65,47 +77,37 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 	})
 })
 
-var readyDeployment = `
-apiVersion: apps/v1
-kind: Deployment
+func setTestChartPath(path string) error {
+	return os.Setenv("D8_TEST_CHART_PATH", path)
+}
+
+var constraintTemplate1 = `
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
 metadata:
+  name: d8priorityclass
   labels:
-    app: gatekeeper
-    app.kubernetes.io/managed-by: Helm
-    control-plane: controller-manager
     heritage: deckhouse
     module: admission-policy-engine
-  name: gatekeeper-controller-manager
-  namespace: d8-admission-policy-engine
-spec:
-  progressDeadlineSeconds: 600
-  replicas: 1
-status:
-  availableReplicas: 1
-  observedGeneration: 1
-  readyReplicas: 1
-  replicas: 1
-  updatedReplicas: 1
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Required Priority Class"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: "Required Priority Class"
 `
 
-var notReadyDeployment = `
-apiVersion: apps/v1
-kind: Deployment
+var constraintTemplate2 = `
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
 metadata:
+  name: d8readonlyrootfilesystem
   labels:
-    app: gatekeeper
-    app.kubernetes.io/managed-by: Helm
-    control-plane: controller-manager
     heritage: deckhouse
     module: admission-policy-engine
-  name: gatekeeper-controller-manager
-  namespace: d8-admission-policy-engine
-spec:
-  progressDeadlineSeconds: 600
-  replicas: 1
-status:
-  availableReplicas: 0
-  readyReplicas: 0
-  replicas: 1
-  updatedReplicas: 1
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Read Only Root Filesystem"
+    metadata.gatekeeper.sh/version: 1.0.0
 `

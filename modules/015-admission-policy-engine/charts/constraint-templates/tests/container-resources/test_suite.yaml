@@ -1,0 +1,29 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-container-resources
+tests:
+  - name: operation-policy
+    template: ../../templates/operation/container-resources.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: example-allowed
+        object: allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        object: disallowed.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-2
+        object: disallowed2.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-3
+        object: disallowed3.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-4
+        object: disallowed4.yaml
+        assertions:
+          - violations: yes

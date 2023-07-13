@@ -31,9 +31,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "OperationPolicy", false)
 
-	Context("Policy is set", func() {
+	Context("Operation policy is set", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(testPolicy))
+			f.BindingContexts.Set(f.KubeStateSet(testOperationPolicy))
 			f.RunHook()
 		})
 		It("should have generated resources", func() {
@@ -41,10 +41,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()).To(HaveLen(1))
 		})
 	})
-
 })
 
-var testPolicy = `
+var testOperationPolicy = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: OperationPolicy
