@@ -84,7 +84,7 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          name: mynamespace
+          enforce: mypolicy
   policies:
     allowHostIPC: true
     allowHostNetwork: true
