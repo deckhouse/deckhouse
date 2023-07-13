@@ -1935,9 +1935,9 @@ spec:
                           description: |
                             Specify whether to:
 
-                            * Disable resource reservation.
-                            * Reserve resources based on the Node capacity.
-                            * Provide your own resource reservation values via the `static` field.
+                            * `Off` — Disable resource reservation.
+                            * `Auto` — Reserve resources based on the Node capacity.
+                            * `Static` — Provide your own resource reservation values via the `static` field.
 
                             More info: https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved
 
