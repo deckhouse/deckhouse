@@ -190,7 +190,7 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 	var firstInternalAddress string
 	for _, addr := range node.Status.Addresses {
 		if addr.Type == corev1.NodeInternalIP {
-			firstInternalAddress = addr.Address
+			firstInternalAddress = addr.Address + "/32"
 			break
 		}
 	}
