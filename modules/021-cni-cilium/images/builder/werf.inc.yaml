@@ -1,4 +1,4 @@
-{{- $ciliumVersion := "1.12.8" }}
+{{- $ciliumVersion := "1.12.10" }}
 # https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L8-L11
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
@@ -13,7 +13,7 @@ from: quay.io/cilium/cilium-iproute2:f882e3fd516184703eea5ee9b3b915748b5d4ee8@sh
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
 from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
 ---
-# https://github.com/cilium/cilium/blob/v1.12.8/images/cilium/Dockerfile#L11
+# https://github.com/cilium/cilium/blob/v1.12.10/images/cilium/Dockerfile#L11
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
 from: quay.io/cilium/cilium-envoy:04413917ff99e4f6ab51d1c6eb424d4a055f4462@sha256:af076f80818bc8d894f2f4f3104d5f4288112a67be5fb6e1b9a9c78370c7c9c8
 ---
