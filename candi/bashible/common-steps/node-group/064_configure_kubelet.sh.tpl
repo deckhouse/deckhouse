@@ -36,6 +36,7 @@ for socket_path in {{ if semverCompare "<1.24" .kubernetesVersion }}/var/run/doc
     break
   fi
 done
+  {{- end }}
 
 if [[ -z "${cri_socket_path}" ]]; then
   bb-log-error 'CRI socket is not found, need to manually set "nodeGroup.cri.notManaged.criSocketPath"'
