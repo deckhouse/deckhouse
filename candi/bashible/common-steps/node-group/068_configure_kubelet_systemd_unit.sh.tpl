@@ -28,9 +28,13 @@ cri_config="--container-runtime=remote --container-runtime-endpoint=unix:/var/ru
   {{- if .nodeGroup.cri.notManaged.criSocketPath }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
-if [[ -S /run/containerd/containerd.sock ]]; then
-  cri_socket_path=/run/containerd/containerd.sock
-fi
+# TODO remove after removing support of kubernetes 1.23
+for socket_path in {{ if semverCompare "<1.24" .kubernetesVersion }}/var/run/docker.sock{{ end }} /run/containerd/containerd.sock; do
+  if [[ -S "${socket_path}" ]]; then
+    cri_socket_path="${socket_path}"
+    break
+  fi
+done
   {{- end }}
 
 if [[ -z "${cri_socket_path}" ]]; then

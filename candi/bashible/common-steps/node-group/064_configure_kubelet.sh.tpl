@@ -24,10 +24,12 @@ fi
 # This folder doesn't have time to create before we stop freshly, unconfigured kubelet during bootstrap (step 034_install_kubelet_and_his_friends.sh).
 mkdir -p /var/lib/kubelet
 
+cri_type="Containerd"
 {{- if eq .cri "NotManaged" }}
   {{- if .nodeGroup.cri.notManaged.criSocketPath }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
+# TODO remove after removing support of kubernetes 1.23
     {{- if semverCompare "<1.24" .kubernetesVersion }}
 if [[ -S /var/run/docker.sock ]]; then
   cri_socket_path=/var/run/docker.sock
@@ -43,19 +45,16 @@ if [[ -z "${cri_socket_path}" ]]; then
   exit 1
 fi
 
+  cri_type="NotManagedContainerd"
+# TODO remove after removing support of kubernetes 1.23
   {{- if semverCompare "<1.24" .kubernetesVersion }}
 if grep -q "docker" <<< "${cri_socket_path}"; then
   cri_type="NotManagedDocker"
-else
-  cri_type="NotManagedContainerd"
 fi
-  {{- else }}
-  cri_type="NotManagedContainerd"
   {{- end }}
-{{- else }}
-cri_type="Containerd"
 {{- end }}
 
+# TODO remove after removing support of kubernetes 1.23
 {{- if semverCompare "<1.24" .kubernetesVersion }}
 if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
   criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
