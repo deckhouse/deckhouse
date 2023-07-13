@@ -128,10 +128,8 @@ func openstackTerraformStateMigration(input *go_hook.HookInput, dc dependency.Co
 		if err != nil {
 			return err
 		}
-		input.LogEntry.Infof("Migration process completed for Secret/%s/%s.", TerraformStateNamespace, secret.ObjectMeta.Name)
 	}
 
-	input.LogEntry.Infof("Terraform migrate hook has been finished.")
 	return nil
 }
 
@@ -161,7 +159,6 @@ func BackupSecret(backupSecretName string, secret v1.Secret, namespace string, k
 	nodeGroup := secret.ObjectMeta.Labels["node.deckhouse.io/node-group"]
 	// nodeName := strings.TrimPrefix(secret.ObjectMeta.Name, "d8-node-terraform-state-")
 
-	input.LogEntry.Infof("Starting backup for Secret/%s/%s", namespace, secret.ObjectMeta.Name)
 	secretBackup := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      backupSecretName,
@@ -185,6 +182,5 @@ func BackupSecret(backupSecretName string, secret v1.Secret, namespace string, k
 		input.LogEntry.Warnf("An error occurred when creating secret backup. Backup aborted. Error: %s.", err)
 		return false
 	}
-	input.LogEntry.Infof("Secret backup completed successfully.")
 	return true
 }

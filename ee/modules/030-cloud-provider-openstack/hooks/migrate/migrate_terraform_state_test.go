@@ -108,8 +108,6 @@ var _ = Describe("Global :: migrate_terraform_state ::", func() {
 			Expect(secret.Data).NotTo(BeNil())
 			Expect(secret.Data[TerraformStateDataKey]).To(MatchJSON(oldTerraformStateWithRootDiskSize))
 			Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Starting backup for Secret/%s/%s", TerraformStateNamespace, "d8-node-terraform-state-"+nodeName))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Secret backup completed successfully."))
 		})
 
 		It("Hook should migrate Terraform state", func() {
@@ -124,7 +122,6 @@ var _ = Describe("Global :: migrate_terraform_state ::", func() {
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name kubernetes_data.", OpenstackV2ResourceType))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name master.", OpenstackV2ResourceType))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found dependency"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Migration process completed for Secret/%s/%s.", TerraformStateNamespace, "d8-node-terraform-state-"+nodeName))
 		})
 	})
 	Context("Single master with root size: Migration has been done already", func() {
@@ -231,8 +228,6 @@ var _ = Describe("Global :: migrate_terraform_state ::", func() {
 				Expect(secret.Data[TerraformStateDataKey]).To(MatchJSON(oldTerraformStateWithRootDiskSize))
 				Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
 				Expect(secret.ObjectMeta.Labels["node.deckhouse.io/node-group"]).To(BeEquivalentTo(strings.Split(nodeName, "-")[0]))
-				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Starting backup for Secret/%s/%s", TerraformStateNamespace, "d8-node-terraform-state-"+nodeName))
-				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Secret backup completed successfully."))
 			}
 			terraformStateBackupSecrets, err := dependency.TestDC.K8sClient.CoreV1().
 				Secrets(TerraformStateNamespace).
@@ -253,7 +248,6 @@ var _ = Describe("Global :: migrate_terraform_state ::", func() {
 				Expect(secret.ObjectMeta.Labels["node.deckhouse.io/node-group"]).To(BeEquivalentTo(strings.Split(nodeName, "-")[0]))
 				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name kubernetes_data.", OpenstackV2ResourceType))
 				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name master.", OpenstackV2ResourceType))
-				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Migration process completed for Secret/%s/%s.", TerraformStateNamespace, "d8-node-terraform-state-"+nodeName))
 			}
 		})
 
