@@ -11,9 +11,7 @@ function detect_bundle() {
 }
 
 function install_jq() {
-  bundle="$1"
-
-  case "$bundle" in
+  case "$1" in
     ubuntu-lts|debian|altlinux|astra)
       apt-get update && apt-get install jq -y
       ;;
@@ -22,7 +20,7 @@ function install_jq() {
       shift
       ;;
     *)
-      echo "Unsupported bundle $bundle for bootstrap.sh! Exiting..."
+      echo "Unsupported bundle $1 for bootstrap.sh! Exiting..."
       exit 1
       ;;
   esac
@@ -49,7 +47,7 @@ function get_bootstrap() {
   done
 }
 
-until install_jq; do
+until install_jq "$bundle"; do
   echo "Error installing jq pacage"
   sleep 10
 done
