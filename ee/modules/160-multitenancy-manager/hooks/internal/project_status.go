@@ -11,21 +11,21 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 )
 
-func SetErrorStatusProject(patcher *object_patch.PatchCollector, projectName, errMsg string, conditions []v1alpha1.Condition) {
-	conditions = append(conditions, v1alpha1.Condition{
+func SetErrorStatusProject(patcher *object_patch.PatchCollector, projectName, errMsg string) {
+	conditions := []v1alpha1.Condition{{
 		Name:    "Error",
 		Message: errMsg,
 		Status:  false,
-	})
+	}}
 
 	setProjectStatus(patcher, projectName, false, errMsg, conditions)
 }
 
-func SetDeployingStatusProject(patcher *object_patch.PatchCollector, projectName string, conditions []v1alpha1.Condition) {
-	conditions = append(conditions, v1alpha1.Condition{
+func SetDeployingStatusProject(patcher *object_patch.PatchCollector, projectName string) {
+	conditions := []v1alpha1.Condition{{
 		Name:    "Deploying",
 		Message: "Deckhouse is creating the project, see deckhouse logs for more details",
-	})
+	}}
 	setProjectStatus(patcher, projectName, false, "", conditions)
 }
 

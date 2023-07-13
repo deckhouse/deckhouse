@@ -163,7 +163,7 @@ status:
       message: "template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
       status: false
     - name: Error
-      message: "template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
+      message: "Err Err Err"
       status: false
 ---
 apiVersion: deckhouse.io/v1alpha1

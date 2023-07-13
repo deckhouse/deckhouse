@@ -90,7 +90,7 @@ func handleProjects(input *go_hook.HookInput) error {
 		allProjectsFromCluster[project.Name] = true
 
 		if err := validateProject(input, project); err != nil {
-			internal.SetErrorStatusProject(input.PatchCollector, project.Name, err.Error(), project.Conditions)
+			internal.SetErrorStatusProject(input.PatchCollector, project.Name, err.Error())
 			continue
 		}
 
@@ -100,7 +100,7 @@ func handleProjects(input *go_hook.HookInput) error {
 			Params:          project.Template,
 		}
 
-		internal.SetDeployingStatusProject(input.PatchCollector, project.Name, project.Conditions)
+		internal.SetDeployingStatusProject(input.PatchCollector, project.Name)
 	}
 
 	values, err := projectValuesCompare(input.Snapshots[oldValuesSecretQueue], newValues, allProjectsFromCluster)
