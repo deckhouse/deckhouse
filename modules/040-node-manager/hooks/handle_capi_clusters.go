@@ -98,10 +98,6 @@ func updateCluster(input *go_hook.HookInput) error {
 
 	snap := input.Snapshots["clusters"]
 
-	if len(snap) == 0 {
-		return nil
-	}
-
 	for _, c := range snap {
 		cluster := c.(cluster)
 
