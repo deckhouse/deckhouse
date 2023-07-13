@@ -23,8 +23,6 @@ spec:
   selector:
     matchLabels:
       app: agent
-  updateStrategy:
-    type: RollingUpdate
   template:
     metadata:
       annotations:
