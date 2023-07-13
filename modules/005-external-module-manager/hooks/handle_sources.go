@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flant/addon-operator/pkg/module_manager"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -44,6 +46,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
+)
+
+const (
+	defaultExternalModuleWeight = 900
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -165,7 +171,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			err = fetchAndCopyModuleVersion(dc, externalModulesDir, ex, moduleName, moduleVersion, opts)
+			err = fetchAndCopyModuleByVersion(dc, externalModulesDir, ex, moduleName, moduleVersion, opts)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
 					Name:  moduleName,
@@ -174,7 +180,9 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			createRelease(input, ex.Name, moduleName, moduleVersion)
+			weight := fetchModuleWeight(externalModulesDir, moduleName, moduleVersion)
+
+			createRelease(input, ex.Name, moduleName, moduleVersion, weight)
 		}
 
 		sc.ModuleErrors = moduleErrors
@@ -258,7 +266,39 @@ func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSou
 	return "v" + moduleMetadata.Version.String(), nil
 }
 
-func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir string, moduleSource v1alpha1.ExternalModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
+func fetchModuleWeight(externalModulesDir, moduleName, moduleVersion string) int {
+	moduleVersionPath := path.Join(externalModulesDir, moduleName, moduleVersion)
+	moduleDefFile := path.Join(moduleVersionPath, module_manager.ModuleDefinitionFileName)
+
+	if _, err := os.Stat(moduleDefFile); err != nil {
+		return defaultExternalModuleWeight
+	}
+
+	var def module_manager.ModuleDefinition
+
+	f, err := os.Open(moduleDefFile)
+	if err != nil {
+		return defaultExternalModuleWeight
+	}
+	defer f.Close()
+
+	err = yaml.NewDecoder(f).Decode(&def)
+	if err != nil {
+		return defaultExternalModuleWeight
+	}
+
+	if def.Weight > 0 && def.Weight < 100 {
+		def.Weight = defaultExternalModuleWeight + def.Weight
+	}
+
+	if def.Weight < defaultExternalModuleWeight || def.Weight >= 1000 {
+		def.Weight = defaultExternalModuleWeight
+	}
+
+	return def.Weight
+}
+
+func fetchAndCopyModuleByVersion(dc dependency.Container, externalModulesDir string, moduleSource v1alpha1.ExternalModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
 	regCli, err := dc.GetRegistryClient(path.Join(moduleSource.Spec.Registry.Repo, moduleName), registryOptions...)
 	if err != nil {
 		return fmt.Errorf("fetch module error: %v", err)
@@ -393,7 +433,7 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 	}
 }
 
-func untarVersionLayer(rc io.ReadCloser, rw io.Writer) error {
+func untarMetadata(rc io.ReadCloser, rw io.Writer) error {
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
@@ -446,7 +486,7 @@ func fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
 			return meta, err
 		}
 
-		err = untarVersionLayer(rc, buf)
+		err = untarMetadata(rc, buf)
 		if err != nil {
 			return meta, err
 		}
@@ -459,7 +499,7 @@ func fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
 	return meta, err
 }
 
-func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string) {
+func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string, moduleWeight int) {
 	rl := &v1alpha1.ExternalModuleRelease{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ExternalModuleRelease",
@@ -473,6 +513,7 @@ func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersi
 		Spec: v1alpha1.ExternalModuleReleaseSpec{
 			ModuleName: moduleName,
 			Version:    semver.MustParse(moduleVersion),
+			Weight:     moduleWeight,
 		},
 	}
 
