@@ -34,7 +34,7 @@ $(document).ready(function() {
   Have no key?
 </h3>
 <div class="button-group">
-  <a href="" data-open-modal="request_access" class="button button_alt">Request 30-day free trial access!</a>
+  <a href="" data-open-modal="request_access" class="button button_alt">Request free trial</a>
 </div>
 </div>
 </div>
