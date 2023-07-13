@@ -116,7 +116,9 @@ properties:
     x-examples: [true, false]
 
   maxConcurrentChallenges:
-    type: int
+    type: integer
+    format: int32
+    minimum: 0
     description: |
       The maximum number of challenges that can be scheduled as 'processing' at once. (default 60)
     x-examples: [25]
