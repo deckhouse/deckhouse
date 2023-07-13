@@ -74,17 +74,13 @@ An example of a security policy:
 
 ```yaml
 ---
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:
   name: mypolicy
 spec:
   enforcementAction: Deny
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          enforce: mypolicy
   policies:
     allowHostIPC: true
     allowHostNetwork: true
@@ -131,6 +127,11 @@ spec:
       - max: 133
         min: 129
       rule: MustRunAs
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          enforce: mypolicy
 ```
 
 To apply the policy, it will be sufficient to set the label `enforce: "mypolicy"` on the desired namespace.
