@@ -7,6 +7,7 @@
     * If NodeGroup `spec.disruptions.approvalMode` is set to `Manual`, you will receive a `NodeRequiresDisruptionApprovalForUpdate` alert.
     * If NodeGroup `spec.disruptions.approvalMode` is set to `Automatic`, nodes will be drained and restarted one by one.
  - Ingress nginx controller will restart.
+ - NodePort services on a nodes without annotation were open to the world.
 
 ## Features
 
@@ -55,6 +56,8 @@
  - **[ingress-nginx]** Update the Kruise controller manager before updating Ingress Nginx so that an updated Kruise controller manager takes care of Ingress nginx demonsets. [#5050](https://github.com/deckhouse/deckhouse/pull/5050)
  - **[ingress-nginx]** Pathch Kruse controller manager logic so that it doesn't delete more than `maxUnavailable` Pods during updates. [#5039](https://github.com/deckhouse/deckhouse/pull/5039)
     Kruise controller manager will be restarted.
+ - **[kube-proxy]** Fix `node.deckhouse.io/nodeport-bind-internal-ip` annotation behavior [#5199](https://github.com/deckhouse/deckhouse/pull/5199)
+    NodePort services on a nodes without annotation were open to the world.
  - **[linstor]** Fix in bashible step in case of installed `drbd-utils`. [#5161](https://github.com/deckhouse/deckhouse/pull/5161)
  - **[linstor]** Rename `exported_node` to `node` in PrometheusRule. [#5121](https://github.com/deckhouse/deckhouse/pull/5121)
  - **[linstor]** Update Linstor. Fix `D8LinstorControllerTargetDown` alert. [#4823](https://github.com/deckhouse/deckhouse/pull/4823)
