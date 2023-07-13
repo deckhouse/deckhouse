@@ -10,6 +10,24 @@ function detect_bundle() {
   {{- .Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
 }
 
+function install_jq() {
+  bundle="$1"
+
+  case "$bundle" in
+    ubuntu-lts|debian|altlinux|astra)
+      apt-get update && apt-get install jq -y
+      ;;
+    alteros|centos|redos)
+      export no_lock=yes
+      shift
+      ;;
+    *)
+      echo "Unsupported bundle $bundle for bootstrap.sh! Exiting..."
+      exit 1
+      ;;
+  esac
+}
+
 function get_bootstrap() {
   token="$(</var/lib/bashible/bootstrap-token)"
   bundle="$(detect_bundle)"
@@ -30,6 +48,11 @@ function get_bootstrap() {
     sleep 10
   done
 }
+
+until install_jq; do
+  echo "Error installing jq pacage"
+  sleep 10
+done
 
 bootstrap_script="$(get_bootstrap)"
 
