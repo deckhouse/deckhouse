@@ -26,6 +26,8 @@ import (
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const (
@@ -54,22 +56,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleGatekeeperBootstrap)
 
 func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
-	var existingTemplates = make(map[string]struct{})
 	var bootstrapped bool
+	var existingTemplates = set.NewFromSnapshot(input.Snapshots["gatekeeper_templates"])
 
-	if len(input.Snapshots["gatekeeper_templates"]) != 0 {
+	if existingTemplates.Size() != 0 {
 		bootstrapped = true
 		requiredTemplates, err := getRequiredTemplates()
 		if err != nil {
 			return err
 		}
-		for _, snapshot := range input.Snapshots["gatekeeper_templates"] {
-			name := snapshot.(string)
-			existingTemplates[name] = struct{}{}
-		}
 
 		for _, name := range requiredTemplates {
-			if _, exists := existingTemplates[name]; !exists {
+			if !existingTemplates.Has(name) {
 				input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: missing %s constraint template", name)
 				bootstrapped = false
 				break
