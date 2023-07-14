@@ -37,7 +37,7 @@ func (pc *preflightCheck) CheckAvailabilityPorts() error {
 	}
 
 	scriptCmd := pc.sshClient.UploadScript(file)
-	_, err = scriptCmd.Execute()
+	out, err := scriptCmd.Execute()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			return fmt.Errorf("check_ports.sh: %v, %s", err, string(ee.Stderr))
@@ -45,5 +45,7 @@ func (pc *preflightCheck) CheckAvailabilityPorts() error {
 		return fmt.Errorf("check_ports.sh: %v", err)
 	}
 
+	log.DebugLn(string(out))
+	log.InfoLn("Checking ssh tunnel success")
 	return nil
 }
