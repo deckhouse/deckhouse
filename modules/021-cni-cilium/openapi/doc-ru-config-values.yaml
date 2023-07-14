@@ -2,17 +2,16 @@ type: object
 properties:
   debugLogging:
     description: Включает отладочный уровень логирования для компонентов Cilium.
-  cleanState:
+  labelsRegex:
     description: |
-      Включает очистку сохраненного статуса.
+      Regex-ы лейблов для уменьшения [количества создаваемых identity](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels).
 
-      Отключите, как только все компоненты Cilium запустятся со сброшенным статусом.
+      Каждый лейбл должен задаваться в формате YAML quoted string с экранированием спецсимволов.
   createNodeRoutes:
     description: |
       Включает создание маршрутов к Pod'ам на других узлах.
 
       Все узлы должны находиться в одной сети L2.
-
   tunnelMode:
     description: |
       Режим работы туннеля.
@@ -29,7 +28,6 @@ properties:
   bpfLBMode:
     description: |
       Режим работы балансировщика eBPF.
-
   resourcesManagement:
     description: |
       Настройки управления ресурсами cilium agent.
