@@ -156,7 +156,9 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		for _, moduleName := range tags {
 			if moduleName == "modules" {
 				input.LogEntry.Warn("'modules' name for module is forbidden. Skip module.")
+				continue
 			}
+
 			moduleVersion, err := fetchModuleVersion(input.LogEntry, dc, ex, moduleName, mChecksum, opts)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{

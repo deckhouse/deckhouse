@@ -18,6 +18,13 @@ package hooks
 
 import (
 	"os"
+	"path"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/stretchr/testify/require"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -100,3 +107,26 @@ status:
 		})
 	})
 })
+
+func TestSymlinkFinder(t *testing.T) {
+	mt, err := os.MkdirTemp("", "target-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(mt)
+
+	tmp, err := os.MkdirTemp("", "modules-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmp)
+
+	_ = os.Symlink(mt, path.Join(tmp, "100-module1"))
+	_ = os.Symlink(mt, path.Join(tmp, "200-module2"))
+	_ = os.Symlink(mt, path.Join(tmp, "300-module3"))
+	_, _ = os.Create(path.Join(tmp, "333-module2"))
+
+	res1, err := findExistingModuleSymlink(tmp, "module2")
+	require.NoError(t, err)
+	assert.True(t, strings.HasSuffix(res1, path.Join(tmp, "200-module2")))
+
+	res2, err := findExistingModuleSymlink(tmp, "module5")
+	require.NoError(t, err)
+	assert.Empty(t, res2)
+}
