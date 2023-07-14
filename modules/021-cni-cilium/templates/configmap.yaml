@@ -23,7 +23,7 @@ data:
   enable-ipv6: "false"
 
   enable-bpf-tproxy: "true"
-
+  disable-envoy-version-check: "true"
   bpf-lb-bypass-fib-lookup: "false" # TODO: https://docs.cilium.io/en/v1.11/gettingstarted/kubeproxy-free/#nodeport-with-fhrp-vpc
 
   {{- if .Values.cniCilium.labelsRegex }}
