@@ -26,6 +26,8 @@ type Splunk struct {
 
 	Encoding Encoding `json:"encoding,omitempty"`
 
+	AutoExtractTimestamp bool `json:"auto_extract_timestamp"`
+
 	Compression string `json:"compression,omitempty"`
 
 	DefaultToken string `json:"default_token,omitempty"`
@@ -89,9 +91,10 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 			Codec:           "text",
 			TimestampFormat: "rfc3339",
 		},
-		IndexedFields: indexedFields,
-		Endpoint:      spec.Endpoint,
-		DefaultToken:  spec.Token,
-		Compression:   "gzip",
+		AutoExtractTimestamp: true,
+		IndexedFields:        indexedFields,
+		Endpoint:             spec.Endpoint,
+		DefaultToken:         spec.Token,
+		Compression:          "gzip",
 	}
 }
