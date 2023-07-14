@@ -680,6 +680,7 @@ entries:
             - title:
                 en: Short-term logs storage
                 ru: Кратковременное хранение логов
+              featureStatus: experimental
               folders:
                 - title:
                     en: Description
