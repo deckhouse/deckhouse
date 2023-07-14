@@ -53,7 +53,7 @@ until install_jq "$bundle"; do
   sleep 10
 done
 
-bootstrap_script="$(get_bootstrap)"
+bootstrap_object="$(get_bootstrap)"
 
-bash <<< "$bootstrap_script"
+bash <<< "$(echo "$bootstrap_object" | jq -r .bootstrap)"
 {{- end }}
