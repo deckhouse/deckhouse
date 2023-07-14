@@ -170,9 +170,23 @@ spec:
       maxUnavailable: 1
     {{- end }}
   controllerEndpoint: https://linstor.d8-{{ .Chart.Name }}.svc:3371
+  {{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
+  nodeAffinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+            {{- range $k, $v := .Values.linstor.dataNodes.nodeSelector }}
+            - key: {{ $k }}
+              operator: In
+              values:
+              - {{ $v | quote }}
+            {{- end }}
+  {{- else }}
   nodeAffinity: {}
+  {{- end }}
   nodeTolerations:
-    {{- index (include "helm_lib_tolerations" (tuple . "wildcard") | fromYaml) "tolerations" | toYaml | nindent 4 }}
+    {{- index (include "helm_lib_tolerations" (tuple . "any-node" "storage-problems") | fromYaml) "tolerations" | toYaml | nindent 4 }}
   controllerAffinity:
     {{- with (include "helm_lib_node_selector" (tuple . "system")) }}
     nodeAffinity:
