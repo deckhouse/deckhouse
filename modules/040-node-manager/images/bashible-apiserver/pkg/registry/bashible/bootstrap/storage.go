@@ -52,7 +52,6 @@ func (s Storage) Render(ng string) (runtime.Object, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context: %v", err)
 	}
-	// FIXME
 	tplContent, err := os.ReadFile(s.templatePath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read template: %v", err)
