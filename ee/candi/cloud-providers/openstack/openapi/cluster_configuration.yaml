@@ -119,8 +119,8 @@ apiVersions:
             type: object
             required: [flavorName, imageName]
             additionalProperties: false
-            properties: &instanceClassProperties
-              flavorName:
+            properties:
+              flavorName: &instanceClassFlavorName
                 type: string
                 description: |
                   Flavor of OpenStack servers.
@@ -131,7 +131,7 @@ apiVersions:
 
                   Flavor create example: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
                 x-doc-required: true
-              imageName:
+              imageName: &instanceClassImageName
                 description: |
                   Image to use while provisioning OpenStack servers.
 
@@ -140,13 +140,19 @@ apiVersions:
                   > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
                 type: string
                 x-doc-required: true
-              rootDiskSize:
+              rootDiskSize: &instanceClassRootDiskSize
                 description: |
                   The size of a root disk (in gigabytes).
 
                   This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
                 type: integer
-              additionalSecurityGroups:
+              etcdDiskSizeGb:
+                description: |
+                  Etcd disk size in gigabytes.
+                example: 10
+                default: 10
+                type: integer
+              additionalSecurityGroups: &instanceClassAdditionalSecurityGroups
                 type: array
                 description: |
                   Security groups that will be applied to VM's network ports in addition to security groups set in a cloud provider configuration.
@@ -157,7 +163,7 @@ apiVersions:
                 items:
                   type: string
                 uniqueItems: true
-              additionalTags:
+              additionalTags: &instanceClassAdditionalTags
                 description: |
                   The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
                 x-examples:
@@ -190,7 +196,6 @@ apiVersions:
         items:
           additionalProperties: false
           type: object
-          required: [name, replicas, instanceClass]
           properties:
             name:
               type: string
@@ -262,7 +267,11 @@ apiVersions:
               additionalProperties: false
               type: object
               properties:
-                <<: *instanceClassProperties
+                flavorName: *instanceClassFlavorName
+                imageName: *instanceClassImageName
+                rootDiskSize: *instanceClassRootDiskSize
+                additionalSecurityGroups: *instanceClassAdditionalSecurityGroups
+                additionalTags: *instanceClassAdditionalTags
                 configDrive:
                   type: boolean
                   default: false
@@ -320,6 +329,20 @@ apiVersions:
               additionalProperties:
                 type: string
                 minLength: 1
+          oneOf:
+          - required: [name, replicas, instanceClass, volumeTypeMap]
+            properties:
+              instanceClass:
+                properties:
+                  rootDiskSize:
+                    type: integer
+          - required: [name, replicas, instanceClass]
+            properties:
+              instanceClass:
+                properties:
+                  rootDiskSize:
+                    not:
+                      type: integer
       layout:
         description: |
           The way resources are located in the cloud.

@@ -27,6 +27,7 @@ variable "clusterUUID" {
 
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
+  internal_network_name = local.prefix
   pod_subnet_cidr = var.clusterConfiguration.podSubnetCIDR
   ng = [for i in var.providerClusterConfiguration.nodeGroups: i if i.name == var.nodeGroupName][0]
   instance_class = local.ng["instanceClass"]
@@ -34,7 +35,7 @@ locals {
   image_name = local.instance_class["imageName"]
   root_disk_size = lookup(local.instance_class, "rootDiskSize", "")
   config_drive = lookup(local.instance_class, "configDrive", false)
-  networks = concat([local.instance_class["mainNetwork"]], lookup(local.instance_class, "additionalNetworks", []))
+  networks = local.layout == "standardWithNoRouter" ? concat([local.instance_class["mainNetwork"]], [local.internal_network_name], lookup(local.instance_class, "additionalNetworks", [])) : concat([local.instance_class["mainNetwork"]], lookup(local.instance_class, "additionalNetworks", []))
   networks_with_security_disabled = lookup(local.instance_class, "networksWithSecurityDisabled", [])
   floating_ip_pools = lookup(local.instance_class, "floatingIPPools", [])
   layout = join("", [lower(substr(var.providerClusterConfiguration.layout, 0, 1)), substr(var.providerClusterConfiguration.layout, 1, -1)])

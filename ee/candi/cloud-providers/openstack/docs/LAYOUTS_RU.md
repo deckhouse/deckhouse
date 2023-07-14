@@ -113,6 +113,9 @@ provider:
 > В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
 сети без роутера, соответственно нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
 virtual IP создаётся в публичной сети, то он всё равно доступен только с узлов кластера.
+>
+> **Внимание!**
+> В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании `OpenStackInstanceClass` в кластере.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vR9Vlk22tZKpHgjOeQO2l-P0hyAZiwxU6NYGaLUsnv-OH0so8UXNnvrkNNiAROMHVI9iBsaZpfkY-kh/pub?w=960&h=720)
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
@@ -179,6 +182,9 @@ nodeGroups:
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
+  # Требуется, если указан параметр rootDiskSize. Карта типов томов для главного корневого тома нод
+  volumeTypeMap:
+    nova: ceph-ssd
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 provider:
   ...

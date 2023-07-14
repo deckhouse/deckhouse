@@ -87,7 +87,7 @@ module "volume_zone" {
   region = var.providerClusterConfiguration.provider.region
 }
 
-resource "openstack_blockstorage_volume_v2" "root" {
+resource "openstack_blockstorage_volume_v3" "root" {
   count       = local.bastion_instance != {} ? 1 : 0
   name        = join("-", [local.name, "root-volume"])
   size        = local.root_disk_size
@@ -95,6 +95,7 @@ resource "openstack_blockstorage_volume_v2" "root" {
   metadata    = local.metadata_tags
   volume_type = local.volume_type
   availability_zone = module.volume_zone.zone
+  enable_online_resize = true
   lifecycle {
     ignore_changes = [
       metadata,
@@ -117,7 +118,7 @@ resource "openstack_compute_instance_v2" "bastion" {
   }
 
   block_device {
-    uuid                  = openstack_blockstorage_volume_v2.root[0].id
+    uuid                  = openstack_blockstorage_volume_v3.root[0].id
     boot_index            = 0
     source_type           = "volume"
     destination_type      = "volume"

@@ -11,6 +11,7 @@ locals {
   volume_type = local.volume_type_map[local.zone]
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
   root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
+  etcd_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
 }
 
@@ -31,6 +32,7 @@ module "master" {
   image_name = local.image_name
   keypair_ssh_name = data.openstack_compute_keypair_v2.ssh.name
   network_port_ids = list(local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id)
+  internal_network_cidr = data.openstack_networking_subnet_v2.internal.cidr
   floating_ip_network = local.external_network_floating_ip ? local.external_network_name : ""
   tags = local.tags
   zone = local.zone
@@ -43,6 +45,7 @@ module "kubernetes_data" {
   prefix = local.prefix
   node_index = var.nodeIndex
   master_id = module.master.id
+  volume_size = local.etcd_volume_size
   volume_type = local.volume_type
   volume_zone = module.volume_zone.zone
   tags = local.tags
