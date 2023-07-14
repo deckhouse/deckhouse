@@ -60,8 +60,7 @@ spec:
   linstorHttpsClientSecret: linstor-client-https-cert
   controllerEndpoint: https://linstor.d8-{{ .Chart.Name }}.svc:3371
   automaticStorageType: None
-  {{- if .Values.linstor.dataNodes }}
-  {{- if .Values.linstor.dataNodes.nodeSelector }}
+  {{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -73,9 +72,6 @@ spec:
               values:
               - {{ $v | quote }}
             {{- end }}
-  {{- else }}
-  affinity: {}
-  {{- end }}
   {{- else }}
   affinity: {}
   {{- end }}

@@ -170,8 +170,7 @@ spec:
       maxUnavailable: 1
     {{- end }}
   controllerEndpoint: https://linstor.d8-{{ .Chart.Name }}.svc:3371
-  {{- if .Values.linstor.dataNodes }}
-  {{- if .Values.linstor.dataNodes.nodeSelector }}
+  {{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
   nodeAffinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -183,9 +182,6 @@ spec:
               values:
               - {{ $v | quote }}
             {{- end }}
-  {{- else }}
-  nodeAffinity: {}
-  {{- end }}
   {{- else }}
   nodeAffinity: {}
   {{- end }}
