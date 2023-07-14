@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	deckhouseConfigmap = `
+	deckhouseConfigmapdWithArgoLabel = `
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -32,6 +32,14 @@ metadata:
   labels:
     argocd.argoproj.io/instance: aaa
 `
+	deckhouseConfigmapd = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deckhouse
+  namespace: d8-system
+`
 )
 
 var _ = Describe("Global hooks :: migration_remove_deprecated_deckhouse_cm ", func() {
@@ -39,12 +47,24 @@ var _ = Describe("Global hooks :: migration_remove_deprecated_deckhouse_cm ", fu
 
 	Context("Cluster with old deckhouse Configmap", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(deckhouseConfigmap))
+			f.BindingContexts.Set(f.KubeStateSet(deckhouseConfigmapd))
 			f.RunHook()
 		})
 
 		It("ExecuteSuccessfully", func() {
 			Expect(f.KubernetesResource("Configmap", "d8-system", "deckhouse").Exists()).Should(BeFalse())
+			Expect(*f.MetricsCollector.CollectedMetrics()[0].Value).Should(Equal(0.0))
+		})
+	})
+
+	Context("Cluster with old deckhouse Configmap", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(deckhouseConfigmapdWithArgoLabel))
+			f.RunHook()
+		})
+
+		It("ExecuteSuccessfully", func() {
+			Expect(f.KubernetesResource("Configmap", "d8-system", "deckhouse").Exists()).Should(BeTrue())
 			Expect(*f.MetricsCollector.CollectedMetrics()[0].Value).Should(Equal(1.0))
 		})
 	})
