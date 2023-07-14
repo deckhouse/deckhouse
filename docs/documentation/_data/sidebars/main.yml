@@ -678,8 +678,8 @@ entries:
                     - title: Custom Resources
                       url: /modules/460-log-shipper/cr.html
             - title:
-                en: Short-term logs storage
-                ru: Кратковременное хранение логов
+                en: Short-term storage
+                ru: Кратковременное хранение
               featureStatus: experimental
               folders:
                 - title:
