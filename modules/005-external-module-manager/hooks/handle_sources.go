@@ -89,6 +89,9 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 			Name: ex.Name,
 		},
 		Spec: ex.Spec,
+		Status: v1alpha1.ExternalModuleSourceStatus{
+			ModuleErrors: ex.Status.ModuleErrors,
+		},
 	}
 
 	if newex.Spec.ReleaseChannel == "" {
@@ -169,6 +172,15 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 
 			if moduleVersion == "" {
+				if len(ex.Status.ModuleErrors) > 0 {
+					// inherit errors to keep failed modules status
+					for _, mer := range ex.Status.ModuleErrors {
+						if mer.Name == moduleName {
+							moduleErrors = append(moduleErrors, mer)
+							break
+						}
+					}
+				}
 				// checksum has not been changed
 				continue
 			}
