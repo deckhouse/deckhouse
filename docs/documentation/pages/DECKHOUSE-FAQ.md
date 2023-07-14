@@ -202,6 +202,10 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
 ### How do I configure Deckhouse to use a third-party registry?
 
 {% alert level="warning" %}
+This feature is available in Enterprise Edition only.
+{% endalert %}
+
+{% alert level="warning" %}
 Deckhouse only supports Bearer authentication for container registries.
 
 Tested and guaranteed to work with the following container registries:
@@ -413,6 +417,10 @@ Use this method only valid if you don't have release channel images in your air-
 * If you want to disable automatic updates for an already installed Deckhouse (including patch release updates), then delete the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
 ### Using a proxy server
+
+{% alert level="warning" %}
+This feature is available in Enterprise Edition only.
+{% endalert %}
 
 {% offtopic title="Example of steps for configuring a Squid-based proxy server..." %}
 * Prepare the VM for setting up the proxy. The machine must be accessible to the nodes that will use it as a proxy and be connected to the Internet.
