@@ -27,19 +27,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		Order: 25,
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
-		internal.ProjectHookKubeConfig,
+		internal.ProjectWithConditionsHookKubeConfig,
 	},
 }, handleReadyStatusForProjectsAndProjectTypes)
 
 func handleReadyStatusForProjectsAndProjectTypes(input *go_hook.HookInput) error {
-	projectSnapshots := make(map[string]internal.ProjectSnapshot)
+	projectSnapshots := make(map[string]*internal.ProjectSnapshotWithConditions)
 	for _, projectSnap := range input.Snapshots[internal.ProjectsQueue] {
-		project, ok := projectSnap.(internal.ProjectSnapshot)
+		project, ok := projectSnap.(*internal.ProjectSnapshotWithConditions)
 		if !ok {
 			input.LogEntry.Errorf("can't convert snapshot to 'projectSnapshot': %v", project)
 			continue
 		}
-		projectSnapshots[project.Name] = project
+		projectSnapshots[project.Snapshot.Name] = project
 	}
 
 	valuesPath := internal.ModuleValuePath(internal.ProjectValuesPath)
@@ -53,6 +53,7 @@ func handleReadyStatusForProjectsAndProjectTypes(input *go_hook.HookInput) error
 		if !ok {
 			return errors.New("can't convert Project values to map[string]interface")
 		}
+
 		projectName, ok := projectValue["projectName"].(string)
 		if !ok || projectName == "" {
 			return errors.New("can't get Project name from values")
@@ -63,7 +64,9 @@ func handleReadyStatusForProjectsAndProjectTypes(input *go_hook.HookInput) error
 			return fmt.Errorf("can't find Project '%s' in cluster from values", projectName)
 		}
 
-		internal.SetSyncStatusProject(input.PatchCollector, projectSnap.Name)
+		if internal.ProjectConditionIsDeploying(projectSnap.Conditions) {
+			internal.SetSyncStatusProject(input.PatchCollector, projectSnap.Snapshot.Name)
+		}
 	}
 	return nil
 }

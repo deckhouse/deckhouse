@@ -47,8 +47,8 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ready status ::"
 					{
 						name:       "test-2",
 						exists:     true,
-						conditions: `[{"name":"Sync","status":true}]`,
-						status:     `{"status":true}`,
+						conditions: `[{"name":"Deploying","status":false}]`,
+						status:     `{"status":false}`,
 					},
 					{
 						name:       "test-3",
@@ -108,6 +108,6 @@ status:
 var (
 	stateTwoProjectsValues = []byte(`
 - projectName: test-1
-- projectName: test-2
+- projectName: test-3
 `)
 )

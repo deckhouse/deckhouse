@@ -11,6 +11,19 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 )
 
+func ProjectConditionIsDeploying(conds []v1alpha1.Condition) bool {
+	return projectHasCondition(v1alpha1.Condition{Name: "Deploying"}, conds)
+}
+
+func projectHasCondition(cond v1alpha1.Condition, conds []v1alpha1.Condition) bool {
+	for _, c := range conds {
+		if c.Name == cond.Name {
+			return true
+		}
+	}
+	return false
+}
+
 func SetErrorStatusProject(patcher *object_patch.PatchCollector, projectName, errMsg string) {
 	conditions := []v1alpha1.Condition{{
 		Name:    "Error",
@@ -65,7 +78,6 @@ func setProjectStatus(patcher *object_patch.PatchCollector, projectName string, 
 
 func uniqueConditions(conds []v1alpha1.Condition) []v1alpha1.Condition {
 	uniqueConds := make(map[v1alpha1.Condition]int)
-
 	for _, c := range conds {
 		if _, ok := uniqueConds[c]; ok {
 			continue

@@ -18,13 +18,23 @@ const (
 )
 
 var (
-	ProjectHookKubeConfig = go_hook.KubernetesConfig{
+	ProjectHookKubeConfig               = projectHookConfig(filterProjects)
+	ProjectWithConditionsHookKubeConfig = projectHookConfig(filterProjectsWithConditions)
+)
+
+func projectHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConfig {
+	return go_hook.KubernetesConfig{
 		Name:       ProjectsQueue,
 		ApiVersion: APIVersion,
 		Kind:       ProjectKind,
-		FilterFunc: filterProjects,
+		FilterFunc: filterFunc,
 	}
-)
+}
+
+type ProjectSnapshotWithConditions struct {
+	Snapshot   ProjectSnapshot
+	Conditions []v1alpha1.Condition
+}
 
 type ProjectSnapshot struct {
 	Name            string
@@ -33,14 +43,29 @@ type ProjectSnapshot struct {
 }
 
 func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	pt := &v1alpha1.Project{}
-	if err := sdk.FromUnstructured(obj, pt); err != nil {
+	projectSnapWithConditions, err := projectSnapshotFromUnstructed(obj)
+	if err != nil {
+		return nil, err
+	}
+	return projectSnapWithConditions.Snapshot, nil
+}
+
+func filterProjectsWithConditions(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return projectSnapshotFromUnstructed(obj)
+}
+
+func projectSnapshotFromUnstructed(obj *unstructured.Unstructured) (*ProjectSnapshotWithConditions, error) {
+	project := &v1alpha1.Project{}
+	if err := sdk.FromUnstructured(obj, project); err != nil {
 		return nil, err
 	}
 
-	return ProjectSnapshot{
-		Name:            pt.Name,
-		ProjectTypeName: pt.Spec.ProjectTypeName,
-		Template:        pt.Spec.Template,
+	return &ProjectSnapshotWithConditions{
+		Snapshot: ProjectSnapshot{
+			Name:            project.Name,
+			ProjectTypeName: project.Spec.ProjectTypeName,
+			Template:        project.Spec.Template,
+		},
+		Conditions: project.Status.Conditions,
 	}, nil
 }
