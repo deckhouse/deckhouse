@@ -247,6 +247,21 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
+			Name:  "Limited with NamespaceSelectors and namespace doesn't exist",
+			Group: []string{"limited-namespace-selectors"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "namespace-selector-test",
+			},
+			Namespaces: []runtime.Object{},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "namespaces \"namespace-selector-test\" not found",
+			},
+		},
+		{
 			Name:  "Limited with NamespaceSelectors and labels match",
 			Group: []string{"limited-namespace-selectors"},
 			Attributes: WebhookResourceAttributes{

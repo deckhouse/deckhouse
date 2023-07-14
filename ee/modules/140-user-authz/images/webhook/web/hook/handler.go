@@ -129,7 +129,7 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 		}
 	}
 
-	// Secondly, we check if the request namespace's labels match any of the provided namespace selectors
+	// Secondly, we check if the labels of the requested namespace match any of the provided namespace selectors
 	if request.Status.Denied && len(entry.NamespaceSelectors) > 0 {
 		match, err := h.namespaceLabelsMatchSelector(request.Spec.ResourceAttributes.Namespace, entry.NamespaceSelectors)
 		if err != nil {
@@ -348,6 +348,7 @@ func (h *Handler) affectedDirs(r *WebhookRequest) []DirectoryEntry {
 	return dirEntriesAffected
 }
 
+// checks if labels of a namespace match provided labelselector
 func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSelectors []*NamespaceSelector) (bool, error) {
 	var labelsSet labels.Set
 	namespace, err := h.kubeclient.CoreV1().Namespaces().Get(context.TODO(), namespaceName, metav1.GetOptions{})
@@ -368,21 +369,7 @@ func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSe
 	return false, nil
 }
 
-// gets the map of namespaces matching specific label selector from k8s api client
-func (h *Handler) getNamespacesByLabelSelector(namespaceSelector NamespaceSelector) (map[string]struct{}, error) {
-	namespaces := make(map[string]struct{})
-
-	getNamespaces, err := h.kubeclient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{LabelSelector: metav1.FormatLabelSelector(namespaceSelector.LabelSelector)})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, namespace := range getNamespaces.Items {
-		namespaces[namespace.Name] = struct{}{}
-	}
-	return namespaces, nil
-}
-
+// checks if an entry has any namespace-related filters
 func hasNamespaceFilters(entry *DirectoryEntry) bool {
 	if len(entry.LimitNamespaces)+len(entry.NamespaceSelectors) == 0 || entry.NamespaceFiltersAbsent {
 		// The limitNamespaces option has a priority over the allowAccessToSystemNamespaces option.

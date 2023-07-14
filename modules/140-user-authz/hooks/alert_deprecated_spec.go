@@ -19,6 +19,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -34,45 +36,43 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyClusterAuthorizationRuleFilter,
 		},
 	},
-}, handleClusterAuthorizationRulesWithLimitNamespaces)
+}, handleClusterAuthorizationRulesWithDeprecatedSpec)
 
-type ObjectNameKind struct {
-	Name string
-	Kind string
+type ObjectCAR struct {
+	Name       string
+	Kind       string
+	Deprecated bool
 }
 
 func applyClusterAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var metricNeeded bool
+	car := ObjectCAR{
+		Name: obj.GetName(),
+		Kind: obj.GetKind(),
+	}
 	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil {
 		return nil, err
 	}
-	if found {
-		if _, ok := spec["limitNamespaces"]; ok {
-			metricNeeded = true
-		} else if _, ok := spec["allowAccessToSystemNamespaces"]; ok {
-			metricNeeded = true
-		}
-
-		if metricNeeded {
-			return &ObjectNameKind{
-				Name: obj.GetName(),
-				Kind: obj.GetKind(),
-			}, nil
-		}
+	if !found {
+		return nil, fmt.Errorf("couldn't find CAR spec")
 	}
 
-	return nil, nil
+	if _, ok := spec["limitNamespaces"]; ok {
+		car.Deprecated = true
+	} else if _, ok := spec["allowAccessToSystemNamespaces"]; ok {
+		car.Deprecated = true
+	}
+
+	return car, nil
 }
 
-func handleClusterAuthorizationRulesWithLimitNamespaces(input *go_hook.HookInput) error {
+func handleClusterAuthorizationRulesWithDeprecatedSpec(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_deprecated_car_spec")
 	for _, obj := range input.Snapshots["cluster_authorization_rules"] {
-		if obj == nil {
-			continue
+		car := obj.(ObjectCAR)
+		if car.Deprecated {
+			input.MetricsCollector.Set("d8_deprecated_car_spec", 1, map[string]string{"kind": car.Kind, "name": car.Name}, metrics.WithGroup("d8_deprecated_car_spec"))
 		}
-		objMeta := obj.(*ObjectNameKind)
-		input.MetricsCollector.Set("d8_deprecated_car_spec", 1, map[string]string{"kind": objMeta.Kind, "name": objMeta.Name}, metrics.WithGroup("d8_deprecated_car_spec"))
 	}
 	return nil
 }
