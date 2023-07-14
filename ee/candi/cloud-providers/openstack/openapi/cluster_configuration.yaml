@@ -181,6 +181,8 @@ apiVersions:
               We recommend using the fastest disks provided by the provider in all cases.
 
               If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `ru-1a` disk type, while master-1, master-3 will have the `ru-1b` disk type
+              openstack availability zone list
+              openstack volume type list
             x-examples:
             - ru-1a: fast-ru-1a
               ru-1b: fast-ru-1b
@@ -321,6 +323,8 @@ apiVersions:
 
 
                 If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then worker-0, worker-2, worker-4 will have the `ru-1a` disk type, while worker-1, worker-3 will have the `ru-1b` disk type.
+                openstack availability zone list
+                openstack volume type list
               x-examples:
                 - ru-1a: fast-ru-1a
                   ru-1b: fast-ru-1b
@@ -527,6 +531,7 @@ apiVersions:
             type: string
             description: |
               The domain name.
+              OS_USER_DOMAIN_NAME variable from openrc.
           tenantName:
             type: string
             description: |
