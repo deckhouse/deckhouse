@@ -106,6 +106,94 @@ status:
 			})
 		})
 	})
+
+	Context("Cluster has ExternalModuleRelease with custom weight", func() {
+		BeforeEach(func() {
+			var err error
+			tmpDir, err = os.MkdirTemp(os.TempDir(), "exrelease-*")
+			if err != nil {
+				Fail(err.Error())
+			}
+			_ = os.Mkdir(tmpDir+"/modules", 0777)
+			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+
+			st := f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ExternalModuleRelease
+metadata:
+  name: echoserver-v0.0.1
+spec:
+  moduleName: echoserver
+  version: 0.0.1
+  weight: 987
+status:
+  phase: Pending
+`)
+
+			f.BindingContexts.Set(st)
+			f.RunHook()
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
+
+		It("module symlink should be created with custom weight", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Deployed"))
+			moduleLinks, err := os.ReadDir(tmpDir + "/modules")
+			if err != nil {
+				Fail(err.Error())
+			}
+			Expect(moduleLinks).To(HaveLen(1))
+			Expect(moduleLinks[0].Name()).To(Equal("987-echoserver"))
+		})
+
+		Context("ExternalModuleRelease was changed with another weight", func() {
+			BeforeEach(func() {
+				st := f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ExternalModuleRelease
+metadata:
+  name: echoserver-v0.0.1
+spec:
+  moduleName: echoserver
+  version: 0.0.1
+  weight: 987
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ExternalModuleRelease
+metadata:
+  name: echoserver-v0.0.2
+spec:
+  moduleName: echoserver
+  version: 0.0.2
+  weight: 913
+status:
+  phase: Pending
+`)
+				f.BindingContexts.Set(st)
+				fsSynchronized = false
+				f.RunHook()
+			})
+
+			It("should change module symlink", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Superseded"))
+				Expect(f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.2").Field("status.phase").String()).To(Equal("Deployed"))
+				moduleLinks, err := os.ReadDir(tmpDir + "/modules")
+				if err != nil {
+					Fail(err.Error())
+				}
+				Expect(moduleLinks).To(HaveLen(1))
+				Expect(moduleLinks[0].Name()).To(Equal("913-echoserver"))
+			})
+		})
+	})
 })
 
 func TestSymlinkFinder(t *testing.T) {

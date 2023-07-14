@@ -44,10 +44,10 @@ require (
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/flant/addon-operator v1.1.5-0.20230714135822-68a6714fca31 // indirect
+	github.com/flant/addon-operator v1.1.5-0.20230714211645-9bbd94915f4b // indirect
 	github.com/flant/kube-client v0.26.1 // indirect
 	github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee // indirect
-	github.com/flant/shell-operator v1.3.0 // indirect
+	github.com/flant/shell-operator v1.3.1-0.20230714211550-6bacd3b026f5 // indirect
 	github.com/go-chi/chi/v5 v5.0.8 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.0.2 // indirect
