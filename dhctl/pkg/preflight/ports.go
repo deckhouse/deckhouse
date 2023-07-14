@@ -17,6 +17,7 @@ package preflight
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -39,10 +40,11 @@ func (pc *preflightCheck) CheckAvailabilityPorts() error {
 	scriptCmd := pc.sshClient.UploadScript(file)
 	out, err := scriptCmd.Execute()
 	if err != nil {
+		log.ErrorLn(strings.Trim(string(out), "\n"))
 		if ee, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("check_ports.sh: %s, %w, %s", string(out), err, string(ee.Stderr))
+			return fmt.Errorf("check_ports.sh: %w, %s", err, string(ee.Stderr))
 		}
-		return fmt.Errorf("check_ports.sh: %s, %w", string(out), err)
+		return fmt.Errorf("check_ports.sh: %w", err)
 	}
 
 	log.DebugLn(string(out))
