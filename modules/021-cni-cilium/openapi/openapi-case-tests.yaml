@@ -1,12 +1,13 @@
 positive:
   configValues:
   - debugLogging: true
-    cleanState: true
+    labelsRegex:
+    - "k8s:!app\\.kubernetes\\.io"
+    - "k8s:io\\.cilium\\.k8s\\.policy"
     createNodeRoutes: true
     svcSourceRangeCheck: true
     policyAuditMode: true
   - debugLogging: false
-    cleanState: false
     createNodeRoutes: false
     svcSourceRangeCheck: false
     policyAuditMode: false

@@ -22,10 +22,13 @@ data:
   enable-ipv4: "true"
   enable-ipv6: "false"
 
-  clean-cilium-state: {{ .Values.cniCilium.cleanState | quote }}
   enable-bpf-tproxy: "true"
 
   bpf-lb-bypass-fib-lookup: "false" # TODO: https://docs.cilium.io/en/v1.11/gettingstarted/kubeproxy-free/#nodeport-with-fhrp-vpc
+
+  {{- if .Values.cniCilium.labelsRegex }}
+  labels: {{.Values.cniCilium.labelsRegex | join " " | quote }}
+  {{- end }}
 
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
   tunnel: "vxlan"
@@ -38,10 +41,20 @@ data:
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
 
+  {{- if has "virtualization" .Values.global.enabledModules }}
+  # Preserve default tunnel port 8472 for virtualization workloads
+  tunnel-port: "8469"
+  enable-ip-masq-agent: "true"
+  ip-masq-agent-config-path: /etc/config/ip-masq-agent
+  # Use stable MAC addresses for pods
+  endpoint-interface-host-mac: "f6:e1:74:94:b8:1b"
+  endpoint-interface-mac: "f6:e1:74:94:b8:1a"
+  {{- end }}
+
   {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
   enable-bpf-masquerade: "true"
   enable-ipv4-egress-gateway: "true"
-    {{- if or (eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes") (eq .Values.cniCilium.internal.mode "Direct") }}
+    {{- if has .Values.cniCilium.internal.mode (list "Direct" "DirectWithNodeRoutes") }}
   # install-no-conntrack-iptables-rules requires the agent to run in direct routing mode
   install-no-conntrack-iptables-rules: "true"
     {{- end }}
@@ -62,13 +75,14 @@ data:
   kube-proxy-replacement: "strict"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
 
-  enable-host-reachable-services: "true"
+  bpf-lb-sock: "true"
   bpf-lb-sock-hostns-only: "true"
   enable-health-check-nodeport: "true"
   node-port-bind-protection: "true"
   enable-auto-protect-node-port-range: "true"
   bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
   bpf-lb-algorithm: "random"
+  bpf-lb-map-max: "512000"
   enable-service-topology: "true"
   netfilter-compatible-mode: "true"
 
@@ -114,3 +128,5 @@ data:
   # disabled since they may generate absurd amount of requests in count and size
   # we've found no use for status field of CNP and CCNP
   disable-cnp-status-updates: "true"
+
+  procfs: "/host/proc"

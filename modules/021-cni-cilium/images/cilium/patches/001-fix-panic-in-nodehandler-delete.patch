@@ -1,0 +1,38 @@
+Subject: [PATCH] fix panic in linuxNodeHandler.NodeDelete
+---
+Index: pkg/datapath/linux/node_ids.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/datapath/linux/node_ids.go b/pkg/datapath/linux/node_ids.go
+--- a/pkg/datapath/linux/node_ids.go	(revision 628b5209efd22e8a102919564c5c30277ca1c9b0)
++++ b/pkg/datapath/linux/node_ids.go	(date 1689246633450)
+@@ -108,7 +108,7 @@
+ 
+ // deallocateIDForNode deallocates the node ID for the given node, if it was allocated.
+ func (n *linuxNodeHandler) deallocateIDForNode(oldNode *nodeTypes.Node) {
+-	nodeID := n.nodeIDsByIPs[oldNode.IPAddresses[0].IP.String()]
++	nodeID := n.getNodeIDForNode(oldNode)
+ 	for _, addr := range oldNode.IPAddresses {
+ 		id := n.nodeIDsByIPs[addr.IP.String()]
+ 		if nodeID != id {
+@@ -122,6 +122,18 @@
+ 	n.deallocateNodeIDLocked(nodeID)
+ }
+ 
++// getNodeIDForNode gets the node ID for the given node if one was allocated
++// for any of the node IP addresses. If none is found, 0 is returned.
++func (n *linuxNodeHandler) getNodeIDForNode(node *nodeTypes.Node) uint16 {
++	nodeID := uint16(0)
++	for _, addr := range node.IPAddresses {
++		if id, exists := n.nodeIDsByIPs[addr.IP.String()]; exists {
++			nodeID = id
++		}
++	}
++	return nodeID
++}
++
+ // DeallocateNodeID deallocates the given node ID, if it was allocated.
+ func (n *linuxNodeHandler) DeallocateNodeID(nodeID uint16) {
+ 	n.mutex.Lock()
