@@ -48,6 +48,6 @@ func (pc *preflightCheck) CheckAvailabilityPorts() error {
 	}
 
 	log.DebugLn(string(out))
-	log.InfoLn("Checking ssh tunnel success")
+	log.InfoLn("Checking availability ports success")
 	return nil
 }

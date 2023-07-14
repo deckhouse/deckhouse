@@ -21,5 +21,5 @@ const checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh"
 func RenderAndSavePreflightCheckPortsScript() (string, error) {
 	log.DebugLn("Start render check ports script")
 
-	return RenderAndSaveTemplate("check_ports.sh", checkPortsScriptPath, nil)
+	return RenderAndSaveTemplate("check_ports.sh", checkPortsScriptPath, map[string]interface{}{})
 }
