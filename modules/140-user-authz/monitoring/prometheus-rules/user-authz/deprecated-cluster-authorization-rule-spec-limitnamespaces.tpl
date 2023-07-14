@@ -1,14 +1,16 @@
 - name: kubernetes.user-authz.deprecated-spec
   rules:
-  - alert: UserAuthzDeprecatedCARSpecLimitNamespaces
+  - alert: UserAuthzDeprecatedCARSpec
     expr: >-
-      group by (module) (d8_deprecated_car_spec_limitnamespaces) == 1
+      d8_deprecated_car_spec > 0
     labels:
       severity_level: "9"
     annotations:
       description: |-
-        There is a cluster authorization rule with [deprecated]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/140-user-authz/#implementation-nuances) '.spec.limitNamespaces' parameter.
-        Migrate to '.spec.namespaceSelector'.
+        There is a cluster authorization rule with [deprecated]({{ include "helm_lib_module_documentation_uri" (list . "/modules/140-user-authz/#implementation-nuances") }}) spec parameters - either 'spec.limitNamespaces' or 'spec.AllowAccessToSystemNamespaces', or both. Migrate to '.spec.namespaceSelector'.
+
+        Use the following command to get the list of the affected clusterAuthorizationRules:
+        `kubectl  get clusterauthorizationrules.deckhouse.io -o json | jq '.items[] | select(.spec.limitNamespaces != null or .spec.allowAccessToSystemNamespaces != null) | .metadata.name'`
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_extended_monitoring_deprecated_annotation: "D8UserAuthzDeprecatedSpec,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"

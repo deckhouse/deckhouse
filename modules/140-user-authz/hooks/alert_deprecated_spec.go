@@ -42,29 +42,37 @@ type ObjectNameKind struct {
 }
 
 func applyClusterAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	namespaces, found, err := unstructured.NestedStringSlice(obj.Object, "spec", "limitNamespaces")
+	var metricNeeded bool
+	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil {
 		return nil, err
 	}
 	if found {
-		if len(namespaces) > 0 {
+		if _, ok := spec["limitNamespaces"]; ok {
+			metricNeeded = true
+		} else if _, ok := spec["allowAccessToSystemNamespaces"]; ok {
+			metricNeeded = true
+		}
+
+		if metricNeeded {
 			return &ObjectNameKind{
 				Name: obj.GetName(),
 				Kind: obj.GetKind(),
 			}, nil
 		}
 	}
+
 	return nil, nil
 }
 
 func handleClusterAuthorizationRulesWithLimitNamespaces(input *go_hook.HookInput) error {
-	input.MetricsCollector.Expire("d8_deprecated_car_spec_limitnamespaces")
+	input.MetricsCollector.Expire("d8_deprecated_car_spec")
 	for _, obj := range input.Snapshots["cluster_authorization_rules"] {
 		if obj == nil {
 			continue
 		}
 		objMeta := obj.(*ObjectNameKind)
-		input.MetricsCollector.Set("d8_deprecated_car_spec_limitnamespaces", 1, map[string]string{"kind": objMeta.Kind, "name": objMeta.Name}, metrics.WithGroup("d8_deprecated_car_spec_limitnamespaces"))
+		input.MetricsCollector.Set("d8_deprecated_car_spec", 1, map[string]string{"kind": objMeta.Kind, "name": objMeta.Name}, metrics.WithGroup("d8_deprecated_car_spec"))
 	}
 	return nil
 }

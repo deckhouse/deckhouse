@@ -57,10 +57,13 @@ spec:
                     Defines if scaling of Deployments and StatefulSets is allowed/not allowed.
                 allowAccessToSystemNamespaces:
                   type: boolean
+                  x-doc-deprecated: true
                   description: |
                     Allow access to System namespaces (kube-*, d8-*, loghouse, default).
 
                     Option available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
+
+                    Deprecated. Use the [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter (API version `v1` of the CR) instead.
                   x-doc-d8Revision: ee
                   x-doc-default: false
                 limitNamespaces:
@@ -194,23 +197,26 @@ spec:
                     Defines if scaling of Deployments and StatefulSets is allowed/not allowed.
                 allowAccessToSystemNamespaces:
                   type: boolean
+                  x-doc-deprecated: true
                   description: |
                     Allow access to System namespaces (kube-*, d8-*, loghouse, default).
 
                     Option available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
+
+                    Deprecated. Use the [namespaceSelector](#clusterauthorizationrule-v1-spec-namespaceselector) field instead.
                   x-doc-d8Revision: ee
                   x-doc-default: false
                 namespaceSelector:
                   description: |
                     Defines a set of namespaces accessible by the user, using labelSelector values.
 
-                    Compatibility with limit limitNamespaces:
-                    * If this field is set, the limitNamespaces value is ignored for the current clusterAuthorizationRule.
-                    * The field limitNamespaces is deprecated.
+                    Compatibility with limit limitNamespaces and allowAccessToSysytemNamespaces:
+                    * If this field is set, the limitNamespaces and allowAccessToSystemNamesapces values are ignored for the current clusterAuthorizationRule.
+                    * The fields limitNamespaces and allowAccessToSystemNamesapces are deprecated.
 
                     The decision making process:
-                    * If the field is defined, then only the namespaces matching labelSelector's criteria are accessible (except for the system ones - see `spec.allowAccessToSystemNamespaces` below).
-                    * If the field is not defined, then all namespaces are accessible (except for the system ones - see `spec.allowAccessToSystemNamespaces` below).
+                    * If the field is defined, then only the namespaces matching labelSelector's criteria are accessible.
+                    * If the field is not defined, then all namespaces are accessible.
 
                     Option available only if [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
                   type: object
@@ -223,9 +229,6 @@ spec:
 
                          If both matchExpressions and matchLabels parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
                       type: object
-                      anyOf:
-                        - required: [ matchLabels ]
-                        - required: [ matchExpressions ]
                       properties:
                         matchExpressions:
                           type: array

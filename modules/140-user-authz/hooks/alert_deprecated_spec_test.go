@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	deprecatedState = `
+	deprecatedStateLimitNs = `
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -49,6 +49,8 @@ spec:
   subjects:
   - kind: Group
     name: administrators
+`
+	deprecatedStateLimitSystemNs = `
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -70,7 +72,7 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
-  name: administrators
+  name: administrators3
 spec:
   accessLevel: SuperAdmin
   allowScale: true
@@ -89,11 +91,28 @@ spec:
 `
 )
 
-var _ = Describe("User-authz hooks :: alert_deprecated_limitnamespaces ::", func() {
+var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "ClusterAuthorizationRule", false)
 
-	Context("A cluster with valid objcet", func() {
+	Context("An empty cluster", func() {
+		BeforeEach(func() {
+			f.RunHook()
+		})
+
+		It("Should have no metrics regarding deprecated clusterAuthorizationRule spec", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(1))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_deprecated_car_spec",
+				Action: "expire",
+			}))
+		})
+	})
+
+	Context("A cluster with a valid CAR", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
@@ -105,15 +124,71 @@ var _ = Describe("User-authz hooks :: alert_deprecated_limitnamespaces ::", func
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Group:  "d8_deprecated_car_spec_limitnamespaces",
+				Group:  "d8_deprecated_car_spec",
 				Action: "expire",
 			}))
 		})
 	})
 
-	Context("Cluster with clusterAuthorizationRule having deprecated spec", func() {
+	Context("Cluster with a namespace-limited clusterAuthorizationRule", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(deprecatedState))
+			f.BindingContexts.Set(f.KubeStateSet(deprecatedStateLimitNs))
+			f.RunHook()
+		})
+
+		It("Metrics should be created for all objects with deprecated spec", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_deprecated_car_spec",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_deprecated_car_spec",
+				Group:  "d8_deprecated_car_spec",
+				Action: "set",
+				Value:  pointer.Float64(1.0),
+				Labels: map[string]string{
+					"kind": "ClusterAuthorizationRule",
+					"name": "administrators",
+				},
+			}))
+		})
+	})
+
+	Context("Cluster with a system-namespace-limited clusterAuthorizationRule", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(deprecatedStateLimitSystemNs))
+			f.RunHook()
+		})
+
+		It("Metrics should be created for all objects with deprecated spec", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_deprecated_car_spec",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_deprecated_car_spec",
+				Group:  "d8_deprecated_car_spec",
+				Action: "set",
+				Value:  pointer.Float64(1.0),
+				Labels: map[string]string{
+					"kind": "ClusterAuthorizationRule",
+					"name": "administrators2",
+				},
+			}))
+		})
+	})
+
+	Context("Cluster with valid and limited clusterAuthorizationRules", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(state + deprecatedStateLimitNs + deprecatedStateLimitSystemNs))
 			f.RunHook()
 		})
 
@@ -123,12 +198,12 @@ var _ = Describe("User-authz hooks :: alert_deprecated_limitnamespaces ::", func
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(3))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Group:  "d8_deprecated_car_spec_limitnamespaces",
+				Group:  "d8_deprecated_car_spec",
 				Action: "expire",
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_deprecated_car_spec_limitnamespaces",
-				Group:  "d8_deprecated_car_spec_limitnamespaces",
+				Name:   "d8_deprecated_car_spec",
+				Group:  "d8_deprecated_car_spec",
 				Action: "set",
 				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
@@ -137,8 +212,8 @@ var _ = Describe("User-authz hooks :: alert_deprecated_limitnamespaces ::", func
 				},
 			}))
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_deprecated_car_spec_limitnamespaces",
-				Group:  "d8_deprecated_car_spec_limitnamespaces",
+				Name:   "d8_deprecated_car_spec",
+				Group:  "d8_deprecated_car_spec",
 				Action: "set",
 				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{

@@ -32,7 +32,7 @@ title: "Модуль user-authz"
 
 > **Важно!** Режим multi-tenancy (авторизация по namespace) в данный момент реализован по временной схеме и **не гарантирует безопасность!**
 
-В случае если [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) ресурс содержит как `limitNamespaces` так и `namespaceSelector` параметры, в дальнейших расчетах будет учтен только `namespaceSelector`.
+В случае если в [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) ресурсе используется `namespaceSelector`, то `limitNamespaces` и `allowAccessToSystemNamespace` параметры не учитываются.
 
 Если webhook, который реализовывает систему авторизации по какой-то причине будет недоступен, то в это время опции `allowAccessToSystemNamespaces`, `namespaceSelector` и `limitNamespaces` в CR перестанут применяться и пользователи будут иметь доступ во все namespace. После восстановления доступности webhook'а опции продолжат работать.
 

@@ -32,7 +32,7 @@ In addition to the RBAC, you can use a set of high-level roles in the module:
 
 > **Caution!** Currently, the multi-tenancy mode (namespace-based authorization) is implemented according to a temporary scheme and **isn't guaranteed to be entirely safe and secure**!
 
-If a [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) Custom Resource contains both `limitNamespaces` and `namespaceSelector` parameters, only the latter will be taken into consideration.
+If a [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) Custom Resource contains the `namespaceSelector` field, neither `limitNamespaces` nor `allowAccessToSystemNamespaces`are taken into consideration.
 
 The `allowAccessToSystemNamespaces`, `namespaceSelector` and `limitNamespaces` options in the CR will no longer be applied if the authorization system's webhook is unavailable for some reason. As a result, users will have access to all namespaces. After the webhook availability is restored, the options will become relevant again.
 

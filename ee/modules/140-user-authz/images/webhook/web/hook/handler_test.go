@@ -14,8 +14,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestAuthorizeRequest(t *testing.T) {
@@ -258,9 +258,10 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
-							"match": "true",
+							"match":      "true",
+							"expression": "allow",
 						},
 					},
 				},
@@ -282,7 +283,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "false",
 						},
@@ -306,7 +307,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "false",
 						},
@@ -330,9 +331,10 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
-							"match": "true",
+							"match":      "true",
+							"expression": "match",
 						},
 					},
 				},
@@ -354,7 +356,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -378,7 +380,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -386,7 +388,7 @@ func TestAuthorizeRequest(t *testing.T) {
 				},
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "d8-system",
+						Name: "d8-system",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -410,7 +412,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -434,7 +436,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -458,9 +460,10 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
-							"match": "true",
+							"match":      "true",
+							"expression": "allow",
 						},
 					},
 				},
@@ -482,7 +485,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "namespace-selector-test",
+						Name: "namespace-selector-test",
 						Labels: map[string]string{
 							"match": "true",
 						},
@@ -502,14 +505,21 @@ func TestAuthorizeRequest(t *testing.T) {
 			allRegex, _ := regexp.Compile("^.*$")
 			namespaceSelector := &NamespaceSelector{
 				LabelSelector: &metav1.LabelSelector{
-					MatchLabels:      map[string]string{
+					MatchLabels: map[string]string{
 						"match": "true",
+					},
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "expression",
+							Operator: "In",
+							Values:   []string{"match", "allow"},
+						},
 					},
 				},
 			}
 
 			handler := &Handler{
-				logger: log.New(io.Discard, "", 0),
+				logger:     log.New(io.Discard, "", 0),
 				kubeclient: fake.NewSimpleClientset(testCase.Namespaces...),
 				cache: &dummyCache{
 					data: map[string]map[string]bool{
@@ -529,10 +539,10 @@ func TestAuthorizeRequest(t *testing.T) {
 				directory: map[string]map[string]DirectoryEntry{
 					"Group": {
 						"normal": {
-							LimitNamespacesAbsent: true,
+							NamespaceFiltersAbsent: true,
 						},
 						"system-allowed": {
-							LimitNamespacesAbsent:         true,
+							NamespaceFiltersAbsent:        true,
 							AllowAccessToSystemNamespaces: true,
 						},
 						"limited": {

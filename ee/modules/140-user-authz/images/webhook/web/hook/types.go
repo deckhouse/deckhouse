@@ -15,16 +15,15 @@ import (
 type DirectoryEntry struct {
 	AllowAccessToSystemNamespaces bool
 	LimitNamespaces               []*regexp.Regexp
-	NamespaceSelector             *NamespaceSelector
 	NamespaceSelectors            []*NamespaceSelector
-	// If there is no LimitNamespaces option, the user has access to all namespaces except system namespaces.
+	// If there is no LimitNamespaces  nor NamespaceSelectors options, the user has access to all namespaces except system namespaces.
 	// If LimitNamespaces is present, we do not need to mind about allowed access to system namespaces.
-	// Thus presence of  LimitNamespaces matters when we summarise rules from all CRs to get the allowed namespaces.
-	LimitNamespacesAbsent         bool
+	// Thus presence of LimitNamespaces matters when we summarise rules from all CRs to get the allowed namespaces.
+	NamespaceFiltersAbsent bool
 }
 
 type NamespaceSelector struct {
-	LabelSelector	*metav1.LabelSelector `json:"labelSelector"`
+	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
 }
 
 // UserAuthzConfig is a config composed from ClusterAuthorizationRules collected from Kubernetes cluster
