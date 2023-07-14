@@ -30,7 +30,6 @@ type ProjectSnapshot struct {
 	Name            string
 	Template        map[string]interface{}
 	ProjectTypeName string
-	Conditions      []v1alpha1.Condition
 }
 
 func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -43,6 +42,5 @@ func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 		Name:            pt.Name,
 		ProjectTypeName: pt.Spec.ProjectTypeName,
 		Template:        pt.Spec.Template,
-		Conditions:      pt.Status.Conditions,
 	}, nil
 }
