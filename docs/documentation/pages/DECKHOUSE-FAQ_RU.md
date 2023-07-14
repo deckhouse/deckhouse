@@ -536,7 +536,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 1. Выполните следующую команду:
 
    ```shell
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry https://registry.deckhouse.io/deckhouse/ce
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Дождитесь перехода Pod'а Deckhouse в статус `Ready`:
@@ -615,7 +615,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN https://registry.deckhouse.io/deckhouse/ee
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
    ```
 
 1. Дождитесь перехода Pod'а Deckhouse в статус `Ready`:
