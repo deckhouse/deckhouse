@@ -29,3 +29,10 @@ if exists(."timestamp_end") {
     ."timestamp_end" = format_timestamp!(ts, format: "%+", timezone: "local")
 }
 `
+
+// DateTimeRule copies time to the datetime field. Only relevant if the Splunk destination is used.
+const DateTimeRule Rule = `
+if exists(."timestamp") {
+  ."datetime" = ."timestamp"
+}
+`

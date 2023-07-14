@@ -8,6 +8,14 @@
     }
   },
   "transforms": {
+    "transform/destination/test-splunk-dest/00_splunk_datetime": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/01_local_timezone"
+      ],
+      "source": "if exists(.\"timestamp\") {\n  .\"datetime\" = .\"timestamp\"\n}",
+      "type": "remap"
+    },
     "transform/source/test-source/00_clean_up": {
       "drop_on_abort": false,
       "inputs": [
@@ -29,7 +37,7 @@
     "destination/cluster/test-splunk-dest": {
       "type": "splunk_hec_logs",
       "inputs": [
-        "transform/source/test-source/01_local_timezone"
+        "transform/destination/test-splunk-dest/00_splunk_datetime"
       ],
       "healthcheck": {
         "enabled": false
@@ -41,12 +49,12 @@
         "codec": "text",
         "timestamp_format": "rfc3339"
       },
-      "auto_extract_timestamp": true,
       "compression": "gzip",
       "default_token": "test-token",
       "endpoint": "192.168.1.1:9200",
       "index": "{{ test }}",
       "indexed_fields": [
+        "datetime",
         "namespace",
         "container",
         "image",
