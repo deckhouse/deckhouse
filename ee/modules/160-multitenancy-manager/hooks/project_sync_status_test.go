@@ -41,13 +41,13 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ready status ::"
 					{
 						name:       "test-1",
 						exists:     true,
-						conditions: `[{"name":"Deploying","status":false},{"name":"Sync","status":true}]`,
+						conditions: `[{"name":"Sync","status":true}]`,
 						status:     `{"status":true}`,
 					},
 					{
 						name:       "test-2",
 						exists:     true,
-						conditions: `[{"name":"Deploying","status":false},{"name":"Sync","status":true}]`,
+						conditions: `[{"name":"Sync","status":true}]`,
 						status:     `{"status":true}`,
 					},
 					{
