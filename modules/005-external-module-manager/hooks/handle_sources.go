@@ -29,9 +29,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/module_manager"
-
 	"github.com/Masterminds/semver/v3"
+	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -43,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
+	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
@@ -171,7 +171,9 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			err = fetchAndCopyModuleByVersion(dc, externalModulesDir, ex, moduleName, moduleVersion, opts)
+			moduleVersionPath := path.Join(externalModulesDir, moduleName, moduleVersion)
+
+			err = fetchAndCopyModuleByVersion(dc, moduleVersionPath, ex, moduleName, moduleVersion, opts)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
 					Name:  moduleName,
@@ -180,7 +182,16 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			weight := fetchModuleWeight(externalModulesDir, moduleName, moduleVersion)
+			weight := fetchModuleWeight(moduleVersionPath)
+
+			err = validateModule(moduleName, moduleVersionPath, weight)
+			if err != nil {
+				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
+					Name:  moduleName,
+					Error: err.Error(),
+				})
+				continue
+			}
 
 			createRelease(input, ex.Name, moduleName, moduleVersion, weight)
 		}
@@ -201,6 +212,15 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	return nil
+}
+
+func validateModule(moduleName, absPath string, weight int) error {
+	module, err := module_manager.NewModuleWithNameValidation(moduleName, absPath, weight)
+	if err != nil {
+		return err
+	}
+
+	return deckhouse_config.Service().ValidateModule(module)
 }
 
 func getSourceChecksums(checksumFilePath string) (sourceChecksum, error) {
@@ -266,8 +286,7 @@ func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSou
 	return "v" + moduleMetadata.Version.String(), nil
 }
 
-func fetchModuleWeight(externalModulesDir, moduleName, moduleVersion string) int {
-	moduleVersionPath := path.Join(externalModulesDir, moduleName, moduleVersion)
+func fetchModuleWeight(moduleVersionPath string) int {
 	moduleDefFile := path.Join(moduleVersionPath, module_manager.ModuleDefinitionFileName)
 
 	if _, err := os.Stat(moduleDefFile); err != nil {
@@ -298,7 +317,7 @@ func fetchModuleWeight(externalModulesDir, moduleName, moduleVersion string) int
 	return def.Weight
 }
 
-func fetchAndCopyModuleByVersion(dc dependency.Container, externalModulesDir string, moduleSource v1alpha1.ExternalModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
+func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
 	regCli, err := dc.GetRegistryClient(path.Join(moduleSource.Spec.Registry.Repo, moduleName), registryOptions...)
 	if err != nil {
 		return fmt.Errorf("fetch module error: %v", err)
@@ -309,7 +328,6 @@ func fetchAndCopyModuleByVersion(dc dependency.Container, externalModulesDir str
 		return fmt.Errorf("fetch module version error: %v", err)
 	}
 
-	moduleVersionPath := path.Join(externalModulesDir, moduleName, moduleVersion)
 	_ = os.RemoveAll(moduleVersionPath)
 
 	err = copyModuleToFS(moduleVersionPath, img)
