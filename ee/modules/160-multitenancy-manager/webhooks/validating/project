@@ -10,7 +10,7 @@ function __config__(){
 configVersion: v1
 kubernetes:
   - name: namespaces
-    apiVersion: deckhouse.io/v1alpha1
+    apiVersion: v1
     kind: Namespace
     queue: "namespaces"
     group: main
