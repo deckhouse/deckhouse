@@ -160,7 +160,7 @@ k8s:
       snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.27':
-    status: available
+    status: preview
     patch: 1
     bashible: *bashible_k8s_ge_1_23
     ccm:
