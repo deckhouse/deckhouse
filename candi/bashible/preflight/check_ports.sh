@@ -27,7 +27,7 @@ do
     echo -n "Check port $port "
     check_port $port
     if [ $? -ne 0 ]; then
-        echo "FAIL" 1>&2
+        echo "FAIL"
         exit 1
     fi
     echo "SUCCESS"

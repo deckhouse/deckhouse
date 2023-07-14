@@ -40,9 +40,9 @@ func (pc *preflightCheck) CheckAvailabilityPorts() error {
 	out, err := scriptCmd.Execute()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("check_ports.sh: %v, %s", err, string(ee.Stderr))
+			return fmt.Errorf("check_ports.sh: %s, %w, %s", string(out), err, string(ee.Stderr))
 		}
-		return fmt.Errorf("check_ports.sh: %v", err)
+		return fmt.Errorf("check_ports.sh: %s, %w", string(out), err)
 	}
 
 	log.DebugLn(string(out))
