@@ -121,6 +121,12 @@ sections:
           ce: false
           ee: true
       - description:
+          en: Air-gapped installation
+          ru: Установка в закрытых окружениях
+        revision:
+          ce: false
+          ee: true
+      - description:
           en: BGP support
           ru: Поддержка BGP
         revision: ee
