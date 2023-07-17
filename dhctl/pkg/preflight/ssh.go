@@ -43,6 +43,7 @@ func (pc *PreflightCheck) CheckSSHTunel() error {
 	tun := pc.sshClient.Tunnel("L", builder.String())
 	err := tun.Up()
 	if err != nil {
+		log.ErrorLn("Checking ssh tunnel fail")
 		return err
 	}
 
