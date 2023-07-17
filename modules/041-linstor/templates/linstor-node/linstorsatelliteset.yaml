@@ -84,7 +84,7 @@ spec:
   monitoringImage: {{ include "helm_lib_module_image" (list . "drbdReactor") }}
   monitoringBindAddress: 127.0.0.1
   kernelModuleInjectionImage: {{ include "helm_lib_module_image" (list . "drbdDriverLoader") }}
-  kernelModuleInjectionMode: Compile
+  kernelModuleInjectionMode: None
   kernelModuleInjectionResources: {}
   kernelModuleInjectionExtraVolumeMounts:
     - name: spaas-certs
