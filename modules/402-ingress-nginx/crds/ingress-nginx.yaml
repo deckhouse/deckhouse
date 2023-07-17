@@ -476,6 +476,8 @@ spec:
                   description: |
                     This certificate will be used when accessing the catch-all server and for Ingress resources without a `secretName` option in `tls:` section.
 
+                    **Caution!** Ingress resources in deckhouse always have a `secretName` option in  `tls` section and are configured in [global configuration](../../deckhouse-configure-global.html).
+
                     By default a self-signed certificate will be used.
                   type: object
                   properties:
