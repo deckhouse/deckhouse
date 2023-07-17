@@ -48,14 +48,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "StorageClass",
 			FilterFunc: applyStorageClassFilter,
 			LabelSelector: &meta.LabelSelector{
-				MatchExpressions: []meta.LabelSelectorRequirement{
-					{
-						Key:      "heritage",
-						Operator: meta.LabelSelectorOpIn,
-						Values: []string{
-							"deckhouse",
-						},
-					},
+				MatchLabels: map[string]string{
+					"heritage": "deckhouse",
+					"module":   "cloud-provider-openstack",
 				},
 			},
 		},

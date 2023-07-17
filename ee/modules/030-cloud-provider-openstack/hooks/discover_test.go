@@ -44,36 +44,37 @@ metadata:
   annotations:
     meta.helm.sh/release-name: cloud-provider-openstack
     meta.helm.sh/release-namespace: d8-system
-  managedFields:
-    - manager: deckhouse-controller
-      operation: Update
-      apiVersion: storage.k8s.io/v1
-      time: '2023-06-01T06:09:25Z'
-      fieldsType: FieldsV1
-      fieldsV1:
-        f:allowVolumeExpansion: {}
-        f:metadata:
-          f:annotations:
-            .: {}
-            f:meta.helm.sh/release-name: {}
-            f:meta.helm.sh/release-namespace: {}
-          f:labels:
-            .: {}
-            f:app.kubernetes.io/managed-by: {}
-            f:heritage: {}
-            f:module: {}
-        f:parameters:
-          .: {}
-          f:type: {}
-        f:provisioner: {}
-        f:reclaimPolicy: {}
-        f:volumeBindingMode: {}
   selfLink: /apis/storage.k8s.io/v1/storageclasses/default
 provisioner: cinder.csi.openstack.org
 parameters:
   type: __DEFAULT__
 reclaimPolicy: Delete
 allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+---
+allowVolumeExpansion: true
+allowedTopologies:
+- matchLabelExpressions:
+  - key: node.deckhouse.io/group
+    values:
+    - system
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    meta.helm.sh/release-name: local-path-provisioner
+    meta.helm.sh/release-namespace: d8-system
+  creationTimestamp: "2022-11-24T16:33:07Z"
+  labels:
+    app: local-path-provisioner
+    app.kubernetes.io/managed-by: Helm
+    heritage: deckhouse
+    module: local-path-provisioner
+  name: localpath-system
+  resourceVersion: "106273"
+  uid: 86533f89-b78a-4cd2-a7b7-5c2a4a77a163
+provisioner: deckhouse.io/localpath-system
+reclaimPolicy: Retain
 volumeBindingMode: WaitForFirstConsumer
 ---
 apiVersion: storage.k8s.io/v1
@@ -91,31 +92,6 @@ metadata:
     meta.helm.sh/release-name: cloud-provider-openstack
     meta.helm.sh/release-namespace: d8-system
     storageclass.kubernetes.io/is-default-class: 'true'
-  managedFields:
-    - manager: deckhouse-controller
-      operation: Update
-      apiVersion: storage.k8s.io/v1
-      time: '2023-06-01T06:09:25Z'
-      fieldsType: FieldsV1
-      fieldsV1:
-        f:allowVolumeExpansion: {}
-        f:metadata:
-          f:annotations:
-            .: {}
-            f:meta.helm.sh/release-name: {}
-            f:meta.helm.sh/release-namespace: {}
-            f:storageclass.kubernetes.io/is-default-class: {}
-          f:labels:
-            .: {}
-            f:app.kubernetes.io/managed-by: {}
-            f:heritage: {}
-            f:module: {}
-        f:parameters:
-          .: {}
-          f:type: {}
-        f:provisioner: {}
-        f:reclaimPolicy: {}
-        f:volumeBindingMode: {}
   selfLink: /apis/storage.k8s.io/v1/storageclasses/ceph-ssd
 provisioner: cinder.csi.openstack.org
 parameters:
@@ -280,7 +256,7 @@ data:
 			b.RunHook()
 		})
 
-		It("Should discover all volumeTypes and no default", func() {
+		It("Should discover all volumeTypes only for storage classes where deployed by cloud-provider-openstack module and no default", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("cloudProviderOpenstack.internal.storageClasses").String()).To(MatchJSON(`
 [
