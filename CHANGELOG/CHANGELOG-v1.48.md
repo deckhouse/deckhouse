@@ -17,7 +17,7 @@
 ## Fixes
 
 
- - **[candi]** Fixed bootstrap master node for altlinux bundle [#5099](https://github.com/deckhouse/deckhouse/pull/5099)
+ - **[candi]** Fix bootstraping master node for AltLinux bundle. [#5099](https://github.com/deckhouse/deckhouse/pull/5099)
  - **[candi]** Add a node approval annotations step. [#5047](https://github.com/deckhouse/deckhouse/pull/5047)
  - **[candi]** Remove the property `etcdDisk` in `nodeGroups` and remove anchor inheritance in the `AWSClusterConfiguration` OpenAPI specification. [#4977](https://github.com/deckhouse/deckhouse/pull/4977)
  - **[cloud-provider-azure]** Fix behavior of the `acceleratedNetworking` variable. [#5000](https://github.com/deckhouse/deckhouse/pull/5000)
@@ -32,7 +32,7 @@
 ## Chore
 
 
- - **[candi]** Moved altlinux bundle to EE edition [#4970](https://github.com/deckhouse/deckhouse/pull/4970)
+ - **[candi]** Move the `altlinux` bundle to EE edition. [#4970](https://github.com/deckhouse/deckhouse/pull/4970)
  - **[candi]** Added the `etcdDiskSizeGb` parameter to Yandex Cloud, GCP, and Azure `ClusterConfiguration`. [#4720](https://github.com/deckhouse/deckhouse/pull/4720)
  - **[candi]** Added the `etcdDiskSizeGb` parameter for OpenStack and migration from `openstack_blockstorage_volume_v2` to `openstack_blockstorage_volume_v3`. [#4716](https://github.com/deckhouse/deckhouse/pull/4716)
  - **[helm_lib]** Update `lib_helm` chart. [#5193](https://github.com/deckhouse/deckhouse/pull/5193)
