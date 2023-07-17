@@ -24,7 +24,7 @@ import (
 
 func (pc *preflightCheck) CheckSSHTunel() error {
 	if app.PreflightSkipSSHForword {
-		log.InfoLn("Skip SSH forward preflight check")
+		log.InfoLn("SSH forward preflight check was skipped")
 		return nil
 	}
 
