@@ -22,18 +22,23 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func (pc *preflightCheck) CheckSSHTunel() error {
+const (
+	DefaultTunnelLocalPort  = 22322
+	DefaultTunnelRemotePort = 22322
+)
+
+func (pc *PreflightCheck) CheckSSHTunel() error {
 	if app.PreflightSkipSSHForword {
 		log.InfoLn("SSH forward preflight check was skipped")
 		return nil
 	}
 
-	log.DebugF("Checking ssh tunnel with remote port %d and local port %d\n", pc.tunnelRemotePort, pc.tunnelLocalPort)
+	log.DebugF("Checking ssh tunnel with remote port %d and local port %d\n", DefaultTunnelRemotePort, DefaultTunnelLocalPort)
 
 	builder := strings.Builder{}
-	builder.WriteString(strconv.Itoa(pc.tunnelLocalPort))
+	builder.WriteString(strconv.Itoa(DefaultTunnelLocalPort))
 	builder.WriteString(":localhost:")
-	builder.WriteString(strconv.Itoa(pc.tunnelRemotePort))
+	builder.WriteString(strconv.Itoa(DefaultTunnelRemotePort))
 
 	tun := pc.sshClient.Tunnel("L", builder.String())
 	err := tun.Up()
