@@ -36,15 +36,22 @@ function check_port() {
     return $exit_code
 }
 
+has_error=false
+
 for port in 6443 2379 2380
 do
     echo -n "Check port $port "
     check_port $port
     if [ $? -ne 0 ]; then
         echo "FAIL"
-        exit 1
+        has_error=true
+        continue
     fi
     echo "SUCCESS"
 done
+
+if [ "$has_error" == true ]; then
+  exit 1
+fi
 
 exit 0
