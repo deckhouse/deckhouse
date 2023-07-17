@@ -26,7 +26,7 @@ import (
 
 func (pc *preflightCheck) CheckAvailabilityPorts() error {
 	if app.PreflightSkipAvailabilityPorts {
-		log.InfoLn("Skip availability ports preflight check")
+		log.InfoLn("Availability ports preflight check was skipped")
 		return nil
 	}
 
