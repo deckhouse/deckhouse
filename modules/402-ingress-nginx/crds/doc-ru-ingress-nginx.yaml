@@ -289,7 +289,7 @@ spec:
                   description: |
                     Этот сертификат используется, в случаях обращений на `catch-all` сервер (запросы, для которых на найден подходящщий Ingress) и для Ingress–ресурсов, в которых не задан `secretName` в секции `tls:`.
 
-                    **Внимание!** Ingress–ресурсы deckhouse всегда имеют `secretName` в секции `tls` и настраиваются в [глобальных настройках](../../deckhouse-configure-global.html).
+                    **Внимание!** Ingress–ресурсы deckhouse по умолчанию имеют `secretName` в секции `tls` и настраиваются в [глобальных настройках](../../deckhouse-configure-global.html).
 
                     По–умолчанию будет использоваться самоподписанный сертификат.
                   properties:
