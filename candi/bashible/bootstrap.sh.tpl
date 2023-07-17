@@ -20,10 +20,7 @@ function get_bundle() {
 }
 
 function basic_bootstrap_{{ .bundle }} {
-  {{- $filePath := .Files.Glob (printf "/bashible/templates/bashible/bundles/%s/bootstrap.sh.tpl|/deckhouse/candi/bashible/bundles/%s/bootstrap.sh.tpl" .bundle .bundle) | keys | first }}
-  {{- fail (toJson $filePath) }}
-  {{- $contents := .Files.Get $filePath }}
-  {{- tpl $contents . | nindent 2 }}
+  {{- tpl (.Files.Get (printf "/deckhouse/candi/bashible/bundles/%s/bootstrap.sh.tpl" .bundle)) . | nindent 2 }}
 }
 
 set -Eeuo pipefail

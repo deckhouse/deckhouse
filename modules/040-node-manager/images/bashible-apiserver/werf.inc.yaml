@@ -43,7 +43,7 @@ import:
 git:
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) | replace "/deckhouse/candi" "/bashible/templates" }}
 - add: /{{ .ModulePath }}candi/bashible
-  to: /bashible/templates/bashible
+  to: /deckhouse/candi/bashible
   stageDependencies:
     beforeSetup:
     - "*"
@@ -55,7 +55,7 @@ git:
   excludePaths:
   - "**/cluster-bootstrap"
 - add: /{{ .ModulePath }}candi/cloud-providers
-  to: /bashible/templates/cloud-providers
+  to: /deckhouse/candi/cloud-providers
   stageDependencies:
     beforeSetup:
     - "*"
