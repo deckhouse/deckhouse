@@ -254,13 +254,11 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 	globalDuplications := make(map[string]struct{})
 
 	for _, mk := range kinds {
-		fmt.Println("KIND 1", mk)
 		uniqGroups := make(map[string]struct{})
 		uniqResources := make(map[string]struct{})
 
 		for _, apiGroup := range mk.APIGroups {
 			for _, kind := range mk.Kinds {
-				fmt.Println("APIGR", apiGroup, kind)
 				if apiGroup == "*" {
 					gvks := rm.findGVKsForWildcard(kind)
 					for _, gvk := range gvks {
@@ -271,14 +269,11 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 							continue
 						}
 
-						fmt.Println("BUNIQ")
-
 						uniqKey := fmt.Sprintf("%s/%s", restMapping.Resource.Group, restMapping.Resource.Resource)
 						if _, ok := globalDuplications[uniqKey]; ok {
 							continue
 						}
 
-						fmt.Println("ADD KEY", uniqKey)
 						uniqGroups[restMapping.Resource.Group] = struct{}{}
 						uniqResources[restMapping.Resource.Resource] = struct{}{}
 						globalDuplications[uniqKey] = struct{}{}
@@ -294,13 +289,11 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 						continue
 					}
 
-					fmt.Println("BUNIQ2")
 					uniqKey := fmt.Sprintf("%s/%s", restMapping.Resource.Group, restMapping.Resource.Resource)
 					if _, ok := globalDuplications[uniqKey]; ok {
 						continue
 					}
 
-					fmt.Println("ADD KEY2", uniqKey)
 					uniqGroups[restMapping.Resource.Group] = struct{}{}
 					uniqResources[restMapping.Resource.Resource] = struct{}{}
 					globalDuplications[uniqKey] = struct{}{}
@@ -308,11 +301,9 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 			}
 		}
 
-		fmt.Println("BEFORE")
 		if len(uniqGroups) == 0 && len(uniqResources) == 0 {
 			continue
 		}
-		fmt.Println("AFTER")
 
 		groups := make([]string, 0, len(mk.APIGroups))
 		resources := make([]string, 0, len(mk.Kinds))
@@ -327,7 +318,6 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 
 		sort.Strings(groups)
 		sort.Strings(resources)
-		fmt.Println("SORTed")
 
 		res = append(res, matchResource{
 			APIGroups: groups,
