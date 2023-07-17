@@ -12,7 +12,7 @@ candi:
   fixes:
     - summary: fix bashible rights to run when SELixux in Enforcement mode
       pull_request: https://github.com/deckhouse/deckhouse/pull/5148
-    - summary: Fixed bootstrap master node for altlinux bundle
+    - summary: Fix bootstraping master node for AltLinux bundle.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5099
     - summary: Add a node approval annotations step.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5047
@@ -46,7 +46,7 @@ dashboard:
       pull_request: https://github.com/deckhouse/deckhouse/pull/5128
 docs:
   fixes:
-    - summary: Fix example of uisind `deckhouse-controller helper helper change-registry`.
+    - summary: Fix the example of using `deckhouse-controller helper helper change-registry`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5208
 ingress-nginx:
   features:
