@@ -24,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-func (pc *preflightCheck) CheckAvailabilityPorts() error {
+func (pc *PreflightCheck) CheckAvailabilityPorts() error {
 	if app.PreflightSkipAvailabilityPorts {
 		log.InfoLn("Availability ports preflight check was skipped")
 		return nil
