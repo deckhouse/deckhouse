@@ -1,0 +1,5 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix discover volume types hooks incorrect fallback to storage classes in another modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5233
+
