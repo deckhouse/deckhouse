@@ -62,9 +62,37 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 		})
 	})
 
-	Context("Required constraint templates are in place", func() {
+	Context("Required constraint templates are in place, but CRDs aren't created", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(constraintTemplate1 + constraintTemplate2)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
+			f.RunHook()
+		})
+		It("should keep bootstrapped flag as false", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeFalse())
+		})
+	})
+
+	Context("Required constraint templates are in place, but some CRD's failed to be created", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(constraintTemplate1 + statusNotCreated + constraintTemplate2 + statusCreated)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
+			f.RunHook()
+		})
+		It("should keep bootstrapped flag as false", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeFalse())
+		})
+	})
+
+	Context("Required constraint templates are in place, all CRD's are created", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(constraintTemplate1 + statusCreated + constraintTemplate2 + statusCreated)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
 			Expect(err).To(BeNil())
@@ -110,4 +138,14 @@ metadata:
   annotations:
     metadata.gatekeeper.sh/title: "Read Only Root Filesystem"
     metadata.gatekeeper.sh/version: 1.0.0
+`
+
+var statusCreated = `
+status:
+  created: true
+`
+
+var statusNotCreated = `
+status:
+  created: false
 `

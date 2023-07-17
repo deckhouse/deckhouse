@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -26,16 +27,20 @@ import (
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const (
 	pattern = "*.yaml"
 )
 
-// Before creating Gatekepeer's constraints, we have to have running gatekeeper-controller-manager deployment for handling ConstraintTemplates and all required CRDs (constraint templates) for them
-// so, based on ready deployment replicas and constraints templates in place we set the `bootstrapped` flag and create constraints only when true
+type CTemplate struct {
+	Name    string
+	Found   bool
+	Created bool
+}
+
+// Before creating Gatekepeer's constraints, we have to make sure that all necessary ConstraintTemplates and their CRDs are present in the cluster,
+// after that we set the `bootstrapped` flag, which in turn permits creating relevant constraints.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -57,22 +62,54 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 	var bootstrapped bool
-	var existingTemplates = set.NewFromSnapshot(input.Snapshots["gatekeeper_templates"])
+	templates := input.Snapshots["gatekeeper_templates"]
 
-	if existingTemplates.Size() != 0 {
+	if len(templates) != 0 {
+		existingTemplates := make(map[string]struct {
+			Found   bool
+			Created bool
+		}, len(templates))
 		bootstrapped = true
+
+		for _, template := range templates {
+			t, ok := template.(CTemplate)
+			if !ok {
+				return fmt.Errorf("Cannot convert ConstraintTemplate")
+			}
+			existingTemplates[t.Name] = struct {
+				Found   bool
+				Created bool
+			}{Found: t.Found, Created: t.Created}
+		}
+
 		requiredTemplates, err := getRequiredTemplates()
 		if err != nil {
 			return err
 		}
 
 		for _, name := range requiredTemplates {
-			if !existingTemplates.Has(name) {
-				input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: missing %s constraint template", name)
+			if values, ok := existingTemplates[name]; !ok {
+				// required template isn't found in the cluster
+				input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: missing %s ConstraintTemplate", name)
 				bootstrapped = false
 				break
+			} else {
+				if !values.Found {
+					// status.created field of a constraint template isn't found - highly likely the constraint template for some reason wasn't processed
+					input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: ConstraintTemplate %s not processed", name)
+					bootstrapped = false
+					break
+				}
+				if !values.Created {
+					// status.created field equals false, there might be some errors in processing
+					input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: CDR for ConstraintTemplate %s not created", name)
+					bootstrapped = false
+					break
+				}
 			}
 		}
+	} else {
+		input.LogEntry.Warn("admission-policy-engine isn't bootstrapped yet: no required constraint templates found")
 	}
 
 	input.Values.Set("admissionPolicyEngine.internal.bootstrapped", bootstrapped)
@@ -81,7 +118,17 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 }
 
 func filterGatekeeperTemplates(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.GetName(), nil
+	// check if CRD has been successfully created from the ConstraintTemplate
+	created, found, err := unstructured.NestedBool(obj.Object, "status", "created")
+	if err != nil {
+		return nil, err
+	}
+
+	return CTemplate{
+		Name:    obj.GetName(),
+		Found:   found,
+		Created: created,
+	}, nil
 }
 
 func getRequiredTemplates() ([]string, error) {
