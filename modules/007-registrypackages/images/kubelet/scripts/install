@@ -18,4 +18,4 @@ mkdir -p /opt/deckhouse/bin
 cp -f kubelet /opt/deckhouse/bin
 cp -f kubelet.service /lib/systemd/system
 systemctl daemon-reload
-systemctl enable kubelet.service
+systemctl enable kubelet.service --now
