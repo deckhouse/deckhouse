@@ -21,7 +21,7 @@ type ManifestWrapper struct {
 	data       interface{}
 }
 
-func NewManifestWrapper(data interface{}, validator ...ValidatorFunc) Manifest {
+func NewManifestWrapper(data interface{}, validator ...ValidatorFunc) *ManifestWrapper {
 	mw := &ManifestWrapper{}
 	mw.SetManifest(data)
 	mw.AddValidator(validator...)
