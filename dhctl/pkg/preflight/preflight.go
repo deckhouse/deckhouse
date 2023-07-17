@@ -42,7 +42,7 @@ func NewPreflightCheck(sshClient *ssh.Client) PreflightCheck {
 func (pc *preflightCheck) StaticCheck() error {
 	return log.Process("common", "Preflight Checks", func() error {
 		if app.PreflightSkipAll {
-			log.InfoLn("Skip all preflight checks")
+			log.InfoLn("Preflight checks were skipped")
 			return nil
 		}
 		return pc.CheckSSHTunel()
