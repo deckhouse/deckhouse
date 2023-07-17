@@ -1506,12 +1506,21 @@ spec:
                     infrastructureTemplateReference:
                       description: |
                         The reference to the `StaticMachineTemplate` object.
+                        Object should locate in `d8-cloud-instance-manager` namespace.
                       type: object
+                      required:
+                      - kind
+                      - name
                       properties:
                         name:
                           description: |
                             The name of the required `StaticMachineTemplate` object.
                           type: string
+                        kind:
+                          description: The object type
+                          type: string
+                          enum:
+                          - StaticMachineTemplate
                 cloudInstances:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
