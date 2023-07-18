@@ -79,6 +79,8 @@ func (r *client) Image(tag string) (v1.Image, error) {
 	var nameOpts []name.Option
 	if r.options.useHTTP {
 		nameOpts = append(nameOpts, name.Insecure)
+	} else {
+		nameOpts = append(nameOpts, name.ForceSecure)
 	}
 
 	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: weak validation, etc.
@@ -104,6 +106,8 @@ func (r *client) ListTags() ([]string, error) {
 	var nameOpts []name.Option
 	if r.options.useHTTP {
 		nameOpts = append(nameOpts, name.Insecure)
+	} else {
+		nameOpts = append(nameOpts, name.ForceSecure)
 	}
 
 	imageOptions := make([]remote.Option, 0)
