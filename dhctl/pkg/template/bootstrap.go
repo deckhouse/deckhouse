@@ -49,7 +49,7 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 	return log.Process("default", "Render bootstrap templates", func() error {
 		for _, info := range saveInfo {
 			log.InfoF("From %q to %q\n", info.from, info.to)
-			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
+			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
 				return err
 			}
 		}

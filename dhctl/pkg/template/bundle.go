@@ -140,11 +140,8 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 	}
 
 	for _, info := range saveInfo {
-		if _, ok := info.ignorePaths[info.from]; ok {
-			continue
-		}
 		log.InfoF("From %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
+		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
 			return err
 		}
 	}
@@ -176,7 +173,7 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 	}
 	for _, info := range saveInfo {
 		log.InfoF("From %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
+		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
 			return err
 		}
 	}
