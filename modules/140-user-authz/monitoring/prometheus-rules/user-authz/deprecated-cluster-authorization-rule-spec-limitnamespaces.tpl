@@ -2,7 +2,7 @@
   rules:
   - alert: UserAuthzDeprecatedCARSpec
     expr: >-
-      d8_deprecated_car_spec > 0
+      count(d8_deprecated_car_spec) > 0
     labels:
       severity_level: "9"
     annotations:
@@ -15,4 +15,4 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_extended_monitoring_deprecated_annotation: "D8UserAuthzDeprecatedSpec,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_extended_monitoring_deprecated_annotation: "D8UserAuthzDeprecatedSpec,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: There is a cluster authorization rule with deprecated '.spec.limitNamespaces' parameter.
+      summary: There is a cluster authorization rule with deprecated parameters.

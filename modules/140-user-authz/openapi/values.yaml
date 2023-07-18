@@ -89,6 +89,7 @@ properties:
                   properties:
                     labelSelector:
                       type: object
+                      minProperties: 1
                       properties:
                         matchExpressions:
                           items:

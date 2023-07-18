@@ -229,6 +229,7 @@ spec:
 
                          If both matchExpressions and matchLabels parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
                       type: object
+                      minProperties: 1
                       properties:
                         matchExpressions:
                           type: array
