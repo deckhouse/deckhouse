@@ -42,7 +42,7 @@ extraArgs: {}
 		t.Errorf("Loading templates error: %v", err)
 	}
 
-	_, err = RenderTemplatesDir("/deckhouse/candi/control-plane-kubeadm/", data)
+	_, err = RenderTemplatesDir("/deckhouse/candi/control-plane-kubeadm/", data, nil)
 	if err != nil {
 		t.Errorf("Rendering templates error: %v", err)
 	}
@@ -58,7 +58,7 @@ nodeIP: "127.0.0.1"
 		t.Errorf("Loading templates error: %v", err)
 	}
 
-	rendered, err := RenderTemplatesDir("testdata/execute", data)
+	rendered, err := RenderTemplatesDir("testdata/execute", data, nil)
 	if err != nil {
 		t.Errorf("Rendering templates error: %v", err)
 	}

@@ -54,7 +54,7 @@ build:
 	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build-test:
-	GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
+	CGO_ENABLED=0 GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
 
 test:
 	go test ./...
