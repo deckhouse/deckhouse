@@ -14,23 +14,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
+function try_connect() {
+   python3 << EOF
+import urllib.request
+req = urllib.request.Request('http://127.0.0.1:$1')
+try: urllib.request.urlopen(req, timeout=1)
+except urllib.error.URLError as e:
+    exit(1)
+except TimeoutError as e:
+    exit(0)
+exit(0)
+EOF
+}
+
 function check_port() {
-    nc -z 127.0.0.1 $1 > /dev/null 2>&1
+    try_connect $1
+
     if [ $? -eq 0 ]; then
-        echo -n "it is already open "
-        return 1
+        echo -n "it is already open "; return 1
     fi
 
-    nc -l $1 > /dev/null 2>&1 &
-    local ncpid=$!
+    python3 -m http.server $1 > /dev/null 2>&1 &
+    local PID=$!
     sleep 0.1
 
-    nc -z 127.0.0.1 $1 > /dev/null 2>&1
+    try_connect $1
     local exit_code=$?
 
-    if ps -p $ncpid > /dev/null
+    if ps -p $PID > /dev/null
     then
-        kill -9 $ncpid
+        kill -9 $PID
+        wait $PID 2>/dev/null
     fi
 
     return $exit_code
