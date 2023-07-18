@@ -320,16 +320,12 @@ const alternativeRebootExitCode = 1
 
 func RebootMaster(sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Reboot Master️", func() error {
-		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().
+		rebootCmd := sshClient.Command("reboot").Sudo().
 			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")
 		if err := rebootCmd.Run(); err != nil {
 			ee, ok := err.(*exec.ExitError)
 			if ok {
 				if ee.ExitCode() == rebootExitCode || ee.ExitCode() == alternativeRebootExitCode {
-					if ee.ExitCode() == 1 {
-						rebootCmd := sshClient.Command("reboot").Sudo()
-						_ = rebootCmd.Run()
-					}
 					log.InfoLn("ERROR: ", ee)
 					log.InfoLn("StdoutBuffer: ", rebootCmd.StdoutBuffer.String())
 					log.InfoLn("StderrBuffer: ", rebootCmd.StderrBuffer.String())
