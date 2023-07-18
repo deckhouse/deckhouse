@@ -38,11 +38,12 @@ external-module-manager:
   internal: {}
 `, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ExternalModuleRelease", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Module", false)
 
 	Context("Cluster has releases which should be cleaned up", func() {
 		BeforeEach(func() {
 			var echoserverState string
-			for i := 1; i < 5; i++ {
+			for i := 1; i < 6; i++ {
 				echoserverState += "\n" + generateOutdated("echoserver", "v0.0."+strconv.Itoa(i))
 			}
 
@@ -52,6 +53,20 @@ external-module-manager:
 			}
 
 			f.KubeStateSet(echoserverState + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: echoserver
+  labels:
+    source-type: "external"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: hellow
+  labels:
+    source-type: "external"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ExternalModuleRelease
@@ -85,9 +100,79 @@ status:
 			rele1 := f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.1")
 			Expect(rele1.Exists()).To(BeFalse())
 			rele2 := f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.2")
-			Expect(rele2.Exists()).To(BeTrue())
+			Expect(rele2.Exists()).To(BeFalse())
+			rele3 := f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.3")
+			Expect(rele3.Exists()).To(BeTrue())
 
 			hel1 := f.KubernetesGlobalResource("ExternalModuleRelease", "hellow-v0.0.1")
+			Expect(hel1.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster has releases from absent module", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: testmodule
+  labels:
+    source-type: "external"
+properties:
+  state: Disabled
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: hellow
+  labels:
+    source-type: "external"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ExternalModuleRelease
+metadata:
+  name: testmodule-v0.0.1
+spec:
+  moduleName: testmodule
+  version: 0.0.1
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ExternalModuleRelease
+metadata:
+  name: echoserver-v0.0.6
+spec:
+  moduleName: echoserver
+  version: 0.0.6
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ExternalModuleRelease
+metadata:
+  name: hellow-v0.0.3
+spec:
+  moduleName: hellow
+  version: 0.0.3
+status:
+  phase: Deployed
+`)
+
+			f.BindingContexts.Set(f.GenerateScheduleContext("13 3 * * *"))
+			f.RunHook()
+		})
+
+		It("Should delete echoserver and testmodule releases, should keep hellow releases", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			rele1 := f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.6")
+			Expect(rele1.Exists()).To(BeFalse())
+
+			test1 := f.KubernetesGlobalResource("ExternalModuleRelease", "testmodule-v0.0.1")
+			Expect(test1.Exists()).To(BeFalse())
+
+			hel1 := f.KubernetesGlobalResource("ExternalModuleRelease", "hellow-v0.0.3")
 			Expect(hel1.Exists()).To(BeTrue())
 		})
 	})
