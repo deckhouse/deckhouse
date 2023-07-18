@@ -41,7 +41,7 @@ import:
   to: /bashible-apiserver
   before: setup
 git:
-{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) | replace "/deckhouse/candi" "/bashible/templates" }}
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 - add: /{{ .ModulePath }}candi/bashible
   to: /deckhouse/candi/bashible
   stageDependencies:
