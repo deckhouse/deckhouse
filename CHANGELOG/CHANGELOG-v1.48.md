@@ -17,6 +17,7 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Improve bootstrap handler logic. [#5242](https://github.com/deckhouse/deckhouse/pull/5242)
  - **[admission-policy-engine]** Fix constraint exporter - avoid duplications and invalid resource handling. [#5240](https://github.com/deckhouse/deckhouse/pull/5240)
  - **[candi]** Fix bootstraping master node for AltLinux bundle. [#5099](https://github.com/deckhouse/deckhouse/pull/5099)
  - **[candi]** Add a node approval annotations step. [#5047](https://github.com/deckhouse/deckhouse/pull/5047)
@@ -25,6 +26,7 @@
  - **[cloud-provider-openstack]** Remove duplicates from images list in `cloud-data-discoverer`. [#5241](https://github.com/deckhouse/deckhouse/pull/5241)
  - **[cloud-provider-openstack]** Fix discover volume types hooks incorrect fallback to storage classes in another modules. [#5233](https://github.com/deckhouse/deckhouse/pull/5233)
  - **[common]** Add commonName field to Deckhouse X.509 certificates. [#4999](https://github.com/deckhouse/deckhouse/pull/4999)
+ - **[control-plane-manager]** Restoring `D8KubernetesVersionIsDeprecated` alert from `1.23` to `1.22`. [#5249](https://github.com/deckhouse/deckhouse/pull/5249)
  - **[runtime-audit-engine]** Mount docker and containerd sockets to fetch metadata. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
  - **[runtime-audit-engine]** Mount falco config to rules-loader to enable plugins for validating webhook. Otherwise, webhook returns an error for valid rules. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
  - **[runtime-audit-engine]** Output webhook validation error. Without this change, users have to search it in logs among all running falco pods. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
