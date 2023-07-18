@@ -70,13 +70,11 @@ defaults:
       sitemap_include: true
       topnav: topnav
       output: web
-      #sidebar: main
-      sidebars:
-        - main
-        - k8s-docs
+      sidebar: main
       multilang: true
       comparable: true
       lang: en
+      tab_name: deckhouse
   - scope:
       path: "pages/includes"
       type: "pages"
@@ -105,8 +103,9 @@ defaults:
       path: "*/k8s"
       type: "pages"
     values:
-      #sidebar: k8s-docs
+      sidebar: k8s-docs
       k8sDocs: true
+      tab_name: k8s
   - scope:
       path: "*/030-cloud-provider-openstack"
       type: "pages"

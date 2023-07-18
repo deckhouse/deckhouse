@@ -2,7 +2,10 @@
 layout: sidebar
 ---
 <div class="docs">
-    {%- include warning-latest.html %}
+    {% if page.k8sDocs %}
+    {% include alerts/KUBERNETES_DOCS_COPYRIGHT.md.liquid %}
+    {% endif %}
+    {%- include alerts/latest-version.html %}
     {%- if page.comparable and site.mode != 'local' %}
     <div class="btn-group compare">
         <a href='{{ page.url | prepend: "compare" | true_relative_url }}' class="btn btn_o" target="_blank">
@@ -67,7 +70,7 @@ layout: sidebar
 
         {%- endunless %}
 
-        {%- include warning-version.html %}
+        {%- include alerts/feature-status.html %}
         {%- include module-webiface-notice.liquid %}
 
     {{content}}

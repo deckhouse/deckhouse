@@ -31,7 +31,11 @@ ansible:
   setup:
     - shell: |
         rsync --ignore-existing /src/content/en/ /src/content/ru/ -a
+        # Apply patches
+        rsync /src-patch/ /src/ -a
+        # Generate Kubernetes documentation
         hugo #--panicOnWarning
+        # Other patches...
         find /src/public/ -type f -exec sed -Ei "s#(href=['\"])../#\1#g; s#(href=['\"].*)../(ru|en)/#\1../#g;" {} +
         rsync --ignore-existing /src/public/docs/ /src/public/en/docs/ -a
         rsync --ignore-existing /src/public/docs/ /src/public/ru/docs/ -a
@@ -78,8 +82,10 @@ git:
       - package.json
       - package-lock.json
     setup: '**/*'
-- add: /modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/k8s
-  to: /src
+- add: /modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/k8s-hugo
+  to: /src-patch
+  owner: 1313
+  group: 1313
   includePaths:
     - layouts
     - hugo.toml
@@ -284,7 +290,8 @@ import:
 #  - ru
 #  - en
 #  - examples
-#  excludePaths:
+  excludePaths:
+  - docs/index.html
 #  - images
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/k8s-static
   add: /src/public/ru
@@ -299,7 +306,8 @@ import:
 #  - ru
 #  - en
 #  - examples
-#  excludePaths:
+  excludePaths:
+  - docs/index.html
 #  - images
 git:
 - add: /docs
@@ -321,6 +329,12 @@ git:
     - site/_includes/footer.html
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
+    setup: '**/*'
+- add: /modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/k8s-jekyll
+  to: /srv/jekyll-data/documentation/pages/k8s
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
     setup: '**/*'
 - add: /
   to: /comparison

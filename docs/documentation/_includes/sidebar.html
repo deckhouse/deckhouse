@@ -7,14 +7,29 @@
   <div class="sidebar__wrapper-inner">
     <nav class="sidebar__container">
       <ul class="sidebar" id="mysidebar">
+
+        {%- if site.mode == 'local' %}
+
+        <div>
+        {%- for tab in site.data.sidebar_tabs.tabs %}
+          <a class='tabs__btn tabs__btn_sidebars {%- if tab[0] == page.tab_name %} active{%- endif %}'  href='/{{lang}}{{tab[1]["url"]}}'>
+            {{ tab[1]['title'][lang] }}
+          </a>
+        {%- endfor %}
+        </div>
+
+        {%- endif %}
+
         {%- for entry in sidebar.folders %}
         {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" is_404=include.is_404 lang=lang %}
         {%- endfor %}
+        {% comment %}
         {%- if site.mode == 'local' and site.data.sidebars[include.sidebar].entries-local %}
           {%- for entry in site.data.sidebars[include.sidebar].entries-local.folders %}
           {%- include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" is_404=include.is_404 lang=lang %}
           {%- endfor %}
         {%- endif %}
+        {% endcomment %}
       </ul>
 
     </nav>

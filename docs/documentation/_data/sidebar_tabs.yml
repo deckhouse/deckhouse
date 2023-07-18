@@ -1,0 +1,11 @@
+tabs:
+  deckhouse:
+    title:
+      en: Deckhouse
+      ru: Deckhouse
+    url: /
+  k8s:
+    title:
+      en: Kubernetes
+      ru: Kubernetes
+    url: /k8s/docs/
