@@ -19,6 +19,12 @@ package kinds
 import (
 	"testing"
 
+	"github.com/flant/kube-client/fake"
+
+	"github.com/stretchr/testify/require"
+
+	"k8s.io/client-go/restmapper"
+
 	"github.com/flant/constraint_exporter/pkg/gatekeeper"
 
 	"github.com/stretchr/testify/assert"
@@ -60,4 +66,117 @@ func TestDeduplicate(t *testing.T) {
 	assert.Len(t, res, 2)
 	assert.Equal(t, res[":Pod"], gatekeeper.MatchKind{APIGroups: []string{""}, Kinds: []string{"Pod"}})
 	assert.Equal(t, res["extensions,networking.k8s.io:Ingress"], gatekeeper.MatchKind{APIGroups: []string{"extensions", "networking.k8s.io"}, Kinds: []string{"Ingress"}})
+}
+
+func TestResourceMapper(t *testing.T) {
+	cl := fake.NewFakeCluster(fake.ClusterVersionV121)
+
+	apiRes, err := restmapper.GetAPIGroupResources(cl.Discovery)
+	require.NoError(t, err)
+
+	rmatch := resourceMatcher{
+		apiGroupResources: apiRes,
+		mapper:            restmapper.NewDiscoveryRESTMapper(apiRes),
+	}
+
+	t.Run("deduplicate objects with wildcard and empty apiGroup", func(t *testing.T) {
+		kinds := []gatekeeper.MatchKind{
+			{
+				APIGroups: []string{"*"},
+				Kinds:     []string{"Pod"},
+			},
+			{
+				APIGroups: []string{""},
+				Kinds:     []string{"Pod"},
+			},
+		}
+
+		data, err := rmatch.convertKindsToResource(kinds)
+		require.NoError(t, err)
+		assert.YAMLEq(t, `
+- apiGroups:
+  - ""
+  resources:
+  - pods
+`, string(data))
+	})
+
+	t.Run("dedup equal resources", func(t *testing.T) {
+		kinds := []gatekeeper.MatchKind{
+			{
+				APIGroups: []string{"extensions", "networking.k8s.io"},
+				Kinds:     []string{"Ingress"},
+			},
+			{
+				APIGroups: []string{"networking.k8s.io"},
+				Kinds:     []string{"Ingress"},
+			},
+		}
+
+		data, err := rmatch.convertKindsToResource(kinds)
+		require.NoError(t, err)
+		assert.YAMLEq(t, `
+- apiGroups:
+  - extensions
+  - networking.k8s.io
+  resources:
+  - ingresses
+`, string(data))
+	})
+
+	t.Run("keep different resources", func(t *testing.T) {
+		kinds := []gatekeeper.MatchKind{
+			{
+				APIGroups: []string{""},
+				Kinds:     []string{"Pod"},
+			},
+			{
+				APIGroups: []string{"networking.k8s.io"},
+				Kinds:     []string{"Ingress"},
+			},
+			{
+				APIGroups: []string{"apps"},
+				Kinds:     []string{"Deployment"},
+			},
+		}
+
+		data, err := rmatch.convertKindsToResource(kinds)
+		require.NoError(t, err)
+		assert.YAMLEq(t, `
+- apiGroups:
+  - ""
+  resources:
+  - pods
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+`, string(data))
+	})
+
+	t.Run("wrong kind", func(t *testing.T) {
+		kinds := []gatekeeper.MatchKind{
+			{
+				APIGroups: []string{""},
+				Kinds:     []string{"Pod"},
+			},
+			{
+				APIGroups: []string{"apps/v1"},
+				Kinds:     []string{"Deployment"},
+			},
+		}
+
+		data, err := rmatch.convertKindsToResource(kinds)
+		require.NoError(t, err)
+		assert.YAMLEq(t, `
+- apiGroups:
+  - ""
+  resources:
+  - pods
+`, string(data))
+	})
 }
