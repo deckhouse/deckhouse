@@ -250,6 +250,9 @@ func (rm resourceMatcher) findGVKsForWildcard(kind string) []schema.GroupVersion
 func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) ([]byte, error) {
 	res := make([]matchResource, 0, len(kinds))
 
+	// avoid duplication between different kinds. If we met it once - we should exclude it
+	globalDuplications := make(map[string]struct{})
+
 	for _, mk := range kinds {
 		uniqGroups := make(map[string]struct{})
 		uniqResources := make(map[string]struct{})
@@ -266,8 +269,14 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 							continue
 						}
 
+						uniqKey := fmt.Sprintf("%s/%s", restMapping.Resource.Group, restMapping.Resource.Resource)
+						if _, ok := globalDuplications[uniqKey]; ok {
+							continue
+						}
+
 						uniqGroups[restMapping.Resource.Group] = struct{}{}
 						uniqResources[restMapping.Resource.Resource] = struct{}{}
+						globalDuplications[uniqKey] = struct{}{}
 					}
 				} else {
 					restMapping, err := rm.mapper.RESTMapping(schema.GroupKind{
@@ -280,10 +289,20 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 						continue
 					}
 
+					uniqKey := fmt.Sprintf("%s/%s", restMapping.Resource.Group, restMapping.Resource.Resource)
+					if _, ok := globalDuplications[uniqKey]; ok {
+						continue
+					}
+
 					uniqGroups[restMapping.Resource.Group] = struct{}{}
 					uniqResources[restMapping.Resource.Resource] = struct{}{}
+					globalDuplications[uniqKey] = struct{}{}
 				}
 			}
+		}
+
+		if len(uniqGroups) == 0 && len(uniqResources) == 0 {
+			continue
 		}
 
 		groups := make([]string, 0, len(mk.APIGroups))
@@ -296,6 +315,9 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 		for k := range uniqResources {
 			resources = append(resources, k)
 		}
+
+		sort.Strings(groups)
+		sort.Strings(resources)
 
 		res = append(res, matchResource{
 			APIGroups: groups,
