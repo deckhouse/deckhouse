@@ -15,8 +15,7 @@ function install_jq() {
       apt-get update && apt-get install jq -y
       ;;
     alteros|centos|redos)
-      export no_lock=yes
-      shift
+      yum updateinfo && yum install jq -y
       ;;
     *)
       echo "Unsupported bundle $1 for bootstrap.sh! Exiting..."
