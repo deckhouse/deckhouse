@@ -326,6 +326,9 @@ func RebootMaster(sshClient *ssh.Client) error {
 			ee, ok := err.(*exec.ExitError)
 			if ok {
 				if ee.ExitCode() == rebootExitCode || ee.ExitCode() == alternativeRebootExitCode {
+					log.InfoLn("ERROR: ", ee)
+					log.InfoLn("StdoutBuffer: ", rebootCmd.StdoutBuffer.String())
+					log.InfoLn("StderrBuffer: ", rebootCmd.StderrBuffer.String())
 					return nil
 				}
 			}
