@@ -244,7 +244,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: ["*"]
+    - apiGroups: [""]
       kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
@@ -272,7 +272,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: ["*"]
+    - apiGroups: [""]
       kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
@@ -296,7 +296,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: ["*"]
+    - apiGroups: [""]
       kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
@@ -320,7 +320,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: ["*"]
+    - apiGroups: [""]
       kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
@@ -356,7 +356,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: ["*"]
+    - apiGroups: [""]
       kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
@@ -378,7 +378,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: ["*"]
+    - apiGroups: [""]
       kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
@@ -406,7 +406,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: ["*"]
+    - apiGroups: [""]
       kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
