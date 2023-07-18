@@ -30,5 +30,21 @@
         description: |-
           You have configured OperationPolicy for the cluster.
 
-          You can find existing objects which are violate policies by running `count by (violating_namespace, violating_kind, violating_name, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="OperationPolicy"})`
-          prometheus query or via the Admission policy engine grafana dashboard.
+          You can find existing objects violating policies by running `count by (violating_namespace, violating_kind, violating_name, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="OperationPolicy"})`
+          prometheus query or via the Admission policy engine Grafana dashboard.
+    - alert: SecurityPolicyViolation
+      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="SecurityPolicy"})) > 0
+      for: 10m
+      labels:
+        severity_level: "7"
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        summary: At least one object violates configured cluster Security Policies.
+        description: |-
+          You have configured SecurityPolicy for the cluster.
+
+          You can find existing objects violating policies by running `count by (violating_namespace, violating_kind, violating_name, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="SecurityPolicy"})`
+          prometheus query or via the Admission policy engine Grafana dashboard.

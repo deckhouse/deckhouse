@@ -34,9 +34,9 @@ const (
 )
 
 type CTemplate struct {
-	Name    string
-	Found   bool
-	Created bool
+	Name      string
+	Processed bool
+	Created   bool
 }
 
 // Before creating Gatekepeer's constraints, we have to make sure that all necessary ConstraintTemplates and their CRDs are present in the cluster,
@@ -66,8 +66,8 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 
 	if len(templates) != 0 {
 		existingTemplates := make(map[string]struct {
-			Found   bool
-			Created bool
+			Processed bool
+			Created   bool
 		}, len(templates))
 		bootstrapped = true
 
@@ -77,9 +77,9 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 				return fmt.Errorf("Cannot convert ConstraintTemplate")
 			}
 			existingTemplates[t.Name] = struct {
-				Found   bool
-				Created bool
-			}{Found: t.Found, Created: t.Created}
+				Processed bool
+				Created   bool
+			}{Processed: t.Processed, Created: t.Created}
 		}
 
 		requiredTemplates, err := getRequiredTemplates()
@@ -94,15 +94,15 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 				bootstrapped = false
 				break
 			} else {
-				if !values.Found {
-					// status.created field of a constraint template isn't found - highly likely the constraint template for some reason wasn't processed
+				if !values.Processed {
+					// status.created field of a constraint template isn't found - highly likely the constraint template wasn't processed for some reaons
 					input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: ConstraintTemplate %s not processed", name)
 					bootstrapped = false
 					break
 				}
 				if !values.Created {
 					// status.created field equals false, there might be some errors in processing
-					input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: CDR for ConstraintTemplate %s not created", name)
+					input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: CRD for ConstraintTemplate %s not created", name)
 					bootstrapped = false
 					break
 				}
@@ -125,9 +125,9 @@ func filterGatekeeperTemplates(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}
 
 	return CTemplate{
-		Name:    obj.GetName(),
-		Found:   found,
-		Created: created,
+		Name:      obj.GetName(),
+		Processed: found,
+		Created:   created,
 	}, nil
 }
 
