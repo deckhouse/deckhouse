@@ -219,3 +219,5 @@ replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
+
+replace github.com/google/go-containerregistry => github.com/deckhouse/go-containerregistry 91148c7bfa60a4483dfe229b1756fc4c3691db7b
