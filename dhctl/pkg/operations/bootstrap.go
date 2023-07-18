@@ -326,6 +326,10 @@ func RebootMaster(sshClient *ssh.Client) error {
 			ee, ok := err.(*exec.ExitError)
 			if ok {
 				if ee.ExitCode() == rebootExitCode || ee.ExitCode() == alternativeRebootExitCode {
+					if ee.ExitCode() == 1 {
+						rebootCmd := sshClient.Command("reboot").Sudo()
+						_ = rebootCmd.Run()
+					}
 					log.InfoLn("ERROR: ", ee)
 					log.InfoLn("StdoutBuffer: ", rebootCmd.StdoutBuffer.String())
 					log.InfoLn("StderrBuffer: ", rebootCmd.StderrBuffer.String())
