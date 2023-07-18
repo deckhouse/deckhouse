@@ -34,7 +34,7 @@ const (
 	pattern = "*.yaml"
 )
 
-type CTemplate struct {
+type cTemplate struct {
 	Name      string
 	Processed bool
 	Created   bool
@@ -66,21 +66,18 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 	templates := input.Snapshots["gatekeeper_templates"]
 
 	if len(templates) != 0 {
-		existingTemplates := make(map[string]struct {
-			Processed bool
-			Created   bool
-		}, len(templates))
+		existingTemplates := make(map[string]cTemplate, len(templates))
 		bootstrapped = true
 
 		for _, template := range templates {
-			t, ok := template.(CTemplate)
+			t, ok := template.(cTemplate)
 			if !ok {
 				return fmt.Errorf("Cannot convert ConstraintTemplate")
 			}
-			existingTemplates[t.Name] = struct {
-				Processed bool
-				Created   bool
-			}{Processed: t.Processed, Created: t.Created}
+			existingTemplates[t.Name] = cTemplate{
+				Processed: t.Processed,
+				Created:   t.Created,
+			}
 		}
 
 		requiredTemplates, err := getRequiredTemplates()
@@ -96,13 +93,13 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 				break
 			} else {
 				if !values.Processed {
-					// status.created field of a constraint template isn't found - highly likely the constraint template wasn't processed for some reaons
+					// status.created field of a constraint template isn't found - highly likely the constraint template wasn't processed for some reasons
 					input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: ConstraintTemplate %s not processed", name)
 					bootstrapped = false
 					break
 				}
 				if !values.Created {
-					// status.created field equals false, there might be some errors in processing
+					// status.created field equals false, there might be some errors in processing there
 					input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: CRD for ConstraintTemplate %s not created", name)
 					bootstrapped = false
 					break
@@ -130,7 +127,7 @@ func filterGatekeeperTemplates(obj *unstructured.Unstructured) (go_hook.FilterRe
 		return nil, err
 	}
 
-	return CTemplate{
+	return cTemplate{
 		Name:      obj.GetName(),
 		Processed: found,
 		Created:   created,
