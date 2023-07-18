@@ -1,0 +1,5 @@
+control-plane-manager:
+  fixes:
+    - summary: Restoring D8KubernetesVersionIsDeprecated alert from 1.23 to 1.22.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5249
+
