@@ -17,10 +17,12 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Fix constraint exporter - avoid duplications and invalid resource handling. [#5240](https://github.com/deckhouse/deckhouse/pull/5240)
  - **[candi]** Fix bootstraping master node for AltLinux bundle. [#5099](https://github.com/deckhouse/deckhouse/pull/5099)
  - **[candi]** Add a node approval annotations step. [#5047](https://github.com/deckhouse/deckhouse/pull/5047)
  - **[candi]** Remove the property `etcdDisk` in `nodeGroups` and remove anchor inheritance in the `AWSClusterConfiguration` OpenAPI specification. [#4977](https://github.com/deckhouse/deckhouse/pull/4977)
  - **[cloud-provider-azure]** Fix behavior of the `acceleratedNetworking` variable. [#5000](https://github.com/deckhouse/deckhouse/pull/5000)
+ - **[cloud-provider-openstack]** Remove duplicates from images list in `cloud-data-discoverer`. [#5241](https://github.com/deckhouse/deckhouse/pull/5241)
  - **[cloud-provider-openstack]** Fix discover volume types hooks incorrect fallback to storage classes in another modules. [#5233](https://github.com/deckhouse/deckhouse/pull/5233)
  - **[common]** Add commonName field to Deckhouse X.509 certificates. [#4999](https://github.com/deckhouse/deckhouse/pull/4999)
  - **[runtime-audit-engine]** Mount docker and containerd sockets to fetch metadata. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
