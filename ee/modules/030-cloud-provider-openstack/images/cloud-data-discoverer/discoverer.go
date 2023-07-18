@@ -301,7 +301,7 @@ func (d *Discoverer) getImages(ctx context.Context, provider *gophercloud.Provid
 		imageNames = append(imageNames, image.Name)
 	}
 
-	return imageNames, nil
+	return removeDuplicates(imageNames), nil
 }
 
 type OpenstackCloudDiscoveryData struct {
@@ -362,4 +362,20 @@ func RetryBackoffFunc(logger *log.Entry) gophercloud.RetryBackoffFunc {
 
 		return nil
 	}
+}
+
+func removeDuplicates(list []string) []string {
+	var (
+		keys       = make(map[string]struct{})
+		uniqueList []string
+	)
+
+	for _, elem := range list {
+		if _, ok := keys[elem]; !ok {
+			keys[elem] = struct{}{}
+			uniqueList = append(uniqueList, elem)
+		}
+	}
+
+	return uniqueList
 }
