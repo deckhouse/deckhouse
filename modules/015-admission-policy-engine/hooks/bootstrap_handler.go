@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -113,6 +114,11 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("admissionPolicyEngine.internal.bootstrapped", bootstrapped)
+
+	input.MetricsCollector.Expire("d8_admission_policy_engine_not_bootstrapped")
+	if !bootstrapped {
+		input.MetricsCollector.Set("d8_admission_policy_engine_not_bootstrapped", 1, map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_not_bootstrapped"))
+	}
 
 	return nil
 }
