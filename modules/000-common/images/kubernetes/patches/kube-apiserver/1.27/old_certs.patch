@@ -1,0 +1,25 @@
+diff --git a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
+--- a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
++++ b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
+@@ -21,6 +21,7 @@ import (
+ 	"crypto/x509/pkix"
+ 	"encoding/hex"
+ 	"fmt"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"strings"
+ 	"time"
+@@ -150,6 +151,13 @@ func (a *Authenticator) AuthenticateRequest(req *http.Request) (*authenticator.R
+
+ 	remaining := req.TLS.PeerCertificates[0].NotAfter.Sub(time.Now())
+ 	clientCertificateExpirationHistogram.WithContext(req.Context()).Observe(remaining.Seconds())
++
++	if remaining < (7 * 24 * time.Hour) {
++		klog.Warningf("%s %s: [%s %s]: certificate expires in one week. Issuer: %s, Subject: %s, NotBefore: %s, NotAfter: %s",
++			req.Method, req.RequestURI, req.UserAgent(), req.RemoteAddr,
++			req.TLS.PeerCertificates[0].Issuer, req.TLS.PeerCertificates[0].Subject, req.TLS.PeerCertificates[0].NotBefore, req.TLS.PeerCertificates[0].NotAfter)
++	}
++
+ 	chains, err := req.TLS.PeerCertificates[0].Verify(optsCopy)
+ 	if err != nil {
+ 		return nil, false, fmt.Errorf(

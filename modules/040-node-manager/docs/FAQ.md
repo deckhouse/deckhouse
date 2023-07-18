@@ -16,20 +16,24 @@ See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.h
 
 To add a new static node (e.g., VM or bare metal server) to the cluster, follow these steps:
 
+1. For [CloudStatic nodes](../040-node-manager/cr.html#nodegroup-v1-spec-nodetype) in the following cloud providers, follow the steps described in the documentation:
+   - [For AWS](../030-cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For GCP](../030-cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
 1. Use an existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource ([example](examples.html#an-example-of-the-static-nodegroup-configuration) of the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
-2. Get the Base64-encoded script code to add and configure the node.
+1. Get the Base64-encoded script code to add and configure the node.
 
    Example of getting a Base64-encoded script code to add a node to the NodeGroup `worker`:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+   NODE_GROUP=worker
+   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
-3. Pre-configure the new node according to the specifics of your environment. For example:
+1. Pre-configure the new node according to the specifics of your environment. For example:
    - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.);
    - Install the necessary packages (e.g., `ceph-common`);
    - Configure network connectivity between the new node and the other nodes of the cluster.
-4. Connect to the new node over SSH and run the following command by inserting the Base64 string got in step 2:
+1. Connect to the new node over SSH and run the following command by inserting the Base64 string got in step 2:
 
    ```shell
    echo <Base64-CODE> | base64 -d | bash

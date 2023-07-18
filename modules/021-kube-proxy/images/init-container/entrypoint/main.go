@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -99,18 +100,30 @@ func main() {
 		CurrentContext: "default",
 	}
 
+	featureGates := map[string]bool{
+		"EndpointSliceTerminatingCondition": true,
+		"ProxyTerminatingEndpoints":         true,
+		"TopologyAwareHints":                true,
+	}
+
+	kubernetesVersion, err := semver.NewVersion(os.Getenv("KUBERNETES_VERSION"))
+	if err != nil {
+		log.Fatalf("Error parsing kubernetes version: %s", err)
+	}
+
+	// The DaemonSetUpdateSurge feature gate has been removed in Kubernetes v1.27.
+	k8s127, _ := semver.NewVersion("1.27")
+	if kubernetesVersion.LessThan(k8s127) {
+		featureGates["DaemonSetUpdateSurge"] = true
+	}
+
 	kubeProxyConfig := &v1alpha1.KubeProxyConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KubeProxyConfiguration",
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		},
-		FeatureGates: map[string]bool{
-			"EndpointSliceTerminatingCondition": true,
-			"ProxyTerminatingEndpoints":         true,
-			"DaemonSetUpdateSurge":              true,
-			"TopologyAwareHints":                true,
-		},
-		ClusterCIDR: podSubnet,
+		FeatureGates: featureGates,
+		ClusterCIDR:  podSubnet,
 		ClientConnection: alpha1.ClientConnectionConfiguration{
 			Kubeconfig: "/var/lib/kube-proxy/kubeconfig.conf",
 		},
@@ -165,7 +178,12 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 		return "", err
 	}
 
-	if v, ok := node.GetAnnotations()[bindInternalIPAnnotationKey]; !ok || v == "false" || os.Getenv("CLOUD_PROVIDER") == "gcp" {
+	if os.Getenv("CLOUD_PROVIDER") == "gcp" {
+		return "0.0.0.0/0", nil
+	}
+
+	v, ok := node.GetAnnotations()[bindInternalIPAnnotationKey]
+	if ok && v == "false" {
 		return "0.0.0.0/0", nil
 	}
 
@@ -181,7 +199,7 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 		return "", fmt.Errorf("failed to found InternalIP for Node %s", node.GetName())
 	}
 
-	return firstInternalAddress, nil
+	return firstInternalAddress + "/32", nil
 }
 
 func getApiProxyAddress() (string, error) {

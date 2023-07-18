@@ -95,22 +95,37 @@ const moduleValues = `
       type: pd-ssd
       replicationType: regional-pd
     providerClusterConfiguration:
-      sshKey: mysshkey
+      apiVersion: deckhouse.io/v1
+      kind: GCPClusterConfiguration
+      layout: WithoutNAT
+      sshKey: "mysshkey"
+      subnetworkCIDR: 10.160.0.0/16
+      masterNodeGroup:
+        replicas: 1
+        zones:
+          - test-a
+        instanceClass:
+          machineType: n1-standard-4
+          image: ubuntu
+          diskSizeGB: 20
+          disableExternalIP: false
       provider:
         region: myregion
-        serviceAccountJSON: mysvcacckey
+        serviceAccountJSON: '{"project_id": "test"}'
     providerDiscoveryData:
-      disableExternalIP: true
-      instances:
-        diskSizeGb: 50
-        diskType: disk-type
-        image: image
-        networkTags: ["tag1", "tag2"]
-        labels:
-          test: test
+      apiVersion: deckhouse.io/v1
+      kind: GCPCloudDiscoveryData
       networkName: mynetname
       subnetworkName: mysubnetname
       zones: ["zonea", "zoneb"]
+      disableExternalIP: false
+      instances:
+        image: image
+        diskSizeGb: 50
+        diskType: disk-type
+        networkTags: ["tag1", "tag2"]
+        labels:
+            test: test
 `
 
 var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
@@ -166,7 +181,7 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			// user story #1
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
-          "disableExternalIP": true,
+          "disableExternalIP": false,
           "diskSizeGb": 50,
           "diskType": "disk-type",
           "image": "image",
@@ -179,7 +194,7 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
             "tag2"
           ],
           "region": "myregion",
-          "serviceAccountJSON": "mysvcacckey",
+          "serviceAccountJSON": "{\"project_id\": \"test\"}",
           "sshKey": "mysshkey",
           "subnetworkName": "mysubnetname"
         }`

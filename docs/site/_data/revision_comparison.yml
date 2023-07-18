@@ -94,14 +94,14 @@ sections:
           en: Istio service mesh
           ru: Istio service mesh
         revision:
-          ce: true
+          ce: partial
           ee: true
         hint:
-          ee:
+          ce:
             en: |
-              Additional tools for automating multicluster and federation building, as well as a tool for automating data-plane updates
+              Except for multicluster and federation capabilities as well as tools for automating data-plane upgrades
             ru: |
-              Дополнительные средства для автоматизации построения мультикластера и федерации, а также инструмент для автоматизации обновления data-plane
+              Кроме функций мультикластера и федерации, а также инструментов автоматизации обновления data-plane
         url: /documentation/v1/modules/110-istio/
       - description:
           en: Multitenancy
@@ -117,6 +117,12 @@ sections:
       - description:
           en: Application images security scanner
           ru: Сканирование образов приложений на уязвимости
+        revision:
+          ce: false
+          ee: true
+      - description:
+          en: Air-gapped installation
+          ru: Установка в закрытых окружениях
         revision:
           ce: false
           ee: true

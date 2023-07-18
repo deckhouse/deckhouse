@@ -87,7 +87,7 @@ spec:
                   example: "500"
                   type: string
                 diskSizeGb:
-                  description: Instance root disk size in gigabytes.
+                  description: Instance root disk size in gibibytes.
                   example: 20
                   type: integer
                   x-doc-default: 20

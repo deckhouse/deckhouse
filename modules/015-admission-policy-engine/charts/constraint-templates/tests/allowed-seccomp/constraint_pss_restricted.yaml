@@ -1,0 +1,23 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedSeccompProfiles
+metadata:
+  name: pod-security-standards-baseline
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaceSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/pod-policy
+          operator: In
+          values: 
+          - baseline
+          - restricted
+  parameters:
+    allowedProfiles:
+      - RuntimeDefault
+      - Localhost
+    allowedLocalhostFiles:
+      - "*"

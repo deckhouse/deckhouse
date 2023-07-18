@@ -12,6 +12,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+    x-doc-search: |
+      ProviderClusterConfiguration
     properties:
       sshPublicKey:
         description: |
@@ -63,6 +65,9 @@ apiVersions:
                   Размер root-диска. Значение указывается в гигабайтах.
 
                   Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+              etcdDiskSizeGb:
+                description: |
+                  Размер диска для etcd. Значение указывается в гигабайтах.
               additionalSecurityGroups:
                 description: |
                   Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud-провайдера.

@@ -3,7 +3,7 @@ title: "Модуль prometheus-metrics-adapter: примеры конфигур
 search: autoscaler, HorizontalPodAutoscaler
 ---
 
-Далее рассматривается только HPA с [apiVersion: autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#horizontalpodautoscaler-v2beta2-autoscaling), чья поддержка появилась начиная с Kubernetes v1.12.
+Далее рассматривается только HPA с [apiVersion: autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling), чья поддержка появилась начиная с Kubernetes v1.12.
 
 В общем виде, для настройки HPA требуется:
 * определить, что масштабируем (`.spec.scaleTargetRef`);
@@ -40,7 +40,7 @@ search: autoscaler, HorizontalPodAutoscaler
 {% raw %}
 
 ```yaml
-apiVersion: autoscaling/v2beta2
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: app-hpa
@@ -122,7 +122,7 @@ spec:
   query: sum(rate(ingress_nginx_detail_requests_total{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>) OR on() vector(0)
 ---
 kind: HorizontalPodAutoscaler
-apiVersion: autoscaling/v2beta2
+apiVersion: autoscaling/v2
 metadata:
   name: myhpa
   namespace: mynamespace
@@ -175,7 +175,7 @@ spec:
   query: sum (rabbitmq_queue_messages{<<.LabelMatchers>>,queue=~"send_forum_message",vhost="/"}) by (<<.GroupBy>>)
 ---
 kind: HorizontalPodAutoscaler
-apiVersion: autoscaling/v2beta2
+apiVersion: autoscaling/v2
 metadata:
   name: myhpa
   namespace: mynamespace
@@ -222,7 +222,7 @@ spec:
   query: sum (avg_over_time(rabbitmq_queue_messages{<<.LabelMatchers>>,queue=~"send_forum_message",vhost="/"}[5m])) by (<<.GroupBy>>)
 ---
 kind: HorizontalPodAutoscaler
-apiVersion: autoscaling/v2beta2
+apiVersion: autoscaling/v2
 metadata:
   name: myhpa
   namespace: mynamespace
@@ -265,7 +265,7 @@ spec:
   query: sum (phpfpm_processes_total{state="active",<<.LabelMatchers>>}) by (<<.GroupBy>>)
 ---
 kind: HorizontalPodAutoscaler
-apiVersion: autoscaling/v2beta2
+apiVersion: autoscaling/v2
 metadata:
   name: myhpa
   namespace: mynamespace
@@ -309,7 +309,7 @@ spec:
   query: round(sum by(<<.GroupBy>>) (phpfpm_processes_total{state="active",<<.LabelMatchers>>}) / sum by(<<.GroupBy>>) (phpfpm_processes_total{<<.LabelMatchers>>}) * 100)
 ---
 kind: HorizontalPodAutoscaler
-apiVersion: autoscaling/v2beta2
+apiVersion: autoscaling/v2
 metadata:
   name: {{ .Chart.Name }}-hpa
 spec:
@@ -371,7 +371,7 @@ spec:
 
 ```yaml
 kind: HorizontalPodAutoscaler
-apiVersion: autoscaling/v2beta2
+apiVersion: autoscaling/v2
 metadata:
   name: myhpa
   namespace: mynamespace
@@ -428,7 +428,7 @@ spec:
       expr: sum (sqs_messages_visible) by (queue)
 ---
 kind: HorizontalPodAutoscaler
-apiVersion: autoscaling/v2beta2
+apiVersion: autoscaling/v2
 metadata:
   name: myhpa
   namespace: mynamespace

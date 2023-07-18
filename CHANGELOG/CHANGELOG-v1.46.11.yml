@@ -1,0 +1,12 @@
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Update the Kruise controller manager before updating Ingress Nginx so that an updated Kruise
+        controller manager takes care of Ingress nginx demonsets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5103
+    - summary: >-
+        Pathch kruse controller manager logic so that it doesn't delete more than maxUnavailable
+        pods at a time during updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5044
+      impact: Kruise controller manager will be restarted.
+

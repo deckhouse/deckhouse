@@ -11,6 +11,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+    x-doc-search: |
+      ProviderClusterConfiguration
     properties:
       peeredVPCs:
         description: |
@@ -28,7 +30,7 @@ apiVersions:
           instanceClass:
             description: |
               Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
-            properties: &instanceClassProperties_ru
+            properties:
               instanceType:
                 type: string
                 description: |
@@ -55,12 +57,12 @@ apiVersions:
               diskType:
                 description: Тип созданного диска.
               diskSizeGb:
-                description: Размер root-диска. Значение указывается в гигабайтах.
+                description: Размер root-диска. Значение указывается в `ГиБ`.
               etcdDisk:
                 type: object
                 properties:
                   sizeGb:
-                    description: Размер диска для etcd. Значение указывается в гигабайтах.
+                    description: Размер диска для etcd. Значение указывается в `ГиБ`.
                   type:
                     description: Тип диска для etcd.
           zones:
@@ -103,7 +105,33 @@ apiVersions:
               description: |
                 Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
               properties:
-                <<: *instanceClassProperties_ru
+                instanceType:
+                  type: string
+                  description: |
+                    Тип заказываемых инстансов.
+
+                    > **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
+                ami:
+                  type: string
+                  description: |
+                    Образ (AMI ID), который будет использоваться в заказанных инстансах.
+
+                    Как найти нужный AMI (в каждом регионе AMI разные):
+                    ```shell
+                    aws ec2 --region <REGION> describe-images \
+                    --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                    jq '.Images[].ImageId'
+                    ```
+                additionalSecurityGroups:
+                  type: array
+                  description: |
+                    Дополнительные secutiry groups, которые будут присвоены созданным инстансам.
+                  items:
+                    type: string
+                diskType:
+                  description: Тип созданного диска.
+                diskSizeGb:
+                  description: Размер root-диска. Значение указывается в `ГиБ`.
             zones:
               description: |
                 Список зон, в которых допустимо создавать узлы.
@@ -131,7 +159,7 @@ apiVersions:
               instanceClass:
                 description: |
                   Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
-                properties: &instanceClassProperties_ru
+                properties:
                   instanceType:
                     type: string
                     description: |
@@ -156,7 +184,7 @@ apiVersions:
                   diskType:
                     description: Тип созданного root-диска.
                   diskSizeGb:
-                    description: Размер root-диска. Значение указывается в гигабайтах.
+                    description: Размер root-диска. Значение указывается в `ГиБ`.
       vpcNetworkCIDR:
         description: |
           Подсеть, которая будет указана в созданном VPC.

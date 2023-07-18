@@ -143,6 +143,8 @@ data:
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.instances.urn").String()).To(Equal("test:test:test"))
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.instances.diskType").String()).To(Equal("test"))
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.instances.additionalTags").String()).To(Equal("{}"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.diskSizeGb").Int()).To(BeEquivalentTo(50))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb").Int()).To(BeEquivalentTo(20))
 
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.sshPublicKey").String()).To(Equal("ssh-rsa AAA"))
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.subscriptionId").String()).To(Equal("test"))

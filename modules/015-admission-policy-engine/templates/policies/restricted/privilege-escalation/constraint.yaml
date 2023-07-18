@@ -1,1 +1,0 @@
-{{- include "pod_security_standard_restricted" (list . "D8PSSAllowPrivilegeEscalation" ) }}

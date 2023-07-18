@@ -67,6 +67,75 @@ spec:
 
 Для применения приведенной политики достаточно навесить лейбл `operation-policy.deckhouse.io/enabled: "true"` на желаемый namespace. Политика, приведенная в примере, рекомендована для использования командой Deckhouse. Аналогичным образом вы можете создать собственную политику с необходимыми настройками.
 
+### Политики безопасности
+
+Модуль предоставляет возможность определять политики безопасности, применимо к приложениям (контейнерам), запущенным в кластере.
+
+Пример политики безопасности:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: mypolicy
+spec:
+  enforcementAction: Deny
+  policies:
+    allowHostIPC: true
+    allowHostNetwork: true
+    allowHostPID: false
+    allowPrivileged: false
+    allowedFlexVolumes:
+    - driver: vmware
+    allowedHostPorts:
+    - max: 4000
+      min: 2000
+    allowedProcMount: Unmasked
+    allowedAppArmor:
+    - unconfined
+    allowedUnsafeSysctls:
+    - kernel.*
+    allowedVolumes:
+    - hostPath
+    - projected
+    fsGroup:
+      ranges:
+      - max: 200
+        min: 100
+      rule: MustRunAs
+    readOnlyRootFilesystem: true
+    requiredDropCapabilities:
+    - ALL
+    runAsGroup:
+      ranges:
+      - max: 500
+        min: 300
+      rule: RunAsAny
+    runAsUser:
+      ranges:
+      - max: 200
+        min: 100
+      rule: MustRunAs
+    seccompProfiles:
+      allowedLocalhostFiles:
+      - my_profile.json
+      allowedProfiles:
+      - Localhost
+    supplementalGroups:
+      ranges:
+      - max: 133
+        min: 129
+      rule: MustRunAs
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          enforce: mypolicy
+```
+
+Для применения приведенной политики достаточно навесить лейбл `enforce: "mypolicy"` на желаемый namespace.
+
 ### Изменение ресурсов Kubernetes
 
 Модуль также позволяет использовать custom resource'ы Gatekeeper, для легкой модификации объектов в кластере, такие как:

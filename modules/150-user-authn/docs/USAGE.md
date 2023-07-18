@@ -256,3 +256,21 @@ spec:
 ```
 
 {% endraw %}
+
+## Example of adding a static user to a group
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: admins
+  members:
+    - kind: User
+      name: admin
+```
+
+{% endraw %}

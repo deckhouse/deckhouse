@@ -108,7 +108,7 @@ spec:
 {{- end }}
       containers:
         - name: deckhouse
-          {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux" . | nindent 10 }}
           command:
             - /deckhouse/deckhouse
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"

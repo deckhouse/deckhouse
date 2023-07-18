@@ -38,7 +38,7 @@ spec:
                     Тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
                 diskSizeGB:
                   description: |
-                    Размер диска (в гигабайтах) у инстансов.
+                    Размер диска у инстансов. Значение указывается в `ГиБ`.
                 assignPublicIPAddress:
                   description: |
                     Присваивать ли публичные IP-адреса инстансам.
@@ -94,7 +94,7 @@ spec:
                     Тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
                 diskSizeGB:
                   description: |
-                    Размер диска (в гигабайтах) у инстансов.
+                    Размер диска у инстансов. Значение указывается в `ГиБ`.
                 assignPublicIPAddress:
                   description: |
                     Необходимость присвоения публичных IP-адресов инстансам.

@@ -1,2 +1,0 @@
-{{- $parameters := dict "allowedCapabilities" (list "NET_BIND_SERVICE") "requiredDropCapabilities" (list "ALL") }}
-{{- include "pod_security_standard_restricted" (list . "D8PSSCapabilities" $parameters ) }}

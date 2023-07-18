@@ -24,9 +24,10 @@ func main() {
 	kpApp.Action(func(context *kingpin.ParseContext) error {
 		logger := app.InitLogger()
 		client := app.InitClient(logger)
+		dynamicClient := app.InitDynamicClient(logger)
 		discoverer := NewDiscoverer(logger)
 
-		r := cloud_data.NewReconciler(discoverer, app.ListenAddress, app.DiscoveryPeriod, logger, client)
+		r := cloud_data.NewReconciler(discoverer, app.ListenAddress, app.DiscoveryPeriod, logger, client, dynamicClient)
 		r.Start()
 
 		return nil

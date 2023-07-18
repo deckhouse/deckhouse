@@ -75,3 +75,53 @@ The example demonstrates the configuration of checking the repository address in
 The [Gatekeeper documentation](https://open-policy-agent.github.io/gatekeeper/website/docs/howto) may find more info about templates and policy language.
 
 Find more examples of checks for policy extension in the [Gatekeeper Library](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general).
+
+## What if there are multiple policies (operational or security) that are applied to the same object?
+
+In that case the object's specification have to fulfil all the requirements imposed by the policies.
+
+For example, consider the following two security policies:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          name: test
+  policies:
+    readOnlyRootFilesystem: true
+    requiredDropCapabilities:
+    - MKNOD
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: bar
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          name: test
+  policies:
+    requiredDropCapabilities:
+    - NET_BIND_SERVICE
+```
+
+Then, in order to fulfill the requirements of the above security policies, the following settings must be set in a container specification:
+
+```yaml
+    securityContext:
+      capabilities:
+        drop:
+          - MKNOD
+          - NET_BIND_SERVICE
+      readOnlyRootFilesystem: true
+```

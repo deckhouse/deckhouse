@@ -12,7 +12,7 @@ Essentials
 </h3>
 <div class="cards-item__text">
 <p>The documentation for the installed in your cluster version of Deckhouse.</p>
-<p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="deckhouse" %}</p>
+<p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="documentation" %}</p>
 </div>
 </div>
 {% endif %}

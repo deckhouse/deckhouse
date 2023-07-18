@@ -7,6 +7,7 @@
     * If NodeGroup `spec.disruptions.approvalMode` is set to `Manual`, you will receive a `NodeRequiresDisruptionApprovalForUpdate` alert.
     * If NodeGroup `spec.disruptions.approvalMode` is set to `Automatic`, nodes will be drained and restarted one by one.
  - Ingress nginx controller will restart.
+ - NodePort services on a nodes without annotation were open to the world.
 
 ## Features
 
@@ -16,6 +17,8 @@
  - **[cni-flannel]** Images are based on a distroless image. [#4635](https://github.com/deckhouse/deckhouse/pull/4635)
  - **[deckhouse]** List all Deckhouse modules as CR. Use the `kubectl get modules` command to browse all modules. [#4478](https://github.com/deckhouse/deckhouse/pull/4478)
  - **[deckhouse-controller]** Move `tools/change-registry.sh` to `deckhouse-controller`. [#4925](https://github.com/deckhouse/deckhouse/pull/4925)
+ - **[ingress-nginx]** Tune Kruise controller's leader election and verbosity. [#5092](https://github.com/deckhouse/deckhouse/pull/5092)
+    Kruise controller deployment will be updated and restarted.
  - **[ingress-nginx]** Set `ingressClass` to `nginx` if not explicitly set. [#4927](https://github.com/deckhouse/deckhouse/pull/4927)
  - **[ingress-nginx]** Images are based on a distroless image. [#4635](https://github.com/deckhouse/deckhouse/pull/4635)
     Ingress nginx controller will restart.
@@ -35,17 +38,28 @@
 ## Fixes
 
 
+ - **[candi]** Create a `systemd` unit that manually unmounts `pre-1.24` CSI mounts. That should stop stuck Pods while upgrading `kubelet` without draining a node. [#5153](https://github.com/deckhouse/deckhouse/pull/5153)
+ - **[candi]** Fix the install `containerd` step for cases when `NodeGroup` CRI changes from `docker` to `containerd`. [#5086](https://github.com/deckhouse/deckhouse/pull/5086)
  - **[cilium-hubble]** Fix the error with the install if the [modules.https.mode](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-mode) global parameter is `OnlyInURI`. [#4846](https://github.com/deckhouse/deckhouse/pull/4846)
  - **[dashboard]** Fix the logout button (it doesn't appear). [#4929](https://github.com/deckhouse/deckhouse/pull/4929)
+ - **[deckhouse]** Fix `DeckhouseRelease` cleanup hook. Mark superseded releases in the right order. [#5113](https://github.com/deckhouse/deckhouse/pull/5113)
+ - **[deckhouse-controller]** Bump addon-operator version to fix mergo concurrent map writes. [#5139](https://github.com/deckhouse/deckhouse/pull/5139)
  - **[deckhouse-controller]** Add unit tests for change-registry. [#4949](https://github.com/deckhouse/deckhouse/pull/4949)
  - **[dhctl]** Add cache identity for a `kubeconfig` parameter in the `converge` command. [#4961](https://github.com/deckhouse/deckhouse/pull/4961)
  - **[dhctl]** Fix parsing node index (CWE-190, CWE-681). [#5023](https://github.com/deckhouse/deckhouse/pull/5023)
  - **[dhctl]** Fix cut off terraform output. [#4800](https://github.com/deckhouse/deckhouse/pull/4800)
  - **[external-module-manager]** Prevent path traversal on zip unpacking [#5024](https://github.com/deckhouse/deckhouse/pull/5024)
  - **[global-hooks]** Delete `d8-deckhouse-validating-webhook-handler` validating webhook configurations [#5032](https://github.com/deckhouse/deckhouse/pull/5032)
+ - **[ingress-nginx]** Fix kruise DaemonSet handling on node drain. [#5142](https://github.com/deckhouse/deckhouse/pull/5142)
+ - **[ingress-nginx]** Fix Kruise controller update logic when reverting a failed update. [#5100](https://github.com/deckhouse/deckhouse/pull/5100)
+    Kruise controller manager will be restarted.
  - **[ingress-nginx]** Update the Kruise controller manager before updating Ingress Nginx so that an updated Kruise controller manager takes care of Ingress nginx demonsets. [#5050](https://github.com/deckhouse/deckhouse/pull/5050)
  - **[ingress-nginx]** Pathch Kruse controller manager logic so that it doesn't delete more than `maxUnavailable` Pods during updates. [#5039](https://github.com/deckhouse/deckhouse/pull/5039)
     Kruise controller manager will be restarted.
+ - **[kube-proxy]** Fix `node.deckhouse.io/nodeport-bind-internal-ip` annotation behavior [#5199](https://github.com/deckhouse/deckhouse/pull/5199)
+    NodePort services on a nodes without annotation were open to the world.
+ - **[linstor]** Fix in bashible step in case of installed `drbd-utils`. [#5161](https://github.com/deckhouse/deckhouse/pull/5161)
+ - **[linstor]** Rename `exported_node` to `node` in PrometheusRule. [#5121](https://github.com/deckhouse/deckhouse/pull/5121)
  - **[linstor]** Update Linstor. Fix `D8LinstorControllerTargetDown` alert. [#4823](https://github.com/deckhouse/deckhouse/pull/4823)
  - **[monitoring-kubernetes]** Fix `kubelet-eviction-thresholds-exporter` Prometheus metric and `node-disk-usage` Prometheus rules. [#4888](https://github.com/deckhouse/deckhouse/pull/4888)
  - **[node-manager]** Rework CRI requirements. Add ignoring `NodeGroup` with the `NotManaged` CRI type and Kubernetes version below `1.24`. [#5033](https://github.com/deckhouse/deckhouse/pull/5033)
@@ -69,6 +83,7 @@
     Kubernetes control plane components will restart, kubelet will restart.
  - **[dashboard]** Add validations for the `ingressClass` field. [#4932](https://github.com/deckhouse/deckhouse/pull/4932)
  - **[deckhouse]** Add cluster-autoscaler logs into debug logs collector. [#4848](https://github.com/deckhouse/deckhouse/pull/4848)
+ - **[deckhouse-controller]** Fix DaemonSet panic on draining. [#5164](https://github.com/deckhouse/deckhouse/pull/5164)
  - **[documentation]** Add validations for the `ingressClass` field. [#4932](https://github.com/deckhouse/deckhouse/pull/4932)
  - **[flant-integration]** Set default schema for Grafana URL to 'http' in case there is problem to fetch data from the cluster. [#4978](https://github.com/deckhouse/deckhouse/pull/4978)
  - **[flant-integration]** Bump the `requests` dependency library from `2.28.1` to `2.31.0`. [#4899](https://github.com/deckhouse/deckhouse/pull/4899)

@@ -49,6 +49,7 @@ rules:
   - deckhouse.io
   resources:
   - users
+  - groups
   verbs:
   - get
   - list
