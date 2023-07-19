@@ -21,6 +21,15 @@ function ip_in_subnet(){
   return $?
 }
 
+if [ -f "/etc/netplan/50-cloud-init.yaml" ]; then
+  if [ -f "/etc/netplan/01-netcfg.yaml" ]; then
+    rm /etc/netplan/01-netcfg.yaml
+  fi
+  if [ -f "/etc/netplan/00-installer-config.yaml" ]; then
+    rm /etc/netplan/00-installer-config.yaml
+  fi
+fi
+
 if ! metadata="$(curl -sH Metadata-Flavor:Google 169.254.169.254/computeMetadata/v1/instance/?recursive=true 2>/dev/null)"; then
   echo "Can't get network cidr from metadata"
   exit 1
