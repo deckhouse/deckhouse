@@ -20,7 +20,7 @@ function check_hostname(){
     [[ $a =~ $r ]]
     if [ $? -ne 0 ]; then
         echo ' FAIL'
-        echo "Hostname '$a' should be contain no more than 63 characters, contain only lowercase alphanumeric characters, '-' or '.', start with an alphanumeric character, end with an alphanumeric character"
+        bb-log-error "Hostname '$a' should be contain no more than 63 characters, contain only lowercase alphanumeric characters, '-' or '.', start with an alphanumeric character, end with an alphanumeric character"
         exit 1
     fi
     echo ' SUCCESS'
