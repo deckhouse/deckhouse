@@ -16,6 +16,10 @@ func TestRemoveDuplicates(t *testing.T) {
 		want []string
 	}{
 		{
+			args: []string{"1", ""},
+			want: []string{"1"},
+		},
+		{
 			args: []string{"1", "1"},
 			want: []string{"1"},
 		},
