@@ -13,17 +13,14 @@
 # limitations under the License.
 
 function check_hostname(){
-    echo -n "Check hostname: "
     local a=`hostname`
-    echo -n "$a"
+    bb-log-info "Check hostname: $a"
     local r='^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,1})$'
     [[ $a =~ $r ]]
     if [ $? -ne 0 ]; then
-        echo ' FAIL'
         bb-log-error "Hostname '$a' should be contain no more than 63 characters, contain only lowercase alphanumeric characters, '-' or '.', start with an alphanumeric character, end with an alphanumeric character"
         exit 1
     fi
-    echo ' SUCCESS'
     exit 0
 }
 
