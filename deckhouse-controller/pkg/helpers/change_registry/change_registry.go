@@ -39,6 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 // TODO (alex123012): Use new methods in transport package for getting bearer token:
@@ -66,7 +67,12 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 
 	authConfig := newAuthConfig(username, password)
 
-	remoteOpts, err := newRemoteOptions(ctx, newRepo, authConfig)
+	caContent, err := getCAContent(caFile)
+	if err != nil {
+		return err
+	}
+
+	remoteOpts, err := newRemoteOptions(ctx, newRepo, authConfig, caContent)
 	if err != nil {
 		return err
 	}
@@ -88,7 +94,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caFile)
+	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caContent)
 	if err != nil {
 		return err
 	}
@@ -114,10 +120,10 @@ func newAuthConfig(username, password string) authn.AuthConfig {
 	}
 }
 
-func newRemoteOptions(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig) ([]remote.Option, error) {
+func newRemoteOptions(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig, caContent string) ([]remote.Option, error) {
 	var opts []remote.Option
 
-	transportOpt, err := newTransportOption(ctx, repo, authConfig)
+	transportOpt, err := newTransportOption(ctx, repo, authConfig, caContent)
 	if err != nil {
 		return nil, err
 	}
@@ -134,11 +140,11 @@ func newNameOptions(insecure bool) []name.Option {
 	return opts
 }
 
-func newTransportOption(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig) (remote.Option, error) {
+func newTransportOption(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig, caContent string) (remote.Option, error) {
 	authorizer := authn.FromConfig(authConfig)
 
 	scopes := []string{repo.Scope(transport.PullScope)}
-	t, err := transport.NewWithContext(ctx, repo.Registry, authorizer, http.DefaultTransport, scopes)
+	t, err := transport.NewWithContext(ctx, repo.Registry, authorizer, cr.GetHTTPTransport(caContent), scopes)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +175,7 @@ func updateImagePullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSe
 	return nil
 }
 
-func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caFile string) (map[string]string, error) {
+func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caContent string) (map[string]string, error) {
 	var authCfg authn.AuthConfig
 	if authConfig.Username != "" && authConfig.Password != "" {
 		authCfg.Auth = base64.StdEncoding.EncodeToString([]byte(authConfig.Username + ":" + authConfig.Password))
@@ -192,17 +198,17 @@ func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig
 		"scheme":            newRepo.Scheme(),
 	}
 
-	if caFile != "" {
-		ca, err := getCAContent(caFile)
-		if err != nil {
-			return nil, err
-		}
-		newSecretData["ca"] = ca
+	if caContent != "" {
+		newSecretData["ca"] = caContent
 	}
 	return newSecretData, nil
 }
 
 func getCAContent(caFile string) (string, error) {
+	if caFile == "" {
+		return "", nil
+	}
+
 	caBytes, err := os.ReadFile(caFile)
 	if err != nil {
 		return "", err
