@@ -15,7 +15,7 @@
 function check_hostname(){
     local a=`hostname`
     bb-log-info "Check hostname: $a"
-    local r='^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,1})$'
+    local r='^[a-z0-9]{1}[a-z0-9\-\.]{0,61}[a-z0-9]{1}$'
     if [[ $a =~ $r ]]; then
         bb-log-info "SUCCESS"
         exit 0
