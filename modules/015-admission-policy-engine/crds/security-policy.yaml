@@ -15,6 +15,10 @@ spec:
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
+      additionalPrinterColumns:
+      - jsonPath: .metadata.annotations.deckhouse\.io/admission-policy-engine-hook-synced
+        name: Processed
+        type: string
       served: true
       storage: true
       schema:

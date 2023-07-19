@@ -1275,6 +1275,10 @@ spec:
         - name: Age
           type: date
           jsonPath: .metadata.creationTimestamp
+        - name: Processed
+          type: string
+          description: Status message if current version of a node group was processed by the operator.
+          jsonPath: .metadata.annotations.deckhouse\.io/node-manager-hook-synced
       subresources:
         status: {}
       schema:

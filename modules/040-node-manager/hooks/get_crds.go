@@ -17,10 +17,12 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -28,10 +30,14 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/autoscaler/capacity"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -184,9 +190,9 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 	},
 }
 
-var _ = sdk.RegisterFunc(getCRDsHookConfig, getCRDsHandler)
+var _ = sdk.RegisterFunc(getCRDsHookConfig, dependency.WithExternalDependencies(getCRDsHandler))
 
-func getCRDsHandler(input *go_hook.HookInput) error {
+func getCRDsHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	// Detect InstanceClass kind and change binding if needed.
 	kindInUse, kindFromSecret := detectInstanceClassKind(input, getCRDsHookConfig)
 
@@ -288,6 +294,11 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		instanceTypeCatalog = iCatalogRaw[0].(*capacity.InstanceTypesCatalog)
 	} else {
 		instanceTypeCatalog = capacity.NewInstanceTypesCatalog(nil)
+	}
+
+	kubeClient, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
 
 	for _, v := range input.Snapshots["ngs"] {
@@ -487,6 +498,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			"name":     nodeGroup.Name,
 			"cri_type": newCRIType,
 		})
+		if err := annotateWithNoticed(&nodeGroup, kubeClient); err != nil {
+			return fmt.Errorf("cannot annotate node group object: %v", err)
+		}
 	}
 
 	if !input.Values.Exists("nodeManager.internal") {
@@ -573,4 +587,44 @@ func calculateUpdateEpoch(ts int64, clusterUUID string, nodeGroupName string) st
 	absWindowStart := ((ts - drift - 1) / EpochWindowSize) * EpochWindowSize
 	epoch := absWindowStart + EpochWindowSize + drift
 	return strconv.FormatInt(epoch, 10)
+}
+
+func annotateWithNoticed(ng *NodeGroupCrdInfo, kubeClient k8s.Client) error {
+	ngInterface := kubeClient.Dynamic().Resource(schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}).Namespace("")
+	ngObj, err := ngInterface.Get(context.TODO(), ng.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	ngBytes, err := json.Marshal(ng)
+	if err != nil {
+		return err
+	}
+	checkSum := utils_checksum.CalculateChecksum(string(ngBytes))
+
+	processedAnnotation, found, err := unstructured.NestedString(ngObj.Object, "metadata", "annotations", "deckhouse.io/node-manager-hook-processed")
+	if err != nil {
+		return err
+	}
+
+	if !found || !checksumEqualsAnnotation(checkSum, processedAnnotation) {
+		if err := unstructured.SetNestedField(ngObj.Object, "False", "metadata", "annotations", "deckhouse.io/node-manager-hook-synced"); err != nil {
+			return err
+		}
+	}
+
+	if err := unstructured.SetNestedField(ngObj.Object, fmt.Sprintf("%s/%s", time.Now().Format(time.RFC3339), checkSum), "metadata", "annotations", "deckhouse.io/node-manager-hook-noticed"); err != nil {
+		return err
+	}
+	_, err = ngInterface.Update(context.TODO(), ngObj, metav1.UpdateOptions{})
+
+	return err
+}
+
+func checksumEqualsAnnotation(checkSum, annotation string) bool {
+	splitAnnotation := strings.Split(annotation, "/")
+	if len(splitAnnotation) != 2 {
+		return false
+	}
+	return splitAnnotation[1] == checkSum
 }
