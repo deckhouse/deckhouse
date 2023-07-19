@@ -15,8 +15,7 @@
 function check_hostname(){
     local a=`hostname`
     bb-log-info "Check hostname: $a"
-    if hostname|grep -P '^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,62})$' > /dev/null 2>&1
-; then
+    if hostname|grep -P '^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,62})$' > /dev/null 2>&1; then
         bb-log-info "SUCCESS"
         exit 0
     fi
