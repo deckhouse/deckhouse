@@ -59,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "check_deckhouse_release",
-			Crontab: "13 3 * * *",
+			Crontab: "*/1  * * *",
 		},
 	},
 }, cleanupReleases)
@@ -88,7 +88,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		}
 	}
 
-	// for disabled/absent modules - delete all ExternalModuleRelease resources
+	// for absent modules - delete all ExternalModuleRelease resources
 	for moduleName, releases := range moduleReleases {
 		if enabledModules.Has(moduleName) {
 			continue
@@ -143,20 +143,7 @@ func filterDeprecatedRelease(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 // returns only Disabled modules
 func filterExternalModule(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	state, found, err := unstructured.NestedString(obj.Object, "properties", "state")
-	if err != nil {
-		return "", err
-	}
-	if !found {
-		// if field is not set by any reason - return Module to avoid wrong deletion
-		return obj.GetName(), nil
-	}
-
-	if state == "Enabled" {
-		return obj.GetName(), nil
-	}
-
-	return nil, nil
+	return obj.GetName(), nil
 }
 
 type deprecatedRelease struct {

@@ -119,8 +119,6 @@ metadata:
   name: testmodule
   labels:
     source-type: "external"
-properties:
-  state: Disabled
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
