@@ -15,13 +15,13 @@
 function check_hostname(){
     local a=`hostname`
     bb-log-info "Check hostname: $a"
-    hostname|grep -P '^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,62})$' > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        bb-log-error "FAIL Hostname '$a' should be contain no more than 63 characters, contain only lowercase alphanumeric characters, '-' or '.', start with an alphanumeric character, end with an alphanumeric character"
-        exit 1
+    if hostname|grep -P '^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,62})$' > /dev/null 2>&1
+; then
+        bb-log-info "SUCCESS"
+        exit 0
     fi
-    bb-log-info "SUCCESS"
-    exit 0
+    bb-log-error "FAIL Hostname '$a' should be contain no more than 63 characters, contain only lowercase alphanumeric characters, '-' or '.', start with an alphanumeric character, end with an alphanumeric character"
+    exit 1
 }
 
 check_hostname
