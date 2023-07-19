@@ -70,8 +70,8 @@ func (m *Module) SetWeight(weight int) {
 func (m *Module) SetSource(source string) {
 	if source == "" {
 		source = "Embedded"
-		m.Labels["source-type"] = "embedded"
 	}
+	m.Labels["source-type"] = "embedded"
 
 	if source != "Embedded" {
 		source = "External: " + source

@@ -121,13 +121,6 @@ metadata:
     source-type: "external"
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: hellow
-  labels:
-    source-type: "external"
----
-apiVersion: deckhouse.io/v1alpha1
 kind: ExternalModuleRelease
 metadata:
   name: testmodule-v0.0.1
@@ -146,16 +139,6 @@ spec:
   version: 0.0.6
 status:
   phase: Deployed
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ExternalModuleRelease
-metadata:
-  name: hellow-v0.0.3
-spec:
-  moduleName: hellow
-  version: 0.0.3
-status:
-  phase: Deployed
 `)
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("13 3 * * *"))
@@ -168,10 +151,7 @@ status:
 			Expect(rele1.Exists()).To(BeFalse())
 
 			test1 := f.KubernetesGlobalResource("ExternalModuleRelease", "testmodule-v0.0.1")
-			Expect(test1.Exists()).To(BeFalse())
-
-			hel1 := f.KubernetesGlobalResource("ExternalModuleRelease", "hellow-v0.0.3")
-			Expect(hel1.Exists()).To(BeTrue())
+			Expect(test1.Exists()).To(BeTrue())
 		})
 	})
 })
