@@ -23,6 +23,8 @@
  - **[candi]** Add a node approval annotations step. [#5047](https://github.com/deckhouse/deckhouse/pull/5047)
  - **[candi]** Remove the property `etcdDisk` in `nodeGroups` and remove anchor inheritance in the `AWSClusterConfiguration` OpenAPI specification. [#4977](https://github.com/deckhouse/deckhouse/pull/4977)
  - **[cloud-provider-azure]** Fix behavior of the `acceleratedNetworking` variable. [#5000](https://github.com/deckhouse/deckhouse/pull/5000)
+ - **[cloud-provider-openstack]** Remove duplicates from additional security groups in cloud-data-discoverer. [#5279](https://github.com/deckhouse/deckhouse/pull/5279)
+ - **[cloud-provider-openstack]** Fix migration from `openstack_blockstorage_volume_v2` to `openstack_blockstorage_volume_v3` for bastion hosts. [#5271](https://github.com/deckhouse/deckhouse/pull/5271)
  - **[cloud-provider-openstack]** Remove duplicates from images list in `cloud-data-discoverer`. [#5241](https://github.com/deckhouse/deckhouse/pull/5241)
  - **[cloud-provider-openstack]** Fix discover volume types hooks incorrect fallback to storage classes in another modules. [#5233](https://github.com/deckhouse/deckhouse/pull/5233)
  - **[common]** Add commonName field to Deckhouse X.509 certificates. [#4999](https://github.com/deckhouse/deckhouse/pull/4999)
@@ -31,6 +33,7 @@
  - **[runtime-audit-engine]** Mount falco config to rules-loader to enable plugins for validating webhook. Otherwise, webhook returns an error for valid rules. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
  - **[runtime-audit-engine]** Output webhook validation error. Without this change, users have to search it in logs among all running falco pods. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
  - **[runtime-audit-engine]** Fix `FalcoAuditRules` resource name in rules. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
+ - **[user-authn]** Fix kubeconfig certificate generation. [#5273](https://github.com/deckhouse/deckhouse/pull/5273)
  - **[user-authn]** Improve groups migration (run only once and slugify group names). [#5130](https://github.com/deckhouse/deckhouse/pull/5130)
  - **[user-authn]** Disable env expansion to support dollar character in `bindPW` for LDAP connector. [#5106](https://github.com/deckhouse/deckhouse/pull/5106)
 
