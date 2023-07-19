@@ -243,7 +243,7 @@ func (d *Discoverer) getAdditionalNetworks(ctx context.Context, provider *gopher
 		networkNames = append(networkNames, network.Name)
 	}
 
-	return networkNames, nil
+	return removeDuplicates(networkNames), nil
 }
 
 func (d *Discoverer) getAdditionalSecurityGroups(ctx context.Context, provider *gophercloud.ProviderClient) ([]string, error) {
@@ -272,7 +272,7 @@ func (d *Discoverer) getAdditionalSecurityGroups(ctx context.Context, provider *
 		groupNames = append(groupNames, group.Name)
 	}
 
-	return groupNames, nil
+	return removeDuplicates(groupNames), nil
 }
 
 func (d *Discoverer) getImages(ctx context.Context, provider *gophercloud.ProviderClient) ([]string, error) {
@@ -371,6 +371,10 @@ func removeDuplicates(list []string) []string {
 	)
 
 	for _, elem := range list {
+		if elem == "" {
+			continue
+		}
+
 		if _, ok := keys[elem]; !ok {
 			keys[elem] = struct{}{}
 			uniqueList = append(uniqueList, elem)
