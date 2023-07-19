@@ -161,7 +161,7 @@ k8s:
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.27':
     status: preview
-    patch: 1
+    patch: 3
     bashible: *bashible_k8s_ge_1_23
     ccm:
       openstack: v1.27.1
