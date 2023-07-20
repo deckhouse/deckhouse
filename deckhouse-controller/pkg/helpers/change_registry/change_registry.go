@@ -28,6 +28,8 @@ import (
 	"path"
 	"strings"
 
+	"sigs.k8s.io/yaml"
+
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -104,8 +106,16 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 
 	if dryRun {
 		logEntry.Println("Dry-run enabled")
-		logEntry.Printf("New Secret will be applied:\n\t%v\n", imagePullSecretData)
-		logEntry.Printf("New Deployment will be applied:\n\t%v\n", deckhouseDeploy)
+		secretClient := kubeCl.CoreV1().Secrets(d8SystemNS)
+		deckhouseRegSecret, err := secretClient.Get(ctx, "deckhouse-registry", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		deckhouseRegSecret.StringData = imagePullSecretData
+		secretYaml, _ := yaml.Marshal(deckhouseRegSecret)
+		deploymentYaml, _ := yaml.Marshal(deckhouseDeploy)
+		logEntry.Printf("New Secret will be applied:\n\t%v\n", secretYaml)
+		logEntry.Printf("New Deployment will be applied:\n\t%v\n", deploymentYaml)
 	} else {
 		logEntry.Println("Updating deckhouse image pull secret...")
 		if err := updateImagePullSecret(ctx, kubeCl, imagePullSecretData); err != nil {
@@ -342,6 +352,7 @@ func checkBearerSupport(ctx context.Context, reg name.Registry) error {
 			return err
 		}
 
+		fmt.Println("MAKING REQUEST", u.String())
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 		if err != nil {
 			return err
