@@ -28,7 +28,7 @@ spec:
             spec:
               type: object
               required: ["address", "credentialsRef"]
-              description: Specification of the desired behavior of the static instance
+              description: Specification of the desired behavior of the static instance.
               properties:
                 address:
                   type: string
@@ -36,15 +36,22 @@ spec:
                 credentialsRef:
                   type: object
                   required: [ "name" ]
-                  description: Reference to credentials for connection to the static instance
+                  description: Reference to credentials for connection to the static instance.
                   properties:
                     name:
                       type: string
-                      description: StaticInstanceCredentials name
+                      description: StaticInstanceCredentials name.
             status:
               type: object
-              description: Most recently observed status of the static instance
+              description: Most recently observed status of the static instance.
               properties:
+                machineRef:
+                  type: object
+                  description: Reference to the static machine object.
+                  properties:
+                    name:
+                      type: string
+                      description: Node group name
                 nodeGroupRef:
                   type: object
                   description: Reference to the node group object.

@@ -17,6 +17,8 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
+      subresources:
+        status: { }
       additionalPrinterColumns:
         - name: Age
           type: date
@@ -29,3 +31,19 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          description: |
+            Defines the static cluster.
+          properties:
+          status:
+            type: object
+            description: Most recently observed status of the static cluster.
+            properties:
+              ready:
+                type: boolean
+                description: Indicates the provider-specific infrastructure has been provisioned and is ready.
+              failureReason:
+                type: string
+                description: Indicates there is a fatal problem reconciling the provider’s infrastructure; meant to be suitable for programmatic interpretation
+              failureMessage:
+                type: string
+                description: Indicates there is a fatal problem reconciling the provider’s infrastructure; meant to be a more descriptive value than failureReason

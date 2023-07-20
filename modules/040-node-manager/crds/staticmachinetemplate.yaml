@@ -11,12 +11,14 @@ spec:
   names:
     kind: StaticMachineTemplate
     plural: staticmachinetemplates
-    singular: staticmachinetemplates
+    singular: staticmachinetemplate
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true
       storage: true
+      subresources:
+        status: { }
       additionalPrinterColumns:
         - name: Age
           type: date
@@ -30,127 +32,137 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines machine templates for static instances
+            Defines machine templates for creating static machines
           properties:
             spec:
               type: object
-              required: [ "labelSelector" ]
               description: Specification of the desired behavior of the static machine templates.
               properties:
-                nodeTemplate:
+                template:
+                  required: [ "labelSelector" ]
                   description: |
-                    Specification of some of the fields that will be maintained in all nodes of the group.
-                  x-doc-example: |
-                    ```yaml
-                    labels:
-                      environment: production
-                      app: warp-drive-ai
-                    annotations:
-                      ai.fleet.com/discombobulate: "true"
-                    taints:
-                    - effect: NoExecute
-                      key: ship-class
-                      value: frigate
-                    ```
+                    Template for creating a static machine.
                   type: object
                   properties:
-                    labels:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      x-kubernetes-preserve-unknown-fields: true
+                    providerID:
+                      type: string
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        The identifier for the provider’s machine instance.
+                        ATTENTION! Should be empty in StaticMachineTemplate
+                    labelSelector:
+                      type: object
+                      description: |
+                        Specifies the label selector to filter static instances with.
+
+                        You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                      anyOf:
+                        - required:
+                            - matchLabels
+                        - required:
+                            - matchExpressions
+                      properties:
+                        matchLabels:
+                          type: object
+                          description: List of labels which static instances should have.
+                          example: { "foo": "bar", "baz": "who" }
+                          additionalProperties:
+                            type: string
+                        matchExpressions:
+                          type: array
+                          description: List of label expressions for static instances.
+                          example: |
+                            ```yaml
+                            matchExpressions:
+                            - key: tier
+                              operator: In
+                              values:
+                              - production
+                              - staging
+                            ```
+                          items:
+                            type: object
+                            required:
+                              - key
+                              - operator
+                            properties:
+                              key:
+                                type: string
+                              operator:
+                                type: string
+                                enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                              values:
+                                type: array
+                                items:
+                                  type: string
+                    nodeTemplate:
+                      description: |
+                        Specification of some of the fields that will be maintained in all nodes of the group.
                       x-doc-example: |
                         ```yaml
                         labels:
                           environment: production
                           app: warp-drive-ai
-                        ```
-                    annotations:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      x-kubernetes-preserve-unknown-fields: true
-                      description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-example: |
-                        ```yaml
                         annotations:
                           ai.fleet.com/discombobulate: "true"
-                        ```
-                    taints:
-                      type: array
-                      description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
-
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
-                      x-doc-example: |
-                        ```yaml
                         taints:
                         - effect: NoExecute
                           key: ship-class
                           value: frigate
                         ```
-                      items:
-                        type: object
-                        properties:
-                          effect:
-                            type: string
-                            enum:
-                              - NoSchedule
-                              - PreferNoSchedule
-                              - NoExecute
-                          key:
-                            type: string
-                          value:
-                            type: string
-                labelSelector:
-                  type: object
-                  description: |
-                    Specifies the label selector to filter static instances with.
-
-                    You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
-                  anyOf:
-                    - required:
-                        - matchLabels
-                    - required:
-                        - matchExpressions
-                  properties:
-                    matchLabels:
                       type: object
-                      description: List of labels which static instances should have.
-                      example: { "foo": "bar", "baz": "who" }
-                      additionalProperties:
-                        type: string
-                    matchExpressions:
-                      type: array
-                      description: List of label expressions for static instances.
-                      example: |
-                        ```yaml
-                        matchExpressions:
-                        - key: tier
-                          operator: In
-                          values:
-                          - production
-                          - staging
-                        ```
-                      items:
-                        type: object
-                        required:
-                          - key
-                          - operator
-                        properties:
-                          key:
+                      properties:
+                        labels:
+                          type: object
+                          additionalProperties:
                             type: string
-                          operator:
+                          x-kubernetes-preserve-unknown-fields: true
+                          description: |
+                            Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                          x-doc-example: |
+                            ```yaml
+                            labels:
+                              environment: production
+                              app: warp-drive-ai
+                            ```
+                        annotations:
+                          type: object
+                          additionalProperties:
                             type: string
-                            enum:
-                              - In
-                              - NotIn
-                              - Exists
-                              - DoesNotExist
-                          values:
-                            type: array
-                            items:
-                              type: string
+                          x-kubernetes-preserve-unknown-fields: true
+                          description: |
+                            Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                          x-doc-example: |
+                            ```yaml
+                            annotations:
+                              ai.fleet.com/discombobulate: "true"
+                            ```
+                        taints:
+                          type: array
+                          description: |
+                            Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                            **Caution!** Only `effect`, `key`, `value` fields are available.
+                          x-doc-example: |
+                            ```yaml
+                            taints:
+                            - effect: NoExecute
+                              key: ship-class
+                              value: frigate
+                            ```
+                          items:
+                            type: object
+                            properties:
+                              effect:
+                                type: string
+                                enum:
+                                  - NoSchedule
+                                  - PreferNoSchedule
+                                  - NoExecute
+                              key:
+                                type: string
+                              value:
+                                type: string
