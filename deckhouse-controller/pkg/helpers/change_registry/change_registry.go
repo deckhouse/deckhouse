@@ -69,12 +69,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	caTransport, err := newTransport(ctx, newRepo, authConfig, caContent)
-	if err != nil {
-		return err
-	}
-
-	remoteOpts := newRemoteOptions(caTransport)
+	caTransport := cr.GetHTTPTransport(caContent)
 
 	if err := checkBearerSupport(ctx, newRepo.Registry, caTransport); err != nil {
 		return err
@@ -87,6 +82,11 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 
 	logEntry.Println("Retrieving deckhouse deployment...")
 	deckhouseDeploy, err := deckhouseDeployment(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	remoteOpts, err := newRemoteOptions(ctx, newRepo, authConfig, caTransport)
 	if err != nil {
 		return err
 	}
@@ -112,9 +112,9 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		secretYaml, _ := yaml.Marshal(deckhouseSecret)
 		deploymentYaml, _ := yaml.Marshal(deckhouseDeploy)
 		logEntry.Println("------------------------------")
-		logEntry.Printf("New Secret will be applied:\n%v\n", secretYaml)
+		logEntry.Printf("New Secret will be applied:\n%s\n", secretYaml)
 		logEntry.Println("------------------------------")
-		logEntry.Printf("New Deployment will be applied:\n%v\n", deploymentYaml)
+		logEntry.Printf("New Deployment will be applied:\n%s\n", deploymentYaml)
 	} else {
 		logEntry.Println("Updating deckhouse image pull secret...")
 		if err := updateImagePullSecret(ctx, kubeCl, deckhouseSecret); err != nil {
@@ -138,10 +138,15 @@ func newAuthConfig(username, password string) authn.AuthConfig {
 	}
 }
 
-func newRemoteOptions(transport http.RoundTripper) []remote.Option {
-	return []remote.Option{
-		remote.WithTransport(transport),
+func newRemoteOptions(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig, caTransport http.RoundTripper) ([]remote.Option, error) {
+	t, err := newTransport(ctx, repo, authConfig, caTransport)
+	if err != nil {
+		return nil, err
 	}
+
+	return []remote.Option{
+		remote.WithTransport(t),
+	}, nil
 }
 
 func newNameOptions(insecure bool) []name.Option {
@@ -152,11 +157,11 @@ func newNameOptions(insecure bool) []name.Option {
 	return opts
 }
 
-func newTransport(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig, caContent string) (http.RoundTripper, error) {
+func newTransport(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig, caTransport http.RoundTripper) (http.RoundTripper, error) {
 	authorizer := authn.FromConfig(authConfig)
 
 	scopes := []string{repo.Scope(transport.PullScope)}
-	return transport.NewWithContext(ctx, repo.Registry, authorizer, cr.GetHTTPTransport(caContent), scopes)
+	return transport.NewWithContext(ctx, repo.Registry, authorizer, caTransport, scopes)
 }
 
 func newKubeClient() (kclient.KubeClient, error) {
@@ -328,8 +333,8 @@ func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
 // checkBearerSupport func checks that registry accepts bearer token authentification.
 // This is modified "ping" func from
 // https://github.com/google/go-containerregistry/blob/v0.5.1/pkg/v1/remote/transport/ping.go
-func checkBearerSupport(ctx context.Context, reg name.Registry, transport http.RoundTripper) error {
-	client := &http.Client{Transport: transport}
+func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper) error {
+	client := &http.Client{Transport: roundTripper}
 
 	// This first attempts to use "https" for every request, falling back to http
 	// if the registry matches our localhost heuristic or if it is intentionally
