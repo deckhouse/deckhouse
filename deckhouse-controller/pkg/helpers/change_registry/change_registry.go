@@ -53,6 +53,7 @@ const (
 
 func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag string, insecure bool) error {
 	ctx := context.Background()
+	log.SetReportCaller(true)
 	logEntry := log.WithField("operator.component", "ChangeRegistry")
 
 	nameOpts := newNameOptions(insecure)
