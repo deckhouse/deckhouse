@@ -19,16 +19,21 @@
 
  - **[admission-policy-engine]** Improve bootstrap handler logic. [#5242](https://github.com/deckhouse/deckhouse/pull/5242)
  - **[admission-policy-engine]** Fix constraint exporter - avoid duplications and invalid resource handling. [#5240](https://github.com/deckhouse/deckhouse/pull/5240)
+ - **[candi]** Fix router metric if the `additionalNetworks` parameter is specified. [#5286](https://github.com/deckhouse/deckhouse/pull/5286)
  - **[candi]** Fix bootstraping master node for AltLinux bundle. [#5099](https://github.com/deckhouse/deckhouse/pull/5099)
  - **[candi]** Add a node approval annotations step. [#5047](https://github.com/deckhouse/deckhouse/pull/5047)
  - **[candi]** Remove the property `etcdDisk` in `nodeGroups` and remove anchor inheritance in the `AWSClusterConfiguration` OpenAPI specification. [#4977](https://github.com/deckhouse/deckhouse/pull/4977)
+ - **[cloud-provider-aws]** Add rbac Role to access d8-provider-cluster-configuration and d8-cloud-provider-discovery-data secrets. [#5291](https://github.com/deckhouse/deckhouse/pull/5291)
+ - **[cloud-provider-azure]** Add rbac Role to access d8-provider-cluster-configuration and d8-cloud-provider-discovery-data secrets. [#5291](https://github.com/deckhouse/deckhouse/pull/5291)
  - **[cloud-provider-azure]** Fix behavior of the `acceleratedNetworking` variable. [#5000](https://github.com/deckhouse/deckhouse/pull/5000)
+ - **[cloud-provider-gcp]** Add rbac Role to access d8-provider-cluster-configuration and d8-cloud-provider-discovery-data secrets. [#5291](https://github.com/deckhouse/deckhouse/pull/5291)
  - **[cloud-provider-openstack]** Remove duplicates from additional security groups in cloud-data-discoverer. [#5279](https://github.com/deckhouse/deckhouse/pull/5279)
  - **[cloud-provider-openstack]** Fix migration from `openstack_blockstorage_volume_v2` to `openstack_blockstorage_volume_v3` for bastion hosts. [#5271](https://github.com/deckhouse/deckhouse/pull/5271)
  - **[cloud-provider-openstack]** Remove duplicates from images list in `cloud-data-discoverer`. [#5241](https://github.com/deckhouse/deckhouse/pull/5241)
  - **[cloud-provider-openstack]** Fix discover volume types hooks incorrect fallback to storage classes in another modules. [#5233](https://github.com/deckhouse/deckhouse/pull/5233)
  - **[common]** Add commonName field to Deckhouse X.509 certificates. [#4999](https://github.com/deckhouse/deckhouse/pull/4999)
  - **[control-plane-manager]** Restoring `D8KubernetesVersionIsDeprecated` alert from `1.23` to `1.22`. [#5249](https://github.com/deckhouse/deckhouse/pull/5249)
+ - **[go_lib]** Add test that original SANs are not mutated. [#5290](https://github.com/deckhouse/deckhouse/pull/5290)
  - **[runtime-audit-engine]** Mount docker and containerd sockets to fetch metadata. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
  - **[runtime-audit-engine]** Mount falco config to rules-loader to enable plugins for validating webhook. Otherwise, webhook returns an error for valid rules. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
  - **[runtime-audit-engine]** Output webhook validation error. Without this change, users have to search it in logs among all running falco pods. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
@@ -40,6 +45,8 @@
 ## Chore
 
 
+ - **[candi]** Bump patch versions of Kubernetes images: `v1.27.3` [#5246](https://github.com/deckhouse/deckhouse/pull/5246)
+    Kubernetes 1.27 control plane components and kubelet will restart.
  - **[candi]** Move the `altlinux` bundle to EE edition. [#4970](https://github.com/deckhouse/deckhouse/pull/4970)
  - **[candi]** Added the `etcdDiskSizeGb` parameter to Yandex Cloud, GCP, and Azure `ClusterConfiguration`. [#4720](https://github.com/deckhouse/deckhouse/pull/4720)
  - **[candi]** Added the `etcdDiskSizeGb` parameter for OpenStack and migration from `openstack_blockstorage_volume_v2` to `openstack_blockstorage_volume_v3`. [#4716](https://github.com/deckhouse/deckhouse/pull/4716)
