@@ -116,10 +116,6 @@ func main() {
 		featureGates["DaemonSetUpdateSurge"] = true
 	}
 
-	if kubernetesVersion.LessThan(semver.MustParse("1.25")) {
-		featureGates["CustomResourceValidationExpressions"] = true
-	}
-
 	kubeProxyConfig := &v1alpha1.KubeProxyConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KubeProxyConfiguration",
