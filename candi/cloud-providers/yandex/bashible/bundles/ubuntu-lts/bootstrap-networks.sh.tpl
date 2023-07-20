@@ -23,7 +23,7 @@ function ip_in_subnet(){
 
 if [ -f "/etc/netplan/50-cloud-init.yaml" ]; then
   if [ -f "/etc/netplan/00-installer-config.yaml" ]; then
-    rm /etc/netplan/00-installer-config.yaml
+    rm -f /etc/netplan/00-installer-config.yaml
   fi
 fi
 
