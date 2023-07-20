@@ -13,9 +13,9 @@
 # limitations under the License.
 
 function check_hostname(){
-    local server_hostname=$(hostname)
+    local server_hostname=$(hostname -s)
     bb-log-info "Check hostname: $server_hostname"
-    if hostname|grep -P '^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,62})$' > /dev/null 2>&1; then
+    if hostname -s|grep -P '^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,62})$' > /dev/null 2>&1; then
         bb-log-info "SUCCESS"
         exit 0
     fi
