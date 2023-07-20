@@ -1,0 +1,27 @@
+candi:
+  fixes:
+    - summary: Fix router metric if the `additionalNetworks` parameter is specified.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5286
+cloud-provider-aws:
+  fixes:
+    - summary: >-
+        Add rbac Role to access d8-provider-cluster-configuration and
+        d8-cloud-provider-discovery-data secrets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5291
+cloud-provider-azure:
+  fixes:
+    - summary: >-
+        Add rbac Role to access d8-provider-cluster-configuration and
+        d8-cloud-provider-discovery-data secrets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5291
+cloud-provider-gcp:
+  fixes:
+    - summary: >-
+        Add rbac Role to access d8-provider-cluster-configuration and
+        d8-cloud-provider-discovery-data secrets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5291
+go_lib:
+  fixes:
+    - summary: Add test that original SANs are not mutated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5290
+
