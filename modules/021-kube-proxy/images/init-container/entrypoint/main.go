@@ -112,9 +112,12 @@ func main() {
 	}
 
 	// The DaemonSetUpdateSurge feature gate has been removed in Kubernetes v1.27.
-	k8s127, _ := semver.NewVersion("1.27")
-	if kubernetesVersion.LessThan(k8s127) {
+	if kubernetesVersion.LessThan(semver.MustParse("1.27")) {
 		featureGates["DaemonSetUpdateSurge"] = true
+	}
+
+	if kubernetesVersion.LessThan(semver.MustParse("1.25")) {
+		featureGates["CustomResourceValidationExpressions"] = true
 	}
 
 	kubeProxyConfig := &v1alpha1.KubeProxyConfiguration{
