@@ -14,9 +14,11 @@ function install_jq() {
     ubuntu-lts|debian|altlinux|astra)
       apt-get update && apt-get install jq -y
       ;;
-    alteros|centos|redos)
+    alteros|redos)
       yum updateinfo && yum install jq -y
       ;;
+    centos)
+      yum install epel-release -y && yum updateinfo && yum install jq -y
     *)
       echo "Unsupported bundle $1 for bootstrap.sh! Exiting..."
       exit 1
