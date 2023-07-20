@@ -59,14 +59,14 @@ kind: Module
 metadata:
   name: echoserver
   labels:
-    source-type: "external"
+    type: "external"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: hellow
   labels:
-    source-type: "external"
+    type: "external"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ExternalModuleRelease
@@ -118,7 +118,7 @@ kind: Module
 metadata:
   name: testmodule
   labels:
-    source-type: "external"
+    type: "external"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ExternalModuleRelease

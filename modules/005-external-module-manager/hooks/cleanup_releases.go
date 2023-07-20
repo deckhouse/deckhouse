@@ -51,7 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"source-type": "external"},
+				MatchLabels: map[string]string{"type": "external"},
 			},
 			FilterFunc: filterExternalModule,
 		},
