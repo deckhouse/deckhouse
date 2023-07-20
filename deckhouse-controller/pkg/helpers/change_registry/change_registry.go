@@ -104,21 +104,22 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
+	deckhouseSecret, err := modifyPullSecret(ctx, kubeCl, imagePullSecretData)
+	if err != nil {
+		return err
+	}
+
 	if dryRun {
 		logEntry.Println("Dry-run enabled")
-		secretClient := kubeCl.CoreV1().Secrets(d8SystemNS)
-		deckhouseRegSecret, err := secretClient.Get(ctx, "deckhouse-registry", metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		deckhouseRegSecret.StringData = imagePullSecretData
-		secretYaml, _ := yaml.Marshal(deckhouseRegSecret)
+		secretYaml, _ := yaml.Marshal(deckhouseSecret)
 		deploymentYaml, _ := yaml.Marshal(deckhouseDeploy)
+		logEntry.Println("--------------------------")
 		logEntry.Printf("New Secret will be applied:\n\t%v\n", secretYaml)
+		logEntry.Println("--------------------------")
 		logEntry.Printf("New Deployment will be applied:\n\t%v\n", deploymentYaml)
 	} else {
 		logEntry.Println("Updating deckhouse image pull secret...")
-		if err := updateImagePullSecret(ctx, kubeCl, imagePullSecretData); err != nil {
+		if err := updateImagePullSecret(ctx, kubeCl, deckhouseSecret); err != nil {
 			return err
 		}
 
@@ -179,16 +180,22 @@ func newKubeClient() (kclient.KubeClient, error) {
 	return kubeCl.KubeClient, nil
 }
 
-func updateImagePullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecretData map[string]string) error {
+func modifyPullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecretData map[string]string) (*v1.Secret, error) {
 	secretClient := kubeCl.CoreV1().Secrets(d8SystemNS)
 	deckhouseRegSecret, err := secretClient.Get(ctx, "deckhouse-registry", metav1.GetOptions{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	deckhouseRegSecret.StringData = newSecretData
 
+	return deckhouseRegSecret, nil
+}
+
+func updateImagePullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecret *v1.Secret) error {
+	secretClient := kubeCl.CoreV1().Secrets(d8SystemNS)
+
 	updateOpts := metav1.UpdateOptions{FieldValidation: metav1.FieldValidationStrict}
-	if _, err := secretClient.Update(ctx, deckhouseRegSecret, updateOpts); err != nil {
+	if _, err := secretClient.Update(ctx, newSecret, updateOpts); err != nil {
 		return err
 	}
 	return nil
@@ -359,6 +366,7 @@ func checkBearerSupport(ctx context.Context, reg name.Registry) error {
 		}
 		resp, err := client.Do(req)
 		if err != nil {
+			fmt.Println("SCHEME ERROR", scheme, err)
 			errs = multierror.Append(errs, err)
 			// Potentially retry with http.
 			continue
