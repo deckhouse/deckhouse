@@ -16,9 +16,12 @@ tests:
         assertions:
           - violations: yes
             message: "Pod <disallowed> has duplicated container names: 'nginx'"
-      - name: example-disallowed-envs
-        object: disallowed_envs.yaml
+      - name: example-allowed-envs-same-name-diff-containers
+        object: allowed_envs_same_name_diff_containers.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed-envs-same-name-same-container
+        object: disallowed_envs_same_name_same_container.yaml
         assertions:
           - violations: yes
-            message: "Pod <disallowed> has duplicated env variable names: 'key1'"
-
+            message: "Container <nginx> in pod <disallowed> has duplicated env variable names: 'key1'"
