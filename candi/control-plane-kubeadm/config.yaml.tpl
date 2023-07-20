@@ -6,6 +6,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare "< 1.23" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "EphemeralContainers=true" | join "," }}
 {{- end }}
+{{- if semverCompare "< 1.25" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "CustomResourceValidationExpressions=true" | join "," }}
+{{- end }}
 {{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
