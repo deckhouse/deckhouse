@@ -28,8 +28,6 @@ import (
 	"path"
 	"strings"
 
-	"sigs.k8s.io/yaml"
-
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -39,6 +37,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -75,21 +74,12 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	remoteOpts, err := newRemoteOptions(caTransport)
-	if err != nil {
-		return err
-	}
+	remoteOpts := newRemoteOptions(caTransport)
 
-	fmt.Println("New repo")
-
-	fmt.Println("Check bearer")
 	if err := checkBearerSupport(ctx, newRepo.Registry, caTransport); err != nil {
 		return err
 	}
 
-	fmt.Println("NEW REMOTE")
-
-	fmt.Println("KUBE CLIENT")
 	kubeCl, err := newKubeClient()
 	if err != nil {
 		return err
@@ -148,11 +138,10 @@ func newAuthConfig(username, password string) authn.AuthConfig {
 	}
 }
 
-func newRemoteOptions(transport http.RoundTripper) ([]remote.Option, error) {
-	var opts []remote.Option
-
-	opts = append(opts, remote.WithTransport(transport))
-	return opts, nil
+func newRemoteOptions(transport http.RoundTripper) []remote.Option {
+	return []remote.Option{
+		remote.WithTransport(transport),
+	}
 }
 
 func newNameOptions(insecure bool) []name.Option {
@@ -377,7 +366,6 @@ func makeRequestWithScheme(ctx context.Context, client *http.Client, scheme, reg
 		return nil, err
 	}
 
-	fmt.Println("MAKING REQUEST", u.String())
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err

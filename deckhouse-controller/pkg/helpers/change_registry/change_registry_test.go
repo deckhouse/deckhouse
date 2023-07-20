@@ -320,7 +320,7 @@ func Test_checkBearerSupport(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := checkBearerSupport(tt.args.ctx, reg); (err != nil) != tt.wantErr {
+			if err := checkBearerSupport(tt.args.ctx, reg, http.DefaultTransport); (err != nil) != tt.wantErr {
 				t.Errorf("checkBearerSupport() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
