@@ -12,17 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function check_hostname(){
-    local server_hostname=$(hostname -s)
-    bb-log-info "Check hostname: $server_hostname"
-    if hostname -s|grep -P '^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,62})$' > /dev/null 2>&1; then
-        bb-log-info "SUCCESS"
-        exit 0
-    fi
-    bb-log-error "FAIL Hostname '$server_hostname' should be contain no more than 63 characters, contain only lowercase alphanumeric characters, '-' or '.', start with an alphanumeric character, end with an alphanumeric character"
-    exit 1
-}
-
-check_hostname
-exit $?
+if ! hostname -s|grep -P '^[a-z0-9]{1}(([a-z0-9\-\.]{0,61}[a-z0-9]{1})|[a-z0-9]{0,62})$' > /dev/null 2>&1; then
+  bb-log-error "FAIL Hostname '$(hostname -s)' should be contain no more than 63 characters, contain only lowercase alphanumeric characters, '-' or '.', start with an alphanumeric character, end with an alphanumeric character"
+  exit 1
+fi
 
