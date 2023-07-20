@@ -19,6 +19,7 @@ function install_jq() {
       ;;
     centos)
       yum install epel-release -y && yum updateinfo && yum install jq -y
+      ;;
     *)
       echo "Unsupported bundle $1 for bootstrap.sh! Exiting..."
       exit 1
