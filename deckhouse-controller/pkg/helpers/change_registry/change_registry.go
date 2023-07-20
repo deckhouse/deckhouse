@@ -51,17 +51,18 @@ const (
 	d8SystemNS = "d8-system"
 )
 
-func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag string, insecure bool) error {
+func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag string, insecure, dryRun bool) error {
 	ctx := context.Background()
-	log.SetReportCaller(true)
 	logEntry := log.WithField("operator.component", "ChangeRegistry")
 
+	fmt.Println("New repo")
 	nameOpts := newNameOptions(insecure)
 	newRepo, err := name.NewRepository(newRegistry, nameOpts...)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("Check bearer")
 	if err := checkBearerSupport(ctx, newRepo.Registry); err != nil {
 		return err
 	}
@@ -72,12 +73,13 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	if err != nil {
 		return err
 	}
-
+	fmt.Println("NEW REMOTE")
 	remoteOpts, err := newRemoteOptions(ctx, newRepo, authConfig, caContent)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("KUBE CLIENT")
 	kubeCl, err := newKubeClient()
 	if err != nil {
 		return err
@@ -100,14 +102,20 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	logEntry.Println("Updating deckhouse image pull secret...")
-	if err := updateImagePullSecret(ctx, kubeCl, imagePullSecretData); err != nil {
-		return err
-	}
+	if dryRun {
+		logEntry.Println("Dry-run enabled")
+		logEntry.Printf("New Secret will be applied:\n\t%v\n", imagePullSecretData)
+		logEntry.Printf("New Deployment will be applied:\n\t%v\n", deckhouseDeploy)
+	} else {
+		logEntry.Println("Updating deckhouse image pull secret...")
+		if err := updateImagePullSecret(ctx, kubeCl, imagePullSecretData); err != nil {
+			return err
+		}
 
-	logEntry.Println("Updating deckhouse deployment...")
-	if err := updateDeployment(ctx, kubeCl, deckhouseDeploy); err != nil {
-		return err
+		logEntry.Println("Updating deckhouse deployment...")
+		if err := updateDeployment(ctx, kubeCl, deckhouseDeploy); err != nil {
+			return err
+		}
 	}
 
 	logEntry.Println("Done")

@@ -45,10 +45,11 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		caFile := changeRegistryCommand.Flag("ca-file", "Path to registry CA.").ExistingFile()
 
 		insecure := changeRegistryCommand.Flag("insecure", "Use HTTP while connecting to new registry.").Bool()
+		dryRun := changeRegistryCommand.Flag("dry-run", "Don't change deckhouse resources, only print them.").Default("false").Bool()
 
 		newImageTag := changeRegistryCommand.Flag("new-deckhouse-tag", "New tag that will be used for deckhouse deployment image (by default current tag from deckhouse deployment will be used).").String()
 		changeRegistryCommand.Action(func(c *kingpin.ParseContext) error {
-			return changeregistry.ChangeRegistry(*newRegistry, *user, *password, *caFile, *newImageTag, *insecure)
+			return changeregistry.ChangeRegistry(*newRegistry, *user, *password, *caFile, *newImageTag, *insecure, *dryRun)
 		})
 	}
 
