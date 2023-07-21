@@ -65,7 +65,6 @@ func handleReadyStatusForProjectsAndProjectTypes(input *go_hook.HookInput) error
 		}
 
 		if internal.ProjectStatusIsDeploying(projectSnap.Status) {
-			fmt.Println("ladofsdfs")
 			internal.SetSyncStatusProject(input.PatchCollector, projectSnap.Snapshot.Name)
 		}
 	}
