@@ -232,8 +232,8 @@ func WithAuth(dockerCfg string) Option {
 	}
 }
 
-// parse arses url without scheme://
-// if we pass url without scheme ve've got url basck with two leading backslashes
+// parse parses url without scheme://
+// if we pass url without scheme ve've got url back with two leading slashes
 func parse(rawURL string) (*url.URL, error) {
 	if strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
 		return url.ParseRequestURI(rawURL)
