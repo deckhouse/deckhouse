@@ -19,6 +19,8 @@ package deckhouse_config
 import (
 	"sync"
 
+	"github.com/flant/addon-operator/pkg/module_manager"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -110,4 +112,8 @@ func (srv *ConfigService) ExternalNames() map[string]string {
 	}
 
 	return res
+}
+
+func (srv *ConfigService) ValidateModule(module *module_manager.Module) error {
+	return srv.moduleManager.ValidateModule(module)
 }
