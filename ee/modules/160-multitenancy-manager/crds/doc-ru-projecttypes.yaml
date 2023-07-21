@@ -62,10 +62,7 @@ spec:
             status:
               description: ""
               properties:
-                statusSummary:
-                  description: Сводная информация о статусе ProjectType.
-                  properties:
-                    message:
-                      description: Сообщение о статусе
-                    status:
-                      description: Сводка статуса (готов или не готов).
+                message:
+                  description: Сообщение о статусе
+                ready:
+                  description: Сводка статуса (готов или не готов).

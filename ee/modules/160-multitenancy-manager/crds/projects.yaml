@@ -16,7 +16,7 @@ spec:
   scope: Cluster
   versions:
     - additionalPrinterColumns:
-        - jsonPath: .status.statusSummary.status
+        - jsonPath: .status.sync
           name: Ready
           type: boolean
         - jsonPath: .spec.description
@@ -45,28 +45,15 @@ spec:
               type: object
             status:
               properties:
-                conditions:
-                  description: A list of Project conditions.
-                  items:
-                    properties:
-                      message:
-                        type: string
-                      name:
-                        type: string
-                      status:
-                        type: boolean
-                    type: object
-                  type: array
-                statusSummary:
-                  description: Summary for the Project status.
-                  properties:
-                    message:
-                      description: Status message.
-                      type: string
-                    status:
-                      description: Summary of the status (ready or not ready).
-                      type: boolean
-                  type: object
+                message:
+                  description: Status message.
+                  type: string
+                state:
+                  description: Summary of the status.
+                  type: string
+                sync:
+                  description: Project definition sync with cluster.
+                  type: boolean
               type: object
           type: object
       served: true

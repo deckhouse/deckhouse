@@ -16,7 +16,7 @@ spec:
   scope: Cluster
   versions:
     - additionalPrinterColumns:
-        - jsonPath: .status.statusSummary.status
+        - jsonPath: .status.ready
           name: Ready
           type: boolean
       name: v1alpha1
@@ -128,16 +128,12 @@ spec:
               type: object
             status:
               properties:
-                statusSummary:
-                  description: Summary about ProjectType status.
-                  properties:
-                    message:
-                      description: Status message.
-                      type: string
-                    status:
-                      description: Summary of the status (ready or not ready).
-                      type: boolean
-                  type: object
+                message:
+                  description: Status message.
+                  type: string
+                ready:
+                  description: Summary of the status (ready or not ready).
+                  type: boolean
               type: object
           type: object
       served: true

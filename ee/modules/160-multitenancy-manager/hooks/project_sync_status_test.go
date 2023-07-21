@@ -39,22 +39,19 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ready status ::"
 			It("Valid Projects status Sync", func() {
 				conds := []testProjectStatus{
 					{
-						name:       "test-1",
-						exists:     true,
-						conditions: `[{"name":"Sync","status":true}]`,
-						status:     `{"status":true}`,
+						name:   "test-1",
+						exists: true,
+						status: `{"sync":true,"state":"Sync"}`,
 					},
 					{
-						name:       "test-2",
-						exists:     true,
-						conditions: `[{"name":"Deploying","status":false}]`,
-						status:     `{"status":false}`,
+						name:   "test-2",
+						exists: true,
+						status: `{"sync":false,"state":"Deploying","message":"Deckhouse is creating the project, see deckhouse logs for more details."}`,
 					},
 					{
-						name:       "test-3",
-						exists:     true,
-						conditions: `[{"message":"Can't find valid ProjectType '' for Project","name":"Error","status":false}]`,
-						status:     `{"status":false}`,
+						name:   "test-3",
+						exists: true,
+						status: `{"sync":false,"state":"Error","message":"Can't find valid ProjectType '' for Project."}`,
 					},
 				}
 				for _, tc := range conds {
@@ -74,34 +71,27 @@ kind: Project
 metadata:
   name: test-1
 status:
-  conditions:
-    - name: Deploying
-      status: false
-  statusSummary:
-    status: false
+  state: Deploying
+  message: "Deckhouse is creating the project, see deckhouse logs for more details."
+  sync: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Project
 metadata:
   name: test-2
 status:
-  conditions:
-    - name: Deploying
-      status: false
-  statusSummary:
-    status: false
+  state: Deploying
+  message: "Deckhouse is creating the project, see deckhouse logs for more details."
+  sync: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Project
 metadata:
   name: test-3
 status:
-  conditions:
-    - message: Can't find valid ProjectType '' for Project
-      name: Error
-      status: false
-  statusSummary:
-    status: false
+  state: Error
+  message: "Can't find valid ProjectType '' for Project."
+  sync: false
 `
 )
 

@@ -18,8 +18,8 @@ const (
 )
 
 var (
-	ProjectHookKubeConfig               = projectHookConfig(filterProjects)
-	ProjectWithConditionsHookKubeConfig = projectHookConfig(filterProjectsWithConditions)
+	ProjectHookKubeConfig           = projectHookConfig(filterProjects)
+	ProjectWithStatusHookKubeConfig = projectHookConfig(filterProjectsWithStatus)
 )
 
 func projectHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConfig {
@@ -31,9 +31,9 @@ func projectHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConfig {
 	}
 }
 
-type ProjectSnapshotWithConditions struct {
-	Snapshot   ProjectSnapshot
-	Conditions []v1alpha1.Condition
+type ProjectSnapshotWithStatus struct {
+	Snapshot ProjectSnapshot
+	Status   v1alpha1.ProjectStatus
 }
 
 type ProjectSnapshot struct {
@@ -43,29 +43,29 @@ type ProjectSnapshot struct {
 }
 
 func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	projectSnapWithConditions, err := projectSnapshotFromUnstructed(obj)
+	projectSnapWithStatus, err := projectSnapshotFromUnstructed(obj)
 	if err != nil {
 		return nil, err
 	}
-	return projectSnapWithConditions.Snapshot, nil
+	return projectSnapWithStatus.Snapshot, nil
 }
 
-func filterProjectsWithConditions(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func filterProjectsWithStatus(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return projectSnapshotFromUnstructed(obj)
 }
 
-func projectSnapshotFromUnstructed(obj *unstructured.Unstructured) (*ProjectSnapshotWithConditions, error) {
+func projectSnapshotFromUnstructed(obj *unstructured.Unstructured) (*ProjectSnapshotWithStatus, error) {
 	project := &v1alpha1.Project{}
 	if err := sdk.FromUnstructured(obj, project); err != nil {
 		return nil, err
 	}
 
-	return &ProjectSnapshotWithConditions{
+	return &ProjectSnapshotWithStatus{
 		Snapshot: ProjectSnapshot{
 			Name:            project.Name,
 			ProjectTypeName: project.Spec.ProjectTypeName,
 			Template:        project.Spec.Template,
 		},
-		Conditions: project.Status.Conditions,
+		Status: project.Status,
 	}, nil
 }

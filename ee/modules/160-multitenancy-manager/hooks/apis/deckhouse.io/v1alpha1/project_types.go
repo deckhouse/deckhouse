@@ -23,16 +23,14 @@ type ProjectSpec struct {
 }
 
 type ProjectStatus struct {
-	// A list of Project conditions
-	Conditions []Condition `json:"conditions,omitempty"`
-	// Summary for the Project status
-	StatusSummary StatusSummary `json:"statusSummary,omitempty"`
-}
-
-type Condition struct {
-	Name    string `json:"name,omitempty"`
-	Status  bool   `json:"status,omitempty"`
+	// Status message.
 	Message string `json:"message,omitempty"`
+
+	// Summary of the status.
+	State string `json:"state,omitempty"`
+
+	// Project definition sync with cluster.
+	Sync bool `json:"sync,omitempty"`
 }
 
 type Project struct {

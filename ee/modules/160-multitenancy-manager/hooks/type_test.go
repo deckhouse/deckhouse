@@ -43,12 +43,12 @@ var _ = Describe("Multitenancy Manager hooks :: handle ProjectTypes ::", func() 
 			pt1 := f.KubernetesGlobalResource("ProjectType", "pt1")
 			Expect(pt1.Exists()).To(BeTrue())
 
-			Expect(pt1.Field("status.statusSummary")).To(MatchJSON(`{"status":true}`))
+			Expect(pt1.Field("status")).To(MatchJSON(`{"ready":true}`))
 
 			pt2 := f.KubernetesGlobalResource("ProjectType", "pt2")
 			Expect(pt2.Exists()).To(BeTrue())
 
-			Expect(pt2.Field("status.statusSummary")).To(MatchJSON(`{"status":true}`))
+			Expect(pt2.Field("status")).To(MatchJSON(`{"ready":true}`))
 		})
 	})
 
@@ -67,7 +67,7 @@ var _ = Describe("Multitenancy Manager hooks :: handle ProjectTypes ::", func() 
 			pt3 := f.KubernetesGlobalResource("ProjectType", "pt3")
 			Expect(pt3.Exists()).To(BeTrue())
 
-			Expect(pt3.Field("status.statusSummary")).To(MatchJSON(`{"status":false,"message": "can't load open api schema from 'pt3' ProjectType spec: unmarshal spec.openAPI to spec.Schema: json: cannot unmarshal array into Go struct field .properties of type struct { spec.SchemaProps; spec.SwaggerSchemaProps }"}`))
+			Expect(pt3.Field("status")).To(MatchJSON(`{"ready":false,"message": "can't load open api schema from 'pt3' ProjectType spec: unmarshal spec.openAPI to spec.Schema: json: cannot unmarshal array into Go struct field .properties of type struct { spec.SchemaProps; spec.SwaggerSchemaProps }"}`))
 		})
 	})
 })

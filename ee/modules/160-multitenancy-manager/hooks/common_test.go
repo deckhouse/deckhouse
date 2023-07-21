@@ -20,10 +20,9 @@ func Test(t *testing.T) {
 }
 
 type testProjectStatus struct {
-	exists     bool
-	name       string
-	conditions string
-	status     string
+	exists bool
+	name   string
+	status string
 }
 
 func checkProjectStatus(f *HookExecutionConfig, tc testProjectStatus) {
@@ -31,7 +30,6 @@ func checkProjectStatus(f *HookExecutionConfig, tc testProjectStatus) {
 	Expect(pr.Exists()).To(Equal(tc.exists))
 
 	if tc.exists {
-		Expect(pr.Field("status.conditions")).To(MatchJSON(tc.conditions))
-		Expect(pr.Field("status.statusSummary")).To(MatchJSON(tc.status))
+		Expect(pr.Field("status")).To(MatchJSON(tc.status))
 	}
 }

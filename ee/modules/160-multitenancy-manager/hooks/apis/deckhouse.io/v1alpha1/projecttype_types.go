@@ -46,16 +46,11 @@ type AuthorizationRule struct {
 }
 
 type ProjectTypeStatus struct {
-	// Summary about ProjectType status.
-	StatusSummary StatusSummary `json:"statusSummary,omitempty"`
-}
-
-type StatusSummary struct {
 	// Status message.
 	Message string `json:"message,omitempty"`
 
-	// Summary of the status (ready or not ready).
-	Status bool `json:"status,omitempty"`
+	// Summary of the status.
+	Ready bool `json:"ready,omitempty"`
 }
 
 type ProjectType struct {

@@ -22,21 +22,9 @@ spec:
             status:
               description: ""
               properties:
-                conditions:
-                  description: Список состояний Project.
-                  items:
-                    description: ""
-                    properties:
-                      message:
-                        description: ""
-                      name:
-                        description: ""
-                      status:
-                        description: ""
-                statusSummary:
-                  description: Сводная информация о статусе Project.
-                  properties:
-                    message:
-                      description: Сообщение о статусе.
-                    status:
-                      description: Сводка статуса (готов или не готов).
+                message:
+                  description: Сообщение о статусе.
+                state:
+                  description: Сводка статуса.
+                sync:
+                  description: Состояние Project синхронизировано с кластером.

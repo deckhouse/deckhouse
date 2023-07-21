@@ -11,83 +11,30 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 )
 
-func ProjectConditionIsDeploying(conds []v1alpha1.Condition) bool {
-	return projectHasCondition(v1alpha1.Condition{Name: "Deploying"}, conds)
-}
-
-func projectHasCondition(cond v1alpha1.Condition, conds []v1alpha1.Condition) bool {
-	for _, c := range conds {
-		if c.Name == cond.Name {
-			return true
-		}
-	}
-	return false
+func ProjectStatusIsDeploying(status v1alpha1.ProjectStatus) bool {
+	return status.State == "Deploying"
 }
 
 func SetErrorStatusProject(patcher *object_patch.PatchCollector, projectName, errMsg string) {
-	conditions := []v1alpha1.Condition{{
-		Name:    "Error",
-		Message: errMsg,
-		Status:  false,
-	}}
-
-	setProjectStatus(patcher, projectName, false, errMsg, conditions)
+	setProjectStatus(patcher, projectName, "Error", errMsg, false)
 }
 
 func SetDeployingStatusProject(patcher *object_patch.PatchCollector, projectName string) {
-	conditions := []v1alpha1.Condition{{
-		Name:    "Deploying",
-		Message: "Deckhouse is creating the project, see deckhouse logs for more details",
-	}}
-	setProjectStatus(patcher, projectName, false, "", conditions)
+	setProjectStatus(patcher, projectName, "Deploying", "Deckhouse is creating the project, see deckhouse logs for more details.", false)
 }
 
 func SetSyncStatusProject(patcher *object_patch.PatchCollector, projectName string) {
-	conditions := []v1alpha1.Condition{{
-		Name:   "Sync",
-		Status: true,
-	}}
-	setProjectStatus(patcher, projectName, true, "", conditions)
+	setProjectStatus(patcher, projectName, "Sync", "", true)
 }
 
-func setProjectStatus(patcher *object_patch.PatchCollector, projectName string, status bool, message string, conditions []v1alpha1.Condition) {
-	uniqueConds := uniqueConditions(conditions)
-	newConditions := make([]map[string]interface{}, 0, len(uniqueConds))
-	for _, cond := range uniqueConds {
-		newCond := map[string]interface{}{
-			"name":    cond.Name,
-			"status":  cond.Status,
-			"message": stringOrNil(cond.Message),
-		}
-
-		newConditions = append(newConditions, newCond)
-	}
-
+func setProjectStatus(patcher *object_patch.PatchCollector, projectName, status, message string, sync bool) {
 	statusPatch := map[string]interface{}{
 		"status": map[string]interface{}{
-			"statusSummary": map[string]interface{}{
-				"status":  status,
-				"message": stringOrNil(message),
-			},
-			"conditions": newConditions,
+			"state":   status,
+			"message": stringOrNil(message),
+			"sync":    sync,
 		},
 	}
 
 	patchStatus(patcher, ProjectKind, projectName, statusPatch)
-}
-
-func uniqueConditions(conds []v1alpha1.Condition) []v1alpha1.Condition {
-	uniqueConds := make(map[v1alpha1.Condition]int)
-	for _, c := range conds {
-		if _, ok := uniqueConds[c]; ok {
-			continue
-		}
-		uniqueConds[c] = len(uniqueConds)
-	}
-
-	result := make([]v1alpha1.Condition, len(uniqueConds))
-	for c, i := range uniqueConds {
-		result[i] = c
-	}
-	return result
 }

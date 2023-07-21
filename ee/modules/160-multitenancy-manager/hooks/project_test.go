@@ -78,7 +78,7 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON("[" + expectedProject1 + "," + expectedProject2 + "]"))
 			})
 
-			It("Projects with valid status and conditions", func() {
+			It("Projects with valid status", func() {
 				for _, tc := range testCasesForProjectStatuses {
 					checkProjectStatus(f, tc)
 				}
@@ -100,7 +100,7 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 				Expect(f.ValuesGet("multitenancyManager.internal.projects").String()).To(MatchJSON("[" + expectedProject1 + "," + expectedProject2 + "," + expectedProject3 + "]"))
 			})
 
-			It("Projects with valid status and conditions", func() {
+			It("Projects with valid status", func() {
 				for _, tc := range testCasesForProjectStatuses {
 					checkProjectStatus(f, tc)
 				}
@@ -158,13 +158,9 @@ spec:
     cpuRequests: 1
     memoryTest: 200Gi
 status:
-  conditions:
-    - name: Error
-      message: "template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
-      status: false
-    - name: Error
-      message: "Err Err Err"
-      status: false
+  message: "template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property"
+  sync: false
+  state: Error
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Project
@@ -232,28 +228,24 @@ data:
 
 	testCasesForProjectStatuses = []testProjectStatus{
 		{
-			name:       "test-1",
-			exists:     true,
-			conditions: `[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`,
-			status:     `{"status":false}`,
+			name:   "test-1",
+			exists: true,
+			status: `{"sync":false,"state":"Deploying","message":"Deckhouse is creating the project, see deckhouse logs for more details."}`,
 		},
 		{
-			name:       "test-2",
-			exists:     true,
-			conditions: `[{"name":"Deploying","status":false,"message": "Deckhouse is creating the project, see deckhouse logs for more details"}]`,
-			status:     `{"status":false}`,
+			name:   "test-2",
+			exists: true,
+			status: `{"sync":false,"state":"Deploying","message":"Deckhouse is creating the project, see deckhouse logs for more details."}`,
 		},
 		{
-			name:       "test-3",
-			exists:     true,
-			conditions: `[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`,
-			status:     `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`,
+			name:   "test-3",
+			exists: true,
+			status: `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","state":"Error","sync":false}`,
 		},
 		{
-			name:       "test-4",
-			exists:     true,
-			conditions: `[{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","name":"Error","status":false}]`,
-			status:     `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","status":false}`,
+			name:   "test-4",
+			exists: true,
+			status: `{"message":"template data doesn't match the OpenAPI schema for 'pt1' ProjectType: validation failure list:\n.memoryTest is a forbidden property","state":"Error","sync":false}`,
 		},
 	}
 

@@ -27,14 +27,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		Order: 25,
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
-		internal.ProjectWithConditionsHookKubeConfig,
+		internal.ProjectWithStatusHookKubeConfig,
 	},
 }, handleReadyStatusForProjectsAndProjectTypes)
 
 func handleReadyStatusForProjectsAndProjectTypes(input *go_hook.HookInput) error {
-	projectSnapshots := make(map[string]*internal.ProjectSnapshotWithConditions)
+	projectSnapshots := make(map[string]*internal.ProjectSnapshotWithStatus)
 	for _, projectSnap := range input.Snapshots[internal.ProjectsQueue] {
-		project, ok := projectSnap.(*internal.ProjectSnapshotWithConditions)
+		project, ok := projectSnap.(*internal.ProjectSnapshotWithStatus)
 		if !ok {
 			input.LogEntry.Errorf("can't convert snapshot to 'projectSnapshot': %v", project)
 			continue
@@ -64,7 +64,8 @@ func handleReadyStatusForProjectsAndProjectTypes(input *go_hook.HookInput) error
 			return fmt.Errorf("can't find Project '%s' in cluster from values", projectName)
 		}
 
-		if internal.ProjectConditionIsDeploying(projectSnap.Conditions) {
+		if internal.ProjectStatusIsDeploying(projectSnap.Status) {
+			fmt.Println("ladofsdfs")
 			internal.SetSyncStatusProject(input.PatchCollector, projectSnap.Snapshot.Name)
 		}
 	}
