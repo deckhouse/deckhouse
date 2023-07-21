@@ -14,12 +14,18 @@
 
 package preflight
 
-import "net"
+import (
+	"net"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+)
 
 func (pc *PreflightCheck) CheckLocalhostDomain() error {
-	_, err := net.LookupHost("localhost")
+	addrs, err := net.LookupHost("localhost")
 	if err != nil {
 		return err
 	}
+	log.DebugF("addrs: %v\n", addrs)
+	log.InfoLn("Checking the availability of the localhost domain success")
 	return nil
 }
