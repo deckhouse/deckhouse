@@ -58,5 +58,4 @@ func TestAddTrailingDot(t *testing.T) {
 	if u != "registry.deckhouse.io.:5000/deckhouse/fe" {
 		t.Errorf("got: %s, wanted: %s", u, testURL)
 	}
-
 }
