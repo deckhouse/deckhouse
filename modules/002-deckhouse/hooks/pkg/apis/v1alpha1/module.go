@@ -81,9 +81,11 @@ func (m *Module) SetSource(source string) {
 	if source == "" {
 		source = "Embedded"
 	}
+	m.Labels["type"] = "embedded"
 
 	if source != "Embedded" {
 		source = "External: " + source
+		m.Labels["type"] = "external"
 	}
 
 	m.Properties.Source = source
