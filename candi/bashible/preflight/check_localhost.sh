@@ -15,6 +15,6 @@
 */}}
 
 if ! getent ahosts localhost; then
-  echo "FAIL localhost is unavailable" >&2
+  echo "FAIL localhost is unavailable"
   exit 1
 fi
