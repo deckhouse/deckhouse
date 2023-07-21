@@ -15,17 +15,33 @@
 package preflight
 
 import (
-	"net"
+	"fmt"
+	"os/exec"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 func (pc *PreflightCheck) CheckLocalhostDomain() error {
-	addrs, err := net.LookupHost("localhost")
+	log.DebugLn("Checking resolving the localhost domain")
+
+	file, err := template.RenderAndSavePreflightCheckPortsScript()
 	if err != nil {
 		return err
 	}
-	log.DebugF("addrs: %v\n", addrs)
-	log.InfoLn("Checking the availability of the localhost domain success")
+
+	scriptCmd := pc.sshClient.UploadScript(file)
+	out, err := scriptCmd.Execute()
+	if err != nil {
+		log.ErrorLn(strings.Trim(string(out), "\n"))
+		if ee, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("check_localhost.sh: %w, %s", err, string(ee.Stderr))
+		}
+		return fmt.Errorf("check_localhost.sh: %w", err)
+	}
+
+	log.DebugLn(string(out))
+	log.InfoLn("Checking resolving the localhost domain success")
 	return nil
 }
