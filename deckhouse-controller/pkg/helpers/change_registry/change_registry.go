@@ -181,9 +181,7 @@ func modifyPullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecretD
 	}
 	deckhouseRegSecret.StringData = newSecretData
 
-	if deckhouseRegSecret.StringData[caKey] == "" && len(deckhouseRegSecret.Data[caKey]) > 0 {
-		delete(deckhouseRegSecret.Data, caKey)
-	}
+	delete(deckhouseRegSecret.Data, caKey)
 
 	return deckhouseRegSecret, nil
 }
