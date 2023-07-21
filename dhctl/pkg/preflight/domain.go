@@ -26,7 +26,7 @@ import (
 func (pc *PreflightCheck) CheckLocalhostDomain() error {
 	log.DebugLn("Checking resolving the localhost domain")
 
-	file, err := template.RenderAndSavePreflightCheckPortsScript()
+	file, err := template.RenderAndSavePreflightCheckLocalhostScript()
 	if err != nil {
 		return err
 	}

@@ -23,3 +23,9 @@ func RenderAndSavePreflightCheckPortsScript() (string, error) {
 
 	return RenderAndSaveTemplate("check_ports.sh", checkPortsScriptPath, map[string]interface{}{})
 }
+
+func RenderAndSavePreflightCheckLocalhostScript() (string, error) {
+	log.DebugLn("Start render check localhost script")
+
+	return RenderAndSaveTemplate("check_localhost.sh", checkPortsScriptPath, map[string]interface{}{})
+}
