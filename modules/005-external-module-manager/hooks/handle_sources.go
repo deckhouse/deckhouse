@@ -234,7 +234,16 @@ func validateModule(moduleName, absPath string, weight int) error {
 		return err
 	}
 
-	return deckhouse_config.Service().ValidateModule(module)
+	err = deckhouse_config.Service().ValidateModule(module)
+	if err != nil {
+		return err
+	}
+
+	if weight < 900 || weight > 999 {
+		return fmt.Errorf("external module weight must be between 900 and 999")
+	}
+
+	return nil
 }
 
 func getSourceChecksums(checksumFilePath string) (sourceChecksum, error) {
@@ -318,14 +327,6 @@ func fetchModuleWeight(moduleVersionPath string) int {
 	err = yaml.NewDecoder(f).Decode(&def)
 	if err != nil {
 		return defaultExternalModuleWeight
-	}
-
-	if def.Weight > 0 && def.Weight < 100 {
-		def.Weight = defaultExternalModuleWeight + def.Weight
-	}
-
-	if def.Weight < defaultExternalModuleWeight || def.Weight >= 1000 {
-		def.Weight = defaultExternalModuleWeight
 	}
 
 	return def.Weight
