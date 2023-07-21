@@ -45,7 +45,6 @@ func (pc *PreflightCheck) StaticCheck() error {
 		if err != nil {
 			return err
 		}
-
 		err = pc.CheckLocalhostDomain()
 		if err != nil {
 			return err
