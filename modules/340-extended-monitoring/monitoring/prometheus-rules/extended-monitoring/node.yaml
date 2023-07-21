@@ -21,6 +21,14 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
       plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      description: |-
+        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
+        Currently at: {{ .Value }}%
+
+        Retrieve disk usage info on the node: `ncdu -x {{$labels.mountpoint}}'
+
+        If output shows high disk usage in catalogue: /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/, following command will show pods with most usage:
+        `crictl stats -o json | jq '.stats[] | select((.writableLayer.usedBytes.value | tonumber) > 1073741824) | { meta: .attributes.labels, diskUsage: ((.writableLayer.usedBytes.value | tonumber) / 1073741824 * 100 | round / 100 | tostring + " GiB")}'`
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%
