@@ -63,7 +63,6 @@ func NewClient(repo string, options ...Option) (Client, error) {
 		return nil, err
 	}
 
-	fmt.Println(u)
 	r := &client{
 		registryURL: u,
 		options:     opts,
