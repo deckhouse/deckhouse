@@ -39,7 +39,7 @@ spec:
                   description: Module version.
                   example: 'v1.0.0'
                 weight:
-                  type: number
+                  type: integer
                   description: Module weight.
                 applyAfter:
                   type: string
