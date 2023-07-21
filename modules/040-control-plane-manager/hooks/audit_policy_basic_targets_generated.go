@@ -28,6 +28,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-log-shipper",
 	"d8-metallb",
 	"d8-monitoring",
+	"d8-multitenancy-manager",
 	"d8-network-gateway",
 	"d8-okmeter",
 	"d8-openvpn",
