@@ -25,6 +25,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -57,8 +58,13 @@ func NewClient(repo string, options ...Option) (Client, error) {
 		opt(opts)
 	}
 
+	u, err := addTrailingDot(repo)
+	if err != nil {
+		return nil, err
+	}
+
 	r := &client{
-		registryURL: repo,
+		registryURL: u,
 		options:     opts,
 	}
 
@@ -137,7 +143,7 @@ func (r *client) Digest(tag string) (string, error) {
 }
 
 func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
-	r, err := url.Parse(repo)
+	r, err := parse(repo)
 	if err != nil {
 		return authn.AuthConfig{}, err
 	}
@@ -150,12 +156,8 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 	authConfig := authn.AuthConfig{}
 
 	// The config should have at least one .auths.* entry
-	for repoNameRaw, repoAuth := range auths {
-		repoName, err := url.Parse(repoNameRaw)
-		if err != nil {
-			continue
-		}
-		if repoName.Host == r.Host {
+	for repoName, repoAuth := range auths {
+		if repoName == r.Host {
 			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
 			if err != nil {
 				return authn.AuthConfig{}, err
@@ -228,4 +230,31 @@ func WithAuth(dockerCfg string) Option {
 	return func(options *registryOptions) {
 		options.dockerCfg = dockerCfg
 	}
+}
+
+// parse arses url without scheme://
+// if we pass url without scheme ve've got url basck with two leading backslashes
+func parse(rawURL string) (*url.URL, error) {
+	if strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
+		return url.ParseRequestURI(rawURL)
+	}
+	return url.Parse("//" + rawURL)
+}
+
+// addTrailingDot adds trailing dot to fqdn to prevent usage of search from resolv.conf
+func addTrailingDot(rawURL string) (string, error) {
+	u, err := parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	parts := strings.Split(u.Host, ":")
+	if len(parts) > 2 {
+		return "", fmt.Errorf("host shouldn't have more than one `:` separator: %s", u.Host)
+	}
+	if len(parts) > 1 {
+		u.Host = fmt.Sprintf("%s.:%s", parts[0], parts[1])
+	} else {
+		u.Host = fmt.Sprintf("%s.", parts[0])
+	}
+	return strings.TrimPrefix(u.String(), "//"), nil
 }
