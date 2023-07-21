@@ -13,6 +13,9 @@ spec:
                   description: Название стороннего модуля.
                 version:
                   description: Версия модуля в данном релизе.
+                weight:
+                  type: number
+                  description: _Вес_ (приоритет) модуля.
             status:
               properties:
                 phase:

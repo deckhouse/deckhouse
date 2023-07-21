@@ -38,6 +38,9 @@ spec:
                   type: string
                   description: Module version.
                   example: 'v1.0.0'
+                weight:
+                  type: integer
+                  description: Module weight.
                 applyAfter:
                   type: string
                   description: Marks release as a part of canary release. This release will be delayed until this time.
