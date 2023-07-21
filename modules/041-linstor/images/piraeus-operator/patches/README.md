@@ -30,3 +30,5 @@ Add the securedMetricsPort parameter to the linstorcontrollers.piraeus.linbit.co
 ### Bump k8s api versions and client for piraeus operator
 
 Bump k8s api versions and client for piraeus operator.
+
+- Upstream: https://github.com/piraeusdatastore/piraeus-operator/pull/504
