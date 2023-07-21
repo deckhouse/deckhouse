@@ -50,6 +50,7 @@ import (
 
 const (
 	d8SystemNS = "d8-system"
+	caKey      = "ca"
 )
 
 func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag string, insecure, dryRun bool) error {
@@ -180,6 +181,10 @@ func modifyPullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecretD
 	}
 	deckhouseRegSecret.StringData = newSecretData
 
+	if deckhouseRegSecret.StringData[caKey] == "" && len(deckhouseRegSecret.Data[caKey]) > 0 {
+		delete(deckhouseRegSecret.Data, caKey)
+	}
+
 	return deckhouseRegSecret, nil
 }
 
@@ -217,7 +222,7 @@ func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig
 	}
 
 	if caContent != "" {
-		newSecretData["ca"] = caContent
+		newSecretData[caKey] = caContent
 	}
 	return newSecretData, nil
 }
@@ -354,12 +359,10 @@ func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper htt
 
 		err = checkResponseForBearerSupport(resp, reg.Name())
 		if err == nil {
-			resp.Body.Close()
 			return nil
 		}
 
 		errs = multierror.Append(errs, fmt.Errorf("check bearer support with %q scheme failed: %w", scheme, err))
-		resp.Body.Close()
 	}
 
 	return errs.ErrorOrNil()
@@ -376,7 +379,13 @@ func makeRequestWithScheme(ctx context.Context, client *http.Client, scheme, reg
 		return nil, err
 	}
 
-	return client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Close body, because we only need headers
+	return resp, resp.Body.Close()
 }
 
 func checkResponseForBearerSupport(resp *http.Response, registryHost string) error {
