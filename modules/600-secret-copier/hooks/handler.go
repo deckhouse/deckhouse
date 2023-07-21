@@ -259,14 +259,11 @@ func createSecret(k8 k8s.Client, secret *Secret) error {
 		Type: secret.Type,
 	}
 
-	// don't create secret if namespace get errors or namespace is terninating
-	ns, err := k8.CoreV1().Namespaces().Get(context.TODO(), secret.Namespace, metav1.GetOptions{})
-	if err != nil || ns.Status.Phase == v1.NamespaceTerminating {
-		return nil
-	}
-
+	// Ignore error if target namespace is in Terminating phase
 	if _, err := k8.CoreV1().Secrets(secret.Namespace).Create(context.TODO(), s, metav1.CreateOptions{}); err != nil {
-		return formatSecretOperationError(secret, err, "create")
+		if !errors.HasStatusCause(err, v1.NamespaceTerminatingCause) {
+			return formatSecretOperationError(secret, err, "create")
+		}
 	}
 
 	return nil
