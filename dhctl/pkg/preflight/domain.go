@@ -19,11 +19,17 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 func (pc *PreflightCheck) CheckLocalhostDomain() error {
+	if app.PreflightSkipResolvingLocalhost {
+		log.InfoLn("Resolving the localhost domain preflight check was skipped")
+		return nil
+	}
+
 	log.DebugLn("Checking resolving the localhost domain")
 
 	file, err := template.RenderAndSavePreflightCheckLocalhostScript()
