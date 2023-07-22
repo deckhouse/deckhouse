@@ -82,8 +82,8 @@ provider:
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   domainName: users
-  # [<en>] OS_USER_DOMAIN_NAME variable from openrc.
-  # [<ru>] Переменная OS_USER_DOMAIN_NAME из openrc.
+  # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
+  # [<ru>] Переменная OS_USER_DOMAIN_NAME из файла openrc.
   password: *!CHANGE_PASSWORD*
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.

@@ -88,9 +88,11 @@ apiVersions:
 
               Если значение, указанное в `replicas`, превышает количество элементов в словаре, то master-узлы, чьи номера превышают
               длину словаря, получают значения, начиная с начала словаря. Если для словаря из примера указано `replicas: 5`, то с типом
-              диска `ru-1a` будут master-0, master-2 и master-4, а с типом диска `ru-1b` будут master-1 и master-3.
-              `openstack availability zone list`
-              `openstack volume type list`
+              диска `eu-1a` будут master-0, master-2 и master-4, а с типом диска `eu-1b` будут master-1 и master-3.
+
+              Полезные команды:
+              - `openstack availability zone list`
+              - `openstack volume type list`
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных frontend-узлов или шлюзов).
@@ -167,11 +169,14 @@ apiVersions:
             volumeTypeMap:
               description: |
                 Словарь типов дисков для загрузочного диска.
+
                 Если значение, указанное в `replicas`, превышает количество элементов в словаре, то узлы, чьи номера превышают
                 длину словаря, получают значения, начиная с начала словаря. Если для словаря из примера указано `replicas: 5`, то с типом
-                диска `ru-1a` будут worker-0, worker-2 и worker-4, а с типом диска `ru-1b` будут worker-1 и worker-3.
-                `openstack availability zone list`
-                `openstack volume type list`
+                диска `eu-1a` будут worker-0, worker-2 и worker-4, а с типом диска `eu-1b` будут worker-1 и worker-3.
+
+                Полезные команды:
+                - `openstack availability zone list`
+                - `openstack volume type list`
       layout:
         description: |
           Название схемы размещения.
@@ -295,7 +300,7 @@ apiVersions:
             description: |
               Имя домена.
 
-              Переменная `OS_USER_DOMAIN_NAME` из openrc.
+              Переменная `OS_USER_DOMAIN_NAME` из файла openrc.
           tenantName:
             description: |
               Имя проекта.
