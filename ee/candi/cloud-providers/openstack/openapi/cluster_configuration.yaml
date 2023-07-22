@@ -176,15 +176,17 @@ apiVersions:
             description: |
               A dictionary of disk types for storing etcd data and Kubernetes configuration files.
 
+              Format of dictionary elements: `<AVAILABILITY ZONE>: <VOLUME TYPE>` (see the example).
+
               If the `rootDiskSize` parameter is specified, the same disk type will be used for the VM's boot drive.
 
               We recommend using the fastest disks provided by the provider in all cases.
 
-              If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `eu-1a` disk type, while master-1, master-3 will have the `eu-1b` disk type.
+              If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `fast-eu-1a` disk type, while master-1, master-3 will have the `fast-eu-1b` disk type.
 
               Useful commands:
-              - `openstack availability zone list`
-              - `openstack volume type list`
+              - `openstack availability zone list` — get list of availability zones.
+              - `openstack volume type list` — get list of volume types.
             x-examples:
             - eu-1a: fast-eu-1a
               eu-1b: fast-eu-1b
@@ -323,11 +325,13 @@ apiVersions:
               description: |
                 A dictionary of disk types for root drive.
 
-                If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then worker-0, worker-2, worker-4 will have the `eu-1a` disk type, while worker-1, worker-3 will have the `eu-1b` disk type.
+                Format of dictionary elements: `<AVAILABILITY ZONE>: <VOLUME TYPE>` (see the example).
+
+                If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then worker-0, worker-2, worker-4 will have the `fast-eu-1a` disk type, while worker-1, worker-3 will have the `fast-eu-1b` disk type.
 
                 Useful commands:
-                - `openstack availability zone list`
-                - `openstack volume type list`
+                - `openstack availability zone list` — get list of availability zones.
+                - `openstack volume type list` — get list of volume types.
               x-examples:
                 - eu-1a: fast-eu-1a
                   eu-1b: fast-eu-1b
