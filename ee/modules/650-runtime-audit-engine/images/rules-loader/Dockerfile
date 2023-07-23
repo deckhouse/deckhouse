@@ -12,6 +12,7 @@ RUN \
     && pip3 install -r requirements.txt \
     && curl -sSfL https://download.falco.org/packages/bin/x86_64/falco-0.35.1-x86_64.tar.gz | tar -C /tmp -xzvf - \
     && cp -f /tmp/falco-0.35.1-x86_64/usr/bin/falco /usr/bin/falco \
+    && cp -rf /tmp/falco-0.35.1-x86_64/usr/share/falco /usr/share/falco \
     # cleanup \
     && apt-get clean autoclean \
     && apt-get autoremove -y \
