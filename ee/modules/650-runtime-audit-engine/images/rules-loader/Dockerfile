@@ -29,8 +29,7 @@ RUN \
     # cleanup
     && apt-get clean autoclean \
     && apt-get autoremove -y \
-    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
-    && rm -rf /tmp/falco-*
+    && rm -rf /var/lib/{apt,dpkg,cache,log}/
 
 COPY hooks/ /hooks
 ENV SHELL_OPERATOR_HOOKS_DIR /hooks
