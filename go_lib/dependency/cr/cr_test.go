@@ -21,41 +21,69 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	testURL := "registry.deckhouse.io/deckhouse/fe"
-	u, err := parse(testURL)
-	if err != nil {
-		t.Errorf("got error: %s", err)
-	}
-	if u.String() != "//"+testURL {
-		t.Errorf("got: %s, wanted: %s", u, testURL)
+	tests := []string{
+		"registry.deckhouse.io/deckhouse/fe",
+		"registry.deckhouse.io:5123/deckhouse/fe",
+		"192.168.1.1/deckhouse/fe",
+		"192.168.1.1:5123/deckhouse/fe",
 	}
 
-	testURL = "registry.deckhouse.io:5123/deckhouse/fe"
-	u, err = parse(testURL)
-	if err != nil {
-		t.Errorf("got error: %s", err)
-	}
-	if u.String() != "//"+testURL {
-		t.Errorf("got: %s, wanted: %s", u, testURL)
+	for _, tt := range tests {
+		t.Run(tt, func(t *testing.T) {
+			u, err := parse(tt)
+			if err != nil {
+				t.Errorf("got error: %s", err)
+			}
+			if u.String() != "//"+tt {
+				t.Errorf("got: %s, wanted: %s", u, tt)
+			}
+		})
 	}
 }
 
 func TestAddTrailingDot(t *testing.T) {
-	testURL := "registry.deckhouse.io/deckhouse/fe"
-	u, err := addTrailingDot(testURL)
-	if err != nil {
-		t.Errorf("got error: %s", err)
-	}
-	if u != "registry.deckhouse.io./deckhouse/fe" {
-		t.Errorf("got: %s, wanted: %s", u, testURL)
+	tests := []struct {
+		testURL   string
+		resultURL string
+	}{
+		{
+			testURL:   "registry.deckhouse.io/deckhouse/fe",
+			resultURL: "registry.deckhouse.io./deckhouse/fe",
+		},
+		{
+			testURL:   "registry.deckhouse.io:5000/deckhouse/fe",
+			resultURL: "registry.deckhouse.io.:5000/deckhouse/fe",
+		},
+		{
+			testURL:   "192.168.1.1/deckhouse/fe",
+			resultURL: "192.168.1.1/deckhouse/fe",
+		},
+		{
+			testURL:   "192.168.1.1:5000/deckhouse/fe",
+			resultURL: "192.168.1.1:5000/deckhouse/fe",
+		},
 	}
 
-	testURL = "registry.deckhouse.io:5000/deckhouse/fe"
-	u, err = addTrailingDot(testURL)
-	if err != nil {
-		t.Errorf("got error: %s", err)
+	for _, tt := range tests {
+		t.Run(tt.testURL, func(t *testing.T) {
+			u, err := addTrailingDot(tt.testURL)
+
+			if err != nil {
+				t.Errorf("got error: %s", err)
+			}
+			if u != tt.resultURL {
+				t.Errorf("got: %s, wanted: %s", u, tt.testURL)
+			}
+		})
 	}
-	if u != "registry.deckhouse.io.:5000/deckhouse/fe" {
-		t.Errorf("got: %s, wanted: %s", u, testURL)
-	}
+
+	testURL := "registry.deckhouse.io:5000:2000/deckhouse/fe"
+	t.Run(testURL, func(t *testing.T) {
+		_, err := addTrailingDot(testURL)
+
+		if err == nil {
+			t.Errorf("test with url %s should fail", testURL)
+		}
+	})
+
 }
