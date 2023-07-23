@@ -85,3 +85,7 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 func key(name string, cpu, memory int64) string {
 	return fmt.Sprintf("%s-%d-%d", name, cpu, memory)
 }
+
+func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
+	return nil, nil
+}

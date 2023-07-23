@@ -78,7 +78,7 @@ spec:
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ $ccmImage }}
           command:
-          - /usr/local/bin/cloud-controller-manager
+          - /usr/local/bin/azure-cloud-controller-manager
           - --v=2
           - --cloud-provider=azure
           - --allocate-node-cidrs=true

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-forbidden-sysctls-disallowed
+  namespace: testns
+  labels:
+    app: nginx-forbidden-sysctls
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+  securityContext:
+    sysctls:
+      - name: net.fake.sysctl
+        value: "1"

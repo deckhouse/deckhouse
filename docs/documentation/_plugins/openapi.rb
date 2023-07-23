@@ -72,7 +72,7 @@ module Jekyll
         aVersion["minVersion"] <=> bVersion["minVersion"]
     end
 
-    def AppendResource2Search(name, url, resourceName, description, version = '')
+    def AppendResource2Search(name, url, resourceName, description, version = '', search = '')
         # Data for search index
         if name and name.length > 0
             searchItemData = Hash.new
@@ -82,6 +82,7 @@ module Jekyll
             searchItemData['isResource'] = true
             searchItemData['content'] = description if description
             searchItemData['version'] = version if version
+            searchItemData['search'] = search if search
 
             addItemToIndex = true
             if !searchItemData['version'].nil?
@@ -127,6 +128,23 @@ module Jekyll
 
     def get_hash_value(input, *keys)
         input ? input.dig(*keys) : nil
+    end
+
+    def get_search_keywords(primaryLanguage, fallbackLanguage = nil)
+      return '' if !primaryLanguage
+      if get_hash_value(primaryLanguage, "x-doc-search") then
+          result = primaryLanguage["x-doc-search"]
+      elsif get_hash_value(fallbackLanguage, "x-doc-search") then
+          result = fallbackLanguage["x-doc-search"]
+      else
+          result = ''
+      end
+
+      if !result || result.length < 3
+        result = ''
+      end
+
+      result.strip
     end
 
     def format_type(first_type, second_type)
@@ -381,6 +399,8 @@ module Jekyll
             searchItemData['version'] = versionAPI
             searchItemData['resourceName'] = resourceName
             searchItemData['content'] = CONVERTER.convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)).to_s if attributes['description']
+            searchKeywords = get_search_keywords(primaryLanguage, fallbackLanguage)
+            searchItemData['search'] = searchKeywords if searchKeywords
 
             addItemToIndex = true
             if !searchItemData['version'].nil?
@@ -516,18 +536,20 @@ module Jekyll
                 end
 
                 if get_hash_value(input,'spec','validation','openAPIV3Schema','description')
+                   searchKeywords = get_search_keywords(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema", input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema")
+
                    if get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","description") then
                        description = CONVERTER.convert(get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","description"))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","description") then
                        description = CONVERTER.convert(input['i18n'][fallbackLanguageName]["spec"]["validation"]["openAPIV3Schema"]["description"])
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    else
                        description = CONVERTER.convert(input["spec"]["validation"]["openAPIV3Schema"]["description"])
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    end
                 end
 
@@ -618,11 +640,23 @@ module Jekyll
                        end
                     end
 
+                    # Get search keywords
+                    if    get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","versions") and
+                          input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
+                          searchKeywords = get_search_keywords(input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"])
+                    elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","versions") and
+                          input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
+                          searchKeywords = get_search_keywords(input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"])
+                    else
+                          searchKeywords = get_search_keywords(item["schema"]["openAPIV3Schema"])
+                    end
+
                     AppendResource2Search(input["spec"]["names"]["kind"],
                                           @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''),
                                           @context.registers[:page]["title"],
                                           description,
-                                          item['name'])
+                                          item['name'],
+                                          searchKeywords)
 
                     if get_hash_value(item,'schema','openAPIV3Schema','properties')
                         header = '<ul class="resources">'
@@ -768,11 +802,14 @@ module Jekyll
              result.push(description)
           end
 
+          searchKeywords = get_search_keywords(item['i18n'][@context.registers[:page]["lang"]], item['i18n'][fallbackLanguageName])
+
           AppendResource2Search(item["resourceName"],
                                 @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''),
                                 @context.registers[:page]["title"],
                                 description,
-                                item["APIversion"])
+                                item["APIversion"],
+                                searchKeywords)
 
           result.push(format_configuration(item, false))
         end

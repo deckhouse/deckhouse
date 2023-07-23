@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+    x-doc-search: |
+      ProviderClusterConfiguration
     x-examples:
       - apiVersion: deckhouse.io/v1
         kind: GCPClusterConfiguration
@@ -124,8 +126,8 @@ apiVersions:
             type: object
             required: [machineType, image]
             description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
-            properties: &instanceClassProperties
-              machineType:
+            properties:
+              machineType: &instanceClassMachineType
                 type: string
                 example: n1-standard-4
                 description: |
@@ -134,7 +136,7 @@ apiVersions:
                   > **Caution!** Make sure that this type is present in all zones specified in the `zones` parameter.
 
                   GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
-              image:
+              image: &instanceClassImage
                 type: string
                 example: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
                 description: |
@@ -143,11 +145,16 @@ apiVersions:
                   You can find a list of images in the [documentation](https://cloud.google.com/compute/docs/images#ubuntu).
 
                   > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
-              diskSizeGb:
-                description: Instance disk size in gigabytes.
+              diskSizeGb: &instanceClassDiskSizeGb
+                description: Instance disk size in gibibytes.
                 example: 20
                 type: integer
-              disableExternalIP:
+              etcdDiskSizeGb:
+                description: Etcd disk size in gibibytes.
+                example: 20
+                default: 20
+                type: integer
+              disableExternalIP: &instanceClassDisableExternalIP
                 type: boolean
                 enum: [true, false]
                 x-doc-default: true
@@ -220,7 +227,10 @@ apiVersions:
               type: object
               description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
               properties:
-                <<: *instanceClassProperties
+                machineType: *instanceClassMachineType
+                image: *instanceClassImage
+                diskSizeGb: *instanceClassDiskSizeGb
+                disableExternalIP: *instanceClassDisableExternalIP
             zones:
               type: array
               description: A limited set of zones in which nodes can be created.

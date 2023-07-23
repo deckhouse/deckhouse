@@ -82,10 +82,17 @@ provider:
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   domainName: users
+  # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
+  # [<ru>] Переменная OS_USER_DOMAIN_NAME из файла openrc.
   password: *!CHANGE_PASSWORD*
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   region: RegionOne
+  # [<en>] You might need to specify tenantName instead of tenantID.
+  # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
+  # [<ru>] Возможно вам нужно указать tenantName вместо tenantID.
+  # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
+  # tenantName: PROJECT_NAME
   tenantID: *!CHANGE_PROJECT_ID*
   username: *!CHANGE_USERNAME*
 masterNodeGroup:

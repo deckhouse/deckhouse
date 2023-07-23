@@ -51,7 +51,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-node")) | nindent 2 }}
 spec:
   {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 2 }}
+  {{- include "helm_lib_tolerations" (tuple . "any-node" "storage-problems") | nindent 2 }}
   sslSecret: linstor-node-ssl-cert
   drbdRepoCred: deckhouse-registry
   imagePullPolicy: IfNotPresent
@@ -60,7 +60,21 @@ spec:
   linstorHttpsClientSecret: linstor-client-https-cert
   controllerEndpoint: https://linstor.d8-{{ .Chart.Name }}.svc:3371
   automaticStorageType: None
+  {{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+            {{- range $k, $v := .Values.linstor.dataNodes.nodeSelector }}
+            - operator: In
+              key: {{ $k }}
+              values:
+              - {{ $v | quote }}
+            {{- end }}
+  {{- else }}
   affinity: {}
+  {{- end }}
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}

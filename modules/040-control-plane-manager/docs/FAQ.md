@@ -441,7 +441,9 @@ Both these parameters directly impact the CPU and memory resources consumed by t
 
 When deciding on the appropriate threshold values, consider resources consumed by the control nodes (graphs can help you with this). Note that the lower parameters are, the more resources you may need to allocate to these nodes.
 
-## How do make etcd backup?
+## etc backup and restore
+
+### How do make etcd backup?
 
 Login into any control-plane node with `root` user and use next script:
 
@@ -472,6 +474,106 @@ We recommend encrypting etcd snapshot backups as well as backup of the directory
 You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc.
 
 You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
+
+### How do I restore a Kubernetes object from an etcd backup?
+
+To get cluster objects data from an etcd backup, you need:
+1. Start an temporary instance of etcd.
+2. Fill it with data from the [backup](#how-do-make-etcd-backup).
+3. Get desired objects using `etcdhelper`.
+
+#### Example of steps to restore objects from an etcd backup
+
+In the example below, `etcd-snapshot.bin` is a [etcd shapshot](#how-do-make-etcd-backup), `infra-production` is the namespace in which objects need to be restored.
+
+1. Start the Pod, with a temporary instance of etcd.
+   - Prepare the file `etcd.pod.yaml` of the Pod template by executing the following commands:
+
+     ```shell
+     cat <<EOF >etcd.pod.yaml 
+     apiVersion: v1
+     kind: Pod
+     metadata:
+       name: etcdrestore
+       namespace: default
+     spec:
+       containers:
+       - command:
+         - /bin/sh
+         - -c
+         - "sleep 96h"
+         image: IMAGE
+         imagePullPolicy: IfNotPresent
+         name: etcd
+         volumeMounts:
+         - name: etcddir
+           mountPath: /default.etcd
+       volumes:
+       - name: etcddir
+         emptyDir: {}
+     EOF
+     IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' '`
+     sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
+     ```
+
+   - Create the Pod:
+
+     ```shell
+     kubectl create -f etcd.pod.yaml
+     ```
+
+2. Copy the `etcdhelper` and the etc snapshot into the Pod container.
+
+   You can build `etcdhelper` from the [source code](https://github.com/openshift/origin/tree/master/tools/etcdhelper) or copy from another image (for example, from the [image of `etcdhelper` on Docker Hub)](https://hub.docker.com/r/webner/etcdhelper/tags).
+
+   Example:
+
+   ```shell
+   kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
+   kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
+   ```
+
+3. Set the rights to run `etcdhelper` in the container, restore the data from the backup and run etcd.
+
+   Example:
+
+   ```console
+   ~ # kubectl -n default exec -it etcdrestore -- sh
+   / # chmod +x /usr/bin/etcdhelper
+   / # etcdctl snapshot restore /tmp/etcd-snapshot.bin
+   / # etcd &
+   ```
+
+4. Get necessary cluster objects by filtering them using `grep'.
+
+   Example:
+
+   ```console
+   ~ # kubectl -n default exec -it etcdrestore -- sh
+   / # mkdir /tmp/restored_yaml
+   / # cd /tmp/restored_yaml
+   /tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
+   ```
+
+   Replacing characters with `sed` in the example allows you to save descriptions of objects in files named similar to the etcd registry structure. For example: `/registry/deployments/infra-production/supercronic.yaml` → `deployments_infra-production_supercronic.yaml`.
+
+5. Copy the received object descriptions to the master node:
+
+   ```shell
+   kubectl cp default/etcdrestore:/tmp/restored_yaml restored_yaml
+   ```
+
+6. Delete information about the creation time, UID, status, and other operational data from the received object descriptions, and then restore the objects:
+
+   ```shell
+   kubectl create -f restored_yaml/deployments_infra-production_supercronic.yaml
+   ```
+
+7. Delete the Pod with a temporary instance of etcd:
+
+   ```shell
+   kubectl -n default delete pod etcdrestore
+   ```
 
 ## How the node to run the Pod on is selected
 

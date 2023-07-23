@@ -1,0 +1,33 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-allowed-apparrmor-profiles
+tests:
+  - name: pod-security-standards-baseline
+    template: ../../templates/security/allowed-apparmor-profiles.yaml
+    constraint: constraint_pss_baseline.yaml
+    cases:
+      - name: example-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-allowed-localhost
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed_localhost.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-ephemeral
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed_ephemeral.yaml
+        assertions:
+          - violations: yes

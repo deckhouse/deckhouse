@@ -47,6 +47,22 @@ spec:
                         watchKinds:
                           description: |
                             Список объектов Kubernetes в формате `$apiGroup/$kind` для просмотра меток.
+                    requiredAnnotations:
+                      description: |
+                        Список аннотаций, которые должен указать объект.
+                      properties:
+                        annotations:
+                          items:
+                            properties:
+                              key:
+                                description: >-
+                                  Требуемая аннотация.
+                              allowedRegex:
+                                description: >-
+                                  Если указано, то содержит регулярное выражение, которому должно соответствовать значение аннотации. Значение должно содержать хотя бы одно совпадение с регулярным выражением.
+                        watchKinds:
+                          description: |
+                            Список объектов Kubernetes в формате `$apiGroup/$kind` для просмотра аннотаций.
                     requiredProbes:
                       description: "Список проб, которые необходимы (например, `readinessProbe`)."
                     maxRevisionHistoryLimit:

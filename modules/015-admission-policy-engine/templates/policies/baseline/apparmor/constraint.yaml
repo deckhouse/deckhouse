@@ -1,2 +1,0 @@
-{{- $parameters := dict "allowedProfiles" (list "runtime/default" "localhost/*") }}
-{{- include "pod_security_standard_baseline" (list . "D8PSSAppArmor" $parameters ) }}

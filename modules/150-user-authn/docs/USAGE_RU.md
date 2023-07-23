@@ -249,10 +249,25 @@ spec:
   email: admin@yourcompany.com
   password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
   userID: some-unique-user-id
-  groups:
-  - Everyone
-  - admins
   ttl: 24h
+```
+
+{% endraw %}
+
+## Пример добавления статического пользователя в группу
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: admins
+  members:
+    - kind: User
+      name: admin
 ```
 
 {% endraw %}

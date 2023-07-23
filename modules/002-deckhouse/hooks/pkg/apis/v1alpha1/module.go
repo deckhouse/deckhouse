@@ -23,6 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var ModuleGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Module"}
+
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen=true
@@ -37,8 +39,6 @@ type Module struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Properties ModuleProperties `json:"properties,omitempty"`
-
-	Status ModuleStatus `json:"status,omitempty"`
 }
 
 type ModuleProperties struct {
@@ -47,37 +47,45 @@ type ModuleProperties struct {
 	Source string `json:"source"`
 }
 
-type ModuleStatus struct{}
-
 type moduleKind struct{}
-
-func (ms *ModuleStatus) GetObjectKind() schema.ObjectKind {
-	return &moduleKind{}
-}
 
 func (mk *moduleKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (mk *moduleKind) GroupVersionKind() schema.GroupVersionKind {
 	return ModuleGVK
 }
 
-var ModuleGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Module"}
+func (m *Module) GetObjectKind() schema.ObjectKind {
+	return &moduleKind{}
+}
 
 func (m *Module) SetName(name string) {
 	m.Name = name
-	m.calculateLabels()
 }
 
 func (m *Module) SetWeight(weight int) {
 	m.Properties.Weight = weight
 }
 
+func (m *Module) SetTags(tags []string) {
+	if len(tags) == 0 {
+		m.calculateLabels()
+		return
+	}
+
+	for _, tag := range tags {
+		m.Labels["module.deckhouse.io/"+tag] = ""
+	}
+}
+
 func (m *Module) SetSource(source string) {
 	if source == "" {
 		source = "Embedded"
 	}
+	m.Labels["type"] = "embedded"
 
 	if source != "Embedded" {
 		source = "External: " + source
+		m.Labels["type"] = "external"
 	}
 
 	m.Properties.Source = source

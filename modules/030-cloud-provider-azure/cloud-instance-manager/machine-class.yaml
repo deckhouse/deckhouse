@@ -44,4 +44,4 @@ spec:
             keyData: {{ .Values.nodeManager.internal.cloudProvider.azure.sshPublicKey }}
     zone: {{ .zoneName }}
     networkProfile:
-      acceleratedNetworking: {{ .nodeGroup.instanceClass.acceleratedNetworking | default true }}
+      acceleratedNetworking: {{ .nodeGroup.instanceClass | dig "acceleratedNetworking" true }}

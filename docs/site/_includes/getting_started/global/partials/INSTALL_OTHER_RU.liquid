@@ -136,7 +136,21 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 {%- endif %}
 
 Процесс установки может занять 15-30 минут при хорошем соединении.
+{% if page.platform_type == "baremetal" %}
+Пример вывода при успешном окончании установки:
+```
+...
+│ │ No more converge tasks found in Deckhouse queue.
+│ │ Deckhouse pod is Ready!
+│ └ Waiting for Deckhouse to become Ready (157.34 seconds)
+└ ⛵ ~ Bootstrap: Install Deckhouse (158.47 seconds)
 
+❗ ~ Some resources require at least one non-master node to be added to the cluster.
+┌ ⛵ ~ Bootstrap: Clear cache
+│ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
+└ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
+```
+{% else  %}
 По окончании установки инсталлятор выведет IP-адрес **master-узла** (он вам потребуется далее). Пример вывода:
 ```
 ...
@@ -144,6 +158,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 │ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@1.2.3.4
 └ 🎈 ~ Common: Kubernetes Master Node addresses for SSH (0.00 seconds)
 ```
+{% endif %}
 
 {%- if page.platform_code == "kind" %}
 

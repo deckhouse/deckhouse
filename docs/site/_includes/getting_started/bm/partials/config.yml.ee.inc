@@ -1,81 +1,80 @@
-# [<en>] general cluster parameters (ClusterConfiguration)
-# [<en>] version of the Deckhouse API
-# [<ru>] секция с общими параметрами кластера (ClusterConfiguration)
-# [<ru>] используемая версия API Deckhouse Platform
+# [<en>] General cluster parameters.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] Секция с общими параметрами кластера.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] type of the configuration section
-# [<ru>] тип секции конфигурации
 kind: ClusterConfiguration
-# [<en>] type of the infrastructure: bare metal (Static) or Cloud (Cloud)
-# [<ru>] тип инфраструктуры: bare metal (Static) или облако (Cloud)
 clusterType: Static
-# [<en>] address space of the cluster's Pods
-# [<ru>] адресное пространство Pod’ов кластера
+# [<en>] Address space of the cluster's Pods.
+# [<ru>] Адресное пространство Pod’ов кластера.
 podSubnetCIDR: 10.111.0.0/16
-# [<en>] address space of the cluster's services
-# [<ru>] адресное пространство для service’ов кластера
+# [<en>] Address space of the cluster's services.
+# [<ru>] Адресное пространство для service’ов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
-# [<en>] Kubernetes version to install
-# [<ru>] устанавливаемая версия Kubernetes
+# [<en>] Kubernetes version to install.
+# [<ru>] Устанавливаемая версия Kubernetes.
 kubernetesVersion: "1.23"
-# [<en>] cluster domain (used for local routing)
-# [<ru>] домен кластера
+# [<en>] Cluster domain (used for local routing).
+# [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
 ---
-# [<en>] section for bootstrapping the Deckhouse cluster (InitConfiguration)
-# [<en>] version of the Deckhouse API
-# [<ru>] секция первичной инициализации кластера Deckhouse (InitConfiguration)
-# [<ru>] используемая версия API Deckhouse
+# [<en>] Section for bootstrapping the Deckhouse cluster.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] Секция первичной инициализации кластера Deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] type of the configuration section
-# [<ru>] тип секции конфигурации
 kind: InitConfiguration
-# [<en>] Deckhouse parameters
-# [<ru>] секция с параметрами Deckhouse
 deckhouse:
-  # [<en>] address of the Docker registry where the Deckhouse images are located
-  # [<ru>] адрес Docker registry с образами Deckhouse
+  # [<en>] Address of the Docker registry where the Deckhouse images are located
+  # [<ru>] Адрес Docker registry с образами Deckhouse
   imagesRepo: registry.deckhouse.io/deckhouse/ee
-  # [<en>] a special string with your token to access Docker registry (generated automatically for your license token)
-  # [<ru>] строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа)
+  # [<en>] A special string with your token to access Docker registry (generated automatically for your license token)
+  # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа)
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
-  # [<en>] the release channel in use
-  # [<ru>] используемый канал обновлений
   releaseChannel: Stable
   configOverrides:
     global:
       modules:
-        # [<en>] template that will be used for system apps domains within the cluster
-        # [<en>] e.g., Grafana for %s.example.com will be available as grafana.example.com
-        # [<ru>] шаблон, который будет использоваться для составления адресов системных приложений в кластере
-        # [<ru>] например, Grafana для %s.example.com будет доступна на домене grafana.example.com
+        # [<en>] Template that will be used for system apps domains within the cluster.
+        # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+        # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
+        # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+        # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
+        # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
         publicDomainTemplate: "%s.example.com"
-    # [<en>] enable cni-flannel module
-    # [<ru>] включить модуль cni-flannel
-    cniFlannelEnabled: true
-    # [<en>] cni-flannel module settings
-    # [<ru>] настройки модуля cni-flannel
-    cniFlannel:
-      # [<en>] flannel backend, available values are VXLAN (if your servers have L3 connectivity) and HostGW (for L2 networks)
-      # [<ru>] режим работы flannel, допустимые значения VXLAN (если ваши сервера имеют связность L3) или HostGW (для L2-сетей)
-      # [<en>] you might consider changing this
-      # [<ru>] возможно, захотите изменить
-      podNetworkMode: VXLAN
+    userAuthn:
+      controlPlaneConfigurator:
+        dexCAMode: DoNotNeed
+      # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+      # [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+      # [<en>] Enabling access to the API server through Ingress.
+      # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+      publishAPI:
+        enable: true
+        https:
+          mode: Global
+    # [<en>] Enable cni-cilium module
+    # [<ru>] Включить модуль cni-cilium
+    cniCiliumEnabled: true
+    # [<en>] cni-cilium module settings
+    # [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
+    # [<ru>] Настройки модуля cni-cilium
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
+    cniCilium:
+      tunnelMode: VXLAN
 ---
-# [<en>] section with the parameters of the bare metal cluster (StaticClusterConfiguration)
-# [<en>] version of the Deckhouse API
-# [<ru>] секция с параметрами bare metal-кластера (StaticClusterConfiguration)
-# [<ru>] используемая версия API Deckhouse
+# [<en>] Section with the parameters of the static cluster.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#staticclusterconfiguration
+# [<ru>] Секция с параметрами статического кластера.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#staticclusterconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] type of the configuration section
-# [<ru>] тип секции конфигурации
 kind: StaticClusterConfiguration
-# [<en>] list of internal cluster networks (e.g., '10.0.4.0/24'), which is
-# [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.)
-# [<en>] if every node in cluster has only one network interface
+# [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is
+# [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.).
+# [<en>] If every node in cluster has only one network interface
 # [<en>] StaticClusterConfiguration resource can be skipped.
-# [<ru>] список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
-# [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой
+# [<ru>] Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
+# [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
 # [<ru>] Если каждый узел в кластере имеет только один сетевой интерфейс,
 # [<ru>] ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:

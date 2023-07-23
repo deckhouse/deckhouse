@@ -5,7 +5,7 @@ title: "Модуль user-authn: FAQ"
 ## Как защитить мое приложение?
 
 Существует возможность спрятать ваше приложение за аутентификацией через Dex при помощи пользовательского ресурса `DexAuthenticator` (CR).
-По факту, создавая DexAuthenticator в кластере, пользователь создает экземпляр [oauth2-proxy](https://github.com/pusher/oauth2_proxy), который уже подключен к Dex.
+По факту, создавая DexAuthenticator в кластере, пользователь создает экземпляр [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), который уже подключен к Dex.
 
 ### Пример CR `DexAuthenticator`
 

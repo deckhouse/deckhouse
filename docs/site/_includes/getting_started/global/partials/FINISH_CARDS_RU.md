@@ -12,7 +12,7 @@
 </h3>
 <div class="cards-item__text">
 <p>Документация по установленной в кластере версии Deckhouse.</p>
-<p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="deckhouse" %}</p>
+<p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="documentation" %}</p>
 </div>
 </div>
 {% endif %}

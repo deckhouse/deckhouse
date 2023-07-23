@@ -59,6 +59,13 @@ var documents=[
     {%- assign keywords = page['legacy-enabled-commands'] %}
   {%- endif %}
 {%- endif %}
+{%- if page.search.size > 0 %}
+  {%- if keywords.size > 0 %}
+    {%- assign keywords = page.search | append: ", " | append: keywords %}
+  {%- else %}
+    {%- assign keywords = page.search %}
+  {%- endif %}
+{%- endif %}
 {
 "title": "{{ page.title | escape }}",
 "url": "{{ page_canonical_url }}",
@@ -73,6 +80,14 @@ var documents=[
 var parameters=[
 {%- for item in site.data.search.searchItems[page.lang] %}
 {%- assign page_canonical_url = item.url | relative_url %}
+{%- assign keywords = "" %}
+{%- if item.search.size > 0 %}
+  {%- if keywords.size > 0 %}
+    {%- assign keywords = item.search | append: ", " | append: keywords %}
+  {%- else %}
+    {%- assign keywords = item.search %}
+  {%- endif %}
+{%- endif %}
 {
 "name": "{{ item.name }}",
 "url": "{{ page_canonical_url }}",
@@ -82,6 +97,9 @@ var parameters=[
 {%- endif %}
 {%- if item.deprecated %}
 "deprecated": "true",
+{%- endif %}
+{%- if keywords.size > 0 %}
+"keywords": {{ keywords | jsonify }},
 {%- endif %}
 "path": "{{ item.pathString | escape }}",
 "content": {{ item.content | default: '' | normalizeSearchContent | jsonify }}

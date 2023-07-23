@@ -125,6 +125,33 @@ properties:
         items:
           type: string
           pattern: '^[0-9]{1,5}$'
+      resourcesManagement:
+        description: |
+          Управляет ресурсами sidecar-контейнера Istio.
+
+          **Внимание!** Настройка применяется только для новых Pod'ов с `istio-proxy`.
+        properties:
+          mode:
+          static:
+            description: |
+              Настройки управления ресурсами в статическом режиме.
+            properties:
+              requests:
+                properties:
+                  cpu:
+                    description: |
+                      Реквесты CPU.
+                  memory:
+                    description: |
+                      Реквесты памяти.
+              limits:
+                properties:
+                  cpu:
+                    description: |
+                      Лимиты CPU.
+                  memory:
+                    description: |
+                      Лимиты памяти.
   ca:
     description: Явно заданный корневой сертификат, который будет использован для подписывания индивидуальных сертификатов сервисов в случае включения MTLS.
     properties:
@@ -158,7 +185,7 @@ properties:
           Опциональные tolerations для компонента istiod. Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
           Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-      resourceManagement:
+      resourcesManagement:
         description: |
           Настройки управления ресурсами istiod.
         properties:

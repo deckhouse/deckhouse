@@ -159,3 +159,7 @@ func (d *Discoverer) continueProcessing(r *armcompute.ResourceSKU) (bool, error)
 
 	return true, nil
 }
+
+func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
+	return nil, nil
+}

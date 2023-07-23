@@ -46,7 +46,7 @@ gitWorktree:
 
   - name: "Install kubectl"
     shell: |
-{{- range $k8sVersion := tuple "1.22" "1.25" }}
+{{- range $k8sVersion := tuple "1.23" "1.26" }}
       curl -L https://dl.k8s.io/release/v{{ $k8sVersion }}.{{ index $.CandiVersionMap "k8s" $k8sVersion "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl-{{ $k8sVersion }}
       chmod +x /usr/local/bin/kubectl-{{ $k8sVersion }}
 {{- end }}
@@ -641,6 +641,9 @@ args:
   BASE_GOLANG_19_ALPINE: {{ .Images.BASE_GOLANG_19_ALPINE }}
   BASE_GOLANG_19_BULLSEYE: {{ .Images.BASE_GOLANG_19_BULLSEYE }}
   BASE_GOLANG_19_BUSTER: {{ .Images.BASE_GOLANG_19_BUSTER }}
+  BASE_GOLANG_20_ALPINE: {{ .Images.BASE_GOLANG_20_ALPINE }}
+  BASE_GOLANG_20_BULLSEYE: {{ .Images.BASE_GOLANG_20_BULLSEYE }}
+  BASE_GOLANG_20_BUSTER: {{ .Images.BASE_GOLANG_20_BUSTER }}
   BASE_NGINX_ALPINE:  {{ .Images.BASE_NGINX_ALPINE }}
   BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
   BASE_PYTHON_ALPINE:  {{ .Images.BASE_PYTHON_ALPINE }}

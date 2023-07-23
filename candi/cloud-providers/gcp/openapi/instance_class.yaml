@@ -85,7 +85,7 @@ spec:
                   - "pd-standard"
                   - "pd-ssd"
                 diskSizeGb:
-                  description: Instance's root disk size in gigabytes.
+                  description: Instance's root disk size in gibibytes.
                   example: 20
                   x-doc-default: 50
                   type: integer

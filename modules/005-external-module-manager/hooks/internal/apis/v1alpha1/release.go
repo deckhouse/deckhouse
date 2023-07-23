@@ -51,8 +51,10 @@ type ExternalModuleRelease struct {
 }
 
 type ExternalModuleReleaseSpec struct {
-	ModuleName   string            `json:"moduleName"`
-	Version      *semver.Version   `json:"version,omitempty"`
+	ModuleName string          `json:"moduleName"`
+	Version    *semver.Version `json:"version,omitempty"`
+	Weight     int             `json:"weight,omitempty"`
+
 	ApplyAfter   *time.Time        `json:"applyAfter,omitempty"`
 	Requirements map[string]string `json:"requirements,omitempty"`
 }

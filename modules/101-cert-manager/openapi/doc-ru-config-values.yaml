@@ -55,3 +55,6 @@ properties:
   disableLetsencrypt:
     description: |
       Не создавать ClusterIssuer `letsencrypt` и `letsencrypt-staging` в кластере (если `true`).
+  maxConcurrentChallenges:
+    description: |
+      Максимальное количество одновременных Challenges в статусе `processing`

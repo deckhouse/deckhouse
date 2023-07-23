@@ -235,52 +235,6 @@ function main() {
 
   fi
 
-{{ if eq .runType "Normal" }}
-  if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
-    >&2 echo "Setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node..."
-    attempt=0
-    until
-      node_data="$(
-        kubectl_exec get node "$(hostname -s)" -o json | jq '
-        {
-          "resourceVersion": .metadata.resourceVersion,
-          "isApproved": (.metadata.annotations | has("update.node.deckhouse.io/approved")),
-          "isWaitingForApproval": (.metadata.annotations | has("update.node.deckhouse.io/waiting-for-approval"))
-        }
-      ')" &&
-       jq -ne --argjson n "$node_data" '(($n.isApproved | not) and ($n.isWaitingForApproval)) or ($n.isApproved)' >/dev/null
-    do
-      attempt=$(( attempt + 1 ))
-      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        >&2 echo "ERROR: Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
-        exit 1
-      fi
-      kubectl_exec annotate node "$(hostname -s)" \
-        --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-        update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- \
-        || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
-    done
-
-    >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
-    attempt=0
-    until
-      kubectl_exec get node "$(hostname -s)" -o json | \
-      jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
-    do
-      attempt=$(( attempt + 1 ))
-      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        >&2 echo "ERROR: Can't get annotation 'update.node.deckhouse.io/approved' from our Node."
-        exit 1
-      fi
-      echo "Steps are waiting for approval to start."
-      echo "Note: Deckhouse is performing a rolling update. If you want to force an update, use the following command."
-      echo "kubectl annotate node $(hostname -s) update.node.deckhouse.io/approved="
-      echo "Retry in 10sec..."
-      sleep 10
-    done
-  fi
-{{ end }}
-
   # Execute bashible steps
   for step in $BUNDLE_STEPS_DIR/*; do
     echo ===

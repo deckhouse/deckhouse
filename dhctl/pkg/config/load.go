@@ -38,8 +38,8 @@ var once sync.Once
 
 var store *SchemaStore
 
-func NewSchemaStore() *SchemaStore {
-	paths := []string{candiDir}
+func NewSchemaStore(paths ...string) *SchemaStore {
+	paths = append([]string{candiDir}, paths...)
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
@@ -60,7 +60,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		}
 
 		switch info.Name() {
-		case "init_configuration.yaml", "cluster_configuration.yaml", "static_cluster_configuration.yaml", "cloud_discovery_data.yaml":
+		case "init_configuration.yaml", "cluster_configuration.yaml", "static_cluster_configuration.yaml", "cloud_discovery_data.yaml", "cloud_provider_discovery_data.yaml":
 			uploadError := st.UploadByPath(path)
 			if uploadError != nil {
 				return uploadError
@@ -197,8 +197,8 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema) (isValid bool, multiE
 	return false, allErrs.ErrorOrNil()
 }
 
-func ValidateDiscoveryData(config *[]byte) (bool, error) {
-	schemaStore := NewSchemaStore()
+func ValidateDiscoveryData(config *[]byte, paths ...string) (bool, error) {
+	schemaStore := NewSchemaStore(paths...)
 
 	_, err := schemaStore.Validate(config)
 	if err != nil {

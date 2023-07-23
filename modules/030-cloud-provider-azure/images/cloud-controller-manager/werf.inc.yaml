@@ -7,8 +7,8 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /usr/local/bin/cloud-controller-manager
-    to: /usr/local/bin/cloud-controller-manager
+    add: /src/bin/azure-cloud-controller-manager
+    to: /usr/local/bin/azure-cloud-controller-manager
     before: setup
 shell:
   beforeInstall:
@@ -16,9 +16,39 @@ shell:
 docker:
   ENV:
     container: docker
-  ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
+  ENTRYPOINT: ["/usr/local/bin/azure-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: mcr.microsoft.com/oss/kubernetes/azure-cloud-controller-manager:{{ $value.ccm.azure }}
+  {{- if semverCompare ">=1.27" $version }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+  {{- else if semverCompare ">=1.25" $version }}
+from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+  {{- else if semverCompare ">=1.24" $version }}
+from: {{ $.Images.BASE_GOLANG_18_ALPINE }}
+  {{- else if semverCompare ">=1.23" $version }}
+from: {{ $.Images.BASE_GOLANG_17_ALPINE }}
+  {{- else if semverCompare ">=1.21" $version }}
+from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
+  {{- end }}
+git:
+  - add: /modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apk add --no-cache make bash git mercurial patch rsync
+  install:
+    - mkdir /src
+    - cd /src
+    - wget https://github.com/kubernetes-sigs/cloud-provider-azure/archive/{{ $value.ccm.azure }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+    - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+    - hack/pkg-config.sh > .pkg_config
+    - export VERSION={{ $value.ccm.azure }}
+    - make bin/azure-cloud-controller-manager
   {{- end }}
 {{- end }}

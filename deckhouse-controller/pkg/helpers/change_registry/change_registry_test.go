@@ -21,7 +21,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -108,12 +110,11 @@ func checkContainersHost(containers []v1.Container, host string, deckhouseTag st
 func TestNewImagePullSecretData(t *testing.T) {
 	type args struct {
 		authConfig authn.AuthConfig
-		caFile     string
 	}
 	tests := []struct {
 		name      string
 		newRepo   string
-		caContent []byte
+		caContent string
 		insecure  bool
 		args      args
 		want      map[string]string
@@ -138,59 +139,15 @@ func TestNewImagePullSecretData(t *testing.T) {
 					Username: "test",
 					Password: "test",
 				},
-				caFile: "/tmp/change-registry-ca-test.pem",
 			},
-			newRepo: "registry.example.com/deckhouse",
-			caContent: []byte(`
------BEGIN CERTIFICATE-----
-MIIDqjCCApICCQC5+/3MLrlWRzANBgkqhkiG9w0BAQsFADCBljELMAkGA1UEBhMC
-TUgxEjAQBgNVBAgMCURlY2tob3VzZTESMBAGA1UEBwwJRGVja2hvdXNlMRIwEAYD
-VQQKDAlEZWNraG91c2UxEjAQBgNVBAsMCURlY2tob3VzZTESMBAGA1UEAwwJRGVj
-a2hvdXNlMSMwIQYJKoZIhvcNAQkBFhRjb250YWN0QGRlY2tob3VzZS5pbzAeFw0y
-MzA2MTYxMjQwMjNaFw0yODA2MTQxMjQwMjNaMIGWMQswCQYDVQQGEwJNSDESMBAG
-A1UECAwJRGVja2hvdXNlMRIwEAYDVQQHDAlEZWNraG91c2UxEjAQBgNVBAoMCURl
-Y2tob3VzZTESMBAGA1UECwwJRGVja2hvdXNlMRIwEAYDVQQDDAlEZWNraG91c2Ux
-IzAhBgkqhkiG9w0BCQEWFGNvbnRhY3RAZGVja2hvdXNlLmlvMIIBIjANBgkqhkiG
-9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvelLA8XRx8LzSPFcqvoV/M68fnhrcykASl/a
-MaRVoKn9Ms/vNvPzkW8X2ushD3tuWJw1JHwb3vUw2eK2K+LdSu/swLodwOf/tMp7
-JX7NuhI0XLFMEpoSfAhbGdyYUaSHEbJkOCF9ZXlp7dtW2dEYefJn4a8+ZXCSQJYP
-TMj08IrztzU9jnWi6nwupB+ItYvMhjNT8tlnCXaZebQMXKpBuH7F0acnojCnOQmT
-qZCvh7bl2EbK4zM9Q0iUSx4MYnC+mQ3x0l525toetmGMqwV1GlTLGD9/t5Cc4q3l
-6mDbkytuKsZeZpkEgmOtdjoESkdAepDiBej1eQvS0i0AiyAFBwIDAQABMA0GCSqG
-SIb3DQEBCwUAA4IBAQAo8oAwmz5wyxljxXqOoWLMlit7MVU/jfUwFCFFCK+pqI2V
-/kQBBH5ZJRZ0AF3k4cuA+vJc+Cwlu25c5KJrl+CgDQQ+pdrHqbw+hLnkRsA6a9kn
-5UBpLuOj2ALuYvxsGVp2DvxVkpKGU2fcbtPbQFY3n7yK1SW64nTCk5dS30gU61pU
-SdpwTLz+GMV14jWRh+TQWO135tFZSuuUwPWzx6k68raQVxPi2fFu949BT5gl1L2Y
-e4f/w8EYFkBiGlZo2RguL3fFMouOo65CPxYj2jA1Y9D2AUG0L/3+CIe+RKCn4HML
-oFmKNcjIX7fCuW8fGd+DwdUQ9cR8JV9si/gjdZzu
------END CERTIFICATE-----`),
+			newRepo:   "registry.example.com/deckhouse",
+			caContent: testCaContent,
 			want: map[string]string{
 				".dockerconfigjson": `{"auths":{"registry.example.com":{"auth":"dGVzdDp0ZXN0"}}}`,
 				"address":           "registry.example.com",
 				"path":              "/deckhouse",
 				"scheme":            "https",
-				"ca": `-----BEGIN CERTIFICATE-----
-MIIDqjCCApICCQC5+/3MLrlWRzANBgkqhkiG9w0BAQsFADCBljELMAkGA1UEBhMC
-TUgxEjAQBgNVBAgMCURlY2tob3VzZTESMBAGA1UEBwwJRGVja2hvdXNlMRIwEAYD
-VQQKDAlEZWNraG91c2UxEjAQBgNVBAsMCURlY2tob3VzZTESMBAGA1UEAwwJRGVj
-a2hvdXNlMSMwIQYJKoZIhvcNAQkBFhRjb250YWN0QGRlY2tob3VzZS5pbzAeFw0y
-MzA2MTYxMjQwMjNaFw0yODA2MTQxMjQwMjNaMIGWMQswCQYDVQQGEwJNSDESMBAG
-A1UECAwJRGVja2hvdXNlMRIwEAYDVQQHDAlEZWNraG91c2UxEjAQBgNVBAoMCURl
-Y2tob3VzZTESMBAGA1UECwwJRGVja2hvdXNlMRIwEAYDVQQDDAlEZWNraG91c2Ux
-IzAhBgkqhkiG9w0BCQEWFGNvbnRhY3RAZGVja2hvdXNlLmlvMIIBIjANBgkqhkiG
-9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvelLA8XRx8LzSPFcqvoV/M68fnhrcykASl/a
-MaRVoKn9Ms/vNvPzkW8X2ushD3tuWJw1JHwb3vUw2eK2K+LdSu/swLodwOf/tMp7
-JX7NuhI0XLFMEpoSfAhbGdyYUaSHEbJkOCF9ZXlp7dtW2dEYefJn4a8+ZXCSQJYP
-TMj08IrztzU9jnWi6nwupB+ItYvMhjNT8tlnCXaZebQMXKpBuH7F0acnojCnOQmT
-qZCvh7bl2EbK4zM9Q0iUSx4MYnC+mQ3x0l525toetmGMqwV1GlTLGD9/t5Cc4q3l
-6mDbkytuKsZeZpkEgmOtdjoESkdAepDiBej1eQvS0i0AiyAFBwIDAQABMA0GCSqG
-SIb3DQEBCwUAA4IBAQAo8oAwmz5wyxljxXqOoWLMlit7MVU/jfUwFCFFCK+pqI2V
-/kQBBH5ZJRZ0AF3k4cuA+vJc+Cwlu25c5KJrl+CgDQQ+pdrHqbw+hLnkRsA6a9kn
-5UBpLuOj2ALuYvxsGVp2DvxVkpKGU2fcbtPbQFY3n7yK1SW64nTCk5dS30gU61pU
-SdpwTLz+GMV14jWRh+TQWO135tFZSuuUwPWzx6k68raQVxPi2fFu949BT5gl1L2Y
-e4f/w8EYFkBiGlZo2RguL3fFMouOo65CPxYj2jA1Y9D2AUG0L/3+CIe+RKCn4HML
-oFmKNcjIX7fCuW8fGd+DwdUQ9cR8JV9si/gjdZzu
------END CERTIFICATE-----`,
+				"ca":                testCaContent,
 			},
 		},
 	}
@@ -207,13 +164,7 @@ oFmKNcjIX7fCuW8fGd+DwdUQ9cR8JV9si/gjdZzu
 				t.Fatal(err)
 			}
 
-			if tt.args.caFile != "" && len(tt.caContent) > 0 {
-				if err := os.WriteFile(tt.args.caFile, tt.caContent, 0755); err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			got, err := newImagePullSecretData(newRepo, tt.args.authConfig, tt.args.caFile)
+			got, err := newImagePullSecretData(newRepo, tt.args.authConfig, tt.caContent)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("newImagePullSecretData() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -369,9 +320,81 @@ func Test_checkBearerSupport(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := checkBearerSupport(tt.args.ctx, reg); (err != nil) != tt.wantErr {
+			if err := checkBearerSupport(tt.args.ctx, reg, http.DefaultTransport); (err != nil) != tt.wantErr {
 				t.Errorf("checkBearerSupport() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
+
+func Test_getCAContent(t *testing.T) {
+	type args struct {
+		caFile string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		want      string
+		wantErr   bool
+		caContent string
+	}{
+		{
+			name: "read ca file",
+			args: args{
+				caFile: filepath.Join(t.TempDir(), "ca.crt"),
+			},
+			want:      strings.TrimSpace(testCaContent),
+			caContent: testCaContent,
+		},
+		{
+			name: "no ca file",
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.args.caFile != "" && len(tt.caContent) > 0 {
+				if err := os.WriteFile(tt.args.caFile, []byte(tt.caContent), 0755); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			got, err := getCAContent(tt.args.caFile)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getCAContent() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("getCAContent() = %v, want %v", got, tt.want)
+				return
+			}
+		})
+	}
+}
+
+const (
+	testCaContent = `
+-----BEGIN CERTIFICATE-----
+MIIDqjCCApICCQC5+/3MLrlWRzANBgkqhkiG9w0BAQsFADCBljELMAkGA1UEBhMC
+TUgxEjAQBgNVBAgMCURlY2tob3VzZTESMBAGA1UEBwwJRGVja2hvdXNlMRIwEAYD
+VQQKDAlEZWNraG91c2UxEjAQBgNVBAsMCURlY2tob3VzZTESMBAGA1UEAwwJRGVj
+a2hvdXNlMSMwIQYJKoZIhvcNAQkBFhRjb250YWN0QGRlY2tob3VzZS5pbzAeFw0y
+MzA2MTYxMjQwMjNaFw0yODA2MTQxMjQwMjNaMIGWMQswCQYDVQQGEwJNSDESMBAG
+A1UECAwJRGVja2hvdXNlMRIwEAYDVQQHDAlEZWNraG91c2UxEjAQBgNVBAoMCURl
+Y2tob3VzZTESMBAGA1UECwwJRGVja2hvdXNlMRIwEAYDVQQDDAlEZWNraG91c2Ux
+IzAhBgkqhkiG9w0BCQEWFGNvbnRhY3RAZGVja2hvdXNlLmlvMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvelLA8XRx8LzSPFcqvoV/M68fnhrcykASl/a
+MaRVoKn9Ms/vNvPzkW8X2ushD3tuWJw1JHwb3vUw2eK2K+LdSu/swLodwOf/tMp7
+JX7NuhI0XLFMEpoSfAhbGdyYUaSHEbJkOCF9ZXlp7dtW2dEYefJn4a8+ZXCSQJYP
+TMj08IrztzU9jnWi6nwupB+ItYvMhjNT8tlnCXaZebQMXKpBuH7F0acnojCnOQmT
+qZCvh7bl2EbK4zM9Q0iUSx4MYnC+mQ3x0l525toetmGMqwV1GlTLGD9/t5Cc4q3l
+6mDbkytuKsZeZpkEgmOtdjoESkdAepDiBej1eQvS0i0AiyAFBwIDAQABMA0GCSqG
+SIb3DQEBCwUAA4IBAQAo8oAwmz5wyxljxXqOoWLMlit7MVU/jfUwFCFFCK+pqI2V
+/kQBBH5ZJRZ0AF3k4cuA+vJc+Cwlu25c5KJrl+CgDQQ+pdrHqbw+hLnkRsA6a9kn
+5UBpLuOj2ALuYvxsGVp2DvxVkpKGU2fcbtPbQFY3n7yK1SW64nTCk5dS30gU61pU
+SdpwTLz+GMV14jWRh+TQWO135tFZSuuUwPWzx6k68raQVxPi2fFu949BT5gl1L2Y
+e4f/w8EYFkBiGlZo2RguL3fFMouOo65CPxYj2jA1Y9D2AUG0L/3+CIe+RKCn4HML
+oFmKNcjIX7fCuW8fGd+DwdUQ9cR8JV9si/gjdZzu
+-----END CERTIFICATE-----
+`
+)

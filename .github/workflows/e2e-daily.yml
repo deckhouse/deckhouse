@@ -331,7 +331,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -472,6 +472,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -480,6 +481,7 @@ jobs:
           name: test_output_aws_containerd_1_23
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -753,7 +755,7 @@ jobs:
 
       - name: "Run e2e test: Azure/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -902,6 +904,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -910,6 +913,7 @@ jobs:
           name: test_output_azure_containerd_1_23
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -1183,7 +1187,7 @@ jobs:
 
       - name: "Run e2e test: GCP/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -1320,6 +1324,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -1328,6 +1333,7 @@ jobs:
           name: test_output_gcp_containerd_1_23
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -1601,7 +1607,7 @@ jobs:
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -1746,6 +1752,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -1754,6 +1761,7 @@ jobs:
           name: test_output_yandex-cloud_containerd_1_23
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -2027,7 +2035,7 @@ jobs:
 
       - name: "Run e2e test: OpenStack/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: OpenStack
           CRI: Containerd
@@ -2164,6 +2172,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -2172,6 +2181,7 @@ jobs:
           name: test_output_openstack_containerd_1_23
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -2445,7 +2455,7 @@ jobs:
 
       - name: "Run e2e test: vSphere/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: vSphere
           CRI: Containerd
@@ -2586,6 +2596,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -2594,6 +2605,7 @@ jobs:
           name: test_output_vsphere_containerd_1_23
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 
@@ -2867,7 +2879,7 @@ jobs:
 
       - name: "Run e2e test: Static/Containerd/1.23"
         id: e2e_test_run
-        timeout-minutes: 60
+        timeout-minutes: 80
         env:
           PROVIDER: Static
           CRI: Containerd
@@ -3004,6 +3016,7 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -3012,6 +3025,7 @@ jobs:
           name: test_output_static_containerd_1_23
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
             testing/cloud_layouts/
             !testing/cloud_layouts/**/sshkey
 

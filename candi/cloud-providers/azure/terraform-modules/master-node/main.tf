@@ -108,7 +108,7 @@ resource "azurerm_managed_disk" "kubernetes_data" {
   zones                = [local.zone]
   storage_account_type = local.disk_type
   create_option        = "Empty"
-  disk_size_gb         = "20"
+  disk_size_gb         = local.etcd_disk_size_gb
   tags                 = local.additional_tags
 }
 

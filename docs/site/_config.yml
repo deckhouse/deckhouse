@@ -103,6 +103,11 @@ defaults:
     values:
       d8Revision: ee
   - scope:
+      path: "*/462-loki"
+      type: "pages"
+    values:
+      featureStatus: experimental
+  - scope:
       path: "*/502-delivery"
       type: "pages"
     values:
@@ -164,5 +169,11 @@ defaults:
       path: "*/490-virtualization"
       type: "pages"
     values:
+      featureStatus: experimental
+  - scope:
+      path: "*/160-multitenancy-manager"
+      type: "pages"
+    values:
+      d8Revision: ee
       featureStatus: experimental
 timezone: Europe/Moscow

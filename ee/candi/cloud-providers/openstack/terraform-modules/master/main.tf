@@ -9,14 +9,15 @@ data "openstack_images_image_v2" "master" {
   name = var.image_name
 }
 
-resource "openstack_blockstorage_volume_v2" "master" {
-  count             = var.root_disk_size == "" ? 0 : 1
-  name              = join("-", [var.prefix, "master-root-volume", var.node_index])
-  size              = var.root_disk_size
-  image_id          = data.openstack_images_image_v2.master.id
-  metadata          = local.metadata_tags
-  volume_type       = var.volume_type
-  availability_zone = var.volume_zone
+resource "openstack_blockstorage_volume_v3" "master" {
+  count                = var.root_disk_size == "" ? 0 : 1
+  name                 = join("-", [var.prefix, "master-root-volume", var.node_index])
+  size                 = var.root_disk_size
+  image_id             = data.openstack_images_image_v2.master.id
+  metadata             = local.metadata_tags
+  volume_type          = var.volume_type
+  availability_zone    = var.volume_zone
+  enable_online_resize = true
   lifecycle {
     ignore_changes = [
       metadata,
@@ -43,7 +44,7 @@ resource "openstack_compute_instance_v2" "master" {
   }
 
   dynamic "block_device" {
-    for_each = var.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v2.master[0])
+    for_each = var.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v3.master[0])
     content {
       uuid                  = block_device.value["id"]
       boot_index            = 0

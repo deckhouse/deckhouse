@@ -5,7 +5,7 @@ title: "The user-authn module: FAQ"
 ## How to secure my application?
 
 It is possible to hide your application behind Dex authentication by using the `DexAuthenticator` custom resource (CR).
-In fact, by creating the DexAuthenticator in a cluster, user creates an instance [oauth2-proxy](https://github.com/pusher/oauth2_proxy), which is already connected to Dex.
+In fact, by creating the DexAuthenticator in a cluster, user creates an instance [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), which is already connected to Dex.
 
 ### An example of the `DexAuthenticator` CR
 

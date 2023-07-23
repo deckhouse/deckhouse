@@ -9,7 +9,7 @@ search: autoscaler, HorizontalPodAutoscaler
 
 Это позволяет:
 - `kubectl top` брать метрики из Prometheus, через адаптер;
-- использовать CR версии [autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#metricspec-v2beta2-autoscaling) для масштабирования приложений (HPA);
+- использовать CR версии [autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling) для масштабирования приложений (HPA);
 - получать информацию из Prometheus средствами API Kubernetes для других модулей (Vertical Pod Autoscaler, ...).
 
 Модуль позволяет производить масштабирование по следующим параметрам:

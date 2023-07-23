@@ -19,7 +19,7 @@ while [ "$patch_pending" = true ] ; do
       sleep 1
     done
 
-    if curl -s --fail \
+    if curl -s --fail -x "" \
       --max-time 10 \
       -XPATCH \
       -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \

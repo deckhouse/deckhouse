@@ -1,1 +1,1 @@
-FROM falcosecurity/falco:0.35.0-slim@sha256:5ac6b10e7131099ec197722412863bd04a608e4b987ef891c684763a5e12e835
+FROM falcosecurity/falco:0.35.1-slim@sha256:99478d303b189ea933d50a45c422f91abae167e9e52485f3d12bcc3f5a34cd69
