@@ -267,7 +267,7 @@ func addTrailingDot(rawURL string) (string, error) {
 
 	// if fqdn is not an ip address, add .
 	if !ipv4Regex.MatchString(fqdn) {
-		fqdn = fqdn + "."
+		fqdn += "."
 	}
 
 	if port == "" {
