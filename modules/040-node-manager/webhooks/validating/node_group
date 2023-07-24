@@ -105,6 +105,15 @@ EOF
     return 0
   fi
 
+  criType="$(context::jq -r '.review.request.object.spec.cri.type')"
+
+  if [[ "${criType}" == "Docker" ]]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to set cri type to Docker"}
+EOF
+    return 0
+  fi
+
   # cri.type cannot be changed if count of endpoints < 3
   if context::jq -e -r '.review.request.name == "master"' >/dev/null 2>&1; then
     defaultCRI="$(context::jq -r '.snapshots.cluster_config[0].filterResult.defaultCRI')"
@@ -149,13 +158,6 @@ EOF
 
   # check for nodeGroup deckhouse.io/v1alpha1
   if context::jq -e -r '.review.request.object.apiVersion == "deckhouse.io/v1alpha1"' >/dev/null 2>&1; then
-    if context::jq -e -r '.review.request.object.spec.cri.type != "Docker" and .review.request.object.spec.docker != null' >/dev/null 2>&1; then
-      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"it is forbidden to create NodeGroup resource with set .spec.docker and without .spec.cri.type=\"Docker\""}
-EOF
-      return 0
-    fi
-
     if context::jq -e -r '.review.request.object.spec.cri.type != "Containerd" and .review.request.object.spec.cri.containerd != null' >/dev/null 2>&1; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"it is forbidden to create NodeGroup resource with set .spec.cri.containerd and without .spec.cri.type=\"Containerd\""}

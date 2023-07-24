@@ -76,9 +76,6 @@ spec:
           value: "1"
 {{- end }}
         volumeMounts:
-        - name: dockersocket
-          mountPath: /var/run/docker.sock
-          readOnly: true
         - name: containerdsocket
           mountPath: /run/containerd/containerd.sock
           readOnly: true
@@ -94,9 +91,6 @@ spec:
             {{- include "okagent_resources" . | nindent 12 }}
   {{- end }}
       volumes:
-      - name: dockersocket
-        hostPath:
-          path: /var/run/docker.sock
       - name: containerdsocket
         hostPath:
           path: /run/containerd/containerd.sock

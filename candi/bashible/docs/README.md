@@ -5,7 +5,7 @@ title: System Configuration Framework - Bashible
 ## Description
 
 Bashible consists of small bash scripts, that are called `steps`.
-* Each step describes some task, e.g., docker installation, kubelet installation.
+* Each step describes some task, e.g., cri installation, kubelet installation.
 
 * Steps are executed in the alphabetic order. Because of it, they are named with a number prefix, e.g., `010_step_...`.
 

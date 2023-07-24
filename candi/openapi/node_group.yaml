@@ -204,6 +204,8 @@ spec:
                         Container runtime type.
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+
+                        > **Note!** the `Docker` is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -591,6 +593,8 @@ spec:
                     Docker settings for nodes.
 
                     If used, `cri.type` must be set to `Docker`.
+
+                    > **Note!** the `Docker` is deprecated.
                   type: object
                   properties:
                     maxConcurrentDownloads:
@@ -810,6 +814,8 @@ spec:
                         Container runtime type.
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+
+                        > **Note!** the `Docker` is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -830,6 +836,8 @@ spec:
                       type: object
                       description: |
                         Docker settings for nodes.
+
+                        > **Note!** the `Docker` is deprecated.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
@@ -1444,6 +1452,8 @@ spec:
                         Container runtime type.
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+
+                        > **Note!** the `Docker` is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -1464,6 +1474,8 @@ spec:
                       type: object
                       description: |
                         Docker settings for nodes.
+
+                        > **Note!** the `Docker` is deprecated.
                       properties:
                         maxConcurrentDownloads:
                           type: integer

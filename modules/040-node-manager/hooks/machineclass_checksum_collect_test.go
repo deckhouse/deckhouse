@@ -57,7 +57,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum coll
                               "minPerZone": 3,
                               "zones": [ "nova" ]
                           },
-                          "cri": { "type": "Docker" },
+                          "cri": { "type": "Containerd" },
                           "disruptions": { "approvalMode": "Automatic" },
                           "instanceClass": {
                               "flavorName": "m1.small",
