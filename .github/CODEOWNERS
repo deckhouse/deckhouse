@@ -25,8 +25,8 @@
 402-ingress-nginx/          @nabokihms @yalosev
 460-log-shipper/            @nabokihms
 470-chrony/                 @RomanenkoDenys
-490-virtualization          @kvaps
-491-containerized-data-importer @kvaps
+490-virtualization          @fl64
+491-containerized-data-importer @fl64
 500-openvpn/                @vitaliy-sn
 500-upmeter/                @shvgn
 502-delivery/               @shvgn
