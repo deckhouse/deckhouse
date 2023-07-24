@@ -17,8 +17,9 @@ package app
 import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
-	PreflightSkipAll        = false
-	PreflightSkipSSHForword = false
+	PreflightSkipAll               = false
+	PreflightSkipSSHForword        = false
+	PreflightSkipAvailabilityPorts = false
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -28,4 +29,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag("preflight-skip-ssh-forward-check", "Skip SSH forward preflight check").
 		Envar(configEnvName("PREFLIGHT_SKIP_SSH_FORWARD_CHECK")).
 		BoolVar(&PreflightSkipSSHForword)
+	cmd.Flag("preflight-skip-availability-ports-check", "Skip availability ports preflight check").
+		Envar(configEnvName("PREFLIGHT_SKIP_AVAILABILITY_PORTS_CHECK")).
+		BoolVar(&PreflightSkipAvailabilityPorts)
 }
