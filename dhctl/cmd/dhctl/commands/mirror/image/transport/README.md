@@ -1,0 +1,1 @@
+# This new transport implementation is based on [directory transport](https://github.com/containers/image/tree/v5.21.1/directory).

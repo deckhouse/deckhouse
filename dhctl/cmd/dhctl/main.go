@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
@@ -50,6 +51,8 @@ func main() {
 		fmt.Printf("%s %s\n", app.AppName, app.AppVersion)
 		return nil
 	})
+
+	mirror.DefineMirrorCommand(kpApp)
 
 	bootstrap.DefineBootstrapCommand(kpApp)
 	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")

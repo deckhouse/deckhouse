@@ -134,6 +134,7 @@ func NewPrettyLogger() *PrettyLogger {
 			"terraform": {"🌱 ~ Terraform: %s", TerraformOptions()},
 			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions()},
 			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions()},
+			"mirror":    {"🪞 ~ Mirror: %s", MirrorOptions()},
 			"default":   {"%s", BoldOptions()},
 		},
 	}

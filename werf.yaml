@@ -584,6 +584,7 @@ shell:
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
 
     echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
+    echo '{{- lower $.Env | default "dev" }}' > /deckhouse/edition
 
 ---
 image: release-channel-version-prebuild
