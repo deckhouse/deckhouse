@@ -9,24 +9,6 @@ function detect_bundle() {
 
 bundle="$(detect_bundle)"
 
-function install_jq() {
-  case "$1" in
-    ubuntu-lts|debian|altlinux|astra)
-      apt-get update && apt-get install jq -y
-      ;;
-    alteros|redos)
-      yum updateinfo && yum install jq -y
-      ;;
-    centos)
-      yum install epel-release -y && yum updateinfo && yum install jq -y
-      ;;
-    *)
-      echo "Unsupported bundle $1 for bootstrap.sh! Exiting..."
-      exit 1
-      ;;
-  esac
-}
-
 function get_bootstrap() {
   token="$(</var/lib/bashible/bootstrap-token)"
   node_group_name="{{ .nodeGroupName }}"
@@ -47,12 +29,20 @@ function get_bootstrap() {
   done
 }
 
-until install_jq "$bundle"; do
-  echo "Error installing jq pacage"
-  sleep 10
-done
-
 bootstrap_object="$(get_bootstrap)"
+export bootstrap_object
 
-bash <<< "$(echo "$bootstrap_object" | jq -r .bootstrap)"
+if ! bootstrap_script="$(python3 <<"EOF"
+from __future__ import print_function
+import json
+import os
+
+data = json.loads(os.environ['bootstrap_object'])
+print(data["bootstrap"])
+EOF
+)"; then
+  echo "Failed to get bootstrap script, exiting..."
+fi
+
+bash <<< "$bootstrap_script"
 {{- end }}
