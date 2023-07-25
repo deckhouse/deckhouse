@@ -37,7 +37,7 @@ k8s:
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.24':
     status: available
-    patch: 15
+    patch: 16
     bashible: *bashible
     ccm:
       openstack: v1.24.2
@@ -56,7 +56,7 @@ k8s:
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.25':
     status: available
-    patch: 11
+    patch: 12
     bashible: *bashible
     ccm:
       openstack: v1.25.3
@@ -75,7 +75,7 @@ k8s:
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.26':
     status: available
-    patch: 6
+    patch: 7
     bashible: *bashible
     ccm:
       openstack: v1.26.1
@@ -94,7 +94,7 @@ k8s:
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.27':
     status: preview
-    patch: 3
+    patch: 4
     bashible: *bashible
     ccm:
       openstack: v1.27.1
