@@ -36,7 +36,6 @@ func (pc *PreflightCheck) StaticCheck() error {
 			log.InfoLn("Preflight checks were skipped")
 			return nil
 		}
-    
 		err := pc.CheckSSHTunel()
 		if err != nil {
 			return err
@@ -46,6 +45,13 @@ func (pc *PreflightCheck) StaticCheck() error {
 		if err != nil {
 			return err
 		}
+
+		err = pc.CheckLocalhostDomain()
+		if err != nil {
+			return err
+		}
+
+
 		return nil
 	})
 }

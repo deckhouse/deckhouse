@@ -16,10 +16,19 @@ package template
 
 import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 
-const checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh"
+const (
+	checkPortsScriptPath     = candiBashibleDir + "/preflight/check_ports.sh"
+	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh"
+)
 
 func RenderAndSavePreflightCheckPortsScript() (string, error) {
 	log.DebugLn("Start render check ports script")
 
 	return RenderAndSaveTemplate("check_ports.sh", checkPortsScriptPath, map[string]interface{}{})
+}
+
+func RenderAndSavePreflightCheckLocalhostScript() (string, error) {
+	log.DebugLn("Start render check localhost script")
+
+	return RenderAndSaveTemplate("check_localhost.sh", checkLocalhostScriptPath, map[string]interface{}{})
 }
