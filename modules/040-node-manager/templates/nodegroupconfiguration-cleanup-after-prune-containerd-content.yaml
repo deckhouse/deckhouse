@@ -1,7 +1,7 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: prune-containerd-content.sh
+  name: cleanup-after-prune-containerd-content.sh
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   weight: 100
@@ -24,23 +24,9 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    # TODO remove after 1.47 release !!!
+    # TODO remove after 1.49 release !!!
     #
-    # This is a oneshot job to remove unnecessary blobs (compressed image layers)
-    # pulled before changing the `discard_unpacked_layer` option. In the future,
-    # it will be removed automatically once they have been pulled and unpacked.
+    # This is a oneshot job to remove flag file after this migration
+    # https://github.com/deckhouse/deckhouse/blob/0bb5310b26f0cde3e0c5592e77f5c1ceda145811/modules/040-node-manager/templates/nodegroupconfiguration-prune-containerd-content.yaml
     #
-    # Prune content to save disk space
-    {{- `
-    {{- if eq .cri "Containerd" }}
-    if [ -f /var/lib/bashible/containerd_content_store_is_cleared ] ; then
-      exit 0
-    fi
-    bb-log-info "Removing compressed image layers from containerd's content store"
-    if ctr -n k8s.io content prune references; then
-        touch /var/lib/bashible/containerd_content_store_is_cleared
-    else
-        bb-log-warning "Failed to clean up containerd's content store. Skip this for now"
-    fi
-    {{- end }}
-    `}}
+    rm -f /var/lib/bashible/containerd_content_store_is_cleared
