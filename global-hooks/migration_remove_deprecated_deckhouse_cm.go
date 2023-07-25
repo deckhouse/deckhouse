@@ -78,6 +78,7 @@ func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error
 	)
 
 	if deckhouseConfigSnap[0].(float64) == 0.0 {
+		input.LogEntry.Info("Delete ConfigMap d8-system/deckhouse")
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "deckhouse")
 	}
 	return nil
