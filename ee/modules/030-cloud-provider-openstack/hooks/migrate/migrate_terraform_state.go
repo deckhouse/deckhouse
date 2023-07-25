@@ -83,6 +83,11 @@ func processSecretsList(secretList *v1.SecretList, terraformStateDataKey string,
 	for _, secret := range secretList.Items {
 		input.LogEntry.Infof("Proceeding with Secret/%s/%s", TerraformStateNamespace, secret.ObjectMeta.Name)
 		backupSecretName := secret.ObjectMeta.Name + "-backup"
+		// dirty hack, we cannot create secret with label value > 63
+		if len(backupSecretName) > 63 {
+			// remove '-terraform' suffix it will be enough
+			backupSecretName = strings.Replace(backupSecretName, "-terraform", "", 1)
+		}
 
 		secretBackupExists, err := isSecretBackupExists(backupSecretName, TerraformStateNamespace, kubeCl, input)
 		if secretBackupExists && err == nil {
