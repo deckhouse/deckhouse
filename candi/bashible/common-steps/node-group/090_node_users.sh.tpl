@@ -45,10 +45,10 @@ function put_user_ssh_key() {
   local main_group="$3"
   local ssh_keys="$4"
   local ssh_dir="$base_path/$user_name/.ssh"
-
   local ssh_new_keys=`sed "s/\;/\n/g" <<< "$ssh_keys" | sort -u`
+  local ssh_curent_keys=`cat $ssh_dir/authorized_keys`
 
-  if [[ "`cat $ssh_dir/authorized_keys`" != "$ssh_new_keys" ]]; then
+  if [[ "${ssh_curent_keys}" != "${ssh_new_keys}" ]]; then
     mkdir -p "$ssh_dir"
     echo -n "$ssh_new_keys" > "$ssh_dir/authorized_keys"
     chown -R "$user_name:$main_group" "$ssh_dir"
