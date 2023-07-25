@@ -79,23 +79,23 @@ type NodeGroupBundleList struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// TODO
+// Bootstrap object contains script to perform initialization of a Kubernetes Node
 type Bootstrap struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// TODO
+	// Bootstrap fields contains the actual script
 	Bootstrap string `json:"bootstrap"`
 }
 
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// TODO
+// BootstrapList is a List of Bootstrap object
 type BootstrapList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// TODO
+	// Items is a List of Bootstraps
 	Items []Bootstrap `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

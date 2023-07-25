@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -422,8 +422,6 @@ func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error)
 }
 
 // Get retrieves a copy of context for the given secretKey.
-//
-// TODO In future, node group name will be passed instead of a secretKey.
 func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]interface{}, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()

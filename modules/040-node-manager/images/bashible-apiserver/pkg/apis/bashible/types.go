@@ -80,23 +80,23 @@ type NodeGroupBundleList struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// TODO
+// Bootstrap object contains script to perform initialization of a Kubernetes Node
 type Bootstrap struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	// TODO
+	// Bootstrap fields contains the actual script
 	Bootstrap string
 }
 
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// TODO
+// BootstrapList is a List of Bootstrap object
 type BootstrapList struct {
 	metav1.TypeMeta
 	metav1.ListMeta
 
-	// TODO
+	// Items is a List of Bootstraps
 	Items []Bootstrap
 }
