@@ -46,12 +46,11 @@ function put_user_ssh_key() {
   local ssh_keys="$4"
   local ssh_dir="$base_path/$user_name/.ssh"
 
-  tmp_file="$(mktemp -u)"
-  sed "s/\;/\n/g" <<< "$ssh_keys" | sort -u > "$tmp_file"
+  local ssh_new_keys=`sed "s/\;/\n/g" <<< "$ssh_keys" | sort -u`
 
-  if ! diff -q "$ssh_dir/authorized_keys" "$tmp_file" >/dev/null 2>/dev/null ; then
+  if [[ "`cat $ssh_dir/authorized_keys`" != "$ssh_new_keys" ]]; then
     mkdir -p "$ssh_dir"
-    mv "$tmp_file" "$ssh_dir/authorized_keys"
+    echo -n "$ssh_new_keys" > "$ssh_dir/authorized_keys"
     chown -R "$user_name:$main_group" "$ssh_dir"
     chmod 700 "$ssh_dir"
     chmod 600 "$ssh_dir/authorized_keys"
