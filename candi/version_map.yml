@@ -20,6 +20,7 @@ k8s:
     patch: 17
     cniVersion: 1.2.0
     bashible: *bashible
+    clusterautoscaler: v1.23.4
     ccm:
       openstack: v1.23.1
       yandex: v0.23.0
@@ -39,6 +40,7 @@ k8s:
     status: available
     patch: 16
     bashible: *bashible
+    clusterautoscaler: v1.24.3
     ccm:
       openstack: v1.24.2
       yandex: v0.24.0
@@ -58,6 +60,7 @@ k8s:
     status: available
     patch: 12
     bashible: *bashible
+    clusterautoscaler: v1.25.3
     ccm:
       openstack: v1.25.3
       yandex: v0.25.2
@@ -77,6 +80,7 @@ k8s:
     status: available
     patch: 7
     bashible: *bashible
+    clusterautoscaler: v1.26.2
     ccm:
       openstack: v1.26.1
       yandex: v0.26.1
@@ -96,6 +100,7 @@ k8s:
     status: preview
     patch: 4
     bashible: *bashible
+    clusterautoscaler: v1.27.0
     ccm:
       openstack: v1.27.1
       yandex: v0.27.0

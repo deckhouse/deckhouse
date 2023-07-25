@@ -1,0 +1,52 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.clusterautoscaler }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: {{ $.Images.BASE_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /src/cluster-autoscaler/cluster-autoscaler
+  to: /cluster-autoscaler
+  before: setup
+shell:
+  beforeInstall:
+  - apk add --no-cache ca-certificates
+docker:
+  ENV:
+    container: docker
+  ENTRYPOINT: ["/cluster-autoscaler"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare ">=1.27" $version }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+    {{- else if semverCompare ">=1.25" $version }}
+from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+    {{- else if semverCompare ">=1.24" $version }}
+from: {{ $.Images.BASE_GOLANG_18_ALPINE }}
+    {{- else if semverCompare ">=1.23" $version }}
+from: {{ $.Images.BASE_GOLANG_17_ALPINE }}
+    {{- else if semverCompare ">=1.21" $version }}
+from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
+    {{- end }}
+git:
+- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache linux-headers build-base git mercurial patch
+  install:
+  - mkdir /src
+  - cd /src
+  - wget https://github.com/gardener/autoscaler/archive/{{ $value.clusterautoscaler }}.tar.gz -O - | tar -xz --strip-components=1
+  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - cd cluster-autoscaler
+  - GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o cluster-autoscaler
+  {{- end }}
+{{- end }}
