@@ -44,7 +44,7 @@ shell:
   install:
   - mkdir /src
   - cd /src
-  - wget https://github.com/gardener/autoscaler/archive/{{ $value.clusterautoscaler }}.tar.gz -O - | tar -xz --strip-components=1
+  - wget https://github.com/gardener/autoscaler/archive/v{{ $version }}.{{ $value.clusterAutoscalerPatch }}.tar.gz -O - | tar -xz --strip-components=1
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - cd cluster-autoscaler
   - GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o cluster-autoscaler
