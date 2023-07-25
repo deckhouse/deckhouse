@@ -79,13 +79,13 @@ By using the following command, you can see the log's before applying the transf
 the first stage of processing according to the output of the `vector graph` command):
 
 ```bash
-vector tap d8_cluster_source_*
+vector tap 'cluster_logging_config/*'
 ```
 
 Transformed logs that are received at the input of the next channel components in the chain:
 
 ```bash
-vector tap d8_tf_*
+vector tap 'transform/*'
 ```
 
 You can then use the `vector vrl` interactive console to debug [VRL](https://vector.dev/docs/reference/vrl/) message remap rules.
