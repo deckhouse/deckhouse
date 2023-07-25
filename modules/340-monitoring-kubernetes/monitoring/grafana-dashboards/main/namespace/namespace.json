@@ -4096,10 +4096,10 @@
         "current": {
           "selected": true,
           "text": [
-            "StatefulSet"
+            "All"
           ],
           "value": [
-            "StatefulSet"
+            ".*"
           ]
         },
         "datasource": {

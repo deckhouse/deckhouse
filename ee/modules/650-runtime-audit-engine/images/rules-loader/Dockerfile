@@ -2,18 +2,30 @@ ARG BASE_SHELL_OPERATOR
 ARG BASE_UBUNTU
 FROM $BASE_SHELL_OPERATOR as shell-operator
 
+FROM $BASE_UBUNTU as falco-builder
+COPY requirements.txt requirements.txt
+RUN \
+    apt update -y \
+    && apt install -yq curl python3='3.10.6-1~22.04' python3-pip \
+    && pip3 install -r requirements.txt \
+    && curl -sSfL https://download.falco.org/packages/bin/x86_64/falco-0.35.1-x86_64.tar.gz | tar -C /tmp -xzvf - \
+    && cp -f /tmp/falco-0.35.1-x86_64/usr/bin/falco /usr/bin/falco \
+    && cp -rf /tmp/falco-0.35.1-x86_64/usr/share/falco /usr/share/falco \
+    # cleanup
+    && apt-get clean autoclean \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
+    && rm -rf /tmp/falco-*
+
 FROM $BASE_UBUNTU
 COPY --from=shell-operator /shell-operator /shell-operator
-COPY requirements.txt requirements.txt
+COPY --from=falco-builder /usr/bin/falco /usr/bin/falco
+COPY --from=falco-builder /usr/share/falco /usr/share/falco
+COPY --from=falco-builder /usr/local/lib/python3.10 /usr/local/lib/python3.10
 RUN \
     chmod +x /shell-operator \
     && apt update -y \
-    && apt install -yq curl gnupg \
-    && curl -s https://falco.org/repo/falcosecurity-packages.asc | apt-key add - \
-    && echo "deb https://download.falco.org/packages/deb stable main" | tee -a /etc/apt/sources.list.d/falcosecurity.list \
-    && apt update -y \
-    && apt install -yq tini falco='0.35.1' python3='3.10.6-1~22.04' python3-pip \
-    && pip3 install -r requirements.txt \
+    && apt install -yq curl tini python3='3.10.6-1~22.04' \
     # cleanup
     && apt-get clean autoclean \
     && apt-get autoremove -y \

@@ -39,7 +39,7 @@ Name                  Description
                       See available layouts inside the provider directory.
 \$PREFIX               A unique prefix to run several tests simultaneously.
 \$KUBERNETES_VERSION   A version of Kubernetes to install.
-\$CRI                  Docker or Containerd.
+\$CRI                  Containerd.
 \$DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
 \$DECKHOUSE_IMAGE_TAG  An image tag for deckhouse Deployment. A Git tag to
                       test prerelease and release images or pr<NUM> slug

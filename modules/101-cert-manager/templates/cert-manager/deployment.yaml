@@ -65,6 +65,9 @@ spec:
           - --acme-http01-solver-resource-limits-cpu=0
           - --acme-http01-solver-resource-request-cpu=0
           - "--acme-http01-solver-image={{ include "helm_lib_module_image" (list . "certManagerAcmeSolver") }}"
+          {{- if $.Values.certManager.maxConcurrentChallenges }}
+          - --max-concurrent-challenges={{ $.Values.certManager.maxConcurrentChallenges }}
+          {{- end }}
 {{- if (hasKey $.Values.global.modules "https") }}
 {{- if eq $.Values.global.modules.https.mode "CertManager" }}
           - --default-issuer-kind=ClusterIssuer

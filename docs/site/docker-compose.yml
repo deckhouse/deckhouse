@@ -33,3 +33,4 @@ services:
 networks:
   deckhouse:
     name: deckhouse
+    external: true

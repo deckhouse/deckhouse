@@ -11,6 +11,8 @@
  - **[dashboard]** Show username and groups. [#5128](https://github.com/deckhouse/deckhouse/pull/5128)
  - **[ingress-nginx]** Provide a High Availability setting for `ingress-nginx` module's control-plane components. [#5046](https://github.com/deckhouse/deckhouse/pull/5046)
  - **[istio]** Added a way to globally override resources for `istio-proxy`. [#4852](https://github.com/deckhouse/deckhouse/pull/4852)
+ - **[okmeter]** Mount `containerd` socket into `okmeter` DaemonSet Pods to meet the requirement for `containerd` monitoring feature. [#5304](https://github.com/deckhouse/deckhouse/pull/5304)
+    Rolling upgrade of the `okmeter` DaemonSet. This will cause a short disruption in node monitoring.
  - **[prometheus]** Improves the `TargetSampleLimitExceeded` alert by adding target labels. [#4795](https://github.com/deckhouse/deckhouse/pull/4795)
  - **[user-authn]** Add `Group` object and migration. The `groups` property of the `User` object becomes read-only.  Migration hook will create groups for all users based on this property. To continue to deploy `User` objects, users must remove groups from the manifest. [#4406](https://github.com/deckhouse/deckhouse/pull/4406)
 
@@ -27,6 +29,7 @@
  - **[cloud-provider-azure]** Add rbac Role to access d8-provider-cluster-configuration and d8-cloud-provider-discovery-data secrets. [#5291](https://github.com/deckhouse/deckhouse/pull/5291)
  - **[cloud-provider-azure]** Fix behavior of the `acceleratedNetworking` variable. [#5000](https://github.com/deckhouse/deckhouse/pull/5000)
  - **[cloud-provider-gcp]** Add rbac Role to access d8-provider-cluster-configuration and d8-cloud-provider-discovery-data secrets. [#5291](https://github.com/deckhouse/deckhouse/pull/5291)
+ - **[cloud-provider-openstack]** Fix creating long name of backup secret in state. [#5332](https://github.com/deckhouse/deckhouse/pull/5332)
  - **[cloud-provider-openstack]** Remove duplicates from additional security groups in cloud-data-discoverer. [#5279](https://github.com/deckhouse/deckhouse/pull/5279)
  - **[cloud-provider-openstack]** Fix migration from `openstack_blockstorage_volume_v2` to `openstack_blockstorage_volume_v3` for bastion hosts. [#5271](https://github.com/deckhouse/deckhouse/pull/5271)
  - **[cloud-provider-openstack]** Remove duplicates from images list in `cloud-data-discoverer`. [#5241](https://github.com/deckhouse/deckhouse/pull/5241)

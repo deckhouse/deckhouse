@@ -24,21 +24,13 @@ fi
 # This folder doesn't have time to create before we stop freshly, unconfigured kubelet during bootstrap (step 034_install_kubelet_and_his_friends.sh).
 mkdir -p /var/lib/kubelet
 
-# Check CRI type and set appropriated parameters.
-# cgroup default is `systemd`, only for docker cri we use `cgroupfs`.
-cgroup_driver="systemd"
-{{- if eq .cri "Containerd" }}
-# Overriding cgroup type from external config file
-if [ -f /var/lib/bashible/cgroup_config ]; then
-  cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
-fi
-{{- end }}
-
+cri_type="Containerd"
 {{- if eq .cri "NotManaged" }}
   {{- if .nodeGroup.cri.notManaged.criSocketPath }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
-for socket_path in /var/run/docker.sock /run/containerd/containerd.sock; do
+# TODO remove after removing support of kubernetes 1.23
+for socket_path in {{ if semverCompare "<1.24" .kubernetesVersion }}/var/run/docker.sock{{ end }} /run/containerd/containerd.sock; do
   if [[ -S "${socket_path}" ]]; then
     cri_socket_path="${socket_path}"
     break
@@ -51,19 +43,18 @@ if [[ -z "${cri_socket_path}" ]]; then
   exit 1
 fi
 
+  cri_type="NotManagedContainerd"
+# TODO remove after removing support of kubernetes 1.23
+  {{- if semverCompare "<1.24" .kubernetesVersion }}
 if grep -q "docker" <<< "${cri_socket_path}"; then
   cri_type="NotManagedDocker"
-else
-  cri_type="NotManagedContainerd"
 fi
-{{- else if eq .cri "Docker" }}
-cri_type="Docker"
-{{- else }}
-cri_type="Containerd"
+  {{- end }}
 {{- end }}
 
+# TODO remove after removing support of kubernetes 1.23
+{{- if semverCompare "<1.24" .kubernetesVersion }}
 if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
-  cgroup_driver="cgroupfs"
   criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
   if [ -d "${criDir}/overlay2" ]; then
     criDir="${criDir}/overlay2"
@@ -73,6 +64,7 @@ if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
     fi
   fi
 fi
+{{- end }}
 
 if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "NotManagedContainerd" ]]; then
   criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
@@ -169,7 +161,7 @@ authorization:
     cacheUnauthorizedTTL: 30s
 cgroupRoot: "/"
 cgroupsPerQOS: true
-cgroupDriver: ${cgroup_driver}
+cgroupDriver: cgroupfs
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}
 clusterDNS:

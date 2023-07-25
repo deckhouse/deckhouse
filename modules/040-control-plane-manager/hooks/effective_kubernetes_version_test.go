@@ -144,7 +144,7 @@ cloud:
   provider: OpenStack
 clusterDomain: cluster.local
 clusterType: Cloud
-defaultCRI: Docker
+defaultCRI: Containerd
 kind: ClusterConfiguration
 kubernetesVersion: "%s"
 podSubnetCIDR: 10.111.0.0/16

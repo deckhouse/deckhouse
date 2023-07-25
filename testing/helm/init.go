@@ -140,6 +140,23 @@ func GetModulesImages() map[string]interface{} {
 	}
 }
 
+func ManifestStringToUnstructed(doc string) *unstructured.Unstructured {
+	var t interface{}
+	err := yaml.Unmarshal([]byte(doc), &t)
+	if err != nil {
+		By("Failed file content:\n" + doc)
+	}
+	Expect(err).To(Not(HaveOccurred()))
+	if t == nil {
+		return nil
+	}
+	Expect(t).To(BeAssignableToTypeOf(map[string]interface{}{}))
+
+	unstructuredObj := &unstructured.Unstructured{}
+	unstructuredObj.SetUnstructuredContent(t.(map[string]interface{}))
+	return unstructuredObj
+}
+
 func (hec *Config) HelmRender(options ...Option) {
 	opts := &configOptions{}
 
@@ -182,20 +199,10 @@ func (hec *Config) HelmRender(options ...Option) {
 			}
 		}
 		for _, doc := range releaseutil.SplitManifests(manifests) {
-			var t interface{}
-			err = yaml.Unmarshal([]byte(doc), &t)
-
-			if err != nil {
-				By("Failed file content:\n" + doc)
-			}
-			Expect(err).To(Not(HaveOccurred()))
-			if t == nil {
+			unstructuredObj := ManifestStringToUnstructed(doc)
+			if unstructuredObj == nil {
 				continue
 			}
-			Expect(t).To(BeAssignableToTypeOf(map[string]interface{}{}))
-
-			var unstructuredObj unstructured.Unstructured
-			unstructuredObj.SetUnstructuredContent(t.(map[string]interface{}))
 
 			hec.objectStore.PutObject(unstructuredObj.Object, object_store.NewMetaIndex(
 				unstructuredObj.GetKind(),
