@@ -449,7 +449,7 @@ mount:
 ansible:
   beforeInstall:
     - apk:
-        name: git,ca-certificates,make
+        name: git,ca-certificates,make,linux-headers
         update_cache: yes
     - command: rm -rf /var/cache/apk/*
 
