@@ -65,6 +65,14 @@ func TestAddTrailingDot(t *testing.T) {
 			testURL:   "192.168.1.1:5000/deckhouse/fe",
 			resultURL: "192.168.1.1:5000/deckhouse/fe",
 		},
+		{
+			testURL:   "2001:db8:3333:4444:5555:6666:7777:8888/deckhouse/fe",
+			resultURL: "2001:db8:3333:4444:5555:6666:7777:8888/deckhouse/fe",
+		},
+		{
+			testURL:   "[2001:db8::1]:8080/deckhouse/fe",
+			resultURL: "[2001:db8::1]:8080/deckhouse/fe",
+		},
 	}
 
 	for _, tt := range tests {
