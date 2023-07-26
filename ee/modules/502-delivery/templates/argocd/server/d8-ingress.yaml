@@ -47,7 +47,7 @@ metadata:
 spec:
   certificateOwnerRef: false
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-argocd") }}
-  commonName: {{ include "helm_lib_module_public_domain" (list . "argocd") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "argocd") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "argocd") }}
   issuerRef:

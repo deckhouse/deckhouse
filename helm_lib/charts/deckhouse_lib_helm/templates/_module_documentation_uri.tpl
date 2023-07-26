@@ -9,7 +9,7 @@
      {{- $uri = printf "%s://%s%s" (include "helm_lib_module_uri_scheme" $context) (include "helm_lib_module_public_domain" (list $context "documentation")) $path_portion -}}
   {{- else }}
      {{- $uri = printf "%s%s" $default_doc_prefix $path_portion -}}
-  {{- end }}
+  {{- end -}}
 
   {{ $uri }}
 {{- end }}
