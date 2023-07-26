@@ -59,13 +59,8 @@ func NewClient(repo string, options ...Option) (Client, error) {
 		opt(opts)
 	}
 
-	u, err := addTrailingDot(repo)
-	if err != nil {
-		return nil, err
-	}
-
 	r := &client{
-		registryURL: u,
+		registryURL: repo,
 		options:     opts,
 	}
 
@@ -243,37 +238,3 @@ func parse(rawURL string) (*url.URL, error) {
 }
 
 var ipv4Regex = regexp.MustCompile(`((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}`)
-
-// addTrailingDot adds trailing dot to fqdn to prevent usage of search from resolv.conf
-func addTrailingDot(rawURL string) (string, error) {
-	u, err := parse(rawURL)
-	if err != nil {
-		return "", err
-	}
-
-	var fqdn, port string
-
-	parts := strings.Split(u.Host, ":")
-	l := len(parts)
-	switch {
-	case l > 2:
-		return "", fmt.Errorf("host shouldn't have more than one `:` separator: %s", u.Host)
-	case l == 2:
-		port = parts[1]
-		fallthrough
-	case l == 1:
-		fqdn = parts[0]
-	}
-
-	// if fqdn is not an ip address, add .
-	if !ipv4Regex.MatchString(fqdn) {
-		fqdn += "."
-	}
-
-	if port == "" {
-		u.Host = fqdn
-	} else {
-		u.Host = net.JoinHostPort(fqdn, port)
-	}
-	return strings.TrimPrefix(u.String(), "//"), nil
-}
