@@ -228,6 +228,19 @@ spec:
                         > **Внимание!** Параметр не влияет на работу, если тип CRI — `Docker`.
 
                         > **Внимание!** `Docker` считается **устаревшим**, не используйте его.
+                    resourceReservation:
+                      properties:
+                        mode:
+                          description: |
+                            Выбрать режим резервирования системных ресурсов:
+
+                            * `Off` — Отключить резервирование системных ресурсов.
+                            * `Auto` — Автоматически подсчитать резервирование через алгоритм, основанный на размере узла.
+                            * `Static` — Указать статические значения через поле `static`.
+
+                            Больше информации в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved).
+
+                            Обратите внимание, что Deckhouse не использует выделенную cgroup для резервирования ресурсов (флаг `-system-reserved-cgroup` не используется).
     - name: v1alpha2
       schema:
         openAPIV3Schema:
