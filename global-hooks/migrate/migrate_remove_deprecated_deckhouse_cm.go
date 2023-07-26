@@ -51,7 +51,7 @@ func applyDeckhouseConfigmapFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	var cm v1.ConfigMap
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return "", err
+		return false, err
 	}
 	for labelName := range cm.Labels {
 		if strings.Contains(labelName, "argocd") {
@@ -67,9 +67,11 @@ func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error
 		return nil
 	}
 
+	managedByArgoCD := deckhouseConfigSnap[0].(bool)
+
 	managedByArgoCDMetricValue := 0.0
-	if deckhouseConfigSnap[0].(bool) {
-		managedByArgoCDMetricValue = 0.0
+	if managedByArgoCD {
+		managedByArgoCDMetricValue = 1.0
 	}
 
 	input.MetricsCollector.Set(
@@ -82,7 +84,7 @@ func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error
 		metrics.WithGroup("migration_remove_deprecated_deckhouse_cm"),
 	)
 
-	if deckhouseConfigSnap[0].(float64) == 0.0 {
+	if !managedByArgoCD {
 		input.LogEntry.Info("Delete ConfigMap d8-system/deckhouse")
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "deckhouse")
 	}
