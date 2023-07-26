@@ -269,8 +269,8 @@ func (d *Discoverer) getAdditionalSecurityGroups(ctx context.Context, provider *
 
 	allPages, err := groups.List(client, groups.ListOpts{}).AllPages()
 	if err != nil {
-		if errors.Is(err, gophercloud.ErrDefault404{}) {
-			d.logger.Infoln("Cloud does not support security groups. Return empty array")
+		if _, ok := err.(gophercloud.ErrDefault404); ok {
+			d.logger.Infoln("Cloud does not support security groups. Returns empty array")
 			return make([]string, 0), nil
 		}
 
