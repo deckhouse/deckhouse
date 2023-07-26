@@ -42,7 +42,7 @@ metadata:
 `
 )
 
-var _ = Describe("Global hooks :: migration_remove_deprecated_deckhouse_cm ", func() {
+var _ = Describe("Global hooks :: migrate_remove_deprecated_deckhouse_cm ", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 
 	Context("Cluster with old deckhouse Configmap", func() {

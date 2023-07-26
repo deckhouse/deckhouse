@@ -55,10 +55,10 @@ func applyDeckhouseConfigmapFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	}
 	for labelName := range cm.Labels {
 		if strings.Contains(labelName, "argocd") {
-			return 1.0, nil
+			return true, nil
 		}
 	}
-	return 0.0, nil
+	return false, nil
 }
 
 func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error {
@@ -67,9 +67,14 @@ func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error
 		return nil
 	}
 
+	managedByArgoCDMetricValue := 0.0
+	if deckhouseConfigSnap[0].(bool) {
+		managedByArgoCDMetricValue = 0.0
+	}
+
 	input.MetricsCollector.Set(
 		"d8_deprecated_configmap_managed_by_argocd",
-		deckhouseConfigSnap[0].(float64),
+		managedByArgoCDMetricValue,
 		map[string]string{
 			"namespace": "d8-system",
 			"configmap": "deckhouse",
