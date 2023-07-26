@@ -197,6 +197,31 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
 ![The scheme of using the releaseChannel parameter during Deckhouse installation and operation](images/common/deckhouse-update-process.png)
 {% endofftopic %}
 
+### Deckhouse is not downloading new releases from the release channel?
+
+* Check that the update channel is [configured](/documentation/v1/deckhouse-faq.html#how-do-i-set-the-desired-release-channel).
+* Check if the registry name resolve is correct:
+
+Get the ip address of registry on one of the nodes:
+
+```shell
+getent ahosts registry.deckhouse.io
+46.4.145.194 STREAM registry.deckhouse.io.
+46.4.145.194 DGRAM
+46.4.145.194 RAW
+```  
+
+And in the Deckhouse pod:
+
+```shell
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
+46.4.145.194 STREAM registry.deckhouse.io
+46.4.145.194 DGRAM registry.deckhouse.io
+```
+
+If the received ip-addresses do not match, pay attention to the DNS settings on the node and especially to the search-domains written in `/etc/resolv.conf`. Search-domains are inherited by Deckhouse pod.
+If a wildcard record is configured in DNS for one of the search-domains, it can lead to incorrect resolving of registry ip-address.
+
 ## Air-gapped environment; working via proxy and third-party registry
 
 ### How do I configure Deckhouse to use a third-party registry?

@@ -198,6 +198,31 @@ Patch-релизы (например, обновление на версию `1.
 ![Схема использования параметра releaseChannel при установке и в процессе работы Deckhouse](images/common/deckhouse-update-process.png)
 {% endofftopic %}
 
+### Deckhouse не скачивает новые релизы канала обновлений?
+
+* Проверьте что канал обновлений [настроен](documentation/v1/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%B8%D1%82%D1%8C-%D0%B6%D0%B5%D0%BB%D0%B0%D0%B5%D0%BC%D1%8B%D0%B9-%D0%BA%D0%B0%D0%BD%D0%B0%D0%BB-%D0%BE%D0%B1%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B9).
+* Проверьте корректность резольва имени registry:
+
+Получите ip-адрес registry на одной из нод:
+
+```shell
+getent ahosts registry.deckhouse.io
+46.4.145.194    STREAM registry.deckhouse.io
+46.4.145.194    DGRAM
+46.4.145.194    RAW
+```  
+
+И в поде Deckhouse:
+
+```shell
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
+46.4.145.194    STREAM registry.deckhouse.io
+46.4.145.194    DGRAM  registry.deckhouse.io
+```
+
+Если полученные ip-адреса не совпадают, обратите внимание на настройки DNS на ноде а так же на search-домены прописанные в `/etc/resolv.conf`. Search-домены наследуются подом Deckhouse.
+Если в DNS настроена wildcard-запись на один из search-доменов это может привести к неверному резолву ip-адреса registry.
+
 ## Закрытое окружение, работа через proxy и сторонние registry
 
 ### Как установить Deckhouse из стороннего registry?

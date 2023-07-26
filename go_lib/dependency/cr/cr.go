@@ -25,7 +25,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -236,5 +235,3 @@ func parse(rawURL string) (*url.URL, error) {
 	}
 	return url.Parse("//" + rawURL)
 }
-
-var ipv4Regex = regexp.MustCompile(`((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}`)
