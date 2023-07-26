@@ -46,7 +46,12 @@ function put_user_ssh_key() {
   local ssh_keys="$4"
   local ssh_dir="$base_path/$user_name/.ssh"
   local ssh_new_keys="$(sed "s/\;/\n/g" <<< "$ssh_keys" | sort -u)"
-  local ssh_curent_keys="$(cat $ssh_dir/authorized_keys 2>/dev/null)"
+
+  if [[ -f "$ssh_dir/authorized_keys" ]]; then
+    local ssh_curent_keys="$(cat $ssh_dir/authorized_keys)"
+  else
+    local ssh_curent_keys=""
+  fi
 
   if [[ "${ssh_curent_keys}" != "${ssh_new_keys}" ]]; then
     mkdir -p "$ssh_dir"
