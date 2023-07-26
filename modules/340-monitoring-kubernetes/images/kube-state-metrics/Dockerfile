@@ -5,7 +5,7 @@ RUN apk add --no-cache make git patch
 
 # Build KSM from sources in case of future patching
 RUN mkdir -p /src/kube-state-metrics && \
-  git clone https://github.com/kubernetes/kube-state-metrics/ /src/kube-state-metrics
+  git clone --depth 1 --branch v2.6.0 https://github.com/kubernetes/kube-state-metrics/ /src/kube-state-metrics
 WORKDIR /src/kube-state-metrics
 RUN make build-local
 
