@@ -34,10 +34,16 @@ func Test_deckhouseEdition(t *testing.T) {
 		wantErr       error
 	}{
 		{
-			name:          "not EE edition",
+			name:          "not EE or FE edition",
 			editionInFile: "ce",
 			createFile:    true,
-			wantErr:       ErrEditionNotEE,
+			wantErr:       ErrNotEE,
+		},
+		{
+			name:          "FE edition",
+			editionInFile: "fe",
+			createFile:    true,
+			want:          "fe",
 		},
 		{
 			name:          "EE edition",
@@ -55,7 +61,7 @@ func Test_deckhouseEdition(t *testing.T) {
 			if tt.createFile {
 				err := os.WriteFile("/deckhouse/edition", []byte(tt.editionInFile), 0o755)
 				require.NoError(t, err)
-				// defer os.Remove("/deckhouse/edition")
+				defer os.Remove("/deckhouse/edition")
 			}
 
 			got, err := deckhouseEdition()

@@ -12,29 +12,135 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package versions_test
+package versions
 
 import (
 	"context"
 	"os"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/image"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/util"
-	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/versions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestVersionsComparer_ImagesToCopy(t *testing.T) {
-	fileDeckhouseRegistry := "fixtures/deckhouse-registry.tar.gz"
-	err := util.ExtractTarGz(fileDeckhouseRegistry)
+const (
+	fileDeckhouseRegistry = "fixtures/deckhouse-registry.tar.gz"
+)
+
+func TestVersionsComparer_calculateDiff(t *testing.T) {
+	fixtureRegistry := image.MustNewRegistry("file:"+fileDeckhouseRegistry, nil)
+	err := fixtureRegistry.Init()
 	require.NoError(t, err)
 
 	defer os.RemoveAll(util.TrimTarGzExt(fileDeckhouseRegistry))
 
-	fixtureRegistry := image.MustNewRegistry("file:fixtures/deckhouse-registry.tar.gz", nil)
+	type fields struct {
+		source         *image.RegistryConfig
+		dest           *image.RegistryConfig
+		destListOpts   []image.ListOption
+		sourceListOpts []image.ListOption
+		sourceCopyOpts []image.CopyOption
+	}
+	type args struct {
+		ctx        context.Context
+		minVersion string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    []semver.Version
+		wantErr error
+	}{
+		{
+			name: "latest version",
+			fields: fields{
+				source: fixtureRegistry,
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
+			},
+			args: args{
+				ctx:        context.Background(),
+				minVersion: "latest",
+			},
+			want: []semver.Version{
+				*semver.MustParse("v1.46.12"),
+				*semver.MustParse("v1.47.2"),
+				*semver.MustParse("v1.47.5"),
+				*semver.MustParse("v1.48.5"),
+				*semver.MustParse("v1.49.1"),
+			},
+		},
+		{
+			name: "no min version",
+			fields: fields{
+				source: fixtureRegistry,
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			want: []semver.Version{
+				*semver.MustParse("v1.44.3"),
+				*semver.MustParse("v1.45.10"),
+				*semver.MustParse("v1.46.12"),
+				*semver.MustParse("v1.47.2"),
+				*semver.MustParse("v1.47.5"),
+				*semver.MustParse("v1.48.5"),
+				*semver.MustParse("v1.49.1"),
+			},
+		},
+		{
+			name: "specific min version",
+			fields: fields{
+				source: fixtureRegistry,
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
+			},
+			args: args{
+				ctx:        context.Background(),
+				minVersion: "v1.45.5",
+			},
+			want: []semver.Version{
+				*semver.MustParse("v1.45.10"),
+				*semver.MustParse("v1.46.12"),
+				*semver.MustParse("v1.47.2"),
+				*semver.MustParse("v1.47.5"),
+				*semver.MustParse("v1.48.5"),
+				*semver.MustParse("v1.49.1"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			policyContext, err := image.NewPolicyContext()
+			require.NoError(t, err)
+			defer policyContext.Destroy()
+
+			v := NewVersionsComparer(
+				tt.fields.source, tt.fields.dest, tt.fields.destListOpts,
+				tt.fields.sourceListOpts, tt.fields.sourceCopyOpts,
+				policyContext, log.GetSilentLogger(),
+			)
+
+			got, err := v.calculateDiff(tt.args.ctx, tt.args.minVersion)
+			require.ErrorIs(t, err, tt.wantErr)
+			if err == nil {
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestVersionsComparer_ImagesToCopy(t *testing.T) {
+	fixtureRegistry := image.MustNewRegistry("file:"+fileDeckhouseRegistry, nil)
+	err := fixtureRegistry.Init()
+	require.NoError(t, err)
+
+	defer os.RemoveAll(util.TrimTarGzExt(fileDeckhouseRegistry))
+
 	type fields struct {
 		source         *image.RegistryConfig
 		dest           *image.RegistryConfig
@@ -259,7 +365,7 @@ func TestVersionsComparer_ImagesToCopy(t *testing.T) {
 				ctx:        context.Background(),
 				minVersion: "v1.41",
 			},
-			wantErr: versions.ErrNoVersion,
+			wantErr: ErrNoVersion,
 		},
 	}
 
@@ -269,7 +375,7 @@ func TestVersionsComparer_ImagesToCopy(t *testing.T) {
 			require.NoError(t, err)
 			defer policyContext.Destroy()
 
-			v := versions.NewVersionsComparer(
+			v := NewVersionsComparer(
 				tt.fields.source, tt.fields.dest, tt.fields.destListOpts,
 				tt.fields.sourceListOpts, tt.fields.sourceCopyOpts,
 				policyContext, log.GetSilentLogger(),

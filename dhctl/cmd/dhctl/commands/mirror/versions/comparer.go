@@ -204,12 +204,11 @@ func (v *VersionsComparer) calculateDiff(ctx context.Context, minVersion string)
 		return nil, err
 	}
 
-	result := make([]semver.Version, 0, len(deckhouseVersions)+len(releaseMetaVersions))
 	for _, v := range deckhouseVersions {
-		if f := releaseMetaVersions[v]; !f {
-			result = append(result, v)
-		}
+		releaseMetaVersions[v] = true
 	}
+
+	result := make([]semver.Version, 0, len(releaseMetaVersions))
 	for v := range releaseMetaVersions {
 		result = append(result, v)
 	}

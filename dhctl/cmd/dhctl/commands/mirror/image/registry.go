@@ -71,7 +71,7 @@ func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig) (*Regis
 	}, nil
 }
 
-func (r *RegistryConfig) Prepare() error {
+func (r *RegistryConfig) Init() error {
 	switch r.Transport() {
 	case FileTransport:
 		p := util.AddTarGzExt(r.Path())

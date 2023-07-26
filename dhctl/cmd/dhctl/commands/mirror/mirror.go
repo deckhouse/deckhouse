@@ -34,6 +34,7 @@ import (
 
 const (
 	eeEdition = "ee"
+	feEdition = "fe"
 
 	destinationHelp = `destination for images to write (archive file: "file:<file path>.tar.gz" or registry: "docker://<registry repositroy").`
 	sourceHelp      = `source for deckhouse images (archive file: "file:<file path>.tar.gz" or registry: "docker://<registry repositroy").`
@@ -42,8 +43,8 @@ const (
 )
 
 var (
-	ErrEditionNotEE = errors.New("dhctl mirror can be used only in EE deckhouse edition")
-	ErrNoLicense    = errors.New("license is required to download Deckhouse Enterprise Edition. Please provide it with CLI argument --license")
+	ErrNotEE     = errors.New("dhctl mirror can be used only in deckhouse EE")
+	ErrNoLicense = errors.New("license is required to download Deckhouse Enterprise Edition. Please provide it with CLI argument --license")
 
 	versionLatestRE = fmt.Sprintf(`^(%s|latest)$`, versions.VersionRE)
 )
@@ -100,7 +101,7 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		defer dest.Close()
 
 		for _, reg := range []*image.RegistryConfig{source, dest} {
-			if err := reg.Prepare(); err != nil {
+			if err := reg.Init(); err != nil {
 				return err
 			}
 		}
@@ -165,8 +166,8 @@ func deckhouseEdition() (string, error) {
 	}
 
 	edition := strings.TrimSpace(string(content))
-	if edition != eeEdition {
-		return "", ErrEditionNotEE
+	if edition != eeEdition && edition != feEdition {
+		return "", ErrNotEE
 	}
 
 	return edition, nil
