@@ -214,4 +214,7 @@ spec:
         emptyDir: {}
       - name: reloader-run
         emptyDir: {}
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
 {{- end }}

@@ -72,11 +72,12 @@ type KubernetesAnnotationFields struct {
 type rawKubernetesLogs struct {
 	commonSource
 
-	Labels           string                     `json:"extra_label_selector,omitempty"`
-	Fields           string                     `json:"extra_field_selector,omitempty"`
-	NamespaceLabels  string                     `json:"extra_namespace_label_selector,omitempty"`
-	AnnotationFields KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
-	GlobCooldownMs   int                        `json:"glob_minimum_cooldown_ms,omitempty"`
+	Labels             string                     `json:"extra_label_selector,omitempty"`
+	Fields             string                     `json:"extra_field_selector,omitempty"`
+	NamespaceLabels    string                     `json:"extra_namespace_label_selector,omitempty"`
+	AnnotationFields   KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
+	GlobCooldownMs     int                        `json:"glob_minimum_cooldown_ms,omitempty"`
+	UserAPIServerCache bool                       `json:"use_apiserver_cache,omitempty"`
 }
 
 func (k *rawKubernetesLogs) BuildSources() []apis.LogSource {
@@ -149,11 +150,12 @@ func (k *Kubernetes) newRawSource(name string, fields []string) *rawKubernetesLo
 			Type: k.Type,
 			Name: name,
 		},
-		Fields:           strings.Join(fields, ","),
-		Labels:           k.labelSelector,
-		NamespaceLabels:  k.namespaceLabelSelector,
-		AnnotationFields: k.annotationFields,
-		GlobCooldownMs:   k.globCooldownMs,
+		Fields:             strings.Join(fields, ","),
+		Labels:             k.labelSelector,
+		NamespaceLabels:    k.namespaceLabelSelector,
+		AnnotationFields:   k.annotationFields,
+		GlobCooldownMs:     k.globCooldownMs,
+		UserAPIServerCache: true,
 	}
 }
 

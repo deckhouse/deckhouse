@@ -53,6 +53,20 @@ func CleanUpAfterSourceTransform() *DynamicTransform {
 	}
 }
 
+func LocalTimezoneAfterSourceTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "local_timezone",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.LocalTimezoneRule.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
+
 type LogSourceConfig struct {
 	SourceType string
 
@@ -70,6 +84,7 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 	}
 
 	transforms = append(transforms, CleanUpAfterSourceTransform())
+	transforms = append(transforms, LocalTimezoneAfterSourceTransform())
 
 	multilineTransforms, err := CreateMultiLineTransforms(cfg.MultilineType, cfg.MultilineCustomConfig)
 	if err != nil {
