@@ -29,9 +29,10 @@ import (
 )
 
 type Discoverer struct {
-	logger   *log.Entry
-	authOpts gophercloud.AuthOptions
-	region   string
+	logger       *log.Entry
+	authOpts     gophercloud.AuthOptions
+	region       string
+	moduleConfig []byte
 }
 
 func NewDiscoverer(logger *log.Entry) *Discoverer {
@@ -45,10 +46,13 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		logger.Fatalf("Cannnot get OS_REGION env")
 	}
 
+	moduleConfig := os.Getenv("MODULE_CONFIG")
+
 	return &Discoverer{
-		logger:   logger,
-		region:   region,
-		authOpts: authOpts,
+		logger:       logger,
+		region:       region,
+		authOpts:     authOpts,
+		moduleConfig: []byte(moduleConfig),
 	}
 }
 
@@ -82,9 +86,16 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
 	var discoveryData OpenstackCloudDiscoveryData
-	err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
+
+	if len(cloudProviderDiscoveryData) == 0 {
+		cloudProviderDiscoveryData = d.moduleConfig
+	}
+
+	if len(cloudProviderDiscoveryData) > 0 {
+		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
+		}
 	}
 
 	provider, err := newProvider(d.authOpts, d.logger)
@@ -258,6 +269,11 @@ func (d *Discoverer) getAdditionalSecurityGroups(ctx context.Context, provider *
 
 	allPages, err := groups.List(client, groups.ListOpts{}).AllPages()
 	if err != nil {
+		if _, ok := err.(gophercloud.ErrDefault404); ok {
+			d.logger.Infoln("Cloud does not support security groups. Returns empty array")
+			return make([]string, 0), nil
+		}
+
 		return nil, fmt.Errorf("failed to list security groups: %v", err)
 	}
 
