@@ -25,6 +25,9 @@ func TestParse(t *testing.T) {
 		"registry.deckhouse.io/deckhouse/fe",
 		"registry.deckhouse.io:5123/deckhouse/fe",
 		"192.168.1.1/deckhouse/fe",
+		"192.168.1.1:8080/deckhouse/fe",
+		"2001:db8:3333:4444:5555:6666:7777:8888/deckhouse/fe",
+		"[2001:db8::1]:8080/deckhouse/fe",
 		"192.168.1.1:5123/deckhouse/fe",
 	}
 
