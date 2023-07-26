@@ -161,6 +161,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const name = 'Build and test for release';
 
@@ -247,6 +248,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Go Generate';
@@ -332,6 +334,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Render workflow';
@@ -626,6 +629,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Build FE';
@@ -921,6 +925,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Build EE';
@@ -1216,6 +1221,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Build CE';
@@ -1334,6 +1340,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Doc web build';
@@ -1452,6 +1459,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Main web build';
@@ -1566,6 +1574,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Tests';
@@ -1680,6 +1689,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Matrix tests';
@@ -1803,6 +1813,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Dhctl Tests';
@@ -1926,6 +1937,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'GolangCI Lint';
@@ -2049,6 +2061,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'OpenAPI Test Cases';
@@ -2242,6 +2255,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Web links test';
@@ -2365,6 +2379,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Validators';
@@ -2486,6 +2501,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,one-line';
             const name = 'Deploy latest doc and site';
@@ -2549,6 +2565,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'workflow,final,restore-one-line';
             const name = 'Build and test for release';

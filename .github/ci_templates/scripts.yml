@@ -6,6 +6,7 @@
   uses: {!{ index (ds "actions") "actions/github-script" }!}
   with:
     github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+    retries: 3
     script: |
       const name = '{!{ $workflowName }!}';
 
@@ -41,6 +42,7 @@ Use statusConfig to set status source and render options.
   uses: {!{ index (ds "actions") "actions/github-script" }!}
   with:
     github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+    retries: 3
     script: |
       const statusConfig = '{!{ $statusConfig }!}';
       const name = '{!{ $name }!}';
