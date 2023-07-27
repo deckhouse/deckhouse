@@ -95,9 +95,12 @@ func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error
 		metrics.WithGroup("migration_remove_deprecated_deckhouse_cm"),
 	)
 
-	if !cm.ManagedByArgoCD {
+	if cm.ManagedByArgoCD {
+		input.LogEntry.Info("d8-system/deckhouse ConfigMap managed by Argo CD. Skip deletion.")
+	} else {
 		input.LogEntry.Info("Delete ConfigMap d8-system/deckhouse.")
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "deckhouse")
 	}
+
 	return nil
 }
