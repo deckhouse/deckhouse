@@ -32,7 +32,20 @@ function get_bootstrap() {
 bootstrap_object="$(get_bootstrap)"
 export bootstrap_object
 
-if ! bootstrap_script="$(python <<"EOF"
+python_binary=""
+
+if command -v python3 >/dev/null 2>&1; then
+  python_binary="python3"
+elif command -v python2 >/dev/null 2>&1; then
+  python_binary="python2"
+elif command -v python >/dev/null 2>&1; then
+  python_binary="python"
+else
+  echo "Python not found, exiting..."
+  exit 1
+fi
+
+if ! bootstrap_script="$("$python_binary" <<"EOF"
 from __future__ import print_function
 import json
 import os
