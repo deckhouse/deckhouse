@@ -1,4 +1,4 @@
-ARG BASE_ALPINE
+ARG BASE_DISTROLESS
 ARG BASE_GOLANG_19_ALPINE
 
 # Based on https://github.com/nabokihms/events_exporter/blob/main/Dockerfile
@@ -20,8 +20,7 @@ RUN apk add --no-cache make git && \
     make build
 
 
-FROM $BASE_ALPINE
-RUN apk add --no-cache --update ca-certificates
+FROM $BASE_DISTROLESS
 COPY --from=artifact /usr/local/src/events_exporter/bin/events_exporter /usr/local/bin/events_exporter
 
 # nobody
