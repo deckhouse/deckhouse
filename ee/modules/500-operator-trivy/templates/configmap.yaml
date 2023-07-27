@@ -18,6 +18,9 @@ data:
   {{- with (include "nodeSelector" . | fromJson) }}
   scanJob.nodeSelector: {{ .nodeSelector | toJson | quote }}
   {{- end }}
+  # Skip upmeter probes in vulnerability scanning
+  # https://github.com/deckhouse/deckhouse/blob/v1.49.0/modules/500-upmeter/images/upmeter/pkg/probe/checker/k8s_statefulset.go#L138
+  skipResourceByLabels: upmeter-group,upmeter-probe
 ---
 apiVersion: v1
 kind: ConfigMap
