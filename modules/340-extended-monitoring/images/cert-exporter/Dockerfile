@@ -1,5 +1,5 @@
-ARG BASE_ALPINE
-FROM $BASE_ALPINE as artifact
+ARG BASE_DISTROLESS
+FROM $BASE_DISTROLESS as artifact
 
 ARG VERSION=2.0.1
 ARG COMMIT_REF=d6f0dcb883004146ca3453a9e2d0c66514afe327
@@ -10,9 +10,8 @@ WORKDIR /cert-exporter
 RUN git checkout "${COMMIT_REF}"
 RUN make
 
-FROM $BASE_ALPINE
+FROM $BASE_DISTROLESS
 
-RUN apk add --no-cache ca-certificates
 USER 1000
 COPY --from=artifact /cert-exporter/cert-exporter /cert-exporter
 
