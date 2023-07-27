@@ -181,7 +181,7 @@ const openDiagram = function () {
 
 function changeHandler(e) {
   e.style.color = "#02003E";
-  if (e.value === "whats_app" || e.value === "telegram") {
+  if (e.value === "telegram") {
     $('.nickname.hidden').removeClass('hidden');
   } else {
     $('.nickname').addClass('hidden');
