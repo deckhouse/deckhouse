@@ -100,7 +100,7 @@ k8s:
     status: preview
     patch: 4
     bashible: *bashible
-    clusterAutoscalerPatch: 0
+    clusterAutoscalerPatch: '0'
     ccm:
       openstack: v1.27.1
       yandex: v0.27.0

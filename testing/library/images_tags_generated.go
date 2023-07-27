@@ -300,6 +300,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"clusterAutoscaler124":     "imageHash-nodeManager-clusterAutoscaler124",
 		"clusterAutoscaler125":     "imageHash-nodeManager-clusterAutoscaler125",
 		"clusterAutoscaler126":     "imageHash-nodeManager-clusterAutoscaler126",
+		"clusterAutoscaler127":     "imageHash-nodeManager-clusterAutoscaler127",
 		"earlyOom":                 "imageHash-nodeManager-earlyOom",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
 	},
