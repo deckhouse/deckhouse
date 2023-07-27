@@ -47,18 +47,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, migrationRemoveDeprecatedConfigmapDeckhouse)
 
+type ConfigMapFiltered struct {
+	ManagedByArgoCD bool
+	Finalizers      []string
+}
+
 func applyDeckhouseConfigmapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var cm v1.ConfigMap
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	for labelName := range cm.Labels {
 		if strings.Contains(labelName, "argocd") {
-			return true, nil
+			return ConfigMapFiltered{ManagedByArgoCD: true, Finalizers: cm.Finalizers}, nil
 		}
 	}
-	return false, nil
+	return ConfigMapFiltered{ManagedByArgoCD: false, Finalizers: cm.Finalizers}, nil
 }
 
 func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error {
@@ -67,7 +72,7 @@ func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error
 		return nil
 	}
 
-	cm := deckhouseConfigSnap[0].(v1.ConfigMap)
+	cm := deckhouseConfigSnap[0].(ConfigMapFiltered)
 	for _, finalizer := range cm.Finalizers {
 		if finalizer == "foregroundDeletion" {
 			input.LogEntry.Info("ConfigMap d8-system/deckhouse has \"foregroundDeletion\" finalizer. Skip delition.")
@@ -75,10 +80,8 @@ func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error
 		}
 	}
 
-	managedByArgoCD := deckhouseConfigSnap[0].(bool)
-
 	managedByArgoCDMetricValue := 0.0
-	if managedByArgoCD {
+	if cm.ManagedByArgoCD {
 		managedByArgoCDMetricValue = 1.0
 	}
 
@@ -92,7 +95,7 @@ func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error
 		metrics.WithGroup("migration_remove_deprecated_deckhouse_cm"),
 	)
 
-	if !managedByArgoCD {
+	if !cm.ManagedByArgoCD {
 		input.LogEntry.Info("Delete ConfigMap d8-system/deckhouse")
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "deckhouse")
 	}
