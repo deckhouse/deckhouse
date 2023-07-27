@@ -238,6 +238,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.23';
 
@@ -623,6 +624,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.23';
@@ -691,6 +693,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.24';
 
@@ -1076,6 +1079,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.24';
@@ -1144,6 +1148,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.25';
 
@@ -1529,6 +1534,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.25';
@@ -1597,6 +1603,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.26';
 
@@ -1982,6 +1989,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.26';
@@ -2050,6 +2058,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.27';
 
@@ -2435,6 +2444,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
             const name = 'e2e: Yandex.Cloud, Containerd, Kubernetes 1.27';
@@ -2483,6 +2493,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'workflow,final,no-skipped,restore-separate';
             const name = 'e2e: Yandex.Cloud';
