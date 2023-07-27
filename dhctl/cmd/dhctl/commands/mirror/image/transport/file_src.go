@@ -16,6 +16,7 @@ package transport
 
 import (
 	"context"
+	"os"
 
 	"github.com/containers/image/v5/types"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/util"
@@ -42,14 +43,14 @@ func newImageSource(ctx context.Context, sys *types.SystemContext, ref fileRefer
 }
 
 // Reference returns the reference used to set up this source, _as specified by the user_
-// (not as the image itself, or its underlying storage, claims).  This can be used e.g. to determine which public keys are trusted for this image.
+// (not as the image itself, or its underlying storage, claims). This can be used e.g. to determine which public keys are trusted for this image.
 func (s *fileImageSource) Reference() types.ImageReference {
 	return s.ref
 }
 
 // Close removes resources associated with an initialized ImageSource, if any.
 func (s *fileImageSource) Close() error {
-	if err := s.ref.close(); err != nil {
+	if err := os.RemoveAll(s.ref.ImageReference.StringWithinTransport()); err != nil {
 		return err
 	}
 	return s.ImageSource.Close()

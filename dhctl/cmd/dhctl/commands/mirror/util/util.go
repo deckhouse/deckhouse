@@ -41,10 +41,10 @@ func HasTarGzSuffix(s string) bool {
 	return strings.HasSuffix(s, tarGzExt)
 }
 
-func CompressDir(dirname string) error {
+func CompressDir(dirname string, deleteAfterCompress bool) error {
 	return NewTarGzWriter(AddTarGzExt(dirname), func(w *tar.Writer) error {
 		walkFn := func(path string, info os.FileInfo, err error) error {
-			if info.Mode().IsDir() || err != nil {
+			if info.IsDir() || err != nil {
 				return err
 			}
 			// Because of scoping we can reference the external root_directory variable
@@ -68,10 +68,15 @@ func CompressDir(dirname string) error {
 				return err
 			}
 
-			_, err = io.Copy(w, fr)
+			if _, err = io.Copy(w, fr); err != nil {
+				return err
+			}
+			return os.RemoveAll(path)
+		}
+		if err := filepath.Walk(dirname, walkFn); err != nil {
 			return err
 		}
-		return filepath.Walk(dirname, walkFn)
+		return os.RemoveAll(dirname)
 	})
 }
 

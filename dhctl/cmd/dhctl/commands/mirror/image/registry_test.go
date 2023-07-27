@@ -99,11 +99,10 @@ func createImageFiles(basePath string) error {
 			return err
 		}
 	}
-	return util.CompressDir(basePath)
+	return util.CompressDir(basePath, true)
 }
 
 func createImage(imgDir string) error {
-	defer os.RemoveAll(imgDir)
 	if err := os.MkdirAll(imgDir, 0o755); err != nil {
 		return err
 	}
@@ -114,7 +113,7 @@ func createImage(imgDir string) error {
 		}
 	}
 
-	return util.CompressDir(imgDir)
+	return util.CompressDir(imgDir, true)
 }
 func createFile(imgDir, filename string) error {
 	f, err := os.Create(filepath.Join(imgDir, filename))

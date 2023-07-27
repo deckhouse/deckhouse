@@ -86,8 +86,7 @@ func (r *RegistryConfig) Init() error {
 func (r *RegistryConfig) Commit() error {
 	switch r.Transport() {
 	case FileTransport:
-		p := util.TrimTarGzExt(r.Path())
-		return util.CompressDir(p)
+		return util.CompressDir(util.TrimTarGzExt(r.Path()), true)
 	}
 	return nil
 }

@@ -43,9 +43,6 @@ func (d *fileImageDestination) Reference() types.ImageReference {
 
 // Close removes resources associated with an initialized ImageDestination, if any.
 func (d *fileImageDestination) Close() error {
-	if err := d.ref.close(); err != nil {
-		return nil
-	}
 	return d.ImageDestination.Close()
 }
 
@@ -57,7 +54,7 @@ func (d *fileImageDestination) Close() error {
 // - Uploaded data MAY be visible to others before Commit() is called
 // - Uploaded data MAY be removed or MAY remain around if Close() is called without Commit() (i.e. rollback is allowed but not guaranteed)
 func (d *fileImageDestination) Commit(ctx context.Context, unparsedToplevel types.UnparsedImage) error {
-	if err := util.CompressDir(util.TrimTarGzExt(d.ref.StringWithinTransport())); err != nil {
+	if err := util.CompressDir(util.TrimTarGzExt(d.ref.StringWithinTransport()), true); err != nil {
 		return err
 	}
 	return d.ImageDestination.Commit(ctx, unparsedToplevel)

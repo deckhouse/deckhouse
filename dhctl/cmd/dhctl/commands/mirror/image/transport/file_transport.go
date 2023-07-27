@@ -16,7 +16,6 @@ package transport
 
 import (
 	"context"
-	"os"
 
 	"github.com/containers/image/v5/directory"
 	"github.com/containers/image/v5/image"
@@ -111,8 +110,4 @@ func (ref fileReference) NewImageSource(ctx context.Context, sys *types.SystemCo
 // The caller must call .Close() on the returned ImageDestination.
 func (ref fileReference) NewImageDestination(ctx context.Context, sys *types.SystemContext) (types.ImageDestination, error) {
 	return newImageDestination(ctx, sys, ref)
-}
-
-func (ref fileReference) close() error {
-	return os.RemoveAll(ref.ImageReference.StringWithinTransport())
 }

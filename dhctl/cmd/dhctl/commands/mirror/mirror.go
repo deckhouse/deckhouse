@@ -98,7 +98,6 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		defer dest.Close()
 
 		for _, reg := range []*image.RegistryConfig{source, dest} {
 			if err := reg.Init(); err != nil {
