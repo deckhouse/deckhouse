@@ -67,6 +67,14 @@ func migrationRemoveDeprecatedConfigmapDeckhouse(input *go_hook.HookInput) error
 		return nil
 	}
 
+	cm := deckhouseConfigSnap[0].(v1.ConfigMap)
+	for _, finalizer := range cm.Finalizers {
+		if finalizer == "foregroundDeletion" {
+			input.LogEntry.Info("ConfigMap d8-system/deckhouse has \"foregroundDeletion\" finalizer. Skip delition.")
+			return nil
+		}
+	}
+
 	managedByArgoCD := deckhouseConfigSnap[0].(bool)
 
 	managedByArgoCDMetricValue := 0.0
