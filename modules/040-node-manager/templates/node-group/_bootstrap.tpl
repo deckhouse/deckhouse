@@ -32,7 +32,7 @@ function get_bootstrap() {
 bootstrap_object="$(get_bootstrap)"
 export bootstrap_object
 
-if ! bootstrap_script="$(python3 <<"EOF"
+if ! bootstrap_script="$(python <<"EOF"
 from __future__ import print_function
 import json
 import os
