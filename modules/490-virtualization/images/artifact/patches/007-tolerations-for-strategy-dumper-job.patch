@@ -1,12 +1,20 @@
-diff --git a/pkg/virt-operator/kubevirt.go b/pkg/virt-operator/kubevirt.go
-index aad02e027..9ed4f3573 100644
---- a/pkg/virt-operator/kubevirt.go
-+++ b/pkg/virt-operator/kubevirt.go
-@@ -745,6 +745,19 @@ func (c *KubeVirtController) generateInstallStrategyJob(infraPlacement *v1.Compo
- 					},
- 				},
- 				Spec: k8sv1.PodSpec{
-+					Tolerations: []k8sv1.Toleration{{Operator: k8sv1.TolerationOpExists}},
+commit e4023dd5abc177a262ad45b19c278996182309d7
+Author: Pavel Tishkov <pavel.tishkov@flant.com>
+Date:   Thu Jul 27 16:10:38 2023 +0300
+
+    add tolerations for strategy dumper job
+    
+    Signed-off-by: Pavel Tishkov <pavel.tishkov@flant.com>
+
+diff --git a/pkg/virt-operator/strategy_job.go b/pkg/virt-operator/strategy_job.go
+index e2838fb7b..a5ab93436 100644
+--- a/pkg/virt-operator/strategy_job.go
++++ b/pkg/virt-operator/strategy_job.go
+@@ -61,6 +61,19 @@ func (c *KubeVirtController) generateInstallStrategyJob(infraPlacement *v1.Compo
+ 					ServiceAccountName: "kubevirt-operator",
+ 					RestartPolicy:      k8sv1.RestartPolicyNever,
+ 					ImagePullSecrets:   config.GetImagePullSecrets(),
++					Tolerations:        []k8sv1.Toleration{{Operator: k8sv1.TolerationOpExists}},
 +					Affinity: &k8sv1.Affinity{PodAffinity: &k8sv1.PodAffinity{
 +						RequiredDuringSchedulingIgnoredDuringExecution: []k8sv1.PodAffinityTerm{{
 +							TopologyKey: "kubernetes.io/hostname",
@@ -19,6 +27,6 @@ index aad02e027..9ed4f3573 100644
 +							},
 +						}},
 +					}},
- 					ServiceAccountName: "kubevirt-operator",
- 					RestartPolicy:      k8sv1.RestartPolicyNever,
- 					ImagePullSecrets:   config.GetImagePullSecrets(),
+ 
+ 					Containers: []k8sv1.Container{
+ 						{

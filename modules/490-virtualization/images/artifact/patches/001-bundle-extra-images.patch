@@ -1,8 +1,14 @@
+commit 93101fbe5845bddd17584ce32164f9ac9657698c
+Author: Pavel Tishkov <pavel.tishkov@flant.com>
+Date:   Wed Jul 26 21:07:23 2023 +0300
+
+    build extra images
+
 diff --git a/BUILD.bazel b/BUILD.bazel
-index 5bbf600f0..23df261dc 100644
+index fa966fb94..9f281b54d 100644
 --- a/BUILD.bazel
 +++ b/BUILD.bazel
-@@ -216,6 +216,9 @@ container_bundle(
+@@ -219,6 +219,9 @@ container_bundle(
          "$(container_prefix)/$(image_prefix)virt-handler:$(container_tag)": "//cmd/virt-handler:virt-handler-image",
          "$(container_prefix)/$(image_prefix)virt-launcher:$(container_tag)": "//cmd/virt-launcher:virt-launcher-image",
          "$(container_prefix)/$(image_prefix)virt-operator:$(container_tag)": "//cmd/virt-operator:virt-operator-image",
