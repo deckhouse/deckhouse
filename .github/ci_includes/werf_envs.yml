@@ -9,3 +9,11 @@ DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss
 GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
 # </template: werf_envs>
 {!{- end -}!}
+
+{!{ define "git_source_envs" }!}
+# <template: git_source_envs>
+SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
+SOURCE_REPO_AUTH_USER: "${{secrets.SOURCE_REPO_AUTH_USER}}"
+SOURCE_REPO_AUTH_PASSWORD: "${{secrets.SOURCE_REPO_AUTH_PASSWORD}}"
+# </template: git_source_envs>
+{!{- end -}!}

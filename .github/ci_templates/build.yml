@@ -72,9 +72,6 @@ steps:
 {!{- else }!}
       CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
 {!{- end }!}
-      SOURCE_REPO: ${{secrets.SOURCE_REPO}}
-      SOURCE_REPO_AUTH_USER: ${{secrets.SOURCE_REPO_AUTH_USER}}
-      SOURCE_REPO_AUTH_PASSWORD: ${{secrets.SOURCE_REPO_AUTH_PASSWORD}}
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
       REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
