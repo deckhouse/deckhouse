@@ -14,9 +14,11 @@ ARG TARGETVARIANT=""
 ENV GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT}
 ARG GOPROXY
 
+ARG SOURCE_REPO
+
 ENV GOARCH=amd64
 RUN apk add --no-cache make git && \
-    git clone --branch v0.0.4 --depth 1 https://github.com/nabokihms/events_exporter.git . && \
+    git clone --branch v0.0.4 --depth 1 ${SOURCE_REPO-https://github.com}/nabokihms/events_exporter.git . && \
     make build
 
 
