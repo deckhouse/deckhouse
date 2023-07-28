@@ -198,30 +198,50 @@ Patch-релизы (например, обновление на версию `1.
 ![Схема использования параметра releaseChannel при установке и в процессе работы Deckhouse](images/common/deckhouse-update-process.png)
 {% endofftopic %}
 
-### Deckhouse не скачивает новые релизы канала обновлений?
+### Что делать, если Deckhouse не получает обновлений из канала обновлений?
 
-* Проверьте что канал обновлений [настроен](documentation/v1/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%B8%D1%82%D1%8C-%D0%B6%D0%B5%D0%BB%D0%B0%D0%B5%D0%BC%D1%8B%D0%B9-%D0%BA%D0%B0%D0%BD%D0%B0%D0%BB-%D0%BE%D0%B1%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B9).
-* Проверьте корректность резольва имени registry:
+* Проверьте, что [настроен](#как-установить-желаемый-канал-обновлений) нужный канал обновлений.
+* Проверьте корректность разрешения DNS-имени хранилища образов Deckhouse.
 
-Получите ip-адрес registry на одной из нод:
+  Получите и сравните IP-адреса хранилища образов Deckhouse (`registry.deckhouse.io`) на одном из узлов и в поде Deckhouse. Они должны совпадать.
 
-```shell
-getent ahosts registry.deckhouse.io
-46.4.145.194    STREAM registry.deckhouse.io
-46.4.145.194    DGRAM
-46.4.145.194    RAW
-```  
+  Пример получения IP-адреса хранилища образов Deckhouse на узле:
 
-И в поде Deckhouse:
+  ```shell
+  $ getent ahosts registry.deckhouse.io
+  46.4.145.194    STREAM registry.deckhouse.io
+  46.4.145.194    DGRAM
+  46.4.145.194    RAW
+  ```
 
-```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
-46.4.145.194    STREAM registry.deckhouse.io
-46.4.145.194    DGRAM  registry.deckhouse.io
-```
+  Пример получения IP-адреса хранилища образов Deckhouse в поде Deckhouse:
+  
+  ```shell
+  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
+  46.4.145.194    STREAM registry.deckhouse.io
+  46.4.145.194    DGRAM  registry.deckhouse.io
+  ```
+  
+  Если полученные IP-адреса не совпадают, то проверьте настройки DNS на узле. В частности, обратите внимание на список доменов в параметре search файла `/etc/resolv.conf` (он влияет на разрешение имен в поде Deckhouse). Если в параметре search файла `/etc/resolv.conf` указан домен, в котором настроено разрешение wildcard-записей, то это может привести к неверному разрешению IP-адреса хранилища образов Deckhouse (см.пример).
+  
+{% offtopic title="Пример настроек DNS, которые могут привести к ошибкам в разрешении IP-адреса хранилища образов Deckhouse..." %}
 
-Если полученные ip-адреса не совпадают, обратите внимание на настройки DNS на ноде а так же на search-домены прописанные в `/etc/resolv.conf`. Search-домены наследуются подом Deckhouse.
-Если в DNS настроена wildcard-запись на один из search-доменов это может привести к неверному резолву ip-адреса registry.
+Далее описан пример, при котором настройки DNS приводят к различному результату при разрешении имен на узле и в поде Kubernetes:
+- Пример файла `/etc/resolv.conf` на узле:
+
+  ```text
+  nameserver 10.0.0.10
+  search company.my
+  ```
+
+  > Обратите внимание, что по умолчанию на узле параметр `ndot` равен 1 (`options ndots:1`). Но в подах Kubernetes параметр `ndot` равен **5**. Таким образом, на узле и в поде логика разрешения DNS-имен имеющих в имени 5 точек и менее — различается.
+
+- В DNS-зоне `company.my` настроено разрешение wildcard-записей `*.company.my` в адрес `10.0.0.100`. Т.е. любое DNS-имя в зоне `company.my`, для которого нет конкретной записи в DNS, разрешается в адрес `10.0.0.100`.
+
+Тогда, с учетом параметра `search`, указанного в файле `/etc/resolv.conf`, при обращении на адрес `registry.deckhouse.io` на узле система попробует получить IP-адрес для имени `registry.deckhouse.io` (т.к. считает его полностью определенным учитывая настройку по умолчанию параметра `options ndots:1`).
+
+При обращении же на адрес `registry.deckhouse.io` **из пода** Kubernetes, с учетом параметра `options ndots:5` (используемого в Kubernetes по умолчанию) и параметра `search` система попробует первоначально получить IP-адрес для имени `registry.deckhouse.io.company.my`. Имя `registry.deckhouse.io.company.my` разрешится в IP-адрес `10.0.0.100`, т.к. в DNS-зоне `company.my` настроено разрешение wildcard-записей `*.company.my` в адрес `10.0.0.100`. Это приведет к невозможности подключения к хосту `registry.deckhouse.io`, что приведет к невозможности скачать информацию о доступных обновлениях Deckhouse.  
+{% endofftopic %}
 
 ## Закрытое окружение, работа через proxy и сторонние registry
 
