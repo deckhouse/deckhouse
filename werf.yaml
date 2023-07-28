@@ -705,6 +705,7 @@ dependencies:
   {{- $_ := set $ctx "Images" $Root.Images }}
   {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
   {{- $_ := set $ctx "TF" $Root.TF }}
+  {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
 
 ---
 {{ include "module_image_template" $ctx }}
