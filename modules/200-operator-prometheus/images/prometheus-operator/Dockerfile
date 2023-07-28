@@ -1,7 +1,7 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_18_ALPINE
+FROM quay.io/prometheus-operator/prometheus-operator:v0.62.0@sha256:83974739969e6f5f1672d7efb3fb710717beda26a5b69f1f9b9d89a8d4f00bcf as artifact
 
-FROM $BASE_GOLANG_18_ALPINE as artifact
+FROM $BASE_DISTROLESS
 
 RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch v0.62.0 https://github.com/prometheus-operator/prometheus-operator.git /prometheus-operator
