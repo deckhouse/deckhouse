@@ -45,6 +45,22 @@
         autocomplete="off" required="required" />
     </div>
     <div class="form__row">
+      <select name="preferred_contact" id="contact-select" class="textfield" required="required" onchange="changeHandler(this)">
+        <option value="" disabled selected hidden>Предпочтительный способ связи</option>
+        <option value="phone">Телефон</option>
+        <option value="email">E-mail</option>
+        <option value="whats_app">Whats app</option>
+        <option value="telegram">Telegram</option>
+      </select>
+    </div>
+    <div class="form__row nickname hidden">
+      <input
+        class="textfield"
+        type="text" name="nickname"
+        placeholder="Никнейм" aria-label="Никнейм"
+        autocomplete="off" />
+    </div>
+    <div class="form__row">
       <label class="license-checkbox">
         <input
           class="checkbox"
