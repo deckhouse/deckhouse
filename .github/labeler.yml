@@ -1,0 +1,5 @@
+area/cli:
+- 'dhctl/*'
+
+area/api-change:
+- '**/openapi/*'
