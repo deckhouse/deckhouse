@@ -5,7 +5,7 @@ ARG BASE_GOLANG_19_ALPINE
 FROM $BASE_GOLANG_19_ALPINE as artifact
 WORKDIR /src
 ENV GOARCH=amd64
-RUN apk add patch
+RUN apk add patch git
 COPY patches/001-support-legacy-annotation.patch /src/
 RUN git clone --depth 1 --branch v0.5.0 https://github.com/deckhouse/k8s-image-availability-exporter.git .
 RUN patch -p1 < 001-support-legacy-annotation.patch
