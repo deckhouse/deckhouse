@@ -29,6 +29,20 @@ function get_bootstrap() {
   done
 }
 
+function install_curl() {
+  case "$1" in
+    altlinux|astra)
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update && apt-get install curl -y
+      ;;
+  esac
+}
+
+until install_curl "$bundle"; do
+  echo "Error installing curl package"
+  sleep 10
+done
+
 bootstrap_object="$(get_bootstrap)"
 export bootstrap_object
 
