@@ -7,9 +7,9 @@ WORKDIR /src
 ENV GOARCH=amd64
 RUN apk add patch
 COPY patches/001-support-legacy-annotation.patch /src/
-RUN git clone --branch v0.5.0 --depth 1 https://github.com/deckhouse/k8s-image-availability-exporter.git /src && \
-    patch -p1 < 001-support-legacy-annotation.patch && \
-    CGO_ENABLED=0 go build -a -ldflags '-s -w -extldflags "-static"' -o /k8s-image-availability-exporter main.go
+RUN git clone --branch v0.5.0 --depth 1 https://github.com/deckhouse/k8s-image-availability-exporter.git /src
+RUN patch -p1 < 001-support-legacy-annotation.patch
+RUN CGO_ENABLED=0 go build -a -ldflags '-s -w -extldflags "-static"' -o /k8s-image-availability-exporter main.go
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /k8s-image-availability-exporter /k8s-image-availability-exporter
