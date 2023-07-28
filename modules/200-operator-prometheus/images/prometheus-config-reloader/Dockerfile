@@ -6,8 +6,4 @@ FROM $BASE_DISTROLESS
 
 COPY --from=artifact /bin/prometheus-config-reloader /bin/
 
-RUN chown nobody:nogroup /bin/prometheus-config-reloader
-
-USER nobody
-
 ENTRYPOINT ["/bin/prometheus-config-reloader"]
