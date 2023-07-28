@@ -10,7 +10,7 @@ data:
     auth_enabled: false
 
     server:
-      http_listen_port: 3100
+      http_listen_port: 3099
 
     limits_config:
       retention_period: {{ .Values.loki.retentionPeriodHours | default 168 }}h

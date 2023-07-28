@@ -92,6 +92,15 @@ properties:
     description: |
       Loki resources management options.
     default: {}
+    oneOf:
+      - properties:
+          mode:
+            enum: [ "VPA" ]
+          vpa: {}
+      - properties:
+          mode:
+            enum: [ "Static" ]
+          static: {}
     x-examples:
       - mode: VPA
         vpa:
