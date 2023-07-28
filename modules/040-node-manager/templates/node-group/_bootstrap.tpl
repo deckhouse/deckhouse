@@ -64,7 +64,17 @@ function get_bootstrap_wget() {
   done
 }
 
-bootstrap_object="$(get_bootstrap_$http_client_binary)"
+bootstrap_object=""
+
+if [ "$http_client_binary" == "curl" ]; then
+  bootstrap_object="$(get_bootstrap_curl)"
+elif [ "$http_client_binary" == "wget" ]; then
+  bootstrap_object="$(get_bootstrap_wget)"
+else
+  echo "Invalid http_client_binary value, exiting..."
+  exit 1
+fi
+
 export bootstrap_object
 
 if ! bootstrap_script="$("$python_binary" <<"EOF"
