@@ -24,9 +24,9 @@ gitWorktree:
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
 ---
 # Source repo  settings
-{{- $_ := set . "SOURCE_REPO" (env "SOURCE_REPO" | gefault "https://github.com") }}
-{{- $_ := set . "SOURCE_REPO_AUTH_USER" (env "SOURCE_REPO_AUTH_USER" | gefault "") }}
-{{- $_ := set . "SOURCE_REPO_AUTH_PASSWORD" (env "SOURCE_REPO_AUTH_PASSWORD" | gefault "") }}
+{{- $_ := set . "SOURCE_REPO" (env "SOURCE_REPO" | default "https://github.com") }}
+{{- $_ := set . "SOURCE_REPO_AUTH_USER" (env "SOURCE_REPO_AUTH_USER" | default "") }}
+{{- $_ := set . "SOURCE_REPO_AUTH_PASSWORD" (env "SOURCE_REPO_AUTH_PASSWORD" | default "") }}
 ---
 {{- define "base components" }}
   - name: "Install jo"
