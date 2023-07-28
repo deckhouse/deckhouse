@@ -5,8 +5,4 @@ FROM $BASE_DISTROLESS
 
 COPY --from=artifact /bin/operator /bin/
 
-RUN chown nobody:nogroup /bin/operator
-
-USER nobody
-
 ENTRYPOINT ["/bin/operator"]
