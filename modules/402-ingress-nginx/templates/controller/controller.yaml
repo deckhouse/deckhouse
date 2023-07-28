@@ -12,11 +12,17 @@
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
+{{- $gracePeriod := 0 }}
 {{- $defaultGracePeriod := 60 }}
 {{- if $loadBalancer }}
   {{- $defaultGracePeriod = 120 }}
 {{- else if eq $crd.spec.inlet "HostWithFailover" }}
   {{- $defaultGracePeriod = 0 }}
+{{- end }}
+{{- if kindIs "invalid" $crd.spec.waitLoadBalancerOnTerminating }}
+  {{- $gracePeriod = $defaultGracePeriod }}
+{{- else }}
+  {{- $gracePeriod = $crd.spec.waitLoadBalancerOnTerminating | int }}
 {{- end }}
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
@@ -186,7 +192,7 @@ spec:
         - --publish-service=d8-ingress-nginx/{{ $crd.name }}-load-balancer
         {{- end }}
         # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
-        - --shutdown-grace-period={{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod }}
+        - --shutdown-grace-period={{ $gracePeriod }}
         {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
         # we don't disable it if validation is disabled because it will lead to deployment rollout
         - --validating-webhook=:8443
@@ -329,6 +335,12 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-protobuf-metrics
                   name: ingress-nginx
+        {{- if gt $gracePeriod 0 }}
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/bin/sh", "-c", "/bin/sleep {{ $gracePeriod }}" ]
+        {{- end }}
         ports:
         - containerPort: 10354
           name: https-metrics
