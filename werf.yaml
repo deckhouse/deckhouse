@@ -25,8 +25,6 @@ gitWorktree:
 ---
 # Source repo  settings
 {{- $_ := set . "SOURCE_REPO" (env "SOURCE_REPO" | default "https://github.com") }}
-{{- $_ := set . "SOURCE_REPO_AUTH_USER" (env "SOURCE_REPO_AUTH_USER" | default "") }}
-{{- $_ := set . "SOURCE_REPO_AUTH_PASSWORD" (env "SOURCE_REPO_AUTH_PASSWORD" | default "") }}
 ---
 {{- define "base components" }}
   - name: "Install jo"
@@ -658,8 +656,6 @@ args:
   BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
   SOURCE_REPO: {{ .SOURCE_REPO }}
-  SOURCE_REPO_AUTH_USER: {{ .SOURCE_REPO_AUTH_USER }}
-  SOURCE_REPO_AUTH_PASSWORD: {{ .SOURCE_REPO_AUTH_PASSWORD }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless" "common/iptables-wrapper")) }}
 dependencies:
 - image: common/distroless
