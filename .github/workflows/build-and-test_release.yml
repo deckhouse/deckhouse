@@ -470,6 +470,9 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          SOURCE_REPO: ${{secrets.SOURCE_REPO}}
+          SOURCE_REPO_AUTH_USER: ${{secrets.SOURCE_REPO_AUTH_USER}}
+          SOURCE_REPO_AUTH_PASSWORD: ${{secrets.SOURCE_REPO_AUTH_PASSWORD}}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -766,6 +769,9 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          SOURCE_REPO: ${{secrets.SOURCE_REPO}}
+          SOURCE_REPO_AUTH_USER: ${{secrets.SOURCE_REPO_AUTH_USER}}
+          SOURCE_REPO_AUTH_PASSWORD: ${{secrets.SOURCE_REPO_AUTH_PASSWORD}}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1062,6 +1068,9 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          SOURCE_REPO: ${{secrets.SOURCE_REPO}}
+          SOURCE_REPO_AUTH_USER: ${{secrets.SOURCE_REPO_AUTH_USER}}
+          SOURCE_REPO_AUTH_PASSWORD: ${{secrets.SOURCE_REPO_AUTH_PASSWORD}}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
