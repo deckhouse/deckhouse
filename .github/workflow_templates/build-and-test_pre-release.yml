@@ -137,4 +137,5 @@ jobs:
 {!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "preproduction" | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_release_doc) | strings.Indent 6 }!}
