@@ -36,10 +36,10 @@ test_metric{container="prometheus-pushgateway", env="dev", exported_job="myapp",
     instance="10.244.1.155:9091", job="prometheus-pushgateway", pushgateway="prometheus-pushgateway", tier="cluster"} 3.14
 ```
 
-{% alert level="warning" %} Название job (в примере — `myapp`) должно быть уникальным в Prometheus, чтобы не испортить существующие графики и алерты. Получить список всех занятых job можно следующим запросом: {% raw %}`count({__name__=~".+"}) by (job)`.{% endraw %}
+{% alert %} Название job (в примере — `myapp`) будет доступно в Prometheus в лейбле `exported_job`, а не `job` (т.к. лейбл `job` уже занят в Prometheus, он переименовывается при приеме метрики от PushGateway).
 {% endalert %}
 
-{% alert %} Название job (в примере — `myapp`) будет доступно в Prometheus в лейбле `exported_job`, а не `job` (т.к. лейбл `job` уже занят в Prometheus, он переименовывается при приеме метрики от PushGateway).
+{% alert %} Возможно вам потребуется получить всех имеющихся job'ы, для выбора уникального названия (чтобы не испортить существующие графики и алерты). Получить список всех имеющихся job можно следующим запросом: {% raw %}`count({__name__=~".+"}) by (job)`.{% endraw %}
 {% endalert %}
 
 ## Удаление метрик

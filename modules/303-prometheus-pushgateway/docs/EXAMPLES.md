@@ -36,10 +36,10 @@ test_metric{container="prometheus-pushgateway", env="dev", exported_job="myapp",
     instance="10.244.1.155:9091", job="prometheus-pushgateway", pushgateway="prometheus-pushgateway", tier="cluster"} 3.14
 ```
 
-{% alert level="warning" %} The job name (`myapp` in the example) must be unique in Prometheus to preserve the consistency of the existing graphs and alerts. Use the following query to get a list of all existing jobs: {% raw %}`count({__name__=~".+"}) by (job)`.{% endraw %}
+{% alert %} The job name (`myapp` in the example) will be available in Prometheus in the label `exported_job`, and not `job` (because the label `job` already exists in Prometheus and is renamed when receiving metrics from PushGateway).
 {% endalert %}
 
-{% alert %} The job name (`myapp` in the example) will be available in Prometheus in the label `exported_job`, and not `job` (because the label `job` already exists in Prometheus and is renamed when receiving metrics from PushGateway).
+{% alert %} You may need to get all available job names to choose a unique name (in order not to spoil existing graphs and alerts). Use the following query to get a list of all existing jobs: {% raw %}`count({__name__=~".+"}) by (job)`.{% endraw %}
 {% endalert %}
 
 ## Deleting metrics
