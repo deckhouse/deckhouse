@@ -9,8 +9,8 @@ ingress:
 resources:
   requests:
     memory:
-      _default: 20M
-      production: 50M
+      _default: 30M
+      web-production: 50M
 
 vrouter:
   defaultGroup: "v1"
