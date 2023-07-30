@@ -192,7 +192,7 @@ steps:
 {!{- end -}!}
 {!{- if eq $env "preproduction" -}!}
   {!{- $ns = "deckhouse-web-production" -}!}
-  {!{- $webEnv = printf "web-production" -}!}
+  {!{- $webEnv = "web-production" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
 {!{- end -}!}
 
@@ -223,12 +223,18 @@ steps:
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
-{!{- if eq $env "production" -}!}
+{!{- if or (eq $env "production") (eq $env "preproduction") -}!}
   {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
 {!{- end -}!}
+{!{- if eq $env "preproduction" -}!}
+  {!{- $ns = "deckhouse-web-production" -}!}
+  {!{- $webEnv = "web-production" -}!}
+  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
+{!{- end -}!}
+
 {!{- $siteDomainMap := printf "{\"en\" : \"%s\", \"ru\" : \"%s\"}" $url $urlRu -}!}
 
 # <template: deploy_site_template>
