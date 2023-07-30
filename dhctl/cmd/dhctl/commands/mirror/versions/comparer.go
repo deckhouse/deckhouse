@@ -116,6 +116,152 @@ func (v *VersionsComparer) ImagesToCopy(ctx context.Context, minVersion string) 
 	return images, nil
 }
 
+func (v *VersionsComparer) calculateDiff(ctx context.Context, minVersion string) ([]semver.Version, error) {
+	sourceVersions, err := v.sourceVersions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	destVersions, err := v.destVersions(ctx, sourceVersions, minVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	deckhouseVersions, err := compareVersions(sourceVersions, destVersions, minVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	releaseMetaVersions, err := v.releaseMetadataVersions(ctx, destVersions)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range deckhouseVersions {
+		releaseMetaVersions[v] = true
+	}
+
+	result := make([]semver.Version, 0, len(releaseMetaVersions))
+	for v := range releaseMetaVersions {
+		result = append(result, v)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		lv, rv := result[i], result[j]
+		return lv.LessThan(&rv)
+	})
+
+	return result, nil
+}
+
+func (v *VersionsComparer) sourceVersions(ctx context.Context) (latestVersions, error) {
+	sourceVersions, err := findDeckhouseVersions(ctx, v.source, v.sourceListOpts...)
+	if err != nil {
+		return nil, err
+	}
+	if len(sourceVersions) < 1 {
+		return nil, fmt.Errorf("no deckhouse versions from source found")
+	}
+	return sourceVersions, nil
+}
+
+func (v *VersionsComparer) destVersions(ctx context.Context, sourceVersions latestVersions, minVersion string) (latestVersions, error) {
+	if v.dest.Transport() == image.DockerTransport {
+		return findDeckhouseVersions(ctx, v.dest, v.destListOpts...)
+	}
+	return make(latestVersions), nil
+}
+
+func findDeckhouseVersions(ctx context.Context, registry *image.RegistryConfig, opts ...image.ListOption) (latestVersions, error) {
+	tags, err := registry.ListTags(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	versions := make(latestVersions)
+	for _, tag := range tags {
+		if !versionsRegexp.MatchString(tag) {
+			continue
+		}
+
+		if _, err := versions.SetString(tag); err != nil {
+			return nil, err
+		}
+	}
+	return versions, nil
+}
+
+func compareVersions(sourceVersions, destVersions latestVersions, minVersion string) (latestVersions, error) {
+	var destOldestWithPatch *semver.Version
+	switch len(destVersions) {
+	case 0:
+		var err error
+		destOldestWithPatch, err = deckhouseMinVersion(sourceVersions, minVersion)
+		if err != nil {
+			return nil, fmt.Errorf("min version: %w", err)
+		}
+	default:
+		destOldestWithPatch = destVersions.Oldest()
+	}
+
+	sourceLatestWithPatch := sourceVersions.Latest()
+	resultVersions := make(latestVersions)
+	for version := *parseFromInt(destOldestWithPatch.Major(), destOldestWithPatch.Minor(), 0); !version.GreaterThan(sourceLatestWithPatch); version = version.IncMinor() {
+		sourceVersion, err := sourceVersions.Get(version)
+		if err != nil {
+			return nil, fmt.Errorf("version %s from source: %w", version, err)
+		}
+
+		destVersion, err := destVersions.Get(version)
+		switch {
+		case (err == nil && !destVersion.Equal(sourceVersion)) || errors.Is(err, ErrNoVersion):
+			if _, err := resultVersions.Set(*sourceVersion); err != nil {
+				return nil, err
+			}
+		case err != nil:
+			return nil, fmt.Errorf("version %s from destination: %w", version, err)
+		}
+	}
+	return resultVersions, nil
+}
+
+func (v *VersionsComparer) releaseMetadataVersions(ctx context.Context, destVersions latestVersions) (map[semver.Version]bool, error) {
+	releaseMetaVersions := make(map[semver.Version]bool, len(releaseChannels))
+	for _, release := range releaseChannels {
+		releaseVersion, err := v.fetchReleaseMetadataDeckhouseVersion(ctx, release)
+		if err != nil {
+			return nil, err
+		}
+
+		dv, err := destVersions.Get(*releaseVersion)
+		if err != nil && !errors.Is(err, ErrNoVersion) {
+			return nil, err
+		}
+
+		if (errors.Is(err, ErrNoVersion) || !dv.Equal(releaseVersion)) && !releaseMetaVersions[*releaseVersion] {
+			releaseMetaVersions[*releaseVersion] = true
+		}
+	}
+	return releaseMetaVersions, nil
+}
+
+func (v *VersionsComparer) fetchReleaseMetadataDeckhouseVersion(ctx context.Context, release string) (*semver.Version, error) {
+	img := image.NewImageConfig(v.source, release, "", "release-channel")
+	contents, err := fileFromImage(ctx, img, "version.json", v.policyContext, v.sourceCopyOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	var meta struct {
+		Version string `json:"version"`
+	}
+
+	if err := json.Unmarshal(contents, &meta); err != nil {
+		return nil, err
+	}
+	return parse(meta.Version)
+}
+
 func (v *VersionsComparer) modulesImages(ctx context.Context, diff []semver.Version) ([]*image.ImageConfig, error) {
 	modulesImagesFile := make(map[semver.Version]map[string]string)
 	for _, tag := range diff {
@@ -181,153 +327,6 @@ func (v *VersionsComparer) modulesImagesForVersion(ctx context.Context, deckhous
 		}
 	}
 	return result, nil
-}
-
-func (v *VersionsComparer) calculateDiff(ctx context.Context, minVersion string) ([]semver.Version, error) {
-	sourceVersions, err := v.sourceVersions(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	destVersions, err := v.destVersions(ctx, sourceVersions, minVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	deckhouseVersions, err := compareVersions(sourceVersions, destVersions, minVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	releaseMetaVersions, err := v.releaseMetadataVersions(ctx, destVersions)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, v := range deckhouseVersions {
-		releaseMetaVersions[v] = true
-	}
-
-	result := make([]semver.Version, 0, len(releaseMetaVersions))
-	for v := range releaseMetaVersions {
-		result = append(result, v)
-	}
-
-	sort.Slice(result, func(i, j int) bool {
-		lv, rv := result[i], result[j]
-		return lv.LessThan(&rv)
-	})
-
-	return result, nil
-}
-
-func (v *VersionsComparer) sourceVersions(ctx context.Context) (latestVersions, error) {
-	sourceVersions, err := findDeckhouseVersions(ctx, v.source, v.sourceListOpts...)
-	if err != nil {
-		return nil, err
-	}
-	if len(sourceVersions) < 1 {
-		return nil, fmt.Errorf("no deckhouse versions from source found")
-	}
-	return sourceVersions, nil
-}
-
-func (v *VersionsComparer) destVersions(ctx context.Context, sourceVersions latestVersions, minVersion string) (latestVersions, error) {
-	if v.dest.Transport() == image.DockerTransport {
-		return findDeckhouseVersions(ctx, v.dest, v.destListOpts...)
-	}
-	return make(latestVersions), nil
-}
-
-func (v *VersionsComparer) releaseMetadataVersions(ctx context.Context, destVersions latestVersions) (map[semver.Version]bool, error) {
-	releaseMetaVersions := make(map[semver.Version]bool, len(releaseChannels))
-	for _, release := range releaseChannels {
-		releaseVersion, err := v.fetchReleaseMetadataDeckhouseVersion(ctx, release)
-		if err != nil {
-			return nil, err
-		}
-
-		dv, err := destVersions.Get(*releaseVersion)
-		if err != nil && !errors.Is(err, ErrNoVersion) {
-			return nil, err
-		}
-
-		if (errors.Is(err, ErrNoVersion) || !dv.Equal(releaseVersion)) && !releaseMetaVersions[*releaseVersion] {
-			releaseMetaVersions[*releaseVersion] = true
-		}
-	}
-	return releaseMetaVersions, nil
-}
-
-// fetchReleaseMetadataDeckhouseVersion copies image to local directory and untar it's layers to find version.json and returns "version" key found in it
-func (v *VersionsComparer) fetchReleaseMetadataDeckhouseVersion(ctx context.Context, release string) (*semver.Version, error) {
-	img := image.NewImageConfig(v.source, release, "", "release-channel")
-	contents, err := fileFromImage(ctx, img, "version.json", v.policyContext, v.sourceCopyOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	var meta struct {
-		Version string `json:"version"`
-	}
-
-	if err := json.Unmarshal(contents, &meta); err != nil {
-		return nil, err
-	}
-	return parse(meta.Version)
-}
-
-func compareVersions(sourceVersions, destVersions latestVersions, minVersion string) (latestVersions, error) {
-	var destOldestWithPatch *semver.Version
-	switch len(destVersions) {
-	case 0:
-		var err error
-		destOldestWithPatch, err = deckhouseMinVersion(sourceVersions, minVersion)
-		if err != nil {
-			return nil, fmt.Errorf("min version: %w", err)
-		}
-	default:
-		destOldestWithPatch = destVersions.Oldest()
-	}
-
-	sourceLatestWithPatch := sourceVersions.Latest()
-	resultVersions := make(latestVersions)
-	for version := *parseFromInt(destOldestWithPatch.Major(), destOldestWithPatch.Minor(), 0); !version.GreaterThan(sourceLatestWithPatch); version = version.IncMinor() {
-		sourceVersion, err := sourceVersions.Get(version)
-		if err != nil {
-			return nil, fmt.Errorf("version %s from source: %w", version, err)
-		}
-
-		destVersion, err := destVersions.Get(version)
-		switch {
-		case (err == nil && !destVersion.Equal(sourceVersion)) || errors.Is(err, ErrNoVersion):
-			if _, err := resultVersions.Set(*sourceVersion); err != nil {
-				return nil, err
-			}
-		case err != nil:
-			return nil, fmt.Errorf("version %s from destination: %w", version, err)
-		}
-	}
-	return resultVersions, nil
-}
-
-func findDeckhouseVersions(ctx context.Context, registry *image.RegistryConfig, opts ...image.ListOption) (latestVersions, error) {
-	tags, err := registry.ListTags(ctx, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	versions := make(latestVersions)
-	for _, tag := range tags {
-		if !versionsRegexp.MatchString(tag) {
-			continue
-		}
-
-		if _, err := versions.SetString(tag); err != nil {
-			return nil, err
-		}
-	}
-	return versions, nil
 }
 
 func deckhouseMinVersion(sourceVersions latestVersions, minVersion string) (*semver.Version, error) {
