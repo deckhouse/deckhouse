@@ -9,7 +9,7 @@ WORKDIR /loki/
 RUN make loki
 
 FROM $BASE_DISTROLESS
-COPY --from=artifact /loki/loki /usr/bin
+COPY --from=artifact /loki/cmd/loki/loki /usr/bin
 RUN mkdir -p /loki
 
 EXPOSE 3100
