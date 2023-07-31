@@ -1,9 +1,16 @@
-# Based on https://github.com/prometheus-operator/prometheus-operator/blob/v0.62.0/cmd/prometheus-config-reloader/Dockerfile
 ARG BASE_DISTROLESS
-FROM quay.io/prometheus-operator/prometheus-config-reloader:v0.62.0@sha256:267b12235d10a810e49b2d40a3deda6256f92690b26997a199601a47283821b9 as artifact
+ARG BASE_GOLANG_18_ALPINE
+
+FROM $BASE_GOLANG_18_ALPINE as artifact
+
+RUN apk add --no-cache make git
+RUN git clone --depth 1 --branch v0.62.0 https://github.com/prometheus-operator/prometheus-operator.git /prometheus-operator
+WORKDIR /prometheus-operator/
+
+RUN make prometheus-config-reloader
 
 FROM $BASE_DISTROLESS
 
-COPY --from=artifact /bin/prometheus-config-reloader /bin/
+COPY --from=artifact /prometheus-operator/prometheus-config-reloader /bin/
 
 ENTRYPOINT ["/bin/prometheus-config-reloader"]
