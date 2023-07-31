@@ -1,7 +1,7 @@
 ARG BASE_GOLANG_19_ALPINE
 ARG BASE_DISTROLESS
 
-FROM $BASE_GOLANG_20_ALPINE as artifact
+FROM $BASE_GOLANG_19_ALPINE as artifact
 
 RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch v2.7.3 https://github.com/grafana/loki.git /loki
@@ -12,5 +12,7 @@ FROM $BASE_DISTROLESS
 COPY --from=artifact /loki/loki /usr/bin
 WORKDIR /loki/
 
+USER nobody
 EXPOSE 3100
+
 ENTRYPOINT ["/usr/bin/loki"]
