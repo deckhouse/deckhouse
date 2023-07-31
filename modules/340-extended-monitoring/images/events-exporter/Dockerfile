@@ -19,7 +19,7 @@ ENV SOURCE_REPO=${SOURCE_REPO}
 
 ENV GOARCH=amd64
 RUN apk add --no-cache make git && \
-    git clone --branch v0.0.4 --depth 1 ${SOURCE_REPO:-https://github.com}/nabokihms/events_exporter.git . && \
+    git clone --branch v0.0.4 --depth 1 ${SOURCE_REPO}/nabokihms/events_exporter.git . && \
     make build
 
 
