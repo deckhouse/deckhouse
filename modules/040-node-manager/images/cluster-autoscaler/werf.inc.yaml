@@ -35,7 +35,7 @@ shell:
   - GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o cluster-autoscaler
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: common/distroless
+fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/cluster-autoscaler/cluster-autoscaler
