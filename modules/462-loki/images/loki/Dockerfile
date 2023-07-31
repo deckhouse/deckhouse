@@ -8,7 +8,7 @@ RUN git clone --depth 1 --branch v2.7.3 https://github.com/grafana/loki.git /lok
 WORKDIR /loki/
 RUN make loki
 
-FROM $BASE_ALPINE
+FROM $BASE_DISTROLESS
 COPY --from=artifact /loki/loki /usr/bin
 RUN mkdir -p /loki
 
