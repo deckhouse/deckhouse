@@ -29,6 +29,7 @@
  - **[cloud-provider-azure]** Add rbac Role to access d8-provider-cluster-configuration and d8-cloud-provider-discovery-data secrets. [#5291](https://github.com/deckhouse/deckhouse/pull/5291)
  - **[cloud-provider-azure]** Fix behavior of the `acceleratedNetworking` variable. [#5000](https://github.com/deckhouse/deckhouse/pull/5000)
  - **[cloud-provider-gcp]** Add rbac Role to access d8-provider-cluster-configuration and d8-cloud-provider-discovery-data secrets. [#5291](https://github.com/deckhouse/deckhouse/pull/5291)
+ - **[cloud-provider-openstack]** Remove 'minLength: 1' requirement from mainNetwork and defaultImageName properties in OpenAPI specification. [#5386](https://github.com/deckhouse/deckhouse/pull/5386)
  - **[cloud-provider-openstack]** Fix discovery security groups and errors in hybrid clusters. [#5341](https://github.com/deckhouse/deckhouse/pull/5341)
  - **[cloud-provider-openstack]** Fix creating long name of backup secret in state. [#5332](https://github.com/deckhouse/deckhouse/pull/5332)
  - **[cloud-provider-openstack]** Remove duplicates from additional security groups in cloud-data-discoverer. [#5279](https://github.com/deckhouse/deckhouse/pull/5279)
