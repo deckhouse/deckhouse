@@ -164,13 +164,16 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 		copyLogger.LogProcessEnd()
 
-		commitLogger := logger.ProcessLogger()
-		commitLogger.LogProcessStart("Images to archive")
-		if err := dest.Commit(); err != nil {
-			commitLogger.LogProcessFail()
-			return err
+		if !dryRun {
+			commitLogger := logger.ProcessLogger()
+			commitLogger.LogProcessStart("Commit to registry")
+			if err := dest.Commit(); err != nil {
+				commitLogger.LogProcessFail()
+				return err
+			}
+			commitLogger.LogProcessEnd()
 		}
-		commitLogger.LogProcessEnd()
+		defer dest.Close()
 
 		reportLogger := logger.ProcessLogger()
 		reportLogger.LogProcessStart("Updated images report")

@@ -26,21 +26,22 @@ import (
 )
 
 func CopyImage(ctx context.Context, src, dest *ImageConfig, policyContext *signature.PolicyContext, opts ...CopyOption) (bool, error) {
-	srcRef, err := src.imageReference()
-	if err != nil {
-		return false, err
-	}
-
-	destRef, err := dest.imageReference()
-	if err != nil {
-		return false, err
-	}
-
 	copyOptions := &copyOptions{copyOptions: &copy.Options{ReportWriter: os.Stdout}}
 
 	opts = append(opts, withSourceAuth(src.AuthConfig()), withDestAuth(dest.AuthConfig()))
 	for _, opt := range opts {
 		opt(copyOptions)
+	}
+
+	srcRef, err := src.imageReference(true, copyOptions.dryRun)
+	if err != nil {
+		return false, err
+	}
+	defer src.close()
+
+	destRef, err := dest.imageReference(false, copyOptions.dryRun)
+	if err != nil {
+		return false, err
 	}
 
 	if err := checkImageExists(ctx, destRef, copyOptions.copyOptions.DestinationCtx); err == nil {

@@ -64,33 +64,11 @@ func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig, isSourc
 		return nil, ErrNoSuchRegistryTransport
 	}
 
-	var err error
-	switch transportName {
-	case FileTransport:
-		err = initFileTransport(withinTransport, isSource)
-	case DockerTransport, directoryTransport:
-	default:
-		err = ErrNoSuchRegistryTransport
-	}
-	if err != nil {
-		return nil, err
-	}
 	return &RegistryConfig{
 		path:       withinTransport,
 		transport:  transportName,
 		authConfig: dockerCfg,
 	}, nil
-}
-
-func initFileTransport(p string, isSource bool) error {
-	p = util.AddTarGzExt(p)
-	switch _, err := os.Stat(p); {
-	case isSource && err != nil:
-		return err
-	case err != nil:
-		return nil
-	}
-	return util.ExtractTarGz(p)
 }
 
 func (r *RegistryConfig) Commit() error {
@@ -146,7 +124,7 @@ func (r *RegistryConfig) ListTags(ctx context.Context, opts ...ListOption) ([]st
 }
 
 func listDockerTags(ctx context.Context, r *RegistryConfig, opts ...ListOption) ([]string, error) {
-	imgRef, err := NewImageConfig(r, "", "").imageReference()
+	imgRef, err := NewImageConfig(r, "", "").imageReference(false, true)
 	if err != nil {
 		return nil, err
 	}

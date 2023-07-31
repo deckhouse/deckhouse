@@ -359,7 +359,7 @@ func fileFromImage(ctx context.Context, img *image.ImageConfig, filename string,
 		return nil, err
 	}
 
-	imageDir := filepath.Join(dest.RegistryPath(), img.Tag())
+	imageDir := filepath.Join(dest.Path(), img.Tag())
 	files, err := os.ReadDir(imageDir)
 	if err != nil {
 		return nil, err

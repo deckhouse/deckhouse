@@ -15,6 +15,7 @@
 package image
 
 import (
+	"archive/tar"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/containers/image/v5/types"
 	_ "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/image/transport" // Add transport for tar.gz file
+	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/util"
 )
 
 type ImageConfig struct {
@@ -38,6 +40,14 @@ func NewImageConfig(registry *RegistryConfig, tag, digest string, additionalPath
 		digest:         digest,
 		additionalPath: filepath.Join(additionalPaths...),
 	}
+}
+
+func (i *ImageConfig) close() error {
+	switch i.RegistryTransport() {
+	case FileTransport:
+		return os.RemoveAll(filepath.Join(i.Path(), util.AddTarGzExt(i.Tag())))
+	}
+	return nil
 }
 
 func (i *ImageConfig) copy() *ImageConfig {
@@ -72,25 +82,29 @@ func (i *ImageConfig) WithTag(t string) *ImageConfig {
 	return n
 }
 
-func (i *ImageConfig) imageReference() (types.ImageReference, error) {
+func (i *ImageConfig) imageReference(isSource, dryRun bool) (types.ImageReference, error) {
 	imageBuilder := &strings.Builder{}
 	imageBuilder.WriteString(i.RegistryTransport())
 	imageBuilder.WriteByte(':')
 
 	switch i.RegistryTransport() {
 	case DockerTransport:
-		imageBuilder.WriteString(i.RegistryPath())
+		imageBuilder.WriteString(i.Path())
 		if i.tag != "" && i.digest == "" {
 			imageBuilder.WriteByte(':')
-			imageBuilder.WriteString(i.tag)
+			imageBuilder.WriteString(i.Tag())
 		}
 
 	case FileTransport, directoryTransport:
-		r := i.RegistryPath()
+		r := i.Path()
 		if err := os.MkdirAll(r, 0o755); err != nil {
 			return nil, err
 		}
-		imageBuilder.WriteString(filepath.Join(r, i.tag))
+		image := filepath.Join(r, i.Tag())
+		if err := i.extractImageFromFileRegistry(image, isSource, dryRun); err != nil {
+			return nil, err
+		}
+		imageBuilder.WriteString(image)
 	}
 
 	if i.digest != "" {
@@ -101,18 +115,24 @@ func (i *ImageConfig) imageReference() (types.ImageReference, error) {
 	return alltransports.ParseImageName(imageBuilder.String())
 }
 
-func (i *ImageConfig) RegistryPath() string {
-	if i.registry == nil {
-		return strings.TrimRight(i.additionalPath, "/")
-	}
-	r := strings.TrimRight(i.registry.Path(), "/")
+func (i *ImageConfig) Path() string {
+	r := i.RegistryPath()
 	if i.additionalPath == "" {
 		return r
+	}
+	if r == "" {
+		return i.additionalPath
 	}
 	// This is used except of "filepath.Join" because docker transport want registry to start with "//"
 	return r + "/" + strings.Trim(i.additionalPath, "/")
 }
 
+func (i *ImageConfig) RegistryPath() string {
+	if i.registry == nil {
+		return ""
+	}
+	return strings.TrimRight(i.registry.Path(), "/")
+}
 func (i *ImageConfig) RegistryTransport() string {
 	if i.registry == nil {
 		return ""
@@ -125,4 +145,18 @@ func (i *ImageConfig) AuthConfig() *types.DockerAuthConfig {
 		return nil
 	}
 	return i.registry.AuthConfig()
+}
+
+func (i *ImageConfig) extractImageFromFileRegistry(p string, isSource, dryRun bool) error {
+	if !isSource || dryRun {
+		return nil
+	}
+
+	fileInArchive := util.AddTarGzExt(filepath.Join(i.additionalPath, i.Tag()))
+	return util.NewTarGzReader(util.AddTarGzExt(i.RegistryPath()), func(h *tar.Header, r *tar.Reader) (bool, error) {
+		if h.Name != fileInArchive {
+			return false, nil
+		}
+		return true, util.MkFile(util.AddTarGzExt(p), r, h.FileInfo())
+	})
 }

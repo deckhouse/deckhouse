@@ -94,7 +94,7 @@ func ExtractTarGz(filename string) error {
 		case tar.TypeDir:
 			err = os.MkdirAll(p, h.FileInfo().Mode().Perm())
 		case tar.TypeReg:
-			err = mkFile(p, r, h.FileInfo())
+			err = MkFile(p, r, h.FileInfo())
 		case tar.TypeSymlink:
 			err = os.Symlink(p, h.Linkname)
 		case tar.TypeLink:
@@ -110,7 +110,7 @@ func ExtractTarGz(filename string) error {
 	return err
 }
 
-func mkFile(name string, content io.Reader, info os.FileInfo) error {
+func MkFile(name string, content io.Reader, info os.FileInfo) error {
 	if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
 		return err
 	}
