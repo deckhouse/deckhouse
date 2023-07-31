@@ -82,6 +82,9 @@ spec:
           value: "/deckhouse/modules:/deckhouse/external-modules/modules"
         - name: EXTERNAL_MODULES_DIR
           value: "/deckhouse/external-modules/"
+{{- else }}
+        - name: MODULES_DIR
+          value: "/deckhouse/modules"
 {{- end }}
         - name: GLOBAL_HOOKS_DIR
           value: "/deckhouse/global-hooks"
