@@ -90,7 +90,7 @@ func Test_deckhouseRegistry(t *testing.T) {
 				edtiton:           "ee",
 				licenseToken:      "token",
 			},
-			want: image.MustNewRegistry("docker://registry.deckhouse.io/deckhouse/ee", &types.DockerAuthConfig{Username: "license-token", Password: "token"}),
+			want: image.MustNewRegistry("docker://registry.deckhouse.io/deckhouse/ee", &types.DockerAuthConfig{Username: "license-token", Password: "token"}, true),
 		},
 		{
 			name: "docker registry without license",
@@ -103,10 +103,10 @@ func Test_deckhouseRegistry(t *testing.T) {
 		{
 			name: "file registry",
 			args: args{
-				deckhouseRegistry: "file:asafs.tar.gz",
+				deckhouseRegistry: "file:versions/fixtures/deckhouse-registry.tar.gz",
 				edtiton:           "ee",
 			},
-			want: image.MustNewRegistry("file:asafs.tar.gz", nil),
+			want: image.MustNewRegistry("file:versions/fixtures/deckhouse-registry.tar.gz", nil, false),
 		},
 		{
 			name: "bad transport registry",
@@ -120,53 +120,9 @@ func Test_deckhouseRegistry(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := deckhouseRegistry(tt.args.deckhouseRegistry, tt.args.edtiton, tt.args.licenseToken)
-			require.ErrorIs(t, err, tt.wantErr)
-			assert.Equal(t, got, tt.want)
-		})
-	}
-}
-
-func Test_newRegistry(t *testing.T) {
-	type args struct {
-		registryWithTransport string
-		auth                  *types.DockerAuthConfig
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *image.RegistryConfig
-		wantErr error
-	}{
-		{
-			name: "docker registry with auth",
-			args: args{
-				registryWithTransport: "docker://registry.com",
-				auth: &types.DockerAuthConfig{
-					Username: "username",
-					Password: "pass",
-				},
-			},
-			want: image.MustNewRegistry("docker://registry.com", &types.DockerAuthConfig{Username: "username", Password: "pass"}),
-		},
-		{
-			name: "archive file",
-			args: args{
-				registryWithTransport: "file:archive.tar.gz",
-			},
-			want: image.MustNewRegistry("file:archive.tar.gz", nil),
-		},
-		{
-			name: "registry with bad transport transport",
-			args: args{
-				registryWithTransport: "docker-archive:archive",
-				auth:                  &types.DockerAuthConfig{},
-			},
-			wantErr: image.ErrNoSuchRegistryTransport,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := newRegistry(tt.args.registryWithTransport, tt.args.auth)
+			if got != nil {
+				defer got.Close()
+			}
 			require.ErrorIs(t, err, tt.wantErr)
 			assert.Equal(t, got, tt.want)
 		})
@@ -232,18 +188,18 @@ func Test_destinationImage(t *testing.T) {
 		{
 			name: "image with tag and digest for file",
 			args: args{
-				destRegistry: image.MustNewRegistry("file:result.tar.gz", nil),
-				srcImage:     image.NewImageConfig(image.MustNewRegistry("docker://registry.test.com", nil), "test-tag", "test-digest", "additional-path"),
+				destRegistry: image.MustNewRegistry("file:result.tar.gz", nil, false),
+				srcImage:     image.NewImageConfig(image.MustNewRegistry("docker://registry.test.com", nil, true), "test-tag", "test-digest", "additional-path"),
 			},
-			want: image.NewImageConfig(image.MustNewRegistry("file:result.tar.gz", nil), "test-tag", "test-digest", "additional-path"),
+			want: image.NewImageConfig(image.MustNewRegistry("file:result.tar.gz", nil, false), "test-tag", "test-digest", "additional-path"),
 		},
 		{
 			name: "image with tag and digest for docker",
 			args: args{
-				destRegistry: image.MustNewRegistry("docker://registry.result.com", nil),
-				srcImage:     image.NewImageConfig(image.MustNewRegistry("docker://registry.test.com", nil), "test-tag", "test-digest", "additional-path"),
+				destRegistry: image.MustNewRegistry("docker://registry.result.com", nil, false),
+				srcImage:     image.NewImageConfig(image.MustNewRegistry("docker://registry.test.com", nil, true), "test-tag", "test-digest", "additional-path"),
 			},
-			want: image.NewImageConfig(image.MustNewRegistry("docker://registry.result.com", nil), "test-tag", "", "additional-path"),
+			want: image.NewImageConfig(image.MustNewRegistry("docker://registry.result.com", nil, false), "test-tag", "", "additional-path"),
 		},
 	}
 	for _, tt := range tests {
@@ -266,16 +222,16 @@ func Test_sourceImage(t *testing.T) {
 		{
 			name: "image with tag and digest docker",
 			args: args{
-				srcImage: image.NewImageConfig(image.MustNewRegistry("docker://registry.test.com", nil), "test-tag", "test-digest", "additional-path"),
+				srcImage: image.NewImageConfig(image.MustNewRegistry("docker://registry.test.com", nil, true), "test-tag", "test-digest", "additional-path"),
 			},
-			want: image.NewImageConfig(image.MustNewRegistry("docker://registry.test.com", nil), "", "test-digest", "additional-path"),
+			want: image.NewImageConfig(image.MustNewRegistry("docker://registry.test.com", nil, true), "", "test-digest", "additional-path"),
 		},
 		{
 			name: "image with tag and digest file",
 			args: args{
-				srcImage: image.NewImageConfig(image.MustNewRegistry("file:test.tar.gz", nil), "test-tag", "test-digest", "additional-path"),
+				srcImage: image.NewImageConfig(image.MustNewRegistry("file:test.tar.gz", nil, false), "test-tag", "test-digest", "additional-path"),
 			},
-			want: image.NewImageConfig(image.MustNewRegistry("file:test.tar.gz", nil), "test-tag", "test-digest", "additional-path"),
+			want: image.NewImageConfig(image.MustNewRegistry("file:test.tar.gz", nil, false), "test-tag", "test-digest", "additional-path"),
 		},
 	}
 	for _, tt := range tests {

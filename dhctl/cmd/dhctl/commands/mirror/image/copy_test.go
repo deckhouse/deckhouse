@@ -34,13 +34,13 @@ func TestCopyImage(t *testing.T) {
 		t.Skip("Do not run this on CI")
 	}
 
-	deckhouseRegistry, err := image.NewRegistry("docker://registry.deckhouse.io/deckhouse/ce/", nil)
+	deckhouseRegistry, err := image.NewRegistry("docker://registry.deckhouse.io/deckhouse/ce/", nil, true)
 	require.NoError(t, err)
 
-	localFile, err := image.NewRegistry("file:"+filepath.Join(t.TempDir(), "file.tar.gz"), nil)
+	localFile, err := image.NewRegistry("file:"+filepath.Join(t.TempDir(), "file.tar.gz"), nil, false)
 	require.NoError(t, err)
 
-	localDir, err := image.NewRegistry("dir:"+filepath.Join(t.TempDir(), "dir"), nil)
+	localDir, err := image.NewRegistry("dir:"+filepath.Join(t.TempDir(), "dir"), nil, false)
 	require.NoError(t, err)
 
 	policyContext, err := image.NewPolicyContext()
@@ -106,7 +106,7 @@ func TestCopyImage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			err := image.CopyImage(tt.args.ctx, tt.args.src, tt.args.dest, policyContext, tt.args.opts...)
+			_, err := image.CopyImage(tt.args.ctx, tt.args.src, tt.args.dest, policyContext, tt.args.opts...)
 			require.ErrorIs(t, err, tt.wantErr)
 
 			if tt.checkFile != "" {

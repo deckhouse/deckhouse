@@ -38,6 +38,7 @@ import (
 
 const (
 	VersionRE = `(v[0-9]+\.[0-9]+)\.[0-9]+`
+	Delimiter = "-"
 )
 
 var (
@@ -293,7 +294,7 @@ func (v *VersionsComparer) modulesImages(ctx context.Context, diff []semver.Vers
 	for identifier, imgSpec := range uniqueImages {
 		tag, digest := identifier, ""
 		if strings.HasPrefix(identifier, "sha256:") {
-			tag, digest = versionToTag(imgSpec.d8Version)+"-"+imgSpec.imageName, identifier
+			tag, digest = versionToTag(imgSpec.d8Version)+Delimiter+imgSpec.imageName, identifier
 		}
 		modulesImages = append(modulesImages, image.NewImageConfig(v.source, tag, digest))
 	}
@@ -323,7 +324,7 @@ func (v *VersionsComparer) modulesImagesForVersion(ctx context.Context, deckhous
 	result := make(map[string]string)
 	for module, images := range modulesImages {
 		for image, identifier := range images {
-			result[module+"-"+image] = identifier
+			result[module+Delimiter+image] = identifier
 		}
 	}
 	return result, nil
@@ -348,13 +349,13 @@ func fileFromImage(ctx context.Context, img *image.ImageConfig, filename string,
 	}
 	defer os.RemoveAll(dir)
 
-	destRegistry, err := image.NewRegistry("dir:"+dir, nil)
+	destRegistry, err := image.NewRegistry("dir:"+dir, nil, true)
 	if err != nil {
 		return nil, err
 	}
 
 	dest := img.WithNewRegistry(destRegistry)
-	if err := image.CopyImage(ctx, img, dest, policyContext, opts...); err != nil {
+	if _, err := image.CopyImage(ctx, img, dest, policyContext, opts...); err != nil {
 		return nil, err
 	}
 

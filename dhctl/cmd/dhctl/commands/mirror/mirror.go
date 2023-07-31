@@ -15,9 +15,12 @@
 package mirror
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -30,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -61,6 +65,9 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		destinationPassword string
 		destinationInsecure bool
 		dryRun              bool
+
+		outputReportFile string
+		outputFormat     string
 	)
 
 	cmd := kpApp.Command("mirror", "Copy images from deckhouse registry or tar.gz file to specified registry or tar.gz file.")
@@ -70,6 +77,8 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 	cmd.Flag("dry-run", "Run without actually copying data.").BoolVar(&dryRun)
 	cmd.Flag("min-version", `The oldest version of deckhouse from your clusters or "latest" for clean installation.`).SetValue(minVersion)
+	cmd.Flag("output-file", "File to save report with updated in destination registry images references.").StringVar(&outputReportFile)
+	cmd.Flag("output", "Format of the output report.").Default("json").EnumVar(&outputFormat, "yaml", "json")
 
 	// Deckhouse registry flags
 	cmd.Flag("license", "License key for Deckhouse registry.").Required().StringVar(&licenseToken)
@@ -94,15 +103,9 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 		defer source.Close()
 
-		dest, err := newRegistry(destination.String(), registryAuth(destinationUser, destinationPassword))
+		dest, err := image.NewRegistry(destination.String(), registryAuth(destinationUser, destinationPassword), false)
 		if err != nil {
 			return err
-		}
-
-		for _, reg := range []*image.RegistryConfig{source, dest} {
-			if err := reg.Init(); err != nil {
-				return err
-			}
 		}
 
 		destListOptions := make([]image.ListOption, 0)
@@ -135,13 +138,29 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			copyOpts = append(copyOpts, image.WithDryRun())
 		}
 
+		updatedImages := make(map[string]map[string]map[string]string /* map[<d8 version>]map[<module name>]map[<image name>]<digest or tag> */)
 		copyLogger := logger.ProcessLogger()
 		copyLogger.LogProcessStart("Mirror images")
 		for _, src := range modulesImages {
-			if err := copyImage(ctx, src, dest, policyContext, copyOpts...); err != nil {
+			exists, err := copyImage(ctx, src, dest, policyContext, copyOpts...)
+			if err != nil {
 				copyLogger.LogProcessFail()
 				return err
 			}
+
+			splitted := strings.Split(src.Tag(), versions.Delimiter)
+			if exists || len(splitted) != 3 {
+				continue
+			}
+
+			d8Version, moduleName, moduleImage := splitted[0], splitted[1], splitted[2]
+			if _, f := updatedImages[d8Version]; !f {
+				updatedImages[d8Version] = make(map[string]map[string]string)
+			}
+			if _, f := updatedImages[d8Version][moduleName]; !f {
+				updatedImages[d8Version][moduleName] = make(map[string]string)
+			}
+			updatedImages[d8Version][moduleName][moduleImage] = src.Digest()
 		}
 
 		if err := dest.Commit(); err != nil {
@@ -149,7 +168,8 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 		defer copyLogger.LogProcessEnd()
-		return nil
+
+		return saveReportToFile(updatedImages, outputReportFile, outputFormat, logger)
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -173,7 +193,7 @@ func deckhouseEdition() (string, error) {
 }
 
 func deckhouseRegistry(deckhouseRegistry, edtiton, licenseToken string) (*image.RegistryConfig, error) {
-	registry, err := newRegistry(deckhouseRegistry, nil)
+	registry, err := image.NewRegistry(deckhouseRegistry, nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +212,7 @@ func deckhouseRegistry(deckhouseRegistry, edtiton, licenseToken string) (*image.
 		return nil, err
 	}
 	u.Path = filepath.Join(u.Path, edtiton)
-	return newRegistry(u.String(), auth)
+	return image.NewRegistry(u.String(), auth, true)
 }
 
 func deckhouseRegistryAuth(edition, licenseToken string) (*types.DockerAuthConfig, error) {
@@ -200,10 +220,6 @@ func deckhouseRegistryAuth(edition, licenseToken string) (*types.DockerAuthConfi
 		return nil, ErrNoLicense
 	}
 	return registryAuth("license-token", licenseToken), nil
-}
-
-func newRegistry(registryWithTransport string, auth *types.DockerAuthConfig) (*image.RegistryConfig, error) {
-	return image.NewRegistry(registryWithTransport, auth)
 }
 
 func registryAuth(username, password string) *types.DockerAuthConfig {
@@ -217,7 +233,7 @@ func registryAuth(username, password string) *types.DockerAuthConfig {
 	}
 }
 
-func copyImage(ctx context.Context, srcImage *image.ImageConfig, destRegistry *image.RegistryConfig, policyContext *signature.PolicyContext, opts ...image.CopyOption) error {
+func copyImage(ctx context.Context, srcImage *image.ImageConfig, destRegistry *image.RegistryConfig, policyContext *signature.PolicyContext, opts ...image.CopyOption) (bool, error) {
 	srcImg := sourceImage(srcImage)
 	destImage := destinationImage(destRegistry, srcImage)
 	return image.CopyImage(ctx, srcImg, destImage, policyContext, opts...)
@@ -243,4 +259,40 @@ func destinationImage(destRegistry *image.RegistryConfig, srcImage *image.ImageC
 		return destImage.WithDigest("")
 	}
 	return destImage
+}
+
+func saveReportToFile(content interface{}, filename, outFormat string, logger *log.PrettyLogger) error {
+	var (
+		f   io.Writer
+		err error
+	)
+
+	if filename == "" {
+		logger.LogSuccess("updated images report:\n\n")
+		f = logger
+	} else {
+		logger.LogSuccess("saved updated images report to file\n")
+		f, err = os.Create(filename)
+	}
+	if err != nil {
+		return err
+	}
+
+	var marshaledReport []byte
+	switch outFormat {
+	case "yaml":
+		b := bytes.NewBuffer(nil)
+		yamlEncoder := yaml.NewEncoder(b)
+		yamlEncoder.SetIndent(2)
+		yamlEncoder.Encode(content)
+		marshaledReport = b.Bytes()
+	case "json":
+		marshaledReport, err = json.MarshalIndent(content, "", "  ")
+	}
+	if err != nil {
+		return err
+	}
+
+	_, err = f.Write(append(marshaledReport, '\n'))
+	return err
 }

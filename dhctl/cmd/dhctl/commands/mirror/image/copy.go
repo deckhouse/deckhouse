@@ -25,15 +25,15 @@ import (
 	"github.com/containers/image/v5/types"
 )
 
-func CopyImage(ctx context.Context, src, dest *ImageConfig, policyContext *signature.PolicyContext, opts ...CopyOption) error {
+func CopyImage(ctx context.Context, src, dest *ImageConfig, policyContext *signature.PolicyContext, opts ...CopyOption) (bool, error) {
 	srcRef, err := src.imageReference()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	destRef, err := dest.imageReference()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	copyOptions := &copyOptions{copyOptions: &copy.Options{ReportWriter: os.Stdout}}
@@ -43,17 +43,21 @@ func CopyImage(ctx context.Context, src, dest *ImageConfig, policyContext *signa
 		opt(copyOptions)
 	}
 
+	if err := checkImageExists(ctx, destRef, copyOptions.copyOptions.DestinationCtx); err == nil {
+		return true, nil
+	}
+
 	msg := fmt.Sprintf("\nCopying %s image to %s...\n", trimRef(srcRef), trimRef(destRef))
 	if _, err := copyOptions.copyOptions.ReportWriter.Write([]byte(msg)); err != nil {
-		return err
+		return false, err
 	}
 
 	if copyOptions.dryRun {
-		return nil
+		return false, nil
 	}
 
 	_, err = copy.Image(ctx, policyContext, destRef, srcRef, copyOptions.copyOptions)
-	return err
+	return false, err
 }
 
 func NewPolicyContext() (*signature.PolicyContext, error) {
@@ -65,4 +69,14 @@ func NewPolicyContext() (*signature.PolicyContext, error) {
 
 func trimRef(ref types.ImageReference) string {
 	return strings.TrimLeft(ref.StringWithinTransport(), "/")
+}
+
+func checkImageExists(ctx context.Context, imgRef types.ImageReference, sysCtx *types.SystemContext) error {
+	imgSource, err := imgRef.NewImageSource(ctx, sysCtx)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = imgSource.GetManifest(ctx, nil)
+	return err
 }

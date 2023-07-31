@@ -82,7 +82,7 @@ func TestRegistryConfig_ListTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r, err := image.NewRegistry(tt.fields.registryPath, tt.fields.authConfig)
+			r, err := image.NewRegistry(tt.fields.registryPath, tt.fields.authConfig, true)
 			require.ErrorIs(t, err, tt.wantInitErr)
 
 			got, err := r.ListTags(tt.args.ctx, tt.args.opts...)

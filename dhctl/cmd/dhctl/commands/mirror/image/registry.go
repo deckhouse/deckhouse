@@ -46,15 +46,15 @@ type RegistryConfig struct {
 	authConfig *types.DockerAuthConfig
 }
 
-func MustNewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig) *RegistryConfig {
-	r, err := NewRegistry(registryPath, dockerCfg)
+func MustNewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig, isSource bool) *RegistryConfig {
+	r, err := NewRegistry(registryPath, dockerCfg, isSource)
 	if err != nil {
 		panic(err)
 	}
 	return r
 }
 
-func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig) (*RegistryConfig, error) {
+func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig, isSource bool) (*RegistryConfig, error) {
 	transportName, withinTransport, f := strings.Cut(util.TrimTarGzExt(registryPath), ":")
 	if !f {
 		return nil, fmt.Errorf("can't find transport for '%s'", registryPath)
@@ -64,6 +64,17 @@ func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig) (*Regis
 		return nil, ErrNoSuchRegistryTransport
 	}
 
+	var err error
+	switch transportName {
+	case FileTransport:
+		err = initFileTransport(withinTransport, isSource)
+	case DockerTransport, directoryTransport:
+	default:
+		err = ErrNoSuchRegistryTransport
+	}
+	if err != nil {
+		return nil, err
+	}
 	return &RegistryConfig{
 		path:       withinTransport,
 		transport:  transportName,
@@ -71,16 +82,15 @@ func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig) (*Regis
 	}, nil
 }
 
-func (r *RegistryConfig) Init() error {
-	switch r.Transport() {
-	case FileTransport:
-		p := util.AddTarGzExt(r.Path())
-		if _, err := os.Stat(p); os.IsNotExist(err) {
-			return nil
-		}
-		return util.ExtractTarGz(p)
+func initFileTransport(p string, isSource bool) error {
+	p = util.AddTarGzExt(p)
+	switch _, err := os.Stat(p); {
+	case isSource && err != nil:
+		return err
+	case err != nil:
+		return nil
 	}
-	return nil
+	return util.ExtractTarGz(p)
 }
 
 func (r *RegistryConfig) Commit() error {
