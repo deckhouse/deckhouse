@@ -2,19 +2,7 @@
   {{- $version := toString $key }}
   {{- if $value.clusterAutoscalerPatch }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: common/distroless
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /src/cluster-autoscaler/cluster-autoscaler
-  to: /cluster-autoscaler
-  before: setup
-docker:
-  ENV:
-    container: docker
-  ENTRYPOINT: ["/cluster-autoscaler"]
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+artifact: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
     {{- else if semverCompare ">=1.25" $version }}
@@ -45,5 +33,17 @@ shell:
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - cd cluster-autoscaler
   - GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o cluster-autoscaler
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /src/cluster-autoscaler/cluster-autoscaler
+    to: /cluster-autoscaler
+    before: setup
+docker:
+  ENV:
+    container: docker
+  ENTRYPOINT: ["/cluster-autoscaler"]
   {{- end }}
 {{- end }}
