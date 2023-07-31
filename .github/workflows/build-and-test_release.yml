@@ -2470,6 +2470,7 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.io"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_SET_DCNAME: "web.dc_name=prod-hz"
       # </template: deploy_doc_template>
       # <template: deploy_doc_template>
       - name: Deploy documentation to preproduction
@@ -2487,6 +2488,7 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.io"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_SET_DCNAME: "web.dc_name=prod-sel"
       # </template: deploy_doc_template>
       # <template: deploy_site_template>
       - name: Deploy site to production
@@ -2506,6 +2508,7 @@ jobs:
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
           WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLmlvIiwgInJ1IiA6ICJkZWNraG91c2UucnUifQ=="
+          WERF_SET_DCNAME: "web.dc_name=prod-hz"
       # </template: deploy_site_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
