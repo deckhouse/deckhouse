@@ -77,9 +77,9 @@ spec:
           value: deckhouse,deckhouse-generated-config-do-not-edit
         - name: ALLOWED_USERS
           value: "system:serviceaccount:d8-system:deckhouse"
+{{- if (.Values.global.enabledModules | has "external-module-manager") }}
         - name: MODULES_DIR
           value: "/deckhouse/modules:/deckhouse/external-modules/modules"
-{{- if (.Values.global.enabledModules | has "external-module-manager") }}
         - name: EXTERNAL_MODULES_DIR
           value: "/deckhouse/external-modules/"
 {{- end }}
