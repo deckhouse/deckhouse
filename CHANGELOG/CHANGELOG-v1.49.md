@@ -31,6 +31,7 @@
 
  - **[admission-policy-engine]** Fix `checkContainerDuplicates` policy. Allow env with the same name in the different containers [#5214](https://github.com/deckhouse/deckhouse/pull/5214)
  - **[candi]** Removed double sudo call for reboot command. [#5272](https://github.com/deckhouse/deckhouse/pull/5272)
+ - **[cloud-provider-openstack]** Remove 'minLength: 1' requirement from mainNetwork and defaultImageName properties in OpenAPI specification. [#5381](https://github.com/deckhouse/deckhouse/pull/5381)
  - **[deckhouse-controller]** Fix CA retaining after change-registry command. [#5307](https://github.com/deckhouse/deckhouse/pull/5307)
  - **[deckhouse-controller]** Fix change-registry CA handling for connecting to registry. [#5282](https://github.com/deckhouse/deckhouse/pull/5282)
  - **[linstor]** Update `piraeus-operator` CRDs to be compatible with the version `1.10.5`. [#5325](https://github.com/deckhouse/deckhouse/pull/5325)
