@@ -10,7 +10,7 @@ RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o loki cmd/
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /loki/loki /usr/bin
-RUN mkdir -p /loki
+WORKDIR /loki/
 
 EXPOSE 3100
 ENTRYPOINT ["/usr/bin/loki"]
