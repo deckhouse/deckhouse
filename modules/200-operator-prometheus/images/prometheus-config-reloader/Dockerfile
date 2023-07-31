@@ -8,6 +8,7 @@ RUN git clone --depth 1 --branch v0.62.0 https://github.com/prometheus-operator/
 WORKDIR /prometheus-operator/
 
 RUN make prometheus-config-reloader
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o prometheus-config-reloader cmd/prometheus-config-reloader/main.go
 
 FROM $BASE_DISTROLESS
 
