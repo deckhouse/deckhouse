@@ -26,7 +26,7 @@ shell:
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-fromImage: {{ .Images.BASE_DISTROLESS }}
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/distroless-kube-proxy-artifact
   add: /filtered-apk
