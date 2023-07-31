@@ -162,14 +162,25 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 			updatedImages[d8Version][moduleName][moduleImage] = src.Digest()
 		}
+		copyLogger.LogProcessEnd()
 
+		commitLogger := logger.ProcessLogger()
+		commitLogger.LogProcessStart("Images to archive")
 		if err := dest.Commit(); err != nil {
-			copyLogger.LogProcessFail()
+			commitLogger.LogProcessFail()
 			return err
 		}
-		defer copyLogger.LogProcessEnd()
+		commitLogger.LogProcessEnd()
 
-		return saveReportToFile(updatedImages, outputReportFile, outputFormat, logger)
+		reportLogger := logger.ProcessLogger()
+		reportLogger.LogProcessStart("Updated images report")
+		if err := saveReportToFile(updatedImages, outputReportFile, outputFormat, logger); err != nil {
+			reportLogger.LogProcessFail()
+			return err
+		}
+		reportLogger.LogProcessEnd()
+
+		return nil
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
