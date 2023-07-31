@@ -11,7 +11,6 @@ bundle="$(detect_bundle)"
 token="$(</var/lib/bashible/bootstrap-token)"
 node_group_name="{{ .nodeGroupName }}"
 bootstrap_bundle_name="$bundle.$node_group_name"
-url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
 
 python_binary=""
 http_client_binary=""
@@ -39,6 +38,8 @@ fi
 function get_bootstrap_curl() {
   while true; do
     for server in {{ .apiserverEndpoints | join " " }}; do
+      url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
+
       if curl -s -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "/var/lib/bashible/ca.crt"
       then
         return 0
@@ -53,6 +54,8 @@ function get_bootstrap_curl() {
 function get_bootstrap_wget() {
   while true; do
     for server in {{ .apiserverEndpoints | join " " }}; do
+      url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
+
       if wget -qvn -O - --header="Authorization: Bearer $token" --ca-certificate="/var/lib/bashible/ca.crt" "$url"
       then
         return 0
