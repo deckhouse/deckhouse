@@ -118,21 +118,23 @@ func (v *VersionsComparer) ImagesToCopy(ctx context.Context, minVersion string) 
 }
 
 func (v *VersionsComparer) calculateDiff(ctx context.Context, minVersion string) ([]semver.Version, error) {
+	v.logger.LogDebugLn("Retrieving source versions")
 	sourceVersions, err := v.sourceVersions(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	v.logger.LogDebugLn("Retrieving dest versions")
 	destVersions, err := v.destVersions(ctx, sourceVersions, minVersion)
 	if err != nil {
 		return nil, err
 	}
-
+	v.logger.LogDebugLn("Compare source and destination versions")
 	deckhouseVersions, err := compareVersions(sourceVersions, destVersions, minVersion)
 	if err != nil {
 		return nil, err
 	}
-
+	v.logger.LogDebugLn("Retrieving release channels versions")
 	releaseMetaVersions, err := v.releaseMetadataVersions(ctx, destVersions)
 	if err != nil {
 		return nil, err
@@ -266,6 +268,7 @@ func (v *VersionsComparer) fetchReleaseMetadataDeckhouseVersion(ctx context.Cont
 func (v *VersionsComparer) modulesImages(ctx context.Context, diff []semver.Version) ([]*image.ImageConfig, error) {
 	modulesImagesFile := make(map[semver.Version]map[string]string)
 	for _, tag := range diff {
+		v.logger.LogDebugF("Listing deckhouse modules images for version %s", tag)
 		versionImages, err := v.modulesImagesForVersion(ctx, tag)
 		if err != nil {
 			return nil, err

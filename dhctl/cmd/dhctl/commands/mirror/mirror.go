@@ -92,17 +92,20 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	runFunc := func() error {
 		ctx := context.Background()
 
+		logger.LogDebugLn("Retrieving deckhouse edition...")
 		edition, err := deckhouseEdition()
 		if err != nil {
 			return err
 		}
 
+		logger.LogDebugLn("Initializing source registry...")
 		source, err := deckhouseRegistry(source.String(), edition, licenseToken)
 		if err != nil {
 			return err
 		}
 		defer source.Close()
 
+		logger.LogDebugLn("Initializing destination registry...")
 		dest, err := image.NewRegistry(destination.String(), registryAuth(destinationUser, destinationPassword), false)
 		if err != nil {
 			return err
