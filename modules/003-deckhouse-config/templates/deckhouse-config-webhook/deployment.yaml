@@ -77,10 +77,15 @@ spec:
           value: deckhouse,deckhouse-generated-config-do-not-edit
         - name: ALLOWED_USERS
           value: "system:serviceaccount:d8-system:deckhouse"
+{{- if (.Values.global.enabledModules | has "external-module-manager") }}
         - name: MODULES_DIR
           value: "/deckhouse/modules:/deckhouse/external-modules/modules"
         - name: EXTERNAL_MODULES_DIR
           value: "/deckhouse/external-modules/"
+{{- else }}
+        - name: MODULES_DIR
+          value: "/deckhouse/modules"
+{{- end }}
         - name: GLOBAL_HOOKS_DIR
           value: "/deckhouse/global-hooks"
         ports:
@@ -99,9 +104,11 @@ spec:
           - name: webhook-certs
             mountPath: /etc/webhook/certs
             readOnly: true
+{{- if (.Values.global.enabledModules | has "external-module-manager") }}
           - mountPath: /deckhouse/external-modules
             name: external-modules
             readOnly: true
+{{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -112,7 +119,9 @@ spec:
       - name: webhook-certs
         secret:
           secretName: deckhouse-config-webhook-tls
+{{- if (.Values.global.enabledModules | has "external-module-manager") }}
       - name: external-modules
         hostPath:
           path: /var/lib/deckhouse/external-modules
           type: Directory
+{{- end }}
