@@ -3,15 +3,12 @@
   {{- if $value.clusterAutoscalerPatch }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+from: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/cluster-autoscaler/cluster-autoscaler
   to: /cluster-autoscaler
   before: setup
-shell:
-  beforeInstall:
-  - apk add --no-cache ca-certificates
 docker:
   ENV:
     container: docker
