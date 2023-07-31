@@ -10,7 +10,6 @@ area/auth:
   - modules/150-user-authn/**
   - modules/140-user-authz/**
   - ee/modules/140-user-authz/**
-  - '!**/docs/**'
 
 area/cicd:
   - '.github'
@@ -20,7 +19,6 @@ area/cloud-provider:
   - ee/modules/030-cloud-provider-*/**
   - candi/cloud-providers/**
   - ee/candi/cloud-providers/**
-  - '!**/docs/**'
 
 area/cluster-and-infrastructure:
   - candi/**
@@ -37,9 +35,6 @@ area/cluster-and-infrastructure:
   - modules/600-namespace-configurator/**
   - modules/600-secret-copier/**
   - ee/modules/350-node-local-dns/**
-  - '!candi/cloud-providers/**'
-  - '!ee/candi/cloud-providers/**'
-  - '!**/docs/**'
 
 area/core:
   - go.mod
@@ -57,7 +52,6 @@ type/dependencies:
 
 area/delivery:
   - ee/modules/502-delivery/**
-  - '!**/docs/**'
 
 area/docs:
   - '**/docs/**'
@@ -68,18 +62,15 @@ area/docs:
 
 area/external-modules:
   - modules/005-external-module-manager/**
-  - '!**/docs/**'
 
 area/kubernetes:
   - '**/version_map.yml'
   - modules/007-registrypackages/images/kube*/**
   - modules/021-kube-proxy/**
-  - '!**/docs/**'
 
 area/logs:
   - modules/460-log-shipper/**
   - modules/462-loki/**
-  - '!**/docs/**'
 
 area/monitoring:
   - modules/010-operator-prometheus-crd/**
@@ -92,7 +83,6 @@ area/monitoring:
   - modules/340-monitoring-*/**
   - modules/500-okmeter/**
   - modules/500-upmeter/**
-  - '!**/docs/**'
 
 area/network:
   - modules/021-cni-cilium/**
@@ -107,13 +97,11 @@ area/network:
   - ee/modules/380-metallb/**
   - ee/modules/450-keepalived/**
   - ee/modules/450-network-gateway/**
-  - '!**/docs/**'
 
 area/scaling:
   - modules/010-vertical-pod-autoscaler-crd/**
   - modules/302-vertical-pod-autoscaler/**
   - modules/400-descheduler/**
-  - '!**/docs/**'
 
 area/security:
   - modules/015-admission-policy-engine/**
@@ -123,7 +111,6 @@ area/security:
   - ee/modules/160-multitenancy-manager/**
   - ee/modules/500-operator-trivy/**
   - ee/modules/650-runtime-audit-engine/**
-  - '!**/docs/**'
 
 area/storage:
   - modules/031-ceph-csi/**
@@ -131,22 +118,18 @@ area/storage:
   - modules/041-linstor/**
   - modules/045-snapshot-controller/**
   - modules/491-containerized-data-importer/**
-  - '!**/docs/**'
 
 area/testing:
   - testing/**
   - tools/**
-  - '!**/docs/**'
 
 area/ui:
   - modules/500-dashboard/**
-  - '!**/docs/**'
 
 # area/ux
 
 area/virtualization:
   - modules/490-virtualization/**
-  - '!**/docs/**'
 
 python:
   - '**/*.py'
