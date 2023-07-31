@@ -102,7 +102,6 @@ bb-apt-rpm-install() {
         bb-apt-rpm-update
         bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
         apt-get install -y ${PACKAGES_TO_INSTALL[@]}
-        bb-apt-rpm-hold ${PACKAGES_TO_INSTALL[@]}
         bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
         printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_APT_UNHANDLED_PACKAGES_STORE"
         NEED_FIRE=true
@@ -138,26 +137,6 @@ bb-apt-rpm-autoremove() {
     export DEBIAN_FRONTEND=noninteractive
     bb-log-info 'Autoremoving unused packages'
     apt-get --purge -y autoremove
-}
-
-bb-apt-rpm-hold?() {
-    exit 0 #TODO
-    dpkg -s "$1" 2> /dev/null | grep -q '^Status:.\+installed'
-}
-
-bb-apt-rpm-hold() {
-    exit 0 #TODO
-    for PACKAGE in "$@"
-    do
-        apt-mark hold "$PACKAGE"
-    done
-}
-
-bb-apt-rpm-unhold() {
-    for PACKAGE in "$@"
-    do
-        apt-mark unhold "$PACKAGE"
-    done
 }
 
 bb-apt-rpm-package-upgrade?() {
