@@ -1,6 +1,11 @@
 priorityClassName:
   _default: develop
   production: production-medium
+
+ingressClass:
+  _default: nginx
+  prod-sel: nginx-tfprod
+
 ingress:
   secret_name:
     _default: ingress-le-tls
