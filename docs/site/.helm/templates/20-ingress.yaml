@@ -43,6 +43,57 @@ spec:
   - host: {{ .URL }}
     http:
       paths:
+{{- if eq $.Values.web.dc_name "prod-sel" }}
+      - path: /images
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /js
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /assets
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /gs
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /guides
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /license_request_expired.html
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /license_request_success.html
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+{{- else }}
       - path: /
         pathType: Prefix
         backend:
@@ -50,6 +101,7 @@ spec:
             name: frontend
             port:
               name: http
+{{- end }}
       - path: /includes
         pathType: Prefix
         backend:

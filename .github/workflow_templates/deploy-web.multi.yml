@@ -12,11 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{!{- $rootCtx := dict -}!}
-{!{- $rootCtx = coll.Merge $rootCtx . -}!}
-
-{!{- range $env := slice "test" "stage" "preproduction" -}!}
-{!{-   $ctx := dict "webEnv" $env "rootCtx" $rootCtx }!}
+{!{- range $env := slice "test" "stage" -}!}
+{!{-   $ctx := dict "webEnv" $env }!}
 {!{-   $outFile := printf "deploy-web-%s.yml" $env }!}
 {!{-   $outPath := filepath.Join (getenv "OUTDIR") (toLower $outFile) }!}
 {!{-   tmpl.Exec "deploy_web_workflow_template" $ctx | file.Write $outPath }!}
@@ -78,36 +75,10 @@ jobs:
 
 {!{ tmpl.Exec "check_label_job" (slice "deploy-web" .webEnv) | strings.Indent 2 }!}
 
-{!{- if eq .webEnv "preproduction" }!}
-{!{ $jobNames := dict }!}
-  # Build doc and site before deploy to preproduction
-{!{- $jobNames = coll.Merge $jobNames (dict "doc_web_build" "Doc web build") }!}
-  doc_web_build:
-    name: {!{ $jobNames.doc_web_build }!}
-    # Wait for success build of modules.
-    needs:
-      - git_info
-{!{ tmpl.Exec "web_build_template" (slice .rootCtx "doc" "release") | strings.Indent 4 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.doc_web_build) | strings.Indent 6 }!}
-
-{!{ $jobNames = coll.Merge $jobNames (dict "main_web_build" "Main web build") }!}
-  main_web_build:
-    name: {!{ $jobNames.main_web_build }!}
-    # Wait for success build of modules.
-    needs:
-      - git_info
-{!{ tmpl.Exec "web_build_template" (slice .rootCtx "main" "release") | strings.Indent 4 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.main_web_build) | strings.Indent 6 }!}
-{!{- end }!}
-
   run_web_deploy:
     needs:
     - check_label
     - git_info
-{!{- if eq .webEnv "preproduction" }!}
-    - doc_web_build
-    - main_web_build
-{!{- end }!}
     if: needs.check_label.outputs.should_run == 'true'
     name: Deploy site
     runs-on: [self-hosted, regular]
@@ -118,8 +89,8 @@ jobs:
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
 
-{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_site_template" .webEnv | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" .webEnv | strings.Indent 6 }!}
 
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,final" $workflowName) | strings.Indent 6 }!}

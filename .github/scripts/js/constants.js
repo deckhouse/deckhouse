@@ -49,9 +49,8 @@ const labels = {
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
 
-  // Deploy documentation and site to test, stage or preproduction.
+  // Deploy documentation and site to test or stage.
   'deploy/web/test': { type: 'deploy-web', env: 'test' },
-  'deploy/web/preprod': { type: 'deploy-web', env: 'preproduction' },
   'deploy/web/stage': { type: 'deploy-web', env: 'stage' },
 
   // Edition for build-and-test workflow
