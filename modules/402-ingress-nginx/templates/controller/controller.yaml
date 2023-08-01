@@ -339,7 +339,10 @@ spec:
         lifecycle:
           preStop:
             exec:
-              command: [ "/bin/sh", "-c", "/bin/sleep {{ $gracePeriod }}" ]
+              command:
+              - /bin/sh
+              - -c
+              - while [ $(nc 127.0.0.1 10254 -z; echo $?) -eq 0 ];do sleep 1; done
         {{- end }}
         ports:
         - containerPort: 10354
