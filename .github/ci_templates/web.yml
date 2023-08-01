@@ -190,7 +190,7 @@ steps:
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
-  {!{- $dcName = "prod-hz" -}!}
+  {!{- $dcName = "prod-eu" -}!}
 {!{- end -}!}
 {!{- if eq $env "preproduction" -}!}
   {!{- $ns = "deckhouse-web-production" -}!}
@@ -233,7 +233,7 @@ steps:
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
-  {!{- $dcName = "prod-hz" -}!}
+  {!{- $dcName = "prod-eu" -}!}
 {!{- end -}!}
 {!{- if eq $env "preproduction" -}!}
   {!{- $ns = "deckhouse-web-production" -}!}
