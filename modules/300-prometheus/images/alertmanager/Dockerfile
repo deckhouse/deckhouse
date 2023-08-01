@@ -1,8 +1,17 @@
-ARG BASE_ALPINE
-FROM prom/alertmanager:v0.25.0@sha256:db8303fa05341f5dc6b19b36a97325cd1b8307254ed9042a2c554af71f3c0284 as artifact
+ARG BASE_DISTROLESS
+ARG BASE_GOLANG_18_ALPINE
 
-FROM $BASE_ALPINE
-COPY --from=artifact /bin/alertmanager /bin
+FROM $BASE_GOLANG_18_ALPINE as artifact
+
+RUN apk add --no-cache make git
+RUN git clone --depth 1 --branch v0.25.0 https://github.com/prometheus/alertmanager.git /alertmanager
+WORKDIR /alertmanager/
+
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o alertmanager cmd/alertmanager/main.go
+
+FROM $BASE_DISTROLESS
+
+COPY --from=artifact /alertmanager/alertmanager /bin/
 
 USER nobody
 ENTRYPOINT ["/bin/alertmanager"]
