@@ -33,6 +33,8 @@ type Loki struct {
 
 	Encoding Encoding `json:"encoding,omitempty"`
 
+	TenantID string `json:"tenant_id,omitempty"`
+
 	Endpoint string `json:"endpoint"`
 
 	Auth LokiAuth `json:"auth,omitempty"`
@@ -125,6 +127,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 		TLS:      tls,
 		Labels:   labels,
 		Endpoint: spec.Endpoint,
+		TenantID: spec.TenantID,
 		Encoding: Encoding{
 			Codec:           "text",
 			TimestampFormat: "rfc3339",
