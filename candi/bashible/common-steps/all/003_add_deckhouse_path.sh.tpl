@@ -15,3 +15,17 @@
 bb-sync-file /etc/profile.d/02-deckhouse-path.sh - << "EOF"
 export PATH="/opt/deckhouse/bin:$PATH"
 EOF
+
+# On Alt Linux there is condition
+# for f in /etc/profile.d/*.sh; do
+#        if [ -f "$f" -a -r "$f" -a -x "$f" -a -s "$f" -a ! -L "$f" ]; then
+#                . "$f"
+#        fi
+# done
+# so /etc/profile.d/02-deckhouse-path.sh should be executable
+chmod a+x /etc/profile.d/02-deckhouse-path.sh
+
+# also need to sure that path to deckhouse bin in root bashrc
+if grep -q "^PATH=" /root/.bashrc 2>/dev/null; then
+  echo "export PATH=/opt/deckhouse/bin:$PATH" >> /root/.bashrc
+fi
