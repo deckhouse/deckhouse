@@ -145,7 +145,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "((sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes{node=~\"$node\"} != 0)-sum by (storage_pool)(linstor_storage_pool_capacity_free_bytes{node=~\"$node\"}))*100/sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes{node=~\"$node\"}))",
+          "expr": "((sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes != 0)-sum by (storage_pool)(linstor_storage_pool_capacity_free_bytes))*100/sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes))",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -201,7 +201,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_total_bytes{node=~\"$node\"} != 0)",
+          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_total_bytes != 0)",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -258,7 +258,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_free_bytes{node=~\"$node\"} != 0)",
+          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_free_bytes != 0)",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -314,7 +314,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (storage_pool) ((linstor_storage_pool_capacity_total_bytes{node=~\"$node\"} != 0) - (linstor_storage_pool_capacity_free_bytes{node=~\"$node\"} != 0))",
+          "expr": "sum by (storage_pool) ((linstor_storage_pool_capacity_total_bytes != 0) - (linstor_storage_pool_capacity_free_bytes != 0))",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -535,7 +535,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(linstor_resource_state{node=~\"$node\"}) OR on() vector(0)",
+          "expr": "count(linstor_resource_state) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -613,7 +613,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "avg_over_time(linstor_scrape_duration_seconds{node=~\"$node\"}[$__interval_sx3])",
+          "expr": "avg_over_time(linstor_scrape_duration_seconds[$__interval_sx3])",
           "legendFormat": "allocated",
           "refId": "A"
         }
@@ -859,7 +859,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count((linstor_volume_state{node=~\"$node\"} != 1) != 4) OR on() vector(0)",
+          "expr": "count((linstor_volume_state != 1) != 4) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -930,7 +930,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(drbd_device_written_bytes_total{node=~\"$node\"}[$__interval_sx3]) and topk(5, avg_over_time(drbd_device_written_bytes_total{node=~\"$node\"}[$__interval_sx3]) > 0)",
+          "expr": "rate(drbd_device_written_bytes_total[$__interval_sx3]) and topk(5, avg_over_time(drbd_device_written_bytes_total[$__interval_sx3]) > 0)",
           "instant": false,
           "legendFormat": "{{name}} on {{node}}",
           "refId": "A"
@@ -1028,7 +1028,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(drbd_device_read_bytes_total{node=~\"$node\"}[$__interval_sx3]) and topk(5, avg_over_time(drbd_device_read_bytes_total{node=~\"$node\"}[$__interval_sx3]) > 0)",
+          "expr": "rate(drbd_device_read_bytes_total[$__interval_sx3]) and topk(5, avg_over_time(drbd_device_read_bytes_total[$__interval_sx3]) > 0)",
           "instant": false,
           "legendFormat": "{{name}} on {{node}}",
           "refId": "A"
@@ -1126,7 +1126,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (node) (rate(drbd_device_written_bytes_total{node=~\"$node\"}[$__interval_sx3]))",
+          "expr": "sum by (node) (rate(drbd_device_written_bytes_total[$__interval_sx3]))",
           "instant": false,
           "legendFormat": "{{ node }}",
           "refId": "A"
@@ -1224,7 +1224,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (node) (rate(drbd_device_read_bytes_total{node=~\"$node\"}[$__interval_sx3]))",
+          "expr": "sum by (node) (rate(drbd_device_read_bytes_total[$__interval_sx3]))",
           "instant": false,
           "legendFormat": "{{ node }}",
           "refId": "A"
@@ -1340,7 +1340,7 @@
           "displayType": "Regular",
           "displayValueWithAlias": "Never",
           "exemplar": true,
-          "expr": "drbd_resource_resources{node=~\"$node\"}",
+          "expr": "drbd_resource_resources",
           "legendFormat": "{{node}}",
           "refId": "A",
           "units": "none",
@@ -1499,7 +1499,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(max by(name, volume) (drbd_peerdevice_outofsync_bytes{node=~\"$node\"} > 0)) OR on() vector(0)",
+          "expr": "sum(max by(name, volume) (drbd_peerdevice_outofsync_bytes > 0)) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1630,7 +1630,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(count by (name) (drbd_device_quorum{node=~\"$node\"} == 0)) OR on() vector(0)",
+          "expr": "count(count by (name) (drbd_device_quorum == 0)) OR on() vector(0)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1701,7 +1701,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(drbd_device_unintentionaldiskless{node=~\"$node\"} == 1) OR on() vector(0)",
+          "expr": "count(drbd_device_unintentionaldiskless == 1) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1763,7 +1763,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(count by (name) (drbd_peerdevice_outofsync_bytes{node=~\"$node\"} > 0)) OR on() vector(0)",
+          "expr": "count(count by (name) (drbd_peerdevice_outofsync_bytes > 0)) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1969,7 +1969,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(drbd_peerdevice_outofsync_bytes{node=~\"$node\"}) by(name, node) > 0",
+          "expr": "sum(drbd_peerdevice_outofsync_bytes) by(name, node) > 0",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -2069,7 +2069,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(drbd_device_quorum{node=~\"$node\"} == 0) by(node, name)",
+          "expr": "count(drbd_device_quorum == 0) by(node, name)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -2158,7 +2158,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(drbd_device_unintentionaldiskless{node=~\"$node\"} == 1) by(node, name, minor)",
+          "expr": "count(drbd_device_unintentionaldiskless == 1) by(node, name, minor)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
