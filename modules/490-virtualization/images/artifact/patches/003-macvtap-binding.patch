@@ -8,14 +8,14 @@ index e28daa07c..ce57e0381 100644
  	createTapCmd.Flags().Uint32("queue-number", 0, "the number of queues to use on multi-queued devices")
 +	createTapCmd.Flags().String("parent-name", "", "the name of parent device for macvtap")
  	createTapCmd.Flags().Uint32("mtu", 1500, "the link MTU of the tap device")
- 
+
  	createMDEVCmd := NewCreateMDEVCommand()
 diff --git a/cmd/virt-chroot/tap-device-maker.go b/cmd/virt-chroot/tap-device-maker.go
 index 4f39328c9..30f2101f2 100644
 --- a/cmd/virt-chroot/tap-device-maker.go
 +++ b/cmd/virt-chroot/tap-device-maker.go
 @@ -2,8 +2,12 @@ package main
- 
+
  import (
  	"fmt"
 +	"io/ioutil"
@@ -25,12 +25,12 @@ index 4f39328c9..30f2101f2 100644
  	"strings"
 +	"syscall"
  	"time"
- 
+
  	"github.com/spf13/cobra"
 @@ -11,41 +15,108 @@ import (
  	"golang.org/x/sys/unix"
  )
- 
+
 -func createTapDevice(name string, owner uint, group uint, queueNumber int, mtu int) error {
 -	tapDevice := &netlink.Tuntap{
 -		LinkAttrs:  netlink.LinkAttrs{Name: name},
@@ -95,7 +95,7 @@ index 4f39328c9..30f2101f2 100644
 +			Mode: netlink.MACVLAN_MODE_BRIDGE,
 +		},
  	}
- 
+
 -	// when netlink receives a request for a tap device with 1 queue, it uses
 -	// the MULTI_QUEUE flag, which differs from libvirt; as such, we need to
 -	// manually request the single queue flags, enabling libvirt to consume
@@ -106,7 +106,7 @@ index 4f39328c9..30f2101f2 100644
 +	if err := netlink.LinkAdd(macvtapDevice); err != nil {
 +		return fmt.Errorf("failed to create macvtap device named %s. Reason: %v", name, err)
  	}
- 
+
 -	// Device creation is retried due to https://bugzilla.redhat.com/1933627
 -	// which has been observed on multiple occasions on CI runs.
 -	const retryAttempts = 5
@@ -120,7 +120,7 @@ index 4f39328c9..30f2101f2 100644
 -		return fmt.Errorf("failed to create tap device named %s. Reason: %v", name, err)
 +		return fmt.Errorf("failed to open directory %s. error: %v", tapSysPath, err)
  	}
- 
+
 -	if err := netlink.LinkSetMTU(tapDevice, mtu); err != nil {
 -		return fmt.Errorf("failed to set MTU on tap device named %s. Reason: %v", name, err)
 +	devName := ""
@@ -140,7 +140,7 @@ index 4f39328c9..30f2101f2 100644
 +	if err != nil {
 +		return fmt.Errorf("unable to read file %s. error: %v", devSysPath, err)
  	}
- 
+
 -	fmt.Printf("Successfully created tap device %s, attempt %d\n", name, attempt)
 +	m := strings.Split(strings.TrimSuffix(string(devString), "\n"), ":")
 +	major, err := strconv.Atoi(m[0])
@@ -156,11 +156,11 @@ index 4f39328c9..30f2101f2 100644
 +	if err := syscall.Mknod(tapDevPath, syscall.S_IFCHR|uint32(os.FileMode(0644)), int(unix.Mkdev(uint32(major), uint32(minor)))); err != nil {
 +		return fmt.Errorf("failed to create characted device %s. error: %v", tapDevPath, err)
 +	}
- 
+
 +	fmt.Printf("Successfully created macvtap device %s", name)
  	return nil
  }
- 
+
 @@ -55,6 +126,7 @@ func NewCreateTapCommand() *cobra.Command {
  		Short: "create a tap device in a given PID net ns",
  		RunE: func(cmd *cobra.Command, args []string) error {
@@ -172,7 +172,7 @@ index 4f39328c9..30f2101f2 100644
 @@ -75,7 +147,7 @@ func NewCreateTapCommand() *cobra.Command {
  				return fmt.Errorf("could not parse tap device group: %v", err)
  			}
- 
+
 -			return createTapDevice(tapName, uint(uid), uint(gid), int(queueNumber), int(mtu))
 +			return createTapDevice(tapName, parentName, uint(uid), uint(gid), int(queueNumber), int(mtu))
  		},
@@ -202,10 +202,10 @@ index 367d74fdd..b9b4f43f6 100644
 +		handler:               handler,
  	}
  }
- 
+
 @@ -246,10 +248,11 @@ func (b *SlirpLibvirtSpecGenerator) Generate() error {
  }
- 
+
  type MacvtapLibvirtSpecGenerator struct {
 -	vmiSpecIface     *v1.Interface
 -	domain           *api.Domain
@@ -217,7 +217,7 @@ index 367d74fdd..b9b4f43f6 100644
 +	podInterfaceName      string
 +	handler               netdriver.NetworkHandler
  }
- 
+
  func (b *MacvtapLibvirtSpecGenerator) Generate() error {
 @@ -275,22 +278,28 @@ func (b *MacvtapLibvirtSpecGenerator) discoverDomainIfaceSpec() (*api.Interface,
  		log.Log.Reason(err).Errorf(linkIfaceFailFmt, b.podInterfaceName)
@@ -245,7 +245,7 @@ index 367d74fdd..b9b4f43f6 100644
 +	if podNicLink.Type() != "macvtap" {
 +		deviceName = virtnetlink.GenerateTapDeviceName(b.podInterfaceName)
  	}
- 
+
 -	return &api.Interface{
 -		MAC: &api.MAC{MAC: mac.String()},
 -		MTU: &api.MTU{Size: strconv.Itoa(podNicLink.Attrs().MTU)},
@@ -259,7 +259,7 @@ index 367d74fdd..b9b4f43f6 100644
 +		Managed: "no"}
 +	return &b.cachedDomainInterface, nil
  }
- 
+
  type PasstLibvirtSpecGenerator struct {
 diff --git a/pkg/network/domainspec/generators_test.go b/pkg/network/domainspec/generators_test.go
 index 8dcb6e0f3..62d9a013c 100644
@@ -272,7 +272,7 @@ index 8dcb6e0f3..62d9a013c 100644
 -					&vmi.Spec.Domain.Devices.Interfaces[0], domain, primaryPodIfaceName, mockNetwork)
 +					&vmi.Spec.Domain.Devices.Interfaces[0], domain, api.Interface{}, primaryPodIfaceName, mockNetwork)
  			})
- 
+
  			It("Should pass a non-privileged macvtap interface to qemu", func() {
 diff --git a/pkg/network/driver/BUILD.bazel b/pkg/network/driver/BUILD.bazel
 index 4d6d5eaaf..c90178d46 100644
@@ -303,11 +303,11 @@ index aed06b6dc..2d67e00ed 100644
  	"os/exec"
 +	"strconv"
 +	"strings"
- 
+
 +	"github.com/opencontainers/runc/libcontainer/configs"
 +	"github.com/opencontainers/runc/libcontainer/devices"
  	"github.com/vishvananda/netlink"
- 
+
  	"kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/converter"
 @@ -42,6 +46,7 @@ import (
  	dhcpserver "kubevirt.io/kubevirt/pkg/network/dhcp/server"
@@ -316,7 +316,7 @@ index aed06b6dc..2d67e00ed 100644
 +	"kubevirt.io/kubevirt/pkg/virt-handler/cgroup"
  	"kubevirt.io/kubevirt/pkg/virt-handler/selinux"
  )
- 
+
 @@ -92,6 +97,7 @@ type NetworkHandler interface {
  	GetNFTIPString(ipVersion IPVersion) string
  	CreateTapDevice(tapName string, queueNumber uint32, launcherPID int, mtu int, tapOwner string) error
@@ -324,11 +324,11 @@ index aed06b6dc..2d67e00ed 100644
 +	CreateMacvtapDevice(tapName string, parentName string, queueNumber uint32, launcherPID int, mtu int, tapOwner string, vmi *v1.VirtualMachineInstance) error
  	DisableTXOffloadChecksum(ifaceName string) error
  }
- 
+
 @@ -380,6 +386,101 @@ func buildTapDeviceMaker(tapName string, queueNumber uint32, virtLauncherPID int
  	return selinux.NewContextExecutor(virtLauncherPID, cmd)
  }
- 
+
 +func (h *NetworkUtilsHandler) CreateMacvtapDevice(tapName string, parentName string, queueNumber uint32, launcherPID int, mtu int, tapOwner string, vmi *v1.VirtualMachineInstance) error {
 +	tapDeviceSELinuxCmdExecutor, err := buildMacvtapDeviceMaker(tapName, parentName, queueNumber, launcherPID, mtu, tapOwner)
 +	if err != nil {
@@ -434,7 +434,7 @@ index 4188db78d..bd0c0aa9e 100644
 @@ -368,6 +368,16 @@ func (_mr *_MockNetworkHandlerRecorder) BindTapDeviceToBridge(arg0, arg1 interfa
  	return _mr.mock.ctrl.RecordCall(_mr.mock, "BindTapDeviceToBridge", arg0, arg1)
  }
- 
+
 +func (_m *MockNetworkHandler) CreateMacvtapDevice(tapName string, parentName string, queueNumber uint32, launcherPID int, mtu int, tapOwner string) error {
 +	ret := _m.ctrl.Call(_m, "CreateMacvtapDevice", tapName, parentName, queueNumber, launcherPID, mtu, tapOwner)
 +	ret0, _ := ret[0].(error)
@@ -467,12 +467,12 @@ index 40037eca7..7e29a8d46 100644
 @@ -25,6 +25,8 @@ import (
  	"kubevirt.io/kubevirt/pkg/network/cache"
  	"kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/api"
- 
+
 +	v1 "kubevirt.io/api/core/v1"
 +
  	netdriver "kubevirt.io/kubevirt/pkg/network/driver"
  )
- 
+
 @@ -43,3 +45,7 @@ func createAndBindTapToBridge(handler netdriver.NetworkHandler, deviceName strin
  	}
  	return handler.BindTapDeviceToBridge(deviceName, bridgeIfaceName)
@@ -483,7 +483,7 @@ index 40037eca7..7e29a8d46 100644
 +}
 diff --git a/pkg/network/infraconfigurators/macvtap.go b/pkg/network/infraconfigurators/macvtap.go
 new file mode 100644
-index 000000000..570eb4f33
+index 000000000..669ad7586
 --- /dev/null
 +++ b/pkg/network/infraconfigurators/macvtap.go
 @@ -0,0 +1,304 @@
@@ -522,13 +522,12 @@ index 000000000..570eb4f33
 +	vmi                 *v1.VirtualMachineInstance
 +}
 +
-+func NewMacvtapPodNetworkConfigurator(vmi *v1.VirtualMachineInstance, vmiSpecIface *v1.Interface, bridgeIfaceName string, launcherPID int, handler netdriver.NetworkHandler) *MacvtapPodNetworkConfigurator {
++func NewMacvtapPodNetworkConfigurator(vmi *v1.VirtualMachineInstance, vmiSpecIface *v1.Interface, launcherPID int, handler netdriver.NetworkHandler) *MacvtapPodNetworkConfigurator {
 +	return &MacvtapPodNetworkConfigurator{
-+		vmi:                 vmi,
-+		vmiSpecIface:        vmiSpecIface,
-+		bridgeInterfaceName: bridgeIfaceName,
-+		launcherPID:         launcherPID,
-+		handler:             handler,
++		vmi:          vmi,
++		vmiSpecIface: vmiSpecIface,
++		launcherPID:  launcherPID,
++		handler:      handler,
 +	}
 +}
 +
@@ -539,6 +538,7 @@ index 000000000..570eb4f33
 +		return err
 +	}
 +	b.podNicLink = link
++	b.bridgeInterfaceName = virtnetlink.GenerateBridgeName(link.Attrs().Name)
 +
 +	addrList, err := b.handler.AddrList(b.podNicLink, netlink.FAMILY_V4)
 +	if err != nil {
@@ -810,7 +810,7 @@ index d0663aa2f..f0e72b315 100644
  	return podnic, nil
  }
 @@ -238,7 +245,7 @@ func (l *podNIC) PlugPhase2(domain *api.Domain) error {
- 
+
  func (l *podNIC) newDHCPConfigurator() dhcpconfigurator.Configurator {
  	var dhcpConfigurator dhcpconfigurator.Configurator
 -	if l.vmiSpecIface.Bridge != nil {
@@ -850,7 +850,7 @@ index 3da406da1..905c6618b 100644
 @@ -525,15 +523,6 @@ func validateForwardPortNonZero(field *k8sfield.Path, forwardPort v1.Port, idx i
  	return causes
  }
- 
+
 -func appendStatusCauseForMacvtapOnlyAllowedWithMultus(field *k8sfield.Path, causes []metav1.StatusCause, idx int) []metav1.StatusCause {
 -	causes = append(causes, metav1.StatusCause{
 -		Type:    metav1.CauseTypeFieldValueInvalid,
@@ -868,7 +868,7 @@ index 04ee3f1fd..a4a9dd515 100644
 --- a/pkg/virt-config/configuration.go
 +++ b/pkg/virt-config/configuration.go
 @@ -483,7 +483,7 @@ func validateConfig(config *v1.KubeVirtConfiguration) error {
- 
+
  	// set default network interface
  	switch config.NetworkConfiguration.NetworkInterface {
 -	case "", string(v1.BridgeInterface), string(v1.SlirpInterface), string(v1.MasqueradeInterface):
@@ -883,7 +883,7 @@ index 23ffacc75..73011b2fe 100644
 @@ -89,11 +89,7 @@ func CreateDomainInterfaces(vmi *v1.VirtualMachineInstance, domain *api.Domain,
  			domainIface.Address = addr
  		}
- 
+
 -		if iface.ACPIIndex > 0 {
 -			domainIface.ACPI = &api.ACPI{Index: uint(iface.ACPIIndex)}
 -		}
@@ -892,7 +892,7 @@ index 23ffacc75..73011b2fe 100644
 +		if iface.Bridge != nil || iface.Masquerade != nil || iface.Macvtap != nil {
  			// TODO:(ihar) consider abstracting interface type conversion /
  			// detection into drivers
- 
+
 @@ -117,21 +113,9 @@ func CreateDomainInterfaces(vmi *v1.VirtualMachineInstance, domain *api.Domain,
  			if err != nil {
  				return nil, err
@@ -926,5 +926,5 @@ index 14d3580c2..cf7648a1f 100644
 +	// Virtual machine instance macvtap interface
 +	MacvtapInterface NetworkInterfaceType = "macvtap"
  )
- 
+
  type DriverCache string
