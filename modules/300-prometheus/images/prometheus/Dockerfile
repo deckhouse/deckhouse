@@ -36,7 +36,7 @@ COPY --from=artifact /prometheus/prometheus/console_libraries/                  
 COPY --from=artifact /prometheus/prometheus/consoles/                              /usr/share/prometheus/consoles/
 
 # RUN apk --no-cache add curl
-RUN ln -s /usr/share/prometheus/console_libraries /usr/share/prometheus/consoles/ /etc/prometheus/
+# RUN ln -s /usr/share/prometheus/console_libraries /usr/share/prometheus/consoles/ /etc/prometheus/
 # RUN mkdir -p /prometheus && \
     # chown -R 65534:2000 etc/prometheus /prometheus
 
