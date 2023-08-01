@@ -1,5 +1,5 @@
 ARG BASE_GOLANG_19_BULLSEYE
-ARG BASE_ALPINE
+ARG BASE_DISTROLESS
 
 FROM $BASE_GOLANG_19_BULLSEYE as artifact
 ENV PROMETHEUS_VERSION=v2.44.0
@@ -28,17 +28,17 @@ RUN git apply sample_limit_annotation.patch && \
   git apply successfully_sent_metric.patch && \
   make build
 
-FROM $BASE_ALPINE
+FROM $BASE_DISTROLESS
 COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
 COPY --from=artifact /prometheus/prometheus/promtool                               /bin/promtool
 COPY --from=artifact /prometheus/prometheus/documentation/examples/prometheus.yml  /etc/prometheus/prometheus.yml
 COPY --from=artifact /prometheus/prometheus/console_libraries/                     /usr/share/prometheus/console_libraries/
 COPY --from=artifact /prometheus/prometheus/consoles/                              /usr/share/prometheus/consoles/
 
-RUN apk --no-cache add curl
+# RUN apk --no-cache add curl
 RUN ln -s /usr/share/prometheus/console_libraries /usr/share/prometheus/consoles/ /etc/prometheus/
-RUN mkdir -p /prometheus && \
-    chown -R 65534:2000 etc/prometheus /prometheus
+# RUN mkdir -p /prometheus && \
+    # chown -R 65534:2000 etc/prometheus /prometheus
 
 USER       65534
 EXPOSE     9090
