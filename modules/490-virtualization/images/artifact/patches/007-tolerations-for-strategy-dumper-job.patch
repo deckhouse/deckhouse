@@ -1,11 +1,3 @@
-commit e4023dd5abc177a262ad45b19c278996182309d7
-Author: Pavel Tishkov <pavel.tishkov@flant.com>
-Date:   Thu Jul 27 16:10:38 2023 +0300
-
-    add tolerations for strategy dumper job
-    
-    Signed-off-by: Pavel Tishkov <pavel.tishkov@flant.com>
-
 diff --git a/pkg/virt-operator/strategy_job.go b/pkg/virt-operator/strategy_job.go
 index e2838fb7b..a5ab93436 100644
 --- a/pkg/virt-operator/strategy_job.go
