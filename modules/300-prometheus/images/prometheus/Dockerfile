@@ -78,6 +78,10 @@ RUN chown -R 64535:64535 /prometheus/ && \
     chmod 0700 /prometheus/prometheus/prometheus && \
     chmod 0700 /prometheus/prometheus/promtool
 
+RUN mkdir -p /consoles
+RUN cp -r /prometheus/prometheus/console_libraries/ /consoles
+RUN cp -r /prometheus/prometheus/consoles/ /consoles
+
 FROM $BASE_DISTROLESS
 COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
 COPY --from=artifact /prometheus/prometheus/promtool                               /bin/promtool
