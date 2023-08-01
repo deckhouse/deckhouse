@@ -1399,8 +1399,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "avg_over_time(scrape_duration_seconds{job=\"linstor-node\", node=~\"$node\"}[$__interval_sx3])",
-          "legendFormat": "{{node}}",
+          "expr": "avg_over_time(scrape_duration_seconds{job=\"linstor-node\"}[$__interval_sx3])",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
