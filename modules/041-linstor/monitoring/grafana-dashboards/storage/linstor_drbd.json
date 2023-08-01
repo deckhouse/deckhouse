@@ -1341,7 +1341,7 @@
           "displayValueWithAlias": "Never",
           "exemplar": true,
           "expr": "drbd_resource_resources",
-          "legendFormat": "{{node}}",
+          "legendFormat": "{{instance}}",
           "refId": "A",
           "units": "none",
           "valueHandler": "Number Threshold"
