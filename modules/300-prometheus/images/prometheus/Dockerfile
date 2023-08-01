@@ -78,7 +78,7 @@ RUN chown -R 64535:64535 /prometheus/ && \
     chmod 0700 /prometheus/prometheus/prometheus && \
     chmod 0700 /prometheus/prometheus/promtool
 
-FROM $BASE_ALPINE
+FROM $BASE_DISTROLESS
 COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
 COPY --from=artifact /prometheus/prometheus/promtool                               /bin/promtool
 COPY --from=artifact /prometheus/prometheus/console_libraries/                     /usr/share/prometheus/console_libraries/
