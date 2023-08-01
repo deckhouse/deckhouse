@@ -34,7 +34,7 @@ import (
 
 var (
 	DockerTransport            = docker.Transport.Name()
-	FileTransport              = transport.Transport.Name()
+	fileTransport              = transport.Transport.Name()
 	directoryTransport         = directory.Transport.Name()
 	ErrNoSuchRegistryTransport = errors.New("no such transport for images. should be 'file:path', 'docker://docker-reference' or 'dir:path'")
 	ErrDirNotImplemented       = errors.New("dir transport: list tags not implemented")
@@ -60,7 +60,7 @@ func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig, isSourc
 		return nil, fmt.Errorf("can't find transport for '%s'", registryPath)
 	}
 
-	if transportName != DockerTransport && transportName != FileTransport && transportName != directoryTransport {
+	if transportName != DockerTransport && transportName != fileTransport && transportName != directoryTransport {
 		return nil, ErrNoSuchRegistryTransport
 	}
 
@@ -73,7 +73,7 @@ func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig, isSourc
 
 func (r *RegistryConfig) Commit() error {
 	switch r.Transport() {
-	case FileTransport:
+	case fileTransport:
 		return util.CompressDir(util.TrimTarGzExt(r.Path()), true)
 	}
 	return nil
@@ -81,7 +81,7 @@ func (r *RegistryConfig) Commit() error {
 
 func (r *RegistryConfig) Close() error {
 	switch r.Transport() {
-	case FileTransport:
+	case fileTransport:
 		return os.RemoveAll(util.TrimTarGzExt(r.Path()))
 	}
 	return nil
@@ -115,7 +115,7 @@ func (r *RegistryConfig) ListTags(ctx context.Context, opts ...ListOption) ([]st
 	switch r.Transport() {
 	case DockerTransport:
 		return listDockerTags(ctx, r, opts...)
-	case FileTransport:
+	case fileTransport:
 		return listFileTags(r.Path())
 	case directoryTransport:
 		return nil, ErrDirNotImplemented

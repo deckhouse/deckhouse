@@ -16,6 +16,7 @@ package image
 
 import (
 	"archive/tar"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,8 +45,9 @@ func NewImageConfig(registry *RegistryConfig, tag, digest string, additionalPath
 
 func (i *ImageConfig) close() error {
 	switch i.RegistryTransport() {
-	case FileTransport:
-		return os.RemoveAll(filepath.Join(i.Path(), util.AddTarGzExt(i.Tag())))
+	case fileTransport:
+		return nil
+		return os.RemoveAll(i.resultImageArchive())
 	}
 	return nil
 }
@@ -90,26 +92,27 @@ func (i *ImageConfig) imageReference(isSource, dryRun bool) (types.ImageReferenc
 	switch i.RegistryTransport() {
 	case DockerTransport:
 		imageBuilder.WriteString(i.Path())
-		if i.tag != "" && i.digest == "" {
+		if i.Tag() != "" && i.Digest() == "" {
 			imageBuilder.WriteByte(':')
 			imageBuilder.WriteString(i.Tag())
 		}
 
-	case FileTransport, directoryTransport:
+	case fileTransport, directoryTransport:
 		r := i.Path()
 		if err := os.MkdirAll(r, 0o755); err != nil {
 			return nil, err
 		}
-		image := filepath.Join(r, i.Tag())
-		if err := i.extractImageFromFileRegistry(image, isSource, dryRun); err != nil {
-			return nil, err
-		}
-		imageBuilder.WriteString(image)
+		imageBuilder.WriteString(filepath.Join(r, i.Tag()))
 	}
 
-	if i.digest != "" {
+	if digest := i.Digest(); digest != "" {
 		imageBuilder.WriteByte('@')
-		imageBuilder.WriteString(i.digest)
+		imageBuilder.WriteString(digest)
+	}
+	if i.RegistryTransport() == fileTransport && (isSource || !dryRun) {
+		if err := i.extractImageFromFileRegistry(); err != nil {
+			return nil, err
+		}
 	}
 
 	return alltransports.ParseImageName(imageBuilder.String())
@@ -147,16 +150,29 @@ func (i *ImageConfig) AuthConfig() *types.DockerAuthConfig {
 	return i.registry.AuthConfig()
 }
 
-func (i *ImageConfig) extractImageFromFileRegistry(p string, isSource, dryRun bool) error {
-	if !isSource || dryRun {
-		return nil
-	}
-
-	fileInArchive := util.AddTarGzExt(filepath.Join(i.additionalPath, i.Tag()))
-	return util.NewTarGzReader(util.AddTarGzExt(i.RegistryPath()), func(h *tar.Header, r *tar.Reader) (bool, error) {
+func (i *ImageConfig) extractImageFromFileRegistry() error {
+	fileInArchive, resultFile := filepath.Join("/", i.fileImageInArchive()), i.resultImageArchive()
+	err := util.NewTarGzReader(util.AddTarGzExt(i.RegistryPath()), func(h *tar.Header, r *tar.Reader) (bool, error) {
 		if h.Name != fileInArchive {
 			return false, nil
 		}
-		return true, util.MkFile(util.AddTarGzExt(p), r, h.FileInfo())
+		return true, util.MkFile(resultFile, r, h.FileInfo())
 	})
+
+	if err != nil {
+		return fmt.Errorf("can't find image in file registry: %w", err)
+	}
+	return nil
+}
+
+func (i *ImageConfig) fileImageInArchive() string {
+	name := filepath.Join(i.additionalPath, i.Tag())
+	if d := i.Digest(); d != "" {
+		name += "@" + d
+	}
+	return util.AddTarGzExt(name)
+}
+
+func (i *ImageConfig) resultImageArchive() string {
+	return filepath.Join(i.RegistryPath(), i.fileImageInArchive())
 }
