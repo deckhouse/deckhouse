@@ -26,6 +26,6 @@ EOF
 chmod a+x /etc/profile.d/02-deckhouse-path.sh
 
 # also need to sure that path to deckhouse bin in root bashrc
-#if grep -q "^PATH=" /root/.bashrc 2>/dev/null; then
-#  echo "export PATH=/opt/deckhouse/bin:$PATH" >> /root/.bashrc
-#fi
+if grep -q "^PATH=" /root/.bashrc 2>/dev/null; then
+  echo "export PATH=/opt/deckhouse/bin:$PATH" >> /root/.bashrc
+fi
