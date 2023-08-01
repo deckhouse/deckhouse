@@ -121,6 +121,9 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: {{ $.Chart.Name }}-{{ .Lang }}-cert
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
 spec:
   certificateOwnerRef: false
   secretName: tls-{{ .URL }}
