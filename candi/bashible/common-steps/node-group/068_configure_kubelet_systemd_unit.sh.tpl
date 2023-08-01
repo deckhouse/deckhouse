@@ -42,7 +42,12 @@ if [[ -z "${cri_socket_path}" ]]; then
   exit 1
 fi
 
-cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_socket_path}"
+# we should keep this condition because user can use NotManaged type and docker
+if grep -q "docker" <<< "${cri_socket_path}"; then
+  cri_config="--container-runtime=docker --docker-endpoint=unix://${cri_socket_path}"
+else
+  cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_socket_path}"
+fi
 {{- end }}
 
 bb-event-on 'bb-sync-file-changed' '_enable_kubelet_service'
