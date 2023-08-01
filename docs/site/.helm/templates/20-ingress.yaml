@@ -72,6 +72,13 @@ spec:
             name: frontend
             port:
               name: http
+      - path: /presentations
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
       - path: /guides
         pathType: Prefix
         backend:
