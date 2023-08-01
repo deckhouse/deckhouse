@@ -2233,7 +2233,7 @@
         "allValue": null,
         "current": {},
         "datasource": "${ds_prometheus}",
-        "definition": "label_values(drbdreactor_up, node)",
+        "definition": "label_values(linstor_node_state{nodetype=\"SATELLITE\"}, node)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -2243,7 +2243,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(drbdreactor_up, node)",
+          "query": "label_values(linstor_node_state{nodetype=\"SATELLITE\"}, node)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
