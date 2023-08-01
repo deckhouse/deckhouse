@@ -47,6 +47,8 @@ spec:
             subPath: config.yaml
           - name: storage
             mountPath: /loki
+          - name: tmp
+            mountPath: /tmp
         ports:
           - name: http-metrics
             containerPort: 3100
@@ -68,6 +70,8 @@ spec:
         configMap:
           name: {{ .Chart.Name }}
           defaultMode: 0644
+      - name: tmp
+        emptyDir: {}
 {{- $storageClass := .Values.loki.internal.effectiveStorageClass }}
 {{- if $storageClass }}
   volumeClaimTemplates:
