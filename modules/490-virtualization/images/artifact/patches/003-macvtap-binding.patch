@@ -833,6 +833,26 @@ index d0663aa2f..3c723d387 100644
  	}
  	if l.vmiSpecIface.Passt != nil {
  		return domainspec.NewPasstLibvirtSpecGenerator(l.vmiSpecIface, domain, l.vmi)
+diff --git a/pkg/network/vmispec/interface.go b/pkg/network/vmispec/interface.go
+index f7378165a..b24e7fa6f 100644
+--- a/pkg/network/vmispec/interface.go
++++ b/pkg/network/vmispec/interface.go
+@@ -52,6 +52,15 @@ func FilterInterfacesSpec(ifaces []v1.Interface, predicate func(i v1.Interface)
+ 	return filteredIfaces
+ }
+ 
++func IsPodNetworkWithMacvtapBindingInterface(networks []v1.Network, ifaces []v1.Interface) bool {
++	if podNetwork := LookupPodNetwork(networks); podNetwork != nil {
++		if podInterface := LookupInterfaceByName(ifaces, podNetwork.Name); podInterface != nil {
++			return podInterface.Macvtap != nil
++		}
++	}
++	return true
++}
++
+ func IsPodNetworkWithMasqueradeBindingInterface(networks []v1.Network, ifaces []v1.Interface) bool {
+ 	if podNetwork := LookupPodNetwork(networks); podNetwork != nil {
+ 		if podInterface := LookupInterfaceByName(ifaces, podNetwork.Name); podInterface != nil {
 diff --git a/pkg/virt-api/webhooks/validating-webhook/admitters/vmi-create-admitter.go b/pkg/virt-api/webhooks/validating-webhook/admitters/vmi-create-admitter.go
 index 3da406da1..905c6618b 100644
 --- a/pkg/virt-api/webhooks/validating-webhook/admitters/vmi-create-admitter.go
@@ -875,6 +895,24 @@ index 04ee3f1fd..a4a9dd515 100644
  		break
  	default:
  		return fmt.Errorf("invalid default-network-interface in config: %v", config.NetworkConfiguration.NetworkInterface)
+diff --git a/pkg/virt-handler/vm.go b/pkg/virt-handler/vm.go
+index 6f495dc77..0524f8a0d 100644
+--- a/pkg/virt-handler/vm.go
++++ b/pkg/virt-handler/vm.go
+@@ -2368,10 +2368,12 @@ func (d *VirtualMachineController) checkNetworkInterfacesForMigration(vmi *v1.Vi
+ 	if allowPodBridgeNetworkLiveMigration && netvmispec.IsPodNetworkWithBridgeBindingInterface(vmi.Spec.Networks, ifaces) {
+ 		return nil
+ 	}
++	if allowPodBridgeNetworkLiveMigration && netvmispec.IsPodNetworkWithMacvtapBindingInterface(vmi.Spec.Networks, ifaces) {
++		return nil
++	}
+ 	if netvmispec.IsPodNetworkWithMasqueradeBindingInterface(vmi.Spec.Networks, ifaces) {
+ 		return nil
+ 	}
+-
+ 	return fmt.Errorf("cannot migrate VMI which does not use masquerade to connect to the pod network or bridge with %s VM annotation", v1.AllowPodBridgeNetworkLiveMigrationAnnotation)
+ }
+ 
 diff --git a/pkg/virt-launcher/virtwrap/converter/network.go b/pkg/virt-launcher/virtwrap/converter/network.go
 index 23ffacc75..73011b2fe 100644
 --- a/pkg/virt-launcher/virtwrap/converter/network.go
