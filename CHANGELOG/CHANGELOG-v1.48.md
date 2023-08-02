@@ -44,6 +44,7 @@
  - **[runtime-audit-engine]** Mount falco config to rules-loader to enable plugins for validating webhook. Otherwise, webhook returns an error for valid rules. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
  - **[runtime-audit-engine]** Output webhook validation error. Without this change, users have to search it in logs among all running falco pods. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
  - **[runtime-audit-engine]** Fix `FalcoAuditRules` resource name in rules. [#5110](https://github.com/deckhouse/deckhouse/pull/5110)
+ - **[user-authn]** Add custom certificate for kubeconfig generator. [#5424](https://github.com/deckhouse/deckhouse/pull/5424)
  - **[user-authn]** Fix kubeconfig certificate generation. [#5273](https://github.com/deckhouse/deckhouse/pull/5273)
  - **[user-authn]** Improve groups migration (run only once and slugify group names). [#5130](https://github.com/deckhouse/deckhouse/pull/5130)
  - **[user-authn]** Disable env expansion to support dollar character in `bindPW` for LDAP connector. [#5106](https://github.com/deckhouse/deckhouse/pull/5106)
