@@ -17,6 +17,15 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  resourceNames:
+  - kubevirt-ca
+  - kubevirt-export-ca
+  - kubevirt-virt-handler-certs
+  - kubevirt-virt-handler-server-certs
+  - kubevirt-operator-certs
+  - kubevirt-virt-api-certs
+  - kubevirt-controller-certs
+  - kubevirt-exportproxy-certs
   resources:
   - secrets
   verbs:
@@ -101,6 +110,18 @@ rules:
   - create
   - update
   - delete
+  - patch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
+  - update
+  - create
   - patch
 - apiGroups:
   - ""
@@ -433,6 +454,18 @@ rules:
   - create
   - patch
 - apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
+  - update
+  - create
+  - patch
+- apiGroups:
   - ""
   resources:
   - events
@@ -640,6 +673,13 @@ rules:
   verbs:
   - get
 - apiGroups:
+  - ""
+  resources:
+  - resourcequotas
+  verbs:
+  - list
+  - watch
+- apiGroups:
   - route.openshift.io
   resources:
   - routes
@@ -801,6 +841,7 @@ rules:
   - virtualmachines/removevolume
   - virtualmachines/migrate
   - virtualmachines/memorydump
+  - virtualmachines/addinterface
   verbs:
   - update
 - apiGroups:
@@ -832,6 +873,32 @@ rules:
   - virtualmachinesnapshots
   - virtualmachinesnapshotcontents
   - virtualmachinerestores
+  verbs:
+  - get
+  - delete
+  - create
+  - update
+  - patch
+  - list
+  - watch
+  - deletecollection
+- apiGroups:
+  - export.kubevirt.io
+  resources:
+  - virtualmachineexports
+  verbs:
+  - get
+  - delete
+  - create
+  - update
+  - patch
+  - list
+  - watch
+  - deletecollection
+- apiGroups:
+  - clone.kubevirt.io
+  resources:
+  - virtualmachineclones
   verbs:
   - get
   - delete
@@ -919,6 +986,7 @@ rules:
   - virtualmachines/removevolume
   - virtualmachines/migrate
   - virtualmachines/memorydump
+  - virtualmachines/addinterface
   verbs:
   - update
 - apiGroups:
@@ -949,6 +1017,30 @@ rules:
   - virtualmachinesnapshots
   - virtualmachinesnapshotcontents
   - virtualmachinerestores
+  verbs:
+  - get
+  - delete
+  - create
+  - update
+  - patch
+  - list
+  - watch
+- apiGroups:
+  - export.kubevirt.io
+  resources:
+  - virtualmachineexports
+  verbs:
+  - get
+  - delete
+  - create
+  - update
+  - patch
+  - list
+  - watch
+- apiGroups:
+  - clone.kubevirt.io
+  resources:
+  - virtualmachineclones
   verbs:
   - get
   - delete
@@ -1037,6 +1129,22 @@ rules:
   - list
   - watch
 - apiGroups:
+  - export.kubevirt.io
+  resources:
+  - virtualmachineexports
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - clone.kubevirt.io
+  resources:
+  - virtualmachineclones
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - instancetype.kubevirt.io
   resources:
   - virtualmachineinstancetypes
@@ -1089,4 +1197,3 @@ subjects:
 - kind: ServiceAccount
   name: kubevirt-operator
   namespace: d8-virtualization
-
