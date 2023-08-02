@@ -36,6 +36,8 @@ RUN mkdir -p /etc && \
   cp /prometheus/prometheus/documentation/examples/prometheus.yml /etc && \
   cp /prometheus/prometheus/console_libraries/* /etc
 
+RUN mkdir -p /prometheus
+
 FROM $BASE_DISTROLESS
 COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
 COPY --from=artifact /prometheus/prometheus/promtool                               /bin/promtool
@@ -44,6 +46,7 @@ COPY --from=artifact /prometheus/prometheus/console_libraries/                  
 # COPY --from=artifact /prometheus/prometheus/consoles/                              /usr/share/prometheus/consoles/
 COPY --from=artifact /consoles/                                                    /usr/share/prometheus/consoles/
 COPY --from=artifact /etc/                                                         /etc/prometheus/
+COPY --from=artifact /prometheus/                                                  /prometheus/
 
 # RUN apk --no-cache add curl
 # RUN ln -s /usr/share/prometheus/console_libraries /usr/share/prometheus/consoles/ /etc/prometheus/
