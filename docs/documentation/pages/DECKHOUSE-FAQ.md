@@ -248,6 +248,8 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 * `registryCA` - root CA certificate to validate the third-party registry's HTTPS certificate (if self-signed certificates are used);
 * `registryScheme` - registry scheme (`HTTP` or `HTTPS`). The default value is `HTTPS`.
 
+<div markdown="0" style="height: 0;" id="tips-for-configuring-the-third-party-registry"></div>
+
 ### Tips for configuring Nexus
 
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:

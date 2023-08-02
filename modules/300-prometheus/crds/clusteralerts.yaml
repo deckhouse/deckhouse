@@ -105,7 +105,7 @@ spec:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
                   description: |
-                    Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   x-doc-example: |
                     ```yaml
                     labels:
@@ -118,7 +118,7 @@ spec:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
                   description: |
-                    Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   x-doc-example: |
                     ```yaml
                     annotations:
