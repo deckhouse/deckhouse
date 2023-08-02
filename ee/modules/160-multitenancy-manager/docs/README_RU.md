@@ -24,7 +24,7 @@ description: Модуль multitenancy-manager Deckhouse помогает удо
 
 При создании ресурса [Project](cr.html#project) происходит следующее:
 - Создается `Namespace` с именем из ресурса [Project](cr.html#project).
-- Создается [AuthorizationRule](../140-user-authz/cr.html#authorizationrule) из приведенных данных в поле [subjects](cr.htlm#projecttype-v1alpha1-spec-subjects) ресурса [ProjectType](cr.htlm#projecttype).
-- Выполняется рендеринг шаблонов (параметр [resourcesTemplate](cr.htlm#projecttype-v1alpha1-spec-resourcestemplate) ресурса [ProjectType](cr.htlm#projecttype)) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [template](cr.htlm#project-v1alpha1-spec-template) ресурса [Project](cr.html#project). При рендеринге выполняется валидация значений согласно OpenAPI-спецификации (параметр [openAPI](cr.htlm#projecttype-v1alpha1-spec-openapi) ресурса [ProjectType](cr.htlm#projecttype)).
+- Создается [AuthorizationRule](../140-user-authz/cr.html#authorizationrule) из приведенных данных в поле [subjects](cr.html#projecttype-v1alpha1-spec-subjects) ресурса [ProjectType](cr.html#projecttype).
+- Выполняется рендеринг шаблонов (параметр [resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) ресурса [ProjectType](cr.html#projecttype)) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [template](cr.html#project-v1alpha1-spec-template) ресурса [Project](cr.html#project). При рендеринге выполняется валидация значений согласно OpenAPI-спецификации (параметр [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) ресурса [ProjectType](cr.html#projecttype)).
 
-Так как рендеринг [шаблонов](cr.htlm#projecttype-v1alpha1-spec-resourcestemplate) выполняется с помощью `Helm`, в шаблоне можно описать любые необходимые объекты Kubernetes, например `NetworkPolicy`, `LimitRange`, `ResourceQuota` и т.п.
+Так как рендеринг [шаблонов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) выполняется с помощью `Helm`, в шаблоне можно описать любые необходимые объекты Kubernetes, например `NetworkPolicy`, `LimitRange`, `ResourceQuota` и т.п.
