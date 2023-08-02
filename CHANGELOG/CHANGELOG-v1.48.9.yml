@@ -1,0 +1,5 @@
+user-authn:
+  fixes:
+    - summary: Add custom certificate for kubeconfig generator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5424
+
