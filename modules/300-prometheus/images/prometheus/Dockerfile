@@ -86,6 +86,8 @@ RUN mkdir -p /etc && \
   cp /prometheus/prometheus/documentation/examples/prometheus.yml /etc && \
   cp /prometheus/prometheus/console_libraries/* /etc
 
+RUN mkdir -p /prometheus
+
 FROM $BASE_DISTROLESS
 COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
 COPY --from=artifact /prometheus/prometheus/promtool                               /bin/promtool
