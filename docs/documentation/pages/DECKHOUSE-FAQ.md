@@ -200,11 +200,11 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
 ### What do I do if Deckhouse fails to retrieve updates from the release channel?
 
 * Make sure that the desired release channel is [configured](#how-do-i-set-the-desired-release-channel).
-* Make sure that the DNS name of the Deckhouse image repository is resolved correctly.
+* Make sure that the DNS name of the Deckhouse container registry is resolved correctly.
 
-  Retrieve and compare the IP addresses of the Deckhouse image repository (`registry.deckhouse.io`) on one of the nodes and in the Deckhouse pod. They should match.
+  Retrieve and compare the IP addresses of the Deckhouse container registry (`registry.deckhouse.io`) on one of the nodes and in the Deckhouse pod. They should match.
   
-  Here is how you can retrieve the IP address of the Deckhouse image repository on a node:
+  Here is how you can retrieve the IP address of the Deckhouse container registry on a node:
 
   ```shell
   $ getent ahosts registry.deckhouse.io
@@ -213,7 +213,7 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
   46.4.145.194    RAW
   ```
 
-  Here is how you can retrieve the IP address of the Deckhouse image repository in a pod:
+  Here is how you can retrieve the IP address of the Deckhouse container registry in a pod:
   
   ```shell
   $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
@@ -221,9 +221,9 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
   46.4.145.194    DGRAM  registry.deckhouse.io
   ```
   
-  If the retrieved IP addresses do not match, inspect the DNS settings on the host. Specifically, check the list of domains in the search parameter of the `/etc/resolv.conf` file (it affects name resolution in the Deckhouse pod). If the search parameter of the `/etc/resolv.conf` file includes a domain where wildcard record resolution is configured, it may result in incorrect resolution of the IP address of the Deckhouse image repository (see example).
+  If the retrieved IP addresses do not match, inspect the DNS settings on the host. Specifically, check the list of domains in the search parameter of the `/etc/resolv.conf` file (it affects name resolution in the Deckhouse pod). If the search parameter of the `/etc/resolv.conf` file includes a domain where wildcard record resolution is configured, it may result in incorrect resolution of the IP address of the Deckhouse container registry (see example).
   
-{% offtopic title="Example of DNS settings that may cause errors in resolving the IP address of the Deckhouse image repository..." %}
+{% offtopic title="Example of DNS settings that may cause errors in resolving the IP address of the Deckhouse container registry..." %}
 
 In the example below, DNS settings produce different results when resolving names on the host and in the Kubernetes pod:
 - The `/etc/resolv.conf` file on the node:
