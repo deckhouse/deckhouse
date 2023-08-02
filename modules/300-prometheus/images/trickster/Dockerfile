@@ -1,7 +1,7 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_15_ALPINE
+ARG BASE_GOLANG_16_ALPINE
 
-FROM $BASE_GOLANG_15_ALPINE as artifact
+FROM $BASE_GOLANG_16_ALPINE as artifact
 
 RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch v1.1.5 https://github.com/trickstercache/trickster.git /trickster
