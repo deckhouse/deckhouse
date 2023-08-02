@@ -76,7 +76,7 @@ spec:
         - name: CONFIG_MAP_NAMES
           value: deckhouse,deckhouse-generated-config-do-not-edit
         - name: ALLOWED_USERS
-          value: "system:serviceaccount:d8-system:deckhouse"
+          value: "system:serviceaccount:d8-system:deckhouse,system:serviceaccount:kube-system:generic-garbage-collector"
 {{- if (.Values.global.enabledModules | has "external-module-manager") }}
         - name: MODULES_DIR
           value: "/deckhouse/modules:/deckhouse/external-modules/modules"
