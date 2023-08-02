@@ -55,10 +55,10 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
 
 1. Create an environment template using the [ProjectType](cr.html#projecttype) custom resource:
 
-   - in the [.spec.subjects](cr.htlm#projecttype-v1alpha1-spec-subjects) field, describe [roles](../140-user-authz/cr.html#authorizationrule-v1alpha1-spec-accesslevel) to be given to users/groups/`ServiceAccount`s;
-   - in the [.spec.resourcesTemplate](cr.htlm#projecttype-v1alpha1-spec-resourcestemplate) field, describe the resource templates that you want to create when setting up isolated environments;
-   - in the [.spec.openAPI](cr.htlm#projecttype-v1alpha1-spec-openapi) field, define the OpenAPI specification for `values` used in the template ([.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate));
-   - in the [.spec.namespaceMetadata](cr.htlm#projecttype-v1alpha1-spec-namespacemetadata) field, describe labels and annotations that need to be set for the `Namespace` when setting up the environment.
+   - in the [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) field, describe [roles](../140-user-authz/cr.html#authorizationrule-v1alpha1-spec-accesslevel) to be given to users/groups/`ServiceAccount`s;
+   - in the [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) field, describe the resource templates that you want to create when setting up isolated environments;
+   - in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) field, define the OpenAPI specification for `values` used in the template ([.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate));
+   - in the [.spec.namespaceMetadata](cr.html#projecttype-v1alpha1-spec-namespacemetadata) field, describe labels and annotations that need to be set for the `Namespace` when setting up the environment.
 
    In the example below, the [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) field of the template contains [roles](../150-user-authn/cr.html#user) to be assigned to the users created above in the new environments. The [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) field contains three resources: `NetworkPolicy` (limits network accessibility of Pods outside the created `Namespace`, except for the `kube-dns`), `LimitRange` and `ResourceQuota`. The resource template uses the parameters described in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) field (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
 

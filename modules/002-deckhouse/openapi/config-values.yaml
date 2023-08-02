@@ -22,7 +22,7 @@ properties:
     enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
     x-examples: ["Stable"]
     description: |
-      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/documentation/v1/deckhouse-faq.html#change-the-release-channel) to it when such an opportunity appears).
+      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/documentation/v1/deckhouse-faq.html#what-happens-when-the-update-channel-changes) to it when such an opportunity appears).
 
       The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   update:
