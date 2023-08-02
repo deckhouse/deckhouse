@@ -8,9 +8,11 @@ properties:
   autoConvergerPeriod:
     type: string
     default: "1h"
-    pattern: '^\d+(?:m|h)$'
+    pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
     description: |
       The time interval after which the state of Terraform is checked and applied.
+
+      It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
   nodeSelector:
     type: object
     additionalProperties:

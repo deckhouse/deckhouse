@@ -5,6 +5,8 @@ properties:
   autoConvergerPeriod:
     description: |
       Промежуток времени, через который проверяется состояние Terraform'а.
+
+      Задаётся в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
