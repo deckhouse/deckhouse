@@ -1,0 +1,19 @@
+candi:
+  fixes:
+    - summary: Revert kubelet CRI socket path configuration for docker.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5411
+    - summary: Fixes in ALTLinux nodes bootstrap
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5397
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix OpenAPI scheme for `d8-cloud-provider-discovery-data` secret.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5405
+linstor:
+  fixes:
+    - summary: Fix for Linstor dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5403
+user-authn:
+  fixes:
+    - summary: Add a custom certificate for the kubeconfig generator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5409
+
