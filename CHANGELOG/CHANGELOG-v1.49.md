@@ -30,16 +30,20 @@
 
 
  - **[admission-policy-engine]** Fix `checkContainerDuplicates` policy. Allow env with the same name in the different containers [#5214](https://github.com/deckhouse/deckhouse/pull/5214)
+ - **[candi]** Revert kubelet CRI socket path configuration for docker. [#5411](https://github.com/deckhouse/deckhouse/pull/5411)
  - **[candi]** Removed double sudo call for reboot command. [#5272](https://github.com/deckhouse/deckhouse/pull/5272)
+ - **[cloud-provider-openstack]** Fix OpenAPI scheme for `d8-cloud-provider-discovery-data` secret. [#5405](https://github.com/deckhouse/deckhouse/pull/5405)
  - **[cloud-provider-openstack]** Remove 'minLength: 1' requirement from mainNetwork and defaultImageName properties in OpenAPI specification. [#5381](https://github.com/deckhouse/deckhouse/pull/5381)
  - **[deckhouse-controller]** Fix CA retaining after change-registry command. [#5307](https://github.com/deckhouse/deckhouse/pull/5307)
  - **[deckhouse-controller]** Fix change-registry CA handling for connecting to registry. [#5282](https://github.com/deckhouse/deckhouse/pull/5282)
+ - **[linstor]** Fix for Linstor dashboard. [#5403](https://github.com/deckhouse/deckhouse/pull/5403)
  - **[linstor]** Update `piraeus-operator` CRDs to be compatible with the version `1.10.5`. [#5325](https://github.com/deckhouse/deckhouse/pull/5325)
  - **[linstor]** Update piraeus-operator and linstor-csi. Bump k8s api package versions. [#5301](https://github.com/deckhouse/deckhouse/pull/5301)
  - **[log-shipper]** Alert if replicas are not available. [#5311](https://github.com/deckhouse/deckhouse/pull/5311)
  - **[monitoring-kubernetes]** Select all controllers by default on the Namespace dashboard in Grafana. [#5224](https://github.com/deckhouse/deckhouse/pull/5224)
  - **[runtime-audit-engine]** Alert if replicas are not available. [#5311](https://github.com/deckhouse/deckhouse/pull/5311)
  - **[secret-copier]** Fix the creation of a secret in terminating or errored namespace. [#5295](https://github.com/deckhouse/deckhouse/pull/5295)
+ - **[user-authn]** Add a custom certificate for the kubeconfig generator. [#5409](https://github.com/deckhouse/deckhouse/pull/5409)
 
 ## Chore
 
