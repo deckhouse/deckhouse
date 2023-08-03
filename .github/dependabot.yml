@@ -268,7 +268,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/300-prometheus/images/trickster/expand-conf"
+  directory: "/modules/300-prometheus/images/trickster/runner"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
