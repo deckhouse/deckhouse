@@ -41,13 +41,16 @@ func main() {
 	tmpfile.Close()
 
 	builder := strings.Builder{}
-	builder.WriteString("-config=")
+	builder.WriteString("--config=")
 	builder.WriteString(tmpfile.Name())
 
 	cmd := exec.Command("trickster", builder.String())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
+
+	log.Println(cmd.String())
+	log.Println(os.ExpandEnv(string(content)))
 
 	if err := cmd.Run(); err != nil {
 		log.Fatal(err)
