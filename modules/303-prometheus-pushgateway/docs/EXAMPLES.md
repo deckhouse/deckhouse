@@ -39,7 +39,7 @@ test_metric{container="prometheus-pushgateway", env="dev", exported_job="myapp",
 {% alert %} The job name (`myapp` in the example) will be available in Prometheus in the label `exported_job`, and not `job` (because the label `job` already exists in Prometheus and is renamed when receiving metrics from PushGateway).
 {% endalert %}
 
-{% alert %} You may need to get all available job names to choose a unique name (in order not to spoil existing graphs and alerts). Use the following query to get a list of all existing jobs: {% raw %}`count({__name__=~".+"}) by (job)`.{% endraw %}
+{% alert %} You may need to get a list of all available job names to choose a unique name (in order not to spoil existing graphs and alerts). Use the following query to get a list of all existing jobs: {% raw %}`count({__name__=~".+"}) by (job)`.{% endraw %}
 {% endalert %}
 
 ## Deleting metrics
