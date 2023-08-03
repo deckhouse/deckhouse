@@ -582,6 +582,9 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 	case node.IsApproved:
 		return "Approved"
 
+	case node.ConfigurationChecksum == "":
+		return "UpdateFailedNoConfigChecksum"
+
 	case node.ConfigurationChecksum != desiredChecksum:
 		return "ToBeUpdated"
 
@@ -595,7 +598,7 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 
 var metricStatuses = []string{
 	"WaitingForApproval", "Approved", "DrainingForDisruption", "WaitingForDisruptionApproval",
-	"WaitingForManualDisruptionApproval", "DisruptionApproved", "ToBeUpdated", "UpToDate",
+	"WaitingForManualDisruptionApproval", "DisruptionApproved", "ToBeUpdated", "UpToDate", "UpdateFailedNoConfigChecksum",
 }
 
 func setNodeStatusesMetrics(input *go_hook.HookInput, nodeName, nodeGroup, nodeStatus string) {
