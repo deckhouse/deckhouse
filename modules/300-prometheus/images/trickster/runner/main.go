@@ -34,14 +34,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("create tmp conf: %v", err)
 	}
-	defer tmpfile.Close()
 
 	if _, err := tmpfile.Write([]byte(os.ExpandEnv(string(content)))); err != nil {
 		log.Fatalf("write tmp conf: %v", err)
 	}
+	tmpfile.Close()
 
 	builder := strings.Builder{}
-	builder.WriteString("--config=")
+	builder.WriteString("-config=")
 	builder.WriteString(tmpfile.Name())
 
 	cmd := exec.Command("trickster", builder.String())
