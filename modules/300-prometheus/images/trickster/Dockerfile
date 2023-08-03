@@ -23,4 +23,4 @@ FROM $BASE_DISTROLESS
 COPY --from=artifact /trickster/OPATH/trickster /usr/local/bin/
 COPY --from=artifact1 /app/runner /usr/local/bin/
 
-ENTRYPOINT ["runner < /etc/trickster/trickster.conf"]
+ENTRYPOINT ["runner" "<" "/etc/trickster/trickster.conf"]
