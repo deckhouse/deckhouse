@@ -1,5 +1,5 @@
 @import "components/common/_variables.scss";
-
+@import "components/common/_mixins";
 .button {
     cursor: pointer;
     display: inline-block;
@@ -22,7 +22,7 @@
         background: $color-inverse;
         border: 2px solid $color-inverse;
     }
-    &:not(.button_disabled):not(.button_card):hover {
+    &:not(.button_disabled):not(.button_card):not(.button--primary):hover {
         color: $color-inverse !important;
         background: $color-main;
         border: 2px solid $color-main;
@@ -63,8 +63,20 @@
           height: $font-size-h2*1.5;
         }
     }
+    &--primary {
+        @include color($white);
+        @include bg-color($primary-700);
+        border: 2px solid $primary-700;
+        transition: .2s;
 
-    &_card {
+        &:hover {
+            @include bg-color($primary-900);
+            border: 2px solid $primary-900;
+        }
+    }
+
+
+  &_card {
         display: flex;
         transition: all .25s ease;
         flex-direction: column;
