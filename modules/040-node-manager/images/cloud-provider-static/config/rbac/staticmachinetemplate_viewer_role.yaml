@@ -1,0 +1,27 @@
+# permissions for end users to view staticmachinetemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: staticmachinetemplate-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: cloud-provider-static
+    app.kubernetes.io/part-of: cloud-provider-static
+    app.kubernetes.io/managed-by: kustomize
+  name: staticmachinetemplate-viewer-role
+rules:
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - staticmachinetemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - staticmachinetemplates/status
+  verbs:
+  - get

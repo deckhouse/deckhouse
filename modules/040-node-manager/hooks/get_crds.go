@@ -503,6 +503,9 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	if !nodeGroupSpec.CRI.IsEmpty() {
 		res["cri"] = nodeGroupSpec.CRI
 	}
+	if !nodeGroupSpec.StaticInstances.IsEmpty() {
+		res["staticInstances"] = nodeGroupSpec.StaticInstances
+	}
 	if !nodeGroupSpec.CloudInstances.IsEmpty() {
 		res["cloudInstances"] = nodeGroupSpec.CloudInstances
 	}

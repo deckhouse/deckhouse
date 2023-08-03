@@ -1,0 +1,12 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: StaticCluster
+metadata:
+  labels:
+    app.kubernetes.io/name: staticcluster
+    app.kubernetes.io/instance: staticcluster-sample
+    app.kubernetes.io/part-of: cloud-provider-static
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cloud-provider-static
+  name: staticcluster-sample
+spec:
+  # TODO(user): Add fields here

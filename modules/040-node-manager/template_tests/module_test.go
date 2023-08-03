@@ -86,11 +86,19 @@ internal:
     ca: string
     key: string
     crt: string
+  cloudProviderStaticWebhookCert:
+    ca: string
+    key: string
+    crt: string
 `
 
 const nodeManagerAWS = `
 internal:
   capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  cloudProviderStaticWebhookCert:
     ca: string
     key: string
     crt: string
@@ -152,6 +160,10 @@ internal:
 const nodeManagerAzure = `
 internal:
   capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  cloudProviderStaticWebhookCert:
     ca: string
     key: string
     crt: string
@@ -234,6 +246,10 @@ internal:
     ca: string
     key: string
     crt: string
+  cloudProviderStaticWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -285,6 +301,10 @@ internal:
     ca: string
     key: string
     crt: string
+  cloudProviderStaticWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -332,6 +352,10 @@ internal:
 const nodeManagerOpenstack = `
 internal:
   capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  cloudProviderStaticWebhookCert:
     ca: string
     key: string
     crt: string
@@ -413,6 +437,10 @@ internal:
 const nodeManagerVsphere = `
 internal:
   capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  cloudProviderStaticWebhookCert:
     ca: string
     key: string
     crt: string
@@ -498,6 +526,10 @@ internal:
     ca: string
     key: string
     crt: string
+  cloudProviderStaticWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -560,6 +592,10 @@ internal:
     ca: string
     key: string
     crt: string
+  cloudProviderStaticWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -573,6 +609,77 @@ internal:
     cri:
       type: "Containerd"
 `
+
+const (
+	nodeManagerStaticInstances = `
+internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  cloudProviderStaticWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  bootstrapTokens:
+    worker: myworker
+  nodeGroups:
+  - name: worker
+    nodeType: Static
+    staticInstances:
+      labelSelector:
+        matchLabels:
+          node-group: worker
+    kubernetesVersion: "1.23"
+    cri:
+      type: "Containerd"
+`
+	nodeManagerStaticInstancesStaticMachineTemplate = `
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: StaticMachineTemplate
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: worker
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    node-group: worker
+spec:
+  template:
+    spec:
+      labelSelector:
+        matchLabels:
+          node-group: worker
+`
+	nodeManagerStaticInstancesMachineDeployment = `
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: worker
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    node-group: worker
+spec:
+  clusterName: static
+  replicas: 0
+  template:
+    spec:
+      bootstrap:
+        dataSecretName: manual-bootstrap-for-worker
+      clusterName: static
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: StaticMachineTemplate
+        name: worker
+  selector: {}
+`
+)
 
 const openstackCIMPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
 const openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
@@ -1322,6 +1429,107 @@ ccc: ddd
 
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			assertBashibleAPIServerTLS(f)
+		})
+	})
+
+	Context("Static instances", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStaticInstances)
+			setBashibleAPIServerTLSValues(f)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
+			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
+
+			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
+			userAuthzClusterRoleClusterEditor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-editor")
+			userAuthzClusterRoleClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-admin")
+
+			mcmDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "machine-controller-manager")
+			mcmServiceAccount := f.KubernetesResource("ServiceAccount", "d8-cloud-instance-manager", "machine-controller-manager")
+			mcmRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "machine-controller-manager")
+			mcmRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "machine-controller-manager")
+			mcmClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:machine-controller-manager")
+			mcmClusterRoleBinding := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:node-manager:machine-controller-manager")
+
+			clusterAutoscalerDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "cluster-autoscaler")
+			clusterAutoscalerServiceAccount := f.KubernetesResource("ServiceAccount", "d8-cloud-instance-manager", "cluster-autoscaler")
+			clusterAutoscalerRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "cluster-autoscaler")
+			clusterAutoscalerRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "cluster-autoscaler")
+			clusterAutoscalerClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:cluster-autoscaler")
+			clusterAutoscalerClusterRoleBinding := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:node-manager:cluster-autoscaler")
+
+			machineClassA := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "worker-02320933")
+			machineClassSecretA := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-02320933")
+			machineDeploymentA := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+			machineClassB := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "worker-6bdb5b0d")
+			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
+			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
+
+			bashibleSecrets := map[string]object_store.KubeObject{}
+			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
+
+			bootstrapSecrets := map[string]object_store.KubeObject{}
+			bootstrapSecrets["manual-bootstrap-for-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "manual-bootstrap-for-worker")
+
+			roles := map[string]object_store.KubeObject{}
+			roles["bashible"] = f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
+			roles["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
+
+			roleBindings := map[string]object_store.KubeObject{}
+			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
+			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
+
+			staticMachineTemplate := f.KubernetesResource("StaticMachineTemplate", "d8-cloud-instance-manager", "worker")
+			staticMachineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "worker")
+
+			Expect(namespace.Exists()).To(BeTrue())
+			Expect(registrySecret.Exists()).To(BeTrue())
+
+			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+
+			Expect(mcmDeploy.Exists()).To(BeFalse())
+			Expect(mcmServiceAccount.Exists()).To(BeFalse())
+			Expect(mcmRole.Exists()).To(BeFalse())
+			Expect(mcmRoleBinding.Exists()).To(BeFalse())
+			Expect(mcmClusterRole.Exists()).To(BeFalse())
+			Expect(mcmClusterRoleBinding.Exists()).To(BeFalse())
+
+			Expect(clusterAutoscalerDeploy.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerServiceAccount.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerRole.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerRoleBinding.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerClusterRole.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeFalse())
+
+			Expect(machineClassA.Exists()).To(BeFalse())
+			Expect(machineClassSecretA.Exists()).To(BeFalse())
+			Expect(machineDeploymentA.Exists()).To(BeFalse())
+
+			Expect(machineClassB.Exists()).To(BeFalse())
+			Expect(machineClassSecretB.Exists()).To(BeFalse())
+			Expect(machineDeploymentB.Exists()).To(BeFalse())
+
+			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
+
+			Expect(bootstrapSecrets["manual-bootstrap-for-worker"].Exists()).To(BeTrue())
+
+			Expect(roles["bashible"].Exists()).To(BeTrue())
+			Expect(roles["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
+			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			Expect(staticMachineTemplate.ToYaml()).To(MatchYAML(nodeManagerStaticInstancesStaticMachineTemplate))
+			Expect(staticMachineDeployment.ToYaml()).To(MatchYAML(nodeManagerStaticInstancesMachineDeployment))
 
 			assertBashibleAPIServerTLS(f)
 		})

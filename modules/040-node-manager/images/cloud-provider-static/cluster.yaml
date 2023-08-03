@@ -1,0 +1,99 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: static-worker
+spec:
+  nodeType: Static
+  staticInstances:
+    infrastructureTemplateReference:
+        kind: StaticMachineTemplate
+        name: cluster-static-md-0
+
+#---
+#apiVersion: cluster.x-k8s.io/v1beta1
+#kind: Cluster
+#metadata:
+#  name: static-cluster
+#  namespace: d8-cloud-instance-manager
+#spec:
+#  infrastructureRef:
+#    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+#    kind: StaticCluster
+#    namespace: d8-cloud-instance-manager
+#    name: static-cluster
+
+#---
+#apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+#kind: StaticCluster
+#metadata:
+#  namespace: d8-cloud-instance-manager
+#  name: static
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: StaticInstanceCredentials
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: bootstrap-ssh
+spec:
+  user: ubuntu
+  privateSSHKey: ""
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: StaticInstance
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: static
+  labels:
+    node-group: static-worker
+spec:
+  address: "95.217.123.59"
+  credentialsRef:
+    kind: StaticInstanceCredentials
+    name: bootstrap-ssh
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: StaticInstance
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: static2
+  labels:
+    node-group: static-worker
+spec:
+  address: "95.217.123.5"
+  credentialsRef:
+    kind: StaticInstanceCredentials
+    name: bootstrap-ssh
+
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: StaticMachineTemplate
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: "cluster-static-md-0"
+spec:
+  template:
+    spec:
+      labelSelector:
+        matchLabels:
+          node-group: static-worker
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: "cluster-static-md-0"
+spec:
+  clusterName: static
+  replicas: 1
+  selector:
+    matchLabels:
+  template:
+    spec:
+      bootstrap:
+        dataSecretName: manual-bootstrap-for-static-worker
+      clusterName: static
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: StaticMachineTemplate
+        name: "cluster-static-md-0"

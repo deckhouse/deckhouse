@@ -56,6 +56,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"cloud-controller-manager",
 	"cloud-data-discoverer",
 	"cloud-metrics-exporter",
+	"cloud-provider-static",
 	"cluster-autoscaler",
 	"cni-flannel",
 	"cni-simple-bridge",

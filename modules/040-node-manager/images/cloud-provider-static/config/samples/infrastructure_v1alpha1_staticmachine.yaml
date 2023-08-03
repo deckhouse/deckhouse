@@ -1,0 +1,12 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: StaticMachine
+metadata:
+  labels:
+    app.kubernetes.io/name: staticmachine
+    app.kubernetes.io/instance: staticmachine-sample
+    app.kubernetes.io/part-of: cloud-provider-static
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cloud-provider-static
+  name: staticmachine-sample
+spec:
+  # TODO(user): Add fields here

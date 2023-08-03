@@ -24,6 +24,24 @@ properties:
             type: string
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
 
+      cloudProviderStaticWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
       machineControllerManagerEnabled:
         type: boolean
 
@@ -248,6 +266,10 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
+            staticInstances:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true  
             cloudInstances:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object

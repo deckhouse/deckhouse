@@ -9,5 +9,9 @@
     {{- end }}
   {{- else }}
     {{- include "node_group_static_or_hybrid_secret" (list $ $ng) }}
+    {{- if hasKey $ng "staticInstances" }}
+      {{- include "node_group_static_or_hybrid_machine_template" (list $ $ng) }}
+      {{- include "node_group_static_or_hybrid_machine_deployment" (list $ $ng) }}
+    {{- end }}
   {{- end }}
 {{- end }}

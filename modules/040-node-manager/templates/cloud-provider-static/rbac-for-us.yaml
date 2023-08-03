@@ -1,0 +1,255 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-provider-static
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:cloud-provider-static
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+rules:
+- apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - clusters
+    - clusters/status
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - machines
+  verbs:
+    - delete
+    - get
+    - list
+    - watch
+- apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - machines/status
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - nodes
+  verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  verbs:
+    - create
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - serviceaccounts/token
+  verbs:
+    - create
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - nodegroups
+  verbs:
+    - get
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticclusters
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticclusters/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticclusters/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticcontrolplanes
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticcontrolplanes/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticcontrolplanes/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticinstancecredentials
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticinstances
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticinstances/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticinstances/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticmachines
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticmachines/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticmachines/status
+  verbs:
+    - get
+    - patch
+    - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:cloud-provider-static
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:cloud-provider-static
+subjects:
+- kind: ServiceAccount
+  name: cloud-provider-static
+  namespace: d8-cloud-instance-manager
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:cloud-provider-static-leader-election-role
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - configmaps
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+- apiGroups:
+    - coordination.k8s.io
+  resources:
+    - leases
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+- apiGroups:
+    - ""
+  resources:
+    - events
+  verbs:
+    - create
+    - patch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:cloud-provider-static-leader-election-role
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:cloud-provider-static-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: cloud-provider-static
+  namespace: d8-cloud-instance-manager

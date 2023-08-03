@@ -1435,4 +1435,33 @@ spec:
 			})
 		})
 	})
+
+	const (
+		staticNodeGroupWithStaticInstances = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    labelSelector:
+      matchLabels:
+        node-group: worker
+`
+	)
+
+	Context("Static instances", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(staticNodeGroupWithStaticInstances))
+			f.RunHook()
+		})
+
+		It("StaticMachineTemplate and MachineDeployment should be generated", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.staticInstances").Exists()).To(BeTrue())
+		})
+	})
 })

@@ -1,0 +1,198 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+  name: cloud-provider-static-mutating-webhook-configuration
+webhooks:
+- name: mstaticinstance.kb.io
+  clientConfig:
+    service:
+      namespace: d8-cloud-instance-manager
+      name: cloud-provider-static-webhook-service
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstance
+    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+  rules:
+    - operations:
+        - CREATE
+        - UPDATE
+      apiGroups:
+        - infrastructure.cluster.x-k8s.io
+      apiVersions:
+        - v1alpha1
+      resources:
+        - staticinstances
+      scope: '*'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  admissionReviewVersions:
+    - v1
+- name: mstaticinstancecredentials.kb.io
+  clientConfig:
+    service:
+      namespace: d8-cloud-instance-manager
+      name: cloud-provider-static-webhook-service
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstancecredentials
+    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+  rules:
+    - operations:
+        - CREATE
+        - UPDATE
+      apiGroups:
+        - infrastructure.cluster.x-k8s.io
+      apiVersions:
+        - v1alpha1
+      resources:
+        - staticinstancecredentials
+      scope: '*'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  admissionReviewVersions:
+    - v1
+- name: mstaticmachine.kb.io
+  clientConfig:
+    service:
+      namespace: d8-cloud-instance-manager
+      name: cloud-provider-static-webhook-service
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine
+    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+  rules:
+    - operations:
+        - CREATE
+        - UPDATE
+      apiGroups:
+        - infrastructure.cluster.x-k8s.io
+      apiVersions:
+        - v1alpha1
+      resources:
+        - staticmachines
+      scope: '*'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  admissionReviewVersions:
+    - v1
+- name: mstaticmachinetemplate.kb.io
+  clientConfig:
+    service:
+      namespace: d8-cloud-instance-manager
+      name: cloud-provider-static-webhook-service
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate
+    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+  rules:
+    - operations:
+        - CREATE
+        - UPDATE
+      apiGroups:
+        - infrastructure.cluster.x-k8s.io
+      apiVersions:
+        - v1alpha1
+      resources:
+        - staticmachinetemplate
+      scope: '*'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  admissionReviewVersions:
+    - v1
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+  name: cloud-provider-static-validating-webhook-configuration
+webhooks:
+- name: vstaticinstance.kb.io
+  clientConfig:
+    service:
+      namespace: d8-cloud-instance-manager
+      name: cloud-provider-static-webhook-service
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstance
+    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+  rules:
+    - operations:
+        - CREATE
+        - UPDATE
+      apiGroups:
+        - infrastructure.cluster.x-k8s.io
+      apiVersions:
+        - v1alpha1
+      resources:
+        - staticinstances
+      scope: '*'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  admissionReviewVersions:
+    - v1
+- name: vstaticinstancecredentials.kb.io
+  clientConfig:
+    service:
+      namespace: d8-cloud-instance-manager
+      name: cloud-provider-static-webhook-service
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstancecredentials
+    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+  rules:
+    - operations:
+        - CREATE
+        - UPDATE
+      apiGroups:
+        - infrastructure.cluster.x-k8s.io
+      apiVersions:
+        - v1alpha1
+      resources:
+        - staticinstancecredentials
+      scope: '*'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  admissionReviewVersions:
+    - v1
+- name: vstaticmachine.kb.io
+  clientConfig:
+    service:
+      namespace: d8-cloud-instance-manager
+      name: cloud-provider-static-webhook-service
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine
+    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+  rules:
+    - operations:
+        - CREATE
+        - UPDATE
+      apiGroups:
+        - infrastructure.cluster.x-k8s.io
+      apiVersions:
+        - v1alpha1
+      resources:
+        - staticmachines
+      scope: '*'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  admissionReviewVersions:
+    - v1
+- name: vstaticmachinetemplate.kb.io
+  clientConfig:
+    service:
+      namespace: d8-cloud-instance-manager
+      name: cloud-provider-static-webhook-service
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate
+    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+  rules:
+    - operations:
+        - CREATE
+        - UPDATE
+      apiGroups:
+        - infrastructure.cluster.x-k8s.io
+      apiVersions:
+        - v1alpha1
+      resources:
+        - staticmachinetemplates
+      scope: '*'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  admissionReviewVersions:
+    - v1

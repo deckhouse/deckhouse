@@ -1,0 +1,112 @@
+{{- define "static_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cloud-provider-static
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cloud-provider-static
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "cloud-provider-static"
+      minAllowed:
+        {{- include "static_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloud-provider-static
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: cloud-provider-static
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-provider-static
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: cloud-provider-static
+      cluster.x-k8s.io/provider: infrastructure-static
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        app: cloud-provider-static
+        cluster.x-k8s.io/provider: infrastructure-static
+        control-plane: controller-manager
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-provider-static")) | nindent 6 }}
+      serviceAccountName: cloud-provider-static
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: cloud-provider-static
+{{/*        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}*/}}
+        image: {{ include "helm_lib_module_image" (list . "cloudProviderStatic") }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        volumeMounts:
+          - mountPath: /tmp/k8s-webhook-server/serving-certs
+            name: cert
+            readOnly: true
+        args:
+          - "--leader-elect"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "static_controller_manager_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: cloud-provider-static-webhook-tls
