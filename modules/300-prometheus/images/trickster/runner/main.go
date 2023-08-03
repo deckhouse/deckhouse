@@ -25,12 +25,12 @@ import (
 )
 
 func main() {
-	f, err := os.Open("/etc/trickster/trickster.conf")
+	confFile, err := os.Open("/etc/trickster/trickster.conf")
 	if err != nil {
 		log.Fatalf("open conf: %v", err)
 	}
 
-	content, err := io.ReadAll(f)
+	content, err := io.ReadAll(confFile)
 	if err != nil {
 		log.Fatalf("reading conf: %v", err)
 	}
@@ -53,9 +53,6 @@ func main() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-
-	log.Println(cmd.String())
-	log.Println(os.ExpandEnv(string(content)))
 
 	if err := cmd.Run(); err != nil {
 		log.Fatal(err)
