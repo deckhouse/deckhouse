@@ -34,6 +34,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("create tmp conf: %v", err)
 	}
+	defer tmpfile.Close()
 
 	if _, err := tmpfile.Write([]byte(os.ExpandEnv(string(content)))); err != nil {
 		log.Fatalf("write tmp conf: %v", err)
@@ -44,6 +45,10 @@ func main() {
 	builder.WriteString(tmpfile.Name())
 
 	cmd := exec.Command("trickster", builder.String())
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
 	if err := cmd.Run(); err != nil {
 		log.Fatal(err)
 	}
