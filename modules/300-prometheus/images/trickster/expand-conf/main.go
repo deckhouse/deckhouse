@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 )
 
 func main() {
 	content, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input:", err)
-		os.Exit(1)
+		log.Fatalf("reading standard input: %v", err)
 	}
 	fmt.Fprint(os.Stdout, os.ExpandEnv(string(content)))
 }
