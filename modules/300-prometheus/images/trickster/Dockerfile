@@ -39,10 +39,10 @@ RUN go build -ldflags="-s -w" -o entrypoint && \
 
 FROM $BASE_GOLANG_20_ALPINE as artifact1
 
-COPY /expand-conf/ /app/
+COPY /runner/ /app/
 WORKDIR /app/
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o expand-conf
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o runner
 
 FROM $BASE_DISTROLESS
 
