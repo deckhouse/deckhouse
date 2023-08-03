@@ -58,6 +58,8 @@ spec:
       labels:
         app: node-exporter
       name: node-exporter
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/node-exporter: "unconfined"
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
