@@ -37,6 +37,13 @@ RUN go build -ldflags="-s -w" -o entrypoint && \
     chown -R 64535:64535 /app/ && \
     chmod 0700 /app/entrypoint
 
+FROM $BASE_GOLANG_20_ALPINE as artifact1
+
+COPY /expand-conf/ /app/
+WORKDIR /app/
+
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o expand-conf
+
 FROM $BASE_DISTROLESS
 
 COPY --from=artifact /trickster/OPATH/trickster /usr/local/bin/
