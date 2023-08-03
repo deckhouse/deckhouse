@@ -24,27 +24,24 @@ import (
 	"strings"
 )
 
-const (
-	confFileName = "/tmp/trickster.conf"
-)
-
 func main() {
 	content, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		log.Fatalf("reading standard input: %v", err)
 	}
-	confFile, err := os.Open(confFileName)
+
+	tmpfile, err := os.CreateTemp("", "trickster.conf-*")
 	if err != nil {
-		log.Fatalf("open tmp conf: %v", err)
+		log.Fatalf("create tmp conf: %v", err)
 	}
-	defer confFile.Close()
-	_, err = confFile.WriteString(os.ExpandEnv(string(content)))
-	if err != nil {
+
+	if _, err := tmpfile.Write([]byte(os.ExpandEnv(string(content)))); err != nil {
 		log.Fatalf("write tmp conf: %v", err)
 	}
+
 	builder := strings.Builder{}
 	builder.WriteString("--config=")
-	builder.WriteString(confFileName)
+	builder.WriteString(tmpfile.Name())
 
 	cmd := exec.Command("trickster", builder.String())
 	if err := cmd.Run(); err != nil {
