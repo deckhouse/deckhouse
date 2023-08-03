@@ -23,5 +23,4 @@ FROM $BASE_DISTROLESS
 COPY --from=artifact /trickster/OPATH/trickster /usr/local/bin/
 COPY --from=artifact1 /app/expand-conf /usr/local/bin/
 
-RUN expand-conf < /etc/trickster/trickster.conf > /tmp/trickster.conf
-ENTRYPOINT ["trickster", "--config=/tmp/trickster.conf"]
+ENTRYPOINT ["/bin/sh", "-c" , "expand-conf < /etc/trickster/trickster.conf > /tmp/trickster.conf && trickster --config=/tmp/trickster.conf"]
