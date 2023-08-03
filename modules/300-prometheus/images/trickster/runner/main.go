@@ -25,12 +25,17 @@ import (
 )
 
 func main() {
-	content, err := io.ReadAll(os.Stdin)
+	f, err := os.Open("/etc/trickster/trickster.conf")
 	if err != nil {
-		log.Fatalf("reading standard input: %v", err)
+		log.Fatalf("open conf: %v", err)
 	}
 
-	tmpfile, err := os.CreateTemp("", "trickster.conf-*")
+	content, err := io.ReadAll(f)
+	if err != nil {
+		log.Fatalf("reading conf: %v", err)
+	}
+
+	tmpfile, err := os.CreateTemp("", "*-trickster.conf")
 	if err != nil {
 		log.Fatalf("create tmp conf: %v", err)
 	}
