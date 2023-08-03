@@ -1,0 +1,9 @@
+---
+layout: none
+searchable: false
+sitemap_include: false
+permalink: ru/sitemap-site.xml
+lang: ru
+---
+
+{% include sitemap-site.liquid %}
