@@ -43,7 +43,7 @@ spec:
   - host: {{ .URL }}
     http:
       paths:
-{{- if eq $.Values.web.dc_name "prod-sel" }}
+{{- if or (eq $.Values.web.dc_name "prod-sel") (eq $.Values.web.env "web-test" ) }}
       - path: /images
         pathType: Prefix
         backend:
@@ -95,6 +95,13 @@ spec:
               name: http
       - path: /license_request_success.html
         pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /sitemap-site.xml
+        pathType: Exact
         backend:
           service:
             name: frontend
