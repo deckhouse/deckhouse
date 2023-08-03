@@ -26,3 +26,9 @@ https://github.com/kubernetes/ingress-nginx/pull/4367
 ### Makefile
 
 Run the build locally, not inside the container.
+
+### metrics SetSSLExpireTime
+
+Fixes namespace which is given by metric nginx_ingress_controller_ssl_expire_time_seconds.
+
+https://github.com/kubernetes/ingress-nginx/pull/10274
