@@ -13,6 +13,5 @@ RUN GOOS=linux GOARCH=${GOARCH} CGO_ENABLED=0 make build
 FROM $BASE_DISTROLESS
 
 COPY --from=artifact /trickster/OPATH/trickster /usr/local/bin/
-COPY --from=artifact /trickster/cmd/trickster/conf/example.conf /etc/trickster/trickster.conf
 
 ENTRYPOINT ["trickster"]
