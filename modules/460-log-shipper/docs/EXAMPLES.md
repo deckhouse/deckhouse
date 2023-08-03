@@ -1,5 +1,6 @@
 ---
 title: "The log-shipper module: examples"
+description: Examples of using the log-shipper Deckhouse module. Examples of module configuration, filtering, and collecting events and logs in a Kubernetes cluster.
 ---
 
 {% raw %}
@@ -261,7 +262,11 @@ spec:
       verifyHostname: false
 ```
 
-> **Note!** Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
+{% endraw %}
+{% alert -%}
+Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
+{%- endalert %}
+{% raw %}
 
 ```yaml
 extraLabels:
@@ -404,7 +409,11 @@ spec:
   - loki-storage
 ```
 
-> **Note!** If you need logs from only one or from a small group of a Pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.
+{% endraw %}
+{% alert -%}
+If you need logs from only one or from a small group of a Pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.
+{%- endalert %}
+{% raw %}
 
 ## Collect logs from production namespaces using the namespace label selector option
 
