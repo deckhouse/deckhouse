@@ -23,7 +23,9 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"regexp"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -168,6 +170,10 @@ releaseLoop:
 					notificationShiftTime = release.ApplyAfter
 				}
 			}
+			if err := releaseChecker.StepByStepUpdate(release.Version, newSemver); err != nil {
+				releaseChecker.logger.Warnf("step by step uodate failed. err: %v", err)
+			}
+
 			break releaseLoop
 		}
 	}
@@ -482,6 +488,70 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts time.Time, clusterU
 	}
 
 	return nil
+}
+
+func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Version) error {
+
+	listTags, err := dcr.registryClient.ListTags()
+	if err != nil {
+		return err
+	}
+
+	nextVersion := nextVersion(listTags, actual, target)
+	if nextVersion == target {
+		return nil
+	}
+
+	image, err := dcr.registryClient.Image(nextVersion.String())
+	if err != nil {
+		return err
+	}
+
+	releaseMeta, err := dcr.fetchReleaseMetadata(image)
+	if err != nil {
+		return err
+	}
+	if releaseMeta.Version == "" {
+		return fmt.Errorf("version not found. Probably image is broken or layer does not exist")
+	}
+
+	dcr.releaseMetadata = releaseMeta
+
+	return nil
+}
+
+func nextVersion(list []string, actual, target *semver.Version) *semver.Version {
+
+	if actual.Major() != target.Major() {
+		return target // TODO step by step update for major version
+	}
+
+	if actual.Minor() == target.Minor() || actual.IncMinor().Minor() == target.Minor() {
+		return target
+	}
+
+	minor := strconv.FormatInt(int64(actual.IncMinor().Minor()), 10)
+	expr := fmt.Sprintf("^v1.%s.([0-9]+)$", minor)
+	r, _ := regexp.Compile(expr)
+
+	collection := make([]*semver.Version, 0)
+	for _, ver := range list {
+		if r.MatchString(ver) {
+			newSemver, err := semver.NewVersion(ver)
+			if err != nil {
+				continue
+			}
+			collection = append(collection, newSemver)
+		}
+	}
+
+	sort.Sort(sort.Reverse(semver.Collection(collection)))
+	if len(collection) == 0 {
+		v := actual.IncMinor()
+		return nextVersion(list, &v, target)
+	}
+
+	return collection[0]
 }
 
 func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Container, releaseChannel string) (*DeckhouseReleaseChecker, error) {

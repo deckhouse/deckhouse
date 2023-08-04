@@ -297,6 +297,16 @@ status:
 
 	Context("Release has cooldown", func() {
 		BeforeEach(func() {
+			dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+				"v1.31.0",
+				"v1.31.1",
+				"v1.33.0",
+				"v1.33.1",
+				"v1.33.2",
+				"v1.33.3",
+				"v1.34.0",
+				"v1.34.1",
+			}, nil)
 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 				LayersStub: func() ([]v1.Layer, error) {
 					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.0"}`}}}, nil
@@ -372,6 +382,46 @@ status:
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.2").Exists()).To(BeTrue())
 				rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.2")
+				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).Exists()).To(BeTrue())
+				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2030-05-05T15:15:15Z"))
+			})
+		})
+
+		Context("StepByStepUpdate", func() {
+			BeforeEach(func() {
+				dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+					"v1.31.0",
+					"v1.31.1",
+					"v1.33.0",
+					"v1.33.1",
+					"v1.33.2",
+					"v1.33.3",
+					"v1.34.0",
+					"v1.34.1",
+				}, nil)
+				dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+					LayersStub: func() ([]v1.Layer, error) {
+						return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.3"}`}}}, nil
+					},
+					DigestStub: func() (v1.Hash, error) {
+						return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+					},
+					ConfigFileStub: func() (*v1.ConfigFile, error) {
+						return &v1.ConfigFile{
+							Config: v1.Config{
+								Labels: map[string]string{"cooldown": "2030-05-05T15:15:15Z"},
+							},
+						}, nil
+					},
+				}, nil)
+				f.KubeStateSet("")
+				f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+				f.RunHook()
+			})
+			It("Release should not inherit cooldown from previous one", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.33.3").Exists()).To(BeTrue())
+				rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.33.3")
 				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).Exists()).To(BeTrue())
 				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2030-05-05T15:15:15Z"))
 			})
@@ -595,4 +645,23 @@ func TestKebabCase(t *testing.T) {
 
 		assert.Equal(t, result, kebabed)
 	}
+}
+
+func TestNextVersion(t *testing.T) {
+	listTags := []string{
+		"v1.31.0",
+		"v1.31.1",
+		"v1.33.0",
+		"v1.33.1",
+		"v1.33.2",
+		"v1.33.3",
+		"v1.34.0",
+		"v1.34.1",
+	}
+	actualVersion, _ := semver.NewVersion("v1.31.0")
+	targetVersion, _ := semver.NewVersion("v1.34.1")
+
+	result := nextVersion(listTags, actualVersion, targetVersion)
+
+	assert.Equal(t, result.String(), "1.33.3")
 }
