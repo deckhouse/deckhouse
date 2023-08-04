@@ -3,6 +3,9 @@ ARG BASE_DISTROLESS
 FROM $BASE_GOLANG_17_ALPINE as artifact
 RUN apk add --no-cache make git patch
 
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
 # Build KSM from sources in case of future patching
 RUN mkdir -p /src/kube-state-metrics && \
   git clone --depth 1 --branch v2.6.0 ${SOURCE_REPO}/kubernetes/kube-state-metrics/ /src/kube-state-metrics
