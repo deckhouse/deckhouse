@@ -22,9 +22,10 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
-          cdata := input_containers_envs[_]
+          container := input_containers_envs[_]
+          cdata := container.envs[_]
           count(cdata) > 1
-          msg := sprintf("Pod <%v> has duplicated env variable names: '%v'", [input.review.object.metadata.name, cdata[0]])
+          msg := sprintf("Container <%v> in pod <%v> has duplicated env variable names: '%v'", [container.name, input.review.object.metadata.name, cdata[0]])
         }
 
         violation[{"msg": msg}] {
@@ -53,38 +54,38 @@ spec:
           ]
         }
 
-        container_envs := {name: list |
-          some i, k
-          name := input.review.object.spec.containers[i].env[k].name
-          list := [obj |
-            some j, f
-            input.review.object.spec.containers[j].env[f].name == name
-            obj := name
-          ]
-        }
+        container_envs := [container |
+          some i
+          container_name := input.review.object.spec.containers[i].name
+          envs := {name: list |
+            name := input.review.object.spec.containers[i].env[_].name
+            list := [obj |
+              input.review.object.spec.containers[i].env[_].name == name
+              obj := name
+            ]
+          }
+          container := {"name":container_name, "envs": envs}
+        ]
 
-        init_container_envs := {name: list |
-          some i, k
-          name := input.review.object.spec.initContainers[i].env[k].name
-          list := [obj |
-            some j, f
-            input.review.object.spec.initContainers[j].env[f].name == name
-            obj := name
-          ]
-        }
+        init_container_envs := [container |
+          some i
+          container_name := input.review.object.spec.initContainers[i].name
+          envs := {name: list |
+            name := input.review.object.spec.initContainers[i].env[_].name
+            list := [obj |
+              input.review.object.spec.initContainers[i].env[_].name == name
+              obj := name
+            ]
+          }
+          container := {"name":container_name, "envs": envs}
+        ]
 
         input_containers[c] {
           c := container_names[_]
-        }
-
-        input_containers_envs[c] {
-          c := container_envs[_]
         }
 
         input_containers[c] {
           c := init_container_names[_]
         }
 
-        input_containers_envs[c] {
-          c := init_container_envs[_]
-        }
+        input_containers_envs := array.concat(container_envs, init_container_envs)

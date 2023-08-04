@@ -37,8 +37,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 // TODO (alex123012): Use new methods in transport package for getting bearer token:
@@ -48,11 +50,19 @@ import (
 
 const (
 	d8SystemNS = "d8-system"
+	caKey      = "ca"
 )
 
-func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag string, insecure bool) error {
+func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag string, insecure, dryRun bool) error {
 	ctx := context.Background()
 	logEntry := log.WithField("operator.component", "ChangeRegistry")
+
+	authConfig := newAuthConfig(username, password)
+
+	caContent, err := getCAContent(caFile)
+	if err != nil {
+		return err
+	}
 
 	nameOpts := newNameOptions(insecure)
 	newRepo, err := name.NewRepository(newRegistry, nameOpts...)
@@ -60,14 +70,9 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	if err := checkBearerSupport(ctx, newRepo.Registry); err != nil {
-		return err
-	}
+	caTransport := cr.GetHTTPTransport(caContent)
 
-	authConfig := newAuthConfig(username, password)
-
-	remoteOpts, err := newRemoteOptions(ctx, newRepo, authConfig)
-	if err != nil {
+	if err := checkBearerSupport(ctx, newRepo.Registry, caTransport); err != nil {
 		return err
 	}
 
@@ -82,25 +87,45 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
+	remoteOpts, err := newRemoteOptions(ctx, newRepo, authConfig, caTransport)
+	if err != nil {
+		return err
+	}
+
 	// Check that all images for deckhouse deploy exist in the new repo before
 	// updating image pull secret and prepare deployment with updated images.
 	if err := updateDeployContainersImagesToNewRepo(deckhouseDeploy, newRepo, nameOpts, remoteOpts, newDeckhouseImageTag); err != nil {
 		return err
 	}
 
-	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caFile)
+	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caContent)
 	if err != nil {
 		return err
 	}
 
-	logEntry.Println("Updating deckhouse image pull secret...")
-	if err := updateImagePullSecret(ctx, kubeCl, imagePullSecretData); err != nil {
+	deckhouseSecret, err := modifyPullSecret(ctx, kubeCl, imagePullSecretData)
+	if err != nil {
 		return err
 	}
 
-	logEntry.Println("Updating deckhouse deployment...")
-	if err := updateDeployment(ctx, kubeCl, deckhouseDeploy); err != nil {
-		return err
+	if dryRun {
+		logEntry.Println("Dry-run enabled")
+		secretYaml, _ := yaml.Marshal(deckhouseSecret)
+		deploymentYaml, _ := yaml.Marshal(deckhouseDeploy)
+		logEntry.Println("------------------------------")
+		logEntry.Printf("New Secret will be applied:\n%s\n", secretYaml)
+		logEntry.Println("------------------------------")
+		logEntry.Printf("New Deployment will be applied:\n%s\n", deploymentYaml)
+	} else {
+		logEntry.Println("Updating deckhouse image pull secret...")
+		if err := updateImagePullSecret(ctx, kubeCl, deckhouseSecret); err != nil {
+			return err
+		}
+
+		logEntry.Println("Updating deckhouse deployment...")
+		if err := updateDeployment(ctx, kubeCl, deckhouseDeploy); err != nil {
+			return err
+		}
 	}
 
 	logEntry.Println("Done")
@@ -114,16 +139,15 @@ func newAuthConfig(username, password string) authn.AuthConfig {
 	}
 }
 
-func newRemoteOptions(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig) ([]remote.Option, error) {
-	var opts []remote.Option
-
-	transportOpt, err := newTransportOption(ctx, repo, authConfig)
+func newRemoteOptions(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig, caTransport http.RoundTripper) ([]remote.Option, error) {
+	t, err := newTransport(ctx, repo, authConfig, caTransport)
 	if err != nil {
 		return nil, err
 	}
 
-	opts = append(opts, transportOpt)
-	return opts, nil
+	return []remote.Option{
+		remote.WithTransport(t),
+	}, nil
 }
 
 func newNameOptions(insecure bool) []name.Option {
@@ -134,16 +158,11 @@ func newNameOptions(insecure bool) []name.Option {
 	return opts
 }
 
-func newTransportOption(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig) (remote.Option, error) {
+func newTransport(ctx context.Context, repo name.Repository, authConfig authn.AuthConfig, caTransport http.RoundTripper) (http.RoundTripper, error) {
 	authorizer := authn.FromConfig(authConfig)
 
 	scopes := []string{repo.Scope(transport.PullScope)}
-	t, err := transport.NewWithContext(ctx, repo.Registry, authorizer, http.DefaultTransport, scopes)
-	if err != nil {
-		return nil, err
-	}
-
-	return remote.WithTransport(t), nil
+	return transport.NewWithContext(ctx, repo.Registry, authorizer, caTransport, scopes)
 }
 
 func newKubeClient() (kclient.KubeClient, error) {
@@ -154,22 +173,30 @@ func newKubeClient() (kclient.KubeClient, error) {
 	return kubeCl.KubeClient, nil
 }
 
-func updateImagePullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecretData map[string]string) error {
+func modifyPullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecretData map[string]string) (*v1.Secret, error) {
 	secretClient := kubeCl.CoreV1().Secrets(d8SystemNS)
 	deckhouseRegSecret, err := secretClient.Get(ctx, "deckhouse-registry", metav1.GetOptions{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	deckhouseRegSecret.StringData = newSecretData
 
+	delete(deckhouseRegSecret.Data, caKey)
+
+	return deckhouseRegSecret, nil
+}
+
+func updateImagePullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecret *v1.Secret) error {
+	secretClient := kubeCl.CoreV1().Secrets(d8SystemNS)
+
 	updateOpts := metav1.UpdateOptions{FieldValidation: metav1.FieldValidationStrict}
-	if _, err := secretClient.Update(ctx, deckhouseRegSecret, updateOpts); err != nil {
+	if _, err := secretClient.Update(ctx, newSecret, updateOpts); err != nil {
 		return err
 	}
 	return nil
 }
 
-func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caFile string) (map[string]string, error) {
+func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caContent string) (map[string]string, error) {
 	var authCfg authn.AuthConfig
 	if authConfig.Username != "" && authConfig.Password != "" {
 		authCfg.Auth = base64.StdEncoding.EncodeToString([]byte(authConfig.Username + ":" + authConfig.Password))
@@ -192,17 +219,17 @@ func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig
 		"scheme":            newRepo.Scheme(),
 	}
 
-	if caFile != "" {
-		ca, err := getCAContent(caFile)
-		if err != nil {
-			return nil, err
-		}
-		newSecretData["ca"] = ca
+	if caContent != "" {
+		newSecretData[caKey] = caContent
 	}
 	return newSecretData, nil
 }
 
 func getCAContent(caFile string) (string, error) {
+	if caFile == "" {
+		return "", nil
+	}
+
 	caBytes, err := os.ReadFile(caFile)
 	if err != nil {
 		return "", err
@@ -309,8 +336,8 @@ func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
 // checkBearerSupport func checks that registry accepts bearer token authentification.
 // This is modified "ping" func from
 // https://github.com/google/go-containerregistry/blob/v0.5.1/pkg/v1/remote/transport/ping.go
-func checkBearerSupport(ctx context.Context, reg name.Registry) error {
-	client := http.Client{Transport: http.DefaultTransport}
+func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper) error {
+	client := &http.Client{Transport: roundTripper}
 
 	// This first attempts to use "https" for every request, falling back to http
 	// if the registry matches our localhost heuristic or if it is intentionally
@@ -322,28 +349,41 @@ func checkBearerSupport(ctx context.Context, reg name.Registry) error {
 
 	var errs *multierror.Error
 	for _, scheme := range schemes {
-		u, err := url.Parse(fmt.Sprintf("%s://%s/v2/", scheme, reg.Name()))
+		resp, err := makeRequestWithScheme(ctx, client, scheme, reg.Name())
 		if err != nil {
-			return err
-		}
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-		if err != nil {
-			return err
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			errs = multierror.Append(errs, err)
-			// Potentially retry with http.
+			errs = multierror.Append(errs, fmt.Errorf("making request with %q scheme failed: %w", scheme, err))
 			continue
 		}
 
-		defer resp.Body.Close()
+		err = checkResponseForBearerSupport(resp, reg.Name())
+		if err == nil {
+			return nil
+		}
 
-		return checkResponseForBearerSupport(resp, reg.Name())
+		errs = multierror.Append(errs, fmt.Errorf("check bearer support with %q scheme failed: %w", scheme, err))
 	}
 
 	return errs.ErrorOrNil()
+}
+
+func makeRequestWithScheme(ctx context.Context, client *http.Client, scheme, registryName string) (*http.Response, error) {
+	u, err := url.Parse(fmt.Sprintf("%s://%s/v2/", scheme, registryName))
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Close body, because we only need headers
+	return resp, resp.Body.Close()
 }
 
 func checkResponseForBearerSupport(resp *http.Response, registryHost string) error {

@@ -60,20 +60,32 @@ func (m *Module) GetObjectKind() schema.ObjectKind {
 
 func (m *Module) SetName(name string) {
 	m.Name = name
-	m.calculateLabels()
 }
 
 func (m *Module) SetWeight(weight int) {
 	m.Properties.Weight = weight
 }
 
+func (m *Module) SetTags(tags []string) {
+	if len(tags) == 0 {
+		m.calculateLabels()
+		return
+	}
+
+	for _, tag := range tags {
+		m.Labels["module.deckhouse.io/"+tag] = ""
+	}
+}
+
 func (m *Module) SetSource(source string) {
 	if source == "" {
 		source = "Embedded"
 	}
+	m.Labels["type"] = "embedded"
 
 	if source != "Embedded" {
 		source = "External: " + source
+		m.Labels["type"] = "external"
 	}
 
 	m.Properties.Source = source

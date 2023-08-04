@@ -380,3 +380,18 @@
 
       summary: |
         Possible apiserver connection error in the client-go informer, check logs and snapshots.
+
+  - alert: D8DeckhouseDeprecatedConfigmapManagedByArgoCD
+    expr: |
+      d8_deprecated_configmap_managed_by_argocd > 0
+    labels:
+      tier: cluster
+      severity_level: "4"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      for: "10m"
+      summary: Deprecated deckhouse configmap managed by Argo CD
+      description: |
+        The deckhouse configmap is no longer used.
+        You need to remove configmap "d8-system/deckhouse" from ArgoCD

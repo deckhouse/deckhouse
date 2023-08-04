@@ -16,6 +16,8 @@
 | **Module Ephemeral Storage** |
 | [helm_lib_module_ephemeral_storage_logs_with_extra](#helm_lib_module_ephemeral_storage_logs_with_extra) |
 | [helm_lib_module_ephemeral_storage_only_logs](#helm_lib_module_ephemeral_storage_only_logs) |
+| **Module Generate Common Name** |
+| [helm_lib_module_generate_common_name](#helm_lib_module_generate_common_name) |
 | **Module Https** |
 | [helm_lib_module_uri_scheme](#helm_lib_module_uri_scheme) |
 | [helm_lib_module_https_mode](#helm_lib_module_https_mode) |
@@ -194,6 +196,22 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+## Module Generate Common Name
+
+### helm_lib_module_generate_common_name
+
+ returns the commonName parameter for use in the Certificate custom resource(cert-manager) 
+
+#### Usage
+
+`{{ include "helm_lib_module_generate_common_name" (list . "<name-portion>") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Name portion 
 
 ## Module Https
 

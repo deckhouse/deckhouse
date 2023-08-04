@@ -26,7 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
-const TerraformStateDataKey = "node-tf-state.json"
+const TerraformNodeStateDataKey = "node-tf-state.json"
+const TerraformClusterStateDataKey = "cluster-tf-state.json"
 const TerraformStateNamespace = "d8-system"
 const OpenstackV2ResourceType = "openstack_blockstorage_volume_v2"
 const OpenstackV3ResourceType = "openstack_blockstorage_volume_v3"
@@ -41,34 +42,61 @@ func openstackTerraformStateMigration(input *go_hook.HookInput, dc dependency.Co
 		return fmt.Errorf("could not initialize Kubernetes client: %v", err)
 	}
 
-	terraformStateLabels := map[string]string{
+	terraformNodeStateLabels := map[string]string{
 		"node.deckhouse.io/terraform-state": "",
 	}
-
-	terraformStateSecrets, err := kubeCl.CoreV1().
-		Secrets(TerraformStateNamespace).
-		List(context.TODO(), metav1.ListOptions{LabelSelector: metav1.FormatLabelSelector(metav1.SetAsLabelSelector(terraformStateLabels))})
-	if err != nil {
-		return fmt.Errorf("failed to get Terraform state secrets in namespace %s with labels %s. The migration process has been aborted", TerraformStateNamespace, terraformStateLabels)
+	terraformClusterStateLabels := map[string]string{
+		"name": "d8-cluster-terraform-state",
 	}
 
-	if terraformStateSecrets.Items == nil {
+	terraformNodeStateSecrets, err := kubeCl.CoreV1().
+		Secrets(TerraformStateNamespace).
+		List(context.TODO(), metav1.ListOptions{LabelSelector: metav1.FormatLabelSelector(metav1.SetAsLabelSelector(terraformNodeStateLabels))})
+	if err != nil {
+		return fmt.Errorf("failed to get Terraform state secrets in namespace %s with labels %s. The migration process has been aborted", TerraformStateNamespace, terraformNodeStateLabels)
+	}
+	terraformClusterStateSecrets, err := kubeCl.CoreV1().
+		Secrets(TerraformStateNamespace).
+		List(context.TODO(), metav1.ListOptions{LabelSelector: metav1.FormatLabelSelector(metav1.SetAsLabelSelector(terraformClusterStateLabels))})
+	if err != nil {
+		return fmt.Errorf("failed to get Terraform state secrets in namespace %s with labels %s. The migration process has been aborted", TerraformStateNamespace, terraformClusterStateLabels)
+	}
+
+	if terraformNodeStateSecrets.Items == nil && terraformClusterStateSecrets.Items == nil {
 		input.LogEntry.Infof("Terraform state not found. Migration is not needed.")
 		return nil
 	}
 
-	for _, secret := range terraformStateSecrets.Items {
+	err = processSecretsList(terraformNodeStateSecrets, TerraformNodeStateDataKey, kubeCl, input)
+	if err != nil {
+		return err
+	}
+	err = processSecretsList(terraformClusterStateSecrets, TerraformClusterStateDataKey, kubeCl, input)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func processSecretsList(secretList *v1.SecretList, terraformStateDataKey string, kubeCl k8s.Client, input *go_hook.HookInput) error {
+	for _, secret := range secretList.Items {
 		input.LogEntry.Infof("Proceeding with Secret/%s/%s", TerraformStateNamespace, secret.ObjectMeta.Name)
 		backupSecretName := secret.ObjectMeta.Name + "-backup"
+		// dirty hack, we cannot create secret with label value > 63
+		if len(backupSecretName) > 63 {
+			// remove '-terraform' suffix it will be enough
+			backupSecretName = strings.Replace(backupSecretName, "-terraform", "", 1)
+		}
 
 		secretBackupExists, err := isSecretBackupExists(backupSecretName, TerraformStateNamespace, kubeCl, input)
 		if secretBackupExists && err == nil {
 			input.LogEntry.Infof("Secret backup with name %s/%s already exists! Migration is not needed for Secret/%s/%s", TerraformStateNamespace, backupSecretName, TerraformStateNamespace, secret.ObjectMeta.Name)
 			continue
 		}
-		terraformStateRaw, ok := secret.Data[TerraformStateDataKey]
+		terraformStateRaw, ok := secret.Data[terraformStateDataKey]
 		if !ok {
-			return fmt.Errorf("key %s not found in Secret/%s/%s. ", TerraformStateDataKey, TerraformStateNamespace, secret.ObjectMeta.Name)
+			return fmt.Errorf("key %s not found in Secret/%s/%s. ", terraformStateDataKey, TerraformStateNamespace, secret.ObjectMeta.Name)
 		}
 
 		if !gjson.ValidBytes(terraformStateRaw) {
@@ -121,7 +149,7 @@ func openstackTerraformStateMigration(input *go_hook.HookInput, dc dependency.Co
 			return err
 		}
 
-		secret.Data[TerraformStateDataKey] = newTerraformState.Bytes()
+		secret.Data[terraformStateDataKey] = newTerraformState.Bytes()
 		_, err = kubeCl.CoreV1().
 			Secrets(TerraformStateNamespace).
 			Update(context.TODO(), &secret, metav1.UpdateOptions{})
@@ -129,7 +157,6 @@ func openstackTerraformStateMigration(input *go_hook.HookInput, dc dependency.Co
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -141,7 +168,7 @@ func isSecretBackupExists(backupSecretName string, namespace string, kubeCl k8s.
 	input.LogEntry.Debugf("Function isSecretBackupExists: Get secret. err=%s", err)
 
 	if errors.IsNotFound(err) {
-		input.LogEntry.Debugf("Function isSecretBackupExists: errors.IsNotFound(err) = %t. secret \"%s\" not found'. Return false and nil", errors.IsNotFound(err), backupSecretName)
+		input.LogEntry.Debugf("Function isSecretBackupExists: errors.IsNotFound(err) = %t. secret \"%s\" not found. Return false and nil", errors.IsNotFound(err), backupSecretName)
 		return false, nil
 	}
 

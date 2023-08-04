@@ -50,20 +50,23 @@ const (
 //	PublicDomainSAN(value)
 func DefaultSANs(sans []string) SANsGenerator {
 	return func(input *go_hook.HookInput) []string {
+		res := make([]string, 0, len(sans))
+
 		clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 		publicDomain := input.Values.Get("global.modules.publicDomainTemplate").String()
 
-		for index, san := range sans {
+		for _, san := range sans {
 			switch {
 			case strings.HasPrefix(san, publicDomainPrefix) && publicDomain != "":
-				sans[index] = getPublicDomainSAN(san, publicDomain)
+				san = getPublicDomainSAN(san, publicDomain)
 
 			case strings.HasPrefix(san, clusterDomainPrefix) && clusterDomain != "":
-				sans[index] = getClusterDomainSAN(san, clusterDomain)
+				san = getClusterDomainSAN(san, clusterDomain)
 			}
-		}
 
-		return sans
+			res = append(res, san)
+		}
+		return res
 	}
 }
 

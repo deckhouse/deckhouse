@@ -224,6 +224,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const name = 'Deploy to stable';
 
@@ -799,6 +800,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,final';
             const name = 'Deploy to stable';

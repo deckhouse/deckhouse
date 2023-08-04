@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -173,6 +174,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineDeckhouseFlags(cmd)
 	app.DefineDontUsePublicImagesFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)
+	app.DefinePreflight(cmd)
 
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)
@@ -218,6 +220,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		showWarningAboutUsageDontUsePublicImagesFlagIfNeed()
 
+		preflightCheck := preflight.NewPreflightCheck(sshClient)
+
 		bootstrapState := bootstrap.NewBootstrapState(stateCache)
 
 		clusterUUID, err := generateClusterUUID(stateCache)
@@ -240,6 +244,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		var resourcesTemplateData map[string]interface{}
 
 		if metaConfig.ClusterType == config.CloudClusterType {
+			err = preflightCheck.CloudCheck()
+			if err != nil {
+				return err
+			}
 			err = log.Process("bootstrap", "Cloud infrastructure", func() error {
 				baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
 					WithVariables(metaConfig.MarshalConfig()).
@@ -298,6 +306,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				return err
 			}
 		} else {
+			err = preflightCheck.StaticCheck()
+			if err != nil {
+				return err
+			}
 			var static struct {
 				NodeIP string `json:"nodeIP"`
 			}

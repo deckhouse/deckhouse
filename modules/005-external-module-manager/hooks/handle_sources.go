@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -41,9 +42,14 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
+	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
+)
+
+const (
+	defaultExternalModuleWeight = 900
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -83,6 +89,9 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 			Name: ex.Name,
 		},
 		Spec: ex.Spec,
+		Status: v1alpha1.ExternalModuleSourceStatus{
+			ModuleErrors: ex.Status.ModuleErrors,
+		},
 	}
 
 	if newex.Spec.ReleaseChannel == "" {
@@ -150,7 +159,9 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		for _, moduleName := range tags {
 			if moduleName == "modules" {
 				input.LogEntry.Warn("'modules' name for module is forbidden. Skip module.")
+				continue
 			}
+
 			moduleVersion, err := fetchModuleVersion(input.LogEntry, dc, ex, moduleName, mChecksum, opts)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
@@ -161,11 +172,22 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 
 			if moduleVersion == "" {
+				if len(ex.Status.ModuleErrors) > 0 {
+					// inherit errors to keep failed modules status
+					for _, mer := range ex.Status.ModuleErrors {
+						if mer.Name == moduleName {
+							moduleErrors = append(moduleErrors, mer)
+							break
+						}
+					}
+				}
 				// checksum has not been changed
 				continue
 			}
 
-			err = fetchAndCopyModuleVersion(dc, externalModulesDir, ex, moduleName, moduleVersion, opts)
+			moduleVersionPath := path.Join(externalModulesDir, moduleName, moduleVersion)
+
+			err = fetchAndCopyModuleByVersion(dc, moduleVersionPath, ex, moduleName, moduleVersion, opts)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
 					Name:  moduleName,
@@ -174,7 +196,18 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			createRelease(input, ex.Name, moduleName, moduleVersion)
+			weight := fetchModuleWeight(moduleVersionPath)
+
+			err = validateModule(moduleName, moduleVersionPath, weight)
+			if err != nil {
+				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
+					Name:  moduleName,
+					Error: err.Error(),
+				})
+				continue
+			}
+
+			createRelease(input, ex.Name, moduleName, moduleVersion, weight)
 		}
 
 		sc.ModuleErrors = moduleErrors
@@ -190,6 +223,24 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	err = saveSourceChecksums(checksumFilePath, sourcesChecksum)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func validateModule(moduleName, absPath string, weight int) error {
+	module, err := module_manager.NewModuleWithNameValidation(moduleName, absPath, weight)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse_config.Service().ValidateModule(module)
+	if err != nil {
+		return err
+	}
+
+	if weight < 900 || weight > 999 {
+		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
 
 	return nil
@@ -258,7 +309,30 @@ func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSou
 	return "v" + moduleMetadata.Version.String(), nil
 }
 
-func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir string, moduleSource v1alpha1.ExternalModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
+func fetchModuleWeight(moduleVersionPath string) int {
+	moduleDefFile := path.Join(moduleVersionPath, module_manager.ModuleDefinitionFileName)
+
+	if _, err := os.Stat(moduleDefFile); err != nil {
+		return defaultExternalModuleWeight
+	}
+
+	var def module_manager.ModuleDefinition
+
+	f, err := os.Open(moduleDefFile)
+	if err != nil {
+		return defaultExternalModuleWeight
+	}
+	defer f.Close()
+
+	err = yaml.NewDecoder(f).Decode(&def)
+	if err != nil {
+		return defaultExternalModuleWeight
+	}
+
+	return def.Weight
+}
+
+func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
 	regCli, err := dc.GetRegistryClient(path.Join(moduleSource.Spec.Registry.Repo, moduleName), registryOptions...)
 	if err != nil {
 		return fmt.Errorf("fetch module error: %v", err)
@@ -269,7 +343,6 @@ func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir strin
 		return fmt.Errorf("fetch module version error: %v", err)
 	}
 
-	moduleVersionPath := path.Join(externalModulesDir, moduleName, moduleVersion)
 	_ = os.RemoveAll(moduleVersionPath)
 
 	err = copyModuleToFS(moduleVersionPath, img)
@@ -393,7 +466,7 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 	}
 }
 
-func untarVersionLayer(rc io.ReadCloser, rw io.Writer) error {
+func untarMetadata(rc io.ReadCloser, rw io.Writer) error {
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
@@ -446,7 +519,7 @@ func fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
 			return meta, err
 		}
 
-		err = untarVersionLayer(rc, buf)
+		err = untarMetadata(rc, buf)
 		if err != nil {
 			return meta, err
 		}
@@ -459,7 +532,7 @@ func fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
 	return meta, err
 }
 
-func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string) {
+func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string, moduleWeight int) {
 	rl := &v1alpha1.ExternalModuleRelease{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ExternalModuleRelease",
@@ -473,6 +546,7 @@ func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersi
 		Spec: v1alpha1.ExternalModuleReleaseSpec{
 			ModuleName: moduleName,
 			Version:    semver.MustParse(moduleVersion),
+			Weight:     moduleWeight,
 		},
 	}
 

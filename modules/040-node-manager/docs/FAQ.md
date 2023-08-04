@@ -364,7 +364,6 @@ spec:
 | cloudInstances.classReference         | -                          | +                 | -               |
 | cloudInstances.maxSurgePerZone        | -                          | -                 | -               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
-| cri.docker.maxConcurrentDownloads     | +                          | -                 | +               |
 | cri.type                              | - (NotManaged) / + (other) | -                 | -               |
 | disruptions                           | -                          | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
@@ -463,31 +462,9 @@ mcmEmergencyBrake: true
 
 ## How do I restore the master node if kubelet cannot load the control plane components?
 
-Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/docker` (`/var/lib/containerd`) was deleted if Docker (container) is used). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
+Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/containerd` was deleted). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
 
 Below is an instruction on how you can restore the master node.
-
-### Docker
-
-Execute the following command to restore the master node in any cluster running under Deckhouse:
-
-```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
-jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r 'del(.auths."registry.deckhouse.io".username, .auths."registry.deckhouse.io".password)'
-```
-
-Copy the output of the command and add it to the `/root/.docker/config.json` file on the corrupted master.
-Next, you need to pull images of control plane components to the corrupted master:
-
-```shell
-for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-  docker pull $image
-done
-```
-
-You need to restart kubelet after pulling the images.
-Please, pay attention that you must **delete the changes made to the `/root/.docker/config.json` file after restoring the master node!**
 
 ### Containerd
 
@@ -512,7 +489,9 @@ You need to restart `kubelet` after pulling the images.
 
 ## How to change CRI for NodeGroup?
 
-Set NodeGroup `cri.type` to `Docker` or `Containerd`.
+> **Note!** CRI can only be switched from Containerd to NotManaged and back.
+
+Set NodeGroup `cri.type` to `Containerd` or `NotManaged`.
 
 NodeGroup YAML example:
 
@@ -535,10 +514,10 @@ Also, this operation can be done with patch:
   kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
-* For Docker:
+* For NotManaged:
 
   ```shell
-  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
+  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
 > **Note!** While changing `cri.type` for NodeGroups, created using `dhctl`, you must change it in `dhctl config edit provider-cluster-configuration` and in `NodeGroup` object.
@@ -549,7 +528,7 @@ node updates or requires manual confirmation.
 
 ## How to change CRI for the whole cluster?
 
-> **Note!** Docker is deprecated. CRI can only be switched from Docker to Containerd.
+> **Note!** CRI can only be switched from Containerd to NotManaged and back.
 
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
@@ -557,14 +536,14 @@ Also, this operation can be done with the following patch:
 * For Containerd
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
-* For Docker
+* For NotManaged
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
@@ -1005,7 +984,7 @@ status:
 
 ## How do I make werf ignore the Ready conditions in a node group?
 
-[werf](werf.io) checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```.
+[werf](https://werf.io) checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```.
 
 Creating (updating) a [nodeGroup](cr.html#nodegroup) resource in a cluster can take a significant amount of time to create the required number of nodes. When deploying such a resource in a cluster using werf (e.g., as part of a CI/CD process), deployment may terminate when resource readiness timeout is exceeded. To make werf ignore the nodeGroup status, the following `nodeGroup` annotations must be added:
 

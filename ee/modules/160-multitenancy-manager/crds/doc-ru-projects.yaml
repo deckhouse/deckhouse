@@ -1,0 +1,30 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ""
+          properties:
+            spec:
+              description: ""
+              properties:
+                description:
+                  description: Произвольное описание назначения окружения.
+                projectTypeName:
+                  description: |
+                    Имя CR [ProjectType](cr.html#projecttype), который будет использоваться
+                    как шаблон для создания ресурсов окружения.
+                template:
+                  description: |
+                    Значения для [темплейтов ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) из шаблона окружения (CR [ProjectType](cr.html#projecttype))
+                    в формате helm values, которые соотносятся с
+                    OpenAPI-спецификацией (поле [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) шаблона окружения).
+            status:
+              description: ""
+              properties:
+                message:
+                  description: Сообщение о статусе.
+                state:
+                  description: Сводка статуса.
+                sync:
+                  description: Состояние Project синхронизировано с кластером.

@@ -1,0 +1,62 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: deckhouse
+  name: projects.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: Project
+    listKind: ProjectList
+    plural: projects
+    singular: project
+  scope: Cluster
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.sync
+          name: Ready
+          type: boolean
+        - jsonPath: .spec.description
+          name: Description
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                description:
+                  description: Arbitrary description of the purpose of the environment.
+                  type: string
+                projectTypeName:
+                  description: |
+                    The name of the CR [ProjectType](cr.html#projecttype) to be used
+                    as a template for creating resources for the environment.
+                  type: string
+                template:
+                  additionalProperties:
+                    x-kubernetes-preserve-unknown-fields: true
+                  description:
+                    Values for [resource templates](cr.html#projecttype-v1alpha1-spec-resourcestemplate) from the environment template (CR [ProjectType](cr.html#projecttype) in helm values format that map to the OpenAPI specification (the [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) parameter of the environment template).
+                  type: object
+              type: object
+            status:
+              properties:
+                message:
+                  description: Status message.
+                  type: string
+                state:
+                  description: Summary of the status.
+                  type: string
+                sync:
+                  description: Project definition sync with cluster.
+                  type: boolean
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

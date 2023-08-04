@@ -24,21 +24,13 @@ fi
 # This folder doesn't have time to create before we stop freshly, unconfigured kubelet during bootstrap (step 034_install_kubelet_and_his_friends.sh).
 mkdir -p /var/lib/kubelet
 
-# Check CRI type and set appropriated parameters.
-# cgroup default is `systemd`, only for docker cri we use `cgroupfs`.
-cgroup_driver="systemd"
-{{- if eq .cri "Containerd" }}
-# Overriding cgroup type from external config file
-if [ -f /var/lib/bashible/cgroup_config ]; then
-  cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
-fi
-{{- end }}
-
+cri_type="Containerd"
 {{- if eq .cri "NotManaged" }}
   {{- if .nodeGroup.cri.notManaged.criSocketPath }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
-for socket_path in /var/run/docker.sock /run/containerd/containerd.sock; do
+# TODO remove after removing support of kubernetes 1.23
+for socket_path in {{ if semverCompare "<1.24" .kubernetesVersion }}/var/run/docker.sock{{ end }} /run/containerd/containerd.sock; do
   if [[ -S "${socket_path}" ]]; then
     cri_socket_path="${socket_path}"
     break
@@ -51,19 +43,18 @@ if [[ -z "${cri_socket_path}" ]]; then
   exit 1
 fi
 
+  cri_type="NotManagedContainerd"
+# TODO remove after removing support of kubernetes 1.23
+  {{- if semverCompare "<1.24" .kubernetesVersion }}
 if grep -q "docker" <<< "${cri_socket_path}"; then
   cri_type="NotManagedDocker"
-else
-  cri_type="NotManagedContainerd"
 fi
-{{- else if eq .cri "Docker" }}
-cri_type="Docker"
-{{- else }}
-cri_type="Containerd"
+  {{- end }}
 {{- end }}
 
+# TODO remove after removing support of kubernetes 1.23
+{{- if semverCompare "<1.24" .kubernetesVersion }}
 if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
-  cgroup_driver="cgroupfs"
   criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
   if [ -d "${criDir}/overlay2" ]; then
     criDir="${criDir}/overlay2"
@@ -73,6 +64,7 @@ if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
     fi
   fi
 fi
+{{- end }}
 
 if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "NotManagedContainerd" ]]; then
   criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
@@ -151,6 +143,45 @@ if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
   fi
 fi
 
+# https://github.com/openshift/machine-config-operator/blob/bd24f17943eb95309fe78327f8f3eabd104ab577/templates/common/_base/files/kubelet-auto-sizing.yaml / 3
+function dynamic_memory_sizing {
+    total_memory=$(free -g|awk '/^Mem:/{print $2}')
+    recommended_systemreserved_memory=0
+    if (($total_memory <= 4)); then # 8% of the first 4GB of memory
+        recommended_systemreserved_memory=$(echo $total_memory 0.08 | awk '{print $1 * $2}')
+        total_memory=0
+    else
+        recommended_systemreserved_memory=0.333
+        total_memory=$((total_memory-4))
+    fi
+    if (($total_memory <= 4)); then # 6% of the next 4GB of memory (up to 8GB)
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.06 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+        total_memory=0
+    else
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory 0.252 | awk '{print $1 + $2}')
+        total_memory=$((total_memory-4))
+    fi
+    if (($total_memory <= 8)); then # 3% of the next 8GB of memory (up to 16GB)
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.03 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+        total_memory=0
+    else
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory 0.246 | awk '{print $1 + $2}')
+        total_memory=$((total_memory-8))
+    fi
+    if (($total_memory <= 112)); then # 2% of the next 112GB of memory (up to 128GB)
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.02 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+        total_memory=0
+    else
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory 2.24 | awk '{print $1 + $2}')
+        total_memory=$((total_memory-112))
+    fi
+    if (($total_memory >= 0)); then # 1% of any memory above 128GB
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.01 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+    fi
+    recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory | awk '{printf("%.2f\n",$1)}')
+    echo -n "${recommended_systemreserved_memory}Gi"
+}
+
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
@@ -169,7 +200,7 @@ authorization:
     cacheUnauthorizedTTL: 30s
 cgroupRoot: "/"
 cgroupsPerQOS: true
-cgroupDriver: ${cgroup_driver}
+cgroupDriver: cgroupfs
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}
 clusterDNS:
@@ -253,6 +284,18 @@ rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
+{{- $resourceReservationMode := dig "kubelet" "resourceReservation" "mode" "" .nodeGroup }}
+{{- if eq $resourceReservationMode "Auto" }}
+systemReserved:
+  cpu: 70m
+  memory: "$(dynamic_memory_sizing)"
+  ephemeral-storage: 1Gi
+{{- else if eq $resourceReservationMode "Static" }}
+systemReserved:
+  cpu: {{ dig "kubelet" "resourceReservation" "static" "cpu" 0 .nodeGroup }}
+  memory: {{ dig "kubelet" "resourceReservation" "static" "memory" 0 .nodeGroup }}
+  ephemeral-storage: {{ dig "kubelet" "resourceReservation" "static" "ephemeralStorage" 0 .nodeGroup }}
+{{- end }}
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248

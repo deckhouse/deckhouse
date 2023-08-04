@@ -24,7 +24,7 @@ global:
     apiVersion: deckhouse.io/v1
     clusterDomain: cluster.local
     clusterType: Static
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
     kubernetesVersion: "1.23"
     podSubnetCIDR: 10.111.0.0/16
@@ -42,7 +42,7 @@ global:
     apiVersion: deckhouse.io/v1
     clusterDomain: cluster.local
     clusterType: Static
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
     kubernetesVersion: "1.23"
     podSubnetCIDR: 10.111.0.0/16
@@ -63,7 +63,7 @@ global:
       provider: vSphere
     clusterDomain: cluster.local
     clusterType: Cloud
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
     kubernetesVersion: "1.23"
     podSubnetCIDR: 10.111.0.0/16
@@ -84,7 +84,7 @@ global:
       provider: OpenStack
     clusterDomain: cluster.local
     clusterType: Cloud
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
     kubernetesVersion: "1.23"
     podSubnetCIDR: 10.111.0.0/16

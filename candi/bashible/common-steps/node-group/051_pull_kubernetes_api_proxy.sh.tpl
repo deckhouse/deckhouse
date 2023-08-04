@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if docker version >/dev/null 2>/dev/null; then
-  HOME=/ docker pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-elif crictl version >/dev/null 2>/dev/null; then
+if crictl version >/dev/null 2>/dev/null; then
   crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 fi

@@ -163,6 +163,7 @@ var skipOssChecks = map[string]struct{}{
 	"030-cloud-provider-yandex":               {},
 	"035-cni-simple-bridge":                   {},
 	"140-user-authz":                          {},
+	"160-multitenancy-manager":                {},
 	"340-extended-monitoring":                 {},
 	"340-monitoring-applications":             {},
 	"340-monitoring-custom":                   {},

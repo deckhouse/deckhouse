@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+# Copyright 2023 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetes:
+  - name: namespaces
+    apiVersion: v1
+    kind: Namespace
+    queue: "namespaces"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "name": .metadata.name,
+      }
+kubernetesValidating:
+- name: projects-unique.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE"]
+    resources:   ["projects"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+  projectName=$(context::jq -r '.review.request.object.metadata.name')
+  if alreadyExistedNS="$(context::jq -er --arg name "$projectName" '.snapshots.namespaces[].filterResult | select(.name == $name) | .name' 2>&1)"; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"projects.deckhouse.io \"$projectName\", the project name is equal to the already existing namespace \"$alreadyExistedNS\"" }
+EOF
+    return 0
+  fi
+
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+
+}
+
+hook::run "$@"

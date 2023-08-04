@@ -378,6 +378,10 @@ func getMountpoint(path string) string {
 		path = _path
 	}
 
+	if path == hostPath {
+		return "/"
+	}
+
 	return strings.TrimPrefix(path, hostPath)
 }
 

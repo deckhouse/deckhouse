@@ -1,4 +1,4 @@
-{{- if and (.Values.global.modules.publicDomainTemplate) (.Values.userAuthn.kubeconfigGenerator) }}
+{{- if and (.Values.global.modules.publicDomainTemplate) (or (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.kubeconfigGenerator)) }}
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1
@@ -10,6 +10,7 @@ metadata:
 spec:
   certificateOwnerRef: false
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "kubeconfig-ingress-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "kubeconfig") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
   issuerRef:

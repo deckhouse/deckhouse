@@ -362,7 +362,6 @@ spec:
 | cloudInstances.classReference         | -                          | +                 | -               |
 | cloudInstances.maxSurgePerZone        | -                          | -                 | -               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
-| cri.docker.maxConcurrentDownloads     | +                          | -                 | +               |
 | cri.type                              | - (NotManaged) / + (other) | -                 | -               |
 | disruptions                           | -                          | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
@@ -463,32 +462,12 @@ mcmEmergencyBrake: true
 
 ## Как восстановить master-узел, если kubelet не может загрузить компоненты control plane?
 
+> **Внимание!** Возможен переход только с Containerd на NotManaged и обратно.
+
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы
-компонентов control plane (например, удалена директория `/var/lib/docker` при использовании Docker или `/var/lib/containerd` при использовании containerd). В этом случае kubelet при рестарте не сможет скачать образы control plane компонентов, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
+компонентов control plane (например, удалена директория `/var/lib/containerd`). В этом случае kubelet при рестарте не сможет скачать образы control plane компонентов, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
 
 Ниже инструкция по восстановлению master-узла.
-
-### Docker
-
-Для восстановления работоспособности master-узла необходимо в любом рабочем кластере под управлением Deckhouse выполнить команду:
-
-```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
-jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r 'del(.auths."registry.deckhouse.io".username, .auths."registry.deckhouse.io".password)'
-```
-
-Вывод команды нужно скопировать и добавить его в файл `/root/.docker/config.json` на поврежденном master-узле.
-Далее на поврежденном master-узле нужно загрузить образы `control-plane` компонентов:
-
-```shell
-for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-  docker pull $image
-done
-```
-
-После загрузки образов необходимо перезапустить kubelet.
-После восстановления работоспособности master-узла необходимо **убрать внесенные в файл `/root/.docker/config.json` изменения!**
 
 ### Containerd
 
@@ -513,7 +492,9 @@ done
 
 ## Как изменить CRI для NodeGroup?
 
-Установить параметр `cri.type` в `Docker` или в `Containerd`.
+> **Внимание!** Возможен переход только с Containerd на NotManaged и обратно.
+
+Установить параметр `cri.type` в `Containerd` или в `NotManaged`.
 
 Пример YAML-манифеста NodeGroup:
 
@@ -536,10 +517,10 @@ spec:
   kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
-* Для Docker:
+* Для NotManaged:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
+  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
 > **Внимание!** При смене `cri.type` для NodeGroup, созданных при помощи `dhctl`, нужно менять ее в `dhctl config edit provider-cluster-configuration` и в настройках объекта `NodeGroup`.
@@ -550,7 +531,7 @@ spec:
 
 ## Как изменить CRI для всего кластера?
 
-> **Внимание!** Поддержка Docker устарела. Возможен переход только с Docker на Containerd.
+> **Внимание!** Возможен переход только с Containerd на NotManaged и обратно.
 
 Необходимо при помощи утилиты `dhctl` отредактировать параметр `defaultCRI` в конфиге `cluster-configuration`.
 
@@ -558,14 +539,14 @@ spec:
 * Для Containerd
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
-* Для Docker
+* Для NotManaged
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
@@ -1007,7 +988,7 @@ status:
 
 ## Как заставить werf игнорировать состояние Ready в группе узлов?
 
-[werf](werf.io) проверяет состояние ```Ready``` у ресурсов и в случае его наличия дожидается пока значение станет ```True```.
+[werf](https://ru.werf.io) проверяет состояние ```Ready``` у ресурсов и в случае его наличия дожидается пока значение станет ```True```.
 
 Создание (обновление) ресурса [nodeGroup](cr.html#nodegroup) в кластере может потребовать значительного времени на развертывание необходимого количества узлов. При развертывании такого ресурса в кластере с помощью werf (например, в рамках процесса CI/CD), развертывание может завершиться по превышению времени ожидания готовности ресурса. Чтобы заставить werf игнорировать состояние `nodeGroup`, необходимо добавить к nodeGroup следующие аннотации:
 
@@ -1015,7 +996,7 @@ status:
 metadata:
   annotations:
     werf.io/fail-mode: IgnoreAndContinueDeployProcess
-    uwerf.io/track-termination-mode: NonBlocking
+    werf.io/track-termination-mode: NonBlocking
 ```
 
 {% endraw %}

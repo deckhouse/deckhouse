@@ -17,9 +17,11 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"syscall"
@@ -111,7 +113,13 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 		pred.calculateRelease()
 
-		symlinkName := path.Join(symlinksDir, "900-"+module)
+		// search symlink for module by regexp
+		// module weight for a new version of the module may be different from the old one,
+		// we need to find a symlink that contains the module name without looking at the weight prefix.
+		currentModuleSymlink, err := findExistingModuleSymlink(symlinksDir, module)
+		if err != nil {
+			currentModuleSymlink = "900-" + module // fallback
+		}
 
 		if pred.currentReleaseIndex == len(pred.releases)-1 {
 			// latest release deployed
@@ -120,9 +128,10 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 			// check symlink exists on FS, relative symlink
 			modulePath := generateModulePath(module, deployedRelease.Version.String())
-			if !isModuleExistsOnFS(symlinksDir, symlinkName, modulePath) {
+			if !isModuleExistsOnFS(symlinksDir, currentModuleSymlink, modulePath) {
+				newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", deployedRelease.Weight, module))
 				input.LogEntry.Debugf("Module %q is not exists on the filesystem. Restoring", module)
-				err := enableModule(symlinkName, modulePath)
+				err := enableModule(currentModuleSymlink, newModuleSymlink, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
 					continue
@@ -162,8 +171,9 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			release := pred.releases[pred.desiredReleaseIndex]
 
 			modulePath := generateModulePath(module, release.Version.String())
+			newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", release.Weight, module))
 
-			err := enableModule(symlinkName, modulePath)
+			err := enableModule(currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
 				input.LogEntry.Errorf("Module deploy failed: %v", err)
 				continue
@@ -202,6 +212,24 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	return nil
 }
 
+func findExistingModuleSymlink(rootPath, moduleName string) (string, error) {
+	var symlinkPath string
+
+	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
+	walkDir := func(path string, d os.DirEntry, err error) error {
+		if !moduleRegexp.MatchString(d.Name()) {
+			return nil
+		}
+
+		symlinkPath = path
+		return filepath.SkipDir
+	}
+
+	err := filepath.WalkDir(rootPath, walkDir)
+
+	return symlinkPath, err
+}
+
 func isModuleExistsOnFS(symlinksDir, symlinkPath, modulePath string) bool {
 	targetPath, err := filepath.EvalSymlinks(symlinkPath)
 	if err != nil {
@@ -218,15 +246,24 @@ func isModuleExistsOnFS(symlinksDir, symlinkPath, modulePath string) bool {
 	return targetPath == modulePath
 }
 
-func enableModule(symlinkPath, modulePath string) error {
-	if _, err := os.Lstat(symlinkPath); err == nil {
-		err = os.Remove(symlinkPath)
+func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
+	if oldSymlinkPath != "" {
+		if _, err := os.Lstat(oldSymlinkPath); err == nil {
+			err = os.Remove(oldSymlinkPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if _, err := os.Lstat(newSymlinkPath); err == nil {
+		err = os.Remove(newSymlinkPath)
 		if err != nil {
 			return err
 		}
 	}
 
-	return os.Symlink(modulePath, symlinkPath)
+	return os.Symlink(modulePath, newSymlinkPath)
 }
 
 func generateModulePath(moduleName, version string) string {
@@ -247,10 +284,14 @@ func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 			releaseApproved = true
 		}
 	}
+	if release.Spec.Weight == 0 {
+		release.Spec.Weight = defaultExternalModuleWeight
+	}
 
 	return enqueueRelease{
 		Name:         release.Name,
 		Version:      release.Spec.Version,
+		Weight:       release.Spec.Weight,
 		ModuleName:   release.Spec.ModuleName,
 		ModuleSource: release.Labels["source"],
 		Status:       release.Status.Phase,
@@ -282,6 +323,7 @@ func readModulesFromFS(dir string) (map[string]string, error) {
 type enqueueRelease struct {
 	Name         string
 	Version      *semver.Version
+	Weight       int
 	ModuleName   string
 	ModuleSource string
 	Status       string

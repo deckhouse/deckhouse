@@ -18,14 +18,14 @@ type OpenStackCloudProviderDiscoveryData struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 
-	Flavors                  []string                                        `json:"flavors,omitempty"`
-	AdditionalNetworks       []string                                        `json:"additionalNetworks,omitempty"`
-	AdditionalSecurityGroups []string                                        `json:"additionalSecurityGroups,omitempty"`
-	DefaultImageName         string                                          `json:"defaultImageName,omitempty"`
-	Images                   []string                                        `json:"images,omitempty"`
-	MainNetwork              string                                          `json:"mainNetwork,omitempty"`
-	Zones                    []string                                        `json:"zones,omitempty"`
-	VolumeTypes              []OpenStackCloudProviderDiscoveryDataVolumeType `json:"volumeTypes,omitempty"`
+	Flavors                  []string                                        `json:"flavors"`
+	AdditionalNetworks       []string                                        `json:"additionalNetworks"`
+	AdditionalSecurityGroups []string                                        `json:"additionalSecurityGroups"`
+	DefaultImageName         string                                          `json:"defaultImageName"`
+	Images                   []string                                        `json:"images"`
+	MainNetwork              string                                          `json:"mainNetwork"`
+	Zones                    []string                                        `json:"zones"`
+	VolumeTypes              []OpenStackCloudProviderDiscoveryDataVolumeType `json:"volumeTypes"`
 }
 
 type OpenStackCloudProviderDiscoveryDataVolumeType struct {
