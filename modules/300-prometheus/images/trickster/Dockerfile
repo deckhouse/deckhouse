@@ -4,8 +4,11 @@ ARG BASE_GOLANG_20_ALPINE
 
 FROM $BASE_GOLANG_16_ALPINE as artifact
 
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
 RUN apk add --no-cache make git
-RUN git clone --depth 1 --branch v1.1.5 https://github.com/trickstercache/trickster.git /trickster
+RUN git clone --depth 1 --branch v1.1.5 ${SOURCE_REPO}/trickstercache/trickster.git /trickster
 WORKDIR /trickster/
 
 ARG GOARCH=amd64

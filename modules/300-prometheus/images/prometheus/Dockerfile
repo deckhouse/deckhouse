@@ -15,8 +15,11 @@ RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
 
 RUN apt install -y make bash git ca-certificates openssl openssh-client bzip2
 
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
 RUN mkdir /prometheus && cd /prometheus \
-  && git clone -b "${PROMETHEUS_VERSION}" --single-branch https://github.com/prometheus/prometheus
+  && git clone -b "${PROMETHEUS_VERSION}" --single-branch ${SOURCE_REPO}/prometheus/prometheus
 WORKDIR /prometheus/prometheus
 
 RUN go mod download
