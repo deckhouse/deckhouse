@@ -22,7 +22,8 @@
 + etc/hostname
 + etc/hosts
 + etc/shadow
-+ etc/protocols
++ etc/protocols\[]
+'
 + etc/services
 + etc/nsswitch.conf
 # ca-certificates

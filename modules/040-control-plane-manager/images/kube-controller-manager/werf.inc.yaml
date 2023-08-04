@@ -4,7 +4,7 @@
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_UBUNTU }}
+fromImage: common/distroless
 import:
 - image: common/pause
   add: /pause
@@ -14,20 +14,6 @@ import:
   add: /src/_output/bin/kube-controller-manager
   to: /usr/bin/kube-controller-manager
   before: setup
-shell:
-  beforeInstall:
-  - apt-get update
-  - apt install ca-certificates apt-transport-https gnupg gnupg2 gnupg1 curl -y
-  - curl -sL 'https://download.ceph.com/keys/release.asc' | apt-key add -
-  - echo deb https://download.ceph.com/debian-pacific/ bionic main | tee /etc/apt/sources.list.d/ceph.list
-  - apt-get update
-  - apt-get install -y ceph-common
-  - touch /etc/ceph/ceph.conf /etc/ceph/ceph.keyring
-  - apt-get purge -y --auto-remove curl apt-transport-https gnupg gnupg2 gnupg1
-  - rm -rf /var/lib/apt/lists/*
 docker:
-  ENV:
-    DEBIAN_FRONTEND: noninteractive
-    container: docker
   ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
 {{- end }}

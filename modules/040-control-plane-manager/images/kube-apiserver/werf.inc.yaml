@@ -4,7 +4,7 @@
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
 - image: common/pause
   add: /pause
@@ -14,12 +14,19 @@ import:
   add: /src/_output/bin/kube-apiserver
   to: /usr/bin/kube-apiserver
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-nsswitch
+  add: /etc/nsswitch.conf
+  to: /etc/nsswitch.conf
+  before: setup
+docker:
+  ENTRYPOINT: ["/usr/bin/kube-apiserver"]
+{{- end }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-nsswitch
+from: {{ $.Images.BASE_ALPINE}}
 shell:
   beforeInstall:
   # set up nsswitch.conf for Go's "netgo" implementation
   # Go stdlib completely ignores /etc/hosts file without it
-  # https://github.com/moby/moby/issues/34544
+  # https://github.com/golang/go/issues/22846
   - "echo 'hosts: files dns' > /etc/nsswitch.conf"
-docker:
-  ENTRYPOINT: ["/usr/bin/kube-apiserver"]
-{{- end }}

@@ -30,7 +30,7 @@ ansible:
     args:
       chdir: /src
   setup:
-  - shell: go build -ldflags="-s -w" -o bashible-apiserver .
+  - shell: go build -ldflags="-s -w" -o bashible-apiserver . && chown 64535:64535 bashible-apiserver && chmod 0700 bashible-apiserver
     args:
       chdir: /src
     environment:
@@ -39,7 +39,7 @@ ansible:
       CGO_ENABLED: "0"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_ALPINE }}
+fromImage: common/distroless
 docker:
   ENTRYPOINT: ["/bashible-apiserver", "--tls-cipher-suites", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"]
 import:

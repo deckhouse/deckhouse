@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_ALPINE }}
+fromImage: common/distroless
 docker:
   ENV:
     WORKDIR: /
@@ -13,28 +13,15 @@ import:
 artifact: {{ .ModuleName }}/{{ .ImageName }}/build
 from: {{ .Images.BASE_GOLANG_ALPINE }}
 fromCacheVersion: "20210607"
-git:
-- url: https://github.com/deckhouse/mcm.git
-  to: /src
-  tag: v0.36.0-flant.13
-  stageDependencies:
-    install:
-    - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-ansible:
-  beforeInstall:
-  - name: "Install dependencies"
-    apk:
-      name:
-      - mercurial
-      - make
-      - bash
-      - tzdata
-      update_cache: yes
+shell:
   install:
-  - name: "Build"
-    shell: make build-local
-    args:
-      chdir: /src
+  - apk add mercurial make bash git
+  setup:
+  - mkdir /src && cd /src
+  - git clone --depth 1 --branch v0.36.0-flant.13 {{ env "SOURCE_REPO" | default "https://github.com" }}/mcm.git .
+  - make build-local
+  - chown 64535:64535 bin/machine-controller-manager
+  - chmod 0700 bin/machine-controller-manager

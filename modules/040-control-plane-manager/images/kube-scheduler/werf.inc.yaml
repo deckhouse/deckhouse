@@ -4,7 +4,7 @@
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
 - image: common/pause
   add: /pause

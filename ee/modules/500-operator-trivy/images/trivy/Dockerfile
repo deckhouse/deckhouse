@@ -1,12 +1,17 @@
-ARG BASE_ALPINE
-ARG BASE_GOLANG_19_ALPINE
+ARG BASE_DISTROLESS
+ARG BASE_GOLANG_20_ALPINE
+ARG SOURCE_REPO
 
-FROM $BASE_GOLANG_19_ALPINE AS build
+FROM $BASE_GOLANG_20_ALPINE AS build
+ENV SOURCE_REPO=${SOURCE_REPO}
 WORKDIR /src
-RUN wget https://github.com/aquasecurity/trivy/archive/refs/tags/v0.42.0.tar.gz -O - | tar -xz --strip-components=1
+RUN apk add git
+RUN git clone --branch v0.42.0 --depth 1 ${SOURCE_REPO}/aquasecurity/trivy.git .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o trivy ./cmd/trivy/main.go
 
-FROM $BASE_ALPINE
+RUN chown 64535:64535 trivy
+RUN chmod 0700 trivy
+
+FROM $BASE_DISTROLESS
 COPY --from=build /src/trivy /usr/local/bin/
 ENTRYPOINT [ "/usr/local/bin/trivy" ]
-ENV LANG=C.UTF-8

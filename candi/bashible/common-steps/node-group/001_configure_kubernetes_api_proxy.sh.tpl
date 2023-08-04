@@ -17,9 +17,11 @@ mkdir -p /etc/kubernetes/kubernetes-api-proxy
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf - << EOF
-user nginx;
+include /etc/nginx/modules/*.conf;
+include /etc/nginx/conf.d/*.conf;
 
-pid /tmp/kubernetes-api-proxy.pid;
+user nobody;
+
 error_log stderr notice;
 
 worker_processes 2;
@@ -77,8 +79,9 @@ spec:
   - name: kubernetes-api-proxy
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
     imagePullPolicy: IfNotPresent
+    command: ["/usr/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf"]
     volumeMounts:
-    - mountPath: /etc/nginx
+    - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf
   - name: kubernetes-api-proxy-reloader
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}

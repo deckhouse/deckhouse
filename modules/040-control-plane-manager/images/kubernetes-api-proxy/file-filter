@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,21 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# shellcheck disable=SC2174
-
-set -Eeuo pipefail
-shopt -s inherit_errexit
-shopt -s failglob
-
-function nginx_reload() {
-  if ! >&2 diff -u /etc/nginx/nginx.conf /etc/nginx/nginx_new.conf && nginx -t -c /etc/nginx/nginx_new.conf; then
-    >&2 echo "nginx.conf changed!"
-    cp /etc/nginx/nginx_new.conf /etc/nginx/nginx.conf
-    kill -s SIGHUP $(pidof nginx)
-  fi
-}
-
-while true; do
-  nginx_reload
-  inotifywait -q -e modify,move_self /etc/nginx/nginx_new.conf
-done
++ /usr/sbin/nginx
++ /etc/ssl/***
++ /etc/nginx/***
++ /lib/***
++ /usr/lib/***
++ /var/lib/nginx/***
