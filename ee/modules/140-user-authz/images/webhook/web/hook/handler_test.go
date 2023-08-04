@@ -251,7 +251,7 @@ func TestAuthorizeRequest(t *testing.T) {
 		},
 		{
 			Name:  "Limited with NamespaceSelectors and namespace doesn't exist",
-			Group: []string{"limited-namespace-selectors"},
+			Group: []string{"limited-namespace-selector"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -266,7 +266,7 @@ func TestAuthorizeRequest(t *testing.T) {
 		},
 		{
 			Name:  "Limited with NamespaceSelectors and labels match",
-			Group: []string{"limited-namespace-selectors"},
+			Group: []string{"limited-namespace-selector"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -291,7 +291,7 @@ func TestAuthorizeRequest(t *testing.T) {
 		},
 		{
 			Name:  "Limited with NamespaceSelectors and labels don't match",
-			Group: []string{"limited-namespace-selectors"},
+			Group: []string{"limited-namespace-selector"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -315,22 +315,12 @@ func TestAuthorizeRequest(t *testing.T) {
 		},
 		{
 			Name:  "Limited with NamespaceSelectors and limitNamespaces, and matches limitNamespaces",
-			Group: []string{"limited-plus"},
+			Group: []string{"limited", "limited-namespace-selector"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
 				Resource:  "object1",
 				Namespace: "test-abc-def",
-			},
-			Namespaces: []runtime.Object{
-				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "namespace-selector-test",
-						Labels: map[string]string{
-							"match": "false",
-						},
-					},
-				},
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: false,
@@ -339,7 +329,7 @@ func TestAuthorizeRequest(t *testing.T) {
 		},
 		{
 			Name:  "Limited with NamespaceSelectors and limitNamespaces, and matches NamespaceSelectors",
-			Group: []string{"limited-plus"},
+			Group: []string{"limited", "limited-namespace-selector"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -363,8 +353,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 		},
 		{
-			Name:  "Limited with NamespaceSelectors and limitNamespaces, wants d8-system namespace without AllowAccessToSystemNamespaces",
-			Group: []string{"limited-plus"},
+			Name:  "Limited with NamespaceSelectors and limitNamespaces (system regex), wants d8-system namespace without AllowAccessToSystemNamespaces",
+			Group: []string{"limited-with-system-regex", "limited-namespace-selector"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -374,7 +364,29 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "d8-system",
+						Name:   "d8-system",
+						Labels: map[string]string{},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "user has no access to the namespace",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces, wants d8-system namespace without AllowAccessToSystemNamespaces",
+			Group: []string{"limited", "limited-namespace-selector"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "d8-system",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "d8-system",
 						Labels: map[string]string{},
 					},
 				},
@@ -386,7 +398,7 @@ func TestAuthorizeRequest(t *testing.T) {
 		},
 		{
 			Name:  "Limited with NamespaceSelectors and limitNamespaces, wants d8-system namespace without AllowAccessToSystemNamespaces but the namespace has the labels",
-			Group: []string{"limited-plus"},
+			Group: []string{"limited", "limited-namespace-selector"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -396,29 +408,22 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "namespace-selector-test",
-						Labels: map[string]string{
-							"match": "true",
-						},
-					},
-				},
-				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
 						Name: "d8-system",
 						Labels: map[string]string{
-							"match": "true",
+							"match":      "true",
+							"expression": "match",
 						},
 					},
 				},
 			},
 			ResultStatus: WebhookRequestStatus{
-				Denied: true,
-				Reason: "user has no access to the namespace",
+				Denied: false,
+				Reason: "",
 			},
 		},
 		{
 			Name:  "Limited with NamespaceSelectors and limitNamespaces, wants d8-system with AllowAccessToSystemNamespaces",
-			Group: []string{"limited-and-system-allowed-plus"},
+			Group: []string{"limited-and-system-allowed", "limited-namespace-selector"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -442,94 +447,20 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 		},
 		{
-			Name:  "Limited with NamespaceSelectors and limitNamespaces from different groups, matches LimitNamespaces",
-			Group: []string{"limited", "limited-namespace-selectors"},
+			Name:  "Limited with NamespaceSelectors and limitNamespaces, wants d8-system with AllowAccessToSystemNamespaces but labels don't match",
+			Group: []string{"limited-and-system-allowed", "limited-namespace-selector"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
 				Resource:  "object1",
-				Namespace: "test-abc-def",
+				Namespace: "d8-system",
 			},
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "namespace-selector-test",
+						Name: "d8-system",
 						Labels: map[string]string{
 							"match": "true",
-						},
-					},
-				},
-			},
-			ResultStatus: WebhookRequestStatus{
-				Denied: false,
-				Reason: "",
-			},
-		},
-		{
-			Name:  "Limited with NamespaceSelectors and limitNamespaces from different groups, matches labels",
-			Group: []string{"limited", "limited-namespace-selectors"},
-			Attributes: WebhookResourceAttributes{
-				Group:     "test",
-				Version:   "v1",
-				Resource:  "object1",
-				Namespace: "namespace-selector-test",
-			},
-			Namespaces: []runtime.Object{
-				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "namespace-selector-test",
-						Labels: map[string]string{
-							"match":      "true",
-							"expression": "allow",
-						},
-					},
-				},
-			},
-			ResultStatus: WebhookRequestStatus{
-				Denied: false,
-				Reason: "",
-			},
-		},
-		{
-			Name:  "Limited with NamespaceSelectors and limitNamespaces from different groups, wants d8-system with AllowAccessToSystemNamespaces",
-			Group: []string{"limited-and-system-allowed", "limited-namespace-selectors"},
-			Attributes: WebhookResourceAttributes{
-				Group:     "test",
-				Version:   "v1",
-				Resource:  "object1",
-				Namespace: "d8-system",
-			},
-			Namespaces: []runtime.Object{
-				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "d8-system",
-						Labels: map[string]string{
-							"match":      "true",
-							"expression": "allow",
-						},
-					},
-				},
-			},
-			ResultStatus: WebhookRequestStatus{
-				Denied: false,
-				Reason: "",
-			},
-		},
-		{
-			Name:  "Limited with NamespaceSelectors and limitNamespaces from different groups, wants d8-system with AllowAccessToSystemNamespaces but labels don't match",
-			Group: []string{"limited-and-system-allowed", "limited-namespace-selectors"},
-			Attributes: WebhookResourceAttributes{
-				Group:     "test",
-				Version:   "v1",
-				Resource:  "object1",
-				Namespace: "d8-system",
-			},
-			Namespaces: []runtime.Object{
-				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "d8-system",
-						Labels: map[string]string{
-							"match":      "true",
 						},
 					},
 				},
@@ -545,6 +476,7 @@ func TestAuthorizeRequest(t *testing.T) {
 		t.Run(testCase.Name, func(t *testing.T) {
 			nsRegex, _ := regexp.Compile("^test-.*$")
 			allRegex, _ := regexp.Compile("^.*$")
+			systemRegex, _ := regexp.Compile("^d8-.*$")
 			namespaceSelector := &NamespaceSelector{
 				LabelSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
@@ -590,28 +522,18 @@ func TestAuthorizeRequest(t *testing.T) {
 						"limited": {
 							LimitNamespaces: []*regexp.Regexp{nsRegex},
 						},
-						"limited-namespace-selectors": {
-							NamespaceSelectors: []*NamespaceSelector{
-								namespaceSelector,
-							},
+						"limited-with-system-regex": {
+							LimitNamespaces: []*regexp.Regexp{systemRegex},
 						},
-						"limited-plus": {
+						"limited-namespace-selector": {
 							NamespaceSelectors: []*NamespaceSelector{
 								namespaceSelector,
 							},
-							LimitNamespaces: []*regexp.Regexp{nsRegex},
 						},
 						"limited-with-unlimited-regex": {
 							LimitNamespaces: []*regexp.Regexp{allRegex},
 						},
 						"limited-and-system-allowed": {
-							LimitNamespaces:               []*regexp.Regexp{nsRegex},
-							AllowAccessToSystemNamespaces: true,
-						},
-						"limited-and-system-allowed-plus": {
-							NamespaceSelectors: []*NamespaceSelector{
-								namespaceSelector,
-							},
 							LimitNamespaces:               []*regexp.Regexp{nsRegex},
 							AllowAccessToSystemNamespaces: true,
 						},

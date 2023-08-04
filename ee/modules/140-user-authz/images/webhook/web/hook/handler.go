@@ -98,38 +98,36 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 		return request
 	}
 
-	// check if we deal with a system namespace and drop the request if a system namespace is requested and there is no AllowAccessToSystemNamespaces
-	for _, pattern := range systemNamespacesRegex {
-		if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
-			if !entry.AllowAccessToSystemNamespaces {
-				// Deny request as system namespaces aren't allowed
+	// there are limitNamespaces/namespaceSelectors
+	if !entry.NamespaceFiltersAbsent {
+		// deny all namespaces
+		request.Status.Denied = true
+		request.Status.Reason = noNamespaceAccessReason
+		// check if the target namespace is in limitNamespaces list
+		for _, pattern := range entry.LimitNamespaces {
+			if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
+				request.Status.Denied = false
+				request.Status.Reason = ""
+				break
+			}
+		}
+	} else {
+	// there is no filters - assume a positive outcome
+		request.Status.Denied = false
+	}
+
+	if !request.Status.Denied && !entry.AllowAccessToSystemNamespaces {
+		// check if the target namespace is a system one and restricted
+		for _, pattern := range systemNamespacesRegex {
+			if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
 				request.Status.Denied = true
 				request.Status.Reason = noNamespaceAccessReason
+				break
 			}
-			// Continue processing the request to figure out if any filter permits access to the system namespace
-			break
 		}
 	}
 
-	// (non-system namespace or system namespaces are allowed) and no other filters - permit request
-	if entry.NamespaceFiltersAbsent {
-		return request
-	}
-
-	// All namespaces are denied
-	request.Status.Denied = true
-	request.Status.Reason = noNamespaceAccessReason
-
-	// Firstly, we check if the target namespace is in limitNamespaces list (plus system namespaces if AllowAccessToSystemNamespace == true) because it's cheaper/faster in terms of requests to API
-	for _, pattern := range entry.LimitNamespaces {
-		if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
-			request.Status.Denied = false
-			request.Status.Reason = ""
-			break
-		}
-	}
-
-	// Secondly, we check if the labels of the requested namespace match any of the provided namespace selectors
+	// if request is still denied - check available namespace selectors if any of them match the request namespace, doesn't matter a system one or not
 	if request.Status.Denied && len(entry.NamespaceSelectors) > 0 {
 		match, err := h.namespaceLabelsMatchSelector(request.Spec.ResourceAttributes.Namespace, entry.NamespaceSelectors)
 		if err != nil {
