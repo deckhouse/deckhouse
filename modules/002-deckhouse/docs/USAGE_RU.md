@@ -4,7 +4,7 @@ title: "Модуль deckhouse: примеры конфигурации"
 
 ## Пример конфигурации модуля
 
-Ниже представлен простой пример конфигурации модуля:
+Пример конфигурации модуля с настройкой автоматического обновления Deckhouse на канал обновлений EarlyAccess:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -14,12 +14,8 @@ metadata:
 spec:
   version: 1
   settings:
-    logLevel: Debug
-    bundle: Minimal
     releaseChannel: EarlyAccess
 ```
-
-Также можно настроить дополнительные параметры.
 
 ## Настройка режима обновления
 
@@ -27,7 +23,7 @@ spec:
 
 Patch-версии (например, обновления с `1.26.1` до `1.26.2`) устанавливаются без подтверждения и без учета окон обновлений.
 
-> Вы также можете настраивать окна disruption-обновлений узлов в custom resource'ах [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup) (параметр `disruptions.automatic.windows`).
+> Вы также можете настроить окна disruption-обновлений узлов с помощью параметра [`disruptions.automatic.windows`](../040-node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) ресурса `NodeGroup`.
 
 ### Конфигурация окон обновлений
 
@@ -74,7 +70,9 @@ spec:
 
 ### Ручное подтверждение обновлений
 
-При необходимости возможно включить ручное подтверждение обновлений. Сделать это можно следующим образом:
+Ручное подтверждение обновлений можно включить с помощью параметра [update.mode](configuration.html#parameters-update-mode) модуля. В этом режиме будет необходимо подтверждать каждое **минорное** обновление Deckhouse. Обновление patch-версии Deckhouse в этом режиме будет выполняться автоматически, без подтверждений.
+
+Пример конфигурации модуля (включение канала обновлений Stable, с ручным режимом обновления):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -89,7 +87,7 @@ spec:
       mode: Manual
 ```
 
-В этом режиме необходимо подтверждать каждое минорное обновление Deckhouse (без учёта patch-версий).
+Для подтверждения обновления, в соответствующем custom resource [`DeckhouseRelease`](cr.html#deckhouserelease) необходимо установить поле `approved` в `true`.
 
 Пример подтверждения обновления на версию `v1.43.2`:
 
@@ -99,7 +97,11 @@ kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
 
 ### Ручное подтверждение потенциально опасных (disruptive) обновлений
 
-При необходимости возможно включить ручное подтверждение потенциально опасных (disruptive) обновлений (которые меняют значения по-умолчанию или поведение некоторых модулей). Сделать это можно следующим образом:
+{% alert %}
+**Потенциально опасное обновление (disruptive-обновление)** может привести к временному прерыванию работы важного компонента кластера, пользовательского приложения или связанных систем. Такое обновление, например, может переопределить значение по умолчанию или изменить поведение некоторых модулей.
+{% endalert %}
+
+Включить ручное подтверждение _потенциально опасных обновлений_ можно с помощью параметра [update.disruptionApprovalMode](configuration.html#parameters-update-disruptionapprovalmode). Пример конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -114,13 +116,36 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
-В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учёта patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе `DeckhouseRelease`.
+В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учёта patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [`DeckhouseRelease`](cr.html#deckhouserelease). Обычное обновление (не потенциально опасное), будет применяться автоматически.
 
 Пример подтверждения минорного потенциально опасного обновления Deckhouse `v1.36.4`:
 
 ```shell
 kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
 ```
+
+{% alert level="warning" %}
+Параметр [disruptionApprovalMode](configuration.html#parameters-update-disruptionapprovalmode) не влияет на режим обновления кластера (параметр [update.mode](configuration.html#parameters-update-mode)). Например, при следующей конфигурации Deckhouse будет обновляться автоматически в пределах установленного окна обновлений по понедельникам и вторникам с 10 до 13 UTC, но не будет обновляться на версии, которые помечены как потенциально опасные:
+
+```yaml
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    releaseChannel: Stable
+    update:
+      disruptionApprovalMode: Manual
+      windows:
+      - days:
+        - Mon
+        - Tue
+        from: "10:00"
+        to: "13:00"
+```
+
+{% endalert %}
 
 ### Оповещение об обновлении Deckhouse
 
