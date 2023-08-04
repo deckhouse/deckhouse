@@ -131,12 +131,9 @@
         Most likely, there is a problem with the `update_approval` hook of the `node-manager` module.
 
 
-  - alert: D8NodeGroupProblematicNodeGroupConfiguration
+  - alert: D8ProblematicNodeGroupConfiguration
     expr: |
-      max by (node,node_group) (
-          node_group_node_status{status="UpdateFailedNoConfigChecksum"} *
-          on(node) group_left() (max by(node) ((kube_node_status_condition{condition="Ready", status="true"} == 1)))
-      ) > 0
+      max by (status, node_group, node) (node_group_node_status{status="UpdateFailedNoConfigChecksum"}) == 1
     for: 5m
     labels:
       tier: cluster
