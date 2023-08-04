@@ -118,7 +118,10 @@ func TestAuthorizeRequest(t *testing.T) {
 				Resource:  "object1",
 				Namespace: "default",
 			},
-			ResultStatus: WebhookRequestStatus{},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "user has no access to the namespace",
+			},
 		},
 		{
 			Name:  "Cluster scoped. Group and version are empty, search in the v1 apiVersion. Allowed.",
@@ -371,10 +374,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "namespace-selector-test",
-						Labels: map[string]string{
-							"match": "true",
-						},
+						Name: "d8-system",
+						Labels: map[string]string{},
 					},
 				},
 			},
@@ -427,9 +428,10 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "namespace-selector-test",
+						Name: "d8-system",
 						Labels: map[string]string{
-							"match": "true",
+							"match":      "true",
+							"expression": "allow",
 						},
 					},
 				},
@@ -500,9 +502,10 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "namespace-selector-test",
+						Name: "d8-system",
 						Labels: map[string]string{
-							"match": "true",
+							"match":      "true",
+							"expression": "allow",
 						},
 					},
 				},
@@ -510,6 +513,30 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{
 				Denied: false,
 				Reason: "",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelectors and limitNamespaces from different groups, wants d8-system with AllowAccessToSystemNamespaces but labels don't match",
+			Group: []string{"limited-and-system-allowed", "limited-namespace-selectors"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "d8-system",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "d8-system",
+						Labels: map[string]string{
+							"match":      "true",
+						},
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "user has no access to the namespace",
 			},
 		},
 	}

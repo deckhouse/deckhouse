@@ -93,12 +93,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *DirectoryEntry) *WebhookRequest {
-	if !hasNamespaceFilters(entry) {
+	if !hasAnyFilters(entry) {
 		// User has no namespaced restriction.
 		return request
 	}
 
-	// check if we deal with a system namespace
+	// check if we deal with a system namespace and drop the request if a system namespace is requested and there is no AllowAccessToSystemNamespaces
 	for _, pattern := range systemNamespacesRegex {
 		if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
 			if !entry.AllowAccessToSystemNamespaces {
@@ -106,12 +106,12 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 				request.Status.Denied = true
 				request.Status.Reason = noNamespaceAccessReason
 			}
-			// Permit request in opposite case
-			return request
+			// Continue processing the request to figure out if any filter permits access to the system namespace
+			break
 		}
 	}
 
-	// non-system namespace and no filters - permit request
+	// (non-system namespace or system namespaces are allowed) and no other filters - permit request
 	if entry.NamespaceFiltersAbsent {
 		return request
 	}
@@ -182,7 +182,7 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 		// could not check whether resource is namespaced or not (from cache) - deny access
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
 
-	} else if namespaced && hasNamespaceFilters(entry) {
+	} else if namespaced && hasAnyFilters(entry) {
 		// we should not allow cluster scoped requests for namespaced objects if namespaces access is limited
 		h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
 	}
@@ -370,8 +370,8 @@ func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSe
 }
 
 // checks if an entry has any namespace-related filters
-func hasNamespaceFilters(entry *DirectoryEntry) bool {
-	if len(entry.LimitNamespaces)+len(entry.NamespaceSelectors) == 0 || entry.NamespaceFiltersAbsent {
+func hasAnyFilters(entry *DirectoryEntry) bool {
+	if entry.NamespaceFiltersAbsent {
 		// The limitNamespaces option has a priority over the allowAccessToSystemNamespaces option.
 		// If limited namespaces are not specified, check whether access to system namespaces is limited.
 		// If it is not - user has no limited namespaces.
@@ -387,7 +387,7 @@ func hasNamespaceFilters(entry *DirectoryEntry) bool {
 		switch regex.String() {
 		// Special regexp cases that allow every namespace. Do not need to forbid cluster scoped requests.
 		case "^.*$", "^.+$":
-			return false
+			return !entry.AllowAccessToSystemNamespaces
 		}
 	}
 
