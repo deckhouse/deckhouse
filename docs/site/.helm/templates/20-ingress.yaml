@@ -100,8 +100,8 @@ spec:
             name: frontend
             port:
               name: http
-      - path: /sitemap-site.xml
-        pathType: Exact
+      - path: /documentation
+        pathType: Prefix
         backend:
           service:
             name: frontend
