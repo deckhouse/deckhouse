@@ -114,7 +114,7 @@ properties:
               Authorization webhook CA.
           webhookCacheTTL:
             type: string
-            pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
+            pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
             description: |
               The duration to cache responses from the webhook token authenticator.
 
