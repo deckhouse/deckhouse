@@ -3,8 +3,11 @@ ARG BASE_DISTROLESS
 
 FROM $BASE_GOLANG_19_ALPINE as artifact
 
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
 RUN apk add --no-cache make git
-RUN git clone --depth 1 --branch v2.7.3 https://github.com/grafana/loki.git /loki
+RUN git clone --depth 1 --branch v2.7.3 ${SOURCE_REPO}/grafana/loki.git /loki
 WORKDIR /loki/
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o loki cmd/loki/main.go
 
