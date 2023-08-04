@@ -491,7 +491,6 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts time.Time, clusterU
 }
 
 func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Version) error {
-
 	listTags, err := dcr.registryClient.ListTags()
 	if err != nil {
 		return err
@@ -521,7 +520,6 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Vers
 }
 
 func nextVersion(list []string, actual, target *semver.Version) *semver.Version {
-
 	if actual.Major() != target.Major() {
 		return target // TODO step by step update for major version
 	}
