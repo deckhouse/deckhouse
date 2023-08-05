@@ -135,7 +135,7 @@ resource "vsphere_virtual_machine" "master" {
   datastore_id     = data.vsphere_datastore.datastore.id
   folder           = var.providerClusterConfiguration.vmFolderPath
 
-  firmware = "efi"
+  firmware = data.vsphere_virtual_machine.template.guest_id
   num_cpus = local.master_instance_class.numCPUs
   memory   = local.master_instance_class.memory
   guest_id = data.vsphere_virtual_machine.template.guest_id
