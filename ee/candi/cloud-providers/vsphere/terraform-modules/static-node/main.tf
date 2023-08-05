@@ -170,6 +170,7 @@ resource "vsphere_virtual_machine" "node" {
       extra_config,
       disk,
       vapp,
+      firmware,
     ]
   }
 }

@@ -198,7 +198,7 @@ resource "vsphere_virtual_machine" "master" {
       extra_config,
       disk,
       vapp,
-      firmware
+      firmware,
     ]
   }
 }
