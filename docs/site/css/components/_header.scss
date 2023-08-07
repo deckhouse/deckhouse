@@ -75,9 +75,21 @@ html {
     }
   }
 
+  &__left-box {
+    display: flex;
+    gap: 4rem;
+    align-items: center;
+  }
+
+
   &__nav {
     &.nav {
-      display: none;
+      //display: none;
+      display: flex;
+      gap: 12px 32px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
 
       //@include min-w(l) {
       //  display: flex;
@@ -107,9 +119,11 @@ html {
       padding: 1em 2em;
       gap: 9px;
       flex-direction: column;
-      //@include bg-color($white);
+      @include bg-color($white);
       border-radius: 4px;
       //@include box-shadow;
+      box-shadow: 0 0 4px rgba(0,0,0, .15);
+      list-style: none;
 
       //@include min-w(xl) {
       //  gap: 12px;
@@ -126,18 +140,20 @@ html {
     }
 
     a {
+      color: $white;
       //@include color($ntrl-800);
       white-space: nowrap;
+      text-decoration: none;
     }
 
     .menu-item-has-children {
       position: relative;
-      display: flex;
-      align-items: baseline;
+      //display: flex;
+      //align-items: baseline;
 
       &:hover {
         &:after {
-          opacity: .5;
+          //opacity: .5;
           transform: translateY(2px);
         }
 
@@ -269,7 +285,8 @@ html {
   }
 
   a {
-    font-size: 12px;
+    //font-size: 12px;
+    font-size: 14px;
 
     //@include min-w(xl) {
     //  font-size: 14px;
@@ -444,22 +461,22 @@ html {
             //}
             &.disabled {
                 opacity: 0.3;
-                &:hover {
-                    & a {
-                        color: $color-main;
-                    }
-                }
+                //&:hover {
+                //    & a {
+                //        color: $color-main;
+                //    }
+                //}
                 & a {
                     cursor: not-allowed;
                 }
             }
-            a {
-                color: $color-main;
-                text-decoration: none;
-                //&:hover {
-                //    color: $color-alt;
-                //}
-            }
+            //a {
+            //    color: $color-main;
+            //    text-decoration: none;
+            //    //&:hover {
+            //    //    color: $color-alt;
+            //    //}
+            //}
         }
     }
 }
