@@ -4,7 +4,7 @@
   {{- if eq $type "virtualization" }}
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-virt-builder-artifact
 git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
