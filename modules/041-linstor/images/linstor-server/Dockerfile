@@ -5,12 +5,19 @@ FROM $BASE_UBUNTU as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
 ARG LINSTOR_VERSION=1.24.1
+ARG LINSTOR_VERSION=1.24.1
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
  && apt-get -y install build-essential debhelper git wget zip default-jdk-headless python3-all \
+ && apt-get -y install build-essential debhelper git wget zip default-jdk-headless python3-all \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir /opt/gradle && cd /opt/gradle \
+ && wget -q https://services.gradle.org/distributions/gradle-6.9.3-bin.zip \
+ && unzip gradle-6.9.3-bin.zip \
+ && ln -s /opt/gradle/gradle-6.9.3/bin/gradle /usr/local/bin/gradle
 
 RUN mkdir /opt/gradle && cd /opt/gradle \
  && wget -q https://services.gradle.org/distributions/gradle-6.9.3-bin.zip \
@@ -36,7 +43,9 @@ FROM $BASE_UBUNTU as client-builder
 
 ARG API_GITREPO=https://github.com/LINBIT/linstor-api-py
 ARG API_VERSION=1.19.0
+ARG API_VERSION=1.19.0
 ARG CLIENT_GITREPO=https://github.com/LINBIT/linstor-client
+ARG CLIENT_VERSION=1.19.0
 ARG CLIENT_VERSION=1.19.0
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -126,7 +135,7 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_UBUNTU
 ARG PIRAEUS_GITREPO=https://github.com/piraeusdatastore/piraeus
-ARG PIRAEUS_COMMIT_REF=01411fc6fe7f329fb91a64ba67d882c24dfcb3c6
+ARG PIRAEUS_COMMIT_REF=42f09ab73de76661404f2c556fbf820bf2826614
 
 COPY --from=linstor-builder /linstor-common_*.deb /linstor-controller_*.deb /linstor-satellite_*.deb /packages/
 COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages/
