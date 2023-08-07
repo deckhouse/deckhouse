@@ -5,18 +5,24 @@ permalink: en/deckhouse-faq.html
 
 ## How do I find out all Deckhouse parameters?
 
-All the Deskhouse settings (including module parameters) are stored in cluster scoped ModuleConfig resources and custom resources. The `global` ModuleConfig contains global Deckhouse settings. Read more in [the documentation](./).
-
-To get list of all ModuleConfigs:
-
-```shell
-kubectl get mc
-```
+Deckhouse is configured using global settings, module settings, and various custom resources. Read more in [the documentation](./).
 
 To view global Deckhouse settings:
 
 ```shell
 kubectl get mc global -o yaml
+```
+
+To list the status of all modules (available for Deckhouse version 1.47+):
+
+```shell
+kubectl get modules
+```
+
+To get the `user-authn` module configuration:
+
+```shell
+kubectl get moduleconfigs user-authn -o yaml
 ```
 
 ## How do I find the documentation for the version installed?
