@@ -171,7 +171,7 @@ releaseLoop:
 				}
 			}
 			if err := releaseChecker.StepByStepUpdate(release.Version, newSemver); err != nil {
-				releaseChecker.logger.Warnf("step by step uodate failed. err: %v", err)
+				releaseChecker.logger.Warnf("step by step update failed. err: %v", err)
 			}
 
 			break releaseLoop
@@ -491,17 +491,15 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts time.Time, clusterU
 }
 
 func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Version) error {
-	listTags, err := dcr.registryClient.ListTags()
+	nextVersion, err := dcr.nextVersion(actual, target)
 	if err != nil {
 		return err
 	}
-
-	nextVersion := nextVersion(listTags, actual, target)
 	if nextVersion == target {
 		return nil
 	}
 
-	image, err := dcr.registryClient.Image(nextVersion.String())
+	image, err := dcr.registryClient.Image(nextVersion.Original())
 	if err != nil {
 		return err
 	}
@@ -519,13 +517,18 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Vers
 	return nil
 }
 
-func nextVersion(list []string, actual, target *semver.Version) *semver.Version {
+func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) (*semver.Version, error) {
 	if actual.Major() != target.Major() {
-		return target // TODO step by step update for major version
+		return nil, fmt.Errorf("major version updated") // TODO step by step update for major version
 	}
 
 	if actual.Minor() == target.Minor() || actual.IncMinor().Minor() == target.Minor() {
-		return target
+		return target, nil
+	}
+
+	listTags, err := dcr.registryClient.ListTags()
+	if err != nil {
+		return nil, err
 	}
 
 	minor := strconv.FormatInt(int64(actual.IncMinor().Minor()), 10)
@@ -533,23 +536,24 @@ func nextVersion(list []string, actual, target *semver.Version) *semver.Version 
 	r, _ := regexp.Compile(expr)
 
 	collection := make([]*semver.Version, 0)
-	for _, ver := range list {
+	for _, ver := range listTags {
 		if r.MatchString(ver) {
 			newSemver, err := semver.NewVersion(ver)
 			if err != nil {
+				dcr.logger.Warn(err)
 				continue
 			}
 			collection = append(collection, newSemver)
 		}
 	}
 
-	sort.Sort(sort.Reverse(semver.Collection(collection)))
 	if len(collection) == 0 {
-		v := actual.IncMinor()
-		return nextVersion(list, &v, target)
+		return nil, fmt.Errorf("next minor version is missed")
 	}
 
-	return collection[0]
+	sort.Sort(sort.Reverse(semver.Collection(collection)))
+
+	return collection[0], nil
 }
 
 func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Container, releaseChannel string) (*DeckhouseReleaseChecker, error) {
