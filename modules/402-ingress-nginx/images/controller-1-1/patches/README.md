@@ -39,3 +39,9 @@ Without this fix, redirects don't work if using behindL7Proxy controller and a l
 Backported from 1.2 version.
 
 https://github.com/kubernetes/ingress-nginx/pull/8468
+
+### metrics SetSSLExpireTime
+
+Fixes namespace which is given by metric nginx_ingress_controller_ssl_expire_time_seconds.
+
+https://github.com/kubernetes/ingress-nginx/pull/10274
