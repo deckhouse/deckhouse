@@ -2,7 +2,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_NGINX_ALPINE }}
 git:
-- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/kubernetes-api-proxy-reloader
+- add: /{{ .ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/kubernetes-api-proxy-reloader
   to: /kubernetes-api-proxy-reloader
 shell:
   beforeInstall:

@@ -29,7 +29,7 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
 git:
-- add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ .ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
   stageDependencies:
     install:
