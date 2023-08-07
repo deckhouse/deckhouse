@@ -74,6 +74,12 @@
             border: 2px solid $primary-900;
         }
     }
+    &--small {
+        font-size: 10px;
+        line-height: 12px;
+        padding: 10px 14px;
+    }
+
 
 
   &_card {
