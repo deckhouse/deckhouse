@@ -1,9 +1,9 @@
 # Based on https://github.com/open-policy-agent/gatekeeper/blob/master/Dockerfile
 ARG BASE_GOLANG_20_ALPINE
 ARG BASE_DISTROLESS
-ARG SOURCE_REPO
 
 FROM $BASE_GOLANG_20_ALPINE as build
+ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 WORKDIR /src
 

@@ -1,8 +1,8 @@
 # Based on https://github.com/dexidp/dex/blob/v2.35.3/Dockerfile
 ARG BASE_GOLANG_18_ALPINE
 ARG BASE_DISTROLESS
-ARG SOURCE_REPO
 FROM $BASE_GOLANG_18_ALPINE as artifact
+ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
 WORKDIR /dex
