@@ -22,7 +22,7 @@ EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
 
 
-# This is temporarily commented out because DRBD version 9.2.4 doesn't currently compile on Astra with a hardened kernel.
+# This is temporarily commented out because DRBD doesn't currently compile on Astra with a hardened kernel.
 
 # if ! uname -a | grep -q hardened; then
 #   apt update && \

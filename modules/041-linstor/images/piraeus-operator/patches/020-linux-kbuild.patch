@@ -35,7 +35,7 @@ index 8fa5257..c430ff8 100644
 +			},
 +		})
  	}
- 
+
  	return ds
 diff --git a/pkg/k8s/spec/const.go b/pkg/k8s/spec/const.go
 index 1fb8051..9ad09fb 100644

@@ -3,7 +3,7 @@ ARG BASE_UBUNTU
 FROM $BASE_UBUNTU as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.24.0
+ARG UTILS_VERSION=9.25.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \

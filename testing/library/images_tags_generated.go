@@ -343,7 +343,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"crictl126":                 "imageHash-registrypackages-crictl126",
 		"crictl127":                 "imageHash-registrypackages-crictl127",
 		"d8Curl801":                 "imageHash-registrypackages-d8Curl801",
-		"drbd924":                   "imageHash-registrypackages-drbd924",
+		"drbd":                      "imageHash-registrypackages-drbd",
 		"inotifyToolsCentos73149":   "imageHash-registrypackages-inotifyToolsCentos73149",
 		"inotifyToolsCentos831419":  "imageHash-registrypackages-inotifyToolsCentos831419",
 		"inotifyToolsCentos9322101": "imageHash-registrypackages-inotifyToolsCentos9322101",
