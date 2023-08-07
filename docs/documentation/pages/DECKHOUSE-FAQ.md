@@ -5,7 +5,7 @@ permalink: en/deckhouse-faq.html
 
 ## How do I find out all Deckhouse parameters?
 
-Deckhouse is configured using global settings, module settings, and various custom resources. Read more in [the documentation](./).
+Deckhouse is configured using global settings, module settings, and various custom resources. Read more in [the documentation](./).
 
 To view global Deckhouse settings:
 
