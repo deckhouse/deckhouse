@@ -26,7 +26,7 @@ git:
     stageDependencies:
       setup:
       - '**/*'
-  - add: /{{ .ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
     to: /src
     stageDependencies:
       setup:
