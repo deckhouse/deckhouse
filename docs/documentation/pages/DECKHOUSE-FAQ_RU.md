@@ -6,18 +6,24 @@ lang: ru
 
 ## Как узнать все параметры Deckhouse?
 
-Настройки конфигурации Deckhouse, включая параметры модулей, хранятся в cluster-scoped ресурсах `ModuleConfig` и custom resource’ах. ModuleConfig `global` содержит глобальные настройки Deckhouse. Подробнее — [в документации](./).
-
-Вывести список всех ModuleConfig:
-
-```shell
-kubectl get mc
-```
+Deckhouse настраивается с помощью глобальных настроек, настроек модулей и различных сustom resource’ов. Подробнее — [в документации](./).
 
 Вывести глобальные настройки:
 
 ```shell
 kubectl get mc global -o yaml
+```
+
+Вывести список состояния всех модулей (доступно для Deckhouse версии 1.47+):
+
+```shell
+kubectl get modules
+```
+
+Вывести настройки модуля `user-authn`:
+
+```shell
+kubectl get moduleconfigs user-authn -o yaml
 ```
 
 ## Как найти документацию по установленной у меня версии?
