@@ -14,7 +14,6 @@ shell:
     - apk fetch -R -o . nginx nginx-mod-stream
     - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
     - mkdir /filtered-apk && rsync -av --include-from=file-filter --include='*/' --exclude '*' /apk/ /filtered-apk/
-    - ln -sf /var/lib/nginx/modules /filtered-apk/usr/lib/nginx/modules
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
