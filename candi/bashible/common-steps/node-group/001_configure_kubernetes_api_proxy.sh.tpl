@@ -81,7 +81,7 @@ spec:
   - name: kubernetes-api-proxy
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
     imagePullPolicy: IfNotPresent
-    command: ["/usr/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf"]
+    command: ["/usr/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf
