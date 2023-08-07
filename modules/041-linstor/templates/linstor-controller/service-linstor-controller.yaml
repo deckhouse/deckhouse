@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-controller")) | nindent 2 }}
+  name: linstor
+  namespace: d8-{{ .Chart.Name }}
+spec:
+  selector:
+    app: linstor-controller
+  ports:
+    - name: metrics
+      port: 3370
+      protocol: TCP
+      targetPort: 3370
+    - name: linstor
+      port: 3371
+      protocol: TCP
+      targetPort: 3371

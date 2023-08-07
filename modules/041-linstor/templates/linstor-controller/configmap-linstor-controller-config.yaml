@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linstor-controller-config
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-controller")) | nindent 2 }}
+data:
+  linstor-client.conf: |
+    [global]
+    controllers = https://linstor.d8-linstor.svc:3371
+    cafile      = /etc/linstor/client/ca.crt
+    certfile    = /etc/linstor/client/tls.crt
+    keyfile     = /etc/linstor/client/tls.key
+  linstor.toml: |
+    [http]
+      listen_addr = "127.0.0.1"
+
+    [https]
+      enabled = true
+      listen_addr = "0.0.0.0"
+      keystore = "/etc/linstor/https/keystore.jks"
+      keystore_password = "linstor"
+      truststore = "/etc/linstor/https/truststore.jks"
+      truststore_password = "linstor"
+
+    [db]
+      connection_url = "k8s"
+
+    [logging]
+      linstor_level = "INFO"

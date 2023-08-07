@@ -1,4 +1,3 @@
-# Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/operator-satelliteset.yaml
 {{- define "linstor_satellite_resources" }}
 cpu: 100m
 memory: 250Mi
@@ -17,8 +16,6 @@ metadata:
   name: linstor-node
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-node" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
-  annotations:
-    kubectl.kubernetes.io/default-container: linstor-satellite
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -43,94 +40,190 @@ spec:
         memory: 50Mi
 {{- end }}
 ---
-apiVersion: piraeus.linbit.com/v1
-kind: LinstorSatelliteSet
+apiVersion: apps/v1
+kind: DaemonSet
 metadata:
-  name: linstor
+  name: linstor-node
   namespace: d8-{{ .Chart.Name }}
+  annotations:
+    kubectl.kubernetes.io/default-container: linstor-satellite
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-node")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "any-node" "storage-problems") | nindent 2 }}
-  sslSecret: linstor-node-ssl-cert
-  drbdRepoCred: deckhouse-registry
-  imagePullPolicy: IfNotPresent
-  serviceAccountName: linstor-node
-  satelliteImage: {{ include "helm_lib_module_image" (list . "linstorServer") }}
-  linstorHttpsClientSecret: linstor-client-https-cert
-  controllerEndpoint: https://linstor.d8-{{ .Chart.Name }}.svc:3371
-  automaticStorageType: None
-  {{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-            {{- range $k, $v := .Values.linstor.dataNodes.nodeSelector }}
-            - operator: In
-              key: {{ $k }}
-              values:
-              - {{ $v | quote }}
-            {{- end }}
-  {{- else }}
-  affinity: {}
-  {{- end }}
-  resources:
-    requests:
-      {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
-      {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-      {{- include "linstor_satellite_resources" . | nindent 6 }}
-      {{- end }}
-  monitoringImage: {{ include "helm_lib_module_image" (list . "drbdReactor") }}
-  monitoringBindAddress: 127.0.0.1
-  kernelModuleInjectionImage: {{ include "helm_lib_module_image" (list . "drbdDriverLoader") }}
-  kernelModuleInjectionMode: None
-  kernelModuleInjectionResources: {}
-  kernelModuleInjectionExtraVolumeMounts:
-    - name: spaas-certs
-      mountPath: /etc/spaas/certs/ca.crt
-      subPath: ca.crt
-      readOnly: true
-  additionalEnv:
-  - name: SPAAS_URL
-    value: "https://spaas.d8-linstor.svc:2020"
-  - name: LB_SELINUX_AS
-    value: "modules_object_t"
-  extraVolumes:
-  - name: spaas-certs
-    secret:
-      secretName: spaas-certs
-  logLevel: info
-  sidecars:
-  - name: kube-rbac-proxy
-    {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 4 }}
-    image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
-    args:
-      - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9942"
-      - "--v=2"
-      - "--logtostderr=true"
-      - "--stale-cache-interval=1h30m"
-    env:
-      - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-        valueFrom:
-          fieldRef:
-            fieldPath: status.podIP
-      - name: KUBE_RBAC_PROXY_CONFIG
-        value: |
-          upstreams:
-          - upstream: http://127.0.0.1:9942
-            path: /
-            authorization:
-              resourceAttributes:
-                namespace: d8-{{ .Chart.Name }}
-                apiGroup: apps
+  selector:
+    matchLabels:
+      app: linstor-node
+  template:
+    metadata:
+      labels:
+        app: linstor-node
+      name: linstor-node
+      namespace: d8-{{ .Chart.Name }}
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "storage-problems") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+{{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
+      nodeSelector:
+        {{- .Values.linstor.dataNodes.nodeSelector | toYaml | nindent 8 }}
+{{- end }}
+      affinity: {}
+      containers:
+      - args:
+          - startSatellite
+        env:
+          - name: SPAAS_URL
+            value: https://spaas.d8-linstor.svc:2020
+          - name: LB_SELINUX_AS
+            value: modules_object_t
+        image: {{ include "helm_lib_module_image" (list . "linstorServer") }}
+        imagePullPolicy: IfNotPresent
+        name: linstor-satellite
+        ports:
+          - containerPort: 3367
+            hostPort: 3367
+            protocol: TCP
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+        securityContext:
+          privileged: true
+          seLinuxOptions:
+            level: s0
+            type: spc_t
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+          - mountPath: /etc/linstor
+            name: linstor-conf
+          - mountPath: /dev/
+            name: device-dir
+          - mountPath: /sys/
+            name: sys-dir
+          - mountPath: /lib/modules/
+            mountPropagation: Bidirectional
+            name: modules-dir
+          - mountPath: /etc/linstor/ssl
+            name: linstor-ssl
+          - mountPath: /etc/linstor/ssl-pem
+            name: linstor-ssl-pem
+            readOnly: true
+          - mountPath: /etc/linstor/client
+            name: linstor-client
+      - args:
+          - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9942
+          - --v=2
+          - --logtostderr=true
+          - --stale-cache-interval=1h30m
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
                 apiVersion: v1
-                resource: daemonsets
-                subresource: prometheus-metrics
-                name: linstor-node
-    resources:
-      requests:
-        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
-        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-        {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
-        {{- end }}
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:9942
+                path: /
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-linstor
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: daemonsets
+                    subresource: prometheus-metrics
+                    name: linstor-node
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        imagePullPolicy: IfNotPresent
+        name: kube-rbac-proxy
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      - image: {{ include "helm_lib_module_image" (list . "drbdReactor") }}
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            host: 127.0.0.1
+            path: /
+            port: 9942
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: drbd-prometheus-exporter
+        ports:
+          - containerPort: 9942
+            hostPort: 9942
+            name: prometheus
+            protocol: TCP
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+        securityContext: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+          - mountPath: /etc/drbd-reactor.d/
+            name: drbd-reactor-config
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      imagePullSecrets:
+        - name: deckhouse-registry
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccount: linstor-node
+      serviceAccountName: linstor-node
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: linstor-node-config
+          name: linstor-conf
+        - hostPath:
+            path: /dev/
+            type: ""
+          name: device-dir
+        - hostPath:
+            path: /sys/
+            type: Directory
+          name: sys-dir
+        - hostPath:
+            path: /lib/modules/
+            type: DirectoryOrCreate
+          name: modules-dir
+        - name: spaas-certs
+          secret:
+            defaultMode: 420
+            secretName: spaas-certs
+        - configMap:
+            defaultMode: 420
+            name: linstor-node-monitoring
+          name: drbd-reactor-config
+        - emptyDir: {}
+          name: linstor-ssl
+        - name: linstor-ssl-pem
+          secret:
+            defaultMode: 420
+            secretName: linstor-node-ssl-cert
+        - name: linstor-client
+          secret:
+            defaultMode: 420
+            secretName: linstor-client-https-cert
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 100%
+    type: RollingUpdate
