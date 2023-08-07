@@ -21,7 +21,7 @@ shell:
   - apk add mercurial make bash git
   setup:
   - mkdir /src && cd /src
-  - git clone --depth 1 --branch v0.36.0-flant.13 {{ env "SOURCE_REPO" | default "https://github.com" }}/mcm.git .
+  - git clone --depth 1 --branch v0.36.0-flant.13 {{ env "SOURCE_REPO" | default "https://github.com" }}/deckhouse/mcm.git .
   - make build-local
   - chown 64535:64535 bin/machine-controller-manager
   - chmod 0700 bin/machine-controller-manager
