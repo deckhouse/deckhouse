@@ -27,6 +27,8 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+  - apk add --no-cache curl
   setup:
   - curl -sfL -o /ec2_describe_tags https://github.com/flant/go-ec2-describe-tags/releases/download/v0.0.1-flant.2/ec2_describe_tags
   - chmod +x /ec2_describe_tags /install /uninstall
