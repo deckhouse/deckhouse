@@ -18,7 +18,7 @@ podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство для service’ов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.23"
+kubernetesVersion: "Automatic"
 clusterDomain: cluster.local
 ---
 # [<en>] Section for bootstrapping the Deckhouse cluster.
