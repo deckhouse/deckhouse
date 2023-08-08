@@ -117,6 +117,7 @@ resource "vsphere_virtual_machine" "node" {
   datastore_id     = data.vsphere_datastore.datastore.id
   folder           = var.providerClusterConfiguration.vmFolderPath
 
+  firmware = data.vsphere_virtual_machine.template.firmware
   num_cpus = local.instance_class.numCPUs
   memory   = local.instance_class.memory
   guest_id = data.vsphere_virtual_machine.template.guest_id
@@ -169,6 +170,7 @@ resource "vsphere_virtual_machine" "node" {
       extra_config,
       disk,
       vapp,
+      firmware,
     ]
   }
 }
