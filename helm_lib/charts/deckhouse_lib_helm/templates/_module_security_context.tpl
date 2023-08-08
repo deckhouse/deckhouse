@@ -11,7 +11,7 @@ securityContext:
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_nobody" . }} */ -}}
-{{- /* returns PodSecurityContext parameters for Pod with user and group nobody */ -}}
+{{- /* returns PodSecurityContext parameters for Pod with user and group "nobody" */ -}}
 {{- define "helm_lib_module_pod_security_context_run_as_user_nobody" -}}
 {{- /* Template context with .Values, .Chart, etc */ -}}
 securityContext:
@@ -21,7 +21,7 @@ securityContext:
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . }} */ -}}
-{{- /* returns PodSecurityContext parameters for Pod with user and group nobody with write access to mounted volumes */ -}}
+{{- /* returns PodSecurityContext parameters for Pod with user and group "nobody" with write access to mounted volumes */ -}}
 {{- define "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" -}}
 {{- /* Template context with .Values, .Chart, etc */ -}}
 securityContext:
@@ -29,6 +29,27 @@ securityContext:
   runAsUser: 65534
   runAsGroup: 65534
   fsGroup: 65534
+{{- end }}
+
+{{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . }} */ -}}
+{{- /* returns PodSecurityContext parameters for Pod with user and group "deckhouse" */ -}}
+{{- define "helm_lib_module_pod_security_context_run_as_user_deckhouse" -}}
+{{- /* Template context with .Values, .Chart, etc */ -}}
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 64535
+  runAsGroup: 64535
+{{- end }}
+
+{{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . }} */ -}}
+{{- /* returns PodSecurityContext parameters for Pod with user and group "deckhouse" with write access to mounted volumes */ -}}
+{{- define "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" -}}
+{{- /* Template context with .Values, .Chart, etc */ -}}
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 64535
+  runAsGroup: 64535
+  fsGroup: 64535
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_root" . }} */ -}}
