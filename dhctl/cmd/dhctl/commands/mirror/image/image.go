@@ -46,7 +46,6 @@ func NewImageConfig(registry *RegistryConfig, tag, digest string, additionalPath
 func (i *ImageConfig) close() error {
 	switch i.RegistryTransport() {
 	case fileTransport:
-		return nil
 		return os.RemoveAll(i.resultImageArchive())
 	}
 	return nil
@@ -89,20 +88,20 @@ func (i *ImageConfig) imageReference(isSource, dryRun bool) (types.ImageReferenc
 	imageBuilder.WriteString(i.RegistryTransport())
 	imageBuilder.WriteByte(':')
 
+	registryPath := i.Path()
 	switch i.RegistryTransport() {
 	case DockerTransport:
-		imageBuilder.WriteString(i.Path())
+		imageBuilder.WriteString(registryPath)
 		if i.Tag() != "" && i.Digest() == "" {
 			imageBuilder.WriteByte(':')
 			imageBuilder.WriteString(i.Tag())
 		}
 
 	case fileTransport, directoryTransport:
-		r := i.Path()
-		if err := os.MkdirAll(r, 0o755); err != nil {
+		if err := os.MkdirAll(registryPath, 0o755); err != nil {
 			return nil, err
 		}
-		imageBuilder.WriteString(filepath.Join(r, i.Tag()))
+		imageBuilder.WriteString(filepath.Join(registryPath, i.Tag()))
 	}
 
 	if digest := i.Digest(); digest != "" {
