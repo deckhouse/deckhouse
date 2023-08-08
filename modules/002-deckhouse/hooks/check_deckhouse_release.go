@@ -30,6 +30,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -45,6 +46,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
+)
+
+const (
+	metricUpdatingFailedGroup = "d8_updating_failed"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -170,8 +175,15 @@ releaseLoop:
 					notificationShiftTime = release.ApplyAfter
 				}
 			}
+			input.MetricsCollector.Expire(metricUpdatingFailedGroup)
 			if err := releaseChecker.StepByStepUpdate(release.Version, newSemver); err != nil {
-				releaseChecker.logger.Warnf("step by step update failed. err: %v", err)
+				releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
+				labels := map[string]string{
+					"releaseChannel": input.Values.Get("deckhouse.releaseChannel").String(),
+				}
+				input.MetricsCollector.Set("d8_updating_is_failed", 1, labels, metrics.WithGroup(metricUpdatingFailedGroup))
+
+				return err
 			}
 
 			break releaseLoop
@@ -533,7 +545,11 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) 
 
 	minor := strconv.FormatInt(int64(actual.IncMinor().Minor()), 10)
 	expr := fmt.Sprintf("^v1.%s.([0-9]+)$", minor)
-	r, _ := regexp.Compile(expr)
+	r, err := regexp.Compile(expr)
+	if err != nil {
+		dcr.logger.Error(err)
+		return nil, err
+	}
 
 	collection := make([]*semver.Version, 0)
 	for _, ver := range listTags {

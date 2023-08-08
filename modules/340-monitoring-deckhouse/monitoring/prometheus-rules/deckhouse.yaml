@@ -354,6 +354,18 @@
       plk_markup_format: "markdown"
       summary: Deckhouse is being updated.
 
+  - alert: DeckhouseUpdatingFailed
+    expr: max (d8_updating_is_failed) == 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Deckhouse updating is failed.
+
   - alert: D8DeckhouseWatchErrorOccurred
     expr: increase(deckhouse_kubernetes_client_watch_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
     for: 1m
