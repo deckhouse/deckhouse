@@ -331,7 +331,6 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-protobuf-metrics
                   name: ingress-nginx
-        {{- if gt $gracePeriod 0 }}
         lifecycle:
           preStop:
             exec:
@@ -339,7 +338,6 @@ spec:
               - /bin/sh
               - -c
               - while [ $(nc 127.0.0.1 10254 -z; echo $?) -eq 0 ];do sleep 1; done
-        {{- end }}
         ports:
         - containerPort: 10354
           name: https-metrics
