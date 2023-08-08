@@ -19,11 +19,7 @@
 {{- else if eq $crd.spec.inlet "HostWithFailover" }}
   {{- $defaultGracePeriod = 0 }}
 {{- end }}
-{{- if kindIs "invalid" $crd.spec.waitLoadBalancerOnTerminating }}
-  {{- $gracePeriod = $defaultGracePeriod }}
-{{- else }}
-  {{- $gracePeriod = $crd.spec.waitLoadBalancerOnTerminating | int }}
-{{- end }}
+{{- $gracePeriod = (kindIs "invalid" $crd.spec.waitLoadBalancerOnTerminating) | ternary $defaultGracePeriod $crd.spec.waitLoadBalancerOnTerminating }}
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
 
