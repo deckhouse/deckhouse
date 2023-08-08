@@ -48,20 +48,10 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node" "storage-problems") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       {{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                {{- range $k, $v := .Values.linstor.dataNodes.nodeSelector }}
-                - key: {{ $k }}
-                  operator: In
-                  values:
-                  - {{ $v | quote }}
-                {{- end }}
-      {{- else }}
-      affinity: {}
+      nodeSelector:
+        {{- .Values.linstor.dataNodes.nodeSelector | toYaml | nindent 8 }}
       {{- end }}
+      affinity: {}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
