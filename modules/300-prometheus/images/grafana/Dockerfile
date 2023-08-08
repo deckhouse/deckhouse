@@ -76,7 +76,7 @@ FROM $BASE_GOLANG_20_ALPINE as runner
 COPY /runner/ /app/
 WORKDIR /app/
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o grafana-runner
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o grafana-runner main.go
 
 # ===================================================
 # Step 4. Final image.
