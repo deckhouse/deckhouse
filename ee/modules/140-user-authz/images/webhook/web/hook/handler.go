@@ -127,7 +127,7 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 		}
 	}
 
-	// if request is still denied - check available namespace selectors if any of them match the request namespace, doesn't matter a system one or not
+	// if request is still denied - check available namespace selectors if any of them matches the request namespace, doesn't matter a system one or not
 	if request.Status.Denied && len(entry.NamespaceSelectors) > 0 {
 		match, err := h.namespaceLabelsMatchSelector(request.Spec.ResourceAttributes.Namespace, entry.NamespaceSelectors)
 		if err != nil {

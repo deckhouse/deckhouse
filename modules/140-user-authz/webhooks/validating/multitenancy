@@ -46,8 +46,8 @@ EOF
 
 # This hook checks MultiTenancy flag for user-authz module
 # if flag is enabled - CM: user-authz-webhook is exists and we just exit
-# if flag is disabled - we check CR ClusterAuthorizationRule for 'allowAccessToSystemNamespaces' or 'limitNamespaces'
-#   if any of those exists - disallow creation because of MultiTenancy
+# if flag is disabled - we check CR ClusterAuthorizationRule for 'allowAccessToSystemNamespaces', 'limitNamespaces' and 'namespaceSelector'
+# if any of those exists - disallow creation because of MultiTenancy
 
 function __main__() {
   # don't check ClusterAuthorizationRule if MultiTenancy is enabled

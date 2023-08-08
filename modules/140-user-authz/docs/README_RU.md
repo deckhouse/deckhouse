@@ -26,7 +26,7 @@ title: "Модуль user-authz"
 - `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например, `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
 - `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором `cluster-wide` объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т.д). Роль для работы оператора кластера.
 - `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., а так же `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера. **Важно**, что так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может **сам себе расширить полномочия**.
-- `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения [`namespaceSelector`] и [`limitNamespaces`](#возможности-модуля) продолжат работать.
+- `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения [`namespaceSelector`](#возможности-модуля) и [`limitNamespaces`](#возможности-модуля) продолжат работать.
 
 ## Особенности реализации
 
