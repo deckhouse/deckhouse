@@ -183,12 +183,20 @@ steps:
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
+{!{- $dcName := "dev" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
-{!{- if eq $env "production" -}!}
+{!{- if or (eq $env "production") (eq $env "preproduction") -}!}
   {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
+  {!{- $dcName = "prod-eu" -}!}
+{!{- end -}!}
+{!{- if eq $env "preproduction" -}!}
+  {!{- $ns = "deckhouse-web-production" -}!}
+  {!{- $webEnv = "web-production" -}!}
+  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
+  {!{- $dcName = "prod-sel" -}!}
 {!{- end -}!}
 
 # <template: deploy_doc_template>
@@ -207,6 +215,7 @@ steps:
     WERF_SET_URL: "global.url={!{ $url }!}"
     WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
+    WERF_SET_DCNAME: "web.dc_name={!{ $dcName }!}"
 # </template: deploy_doc_template>
 {!{- end -}!}
 
@@ -217,13 +226,22 @@ steps:
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
+{!{- $dcName := "dev" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
-{!{- if eq $env "production" -}!}
+{!{- if or (eq $env "production") (eq $env "preproduction") -}!}
   {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
+  {!{- $dcName = "prod-eu" -}!}
 {!{- end -}!}
+{!{- if eq $env "preproduction" -}!}
+  {!{- $ns = "deckhouse-web-production" -}!}
+  {!{- $webEnv = "web-production" -}!}
+  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
+  {!{- $dcName = "prod-sel" -}!}
+{!{- end -}!}
+
 {!{- $siteDomainMap := printf "{\"en\" : \"%s\", \"ru\" : \"%s\"}" $url $urlRu -}!}
 
 # <template: deploy_site_template>
@@ -244,5 +262,6 @@ steps:
     WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
     WERF_SET_DOMAIN_MAP: "global.domain_map={!{ base64.Encode $siteDomainMap }!}"
+    WERF_SET_DCNAME: "web.dc_name={!{ $dcName }!}"
 # </template: deploy_site_template>
 {!{- end -}!}

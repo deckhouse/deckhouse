@@ -91,10 +91,7 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 		}
 
 		if kubernetesVersionFromMetaConfig == "Automatic" {
-			b, err := json.Marshal(config.DefaultKubernetesVersion)
-			if err != nil {
-				return err
-			}
+			b, _ := json.Marshal(config.DefaultKubernetesVersion)
 			metaConfig.ClusterConfig["kubernetesVersion"] = b
 		}
 

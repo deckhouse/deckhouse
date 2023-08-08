@@ -25,6 +25,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -137,7 +138,7 @@ func (r *client) Digest(tag string) (string, error) {
 }
 
 func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
-	r, err := url.Parse(repo)
+	r, err := parse(repo)
 	if err != nil {
 		return authn.AuthConfig{}, err
 	}
@@ -150,12 +151,8 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 	authConfig := authn.AuthConfig{}
 
 	// The config should have at least one .auths.* entry
-	for repoNameRaw, repoAuth := range auths {
-		repoName, err := url.Parse(repoNameRaw)
-		if err != nil {
-			continue
-		}
-		if repoName.Host == r.Host {
+	for repoName, repoAuth := range auths {
+		if repoName == r.Host {
 			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
 			if err != nil {
 				return authn.AuthConfig{}, err
@@ -228,4 +225,13 @@ func WithAuth(dockerCfg string) Option {
 	return func(options *registryOptions) {
 		options.dockerCfg = dockerCfg
 	}
+}
+
+// parse parses url without scheme://
+// if we pass url without scheme ve've got url back with two leading slashes
+func parse(rawURL string) (*url.URL, error) {
+	if strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
+		return url.ParseRequestURI(rawURL)
+	}
+	return url.Parse("//" + rawURL)
 }

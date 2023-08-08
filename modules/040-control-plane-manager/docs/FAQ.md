@@ -16,6 +16,9 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 >
 > It is important to have an odd number of masters to ensure a quorum.
 
+1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
+1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the creation of new master nodes.
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -48,6 +51,9 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 
 ## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
+1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
+1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -112,6 +118,9 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 
 ## How do I dismiss the master role while keeping the node?
 
+1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
+1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/control-plane: ""` labels.
 1. Make sure that the master node to be deleted is no longer listed as a member of the etcd cluster:
 
@@ -136,6 +145,9 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 
 ## How do I switch to a different OS image in a multi-master cluster?
 
+1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
+1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -459,6 +471,9 @@ for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane
     break
   fi
 done
+cp -r /etc/kubernetes/ ./
+tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
+rm -r ./kubernetes
 ```
 
 In the current directory etcd snapshot file `etcd-backup.snapshot` will be created from one of an etcd cluster members.

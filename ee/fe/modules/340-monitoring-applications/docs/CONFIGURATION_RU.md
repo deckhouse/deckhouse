@@ -16,6 +16,7 @@ title: "Модуль monitoring-applications: настройки"
     | elasticsearch   | <span class="doc-checkmark"></span> |                                     |
     | etcd3           | <span class="doc-checkmark"></span> |                                     |
     | fluentd         |                                     |                                     |
+    | loki            | <span class="doc-checkmark"></span> |                                     |
     | memcached       | <span class="doc-checkmark"></span> |                                     |
     | minio           |                                     |                                     |
     | mongodb         | <span class="doc-checkmark"></span> |                                     |

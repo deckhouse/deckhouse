@@ -122,6 +122,11 @@ spec:
             secretKeyRef:
               key: region
               name: cloud-data-discoverer
+        - name: MODULE_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: moduleConfig
+              name: cloud-data-discoverer
         livenessProbe:
           httpGet:
             path: /healthz

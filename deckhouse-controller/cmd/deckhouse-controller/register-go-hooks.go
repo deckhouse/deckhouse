@@ -58,6 +58,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/migration"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/041-linstor/hooks"

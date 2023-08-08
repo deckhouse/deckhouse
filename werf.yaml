@@ -23,6 +23,9 @@ gitWorktree:
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
 ---
+# Source repo  settings
+{{- $_ := set . "SOURCE_REPO" (env "SOURCE_REPO" | default "https://github.com") }}
+---
 {{- define "base components" }}
   - name: "Install jo"
     apk:
@@ -652,6 +655,7 @@ args:
   BASE_UBUNTU: {{ .Images.BASE_UBUNTU }}
   BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
+  SOURCE_REPO: {{ .SOURCE_REPO }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless" "common/iptables-wrapper")) }}
 dependencies:
 - image: common/distroless
@@ -701,6 +705,7 @@ dependencies:
   {{- $_ := set $ctx "Images" $Root.Images }}
   {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
   {{- $_ := set $ctx "TF" $Root.TF }}
+  {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
 
 ---
 {{ include "module_image_template" $ctx }}

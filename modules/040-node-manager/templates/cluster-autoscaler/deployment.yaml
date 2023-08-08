@@ -3,6 +3,10 @@ cpu: 25m
 memory: 150Mi
 {{- end }}
 
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $autoscalerImageName := join "" (list "clusterAutoscaler" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $autoscalerImage := include "helm_lib_module_image_no_fail" (list . $autoscalerImageName) }}
+
 {{- define "cluster_autoscaler_nodes" }}
   {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
     {{- if eq $ng.nodeType "CloudEphemeral" }}
@@ -85,7 +89,7 @@ spec:
       containers:
       - name: cluster-autoscaler
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "clusterAutoscaler") }}
+        image: {{ $autoscalerImage }}
         args:
         - --namespace=d8-cloud-instance-manager
         - --cloud-provider=mcm

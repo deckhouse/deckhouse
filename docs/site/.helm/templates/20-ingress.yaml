@@ -31,7 +31,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 {{- end }}
 spec:
-  ingressClassName: "nginx"
+  ingressClassName: {{ pluck $.Values.web.dc_name $.Values.ingressClass | first | default $.Values.ingressClass._default | quote }}
   tls:
   - hosts:
       - {{ .URL }}
@@ -43,6 +43,71 @@ spec:
   - host: {{ .URL }}
     http:
       paths:
+{{- if or (eq $.Values.web.dc_name "prod-sel") (eq $.Values.web.env "web-test" ) }}
+      - path: /images
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /js
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /assets
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /gs
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /presentations
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /guides
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /license_request_expired.html
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /license_request_success.html
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /documentation
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+{{- else }}
       - path: /
         pathType: Prefix
         backend:
@@ -50,6 +115,7 @@ spec:
             name: frontend
             port:
               name: http
+{{- end }}
       - path: /includes
         pathType: Prefix
         backend:
@@ -69,12 +135,15 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: {{ $.Chart.Name }}-{{ .Lang }}-cert
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
 spec:
   certificateOwnerRef: false
   secretName: tls-{{ .URL }}
   issuerRef:
     kind: ClusterIssuer
-    name: letsencrypt
+    name: {{ pluck $.Values.web.dc_name $.Values.certificateClusterIssuer | first | default $.Values.certificateClusterIssuer._default }}
   commonName: {{ .URL }}
   dnsNames:
   - {{ .URL }}
@@ -91,7 +160,7 @@ spec:
   applicationDomain: {{ .URL }}
   sendAuthorizationHeader: false
   applicationIngressCertificateSecretName: tls-{{ .URL }}
-  applicationIngressClassName: "nginx"
+  applicationIngressClassName: {{ pluck $.Values.web.dc_name $.Values.ingressClass | first | default $.Values.ingressClass._default | quote }}
   keepUsersLoggedInFor: "720h"
 {{- end }}
 ---

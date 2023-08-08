@@ -19,7 +19,7 @@
 - name: JQ
   link: https://github.com/stedolan/jq
   description: A lightweight and flexible command-line JSON processor.
-  logo: https://stedolan.github.io/jq/jq.png
+  logo: /images/logos/jq.svg
   licence: Mixed (https://github.com/stedolan/jq/blob/master/COPYING)
 
 - name: image-syncer
