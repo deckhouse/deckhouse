@@ -21,6 +21,11 @@ spec:
       - Snapshot
       - ExpandDisks
       - Root
+      - VMLiveUpdateFeatures
+      - VMExport
+      - CPUManager
+      - Sidecar
+      - VolumeSnapshotDataSource
   customizeComponents:
     patches:
     - resourceType: Deployment
