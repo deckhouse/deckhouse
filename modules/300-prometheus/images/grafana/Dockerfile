@@ -19,7 +19,7 @@ ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vona
 # It will fail fast on problems with future versions.
 FROM $BASE_ALPINE as src-files
 WORKDIR /usr/src/app
-RUN apk add --no-cache patch
+RUN apk add --no-cache patch git
 
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
