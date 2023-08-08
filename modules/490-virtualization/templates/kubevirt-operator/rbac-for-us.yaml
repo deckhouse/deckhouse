@@ -1197,3 +1197,4 @@ subjects:
 - kind: ServiceAccount
   name: kubevirt-operator
   namespace: d8-virtualization
+
