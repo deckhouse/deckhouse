@@ -140,6 +140,21 @@ Multiline
 
 			Context("With https mode 'Global'", func() {
 				BeforeEach(func() {
+					hec.ValuesSet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA", "test_cert")
+					hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
+				})
+
+				It("Should add k8s_ca_pem param with publishedAPIKubeconfigGeneratorMasterCA for first cluster", func() {
+					Expect(hec.RenderError).ToNot(HaveOccurred())
+
+					jsonBytes := assertCreateConfig(hec)
+
+					Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal("test_cert"))
+				})
+			})
+
+			Context("With https mode 'Global' and kubeconfigGeneratorMasterCA", func() {
+				BeforeEach(func() {
 					hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
 					hec.ValuesSet("userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA", "kubeconfigGeneratorMasterCAText")
 				})
