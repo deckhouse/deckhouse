@@ -1,7 +1,7 @@
 # Based on https://github.com/dexidp/dex/blob/v2.35.3/Dockerfile
-ARG BASE_GOLANG_18_ALPINE
+ARG BASE_GOLANG_20_ALPINE
 ARG BASE_DISTROLESS
-FROM $BASE_GOLANG_18_ALPINE as artifact
+FROM $BASE_GOLANG_20_ALPINE as artifact
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
@@ -14,7 +14,7 @@ RUN git clone --branch v2.35.3 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /connector-data.patch \
   && git apply /oidc-ca-insecure.patch \
   && git apply /robots-txt.patch
-RUN go build ./cmd/dex
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' go build ./cmd/dex
 
 RUN chown 64535:64535 dex
 RUN chmod 0700 dex

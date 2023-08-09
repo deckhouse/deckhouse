@@ -177,16 +177,6 @@ spec:
         - name: tls
           mountPath: "/opt/dex-authenticator/tls"
           readOnly: true
-        readinessProbe:
-          exec:
-            command:
-            - curl
-            - -f
-            - -k
-            - https://dex.d8-user-authn/.well-known/openid-configuration
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          failureThreshold: 5
         livenessProbe:
           httpGet:
             port: 8443
