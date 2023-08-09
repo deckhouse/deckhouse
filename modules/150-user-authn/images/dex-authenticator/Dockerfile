@@ -17,7 +17,6 @@ RUN chown 64535:64535 oauth2-proxy
 RUN chmod 0700 oauth2-proxy
 
 FROM $BASE_DISTROLESS
-RUN apk --update add curl bash  ca-certificates && update-ca-certificates
 COPY --from=artifact /go/src/github.com/oauth2-proxy/oauth2_proxy/oauth2-proxy /bin/oauth2_proxy
 
 EXPOSE 8080 4180
