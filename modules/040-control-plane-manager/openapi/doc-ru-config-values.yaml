@@ -71,6 +71,8 @@ properties:
           webhookCacheTTL:
             description: |
               Продолжительность кэширования ответов от аутентификационного webhook'a.
+
+              Задаётся в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
       authz:
         description: |
           Параметры авторизации клиентов Kubernetes API.
