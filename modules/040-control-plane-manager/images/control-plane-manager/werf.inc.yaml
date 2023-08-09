@@ -5,6 +5,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
+fromCacheVersion: 1
 import:
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin
@@ -22,6 +23,7 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/controller-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+fromCacheVersion: 1
 git:
   - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
     to: /
@@ -34,4 +36,3 @@ mount:
 shell:
   install:
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go
-
