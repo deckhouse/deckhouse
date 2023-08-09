@@ -38,6 +38,7 @@ clusters:
   {{- $_ := set $publish_api_cluster "id" (include "helm_lib_module_public_domain" (list . "api")) }}
   {{- $_ := set $publish_api_cluster "client_id" "kubeconfig-generator" }}
   {{- $_ := set $publish_api_cluster "description" $publish_api_master_url }}
+  {{- $_ := set $publish_api_cluster "masterCA" .Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA }}
 
   {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
 {{- $_ := set $publish_api_cluster "masterCA" .Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA }}
@@ -48,7 +49,9 @@ clusters:
     {{- end }}
 
   {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
-{{- $_ := set $publish_api_cluster "masterCA" (.Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA | default $.Values.global.discovery.kubernetesCA) }}
+    {{- if not $publish_api_cluster.masterCA }}
+{{- $_ := set $publish_api_cluster "masterCA" .Values.global.discovery.kubernetesCA }}
+    {{- end }}
   {{- end }}
 
   {{- if .Values.userAuthn.publishAPI.enable }}
