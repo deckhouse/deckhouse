@@ -39,6 +39,8 @@ while read name repo; do
       current_tag=$(curl -fLsS "https://api.github.com/repos/${shortrepo}/tags" | jq -r '.[] | .name' | sed -n 's|drbd-9|v9|p' | sort -V | tail -n1)
       # convert v9.X.X to 9.X.X
       drbd_version=${current_tag#*v}
+      # convert 9.X.X to 9XX
+      drbd_undotted_version=$(echo $drbd_version | sed 's/\.//g')
     elif [ "$name" = PIRAEUS_OPERATOR ]; then
       current_tag=$(curl -fLsS "https://api.github.com/repos/${shortrepo}/tags" | jq -r '.[] | .name' | grep "v${piraeus_operator_major_ver}.*" | sort -V | tail -n1)
     else
@@ -59,4 +61,6 @@ echo "Applying changes:"
 (set -x; sed -e "$sed_regex" -i $targets)
 if [ -n "$drbd_version" ]; then
   (set -x; sed -e "/^      drbdVersion:/,/default:/{/^\([[:space:]]*default: \).*/s//\1\"${drbd_version}\"/}" -i openapi/values.yaml)
+  (set -x; sed 's/$version := "[0-9]\+\.[0-9]\+\.[0-9]"/$version := "'$drbd_version'"/' -i modules/007-registrypackages/images/drbd/werf.inc.yaml)
+  (set -x; sed 's/drbd[0-9]\+/drbd'$drbd_undotted_version'/' -i modules/041-linstor/templates/nodegroupconfiguration-drbd-install-*-like.yaml)
 fi

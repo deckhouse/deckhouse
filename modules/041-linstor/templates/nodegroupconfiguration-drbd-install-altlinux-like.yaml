@@ -101,7 +101,7 @@ spec:
     SPAAS_URL="https://${SPAAS_IP}:2020"
 
     attempt=0
-    until [ `d8-curl -kIs $SPAAS_URL'/api/v1/hello' | grep -q 'HTTP/2 405' && echo 1 || echo 0` == 1 ]
+    until [[ "$(d8-curl -ks -w '%{http_code}' -o /dev/null $SPAAS_URL'/api/v1/hello')" == "200" ]]
     do
       if [ $attempt -gt 60 ]; then
         bb-log-info "SPAAS service isn't accessible, can't continue DRBD building"
@@ -123,6 +123,7 @@ spec:
     echo 'drbd' | tee -a /etc/modules
     depmod
     modprobe drbd
+    modprobe dm-thin-pool
 
     if [ -e "/proc/drbd" ]; then
       current_version="$(cat /proc/drbd | grep 'version:' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
