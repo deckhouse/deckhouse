@@ -17,14 +17,14 @@
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
 
 if grep -q "docker" <<< "${cri_socket_path}"; then
-  bb-log-error "Looks like you using Docker as CRI (cri socket path contains the 'docker' string). Docker is not supported as a container runtime"
+  bb-log-error "Looks like you have Docker as CRI on this node (cri socket path contains the 'docker' string). Docker is not supported as a container runtime"
   exit 1
 fi
   {{- else }}
 # TODO remove after removing support of kubernetes 1.23
     {{- if semverCompare "<1.24" .kubernetesVersion }}
 if [[ -S "/var/run/docker.sock" ]]; then
-  bb-log-error "Looks like you using Docker as CRI (socket file '/var/run/docker.sock' exists). Docker is not supported as a container runtime"
+  bb-log-error "Looks like you have Docker as CRI on this node (socket file '/var/run/docker.sock' exists). Docker is not supported as a container runtime"
   exit 1
 fi
     {{- end }}
@@ -34,7 +34,7 @@ fi
 {{- if semverCompare "<1.27" .kubernetesVersion }}
 if [[ -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]]; then
   if cat /etc/systemd/system/kubelet.service.d/10-deckhouse.conf | grep -q -- '--container-runtime=docker'; then
-    bb-log-error "Looks like you using Docker as CRI (kubelet systemd unit contains the '--container-runtime=docker' string). Docker is not supported as a container runtime"
+    bb-log-error "Looks like you have Docker as CRI on this node (kubelet systemd unit contains the '--container-runtime=docker' string). Docker is not supported as a container runtime"
     exit 1
   fi
 fi
