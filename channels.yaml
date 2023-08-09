@@ -8,6 +8,6 @@ groups:
     - name: ea
       version: v1.49
     - name: stable
-      version: v1.48
+      version: v1.49
     - name: rock-solid
       version: v1.48
