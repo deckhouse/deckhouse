@@ -136,7 +136,7 @@ func main() {
 		fmt.Sprintf("cfg:default.paths.provisioning=%s", gfPathsProvisioning),
 	}
 
-	err = unix.Exec("/usr/share/grafana/bin/grafana", grafanaArgs, os.Environ())
+	err = unix.Exec("/usr/share/grafana/bin/grafana-server", grafanaArgs, os.Environ())
 	if err != nil {
 		log.Fatalf("exec grafana: %v", err)
 	}
