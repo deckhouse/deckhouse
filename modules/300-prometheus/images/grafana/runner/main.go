@@ -37,7 +37,7 @@ func main() {
 	if os.IsNotExist(err) {
 		err := os.MkdirAll(gfPathsPlugins, 0600)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("create plugins folder: %v", err)
 		}
 	}
 	if err := unix.Access(gfPathsPlugins, unix.W_OK); err != nil {
@@ -138,6 +138,6 @@ func main() {
 
 	err = unix.Exec("/usr/share/grafana/bin/grafana", grafanaArgs, os.Environ())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("exec grafana: %v", err)
 	}
 }
