@@ -1,0 +1,19 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+--- a/cmd/dex/config.go	(revision 54c9e8231fb8305875f4ee0f7bf1f5090e82e4ad)
++++ b/cmd/dex/config.go	(date 1691661810769)
+@@ -180,7 +180,6 @@
+ 	_ StorageConfig = (*etcd.Etcd)(nil)
+ 	_ StorageConfig = (*kubernetes.Config)(nil)
+ 	_ StorageConfig = (*memory.Config)(nil)
+-	_ StorageConfig = (*sql.SQLite3)(nil)
+ 	_ StorageConfig = (*sql.Postgres)(nil)
+ 	_ StorageConfig = (*sql.MySQL)(nil)
+ 	_ StorageConfig = (*ent.SQLite3)(nil)
+@@ -203,7 +202,6 @@
+ 	"etcd":       func() StorageConfig { return new(etcd.Etcd) },
+ 	"kubernetes": func() StorageConfig { return new(kubernetes.Config) },
+ 	"memory":     func() StorageConfig { return new(memory.Config) },
+-	"sqlite3":    getORMBasedSQLStorage(&sql.SQLite3{}, &ent.SQLite3{}),
+ 	"postgres":   getORMBasedSQLStorage(&sql.Postgres{}, &ent.Postgres{}),
+ 	"mysql":      getORMBasedSQLStorage(&sql.MySQL{}, &ent.MySQL{}),
+ }
