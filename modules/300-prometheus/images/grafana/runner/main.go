@@ -135,22 +135,33 @@ func main() {
 		fmt.Sprintf("cfg:default.paths.plugins=%s", gfPathsPlugins),
 		fmt.Sprintf("cfg:default.paths.provisioning=%s", gfPathsProvisioning),
 	}
+
 	grafanaBin := "/usr/share/grafana/bin/grafana-server"
-	listDir("/usr/share/grafana/bin/")
+
+	err = listDir("/usr/share/grafana/bin/")
+	if err != nil {
+		log.Fatalf("list dir: %v", err)
+	}
+
 	err = unix.Exec(grafanaBin, grafanaArgs, os.Environ())
 	if err != nil {
 		log.Fatalf("exec %s: %v", grafanaBin, err)
 	}
 }
 
-func listDir(path string) {
+func listDir(path string) error {
 	log.Printf("list dir %s", path)
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	for _, e := range entries {
-		fmt.Printf("%s%s", path, e.Name())
+	if len(entries) == 0 {
+		log.Printf("dir %s is empty", path)
+		return nil
 	}
+	for _, e := range entries {
+		fmt.Printf("%s%s\n", path, e.Name())
+	}
+	return nil
 }

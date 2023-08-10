@@ -145,11 +145,12 @@ RUN git clone --depth 1 --branch v${STATUSMAP_VERSION} ${SOURCE_REPO}/flant/graf
 COPY ./grafana_home_dashboard.json /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
 COPY ./web/ /usr/share/grafana/public/img/
 
-RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
 RUN chown -R 64535:64535 /usr/share/grafana && \
     chown -R 64535:64535 /etc/grafana && \
     chown -R 64535:64535 /var/lib/grafana && \
     chown -R 64535:64535 /var/log/grafana
+
+RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
 
 FROM $BASE_DISTROLESS
 
