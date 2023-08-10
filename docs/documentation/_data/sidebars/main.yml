@@ -1089,6 +1089,8 @@ entries:
                     en: Advanced Usage
                     ru: Расширенная конфигурация
                   url: /modules/041-linstor/advanced_usage.html
+                - title: Custom Resources
+                  url: /modules/041-linstor/cr.html
             - title: FAQ
               url: /modules/041-linstor/faq.html
         - title: local-path-provisioner
