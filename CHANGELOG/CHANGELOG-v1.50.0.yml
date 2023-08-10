@@ -54,6 +54,9 @@ linstor:
     - summary: Move DRBD module build from `kernel-module-injector` to `bashible`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5230
       impact: linstor satellite on nodes will restart.
+  fixes:
+    - summary: Fixes in nodegroupconfigurations for DRBD install and linstor components update script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5483
 log-shipper:
   features:
     - summary: Add `tenantID` option for Loki (may be required for Grafana Cloud).
