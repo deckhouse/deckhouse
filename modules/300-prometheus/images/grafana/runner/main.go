@@ -143,6 +143,11 @@ func main() {
 		log.Fatalf("list dir: %v", err)
 	}
 
+	err = listDir("/usr/share/grafana/")
+	if err != nil {
+		log.Fatalf("list dir: %v", err)
+	}
+
 	err = unix.Exec(grafanaBin, grafanaArgs, os.Environ())
 	if err != nil {
 		log.Fatalf("exec %s: %v", grafanaBin, err)
