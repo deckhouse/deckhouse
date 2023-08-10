@@ -541,12 +541,13 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 	}
 	switch *securityContext.RunAsNonRoot {
 	case true:
-		if *securityContext.RunAsUser != 65534 || *securityContext.RunAsGroup != 65534 {
+		if (*securityContext.RunAsUser != 65534 || *securityContext.RunAsGroup != 65534) &&
+			(*securityContext.RunAsUser != 64535 || *securityContext.RunAsGroup != 64535) {
 			return errors.NewLintRuleError(
 				"MANIFEST003",
 				object.Identity(),
 				fmt.Sprintf("%d:%d", *securityContext.RunAsUser, *securityContext.RunAsGroup),
-				"Object's SecurityContext has `RunAsNonRoot: true`, but RunAsUser:RunAsGroup differs from 65534:65534",
+				"Object's SecurityContext has `RunAsNonRoot: true`, but RunAsUser:RunAsGroup differs from 65534:65534 (nobody) or 64535:64535 (deckhouse)",
 			)
 		}
 	case false:
