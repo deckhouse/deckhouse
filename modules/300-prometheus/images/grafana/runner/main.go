@@ -125,7 +125,7 @@ func main() {
 	}
 
 	grafanaArgs := []string{
-		"grafana",
+		"grafana-server",
 		fmt.Sprintf("--homepath=%s", gfPathsHome),
 		fmt.Sprintf("--config=%s", gfPathsConfig),
 		"--packaging=docker",
