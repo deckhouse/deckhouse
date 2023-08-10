@@ -31,7 +31,7 @@ ansible:
         name:
           - python3
 git:
-- add: /
+- add: /{{ .ModulePath }}
   to: /available_hooks
   includePaths:
   - '{{ .ModulePath }}modules/*/webhooks/'
@@ -39,9 +39,9 @@ git:
   # - 'ee/fe/modules/*/webhooks/'
 - add: /{{ .ModulePath }}/modules/002-deckhouse/images/webhook-handler/entrypoint.sh
   to: /entrypoint.sh
-- add: /shell_lib/semver.sh
-  to: /frameworks/shell/semver.sh
-- add: /python_lib
+- add: /{{ .ModulePath }}/shell_lib/semver.sh
+  to: /{{ .ModulePath }}/frameworks/shell/semver.sh
+- add: /{{ .ModulePath }}/python_lib
   to: /frameworks/python
 docker:
   ENV:
