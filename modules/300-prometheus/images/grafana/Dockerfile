@@ -124,6 +124,8 @@ COPY --from=go-builder /usr/src/app/bin/*/grafana-server /usr/src/app/bin/*/graf
 COPY --from=js-builder /usr/src/app/public ./public
 COPY --from=js-builder /usr/src/app/tools ./tools
 
+RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
+
 # Install bundled plugins.
 ARG BUNDLED_PLUGINS
 RUN echo Add bundled plugins: ${BUNDLED_PLUGINS} && \
