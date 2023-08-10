@@ -161,6 +161,8 @@ ENV PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_PLUGINS="/var/lib/grafana/plugins" \
     GF_PATHS_PROVISIONING="/etc/grafana/provisioning"
 
+ENV BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
+
 WORKDIR $GF_PATHS_HOME
 
 EXPOSE 3000
