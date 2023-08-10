@@ -124,8 +124,6 @@ COPY --from=go-builder /usr/src/app/bin/*/grafana-server /usr/src/app/bin/*/graf
 COPY --from=js-builder /usr/src/app/public ./public
 COPY --from=js-builder /usr/src/app/tools ./tools
 
-RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
-
 # Install bundled plugins.
 ARG BUNDLED_PLUGINS
 RUN echo Add bundled plugins: ${BUNDLED_PLUGINS} && \
@@ -147,6 +145,12 @@ RUN git clone --depth 1 --branch v${STATUSMAP_VERSION} ${SOURCE_REPO}/flant/graf
 COPY ./grafana_home_dashboard.json /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
 COPY ./web/ /usr/share/grafana/public/img/
 
+RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
+RUN chown -R 64535:64535 /usr/share/grafana && \
+    chown -R 64535:64535 /etc/grafana && \
+    chown -R 64535:64535 /var/lib/grafana && \
+    chown -R 64535:64535 /var/log/grafana
+
 FROM $BASE_DISTROLESS
 
 COPY --from=runner /app/grafana-runner /usr/local/bin/
@@ -167,5 +171,8 @@ ENV BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
 
 WORKDIR $GF_PATHS_HOME
 
+USER 64535
+
 EXPOSE 3000
+
 ENTRYPOINT ["grafana-runner"]
