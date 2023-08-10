@@ -47,6 +47,10 @@ spec:
                     dockerCfg:
                       type: string
                       description: Container registry access token in Base64.
+                    ca:
+                      type: string
+                      description: |
+                        Root CA certificate (PEM format) to validate the registry’s HTTPS certificate (if self-signed certificates are used).
             status:
               type: object
               properties:
