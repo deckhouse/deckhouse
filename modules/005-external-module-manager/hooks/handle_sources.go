@@ -129,6 +129,10 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 			opts = append(opts, cr.WithDisabledAuth())
 		}
 
+		if ex.Spec.Registry.CA != "" {
+			opts = append(opts, cr.WithCA(ex.Spec.Registry.CA))
+		}
+
 		regCli, err := dc.GetRegistryClient(ex.Spec.Registry.Repo, opts...)
 		if err != nil {
 			sc.Msg = err.Error()
