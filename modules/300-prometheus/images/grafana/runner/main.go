@@ -144,12 +144,13 @@ func main() {
 }
 
 func listDir(path string) {
+	log.Printf("list dir %s", path)
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, e := range entries {
-		fmt.Println(e.Name())
+		fmt.Printf("%s%s", path, e.Name())
 	}
 }
