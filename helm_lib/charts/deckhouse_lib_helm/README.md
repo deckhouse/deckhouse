@@ -43,6 +43,8 @@
 | [helm_lib_module_pod_security_context_run_as_user_custom](#helm_lib_module_pod_security_context_run_as_user_custom) |
 | [helm_lib_module_pod_security_context_run_as_user_nobody](#helm_lib_module_pod_security_context_run_as_user_nobody) |
 | [helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs) |
+| [helm_lib_module_pod_security_context_run_as_user_deckhouse](#helm_lib_module_pod_security_context_run_as_user_deckhouse) |
+| [helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs) |
 | [helm_lib_module_pod_security_context_run_as_user_root](#helm_lib_module_pod_security_context_run_as_user_root) |
 | [helm_lib_module_container_security_context_not_allow_privilege_escalation](#helm_lib_module_container_security_context_not_allow_privilege_escalation) |
 | [helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux](#helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux) |
@@ -452,7 +454,7 @@ list:
 
 ### helm_lib_module_pod_security_context_run_as_user_nobody
 
- returns PodSecurityContext parameters for Pod with user and group nobody 
+ returns PodSecurityContext parameters for Pod with user and group "nobody" 
 
 #### Usage
 
@@ -465,11 +467,37 @@ list:
 
 ### helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs
 
- returns PodSecurityContext parameters for Pod with user and group nobody with write access to mounted volumes 
+ returns PodSecurityContext parameters for Pod with user and group "nobody" with write access to mounted volumes 
 
 #### Usage
 
 `{{ include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_pod_security_context_run_as_user_deckhouse
+
+ returns PodSecurityContext parameters for Pod with user and group "deckhouse" 
+
+#### Usage
+
+`{{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs
+
+ returns PodSecurityContext parameters for Pod with user and group "deckhouse" with write access to mounted volumes 
+
+#### Usage
+
+`{{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . }} `
 
 #### Arguments
 
