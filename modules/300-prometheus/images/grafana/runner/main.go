@@ -135,6 +135,7 @@ func main() {
 		fmt.Sprintf("cfg:default.paths.plugins=%s", gfPathsPlugins),
 		fmt.Sprintf("cfg:default.paths.provisioning=%s", gfPathsProvisioning),
 	}
+	log.Printf("command %v", grafanaArgs)
 
 	grafanaBin := "/usr/share/grafana/bin/grafana-server"
 
@@ -166,7 +167,7 @@ func listDir(path string) error {
 		return nil
 	}
 	for _, e := range entries {
-		fmt.Printf("%s%s\n", path, e.Name())
+		log.Printf("%s%s\n", path, e.Name())
 	}
 	return nil
 }
