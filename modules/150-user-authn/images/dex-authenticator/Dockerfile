@@ -1,6 +1,6 @@
-ARG BASE_ALPINE
-ARG BASE_GOLANG_16_ALPINE
-FROM $BASE_GOLANG_16_ALPINE as artifact
+ARG BASE_DISTROLESS
+ARG BASE_GOLANG_20_ALPINE
+FROM $BASE_GOLANG_20_ALPINE as artifact
 WORKDIR /go/src/github.com/oauth2-proxy/oauth2_proxy
 
 # Download tools
@@ -13,8 +13,10 @@ RUN patch -p1 < /cookie-refresh.patch \
   && patch -p1 < /remove-groups.patch \
   && make build
 
-FROM $BASE_ALPINE
-RUN apk --update add curl bash  ca-certificates && update-ca-certificates
+RUN chown 64535:64535 oauth2-proxy
+RUN chmod 0700 oauth2-proxy
+
+FROM $BASE_DISTROLESS
 COPY --from=artifact /go/src/github.com/oauth2-proxy/oauth2_proxy/oauth2-proxy /bin/oauth2_proxy
 
 EXPOSE 8080 4180

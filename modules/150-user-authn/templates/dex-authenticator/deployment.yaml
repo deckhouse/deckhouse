@@ -97,28 +97,18 @@ spec:
 {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name)) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
       - name: registry-dex-authenticator
       volumes:
       - name: tls
         emptyDir: {}
       initContainers:
-      - command: ["bash", "-c"]
-        args:
-        - |
-          ca=$(jo CN=dex-authenticator key="$(jo algo=ecdsa size=256)" ca="$(jo expirty=87600h)" | cfssl gencert -initca -)
-          ca_cert=$(echo $ca | jq .cert -r)
-
-          config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
-
-          cert=$(jo CN=dex-authenticator hosts="$(jo -a {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }} {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo $ca | jq .cert -r) -ca-key=<(echo $ca | jq .key -r) -config=<(echo $config) -)
-
-          echo $cert | jq .key -r > /certs/tls.key
-          echo $cert | jq .cert -r > /certs/tls.crt
-          echo $ca_cert > /certs/ca.crt
-        image: {{ include "helm_lib_module_image" (list $context "cfssl") }}
-        name: cfssl
+      - args:
+        - {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}
+        - {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}.svc
+        image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
+        name: self-signed-generator
         volumeMounts:
         - name: tls
           mountPath: "/certs"
@@ -177,16 +167,6 @@ spec:
         - name: tls
           mountPath: "/opt/dex-authenticator/tls"
           readOnly: true
-        readinessProbe:
-          exec:
-            command:
-            - curl
-            - -f
-            - -k
-            - https://dex.d8-user-authn/.well-known/openid-configuration
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          failureThreshold: 5
         livenessProbe:
           httpGet:
             port: 8443
@@ -194,6 +174,14 @@ spec:
             path: /ping
           initialDelaySeconds: 15
           periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            port: 8443
+            scheme: HTTPS
+            path: /.well-known/openid-configuration
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 5
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

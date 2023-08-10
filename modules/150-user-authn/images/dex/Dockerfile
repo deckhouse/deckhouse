@@ -1,29 +1,28 @@
 # Based on https://github.com/dexidp/dex/blob/v2.35.3/Dockerfile
-ARG BASE_GOLANG_18_ALPINE
-ARG BASE_ALPINE
-FROM $BASE_GOLANG_18_ALPINE as artifact
+ARG BASE_GOLANG_20_ALPINE
+ARG BASE_DISTROLESS
+FROM $BASE_GOLANG_20_ALPINE as artifact
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
 WORKDIR /dex
-COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch patches/connector-data.patch patches/oidc-ca-insecure.patch patches/robots-txt.patch /
-RUN wget https://github.com/dexidp/dex/archive/v2.35.3.tar.gz -O - | tar -xz --strip-components=1 \
+COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch patches/connector-data.patch patches/oidc-ca-insecure.patch patches/robots-txt.patch patches/disable-sqlite3.patch /
+RUN git clone --branch v2.35.3 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /client-groups.patch \
   && git apply /static-user-groups.patch \
   && git apply /gitlab-refresh-context.patch \
   && git apply /connector-data.patch \
   && git apply /oidc-ca-insecure.patch \
-  && git apply /robots-txt.patch
-RUN go build ./cmd/dex
+  && git apply /robots-txt.patch \
+  && git apply /disable-sqlite3.patch
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' ./cmd/dex
 
-FROM $BASE_ALPINE
-RUN apk add --no-cache --update ca-certificates openssl
-RUN mkdir -p /var/dex
-RUN chown -R 1001:1001 /var/dex
-RUN mkdir -p /etc/dex
-RUN chown -R 1001:1001 /etc/dex
+RUN chown 64535:64535 dex
+RUN chmod 0700 dex
+
+FROM $BASE_DISTROLESS
 
 COPY --from=artifact /dex/dex /usr/local/bin/
 COPY web /web
-
-USER 1001:1001
 
 CMD ["dex", "serve", "/etc/dex/config.docker.yaml"]
