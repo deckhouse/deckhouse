@@ -1,4 +1,4 @@
-ARG BASE_ALPINE
+ARG BASE_DISTROLESS
 ARG BASE_GOLANG_19_BULLSEYE
 
 FROM $BASE_GOLANG_19_BULLSEYE AS build
@@ -13,7 +13,9 @@ RUN git clone --depth 1 --branch ${TRIVY_DB_VERSION} ${SOURCE_REPO}/aquasecurity
     cd trivy && \
     CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o trivy ./cmd/trivy/main.go
 
-FROM $BASE_ALPINE
+RUN chown 64535:64535 trivy
+RUN chmod 0700 trivy
+
+FROM $BASE_DISTROLESS
 COPY --from=build /src/trivy /usr/local/bin/
 ENTRYPOINT [ "/usr/local/bin/trivy" ]
-ENV LANG=C.UTF-8
