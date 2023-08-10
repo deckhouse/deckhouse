@@ -135,9 +135,21 @@ func main() {
 		fmt.Sprintf("cfg:default.paths.plugins=%s", gfPathsPlugins),
 		fmt.Sprintf("cfg:default.paths.provisioning=%s", gfPathsProvisioning),
 	}
-
-	err = unix.Exec("/usr/share/grafana/bin/grafana-server", grafanaArgs, os.Environ())
+	grafanaBin := "/usr/share/grafana/bin/grafana-server"
+	listDir(grafanaBin)
+	err = unix.Exec(grafanaBin, grafanaArgs, os.Environ())
 	if err != nil {
 		log.Fatalf("exec grafana: %v", err)
+	}
+}
+
+func listDir(path string) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, e := range entries {
+		fmt.Println(e.Name())
 	}
 }
