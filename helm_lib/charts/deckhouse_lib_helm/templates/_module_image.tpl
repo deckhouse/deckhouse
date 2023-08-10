@@ -17,7 +17,9 @@
   {{- if index $context.Values $moduleName }}
     {{- if index $context.Values $moduleName "registry" }}
       {{- if index $context.Values $moduleName "registry" "base" }}
-        {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $context.Chart.Name) }}
+        {{- $host := trimAll "/" (index $context.Values $moduleName "registry" "base") }}
+        {{- $path := trimAll "/" $context.Chart.Name }}
+        {{- $registryBase = join "/" (list $host $path) }}
       {{- end }}
     {{- end }}
   {{- end }}
@@ -39,7 +41,9 @@
     {{- if index $context.Values $moduleName }}
       {{- if index $context.Values $moduleName "registry" }}
         {{- if index $context.Values $moduleName "registry" "base" }}
-          {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $context.Chart.Name) }}
+          {{- $host := trimAll "/" (index $context.Values $moduleName "registry" "base") }}
+          {{- $path := trimAll "/" $context.Chart.Name }}
+          {{- $registryBase = join "/" (list $host $path) }}
         {{- end }}
       {{- end }}
     {{- end }}
