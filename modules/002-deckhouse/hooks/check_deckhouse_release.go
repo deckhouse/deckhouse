@@ -130,6 +130,7 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	sort.Sort(sort.Reverse(updater.ByVersion(releases)))
+	input.MetricsCollector.Expire(metricUpdatingFailedGroup)
 
 releaseLoop:
 	for _, release := range releases {
@@ -174,7 +175,6 @@ releaseLoop:
 					notificationShiftTime = release.ApplyAfter
 				}
 			}
-			input.MetricsCollector.Expire(metricUpdatingFailedGroup)
 			if err := releaseChecker.StepByStepUpdate(release.Version, newSemver); err != nil {
 				releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
 				labels := map[string]string{
@@ -547,7 +547,6 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) 
 	expr := fmt.Sprintf("^v1.%d.([0-9]+)$", actual.IncMinor().Minor())
 	r, err := regexp.Compile(expr)
 	if err != nil {
-		dcr.logger.Error(err)
 		return nil, err
 	}
 
@@ -556,7 +555,7 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) 
 		if r.MatchString(ver) {
 			newSemver, err := semver.NewVersion(ver)
 			if err != nil {
-				dcr.logger.Warn(err)
+				dcr.logger.Errorf("unable to parce semver from the registry Version: %v. This version will be skipped.", ver)
 				continue
 			}
 			collection = append(collection, newSemver)
