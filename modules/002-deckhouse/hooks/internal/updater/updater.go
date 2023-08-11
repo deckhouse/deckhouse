@@ -189,7 +189,7 @@ func (du *DeckhouseUpdater) checkMinorReleaseConditions(predictedRelease *Deckho
 
 	// check: Notification
 	if du.notificationConfig != nil {
-		passed = du.checkReleaseNotification(predictedRelease, updateWindows) //
+		passed = du.checkReleaseNotification(predictedRelease, updateWindows)
 		if !passed {
 			return false
 		}
