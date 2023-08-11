@@ -6,13 +6,13 @@
 #
 # This hook is responsible for generating metrics for d8 controllers resource consumption.
 
-
+import os
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, TypeVar
 
 from shell_operator import hook
-from utils import prometheus_query_value
+from utils import MetricQuerierT, PrometheusQuerier
 
 
 @dataclass
@@ -68,6 +68,10 @@ class AbstractMetricCollector(ABC):
 
 class MetricCollector(AbstractMetricCollector):
 
+    def __init__(self, querier: MetricQuerierT):
+        super().__init__()
+        self.querier = querier
+
     def get_cpu_controller_consumption(self, controller: Controller) -> float:
         '''Query prometheus for controller cpu consumption'''
 
@@ -84,11 +88,11 @@ class MetricCollector(AbstractMetricCollector):
 
         return self.consumption_query(func, metric_name, controller)
 
-    def consumption_query(self, func: str, metric_name: str, controller: Controller) -> str:
+    def consumption_query(self, func: str, metric_name: str, controller: Controller) -> float:
         '''Query prometheus for controller resource consumption'''
 
         query = f'''
-            sum (
+            avg (
                 ( {func}({metric_name}{{
                     namespace="{controller.namespace}"
                   }}[5m]) )
@@ -103,7 +107,7 @@ class MetricCollector(AbstractMetricCollector):
             )
         '''
 
-        return prometheus_query_value(query)
+        return self.querier.query_value(query)
 
 
 class HookRunner:
@@ -142,6 +146,13 @@ class HookRunner:
 
 
 if __name__ == "__main__":
-    metric_collector = MetricCollector()
+    try:
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/token", encoding="utf-8") as f:
+            SERVICE_ACCOUNT_TOKEN = f.read()
+    except FileNotFoundError:
+        SERVICE_ACCOUNT_TOKEN = token if (token := os.getenv("SERVICE_ACCOUNT_TOKEN")) else ""
+
+    prometheus_querier = PrometheusQuerier(SERVICE_ACCOUNT_TOKEN)
+    metric_collector = MetricCollector(prometheus_querier)
     hook_runner = HookRunner(metric_collector)
     hook.run(hook_runner.run, configpath="controller_metrics.yaml")
