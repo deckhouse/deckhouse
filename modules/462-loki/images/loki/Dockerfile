@@ -17,7 +17,7 @@ FROM $BASE_DISTROLESS
 COPY --from=artifact /loki/loki /usr/bin
 WORKDIR /loki/
 
-USER nobody
+USER 64535
 EXPOSE 3100
 
 ENTRYPOINT ["/usr/bin/loki"]
