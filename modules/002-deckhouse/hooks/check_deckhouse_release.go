@@ -178,8 +178,9 @@ releaseLoop:
 			input.MetricsCollector.Expire(metricUpdatingFailedGroup)
 			if err := releaseChecker.StepByStepUpdate(release.Version, newSemver); err != nil {
 				releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
+				versionLable := fmt.Sprintf("%v.%v.*", release.Version.Major(), release.Version.IncMinor().Minor())
 				labels := map[string]string{
-					"releaseChannel": input.Values.Get("deckhouse.releaseChannel").String(),
+					"version": versionLable,
 				}
 				input.MetricsCollector.Set("d8_updating_is_failed", 1, labels, metrics.WithGroup(metricUpdatingFailedGroup))
 

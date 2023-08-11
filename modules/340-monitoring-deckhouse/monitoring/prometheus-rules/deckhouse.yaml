@@ -364,6 +364,11 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      description: |
+        Failed to update Deckhouse.
+
+        Deckhouse image is not available in the registry or the image is corrupted. Make sure that the correct Deckhouse image {{ $labels.version }} is available in the registry.
+
       summary: Deckhouse updating is failed.
 
   - alert: D8DeckhouseWatchErrorOccurred
