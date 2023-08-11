@@ -25,7 +25,6 @@ import (
 	"path"
 	"regexp"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -178,9 +177,8 @@ releaseLoop:
 			input.MetricsCollector.Expire(metricUpdatingFailedGroup)
 			if err := releaseChecker.StepByStepUpdate(release.Version, newSemver); err != nil {
 				releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
-				versionLable := fmt.Sprintf("%v.%v.*", release.Version.Major(), release.Version.IncMinor().Minor())
 				labels := map[string]string{
-					"version": versionLable,
+					"version": release.Version.Original(),
 				}
 				input.MetricsCollector.Set("d8_updating_is_failed", 1, labels, metrics.WithGroup(metricUpdatingFailedGroup))
 
@@ -544,8 +542,9 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) 
 		return nil, err
 	}
 
-	minor := strconv.FormatInt(int64(actual.IncMinor().Minor()), 10)
-	expr := fmt.Sprintf("^v1.%s.([0-9]+)$", minor)
+	// Here we get the following minor with the maximum patch version.
+	// <major.minor+1.max>
+	expr := fmt.Sprintf("^v1.%d.([0-9]+)$", actual.IncMinor().Minor())
 	r, err := regexp.Compile(expr)
 	if err != nil {
 		dcr.logger.Error(err)
