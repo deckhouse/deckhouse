@@ -24,7 +24,16 @@ fi
 # This folder doesn't have time to create before we stop freshly, unconfigured kubelet during bootstrap (step 034_install_kubelet_and_his_friends.sh).
 mkdir -p /var/lib/kubelet
 
-cri_type="Containerd"
+# Check CRI type and set appropriated parameters.
+# cgroup default is `systemd`, only for docker cri we use `cgroupfs`.
+cgroup_driver="systemd"
+{{- if eq .cri "Containerd" }}
+# Overriding cgroup type from external config file
+if [ -f /var/lib/bashible/cgroup_config ]; then
+  cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
+fi
+{{- end }}
+
 {{- if eq .cri "NotManaged" }}
   {{- if .nodeGroup.cri.notManaged.criSocketPath }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
@@ -200,7 +209,7 @@ authorization:
     cacheUnauthorizedTTL: 30s
 cgroupRoot: "/"
 cgroupsPerQOS: true
-cgroupDriver: cgroupfs
+cgroupDriver: ${cgroup_driver}
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}
 clusterDNS:
