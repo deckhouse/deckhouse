@@ -27,12 +27,14 @@ class MockMetricCollector(AbstractMetricCollector):
     }
 
     def get_cpu_controller_consumption(self, controller: Controller) -> float:
-        return self.__cpu_values[(controller.name, controller.module,
-                                  controller.kind, controller.namespace)]
+        return self.__cpu_values[
+            (controller.name, controller.module, controller.kind, controller.namespace)
+        ]
 
     def get_memory_controller_consumption(self, controller: Controller) -> float:
-        return self.__memory_values[(controller.name, controller.module,
-                                     controller.kind, controller.namespace)]
+        return self.__memory_values[
+            (controller.name, controller.module, controller.kind, controller.namespace)
+        ]
 
 
 def test_controller_metrics():
