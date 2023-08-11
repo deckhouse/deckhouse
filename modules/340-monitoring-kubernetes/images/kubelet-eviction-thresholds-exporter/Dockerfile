@@ -10,11 +10,12 @@ RUN apk add --no-cache git && \
     mkdir -p /var/run/node-exporter-textfile/ && \
     chown -R 64535:64535 /var/run/node-exporter-textfile/ && \
     chown -R 64535:64535 /src/ && \
+    chmod 0600 -R /var/run/node-exporter-textfile && \
     chmod 0700 /src/loop
 
 FROM $BASE_DISTROLESS
 
 COPY --from=artifact /src/loop /
-COPY --from=artifact /var/run/node-exporter-textfile/ /src/loop
+COPY --from=artifact /var/run/node-exporter-textfile/ /var/run/node-exporter-textfile/
 USER 64535
 ENTRYPOINT ["/loop"]
