@@ -13,7 +13,9 @@ WORKDIR /prometheus-operator/
 COPY local_probe.patch ./
 RUN git apply local_probe.patch
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o operator cmd/operator/main.go
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o operator cmd/operator/main.go && \
+    chown -R 64535:64535 /prometheus-operator/ && \
+    chmod 0700 /prometheus-operator/operator
 
 FROM $BASE_DISTROLESS
 
