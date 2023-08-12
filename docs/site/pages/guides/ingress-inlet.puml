@@ -29,10 +29,10 @@ partition Bare metal, vSphere cloud, ... {
     (Cloudflare, Qrator, metallb, ...);
   end split
   split
-     :inlet **LoadBalancer**;
+     :inlet **HostPort**;
      kill
   split again
-    :inlet **LoadBalancerWithProxyProtocol**;
+    :inlet **HostPortWithProxyProtocol**;
     kill
   end split
   }
