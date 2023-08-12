@@ -71,18 +71,17 @@ It may take some time to start the Ingress controller after installing Deckhouse
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
-Wait for the Pods to switch to <code>Ready</code> state.
+Wait for the Ingress controller pods to switch to <code>Ready</code> state.
 
 {% offtopic title="Example of the output..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
-controller-nginx-r6hxc                     3/3     Running   0          16h
-kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
+controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {%- endofftopic %}
 </li>

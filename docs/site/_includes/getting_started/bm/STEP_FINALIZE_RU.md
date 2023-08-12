@@ -71,18 +71,17 @@ sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
-Дождитесь перехода подов в статус <code>Ready</code>.
+Дождитесь перехода подов Ingress-контролллера в статус <code>Ready</code>.
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
-controller-nginx-r6hxc                     3/3     Running   0          16h
-kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
+controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {%- endofftopic %}
 </li>
