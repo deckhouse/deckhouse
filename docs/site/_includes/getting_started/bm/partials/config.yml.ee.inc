@@ -6,10 +6,10 @@ apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
 # [<en>] Address space of the cluster's Pods.
-# [<ru>] Адресное пространство Pod’ов кластера.
+# [<ru>] Адресное пространство подов кластера.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
-# [<ru>] Адресное пространство для service’ов кластера.
+# [<ru>] Адресное пространство сети сервисов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
