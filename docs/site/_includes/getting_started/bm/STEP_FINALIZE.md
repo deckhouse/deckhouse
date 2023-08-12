@@ -75,7 +75,7 @@ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
 ```
 {% endsnippetcut %}
 
-Wait for the Pods to switch to `Ready` state.
+Wait for the Pods to switch to <code>Ready</code> state.
 
 {% offtopic title="Example of the output..." %}
 ```

@@ -75,7 +75,7 @@ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
 ```
 {% endsnippetcut %}
 
-Дождитесь перехода подов в статус `Ready`.
+Дождитесь перехода подов в статус <code>Ready</code>.
 
 {% offtopic title="Пример вывода..." %}
 ```
