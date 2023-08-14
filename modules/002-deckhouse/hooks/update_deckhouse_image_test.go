@@ -727,6 +727,32 @@ metadata:
 			Expect(headerValue).To(Equal("Bearer the_token"))
 		})
 	})
+
+	Context("Update minimal notification time without configuring notification webhook", func() {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		AfterEach(func() {
+			defer svr.Close()
+		})
+
+		BeforeEach(func() {
+			f.ValuesSet("deckhouse.update.disruptionApprovalMode", "Manual")
+			f.ValuesSetFromYaml("deckhouse.update.notification.minimalNotificationTime", []byte("2h"))
+			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+			f.RunHook()
+		})
+
+		It("Should postpone the release without webhook notification", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.26.0")
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
+			Expect(cm.Field("data.notified").Bool()).To(BeTrue())
+			Expect(r126.Field("status.phase").String()).To(Equal("Pending"))
+			Expect(r126.Field("spec.applyAfter").String()).To(Equal("2021-01-01T15:30:00Z"))
+			Expect(r126.Field("metadata.annotations.release\\.deckhouse\\.io/notification-time-shift").Exists()).To(BeTrue())
+		})
+	})
 })
 
 var (
