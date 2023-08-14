@@ -100,7 +100,7 @@ ENV PATH="/usr/share/grafana/bin:$PATH" \
 WORKDIR $GF_PATHS_HOME
 
 RUN apt-get update && \
-    apt-get -y --no-install-recommends install libfontconfig curl ca-certificates openssl unzip git && \
+    apt-get -y --no-install-recommends install libfontconfig curl ca-certificates openssl unzip git libsqlite3-dev && \
     apt-get clean && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
