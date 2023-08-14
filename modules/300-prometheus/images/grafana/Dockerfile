@@ -72,6 +72,7 @@ COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
 RUN make gen-go
 RUN go build -ldflags -w -ldflags "-linkmode external -extldflags -static" -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
+RUN go build -ldflags -w -ldflags "-linkmode external -extldflags -static" -o ./bin/linux-amd64/grafana-cli ./pkg/cmd/grafana-cli
 
 FROM $BASE_GOLANG_20_ALPINE as runner
 
@@ -122,7 +123,7 @@ RUN mkdir -p "$GF_PATHS_HOME/.aws" && \
     cp "$GF_PATHS_HOME/conf/ldap.toml" /etc/grafana/ldap.toml && \
     chmod -R 777 "$GF_PATHS_DATA" "$GF_PATHS_HOME/.aws" "$GF_PATHS_LOGS" "$GF_PATHS_PLUGINS" "$GF_PATHS_PROVISIONING"
 
-COPY --from=go-builder /usr/src/app/bin/*/grafana-server ./bin/
+COPY --from=go-builder /usr/src/app/bin/*/grafana-server /usr/src/app/bin/*/grafana-cli ./bin/
 COPY --from=js-builder /usr/src/app/public ./public
 COPY --from=js-builder /usr/src/app/tools ./tools
 
@@ -152,7 +153,7 @@ RUN chown -R 64535:64535 /usr/share/grafana && \
     chown -R 64535:64535 /var/lib/grafana && \
     chown -R 64535:64535 /var/log/grafana
 
-RUN chmod 0700 ./bin/grafana-server
+RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
 
 FROM $BASE_DISTROLESS
 
