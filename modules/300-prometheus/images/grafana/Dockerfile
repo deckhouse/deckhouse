@@ -67,7 +67,7 @@ FROM $BASE_GOLANG_17_BUSTER as go-builder
 ARG GRAFANA_VERSION
 ENV GRAFANA_VERSION=${GRAFANA_VERSION}
 RUN apt-get update && \
-    apt-get -y git gcc musl
+    apt-get -y --no-install-recommends install git gcc musl
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
 RUN make gen-go
