@@ -66,7 +66,8 @@ RUN yarn build
 FROM $BASE_GOLANG_17_BUSTER as go-builder
 ARG GRAFANA_VERSION
 ENV GRAFANA_VERSION=${GRAFANA_VERSION}
-RUN apk --no-cache add git gcc musl
+RUN apt-get update && \
+    apt-get -y --no-install-recommends git gcc musl
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
 RUN make gen-go
