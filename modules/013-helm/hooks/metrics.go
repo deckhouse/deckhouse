@@ -354,7 +354,7 @@ const (
 //	 2 - if resource is unsupported for current k8s version
 //	and k8s version in which deprecation would be
 func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semver.Version, resourceAPIVersion, resourceKind string) (uint, string) {
-	// check unsupported api for current k8s version
+	// check unsupported api for the current k8s version
 	currentK8SAPIsStorage, exists := uvs.getByK8sVersion(currentVersion)
 	if exists {
 		isUnsupported := currentK8SAPIsStorage.isUnsupportedByAPIAndKind(resourceAPIVersion, resourceKind)
@@ -364,7 +364,7 @@ func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semve
 	}
 
 	// if api is supported - check deprecation in the next 2 minor k8s versions
-	for i := 0; i < delta; i++ {
+	for i := 1; i <= delta; i++ {
 		newMinor := currentVersion.Minor() + uint64(i)
 		nextVersion := semver.MustParse(fmt.Sprintf("%d.%d.0", currentVersion.Major(), newMinor))
 		storage, exists := uvs.getByK8sVersion(nextVersion)
