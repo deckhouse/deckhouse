@@ -73,6 +73,10 @@ func trimRef(ref types.ImageReference) string {
 }
 
 func checkImageExists(ctx context.Context, imgRef types.ImageReference, sysCtx *types.SystemContext) error {
+	if imgRef.Transport().Name() == fileTransport {
+		return fmt.Errorf("Image existence not implemented in file registry")
+	}
+
 	imgSource, err := imgRef.NewImageSource(ctx, sysCtx)
 	if err != nil {
 		return err

@@ -108,7 +108,7 @@ func (i *ImageConfig) imageReference(isSource, dryRun bool) (types.ImageReferenc
 		imageBuilder.WriteByte('@')
 		imageBuilder.WriteString(digest)
 	}
-	if i.RegistryTransport() == fileTransport && (isSource || !dryRun) {
+	if i.RegistryTransport() == fileTransport && isSource && !dryRun {
 		if err := i.extractImageFromFileRegistry(); err != nil {
 			return nil, err
 		}
@@ -152,10 +152,18 @@ func (i *ImageConfig) AuthConfig() *types.DockerAuthConfig {
 func (i *ImageConfig) extractImageFromFileRegistry() error {
 	fileInArchive, resultFile := filepath.Join("/", i.fileImageInArchive()), i.resultImageArchive()
 	err := util.NewTarGzReader(util.AddTarGzExt(i.RegistryPath()), func(h *tar.Header, r *tar.Reader) (bool, error) {
-		if h.Name != fileInArchive {
-			return false, nil
+		dir, name := filepath.Split(h.Name)
+
+		tagAndDigest := strings.Split(name, "@")
+		tag := tagAndDigest[0]
+		var digest string
+		if len(tagAndDigest) > 1 {
+			digest = tagAndDigest[1]
 		}
-		return true, util.MkFile(resultFile, r, h.FileInfo())
+		if h.Name == fileInArchive || dir == i.Path() && (digest == i.Digest() || (digest == "" && tag == i.Tag())) {
+			return true, util.MkFile(resultFile, r, h.FileInfo())
+		}
+		return false, nil
 	})
 
 	if err != nil {
