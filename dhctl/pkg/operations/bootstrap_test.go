@@ -153,7 +153,7 @@ func TestInstallDeckhouse(t *testing.T) {
 			fakeClient := client.NewFakeKubernetesClient()
 			createReadyDeckhousePod(fakeClient)
 
-			err := InstallDeckhouse(fakeClient, conf)
+			err := InstallDeckhouse(fakeClient, conf, &config.MetaConfig{})
 
 			require.NoError(t, err, "Should install Deckhouse")
 
@@ -170,7 +170,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, curUUID)
 
-				err := InstallDeckhouse(fakeClient, conf)
+				err := InstallDeckhouse(fakeClient, conf, &config.MetaConfig{})
 
 				require.Error(t, err, "Should not install Deckhouse")
 
@@ -187,7 +187,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, curUUID)
 
-				err := InstallDeckhouse(fakeClient, conf)
+				err := InstallDeckhouse(fakeClient, conf, &config.MetaConfig{})
 
 				require.Error(t, err, "Should not install Deckhouse")
 
@@ -201,7 +201,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, clusterUUID)
 
-				err := InstallDeckhouse(fakeClient, conf)
+				err := InstallDeckhouse(fakeClient, conf, &config.MetaConfig{})
 
 				require.NoError(t, err, "Should install Deckhouse")
 

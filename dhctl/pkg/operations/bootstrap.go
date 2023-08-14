@@ -250,7 +250,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 	})
 }
 
-func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config) error {
+func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config, metaConfig *config.MetaConfig) error {
 	return log.Process("bootstrap", "Install Deckhouse", func() error {
 		err := bootstrap.CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
 		if err != nil {
@@ -265,6 +265,11 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config)
 		err = cache.Global().Save(ManifestCreatedInClusterCacheKey, []byte("yes"))
 		if err != nil {
 			return fmt.Errorf("set manifests in cluster flag to cache: %v", err)
+		}
+
+		err = bootstrap.ConvertInitConfigurationToModuleConfigs(kubeCl, metaConfig)
+		if err != nil {
+			return fmt.Errorf("convert InitConfiguration: %w", err)
 		}
 
 		err = deckhouse.WaitForReadiness(kubeCl)

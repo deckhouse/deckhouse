@@ -41,3 +41,17 @@ func Values(m map[string]string) []string {
 
 	return keysList
 }
+
+func Filter[K comparable, V any](in map[K]V, filterFunc func(key K, val V) bool) map[K]V {
+	if len(in) == 0 || filterFunc == nil {
+		return in
+	}
+
+	out := make(map[K]V, len(in))
+	for k, v := range in {
+		if filterFunc(k, v) {
+			out[k] = v
+		}
+	}
+	return out
+}

@@ -71,7 +71,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		return operations.InstallDeckhouse(kubeCl, installConfig)
+		return operations.InstallDeckhouse(kubeCl, installConfig, metaConfig)
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
