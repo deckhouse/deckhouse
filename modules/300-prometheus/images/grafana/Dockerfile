@@ -177,7 +177,7 @@ COPY --from=grafana-distr /usr/share/grafana/ /usr/share/grafana/
 COPY --from=grafana-distr /etc/grafana/ /etc/grafana/
 COPY --from=grafana-distr /var/lib/grafana/ /var/lib/grafana/
 COPY --from=grafana-distr /var/log/grafana/ /var/log/grafana/
-COPY --from=grafana-distr /usr/lib/x86_64-linux-gnu/libsqlite3.so /usr/lib/x86_64-linux-gnu/libsqlite3.so
+COPY --from=grafana-distr /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 /usr/lib/x86_64-linux-gnu/libsqlite3.so.0
 
 ENV PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
