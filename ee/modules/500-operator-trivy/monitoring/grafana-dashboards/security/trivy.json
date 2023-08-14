@@ -301,16 +301,6 @@
               "options": "vuln_id"
             },
             "properties": [
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "targetBlank": true,
-                    "title": "",
-                    "url": "https://nvd.nist.gov/vuln/detail/${__value.text}"
-                  }
-                ]
-              }
             ]
           }
         ]
