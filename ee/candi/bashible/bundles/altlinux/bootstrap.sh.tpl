@@ -31,10 +31,10 @@ export no_proxy=${NO_PROXY}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
 if ! type jq 2>/dev/null || ! type curl 2>/dev/null || ! type nc 2>/dev/null; then
-  apt-get update
+  apt-get -o Acquire::http::Timeout=120 update
   until apt-get install jq netcat curl -y; do
     echo "Error installing packages"
-    apt-get update
+    apt-get -o Acquire::http::Timeout=120 update
     sleep 10
   done
 fi

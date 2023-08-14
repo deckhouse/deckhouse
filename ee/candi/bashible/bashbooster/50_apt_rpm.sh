@@ -62,7 +62,7 @@ bb-apt-rpm-update() {
     export DEBIAN_FRONTEND=noninteractive
     bb-flag? apt-rpm-updated && return 0
     bb-log-info 'Updating apt cache'
-    apt-get update
+    apt-get -o Acquire::http::Timeout=120 update
     bb-flag-set apt-rpm-updated
 }
 
