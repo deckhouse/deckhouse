@@ -95,7 +95,7 @@ RUN mkdir -p /prometheus && \
     chown -R 64535:64535 /etc/ && \
     chown -R 64535:64535 /consoles/ && \
     chmod 0700 /prometheus/prometheus/prometheus && \
-    chmod 0700 /prometheus/prometheus/promtool && \
+    chmod 0700 /prometheus/prometheus/promtool
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
