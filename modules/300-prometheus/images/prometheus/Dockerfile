@@ -39,7 +39,13 @@ RUN mkdir -p /etc && \
   cp /prometheus/prometheus/documentation/examples/prometheus.yml /etc && \
   cp /prometheus/prometheus/console_libraries/* /etc
 
-RUN mkdir -p /prometheus
+RUN mkdir -p /prometheus && \
+    chown -R 64535:64535 /prometheus/ && \
+    chown -R 64535:64535 /prometheus/ && \
+    chown -R 64535:64535 /etc/ && \
+    chown -R 64535:64535 /consoles/ && \
+    chmod 0700 /prometheus/prometheus/prometheus && \
+    chmod 0700 /prometheus/prometheus/promtool && \
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
@@ -51,12 +57,7 @@ COPY --from=artifact /consoles/                                                 
 COPY --from=artifact /etc/                                                         /etc/prometheus/
 COPY --from=artifact /prometheus/                                                  /prometheus/
 
-# RUN apk --no-cache add curl
-# RUN ln -s /usr/share/prometheus/console_libraries /usr/share/prometheus/consoles/ /etc/prometheus/
-# RUN mkdir -p /prometheus && \
-    # chown -R 65534:2000 etc/prometheus /prometheus
-
-USER       65534
+USER 64535
 EXPOSE     9090
 VOLUME     [ "/prometheus" ]
 WORKDIR    /prometheus

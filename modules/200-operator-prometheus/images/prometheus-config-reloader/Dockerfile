@@ -17,5 +17,5 @@ RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o prometheu
 FROM $BASE_DISTROLESS
 
 COPY --from=artifact /prometheus-operator/prometheus-config-reloader /bin/
-
+USER 64535
 ENTRYPOINT ["/bin/prometheus-config-reloader"]
