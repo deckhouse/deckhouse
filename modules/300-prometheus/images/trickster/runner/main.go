@@ -20,8 +20,9 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"strings"
+
+	"golang.org/x/sys/unix"
 )
 
 func main() {
@@ -49,12 +50,8 @@ func main() {
 	builder.WriteString("--config=")
 	builder.WriteString(tmpfile.Name())
 
-	cmd := exec.Command("trickster", builder.String())
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	if err := cmd.Run(); err != nil {
+	err = unix.Exec("/usr/local/bin/trickster", []string{"trickster", builder.String()}, os.Environ())
+	if err != nil {
 		log.Fatal(err)
 	}
 }
