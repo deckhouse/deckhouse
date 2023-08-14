@@ -67,7 +67,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 					case "resource_versions_compatibility":
 						Expect(*metric.Value).To(Equal(float64(1))) // 1 means deprecated
 						Expect(metric.Labels["k8s_version"]).To(Equal("1.22"))
-						Expect(metric.Labels["helm_release_namespace"]).To(Equal("appns")) // we check namespace injection, because the release contains 'defau;t' namespace
+						Expect(metric.Labels["helm_release_namespace"]).To(Equal("appns")) // we check namespace injection, because the release contains 'default' namespace
 
 						switch metric.Labels["api_version"] {
 						case "networking.k8s.io/v1beta1":
@@ -76,6 +76,38 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 							Expect(metric.Labels["kind"]).To(Equal("CustomResourceDefinition"))
 						default:
 							Fail("unknown api version")
+						}
+					}
+				}
+			})
+		})
+
+		// check delta for the current version + 2
+		Context("check for k8s version 1.20", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.20.4")
+				f.RunGoHook()
+			})
+			It("must have metric with deprecated resource for 1.22 version", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				metrics := f.MetricsCollector.CollectedMetrics()
+				Expect(metrics).To(HaveLen(5))
+				for _, metric := range metrics {
+					switch metric.Name {
+					case "helm_releases_count":
+						if metric.Labels["helm_version"] == "3" {
+							Expect(*metric.Value).To(Equal(float64(1)))
+						}
+
+					case "resource_versions_compatibility":
+						Expect(*metric.Value).To(Equal(float64(1))) // 1 means deprecated
+						Expect(metric.Labels["k8s_version"]).To(Equal("1.22"))
+						Expect(metric.Labels["helm_release_namespace"]).To(Equal("appns")) // we check namespace injection, because the release contains 'default' namespace
+
+						switch metric.Labels["api_version"] {
+						case "networking.k8s.io/v1beta1":
+							// deprecated in the 1.22: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#ingress-v122
+							Expect(metric.Labels["kind"]).To(Equal("Ingress"))
 						}
 					}
 				}
