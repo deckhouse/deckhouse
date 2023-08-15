@@ -21,6 +21,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"log"
 	"math/big"
@@ -29,8 +30,15 @@ import (
 )
 
 func main() {
-	certHosts := os.Args[1:]
+	if len(os.Args) > 1 && os.Args[1] == "generate-crowd-proxy-certs" {
+		generateCrowdProxyCerts()
+		return
+	}
 
+	generateAndSaveSelfSignedCaAndCert(os.Args[1:])
+}
+
+func generateAndSaveSelfSignedCaAndCert(certHosts []string) {
 	// Generate a CA private key
 	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -131,4 +139,97 @@ func main() {
 	serverCertificateFile.Close()
 
 	log.Print("Self-signed certificate, key, and CA certificate, key generated successfully.")
+}
+
+func generateCrowdProxyCerts() {
+	csrRaw, ok := os.LookupEnv("CSR")
+	if ok == false {
+		log.Fatal(`Failed to lookup env variable "CSR"`)
+	}
+
+	caCert, caKey, csr, err := parseFrontProxyCaAndCsr("/etc/kubernetes/pki/front-proxy-ca.crt", "/etc/kubernetes/pki/front-proxy-ca.key", csrRaw)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Generate a random serial number for the new certificate
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		log.Fatal("Failed to generate serial number:", err)
+	}
+
+	// Set the certificate template for the new certificate
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject:      csr.Subject,
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(10 * 365 * 24 * time.Hour), // Valid for 10 years
+	}
+
+	// Sign the new certificate using the CA private key
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, caCert, csr.PublicKey, caKey)
+	if err != nil {
+		log.Fatalf("Failed to sign certificate:", err)
+	}
+
+	// Generate the PEM encoded certificate
+	cert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	if cert == nil {
+		log.Fatalf("Failed to encode certificate to PEM: %s", certBytes)
+	}
+
+	log.Printf("Certificate: %s", base64.StdEncoding.EncodeToString(cert))
+
+	return
+}
+
+func parseFrontProxyCaAndCsr(caCertPath, caKeyPath, csrRaw string) (*x509.Certificate, *rsa.PrivateKey, *x509.CertificateRequest, error) {
+	caCertRaw, err := os.ReadFile(caCertPath)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	caKeyRaw, err := os.ReadFile(caKeyPath)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Parse the CA certificate
+	caCertBlock, _ := pem.Decode(caCertRaw)
+	if caCertBlock == nil || caCertBlock.Type != "CERTIFICATE" {
+		log.Println("Failed to parse CA certificate")
+		return nil, nil, nil, err
+	}
+	caCertificate, err := x509.ParseCertificate(caCertBlock.Bytes)
+	if err != nil {
+		log.Println("Failed to parse CA certificate:", err)
+		return nil, nil, nil, err
+	}
+
+	// Parse the CA private key
+	caKeyBlock, _ := pem.Decode(caKeyRaw)
+	if caKeyBlock == nil || caKeyBlock.Type != "RSA PRIVATE KEY" {
+		log.Println("Failed to parse CA private key")
+		return nil, nil, nil, err
+	}
+	caPrivateKey, err := x509.ParsePKCS1PrivateKey(caKeyBlock.Bytes)
+	if err != nil {
+		log.Println("Failed to parse CA private key:", err)
+		return nil, nil, nil, err
+	}
+
+	// Parse the CSR
+	csrBlock, _ := pem.Decode([]byte(csrRaw))
+	if csrBlock == nil || csrBlock.Type != "CERTIFICATE REQUEST" {
+		log.Println("Failed to parse CSR")
+		return nil, nil, nil, err
+	}
+
+	// Parse the CSR certificate request
+	csr, err := x509.ParseCertificateRequest(csrBlock.Bytes)
+	if err != nil {
+		log.Println("Failed to parse CSR:", err)
+		return nil, nil, nil, err
+	}
+
+	return caCertificate, caPrivateKey, csr, nil
 }
