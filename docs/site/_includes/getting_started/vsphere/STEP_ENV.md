@@ -67,10 +67,11 @@ StorageClasses will be created automatically for each Datastore that is tagged w
 
 ### Permissions
 
-> We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
->
-> This all-encompassing Role should be enough for all Deckhouse components.
-> If you need a more granular Role, please contact your Deckhouse support.
+{% alert %}
+We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
+
+This all-encompassing Role should be enough for all Deckhouse components. If you need a more granular Role, please contact your Deckhouse support.
+{% endalert %}
 
 You have to create a role with a following list of permissions and attach
 it to **vCenter**.
