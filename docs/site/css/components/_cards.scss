@@ -59,6 +59,11 @@
             text-decoration: none;
         }
     }
+
+    &__title_text {
+        color: $color-main;
+    }
+
     &_smooth {
         background: $color-inverse;
     }

@@ -8,7 +8,7 @@ Essentials
 {% if page.platform_code != 'existing' and page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-📚 Documentation
+📚 <span class="cards-item__title_text">Documentation</span>
 </h3>
 <div class="cards-item__text">
 <p>The documentation for the installed in your cluster version of Deckhouse.</p>
@@ -20,7 +20,7 @@ Essentials
 {% if page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-📊 Monitoring
+📊 <span class="cards-item__title_text">Monitoring</span>
 </h3>
 <div class="cards-item__text">
 <p>Explore Grafana dashboards bundled with Deckhouse.</p>
@@ -33,7 +33,7 @@ Essentials
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-☸ Dashboard
+☸ <span class="cards-item__title_text">Dashboard</span>
 </h3>
 <div class="cards-item__text">
 <p>Get access to the Kubernetes Dashboard.</p>
@@ -43,7 +43,7 @@ Essentials
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-👌 Status page
+👌 <span class="cards-item__title_text">Status page</span>
 </h3>
 <div class="cards-item__text">
 <p>Get information about the overall status of Deckhouse and its components.<br />
@@ -70,7 +70,7 @@ Deploying your first application
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-⟳ Setting up a CI/CD system
+⟳ <span class="cards-item__title_text">Setting up a CI/CD system</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 [Create](/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
@@ -82,7 +82,7 @@ You can use the generated `kubeconfig` file in Kubernetes with any deployment sy
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔀 Routing traffic
+🔀 <span class="cards-item__title_text">Routing traffic</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Create a `Service` and `Ingress` for your application.
@@ -93,7 +93,7 @@ Create a `Service` and `Ingress` for your application.
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔍 Monitoring your application
+🔍 <span class="cards-item__title_text">Monitoring your application</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
@@ -116,7 +116,7 @@ Other features
 
 <div class="cards-item cards-item_inverse" style="width: 100%">
 <h3 class="cards-item__title text_h3">
-⚖ Managing nodes
+⚖ <span class="cards-item__title_text">Managing nodes</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/documentation/v1/modules/040-node-manager/).
