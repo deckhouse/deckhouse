@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 
 	cp "github.com/otiai10/copy"
@@ -124,6 +125,18 @@ func main() {
 		}
 	}
 
+	err = convertEnv()
+	if err != nil {
+		log.Fatalf("convert env: %v", err)
+	}
+
+	os.Setenv("HOME", gfPathsHome)
+
+	err = installPlugins(gfInstallPlugins, gfPathsPlugins)
+	if err != nil {
+		log.Fatalf("convert env: %v", err)
+	}
+
 	grafanaArgs := []string{
 		"grafana-server",
 		fmt.Sprintf("--homepath=%s", gfPathsHome),
@@ -135,19 +148,8 @@ func main() {
 		fmt.Sprintf("cfg:default.paths.plugins=%s", gfPathsPlugins),
 		fmt.Sprintf("cfg:default.paths.provisioning=%s", gfPathsProvisioning),
 	}
-	log.Printf("command %v", grafanaArgs)
 
 	grafanaBin := "/usr/share/grafana/bin/grafana-server"
-
-	err = listDir("/usr/share/grafana/bin/")
-	if err != nil {
-		log.Fatalf("list dir: %v", err)
-	}
-
-	err = listDir("/usr/share/grafana/")
-	if err != nil {
-		log.Fatalf("list dir: %v", err)
-	}
 
 	err = unix.Exec(grafanaBin, grafanaArgs, os.Environ())
 	if err != nil {
@@ -155,19 +157,66 @@ func main() {
 	}
 }
 
-func listDir(path string) error {
-	log.Printf("list dir %s", path)
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return err
-	}
+const (
+	paramPrefix = "GF_"
+	paramSuffix = "__FILE"
+)
 
-	if len(entries) == 0 {
-		log.Printf("dir %s is empty", path)
+// convertEnv Convert all environment variables with names ending in __FILE into the content of
+// the file that they point at and use the name without the trailing __FILE.
+// This can be used to carry in Docker secrets.
+func convertEnv() error {
+	for _, param := range os.Environ() {
+		if !strings.HasPrefix(param, paramPrefix) {
+			continue
+		}
+		splitedParam := strings.Split(param, "=")
+		if !strings.HasSuffix(splitedParam[0], paramSuffix) {
+			continue
+		}
+		newParamName := strings.TrimRight(splitedParam[0], paramSuffix)
+		_, ok := os.LookupEnv(newParamName)
+		if ok {
+			return fmt.Errorf("error: both %s and %s are set (but are exclusive)", newParamName, splitedParam[0])
+		}
+
+		os.Setenv(newParamName, splitedParam[1])
+		os.Unsetenv(splitedParam[0])
+	}
+	return nil
+}
+
+func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
+	if gfInstallPlugins == "" {
 		return nil
 	}
-	for _, e := range entries {
-		log.Printf("%s%s\n", path, e.Name())
+
+	for _, plugin := range strings.Split(gfInstallPlugins, ",") {
+		if strings.Contains(plugin, ";") {
+			bit := strings.Split(plugin, ";")
+			cmd := exec.Command(
+				"grafana-cli",
+				fmt.Sprintf("--pluginUrl %s", bit[0]),
+				fmt.Sprintf("--pluginsDir %s", gfPathsPlugins),
+				"plugins",
+				"install",
+				bit[1],
+			)
+			if err := cmd.Run(); err != nil {
+				return err
+			}
+			continue
+		}
+		cmd := exec.Command(
+			"grafana-cli",
+			fmt.Sprintf("--pluginsDir %s", gfPathsPlugins),
+			"plugins",
+			"install",
+			plugin,
+		)
+		if err := cmd.Run(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
