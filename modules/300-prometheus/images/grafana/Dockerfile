@@ -170,7 +170,7 @@ RUN chown -R 64535:64535 /usr/share/grafana && \
 
 RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
 
-FROM $BASE_DISTROLESS
+FROM $BASE_UBUNTU
 
 COPY --from=entrypoint /app/entrypoint /usr/local/bin/
 COPY --from=grafana-distr /usr/share/grafana/ /usr/share/grafana/
