@@ -111,7 +111,9 @@ moduleconfig.deckhouse.io/global patched
 Domain template is '%s.1.2.3.4.sslip.io'.
 ```
 
-> Regenerating certificates after changing the DNS name template can take up to 5 minutes.
+{% alert %}
+Regenerating certificates after changing the DNS name template can take up to 5 minutes.
+{% endalert %}
 
 {% offtopic title="Other options..." %}
 Instead of using *sslip.io*, you can use other options.
