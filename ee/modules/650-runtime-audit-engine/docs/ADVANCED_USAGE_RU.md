@@ -2,6 +2,8 @@
 title: "Модуль runtime-audit-engine: расширенная конфигурация"
 ---
 
+{% raw %}
+
 ## Включение логов для отладки
 
 ### Falco
@@ -48,7 +50,7 @@ kubectl run falco-event-generator --image=falcosecurity/event-generator run
 
 Если вам нужно реализовать действие, вы можете воспользоваться этим [руководством](https://github.com/falcosecurity/event-generator/blob/main/events/README.md).
 
-## Emulating a Falcosidekick event
+## Эмуляция события Falcosidekick
 
 Вы можете использовать [Falcosidekick](https://github.com/falcosecurity/falcosidekick) `/test` HTTP endpoint для отправки тестового события во все включенные выходы.
 
@@ -105,3 +107,5 @@ kubectl run falco-event-generator --image=falcosecurity/event-generator run
       ]
     }
   ```
+
+{% endraw %}

@@ -2,6 +2,8 @@
 title: "The runtime-audit-engine module: advanced usage"
 ---
 
+{% raw %}
+
 ## Enabling debugging logs
 
 ### Falco
@@ -105,3 +107,5 @@ You can use the [Falcosidekick](https://github.com/falcosecurity/falcosidekick) 
       ]
     }
   ```
+
+{% endraw %}
