@@ -142,12 +142,17 @@ func generateAndSaveSelfSignedCaAndCert(certHosts []string) {
 }
 
 func generateCrowdProxyCerts() {
-	csrRaw, ok := os.LookupEnv("CSR")
+	csrRawEncoded, ok := os.LookupEnv("CSR")
 	if ok == false {
 		log.Fatal(`Failed to lookup env variable "CSR"`)
 	}
 
-	caCert, caKey, csr, err := parseFrontProxyCaAndCsr("/etc/kubernetes/pki/front-proxy-ca.crt", "/etc/kubernetes/pki/front-proxy-ca.key", csrRaw)
+	csrRaw, err := base64.StdEncoding.DecodeString(csrRawEncoded)
+	if err != nil {
+		log.Fatalf("Failed to to decode base64-encoded CSR: %s", csrRawEncoded)
+	}
+
+	caCert, caKey, csr, err := parseFrontProxyCaAndCsr("/etc/kubernetes/pki/front-proxy-ca.crt", "/etc/kubernetes/pki/front-proxy-ca.key", string(csrRaw))
 	if err != nil {
 		log.Fatal(err)
 	}
