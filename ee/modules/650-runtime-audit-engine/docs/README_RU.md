@@ -112,4 +112,4 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 ## Алерты
 
-Если несколько Подов `runtime-audit-engine` не назначены на узлы планировщиком, то будет сгенерирован алерт `D8RuntimeAuditEngineNotScheduledInCluster`.
+Если несколько подов `runtime-audit-engine` не назначены на узлы планировщиком, то будет сгенерирован алерт `D8RuntimeAuditEngineNotScheduledInCluster`.

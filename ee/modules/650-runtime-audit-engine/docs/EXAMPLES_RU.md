@@ -80,7 +80,7 @@ spec:
       priority: Notice
 ```
 
-## Добавление правила для отправки уведомлений о запуске shell оболочки в контейнере
+## Добавление правила для отправки уведомлений о запуске shell-оболочки в контейнере
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -107,7 +107,7 @@ spec:
 
 ## Дополнительные примеры
 
-Если вам необходимо больше примеров правил, изучите следующие ресурсы
+Если вам необходимо больше примеров правил, изучите следующие ресурсы:
 
 - [falco rules repository](https://github.com/falcosecurity/rules/blob/32b635394c40a56f8bdeb334c60a46e2edd9908c/rules/application_rules.yaml)
 - [artifacthub falco rules](https://artifacthub.io/packages/search?kind=1&sort=relevance&page=1)
