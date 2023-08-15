@@ -24,9 +24,11 @@ Deckhouse deploys Falco agents (which run as a DaemonSet) on every node. The age
 ![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.svg)
 <!--- Source: https://docs.google.com/drawings/d/1NZ91z8NXNiuS50ybcMoMsZI3SbQASZXJGLANdaNNm_U --->
 
-> Falco developers recommend deploying Falco as a systemd unit for maximum security.
-> However, a Kubernetes cluster with the autoscaling feature enabled makes it hard to operate. 
-> Additional security mechanisms of Deckhouse (implemented by other modules), such as multitenancy and admission policy control, provide the required level of security to mitigate attacks on the Falco DaemonSet.
+{% alert %}
+Falco developers recommend deploying Falco as a systemd unit for maximum security.
+However, a Kubernetes cluster with the autoscaling feature enabled makes it hard to operate. 
+Additional security mechanisms of Deckhouse (implemented by other modules), such as multitenancy and admission policy control, provide the required level of security to mitigate attacks on the Falco DaemonSet.
+{% endalert %}
 
 There are four different containers in a single agent Pod:
 ![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.svg)
@@ -106,8 +108,10 @@ You can manually configure the webhook for Kubernetes clusters with a control pl
    ```
 2. Add the `--audit-webhook-config-file` flag to the `kube-apiserver` manifest. The flag must point to the previously created file.
 
-> **Note!** Remember to configure the audit policy, because Deckhouse only collects Kubernetes audit events from the system namespaces by default.
-> An example of configuration can be found in the [control-plane-manager](../040-control-plane-manager/) module documentation.
+{% alert level="warning" %}
+Remember to configure the audit policy, because Deckhouse only collects Kubernetes audit events from the system namespaces by default. 
+An example of configuration can be found in the [control-plane-manager](../040-control-plane-manager/) module documentation.
+{% endalert %}
 
 ## Alerting
 
