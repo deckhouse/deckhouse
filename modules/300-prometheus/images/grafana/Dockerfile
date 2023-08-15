@@ -71,7 +71,7 @@ RUN apt-get update && \
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
 RUN make gen-go
-RUN go build -ldflags -w -ldflags "-linkmode external -extldflags -static" -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
+RUN go build -ldflags -w -ldflags "-linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
 RUN go run build.go build-cli
 
 FROM $BASE_GOLANG_20_ALPINE as runner
@@ -175,6 +175,7 @@ ENV BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
 
 WORKDIR $GF_PATHS_HOME
 
+ENV GODEBUG="netdns=cgo"
 USER 64535
 
 EXPOSE 3000
