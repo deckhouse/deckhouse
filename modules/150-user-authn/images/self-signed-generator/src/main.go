@@ -23,6 +23,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
+	"fmt"
 	"log"
 	"math/big"
 	"os"
@@ -160,7 +161,7 @@ func generateCrowdProxyCerts() {
 	// Generate a random serial number for the new certificate
 	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {
-		log.Fatal("Failed to generate serial number:", err)
+		log.Fatal("Failed to generate serial number: %s", err)
 	}
 
 	// Set the certificate template for the new certificate
@@ -174,7 +175,7 @@ func generateCrowdProxyCerts() {
 	// Sign the new certificate using the CA private key
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, caCert, csr.PublicKey, caKey)
 	if err != nil {
-		log.Fatalf("Failed to sign certificate:", err)
+		log.Fatalf("Failed to sign certificate: %s", err)
 	}
 
 	// Generate the PEM encoded certificate
@@ -183,7 +184,7 @@ func generateCrowdProxyCerts() {
 		log.Fatalf("Failed to encode certificate to PEM: %s", certBytes)
 	}
 
-	log.Printf("Certificate: %s", base64.StdEncoding.EncodeToString(cert))
+	fmt.Printf("Certificate: %s", base64.StdEncoding.EncodeToString(cert))
 
 	return
 }
