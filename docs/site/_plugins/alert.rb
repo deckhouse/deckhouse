@@ -40,7 +40,7 @@ module Jekyll
         id = @config[:id] ? %Q(id="#{@config[:id]}") : ""
         %Q(<#{@config[:tag]} markdown="0" #{id} class="#{@config[:level]} #{@config[:class]}">
           <svg class="alert__icon icon--#{@config[:level]}">
-            <use xlink:href="../images/sprite.svg##{@config[:level]}-icon"></use>
+            <use xlink:href="/images/sprite.svg##{@config[:level]}-icon"></use>
           </svg>
           <div>#{rendered_content}</div>
         </#{@config[:tag]}>)
