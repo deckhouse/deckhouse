@@ -71,7 +71,7 @@ RUN apt-get update && \
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
 RUN make gen-go
-RUN go build -ldflags -w -ldflags "-linkmode external -extldflags -static" -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
+RUN GODEBUG=netdns=cgo go build -ldflags -w -ldflags "-linkmode external -extldflags -static" -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
 RUN go run build.go build-cli
 
 FROM $BASE_GOLANG_20_ALPINE as runner
@@ -155,7 +155,7 @@ RUN chown -R 64535:64535 /usr/share/grafana && \
 
 RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
 
-FROM $BASE_UBUNTU
+FROM $BASE_DISTROLESS
 
 COPY --from=runner /app/grafana-runner /usr/local/bin/
 COPY --from=grafana-distr /usr/share/grafana/ /usr/share/grafana/
