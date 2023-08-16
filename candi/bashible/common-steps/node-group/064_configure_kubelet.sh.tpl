@@ -38,8 +38,7 @@ fi
   {{- if .nodeGroup.cri.notManaged.criSocketPath }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
-# TODO remove after removing support of kubernetes 1.23
-for socket_path in {{ if semverCompare "<1.24" .kubernetesVersion }}/var/run/docker.sock{{ end }} /run/containerd/containerd.sock; do
+for socket_path in /var/run/docker.sock /run/containerd/containerd.sock; do
   if [[ -S "${socket_path}" ]]; then
     cri_socket_path="${socket_path}"
     break
@@ -52,18 +51,19 @@ if [[ -z "${cri_socket_path}" ]]; then
   exit 1
 fi
 
-  cri_type="NotManagedContainerd"
-# TODO remove after removing support of kubernetes 1.23
-  {{- if semverCompare "<1.24" .kubernetesVersion }}
 if grep -q "docker" <<< "${cri_socket_path}"; then
   cri_type="NotManagedDocker"
+else
+  cri_type="NotManagedContainerd"
 fi
-  {{- end }}
+{{- else if eq .cri "Docker" }}
+cri_type="Docker"
+{{- else }}
+cri_type="Containerd"
 {{- end }}
 
-# TODO remove after removing support of kubernetes 1.23
-{{- if semverCompare "<1.24" .kubernetesVersion }}
 if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
+  cgroup_driver="cgroupfs"
   criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
   if [ -d "${criDir}/overlay2" ]; then
     criDir="${criDir}/overlay2"
@@ -73,7 +73,6 @@ if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
     fi
   fi
 fi
-{{- end }}
 
 if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "NotManagedContainerd" ]]; then
   criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
