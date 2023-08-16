@@ -132,6 +132,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: DECKHOUSE_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
             - name: DECKHOUSE_NODE_NAME
               valueFrom:
                 fieldRef:

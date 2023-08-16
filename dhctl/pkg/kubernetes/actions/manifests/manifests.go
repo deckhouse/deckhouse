@@ -325,6 +325,12 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		{
+			Name: "DECKHOUSE_NODE_IP",
+			ValueFrom: &apiv1.EnvVarSource{
+				FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.hostIP"},
+			},
+		},
+		{
 			Name: "DECKHOUSE_NODE_NAME",
 			ValueFrom: &apiv1.EnvVarSource{
 				FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "spec.nodeName"},
