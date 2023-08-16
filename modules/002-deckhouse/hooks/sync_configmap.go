@@ -46,13 +46,13 @@ Notes:
 */
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/deckhouse-config/sync",
+	Queue: "/modules/deckhouse/sync-configs",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                   "configs",
 			ApiVersion:             "deckhouse.io/v1alpha1",
 			Kind:                   "ModuleConfig",
-			WaitForSynchronization: pointer.BoolPtr(true),
+			WaitForSynchronization: pointer.Bool(true),
 			FilterFunc:             filterModuleConfig,
 		},
 		{

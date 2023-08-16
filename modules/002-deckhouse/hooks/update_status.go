@@ -55,15 +55,15 @@ ModuleConfig status consists of:
 */
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/deckhouse-config/status",
+	Queue: "/modules/deckhouse/status-configs",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "configs",
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "ModuleConfig",
 			FilterFunc:                   filterModuleConfigForStatus,
-			ExecuteHookOnSynchronization: pointer.BoolPtr(true),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.Bool(true),
+			ExecuteHookOnEvents:          pointer.Bool(false),
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
