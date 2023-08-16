@@ -18,48 +18,45 @@ package apis
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
+	v1 "k8s.io/api/core/v1"
+
 	log "github.com/sirupsen/logrus"
+
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
-	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
 	"github.com/slok/kubewebhook/v2/pkg/model"
+	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/deckhouse/deckhouse/go_lib/module"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
-func init() {
-	module.RegisterValidationHandler("/validate/v1alpha1/modules", moduleValidationHandler())
-}
-
-func moduleValidationHandler() http.Handler {
+func deckhouseCMValidationHandler() http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
-		// UserInfo groups: [system:serviceaccounts system:serviceaccounts:d8-system system:authenticated]
-		if review.UserInfo.Username != "system:serviceaccount:d8-system:deckhouse" {
-			return &kwhvalidating.ValidatorResult{
-				Valid:   false,
-				Message: "manual Module change is forbidden",
-			}, nil
+		operation := "changing"
+		if review.Operation == kwhmodel.OperationDelete {
+			operation = "deleting"
 		}
 
-		return &kwhvalidating.ValidatorResult{
-			Valid:   true,
-			Message: "",
-		}, nil
-	})
+		cmName := obj.GetName()
 
-	kl := kwhlogrus.NewLogrus(log.NewEntry(log.StandardLogger()))
+		if review.UserInfo.Username == "system:serviceaccount:d8-system:deckhouse" || review.UserInfo.Username == "system:serviceaccount:kube-system:generic-garbage-collector" {
+			return allowResult("")
+		}
+
+		log.Infof("Request to %s ConfigMap/%s by user %+v", string(review.Operation), cmName, review.UserInfo)
+
+		return rejectResult(fmt.Sprintf("%s ConfigMap/%s is not allowed for %s. Use ModuleConfig resources to configure Deckhouse.", operation, cmName, review.UserInfo.Username))
+	})
 
 	// Create webhook.
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
-		ID:        "module-operations",
+		ID:        "deckhouse-cm-operations",
 		Validator: vf,
-		Logger:    kl,
-		Obj:       &v1alpha1.Module{},
+		Logger:    validationLogger,
+		Obj:       &v1.ConfigMap{},
 	})
 
-	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: kl})
+	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: validationLogger})
 }
