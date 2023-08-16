@@ -33,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, generateDeckhouseEndpoints)
 
 func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
-	es := discv1.EndpointSlice{
+	es := &discv1.EndpointSlice{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "EndpointSlice",
 			APIVersion: "discovery.k8s.io/v1",
