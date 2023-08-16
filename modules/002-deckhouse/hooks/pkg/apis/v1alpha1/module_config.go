@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -28,6 +29,8 @@ const (
 	ModuleConfigVersion    = "v1alpha1"
 	ModuleConfigAPIVersion = "deckhouse.io/v1alpha1"
 )
+
+var _ runtime.Object = (*ModuleConfig)(nil)
 
 // +genclient
 // +genclient:nonNamespaced
@@ -46,10 +49,34 @@ type ModuleConfig struct {
 	Status ModuleConfigStatus `json:"status,omitempty"`
 }
 
+// SettingsValues empty interface in needed to handle DeepCopy generation. DeepCopy does not work with unnamed empty interfaces
+type SettingsValues map[string]interface{}
+
+func (v *SettingsValues) DeepCopy() *SettingsValues {
+	nmap := make(map[string]interface{}, len(*v))
+
+	for key, value := range *v {
+		nmap[key] = value
+	}
+
+	vv := SettingsValues(nmap)
+
+	return &vv
+}
+
+func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
+	{
+		v := &v
+		clone := v.DeepCopy()
+		*out = *clone
+		return
+	}
+}
+
 type ModuleConfigSpec struct {
-	Version  int                    `json:"version,omitempty"`
-	Settings map[string]interface{} `json:"settings,omitempty"`
-	Enabled  *bool                  `json:"enabled,omitempty"`
+	Version  int            `json:"version,omitempty"`
+	Settings SettingsValues `json:"settings,omitempty"`
+	Enabled  *bool          `json:"enabled,omitempty"`
 }
 
 type ModuleConfigStatus struct {

@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
+
 	kcm "github.com/flant/addon-operator/pkg/kube_config_manager"
 	"github.com/flant/kube-client/client"
 	"github.com/flant/kube-client/fake"
@@ -34,7 +36,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 func TestInitialConfigLoaderWithConfigMapDeckhouse(t *testing.T) {
