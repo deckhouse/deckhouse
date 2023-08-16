@@ -45,6 +45,8 @@
  - **[linstor]** Update `piraeus-operator` CRDs to be compatible with the version `1.10.5`. [#5325](https://github.com/deckhouse/deckhouse/pull/5325)
  - **[linstor]** Update piraeus-operator and linstor-csi. Bump k8s api package versions. [#5301](https://github.com/deckhouse/deckhouse/pull/5301)
  - **[log-shipper]** Alert if replicas are not available. [#5311](https://github.com/deckhouse/deckhouse/pull/5311)
+ - **[metallb]** fix error in speaker leader-election [#5572](https://github.com/deckhouse/deckhouse/pull/5572)
+    metallb pods should restart
  - **[monitoring-kubernetes]** Select all controllers by default on the Namespace dashboard in Grafana. [#5224](https://github.com/deckhouse/deckhouse/pull/5224)
  - **[runtime-audit-engine]** Alert if replicas are not available. [#5311](https://github.com/deckhouse/deckhouse/pull/5311)
  - **[secret-copier]** Fix the creation of a secret in terminating or errored namespace. [#5295](https://github.com/deckhouse/deckhouse/pull/5295)
