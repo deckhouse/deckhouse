@@ -21,14 +21,12 @@ import (
 	"strconv"
 	"strings"
 
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
-
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/go-openapi/spec"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 // ConfigValidator is a validator for values in ModuleConfig.
@@ -66,7 +64,7 @@ func (v ValidationResult) HasError() bool {
 
 // validateCR checks if ModuleConfig resource is well-formed.
 // TODO(future) return only error
-func (c *ConfigValidator) validateCR(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationResult {
+func (c *ConfigValidator) validateCR(cfg *d8v1alpha1.ModuleConfig) ValidationResult {
 	result := ValidationResult{}
 
 	if cfg.Spec.Version == 0 {
@@ -118,7 +116,7 @@ func (c *ConfigValidator) validateCR(cfg *d8cfg_v1alpha1.ModuleConfig) Validatio
 
 // ConvertToLatest checks if ModuleConfig resource is well-formed and runs conversions for spec.settings is needed.
 // TODO(future) return cfg, error. Put cfg.Spec into result cfg.
-func (c *ConfigValidator) ConvertToLatest(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationResult {
+func (c *ConfigValidator) ConvertToLatest(cfg *d8v1alpha1.ModuleConfig) ValidationResult {
 	result := c.validateCR(cfg)
 	if result.HasError() || !hasVersionedSettings(cfg) {
 		return result
@@ -153,7 +151,7 @@ func (c *ConfigValidator) ConvertToLatest(cfg *d8cfg_v1alpha1.ModuleConfig) Vali
 // - runs conversions for spec.settings is needed
 // - use OpenAPI schema defined in related config-values.yaml file to validate converted spec.settings.
 // TODO(future) return cfg, error. Put cfg.Spec into result cfg.
-func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationResult {
+func (c *ConfigValidator) Validate(cfg *d8v1alpha1.ModuleConfig) ValidationResult {
 	result := c.ConvertToLatest(cfg)
 	if result.HasError() || !hasVersionedSettings(cfg) {
 		return result
@@ -238,6 +236,6 @@ func cleanupMultilineError(err error) string {
 	return buf.String()
 }
 
-func hasVersionedSettings(cfg *d8cfg_v1alpha1.ModuleConfig) bool {
+func hasVersionedSettings(cfg *d8v1alpha1.ModuleConfig) bool {
 	return cfg != nil && cfg.Spec.Version > 0 && cfg.Spec.Settings != nil
 }

@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
-
 	kcm "github.com/flant/addon-operator/pkg/kube_config_manager"
 	"github.com/flant/kube-client/client"
 	"github.com/flant/kube-client/fake"
@@ -36,7 +34,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 func TestInitialConfigLoaderWithConfigMapDeckhouse(t *testing.T) {
@@ -49,7 +47,7 @@ func TestInitialConfigLoaderWithConfigMapDeckhouse(t *testing.T) {
 	})
 
 	// KubeClient
-	mcGVR := d8cfg_v1alpha1.GroupVersionResource()
+	mcGVR := d8v1alpha1.GroupVersionResource()
 	fakeCluster := fake.NewFakeCluster(fake.ClusterVersionV121)
 	fakeCluster.RegisterCRD(mcGVR.Group, mcGVR.Version, "ModuleConfig", false)
 	kubeClient := fakeCluster.Client
@@ -338,7 +336,7 @@ func createCm(kubeClient client.Client, manifest string) error {
 }
 
 func createModCfg(kubeClient client.Client, manifest string) error {
-	var cfg d8cfg_v1alpha1.ModuleConfig
+	var cfg d8v1alpha1.ModuleConfig
 	err := yaml.Unmarshal([]byte(manifest), &cfg)
 	if err != nil {
 		return err
@@ -350,6 +348,6 @@ func createModCfg(kubeClient client.Client, manifest string) error {
 	}
 	obj := &unstructured.Unstructured{Object: content}
 
-	_, err = kubeClient.Dynamic().Resource(d8cfg_v1alpha1.GroupVersionResource()).Create(context.Background(), obj, metav1.CreateOptions{})
+	_, err = kubeClient.Dynamic().Resource(d8v1alpha1.GroupVersionResource()).Create(context.Background(), obj, metav1.CreateOptions{})
 	return err
 }

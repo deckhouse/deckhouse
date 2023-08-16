@@ -22,8 +22,6 @@ import (
 	"sort"
 	"strings"
 
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -35,7 +33,7 @@ import (
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 /**
@@ -143,7 +141,7 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 		input.LogEntry.Infof(msg)
 	}
 
-	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+	properCfgs := make([]*d8v1alpha1.ModuleConfig, 0)
 
 	for _, cfg := range configs {
 		res := d8config.Service().ConfigValidator().ConvertToLatest(cfg)
@@ -208,8 +206,8 @@ func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_pat
 }
 
 // syncModuleConfigs updates generated ConfigMap using ModuleConfig resources.
-func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8cfg_v1alpha1.ModuleConfig) error {
-	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8v1alpha1.ModuleConfig) error {
+	properCfgs := make([]*d8v1alpha1.ModuleConfig, 0)
 
 	for _, cfg := range allConfigs {
 		res := d8config.Service().ConfigValidator().Validate(cfg)

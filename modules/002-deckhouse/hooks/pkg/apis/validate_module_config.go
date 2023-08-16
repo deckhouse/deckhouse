@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
-
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
@@ -14,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 func moduleConfigValidationHandler() http.Handler {
@@ -28,7 +26,7 @@ func moduleConfigValidationHandler() http.Handler {
 			return rejectResult(fmt.Sprintf("operation '%s' is not applicable", review.Operation))
 		}
 
-		cfg, ok := obj.(*d8cfg_v1alpha1.ModuleConfig)
+		cfg, ok := obj.(*d8v1alpha1.ModuleConfig)
 		if !ok {
 			return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 		}
@@ -54,7 +52,7 @@ func moduleConfigValidationHandler() http.Handler {
 		ID:        "module-config-operations",
 		Validator: vf,
 		Logger:    validationLogger,
-		Obj:       &d8cfg_v1alpha1.ModuleConfig{},
+		Obj:       &d8v1alpha1.ModuleConfig{},
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: validationLogger})
