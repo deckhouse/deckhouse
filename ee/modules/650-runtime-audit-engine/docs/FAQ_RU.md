@@ -1,5 +1,5 @@
 ---
-title: "Модуль runtime-audit-engine: FAQ                                                            "
+title: "Модуль runtime-audit-engine: FAQ"
 ---
 
 {% raw %}
