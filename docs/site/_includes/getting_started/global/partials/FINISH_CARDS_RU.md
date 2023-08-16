@@ -8,7 +8,7 @@
 {% if page.platform_code != 'existing' and page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-📚 <span class="cards-item__title_text">Документация</span>
+📚 <span class="cards-item__title-text">Документация</span>
 </h3>
 <div class="cards-item__text">
 <p>Документация по установленной в кластере версии Deckhouse.</p>
@@ -20,7 +20,7 @@
 {% if page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-📊 <span class="cards-item__title_text">Мониторинг</span>
+📊 <span class="cards-item__title-text">Мониторинг</span>
 </h3>
 <div class="cards-item__text">
 <p>Изучите дэшборды Grafana, поставляемые с Deckhouse.</p>
@@ -33,7 +33,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-☸ <span class="cards-item__title_text">Dashboard</span>
+☸ <span class="cards-item__title-text">Dashboard</span>
 </h3>
 <div class="cards-item__text">
 <p>Получите доступ к Kubernetes Dashboard</p>
@@ -43,7 +43,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-👌 <span class="cards-item__title_text">Status page</span>
+👌 <span class="cards-item__title-text">Status page</span>
 </h3>
 <div class="cards-item__text">
 <p>Узнайте общий статус Deckhouse и его компонентов.<br />
@@ -57,7 +57,7 @@
 {% if page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🏭 <span class="cards-item__title_text">Подготовка к production</span>
+🏭 <span class="cards-item__title-text">Подготовка к production</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Подготовьте ваш кластер к приему продуктивного трафика.
@@ -85,7 +85,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-⟳ <span class="cards-item__title_text">Настройка CI/CD-системы</span>
+⟳ <span class="cards-item__title-text">Настройка CI/CD-системы</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 [Создайте](/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер, и выделите ему права.
@@ -96,7 +96,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔀 <span class="cards-item__title_text">Направляем трафик на приложение</span>
+🔀 <span class="cards-item__title-text">Направляем трафик на приложение</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Создайте `Service` и `Ingress` для вашего приложения.
@@ -108,7 +108,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔍 <span class="cards-item__title_text">Мониторинг приложения</span>
+🔍 <span class="cards-item__title-text">Мониторинг приложения</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
@@ -132,7 +132,7 @@ Service'у.
 
 <div class="cards-item cards-item_inverse" style="width: 100%">
 <h3 class="cards-item__title text_h3">
-⚖ <span class="cards-item__title_text">Управление узлами</span>
+⚖ <span class="cards-item__title-text">Управление узлами</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 {% if page.platform_type == 'cloud' %}
