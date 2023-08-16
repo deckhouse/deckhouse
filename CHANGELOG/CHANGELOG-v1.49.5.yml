@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Fix kubelet configuration step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5553
+
