@@ -2,7 +2,7 @@
 002-deckhouse/              @yalosev
 010-operator-prometheus-crd/ @nabokihms
 010-prometheus-crd/         @nabokihms
-021-cni-cilium/             @zuzzas @RomanenkoDenys
+021-cni-cilium/             @zuzzas @RomanenkoDenys @apolovov
 030-cloud-provider-openstack/ @konstantin-axenov
 030-cloud-provider-vsphere/ @RomanenkoDenys
 041-linstor/                @AleksZimin
@@ -21,7 +21,7 @@
 301-prometheus-*/           @nabokihms
 303-prometheus-*/           @nabokihms
 350-node-local-dns/         @zuzzas
-380-metallb/                @RomanenkoDenys
+380-metallb/                @RomanenkoDenys @apolovov
 402-ingress-nginx/          @nabokihms @yalosev
 460-log-shipper/            @nabokihms
 470-chrony/                 @RomanenkoDenys
