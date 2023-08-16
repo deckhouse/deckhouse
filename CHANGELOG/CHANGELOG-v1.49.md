@@ -32,6 +32,7 @@
  - **[admission-policy-engine]** Update Kubernetes Go client dependency to `0.26.4`. [#5454](https://github.com/deckhouse/deckhouse/pull/5454)
     `gatekeeper-audit` pod will be recreated.
  - **[admission-policy-engine]** Fix `checkContainerDuplicates` policy. Allow env with the same name in the different containers [#5214](https://github.com/deckhouse/deckhouse/pull/5214)
+ - **[candi]** Fix kubelet configuration step. [#5553](https://github.com/deckhouse/deckhouse/pull/5553)
  - **[candi]** Revert migration to cgroupfs driver for containerd CRI. [#5514](https://github.com/deckhouse/deckhouse/pull/5514)
  - **[candi]** Revert kubelet CRI socket path configuration for docker. [#5411](https://github.com/deckhouse/deckhouse/pull/5411)
  - **[candi]** Removed double sudo call for reboot command. [#5272](https://github.com/deckhouse/deckhouse/pull/5272)
