@@ -6,6 +6,9 @@ FROM $BASE_GOLANG_19_ALPINE as artifact
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch v2.7.3 ${SOURCE_REPO}/grafana/loki.git /loki
 WORKDIR /loki/
