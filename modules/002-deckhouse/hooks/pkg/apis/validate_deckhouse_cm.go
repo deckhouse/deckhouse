@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -34,12 +35,16 @@ import (
 
 func deckhouseCMValidationHandler() http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+		cmName := obj.GetName()
+
+		if cmName != os.Getenv("ADDON_OPERATOR_CONFIG_MAP") {
+			return allowResult("")
+		}
+
 		operation := "changing"
 		if review.Operation == kwhmodel.OperationDelete {
 			operation = "deleting"
 		}
-
-		cmName := obj.GetName()
 
 		if review.UserInfo.Username == "system:serviceaccount:d8-system:deckhouse" || review.UserInfo.Username == "system:serviceaccount:kube-system:generic-garbage-collector" {
 			return allowResult("")

@@ -54,12 +54,6 @@ webhooks:
         port: 9651
         path: /validate/v1alpha1/module-configs
   - name: configmap.deckhouse-webhook.deckhouse.io
-    objectSelector:
-      matchExpressions:
-        - key: "kubernetes.io/metadata.name"
-          operator: "In"
-          values:
-            - "deckhouse-generated-config-do-not-edit"
     namespaceSelector:
       matchExpressions:
         - key: "kubernetes.io/metadata.name"
