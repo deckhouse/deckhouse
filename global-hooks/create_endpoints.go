@@ -42,9 +42,10 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 			Name:      "deckhouse",
 			Namespace: "d8-system",
 			Labels: map[string]string{
-				"app":      "deckhouse",
-				"module":   "deckhouse",
-				"heritage": "deckhouse",
+				"app":                        "deckhouse",
+				"module":                     "deckhouse",
+				"heritage":                   "deckhouse",
+				"kubernetes.io/service-name": "deckhouse",
 			},
 		},
 		AddressType: "IPv4",
