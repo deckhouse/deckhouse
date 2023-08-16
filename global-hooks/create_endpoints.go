@@ -50,7 +50,7 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 		AddressType: "IPv4",
 		Endpoints: []discv1.Endpoint{
 			{
-				Addresses: []string{os.Getenv("DECKHOUSE_NODE_IP")},
+				Addresses: []string{os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")},
 				Conditions: discv1.EndpointConditions{
 					Ready:       pointer.Bool(true),
 					Serving:     pointer.Bool(true),
