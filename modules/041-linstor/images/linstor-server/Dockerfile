@@ -135,7 +135,7 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_UBUNTU
 ARG PIRAEUS_GITREPO=https://github.com/piraeusdatastore/piraeus
-ARG PIRAEUS_COMMIT_REF=42f09ab73de76661404f2c556fbf820bf2826614
+ARG PIRAEUS_COMMIT_REF=01411fc6fe7f329fb91a64ba67d882c24dfcb3c6
 
 COPY --from=linstor-builder /linstor-common_*.deb /linstor-controller_*.deb /linstor-satellite_*.deb /packages/
 COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages/
