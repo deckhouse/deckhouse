@@ -151,8 +151,10 @@ func (i *ImageConfig) AuthConfig() *types.DockerAuthConfig {
 
 func (i *ImageConfig) extractImageFromFileRegistry() error {
 	fileInArchive, resultFile := filepath.Join("/", i.fileImageInArchive()), i.resultImageArchive()
+	targetDir, _ := filepath.Split(fileInArchive)
+
 	err := util.NewTarGzReader(util.AddTarGzExt(i.RegistryPath()), func(h *tar.Header, r *tar.Reader) (bool, error) {
-		dir, name := filepath.Split(h.Name)
+		dir, name := filepath.Split(util.TrimTarGzExt(h.Name))
 
 		tagAndDigest := strings.Split(name, "@")
 		tag := tagAndDigest[0]
@@ -160,7 +162,8 @@ func (i *ImageConfig) extractImageFromFileRegistry() error {
 		if len(tagAndDigest) > 1 {
 			digest = tagAndDigest[1]
 		}
-		if h.Name == fileInArchive || dir == i.Path() && (digest == i.Digest() || (digest == "" && tag == i.Tag())) {
+
+		if h.Name == fileInArchive || (dir == targetDir && (digest == i.Digest() || (digest == "" && tag == i.Tag()))) {
 			return true, util.MkFile(resultFile, r, h.FileInfo())
 		}
 		return false, nil

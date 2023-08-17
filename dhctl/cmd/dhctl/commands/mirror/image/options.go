@@ -49,35 +49,49 @@ func WithOutput(w io.Writer) CopyOption {
 }
 
 func WithDestInsecure() CopyOption {
-	return func(o *copyOptions) {
-		if o.copyOptions.DestinationCtx == nil {
-			o.copyOptions.DestinationCtx = &types.SystemContext{}
+	return func(co *copyOptions) {
+		co.copyOptions.DestinationCtx = sysCtxORNew(co.copyOptions.DestinationCtx)
+		co.copyOptions.DestinationCtx.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
+	}
+}
+
+func WithSourceCertsDir(certsDir string) CopyOption {
+	return func(co *copyOptions) {
+		if certsDir == "" {
+			return
 		}
-		o.copyOptions.DestinationCtx.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
+		co.copyOptions.SourceCtx = sysCtxORNew(co.copyOptions.SourceCtx)
+		co.copyOptions.SourceCtx.DockerCertPath = certsDir
+	}
+}
+
+func WithDestCertsDir(certsDir string) CopyOption {
+	return func(co *copyOptions) {
+		if certsDir == "" {
+			return
+		}
+		co.copyOptions.DestinationCtx = sysCtxORNew(co.copyOptions.DestinationCtx)
+		co.copyOptions.DestinationCtx.DockerCertPath = certsDir
 	}
 }
 
 func withSourceAuth(cfg *types.DockerAuthConfig) CopyOption {
-	return func(o *copyOptions) {
+	return func(co *copyOptions) {
 		if cfg == nil {
 			return
 		}
-		if o.copyOptions.SourceCtx == nil {
-			o.copyOptions.SourceCtx = &types.SystemContext{}
-		}
-		o.copyOptions.SourceCtx.DockerAuthConfig = cfg
+		co.copyOptions.SourceCtx = sysCtxORNew(co.copyOptions.SourceCtx)
+		co.copyOptions.SourceCtx.DockerAuthConfig = cfg
 	}
 }
 
 func withDestAuth(cfg *types.DockerAuthConfig) CopyOption {
-	return func(o *copyOptions) {
+	return func(co *copyOptions) {
 		if cfg == nil {
 			return
 		}
-		if o.copyOptions.DestinationCtx == nil {
-			o.copyOptions.DestinationCtx = &types.SystemContext{}
-		}
-		o.copyOptions.DestinationCtx.DockerAuthConfig = cfg
+		co.copyOptions.DestinationCtx = sysCtxORNew(co.copyOptions.DestinationCtx)
+		co.copyOptions.DestinationCtx.DockerAuthConfig = cfg
 	}
 }
 
@@ -96,18 +110,31 @@ func withAuth(cfg *types.DockerAuthConfig) ListOption {
 		if cfg == nil {
 			return
 		}
-		if lo.sysCtx == nil {
-			lo.sysCtx = &types.SystemContext{}
-		}
+		lo.sysCtx = sysCtxORNew(lo.sysCtx)
 		lo.sysCtx.DockerAuthConfig = cfg
 	}
 }
 
 func WithInsecure() ListOption {
 	return func(lo *listOptions) {
-		if lo.sysCtx == nil {
-			lo.sysCtx = &types.SystemContext{}
-		}
+		lo.sysCtx = sysCtxORNew(lo.sysCtx)
 		lo.sysCtx.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
 	}
+}
+
+func WithCertsDir(certsDir string) ListOption {
+	return func(lo *listOptions) {
+		if certsDir == "" {
+			return
+		}
+		lo.sysCtx = sysCtxORNew(lo.sysCtx)
+		lo.sysCtx.DockerCertPath = certsDir
+	}
+}
+
+func sysCtxORNew(sysCtx *types.SystemContext) *types.SystemContext {
+	if sysCtx == nil {
+		return &types.SystemContext{}
+	}
+	return sysCtx
 }

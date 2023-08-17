@@ -32,7 +32,7 @@ const (
 )
 
 func TestVersionsComparer_calculateDiff(t *testing.T) {
-	fixtureRegistry := image.MustNewRegistry("file:"+fileDeckhouseRegistry, nil, true)
+	fixtureRegistry := image.MustNewRegistry("file:"+fileDeckhouseRegistry, nil)
 
 	defer os.RemoveAll(util.TrimTarGzExt(fileDeckhouseRegistry))
 
@@ -58,7 +58,7 @@ func TestVersionsComparer_calculateDiff(t *testing.T) {
 			name: "latest version",
 			fields: fields{
 				source: fixtureRegistry,
-				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil, false),
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
 			},
 			args: args{
 				ctx:        context.Background(),
@@ -76,7 +76,7 @@ func TestVersionsComparer_calculateDiff(t *testing.T) {
 			name: "no min version",
 			fields: fields{
 				source: fixtureRegistry,
-				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil, false),
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
 			},
 			args: args{
 				ctx: context.Background(),
@@ -95,7 +95,7 @@ func TestVersionsComparer_calculateDiff(t *testing.T) {
 			name: "specific min version",
 			fields: fields{
 				source: fixtureRegistry,
-				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil, false),
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
 			},
 			args: args{
 				ctx:        context.Background(),
@@ -133,7 +133,7 @@ func TestVersionsComparer_calculateDiff(t *testing.T) {
 }
 
 func TestVersionsComparer_ImagesToCopy(t *testing.T) {
-	fixtureRegistry := image.MustNewRegistry("file:"+fileDeckhouseRegistry, nil, true)
+	fixtureRegistry := image.MustNewRegistry("file:"+fileDeckhouseRegistry, nil)
 
 	defer os.RemoveAll(util.TrimTarGzExt(fileDeckhouseRegistry))
 
@@ -160,7 +160,7 @@ func TestVersionsComparer_ImagesToCopy(t *testing.T) {
 			name: "Copy from fixtures to folder without destination and min version",
 			fields: fields{
 				source: fixtureRegistry,
-				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil, false),
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
 			},
 			args: args{
 				ctx: context.Background(),
@@ -267,7 +267,7 @@ func TestVersionsComparer_ImagesToCopy(t *testing.T) {
 			name: "Copy from fixtures to folder with very latest min version",
 			fields: fields{
 				source: fixtureRegistry,
-				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil, false),
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
 			},
 			args: args{
 				ctx:        context.Background(),
@@ -311,7 +311,7 @@ func TestVersionsComparer_ImagesToCopy(t *testing.T) {
 			name: "Copy from fixtures to folder with miv version latest",
 			fields: fields{
 				source: fixtureRegistry,
-				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil, false),
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
 			},
 			args: args{
 				ctx:        context.Background(),
@@ -355,7 +355,7 @@ func TestVersionsComparer_ImagesToCopy(t *testing.T) {
 			name: "Copy from fixtures to folder with old min version, that diff can not be fullfilled",
 			fields: fields{
 				source: fixtureRegistry,
-				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil, false),
+				dest:   image.MustNewRegistry("file:"+t.TempDir(), nil),
 			},
 			args: args{
 				ctx:        context.Background(),

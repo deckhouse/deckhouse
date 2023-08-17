@@ -46,15 +46,15 @@ type RegistryConfig struct {
 	authConfig *types.DockerAuthConfig
 }
 
-func MustNewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig, isSource bool) *RegistryConfig {
-	r, err := NewRegistry(registryPath, dockerCfg, isSource)
+func MustNewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig) *RegistryConfig {
+	r, err := NewRegistry(registryPath, dockerCfg)
 	if err != nil {
 		panic(err)
 	}
 	return r
 }
 
-func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig, isSource bool) (*RegistryConfig, error) {
+func NewRegistry(registryPath string, dockerCfg *types.DockerAuthConfig) (*RegistryConfig, error) {
 	transportName, withinTransport, f := strings.Cut(util.TrimTarGzExt(registryPath), ":")
 	if !f {
 		return nil, fmt.Errorf("can't find transport for '%s'", registryPath)

@@ -250,7 +250,7 @@ func (v *VersionsComparer) releaseMetadataVersions(ctx context.Context, destVers
 
 func (v *VersionsComparer) fetchReleaseMetadataDeckhouseVersion(ctx context.Context, release string) (*semver.Version, error) {
 	img := image.NewImageConfig(v.source, release, "", "release-channel")
-	contents, err := fileFromImage(ctx, img, "version.json", v.policyContext, v.sourceCopyOpts...)
+	contents, err := fileFromImage(ctx, img, "version.json", v.policyContext, v.logger, v.sourceCopyOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -311,9 +311,9 @@ func (v *VersionsComparer) modulesImages(ctx context.Context, diff []semver.Vers
 
 func (v *VersionsComparer) modulesImagesForVersion(ctx context.Context, deckhouseVersion semver.Version) (map[string]string, error) {
 	img := image.NewImageConfig(v.source, versionToTag(deckhouseVersion), "")
-	contents, err := fileFromImage(ctx, img, "deckhouse/modules/images_digests.json", v.policyContext, v.sourceCopyOpts...)
+	contents, err := fileFromImage(ctx, img, "deckhouse/modules/images_digests.json", v.policyContext, v.logger, v.sourceCopyOpts...)
 	if err != nil {
-		contents, err = fileFromImage(ctx, img, "deckhouse/modules/images_tags.json", v.policyContext, v.sourceCopyOpts...)
+		contents, err = fileFromImage(ctx, img, "deckhouse/modules/images_tags.json", v.policyContext, v.logger, v.sourceCopyOpts...)
 		if err != nil {
 			return nil, err
 		}
@@ -345,20 +345,20 @@ func deckhouseMinVersion(sourceVersions latestVersions, minVersion string) (*sem
 	return sourceVersions.GetString(minVersion)
 }
 
-func fileFromImage(ctx context.Context, img *image.ImageConfig, filename string, policyContext *signature.PolicyContext, opts ...image.CopyOption) ([]byte, error) {
+func fileFromImage(ctx context.Context, img *image.ImageConfig, filename string, policyContext *signature.PolicyContext, logger log.Logger, opts ...image.CopyOption) ([]byte, error) {
 	dir, err := os.MkdirTemp("/tmp", "deckhouse_*")
 	if err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(dir)
 
-	destRegistry, err := image.NewRegistry("dir:"+dir, nil, true)
+	destRegistry, err := image.NewRegistry("dir:"+dir, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	dest := img.WithNewRegistry(destRegistry)
-	if _, err := image.CopyImage(ctx, img, dest, policyContext, opts...); err != nil {
+	if _, err := image.CopyImage(ctx, img, dest, policyContext, logger, opts...); err != nil {
 		return nil, err
 	}
 

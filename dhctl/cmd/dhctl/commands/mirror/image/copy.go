@@ -23,14 +23,20 @@ import (
 	"github.com/containers/image/v5/copy"
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/types"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func CopyImage(ctx context.Context, src, dest *ImageConfig, policyContext *signature.PolicyContext, opts ...CopyOption) (bool, error) {
+func CopyImage(ctx context.Context, src, dest *ImageConfig, policyContext *signature.PolicyContext, logger log.Logger, opts ...CopyOption) (bool, error) {
 	copyOptions := &copyOptions{copyOptions: &copy.Options{ReportWriter: os.Stdout}}
-
 	opts = append(opts, withSourceAuth(src.AuthConfig()), withDestAuth(dest.AuthConfig()))
 	for _, opt := range opts {
 		opt(copyOptions)
+	}
+
+	if err := checkImageExists(ctx, src, dest, copyOptions); err == nil {
+		return true, nil
+	} else {
+		logger.LogDebugF("No image in dest registry equal to source image: %w\n", err)
 	}
 
 	srcRef, err := src.imageReference(true, copyOptions.dryRun)
@@ -42,10 +48,6 @@ func CopyImage(ctx context.Context, src, dest *ImageConfig, policyContext *signa
 	destRef, err := dest.imageReference(false, copyOptions.dryRun)
 	if err != nil {
 		return false, err
-	}
-
-	if err := checkImageExists(ctx, destRef, copyOptions.copyOptions.DestinationCtx); err == nil {
-		return true, nil
 	}
 
 	msg := fmt.Sprintf("\nCopying %s image to %s...\n", trimRef(srcRef), trimRef(destRef))
@@ -72,16 +74,49 @@ func trimRef(ref types.ImageReference) string {
 	return strings.TrimLeft(ref.StringWithinTransport(), "/")
 }
 
-func checkImageExists(ctx context.Context, imgRef types.ImageReference, sysCtx *types.SystemContext) error {
-	if imgRef.Transport().Name() == fileTransport {
-		return fmt.Errorf("Image existence not implemented in file registry")
+func checkImageExists(ctx context.Context, sourceImg, destImg *ImageConfig, copyOpt *copyOptions) error {
+	if destImg.RegistryTransport() == fileTransport {
+		return fmt.Errorf("image existence not implemented in file registry")
 	}
 
-	imgSource, err := imgRef.NewImageSource(ctx, sysCtx)
+	if digest := sourceImg.Digest(); digest != "" {
+		destImg = destImg.WithDigest(digest).WithTag("")
+	} else {
+		destImg = destImg.WithTag(sourceImg.Tag()).WithDigest("")
+	}
+
+	destImgRef, err := destImg.imageReference(false, copyOpt.dryRun)
 	if err != nil {
 		return err
 	}
 
-	_, _, err = imgSource.GetManifest(ctx, nil)
-	return err
+	destImgSource, err := destImgRef.NewImageSource(ctx, copyOpt.copyOptions.DestinationCtx)
+	if err != nil {
+		return err
+	}
+
+	destManifest, _, err := destImgSource.GetManifest(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	sourceImgRef, err := sourceImg.imageReference(true, copyOpt.dryRun)
+	if err != nil {
+		return err
+	}
+
+	sourceImgSource, err := sourceImgRef.NewImageSource(ctx, copyOpt.copyOptions.SourceCtx)
+	if err != nil {
+		return err
+	}
+
+	sourceManifest, _, err := sourceImgSource.GetManifest(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	if string(sourceManifest) != string(destManifest) {
+		return fmt.Errorf("images are not equal for %s and %s", sourceImgRef.StringWithinTransport(), destImgRef.StringWithinTransport())
+	}
+	return nil
 }

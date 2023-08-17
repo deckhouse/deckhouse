@@ -21,14 +21,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/types"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/image"
+	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/util"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/versions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -57,23 +56,32 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	var (
 		minVersion = app.NewStringWithRegexpValidation(versionLatestRE)
 
-		source       = app.NewStringWithRegexpValidation(registryRegexp)
-		licenseToken string
+		source         = app.NewStringWithRegexpValidation(registryRegexp)
+		sourceUser     string
+		sourcePassword string
+		sourceInsecure bool
+		sourceCAFile   string
 
 		destination         = app.NewStringWithRegexpValidation(registryRegexp)
 		destinationUser     string
 		destinationPassword string
 		destinationInsecure bool
+		destinationCAFile   string
 		dryRun              bool
 
 		outputReportFile string
 		outputFormat     string
 	)
 
+	edition, err := deckhouseEdition()
+	if err != nil {
+		panic(err)
+	}
+
 	cmd := kpApp.Command("mirror", "Copy images from deckhouse registry or tar.gz file to specified registry or tar.gz file.")
 
 	cmd.Arg("DESTINATION", destinationHelp).Required().SetValue(destination)
-	cmd.Flag("from", sourceHelp).Default("docker://registry.deckhouse.io/deckhouse").SetValue(source)
+	cmd.Flag("from", sourceHelp).Default(fmt.Sprintf("docker://registry.deckhouse.io/deckhouse/%s", edition)).SetValue(source)
 
 	cmd.Flag("dry-run", "Run without actually copying data.").BoolVar(&dryRun)
 	cmd.Flag("min-version", `The oldest version of deckhouse from your clusters or "latest" for clean installation.`).SetValue(minVersion)
@@ -81,39 +89,50 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd.Flag("output", "Format of the output report.").Default("json").EnumVar(&outputFormat, "yaml", "json")
 
 	// Deckhouse registry flags
-	cmd.Flag("license", "License key for Deckhouse registry.").Required().StringVar(&licenseToken)
+	cmd.Flag("source-username", "Username for the source registry.").Default("license-token").StringVar(&sourceUser)
+	cmd.Flag("source-password", "Password for the source registry.").StringVar(&sourcePassword)
+	cmd.Flag("source-insecure", "Use http instead of https while connecting to source registry.").BoolVar(&sourceInsecure)
+	cmd.Flag("source-ca-file", "Path to source registry CA.").ExistingFileVar(&sourceCAFile)
 
 	// Destination registry flags
-	cmd.Flag("username", "Username for the destination registry.").StringVar(&destinationUser)
-	cmd.Flag("password", "Password for the destination registry.").StringVar(&destinationPassword)
-	cmd.Flag("insecure", "Use http instead of https while connecting to destination registry.").BoolVar(&destinationInsecure)
+	cmd.Flag("dest-username", "Username for the destination registry.").StringVar(&destinationUser)
+	cmd.Flag("dest-password", "Password for the destination registry.").StringVar(&destinationPassword)
+	cmd.Flag("dest-insecure", "Use http instead of https while connecting to destination registry.").BoolVar(&destinationInsecure)
+	cmd.Flag("dest-ca-file", "Path to destination registry CA.").ExistingFileVar(&destinationCAFile)
 
 	logger := log.NewPrettyLogger()
 	runFunc := func() error {
 		ctx := context.Background()
-
-		logger.LogDebugLn("Retrieving deckhouse edition...")
-		edition, err := deckhouseEdition()
+		sourceTempCertsDir, err := util.CreateCertsDir(sourceCAFile)
+		if err != nil {
+			return err
+		}
+		destTempCertsDir, err := util.CreateCertsDir(destinationCAFile)
 		if err != nil {
 			return err
 		}
 
 		logger.LogDebugLn("Initializing source registry...")
-		source, err := deckhouseRegistry(source.String(), edition, licenseToken)
+		source, err := image.NewRegistry(source.String(), registryAuth(sourceUser, sourcePassword))
 		if err != nil {
 			return err
 		}
 		defer source.Close()
 
 		logger.LogDebugLn("Initializing destination registry...")
-		dest, err := image.NewRegistry(destination.String(), registryAuth(destinationUser, destinationPassword), false)
+		dest, err := image.NewRegistry(destination.String(), registryAuth(destinationUser, destinationPassword))
 		if err != nil {
 			return err
 		}
 
-		destListOptions := make([]image.ListOption, 0)
+		destListOptions := []image.ListOption{image.WithCertsDir(destTempCertsDir)}
 		if destinationInsecure {
 			destListOptions = append(destListOptions, image.WithInsecure())
+		}
+
+		sourceListOptions := []image.ListOption{image.WithCertsDir(sourceTempCertsDir)}
+		if destinationInsecure {
+			sourceListOptions = append(sourceListOptions, image.WithInsecure())
 		}
 
 		policyContext, err := image.NewPolicyContext()
@@ -124,10 +143,12 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		copyOpts := []image.CopyOption{
 			image.WithOutput(logger),
+			image.WithSourceCertsDir(sourceTempCertsDir),
+			image.WithDestCertsDir(destTempCertsDir),
 		}
 
-		finder := versions.NewVersionsComparer(source, dest, destListOptions, nil, copyOpts, policyContext, logger)
-		modulesImages, err := finder.ImagesToCopy(ctx, minVersion.String())
+		finder := versions.NewVersionsComparer(source, dest, destListOptions, sourceListOptions, copyOpts, policyContext, logger)
+		allImagesToCopy, err := finder.ImagesToCopy(ctx, minVersion.String())
 		if err != nil {
 			return err
 		}
@@ -141,29 +162,29 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			copyOpts = append(copyOpts, image.WithDryRun())
 		}
 
-		updatedImages := make(map[string]map[string]map[string]string /* map[<d8 version>]map[<module name>]map[<image name>]<digest or tag> */)
+		updatedImages := make(imagesWithModules)
 		copyLogger := logger.ProcessLogger()
 		copyLogger.LogProcessStart("Mirror images")
-		for _, src := range modulesImages {
-			exists, err := copyImage(ctx, src, dest, policyContext, copyOpts...)
+		logger.LogDebugF("will push %d images to destination registry\n", len(allImagesToCopy))
+		for _, src := range allImagesToCopy {
+			var exists bool
+			for errCount := 0; errCount < 3; errCount++ {
+				exists, err = copyImage(ctx, src, dest, policyContext, logger, copyOpts...)
+				if err == nil {
+					break
+				}
+				logger.LogDebugF("error copying image %s with tag %s and digest %s to %s: %v", src.Path(), src.Tag(), src.Digest(), dest.Path(), err)
+			}
 			if err != nil {
 				copyLogger.LogProcessFail()
 				return err
 			}
 
-			splitted := strings.Split(src.Tag(), versions.Delimiter)
-			if exists || len(splitted) != 3 {
+			if exists {
 				continue
 			}
 
-			d8Version, moduleName, moduleImage := splitted[0], splitted[1], splitted[2]
-			if _, f := updatedImages[d8Version]; !f {
-				updatedImages[d8Version] = make(map[string]map[string]string)
-			}
-			if _, f := updatedImages[d8Version][moduleName]; !f {
-				updatedImages[d8Version][moduleName] = make(map[string]string)
-			}
-			updatedImages[d8Version][moduleName][moduleImage] = src.Digest()
+			updatedImages.set(src.Path(), src.Tag(), src.Digest())
 		}
 		copyLogger.LogProcessEnd()
 
@@ -198,7 +219,7 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 func deckhouseEdition() (string, error) {
 	content, err := os.ReadFile("/deckhouse/edition")
 	if err != nil {
-		return "", err
+		return "", errors.Join(err, ErrNotEE)
 	}
 
 	edition := strings.TrimSpace(string(content))
@@ -207,36 +228,6 @@ func deckhouseEdition() (string, error) {
 	}
 
 	return edition, nil
-}
-
-func deckhouseRegistry(deckhouseRegistry, edtiton, licenseToken string) (*image.RegistryConfig, error) {
-	registry, err := image.NewRegistry(deckhouseRegistry, nil, true)
-	if err != nil {
-		return nil, err
-	}
-
-	if registry.Transport() != image.DockerTransport {
-		return registry, nil
-	}
-
-	auth, err := deckhouseRegistryAuth(edtiton, licenseToken)
-	if err != nil {
-		return nil, err
-	}
-
-	u, err := url.Parse(deckhouseRegistry)
-	if err != nil {
-		return nil, err
-	}
-	u.Path = filepath.Join(u.Path, edtiton)
-	return image.NewRegistry(u.String(), auth, true)
-}
-
-func deckhouseRegistryAuth(edition, licenseToken string) (*types.DockerAuthConfig, error) {
-	if licenseToken == "" {
-		return nil, ErrNoLicense
-	}
-	return registryAuth("license-token", licenseToken), nil
 }
 
 func registryAuth(username, password string) *types.DockerAuthConfig {
@@ -250,10 +241,10 @@ func registryAuth(username, password string) *types.DockerAuthConfig {
 	}
 }
 
-func copyImage(ctx context.Context, srcImage *image.ImageConfig, destRegistry *image.RegistryConfig, policyContext *signature.PolicyContext, opts ...image.CopyOption) (bool, error) {
+func copyImage(ctx context.Context, srcImage *image.ImageConfig, destRegistry *image.RegistryConfig, policyContext *signature.PolicyContext, logger log.Logger, opts ...image.CopyOption) (bool, error) {
 	srcImg := sourceImage(srcImage)
 	destImage := destinationImage(destRegistry, srcImage)
-	return image.CopyImage(ctx, srcImg, destImage, policyContext, opts...)
+	return image.CopyImage(ctx, srcImg, destImage, policyContext, logger, opts...)
 }
 
 // sourceImage source destination image
@@ -312,4 +303,23 @@ func saveReportToFile(content interface{}, filename, outFormat string, logger *l
 
 	_, err = f.Write(append(marshaledReport, '\n'))
 	return err
+}
+
+type imagesWithModules map[string]map[string]map[string]string
+
+func (u imagesWithModules) set(regPath, tag, digest string) {
+	var d8Version, moduleName, moduleImage string
+	if splitted := strings.Split(tag, versions.Delimiter); len(splitted) == 3 {
+		d8Version, moduleName, moduleImage = splitted[0], splitted[1], splitted[2]
+	} else {
+		d8Version, moduleName, moduleImage = "otherImages", regPath, tag
+	}
+
+	if _, f := u[d8Version]; !f {
+		u[d8Version] = make(map[string]map[string]string)
+	}
+	if _, f := u[d8Version][moduleName]; !f {
+		u[d8Version][moduleName] = make(map[string]string)
+	}
+	u[d8Version][moduleName][moduleImage] = digest
 }

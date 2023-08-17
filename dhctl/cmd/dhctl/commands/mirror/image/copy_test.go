@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/image"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,13 +35,13 @@ func TestCopyImage(t *testing.T) {
 		t.Skip("Do not run this on CI")
 	}
 
-	deckhouseRegistry, err := image.NewRegistry("docker://registry.deckhouse.io/deckhouse/ce/", nil, true)
+	deckhouseRegistry, err := image.NewRegistry("docker://registry.deckhouse.io/deckhouse/ce/", nil)
 	require.NoError(t, err)
 
-	localFile, err := image.NewRegistry("file:"+filepath.Join(t.TempDir(), "file.tar.gz"), nil, false)
+	localFile, err := image.NewRegistry("file:"+filepath.Join(t.TempDir(), "file.tar.gz"), nil)
 	require.NoError(t, err)
 
-	localDir, err := image.NewRegistry("dir:"+filepath.Join(t.TempDir(), "dir"), nil, false)
+	localDir, err := image.NewRegistry("dir:"+filepath.Join(t.TempDir(), "dir"), nil)
 	require.NoError(t, err)
 
 	policyContext, err := image.NewPolicyContext()
@@ -106,7 +107,7 @@ func TestCopyImage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			_, err := image.CopyImage(tt.args.ctx, tt.args.src, tt.args.dest, policyContext, tt.args.opts...)
+			_, err := image.CopyImage(tt.args.ctx, tt.args.src, tt.args.dest, policyContext, log.GetSilentLogger(), tt.args.opts...)
 			require.ErrorIs(t, err, tt.wantErr)
 
 			if tt.checkFile != "" {
