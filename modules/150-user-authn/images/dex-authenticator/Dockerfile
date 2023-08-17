@@ -19,7 +19,7 @@ RUN chown 64535:64535 oauth2-proxy
 RUN chmod 0700 oauth2-proxy
 
 FROM $BASE_DISTROLESS
-COPY --from=artifact /go/src/oauth2-proxy /bin/oauth2_proxy
+COPY --from=artifact /src/oauth2-proxy /bin/oauth2_proxy
 
 ENTRYPOINT [ "/bin/oauth2_proxy" ]
 CMD [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
