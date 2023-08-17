@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  annotation:
+  annotations:
     helm.sh/resource-policy: keep
   {{- include "helm_lib_module_labels" (list . (dict "prometheus.deckhouse.io/rules-watcher-enabled" "true")) | nindent 2 }}
   name: d8-cdi
