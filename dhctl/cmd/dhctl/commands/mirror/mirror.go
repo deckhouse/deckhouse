@@ -81,7 +81,7 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("mirror", "Copy images from deckhouse registry or tar.gz file to specified registry or tar.gz file.")
 
 	cmd.Arg("DESTINATION", destinationHelp).Required().SetValue(destination)
-	cmd.Flag("from", sourceHelp).Default(fmt.Sprintf("docker://registry.deckhouse.io/deckhouse/%s", edition)).SetValue(source)
+	cmd.Flag("source", sourceHelp).Default(fmt.Sprintf("docker://registry.deckhouse.io/deckhouse/%s", edition)).SetValue(source)
 
 	cmd.Flag("dry-run", "Run without actually copying data.").BoolVar(&dryRun)
 	cmd.Flag("min-version", `The oldest version of deckhouse from your clusters or "latest" for clean installation.`).SetValue(minVersion)
