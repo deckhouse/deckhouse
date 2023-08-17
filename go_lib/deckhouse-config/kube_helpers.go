@@ -90,10 +90,10 @@ func GetAllConfigs(kubeClient k8s.Client) ([]*d8v1alpha1.ModuleConfig, error) {
 	}
 
 	objs := make([]*d8v1alpha1.ModuleConfig, 0, len(unstructuredObjs.Items))
-	for _, unstructured := range unstructuredObjs.Items {
+	for _, unst := range unstructuredObjs.Items {
 		var obj d8v1alpha1.ModuleConfig
 
-		err := sdk.FromUnstructured(&unstructured, &obj)
+		err := sdk.FromUnstructured(&unst, &obj)
 		if err != nil {
 			return nil, err
 		}
