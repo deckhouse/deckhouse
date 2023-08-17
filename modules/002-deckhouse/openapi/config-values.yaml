@@ -24,19 +24,19 @@ properties:
     description: |
       Deckhouse release channel.
 
-      При изменении канала обновлений, переключение Deckhouse на версию соответствующую выбранному каналу обновлений может произойти не сразу, а когда появится такая возможность. Например, Deckhouse не обновится автоматически на меньшую минорную версию. Читайте подробнее о том, [что происходит при смене канала обновлений...](../../deckhouse-faq.html#что-происходит-при-смене-канала-обновлений)
+      If you change the release channel, Deckhouse switching to the version in the selected release channel may take place when it makes sense, rather than right away. For example, Deckhouse will not automatically upgrade to a lower minor version. Read more about [what happens when you change the release channel...](../../deckhouse-faq.html#what-happens-when-the-update-channel-changes)
 
-      Если параметр `releaseChannel` не указан, то обновление Deckhouse полностью отключается (даже обновление patch-версий).
-
-      > **Внимание!** Если параметр `releaseChannel` не был указан, то при его указании произойдет безусловная смена версии Deckhouse на версию, соответствующую выбранному каналу обновлений (с учетом режима обновлений и окон). В этом случае возможно переключение Deckhouse через несколько минорных версий (например, с `1.42` сразу на `1.48`), или на версию ниже текущей. Откат на меньшую минорную версию и непоследовательное обновление минорных версий Deckhouse не поддерживается, и может привести к непредсказуемым последствиям.
-
-      Порядок возрастания стабильности канала обновлений (от **наименее** стабильного, к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+      If the `releaseChannel` parameter is not set, Deckhouse upgrades are completely disabled (even patch version upgrades).
+      
+      > **Note!** If the `releaseChannel` parameter was not set, setting it will result in Deckhouse switching to the version in the selected release channel (in doing so, it will take into account the upgrade mode and upgrade windows). In this case, Deckhouse may skip over several minor versions all at once (e.g., jumping from `1.42` right to `1.48`), or switch to a version lower than the current one. Rolling back to a lower minor version or upgrading minor versions in a nonsequential fashion is not supported, and may lead to unintended consequences.
+   
+      The stability of the release channel (from the **least** stable to the **most** stable one) increases in the following order: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   update:
     type: object
     description: |
-      Управление настройками обновления Deckhouse.
+      Managing Deckhouse upgrade settings.
 
-      Обновление Deckhouse работает только при установленном в параметре [releaseChannel](#parameters-releasechannel) канале обновлений.
+      Deckhouse will only update if the release channel is set in the [releaseChannel](#parameters-releasechannel) parameter.
     x-doc-example: |
       ```yaml
       releaseChannel: EarlyAccess
@@ -79,13 +79,13 @@ properties:
           - 'Auto'
           - 'Manual'
         description: |
-          Управление режимом применения потенциально опасных обновлений (disruptive-обновлений). Такое обновление может привести к временному прерыванию работы важного компонента кластера, пользовательского приложения или связанных систем, может переопределить значение по умолчанию или изменить поведение некоторых модулей:
-          - `Auto` — disruptive-обновления применяются автоматически.
-          - `Manual` — для применения disruptive-обновления требуется ручное подтверждение (установка аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе `DeckhouseRelease`).
+          Manage the way disruptive updates are applied. Note that the disruptive update may result in an important cluster component, user application, or related systems being temporarily shut down, default values being overwritten, or the behavior of some modules being altered:
+          - `Auto` — disruptive updates are applied automatically.
+          - `Manual` — disruptive updates must be manually confirmed (to do so, you must add the `release.deckhouse.io/disruption-approved=true` annotation to the corresponding `DeckhouseRelease` resource).
 
-          Параметр `disruptionApprovalMode` влияет только на применение disruptive-обновлений, и не влияет на применение обычных обновлений (см. параметр [update.mode](#parameters-update-mode)).
+          The `disruptionApprovalMode` parameter only affects the way disruptive updates are applied and has no efeect on regular updates (see the [update.mode](#parameters-update-mode) parameter).
 
-          > Вы также можете настроить окна disruption-обновлений узлов с помощью параметра [`disruptions.automatic.windows`](../040-node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) ресурса `NodeGroup`.
+          > Disruption update windows for nodes can be customized using the [`disruptions.automatic.windows`](../040-node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) parameter of the `NodeGroup` resource.
       windows:
         type: array
         description: |
