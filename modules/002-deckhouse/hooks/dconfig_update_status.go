@@ -122,17 +122,16 @@ func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 	externalNames := d8config.Service().ExternalNames()
 	for _, cfg := range allConfigs {
 		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName, externalNames)
-		statusPatch := makeStatusPatch(cfg, moduleStatus)
-		if statusPatch != nil {
-			// TODO Switch to debug level in 1.42 release.
-			input.LogEntry.Infof(
+		sPatch := makeStatusPatch(cfg, moduleStatus)
+		if sPatch != nil {
+			input.LogEntry.Debugf(
 				"Patch /status for moduleconfig/%s: state '%s' to '%s', version '%s' to %s', status '%s' to '%s'",
 				cfg.GetName(),
-				cfg.Status.State, statusPatch.State,
-				cfg.Status.Version, statusPatch.Version,
-				cfg.Status.Status, statusPatch.Status,
+				cfg.Status.State, sPatch.State,
+				cfg.Status.Version, sPatch.Version,
+				cfg.Status.Status, sPatch.Status,
 			)
-			input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1alpha1", "ModuleConfig", "", cfg.GetName(), object_patch.WithSubresource("/status"))
+			input.PatchCollector.MergePatch(sPatch, "deckhouse.io/v1alpha1", "ModuleConfig", "", cfg.GetName(), object_patch.WithSubresource("/status"))
 		}
 	}
 
