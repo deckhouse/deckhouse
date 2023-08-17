@@ -1,5 +1,5 @@
 {{- /*
-# Copyright 2023 Flant JSC
+# Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,11 +31,11 @@ export no_proxy=${NO_PROXY}
 {{- else }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
-apt -o Acquire::http::Timeout=120 update
+apt update
 export DEBIAN_FRONTEND=noninteractive
 until apt install jq netcat-openbsd curl -y; do
   echo "Error installing packages"
-  apt -o Acquire::http::Timeout=120 update
+  apt update
   sleep 10
 done
 mkdir -p /var/lib/bashible/

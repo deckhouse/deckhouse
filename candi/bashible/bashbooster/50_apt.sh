@@ -62,7 +62,7 @@ bb-apt-update() {
     export DEBIAN_FRONTEND=noninteractive
     bb-flag? apt-updated && return 0
     bb-log-info 'Updating apt cache'
-    apt-get -o Acquire::http::Timeout=120 update
+    apt-get update
     bb-flag-set apt-updated
 }
 
