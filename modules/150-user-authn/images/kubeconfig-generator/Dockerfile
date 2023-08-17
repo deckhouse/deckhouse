@@ -17,8 +17,8 @@ RUN git clone ${SOURCE_REPO}/mintel/dex-k8s-authenticator.git . && \
   mkdir -p /app/app/bin && \
   GOPROXY=https://proxy.golang.org CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o /app/app/bin/dex-k8s-authenticator .
 
-RUN chown 64535:64535 /app/bin/dex-k8s-authenticator
-RUN chmod 0700 /app/bin/dex-k8s-authenticator
+RUN chown 64535:64535 /app/app/bin/dex-k8s-authenticator
+RUN chmod 0700 /app/app/bin/dex-k8s-authenticator
 
 # set up nsswitch.conf for Go's "netgo" implementation
 # Go stdlib completely ignores /etc/hosts file without it
