@@ -10,7 +10,8 @@ WORKDIR /app
 
 ADD already_logged.patch /
 
-RUN git clone --depth 1 --branch 378a39dd93bed9f56a5a1b1a799a208c61ead83f ${SOURCE_REPO}/mintel/dex-k8s-authenticator.git . && \
+RUN git clone ${SOURCE_REPO}/mintel/dex-k8s-authenticator.git . && \
+  git checkout 378a39dd93bed9f56a5a1b1a799a208c61ead83f && \
   git apply --whitespace=fix /already_logged.patch && \
   go mod download && \
   GOPROXY=https://proxy.golang.org CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o /dex-k8s-authenticator ./main.go
