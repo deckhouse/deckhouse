@@ -98,10 +98,10 @@ kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
 ### Manual disruption update confirmation
 
 {% alert %}
-**Потенциально опасное обновление (disruptive-обновление)** может привести к временному прерыванию работы важного компонента кластера, пользовательского приложения или связанных систем. Такое обновление, например, может переопределить значение по умолчанию или изменить поведение некоторых модулей.
+A **disruptive update** can temporarily interrupt the operation of an important cluster component, user application, or related systems. For example, such an update may overwrite a default value or change the behavior of some modules.
 {% endalert %}
 
-Включить ручное подтверждение _потенциально опасных обновлений_ можно с помощью параметра [update.disruptionApprovalMode](configuration.html#parameters-update-disruptionapprovalmode). Пример конфигурации:
+You can enable manual confirmation of _disruptive updates_ using the [update.disruptionApprovalMode](configuration.html#parameters-update-disruptionapprovalmode) parameter — refer to the configuration example below:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
