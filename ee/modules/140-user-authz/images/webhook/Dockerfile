@@ -1,6 +1,6 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_16_ALPINE
-FROM $BASE_GOLANG_16_ALPINE as artifact
+ARG BASE_GOLANG_19_ALPINE
+FROM $BASE_GOLANG_19_ALPINE as artifact
 WORKDIR /src/user-authz-webhook
 COPY main.go go.mod go.sum /src/user-authz-webhook/
 COPY cache /src/user-authz-webhook/cache/

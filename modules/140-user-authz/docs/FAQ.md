@@ -8,7 +8,7 @@ title: "The user-authz module: FAQ"
 
 ## How do I limit user rights to specific namespaces?
 
-Use the `limitNamespaces` parameter in the [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
+Use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
 
 ## What if there are two ClusterAuthorizationRules matching to a single user?
 
@@ -24,8 +24,10 @@ spec:
     - kind: User
       name: jane.doe@example.com
   accessLevel: User
-  limitNamespaces:
-  - review-.*
+  namespaceSelector:
+    labelSelector:
+      matchLabels:
+        env: review
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -36,26 +38,21 @@ spec:
   - kind: Group
     name: administrators
   accessLevel: ClusterAdmin
-  limitNamespaces:
-  - prod
-  - stage
+  namespaceSelector:
+    labelSelector:
+      matchExpressions:
+      - key: env
+        operator: In
+        values:
+        - prod
+        - stage
 ```
 
-1. `jane.doe@example.com` has the right to get and list any objects access all review namespaces.
-2. `Administrators` can get, edit, list, and delete objects on the cluster level and in the namespaces `prod` and `stage`.
+1. `jane.doe@example.com` has the right to get and list any objects in the namespaces labeled `env=review`
+2. `Administrators` can get, edit, list, and delete objects on the cluster level and in the namespaces labeled `env=prod` and `env=stage`.
 
 Because `Jane Doe` matches two rules, some calculations will be made:
 * She will have the most powerful accessLevel across all matching rules — `ClusterAdmin`.
-* The `limitNamespaces` options will be combined, so that Jane will have access to the following namespaces.
+* The `namespaceSelector` options will be combined, so that Jane will have access to all the namespaces labeled with `env` label of the following values: `review`, `stage`, or `prod`.
 
-The resulting rights will be:
-
-```yaml
-accessLevel: ClusterAdmin
-limitNamespaces:
-- prod
-- stage
-- review-.*
-```
-
-> **Note!** If there is a rule without the limitNamespaces option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.
+> **Note!** If there is a rule without the `namespaceSelector` option and `limitNamespaces` deprecated option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.

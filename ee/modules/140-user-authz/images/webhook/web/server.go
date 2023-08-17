@@ -61,9 +61,13 @@ type Server struct {
 	logger  *log.Logger
 }
 
-func NewServer(l *log.Logger) *Server {
+func NewServer(l *log.Logger) (*Server, error) {
 	c := cache.NewNamespacedDiscoveryCache(l)
-	return &Server{logger: l, cache: c, handler: hook.NewHandler(l, c)}
+	h, err := hook.NewHandler(l, c)
+	if err != nil {
+		return nil, err
+	}
+	return &Server{logger: l, cache: c, handler: h}, nil
 }
 
 func (s *Server) prepareHTTPServer() (*http.Server, error) {

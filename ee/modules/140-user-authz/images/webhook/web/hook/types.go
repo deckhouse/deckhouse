@@ -5,16 +5,25 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package hook
 
-import "regexp"
+import (
+	"regexp"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // DirectoryEntry describes an entry with limited namespaces options for a single user
 type DirectoryEntry struct {
 	AllowAccessToSystemNamespaces bool
 	LimitNamespaces               []*regexp.Regexp
-	// If there is no LimitNamespaces option, the user has access to all namespaces except system namespaces.
+	NamespaceSelectors            []*NamespaceSelector
+	// If there is no LimitNamespaces  nor NamespaceSelectors options, the user has access to all namespaces except system namespaces.
 	// If LimitNamespaces is present, we do not need to mind about allowed access to system namespaces.
-	// Thus presence of  LimitNamespaces matters when we summarise rules from all CRs to get the allowed namespaces.
-	LimitNamespacesAbsent bool
+	// Thus presence of LimitNamespaces matters when we summarise rules from all CRs to get the allowed namespaces.
+	NamespaceFiltersAbsent bool
+}
+
+type NamespaceSelector struct {
+	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
 }
 
 // UserAuthzConfig is a config composed from ClusterAuthorizationRules collected from Kubernetes cluster
@@ -22,11 +31,12 @@ type UserAuthzConfig struct {
 	CRDs []struct {
 		Name string `json:"name"`
 		Spec struct {
-			AccessLevel                   string   `json:"accessLevel"`
-			PortForwarding                bool     `json:"portForwarding"`
-			AllowScale                    bool     `json:"allowScale"`
-			AllowAccessToSystemNamespaces bool     `json:"allowAccessToSystemNamespaces"`
-			LimitNamespaces               []string `json:"limitNamespaces"`
+			AccessLevel                   string             `json:"accessLevel"`
+			PortForwarding                bool               `json:"portForwarding"`
+			AllowScale                    bool               `json:"allowScale"`
+			AllowAccessToSystemNamespaces bool               `json:"allowAccessToSystemNamespaces"`
+			LimitNamespaces               []string           `json:"limitNamespaces"`
+			NamespaceSelector             *NamespaceSelector `json:"namespaceSelector"`
 			AdditionalRoles               []struct {
 				APIGroup string `json:"apiGroup"`
 				Kind     string `json:"kind"`
