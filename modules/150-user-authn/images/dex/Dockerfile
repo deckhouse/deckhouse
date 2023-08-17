@@ -14,8 +14,7 @@ RUN git clone --branch v2.35.3 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /connector-data.patch \
   && git apply /oidc-ca-insecure.patch \
   && git apply /robots-txt.patch \
-  && git apply /disable-sqlite3.patch
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' ./cmd/dex
+RUN GOPROXY=https://proxy.golang.org CGO_ENABLED=1 GOOS=linux go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo ./cmd/dex
 
 RUN chown 64535:64535 dex
 RUN chmod 0700 dex

@@ -36,7 +36,3 @@ Upstream PR that should fix the problem in general - https://github.com/dexidp/d
 Add robots.txt to avoid indexing by bots.
 
 Upstream PR  - https://github.com/dexidp/dex/pull/2834
-
-### Disable sqlite3
-
-sqlite3 is not required in our usage of dex. And it prevents dex from statically compiling.

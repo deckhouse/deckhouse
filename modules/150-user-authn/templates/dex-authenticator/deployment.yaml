@@ -163,6 +163,8 @@ spec:
             secretKeyRef:
               name: dex-authenticator-{{ $crd.name }}
               key: cookie-secret
+        - name: TRUSTED_ROOT_CA_FILE
+          value: /certs/ca.crt
         volumeMounts:
         - name: tls
           mountPath: "/opt/dex-authenticator/tls"
