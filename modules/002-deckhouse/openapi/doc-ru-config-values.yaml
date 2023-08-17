@@ -66,7 +66,7 @@ properties:
 
               Вызов webhook'а произойдет после появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента ее применения в кластере.
 
-              > Используйте параметр [minimalNotificationTime](#parameters-update-notification-minimalnotificationtime) при необходимости установить минимальное время, которое должно пройти перед обновлением с момента оповещения.
+              > Используйте параметр [minimalNotificationTime](#parameters-update-notification-minimalnotificationtime) при необходимости установить минимальное время, которое должно пройти перед обновлением с момента появления новой минорной версии Deckhouse на используемом канале обновлений и оповещения.
 
               На адрес webhook'а выполняется POST-запрос с `Content-Type: application/json`. Пример содержания запроса:
 

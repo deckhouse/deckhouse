@@ -96,6 +96,16 @@ spec:
     releaseChannel: Stable
 ```
 
+
+### Как настроить отложенное обновление?
+
+Чтобы настроить отложенное обновление, необходимо настроить [отправку оповещений](modules/002-deckhouse/configuration.html#parameters-update-notification) о запланированном обновлении Deckhouse.
+
+- Времея [minimalNotificationTime](002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), которое должно пройти перед обновлением с момента появления новой минорной версии Deckhouse на используемом канале обновлений.
+
+- URL-адрес [webhook](002-deckhouse/configuration.html#parameters-update-notification-webhook), вызов которого произойдет после появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента ее применения в кластере.
+> Указание [webhook](002-deckhouse/configuration.html#parameters-update-notification-webhook) URL не является обязательным. В этом случае обновление та же будет отложено на [minimalNotificationTime](002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), но без предварительного уведомления.
+
 ### Как отключить автоматическое обновление?
 
 Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse` параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel).
