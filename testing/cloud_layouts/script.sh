@@ -487,7 +487,7 @@ function bootstrap_static() {
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
-       apt -o Acquire::http::Timeout=120 update
+       apt-get update
        apt-get install -y docker.io
        docker run -d --network host vimagick/tinyproxy
 ENDSSH
