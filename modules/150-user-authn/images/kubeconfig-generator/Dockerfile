@@ -14,7 +14,7 @@ RUN git clone ${SOURCE_REPO}/mintel/dex-k8s-authenticator.git . && \
   git checkout 378a39dd93bed9f56a5a1b1a799a208c61ead83f && \
   git apply --whitespace=fix /already_logged.patch && \
   go mod download && \
-  GOPROXY=https://proxy.golang.org CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o /dex-k8s-authenticator ./main.go
+  GOPROXY=https://proxy.golang.org CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o /dex-k8s-authenticator .
 
 RUN chown 64535:64535 /dex-k8s-authenticator
 RUN chmod 0700 /dex-k8s-authenticator
