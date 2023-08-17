@@ -40,13 +40,13 @@ clusters:
   {{- $_ := set $publish_api_cluster "description" $publish_api_master_url }}
 
   {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
+{{- $_ := set $publish_api_cluster "masterCA" .Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA }}
     {{- if hasKey .Values.userAuthn.publishAPI.https "global" }}
       {{- if hasKey .Values.userAuthn.publishAPI.https.global "kubeconfigGeneratorMasterCA" }}
 {{- $_ := set $publish_api_cluster "masterCA" .Values.userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA }}
-      {{- else }}
-{{- $_ := set $publish_api_cluster "masterCA" .Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA }}
       {{- end }}
     {{- end }}
+
   {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
 {{- $_ := set $publish_api_cluster "masterCA" (.Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA | default $.Values.global.discovery.kubernetesCA) }}
   {{- end }}

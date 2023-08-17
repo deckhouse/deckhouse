@@ -85,10 +85,12 @@ properties:
             * We recommend using a self-signed certificate (and specify it as masterCA) if an HTTP proxy (that terminates HTTPS traffic) is used for exposing.
   idTokenTTL:
     type: string
-    pattern: '^[0-9]+[smh]{1}$'
+    pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
     default: '10m'
     description: |
       The TTL of the id token (use `s` for seconds, `m` for minutes, `h` for hours).
+
+      It is specified as a string containing the time unit in hours, minutes and seconds: 30m, 20s, 2h30m10s, 24h.
   highAvailability:
     type: boolean
     x-examples: [true, false]

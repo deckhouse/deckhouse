@@ -15,26 +15,46 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
 {% endsnippetcut %}
 </blockquote>
 
-It may take some time to start the Ingress controller after installing Deckhouse. Make sure that the Ingress controller has started before continuing:
+It may take some time to start Deckhouse components.
+
+Before you go further:
+<ul><li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
+<p>On the <strong>master node</strong>, run the following command to get nodes list:</p>
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+sudo /opt/deckhouse/bin/kubectl get no
 ```
 {% endsnippetcut %}
 
-Wait for the Pods to switch to `Ready` state.
+{% offtopic title="Example of the output..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl get no
+NAME               STATUS   ROLES                  AGE    VERSION
+d8cluster          Ready    control-plane,master   30m   v1.23.17
+d8cluster-worker   Ready    worker                 10m   v1.23.17
+```
+{%- endofftopic %}
+</li>
+<li><p>Make sure the Kruise controller manager is <code>Ready</code> before continuing.</p>
+<p>On the <strong>master node</strong>, run the following command:</p>
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+```
+{% endsnippetcut %}
 
 {% offtopic title="Example of the output..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
-NAME                                       READY   STATUS    RESTARTS   AGE
-controller-nginx-r6hxc                     3/3     Running   0          16h
-kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+NAME                                         READY   STATUS    RESTARTS    AGE
+kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
 {%- endofftopic %}
+</li></ul>
 
-After that, there will be three more actions.
+After that, creating an Ingress controller, creating a user to access web interfaces, and configuring DNS remains.
 <ul><li><p><strong>Setup Ingress controller</strong></p>
 <p>On the <strong>master node</strong>, create the <code>ingress-nginx-controller.yml</code> file containing the Ingress controller configuration:</p>
   {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
@@ -46,6 +66,24 @@ After that, there will be three more actions.
 sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
+
+It may take some time to start the Ingress controller after installing Deckhouse. Make sure the Ingress controller has started before continuing (run on the <code>master</code> node):
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+```
+{% endsnippetcut %}
+
+Wait for the Ingress controller pods to switch to <code>Ready</code> state.
+
+{% offtopic title="Example of the output..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+NAME                                       READY   STATUS    RESTARTS   AGE
+controller-nginx-r6hxc                     3/3     Running   0          5m
+```
+{%- endofftopic %}
 </li>
 <li><p><strong>Create a user</strong> to access the cluster web interfaces</p>
 <p>Create on the <strong>master node</strong> the <code>user.yml</code> file containing the user account data and access rights:</p>

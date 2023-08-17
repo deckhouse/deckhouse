@@ -18,6 +18,9 @@ spec:
                       description: Адрес репозитория образов контейнеров.
                     dockerCfg:
                       description: Строка с токеном доступа к container registry в Base64.
+                    ca:
+                      description: |
+                        Корневой сертификат (В формате PEM), которым можно проверить сертификат registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
             status:
               properties:
                 syncTime:

@@ -33,7 +33,7 @@ import (
 
 const (
 	candiDir                 = "/deckhouse/candi"
-	DefaultKubernetesVersion = "1.23"
+	DefaultKubernetesVersion = "1.25"
 )
 
 const (

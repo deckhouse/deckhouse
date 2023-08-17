@@ -5,18 +5,24 @@ permalink: en/deckhouse-faq.html
 
 ## How do I find out all Deckhouse parameters?
 
-All the Deskhouse settings (including module parameters) are stored in cluster scoped ModuleConfig resources and custom resources. The `global` ModuleConfig contains global Deckhouse settings. Read more in [the documentation](./).
-
-To get list of all ModuleConfigs:
-
-```shell
-kubectl get mc
-```
+Deckhouse is configured using global settings, module settings, and various custom resources. Read more in [the documentation](./).
 
 To view global Deckhouse settings:
 
 ```shell
 kubectl get mc global -o yaml
+```
+
+To list the status of all modules (available for Deckhouse version 1.47+):
+
+```shell
+kubectl get modules
+```
+
+To get the `user-authn` module configuration:
+
+```shell
+kubectl get moduleconfigs user-authn -o yaml
 ```
 
 ## How do I find the documentation for the version installed?
@@ -195,6 +201,53 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
 
 {% offtopic title="The scheme of using the releaseChannel parameter during Deckhouse installation and operation" %}
 ![The scheme of using the releaseChannel parameter during Deckhouse installation and operation](images/common/deckhouse-update-process.png)
+{% endofftopic %}
+
+### What do I do if Deckhouse fails to retrieve updates from the release channel?
+
+* Make sure that the desired release channel is [configured](#how-do-i-set-the-desired-release-channel).
+* Make sure that the DNS name of the Deckhouse container registry is resolved correctly.
+
+  Retrieve and compare the IP addresses of the Deckhouse container registry (`registry.deckhouse.io`) on one of the nodes and in the Deckhouse pod. They should match.
+  
+  Here is how you can retrieve the IP address of the Deckhouse container registry on a node:
+
+  ```shell
+  $ getent ahosts registry.deckhouse.io
+  46.4.145.194    STREAM registry.deckhouse.io
+  46.4.145.194    DGRAM
+  46.4.145.194    RAW
+  ```
+
+  Here is how you can retrieve the IP address of the Deckhouse container registry in a pod:
+  
+  ```shell
+  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
+  46.4.145.194    STREAM registry.deckhouse.io
+  46.4.145.194    DGRAM  registry.deckhouse.io
+  ```
+  
+  If the retrieved IP addresses do not match, inspect the DNS settings on the host. Specifically, check the list of domains in the search parameter of the `/etc/resolv.conf` file (it affects name resolution in the Deckhouse pod). If the search parameter of the `/etc/resolv.conf` file includes a domain where wildcard record resolution is configured, it may result in incorrect resolution of the IP address of the Deckhouse container registry (see example).
+  
+{% offtopic title="Example of DNS settings that may cause errors in resolving the IP address of the Deckhouse container registry..." %}
+
+In the example below, DNS settings produce different results when resolving names on the host and in the Kubernetes pod:
+- The `/etc/resolv.conf` file on the node:
+
+  ```text
+  nameserver 10.0.0.10
+  search company.my
+  ```
+
+  > Note that the `ndot` parameter defaults to 1 (`options ndots:1`) on the node. But in Kubernetes pods, the `ndot` parameter is set to **5**.
+Therefore, the logic for resolving DNS names with 5 dots or less in the name is different on the host and in the pod.
+
+- The `company.my` DNS zone is configured to resolve wildcard records `*.company.my` to `10.0.0.100`. That is, any DNS name in the `company.my` zone for which there is no specific DNS entry is resolved to `10.0.0.100`.
+
+In this case, subject to the `search` parameter specified in the `/etc/resolv.conf` file, when accessing the `registry.deckhouse.io` address **on the node**, the system will try to obtain the IP address for the `registry.deckhouse.io` name (it treats it as a fully qualified name given the default setting of `options ndots:1`).
+
+On the other hand, when accessing `registry.deckhouse.io` **from a Kubernetes pod**, given the `options ndots:5` parameter (the default one in Kubernetes) and the `search` parameter, the system will initially try to resolve the IP address for the `registry.deckhouse.io.company.my` name. The `registry.deckhouse.io.company.my` name will be resolved to `10.0.0.100` because the `company.my` DNS zone is configured to resolve wildcard records `*.company.my` to `10.0.0.100`. As a result, the `registry.deckhouse.io` host and information about the available Deckhouse updates will be unreachable.
+
 {% endofftopic %}
 
 ## Air-gapped environment; working via proxy and third-party registry
@@ -475,7 +528,7 @@ cloud:
   prefix: main
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.23"
+kubernetesVersion: "Automatic"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 proxy:
