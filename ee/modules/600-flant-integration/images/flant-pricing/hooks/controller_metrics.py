@@ -6,7 +6,7 @@
 #
 # This hook is responsible for generating metrics for d8 controllers resource consumption.
 
-import os
+from os import getenv
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, TypeVar
@@ -164,13 +164,13 @@ if __name__ == "__main__":
         with open(
             "/var/run/secrets/kubernetes.io/serviceaccount/token", encoding="utf-8"
         ) as f:
-            SERVICE_ACCOUNT_TOKEN = f.read()
+            service_account_token = f.read()
     except FileNotFoundError:
-        SERVICE_ACCOUNT_TOKEN = (
-            token if (token := os.getenv("SERVICE_ACCOUNT_TOKEN")) else ""
+        service_account_token = (
+            token if (token := getenv("SERVICE_ACCOUNT_TOKEN")) else ""
         )
 
-    prometheus_querier = PrometheusQuerier(SERVICE_ACCOUNT_TOKEN)
+    prometheus_querier = PrometheusQuerier(service_account_token)
     metric_collector = MetricCollector(prometheus_querier)
     hook_runner = HookRunner(metric_collector)
     hook.run(hook_runner.run, configpath="controller_metrics.yaml")

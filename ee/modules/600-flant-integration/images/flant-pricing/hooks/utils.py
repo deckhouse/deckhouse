@@ -4,8 +4,8 @@
 #
 # util functions for hook.
 
-import ssl
-import json
+from ssl import CERT_NONE
+from json import loads
 from typing import Dict, List, Any, TypeVar, Optional
 from abc import ABC, abstractmethod
 from urllib3 import disable_warnings
@@ -33,7 +33,7 @@ class AbstractMetricQuerier(ABC):
             backoff_factor=0.1,
             status_forcelist=[500, 502, 503, 504],
         )
-        pool = PoolManager(retries=retries, cert_reqs=ssl.CERT_NONE)
+        pool = PoolManager(retries=retries, cert_reqs=CERT_NONE)
         response = pool.request("GET", url, fields=params, headers=headers)
 
         if response.status != 200:
@@ -42,7 +42,7 @@ class AbstractMetricQuerier(ABC):
             )
 
         if decode_json:
-            return json.loads(response.data)
+            return loads(response.data)
 
         return response.data
 
