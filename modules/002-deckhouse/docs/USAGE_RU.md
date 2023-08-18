@@ -114,7 +114,7 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
-В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учёта patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе `DeckhouseRelease`.
+В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учёта patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](cr.html#deckhouserelease).
 
 Пример подтверждения минорного потенциально опасного обновления Deckhouse `v1.36.4`:
 
@@ -164,6 +164,10 @@ spec:
         webhook: https://release-webhook.mydomain.com
         minimalNotificationTime: 8h
 ```
+
+{% alert %}
+Если не указать адрес в параметре [webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), то применение новой версии все равно будет отложено как минимум на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии можно считать появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
+{% endalert %}
 
 ## Сбор информации для отладки
 

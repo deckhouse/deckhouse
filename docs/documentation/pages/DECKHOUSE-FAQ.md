@@ -166,7 +166,17 @@ Possible options for action if something went wrong:
 
 As soon as a new version of Deckhouse appears on the release channel installed in the cluster:
 - The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
-- There is a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases.
+- There is a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
+    - Manual update mode is set (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
+    - The automatic update mode is set, and the [update windows](modules/002-deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come. 
+    - The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
+    - The [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
+
+### How do I get information about the upcoming update in advance?
+
+You can get information in advance about updating minor versions of Deckhouse on the release channel in the following ways:
+- Configure manual [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode). In this case, when a new version appears on the release channel, the alert `DeckhouseReleaseIsWaitingManualApproval` will fire and a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) will appear in the cluster.
+- Configure automatic [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode) and specify the minimum time in the [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter for which the update will be postponed. In this case, when a new version appears on the release channel, a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) will appear in the cluster. And if you specify the [webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook) parameters, then the webhook will be called additionally.
 
 ### How do I find out which version of Deckhouse is on which release channel?
 
@@ -190,7 +200,7 @@ kubectl get deckhousereleases
 Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignore update windows settings and apply as soon as they are available.
 {% endalert %}
 
-### What happens when the update channel changes?
+### What happens when the release channel changes?
 
 * When switching to a **more stable** release channel (e.g., from `Alpha` to `EarlyAccess`), Deckhouse downloads release data from the release channel (the `EarlyAccess` release channel in the example) and compares it with the existing `DeckhouseReleases`:
   * Deckhouse deletes *later* releases (by semver) that have not yet been applied (with the `Pending` status).

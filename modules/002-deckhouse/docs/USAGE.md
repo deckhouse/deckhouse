@@ -114,7 +114,7 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
-In this mode, it will be necessary to confirm each minor disruptive update with the `release.deckhouse.io/disruption-approved=true` annotation on the `DeckhouseRelease` resource.
+In this mode, it will be necessary to confirm each minor disruptive update with the `release.deckhouse.io/disruption-approved=true` annotation on the [DeckhouseRelease](cr.html#deckhouserelease) resource.
 
 An example of confirmation of a potentially dangerous Deckhouse minor update `v1.36.4`:
 
@@ -164,6 +164,10 @@ spec:
         webhook: https://release-webhook.mydomain.com
         minimalNotificationTime: 8h
 ```
+
+{% alert %}
+If you do not specify the address in the [webhook](configuration.html#parameters-update-notification-webhook) parameter, but specify the time in the [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter, then the release will still be postponed for at least the time specified in the `minimalNotificationTime` parameter. In this case, the notification of the appearance of a new version can be considered the appearance of a [DeckhouseRelease](cr.html#deckhouserelease) resource with a name corresponding to the new version.
+{% endalert %}
 
 ## Collect debug info
 

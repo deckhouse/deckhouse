@@ -96,16 +96,6 @@ spec:
     releaseChannel: Stable
 ```
 
-
-### Как настроить отложенное обновление?
-
-Чтобы настроить отложенное обновление, необходимо настроить [отправку оповещений](modules/002-deckhouse/configuration.html#parameters-update-notification) о запланированном обновлении Deckhouse.
-
-- Времея [minimalNotificationTime](002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), которое должно пройти перед обновлением с момента появления новой минорной версии Deckhouse на используемом канале обновлений.
-
-- URL-адрес [webhook](002-deckhouse/configuration.html#parameters-update-notification-webhook), вызов которого произойдет после появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента ее применения в кластере.
-> Указание [webhook](002-deckhouse/configuration.html#parameters-update-notification-webhook) URL не является обязательным. В этом случае обновление та же будет отложено на [minimalNotificationTime](002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), но без предварительного уведомления.
-
 ### Как отключить автоматическое обновление?
 
 Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse` параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel).
@@ -177,7 +167,17 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 Как только на установленном в кластере канале обновления появляется новая версия Deckhouse:
 - Загорается алерт `DeckhouseReleaseIsWaitingManualApproval`, если кластер использует ручной режим обновлений (параметр [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
-- Появляется новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Используйте команду `kubectl get deckhousereleases`, чтобы посмотреть список релизов.
+- Появляется новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Используйте команду `kubectl get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, то указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
+    - Установлен ручной режим обновлений (параметр [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
+    - Установлен автоматический режим обновлений и настроены [окна обновлений](modules/002-deckhouse/usage.html#конфигурация-окон-обновлений), интервал которых еще не наступил.
+    - Установлен автоматический режим обновлений, окна обновлений не настроены, но применение версии отложено на случайный период времени из-за механизма снижения нагрузки на репозиторий образов контейнеров. В поле `status.message` ресурса `DeckhouseRelease` будет соответствующее сообщение.
+    - Установлен параметр [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), и указанное в нем время еще не прошло.
+
+### Как заранее получать информацию о предстоящем обновлении?
+
+Получать заранее информацию об обновлении минорных версий Deckhouse на канале обновлений, можно следующими способами:
+- Настроить ручной [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval` и в кластере появится новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). 
+- Настроить автоматический [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode) и указать минимальное время в параметре [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). А если указать параметры [webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook), то дополнительно произойдет вызов webhook'а.
 
 ### Как узнать, какая версия Deckhouse находится на каком канале обновлений?
 
