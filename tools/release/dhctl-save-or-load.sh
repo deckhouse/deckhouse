@@ -168,6 +168,8 @@ if [[ ! -f "$INSTALL_ARCHIVE" ]]; then
   echo "successfully saved $DHCTL_IMAGE to $INSTALL_ARCHIVE file"
 else
   echo "extracting image from $INSTALL_ARCHIVE to local docker daemon"
-  docker load -i "$INSTALL_ARCHIVE"
+  DHCTL_IMAGE=$(docker load -i "$INSTALL_ARCHIVE" | grep '^Loaded image:' | awk -F': ' '{print $2}' | awk NF)
   echo "successfully extracted image from $INSTALL_ARCHIVE to local docker daemon"
+  echo
+  echo "run: docker run -ti --rm -v '<directory with registry archive>:/tmp/mirror' $DHCTL_IMAGE bash"
 fi
