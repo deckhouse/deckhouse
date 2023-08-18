@@ -37,6 +37,7 @@ ansible:
       GOOS: "linux"
       GOARCH: "amd64"
       CGO_ENABLED: "0"
+      GOPROXY: {{ env "GOPROXY" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
