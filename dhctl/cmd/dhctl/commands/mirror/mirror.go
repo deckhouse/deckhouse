@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/containers/image/v5/signature"
@@ -285,6 +286,10 @@ func saveReportToFile(content interface{}, filename, outFormat string, logger *l
 		f = logger
 	} else {
 		logger.LogSuccess("saved updated images report to file\n")
+		dir, _ := filepath.Split(filename)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
 		f, err = os.Create(filename)
 	}
 	if err != nil {
