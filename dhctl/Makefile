@@ -50,13 +50,15 @@ bin/gofumpt:
 	curl -sLo "bin/gofumpt" https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS)_$(GOARCH)
 	@chmod +x "./bin/gofumpt"
 
+BUILD_TAGS ?=
+BUILD_TAG_EDITION ?= ce
 # https://github.com/containers/image/tree/main#supported-build-tags
-BUILD_TAGS ?= containers_image_docker_daemon_stub,containers_image_storage_stub,containers_image_openpgp
+BUILD_TAGS_CONTAINERS_IMAGE ?= containers_image_docker_daemon_stub containers_image_storage_stub containers_image_openpgp
 build:
-	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -tags="$(BUILD_TAGS)" -ldflags="-s -w" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -tags="$(BUILD_TAGS_CONTAINERS_IMAGE) $(BUILD_TAG_EDITION) $(BUILD_TAGS)" -ldflags="-s -w" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build-test:
-	GOOS="linux" GOARCH="$(GOARCH)" go build -tags="$(BUILD_TAGS)" -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
+	GOOS="linux" GOARCH="$(GOARCH)" go build -tags="$(BUILD_TAGS_CONTAINERS_IMAGE) $(BUILD_TAG_EDITION) $(BUILD_TAGS)" -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
 
 test:
 	go test ./...

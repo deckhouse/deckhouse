@@ -459,7 +459,7 @@ ansible:
         chdir: /dhctl
 
   setup:
-    - command: make build
+    - command: make build BUILD_TAG_EDITION='{{ $.Env | lower }}'
       args:
         chdir: /dhctl
 ---

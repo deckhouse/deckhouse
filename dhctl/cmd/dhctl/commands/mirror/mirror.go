@@ -1,3 +1,5 @@
+//go:build !ce
+
 // Copyright 2023 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,15 +41,15 @@ const (
 	eeEdition = "ee"
 	feEdition = "fe"
 
-	destinationHelp = `destination for images to write (archive file: "file:<file path>.tar.gz" or registry: "docker://<registry repositroy").`
-	sourceHelp      = `source for deckhouse images (archive file: "file:<file path>.tar.gz" or registry: "docker://<registry repositroy").`
+	destinationHelp = `destination for images to write (archive file: "file:<file path>.tar.gz" or registry: "docker://<registry repository").`
+	sourceHelp      = `source for deckhouse images (archive file: "file:<file path>.tar.gz" or registry: "docker://<registry repository").`
 
 	registryRegexp = `^(file:.+\.tar\.gz|docker://.+)$`
 )
 
 var (
 	ErrNotEE     = errors.New("dhctl mirror can be used only in deckhouse EE")
-	ErrNoLicense = errors.New("license is required to download Deckhouse Enterprise Edition. Please provide it with CLI argument --license")
+	ErrNoLicense = errors.New("license is required to download Deckhouse Enterprise Edition. Please provide it with CLI argument --source-password")
 
 	versionLatestRE = fmt.Sprintf(`^(%s|latest)$`, versions.VersionRE)
 )
@@ -113,6 +115,9 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		logger.LogDebugLn("Initializing source registry...")
+		if strings.HasPrefix(source.String(), "docker://registry.deckhouse.io") && sourcePassword == "" {
+			return ErrNoLicense
+		}
 		source, err := image.NewRegistry(source.String(), registryAuth(sourceUser, sourcePassword))
 		if err != nil {
 			return err
@@ -184,7 +189,7 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				continue
 			}
 
-			updatedImages.set(src.Path(), src.Tag(), src.Digest())
+			updatedImages.set(src.WithNewRegistry(dest).Path(), src.Tag(), src.Digest())
 		}
 		copyLogger.LogProcessEnd()
 
@@ -219,7 +224,7 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 func deckhouseEdition() (string, error) {
 	content, err := os.ReadFile("/deckhouse/edition")
 	if err != nil {
-		return "", errors.Join(err, ErrNotEE)
+		return "", fmt.Errorf("%w: %w", ErrNotEE, err)
 	}
 
 	edition := strings.TrimSpace(string(content))
