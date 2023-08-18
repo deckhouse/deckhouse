@@ -3,6 +3,8 @@ ARG BASE_GOLANG_20_ALPINE
 FROM $BASE_GOLANG_20_ALPINE as artifact
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
 
 RUN apk add bash git make
 
@@ -15,7 +17,7 @@ RUN git clone ${SOURCE_REPO}/mintel/dex-k8s-authenticator.git . && \
   git apply --whitespace=fix /already_logged.patch && \
   go mod download && \
   mkdir -p /app/app/bin && \
-  GOPROXY=https://proxy.golang.org CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o /app/app/bin/dex-k8s-authenticator .
+  CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o /app/app/bin/dex-k8s-authenticator .
 
 RUN chown 64535:64535 /app/app/bin/dex-k8s-authenticator
 RUN chmod 0700 /app/app/bin/dex-k8s-authenticator

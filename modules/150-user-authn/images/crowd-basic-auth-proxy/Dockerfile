@@ -1,10 +1,12 @@
 ARG BASE_DISTROLESS
 ARG BASE_GOLANG_20_ALPINE
 FROM $BASE_GOLANG_20_ALPINE as artifact
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
 WORKDIR /src/
 COPY /app/ /src/
 RUN apk add --no-cache git && \
-    GOPROXY=https://proxy.golang.org GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/crowd-basic-auth-proxy
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/crowd-basic-auth-proxy
 
 RUN chown 64535:64535 crowd-basic-auth-proxy
 RUN chmod 0700 crowd-basic-auth-proxy
