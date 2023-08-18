@@ -2,6 +2,9 @@ ARG BASE_DISTROLESS
 ARG BASE_GOLANG_20_ALPINE
 
 FROM $BASE_GOLANG_20_ALPINE as artifact
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 WORKDIR /src/user-authz-webhook
 COPY main.go go.mod go.sum /src/user-authz-webhook/
 COPY cache /src/user-authz-webhook/cache/
