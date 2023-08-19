@@ -48,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                         "releases",
 			ApiVersion:                   "deckhouse.io/v1alpha1",
-			Kind:                         "ExternalModuleRelease",
+			Kind:                         "ModuleRelease",
 			ExecuteHookOnEvents:          pointer.Bool(true),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   filterRelease,
@@ -92,14 +92,14 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		rel := sn.(enqueueRelease)
 		if rel.Status == "" {
 			rel.Status = v1alpha1.PhasePending
-			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
+			status := map[string]v1alpha1.ModuleReleaseStatus{
 				"status": {
 					Phase:          v1alpha1.PhasePending,
 					TransitionTime: time.Now().UTC(),
 					Message:        "",
 				},
 			}
-			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", rel.Name, object_patch.WithSubresource("/status"))
+			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", rel.Name, object_patch.WithSubresource("/status"))
 		}
 
 		moduleReleases[rel.ModuleName] = append(moduleReleases[rel.ModuleName], rel)
@@ -144,27 +144,27 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		if len(pred.skippedPatchesIndexes) > 0 {
 			for _, index := range pred.skippedPatchesIndexes {
 				release := pred.releases[index]
-				status := map[string]v1alpha1.ExternalModuleReleaseStatus{
+				status := map[string]v1alpha1.ModuleReleaseStatus{
 					"status": {
 						Phase:          v1alpha1.PhaseSuperseded,
 						TransitionTime: pred.ts,
 						Message:        "",
 					},
 				}
-				input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+				input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 			}
 		}
 
 		if pred.currentReleaseIndex >= 0 {
 			release := pred.releases[pred.currentReleaseIndex]
-			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
+			status := map[string]v1alpha1.ModuleReleaseStatus{
 				"status": {
 					Phase:          v1alpha1.PhaseSuperseded,
 					TransitionTime: pred.ts,
 					Message:        "",
 				},
 			}
-			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 		}
 
 		if pred.desiredReleaseIndex >= 0 {
@@ -180,14 +180,14 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			}
 			modulesChangedReason = "a new module release found"
 
-			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
+			status := map[string]v1alpha1.ModuleReleaseStatus{
 				"status": {
 					Phase:          v1alpha1.PhaseDeployed,
 					TransitionTime: pred.ts,
 					Message:        "",
 				},
 			}
-			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 		}
 	}
 	if !fsSynchronized {
@@ -273,7 +273,7 @@ func generateModulePath(moduleName, version string) string {
 }
 
 func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var release v1alpha1.ExternalModuleRelease
+	var release v1alpha1.ModuleRelease
 
 	err := sdk.FromUnstructured(obj, &release)
 	if err != nil {
@@ -287,7 +287,7 @@ func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		}
 	}
 	if release.Spec.Weight == 0 {
-		release.Spec.Weight = defaultExternalModuleWeight
+		release.Spec.Weight = defaultModuleWeight
 	}
 
 	return enqueueRelease{

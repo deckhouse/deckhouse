@@ -37,20 +37,20 @@ const (
 	PhaseSuspended  = "Suspended"
 )
 
-// ExternalModuleRelease is a ExternalModule release object.
-type ExternalModuleRelease struct {
+// ModuleRelease is a Module release object.
+type ModuleRelease struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ExternalModuleReleaseSpec `json:"spec"`
+	Spec ModuleReleaseSpec `json:"spec"`
 
-	Status ExternalModuleReleaseStatus `json:"status,omitempty"`
+	Status ModuleReleaseStatus `json:"status,omitempty"`
 }
 
-type ExternalModuleReleaseSpec struct {
+type ModuleReleaseSpec struct {
 	ModuleName string          `json:"moduleName"`
 	Version    *semver.Version `json:"version,omitempty"`
 	Weight     int             `json:"weight,omitempty"`
@@ -59,22 +59,22 @@ type ExternalModuleReleaseSpec struct {
 	Requirements map[string]string `json:"requirements,omitempty"`
 }
 
-type ExternalModuleReleaseStatus struct {
+type ModuleReleaseStatus struct {
 	Phase          string    `json:"phase,omitempty"`
 	Approved       bool      `json:"approved"`
 	TransitionTime time.Time `json:"transitionTime,omitempty"`
 	Message        string    `json:"message"`
 }
 
-type ExternalModuleReleaseKind struct{}
+type ModuleReleaseKind struct{}
 
-func (in *ExternalModuleReleaseStatus) GetObjectKind() schema.ObjectKind {
-	return &ExternalModuleReleaseKind{}
+func (in *ModuleReleaseStatus) GetObjectKind() schema.ObjectKind {
+	return &ModuleReleaseKind{}
 }
 
-func (f *ExternalModuleReleaseKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *ExternalModuleReleaseKind) GroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ExternalModuleRelease"}
+func (f *ModuleReleaseKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
+func (f *ModuleReleaseKind) GroupVersionKind() schema.GroupVersionKind {
+	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleRelease"}
 }
 
 // Duration custom type for appropriate json marshalling / unmarshalling (like "15m")
