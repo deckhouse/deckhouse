@@ -60,7 +60,7 @@ area/docs:
 
 # area/dx:
 
-area/external-modules:
+area/modules:
   - modules/005-external-module-manager/**
 
 area/kubernetes:
