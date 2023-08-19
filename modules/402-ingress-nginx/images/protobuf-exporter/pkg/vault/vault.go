@@ -28,19 +28,20 @@ import (
 const labelsSeparator = byte(255)
 
 type MetricsVault struct {
-	metrics []ConstMetricCollector
-	now     func() time.Time
+	metrics        []ConstMetricCollector
+	now            func() time.Time
+	scrapeInterval time.Duration
 }
 
-func NewVault() *MetricsVault {
-	return &MetricsVault{now: time.Now}
+func NewVault(scrapeInterval time.Duration) *MetricsVault {
+	return &MetricsVault{now: time.Now, scrapeInterval: scrapeInterval}
 }
 
 func (v *MetricsVault) RegisterMappings(mappings []Mapping) error {
 	for _, mapping := range mappings {
 		switch mapping.Type {
 		case CounterMapping:
-			collector := NewConstCounterCollector(mapping)
+			collector := NewConstCounterCollector(mapping, v.scrapeInterval)
 			v.metrics = append(v.metrics, collector)
 
 			if err := prometheus.Register(collector); err != nil {

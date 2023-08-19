@@ -286,6 +286,9 @@ spec:
           readOnly: true
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
+        env:
+        - name: PROMETHEUS_SCRAPE_INTERVAL
+          value: {{ $context.Values.global.discovery.prometheusScrapeInterval | default 30 }}s
         resources:
           requests:
             memory: 20Mi

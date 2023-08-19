@@ -156,14 +156,16 @@ func (c *ConstHistogramCollector) Clear(now time.Time) {
 type ConstCounterCollector struct {
 	mtx sync.RWMutex
 
-	collection map[uint64]StampedCounterMetric
-	desc       *prometheus.Desc
-	mapping    Mapping
+	collection     map[uint64]StampedCounterMetric
+	tempCollection map[uint64]StampedCounterMetric
+	desc           *prometheus.Desc
+	mapping        Mapping
+	scrapeInterval time.Duration
 }
 
-func NewConstCounterCollector(mapping Mapping) *ConstCounterCollector {
+func NewConstCounterCollector(mapping Mapping, scrapeInterval time.Duration) *ConstCounterCollector {
 	desc := prometheus.NewDesc(mapping.Name, mapping.Help, mapping.LabelNames, nil)
-	return &ConstCounterCollector{mapping: mapping, collection: make(map[uint64]StampedCounterMetric), desc: desc}
+	return &ConstCounterCollector{mapping: mapping, scrapeInterval: scrapeInterval, collection: make(map[uint64]StampedCounterMetric), tempCollection: make(map[uint64]StampedCounterMetric), desc: desc}
 }
 
 func (c *ConstCounterCollector) GetType() MappingType {
@@ -194,15 +196,24 @@ func (c *ConstCounterCollector) Store(labelsHash uint64, labels []string, timest
 	defer c.mtx.Unlock()
 
 	counterValue := value.(uint64)
-	storedMetric, ok := c.collection[labelsHash]
-	if !ok {
-		storedMetric = StampedCounterMetric{Value: counterValue, LabelValues: labels}
+	// check if temporary storage contains relevant metric and update temporary metric in that case (LastUpdate shouldn't be set for temp metric as we have to merge it after the scrape interval
+	if tempMetric, ok := c.tempCollection[labelsHash]; ok {
+		atomic.AddUint64(&tempMetric.Value, counterValue)
+		c.tempCollection[labelsHash] = tempMetric
 	} else {
-		atomic.AddUint64(&storedMetric.Value, counterValue)
+		storedMetric := StampedCounterMetric{}
+		// check if main storage contains relevant metric and if not - create a metric in the temporary storage with the real value and a fake 0 metric in main storage
+		if storedMetric, ok = c.collection[labelsHash]; !ok {
+			storedMetric = StampedCounterMetric{Value: 0, LabelValues: labels, LastUpdate: timestamp}
+			c.tempCollection[labelsHash] = StampedCounterMetric{Value: counterValue, LabelValues: labels, LastUpdate: timestamp}
+		} else {
+			// if metric is found in main storage - update its value
+			atomic.AddUint64(&storedMetric.Value, counterValue)
+			storedMetric.LastUpdate = timestamp
+		}
+		c.collection[labelsHash] = storedMetric
 	}
 
-	storedMetric.LastUpdate = timestamp
-	c.collection[labelsHash] = storedMetric
 }
 
 func (c *ConstCounterCollector) Clear(now time.Time) {
@@ -212,6 +223,20 @@ func (c *ConstCounterCollector) Clear(now time.Time) {
 
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
+
+	// check if we have stale temp metrics that should merged into main storage
+	for labelsHash, singleMetric := range c.tempCollection {
+		if singleMetric.LastUpdate.Add(c.scrapeInterval).Before(now) {
+			fakeMetric, ok := c.collection[labelsHash]
+			if ok {
+				atomic.AddUint64(&fakeMetric.Value, singleMetric.Value)
+				c.collection[labelsHash] = fakeMetric
+			} else {
+				c.collection[labelsHash] = singleMetric
+			}
+			delete(c.tempCollection, labelsHash)
+		}
+	}
 
 	for labelsHash, singleMetric := range c.collection {
 		if singleMetric.LastUpdate.Add(c.mapping.TTL).Before(now) {

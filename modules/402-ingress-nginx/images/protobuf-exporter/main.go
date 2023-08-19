@@ -34,18 +34,24 @@ func main() {
 	exporterAddress := ":8081"
 	mappingsPath := "./mappings.yaml"
 	logLevel := "info"
+	scrapeInterval, err := time.ParseDuration(os.Getenv("PROMETHEUS_SCRAPE_INTEVAL"))
+	if err != nil {
+		scrapeInterval = (time.Second * 30)
+		log.Warnf("Set default scrape interval to %s: %v", scrapeInterval, err)
+	}
 
 	flag.StringVar(&telemetryAddress, "server.telemetry-address", telemetryAddress, "Address to listen telemetry messages")
 	flag.StringVar(&exporterAddress, "server.exporter-address", exporterAddress, "Address to export prometheus metrics")
 	flag.StringVar(&mappingsPath, "mappings", mappingsPath, "Path to mappings")
 	flag.StringVar(&logLevel, "log-level", logLevel, "Log level")
+	flag.DurationVar(&scrapeInterval, "scrape-interval", scrapeInterval, "Prometheus Scrape Interval")
 	flag.Parse()
 
-	if err := log.Base().SetLevel(logLevel); err != nil {
+	if err = log.Base().SetLevel(logLevel); err != nil {
 		log.Fatalf("Set log level: %v", err)
 	}
 
-	metricsVault := vault.NewVault()
+	metricsVault := vault.NewVault(scrapeInterval)
 	mappings, err := vault.LoadMappingsByPath(mappingsPath)
 	if err != nil {
 		log.Fatalf("Can't load mappings from %q failed: %v", mappingsPath, err)
