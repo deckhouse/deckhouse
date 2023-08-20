@@ -42,7 +42,7 @@ Usage: $0
 EDITION="ee"
 HAS_DOCKER="$(type "docker" &> /dev/null && echo true || echo false)"
 HAS_JQ="$(type "jq" &> /dev/null && echo true || echo false)"
-HAS_GNU_READLINK=$(type "readlink" &> /dev/null && readlink --version | grep -qi GNU && echo true || echo false)
+HAS_GNU_READLINK=$({ type "readlink" &> /dev/null && readlink --version 2>&1 | grep -qi GNU && echo true; } || echo false)
 LICENSE=""
 INSTALL_ARCHIVE=""
 D8_DOCKER_CONFIG_DIR=~/.docker/deckhouse
