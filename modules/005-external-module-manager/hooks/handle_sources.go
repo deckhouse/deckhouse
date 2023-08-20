@@ -49,6 +49,7 @@ import (
 )
 
 const (
+	defaultReleaseChannel       = "stable"
 	defaultExternalModuleWeight = 900
 )
 
@@ -95,7 +96,7 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	}
 
 	if newex.Spec.ReleaseChannel == "" {
-		newex.Spec.ReleaseChannel = "stable"
+		newex.Spec.ReleaseChannel = defaultReleaseChannel
 	}
 
 	return newex, nil

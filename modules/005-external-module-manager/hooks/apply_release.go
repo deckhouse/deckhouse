@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "ExternalModuleRelease",
 			ExecuteHookOnEvents:          pointer.Bool(true),
-			ExecuteHookOnSynchronization: pointer.Bool(true),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   filterRelease,
 		},
 	},
@@ -61,7 +61,7 @@ var (
 )
 
 func applyModuleRelease(input *go_hook.HookInput) error {
-	var modulesChanged bool
+	var modulesChangedReason string
 	var fsModulesLinks map[string]string
 
 	snap := input.Snapshots["releases"]
@@ -109,7 +109,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		sort.Sort(byVersion[enqueueRelease](releases))
 		delete(fsModulesLinks, module)
 
-		pred := NewReleasePredictor(releases)
+		pred := newReleasePredictor(releases)
 
 		pred.calculateRelease()
 
@@ -136,7 +136,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
 					continue
 				}
-				modulesChanged = true
+				modulesChangedReason = "one of modules is not enabled"
 			}
 			continue
 		}
@@ -178,7 +178,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 				input.LogEntry.Errorf("Module deploy failed: %v", err)
 				continue
 			}
-			modulesChanged = true
+			modulesChangedReason = "a new module release found"
 
 			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
 				"status": {
@@ -196,12 +196,14 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 				input.LogEntry.Warnf("Module %q has no releases. Purging from FS", module)
 				_ = os.RemoveAll(moduleLinkPath)
 			}
-			modulesChanged = true
+			modulesChangedReason = "the modules filesystem is not synchronized"
 		}
 		fsSynchronized = true
 	}
 
-	if modulesChanged {
+	if modulesChangedReason != "" {
+		input.LogEntry.Infof("Restarting Deckhouse because %s", modulesChangedReason)
+
 		err := syscall.Kill(1, syscall.SIGUSR2)
 		if err != nil {
 			input.LogEntry.Errorf("Send SIGUSR2 signal failed: %s", err)
@@ -343,8 +345,7 @@ type releasePredictor struct {
 	skippedPatchesIndexes []int
 }
 
-// nolint: revive
-func NewReleasePredictor(releases []enqueueRelease) *releasePredictor {
+func newReleasePredictor(releases []enqueueRelease) *releasePredictor {
 	return &releasePredictor{
 		ts:       time.Now().UTC(),
 		releases: releases,

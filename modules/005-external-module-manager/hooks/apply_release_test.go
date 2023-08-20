@@ -54,7 +54,7 @@ external-module-manager:
 			_ = os.Mkdir(tmpDir+"/modules", 0777)
 			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
 
-			st := f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ExternalModuleRelease
@@ -67,7 +67,7 @@ status:
   phase: Pending
 `)
 
-			f.BindingContexts.Set(st)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -115,7 +115,7 @@ status:
 			_ = os.Mkdir(tmpDir+"/modules", 0777)
 			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
 
-			st := f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ExternalModuleRelease
@@ -129,7 +129,7 @@ status:
   phase: Pending
 `)
 
-			f.BindingContexts.Set(st)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -150,6 +150,7 @@ status:
 
 		Context("ExternalModuleRelease was changed with another weight", func() {
 			BeforeEach(func() {
+				f.KubeStateSet(``) // Empty cluster
 				st := f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
