@@ -27,7 +27,7 @@ git:
     add: /
     to: /drbd
     tag: drbd-{{ $version }}
-  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /scripts
 shell:
   setup:
