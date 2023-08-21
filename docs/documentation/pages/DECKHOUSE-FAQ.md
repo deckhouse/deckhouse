@@ -167,10 +167,10 @@ Possible options for action if something went wrong:
 As soon as a new version of Deckhouse appears on the release channel installed in the cluster:
 - The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
 - There is a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
-    - Manual update mode is set (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
-    - The automatic update mode is set, and the [update windows](modules/002-deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come. 
-    - The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
-    - The [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
+  - Manual update mode is set (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
+  - The automatic update mode is set, and the [update windows](modules/002-deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come.
+  - The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
+  - The [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
 
 ### How do I get information about the upcoming update in advance?
 
