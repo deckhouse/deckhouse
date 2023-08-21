@@ -29,7 +29,7 @@ shell:
   install:
   - mkdir /src
   - cd /src
-  - git clone --depth 1 --branch v{{ $version }} {{ env "SOURCE_REPO" | default "https://github.com" }}/gardener/autoscaler.git .
+  - git clone --depth 1 --branch v{{ $version }}.{{ $value.clusterAutoscalerPatch }} {{ env "SOURCE_REPO" | default "https://github.com" }}/gardener/autoscaler.git .
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - cd cluster-autoscaler
   - GOPROXY={{ env "GOPROXY" }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o cluster-autoscaler
