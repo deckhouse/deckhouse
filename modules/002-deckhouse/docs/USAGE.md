@@ -4,7 +4,7 @@ title: "The deckhouse module: usage"
 
 ## Usage
 
-Example of module configuration with automatic Deckhouse update on the EarlyAccess release channel:
+Example of module configuration with automatic Deckhouse update on the Early Access release channel:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
