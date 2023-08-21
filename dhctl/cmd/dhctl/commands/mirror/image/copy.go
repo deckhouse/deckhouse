@@ -17,7 +17,6 @@ package image
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/containers/image/v5/copy"
@@ -27,7 +26,7 @@ import (
 )
 
 func CopyImage(ctx context.Context, src, dest *ImageConfig, policyContext *signature.PolicyContext, logger log.Logger, opts ...CopyOption) (bool, error) {
-	copyOptions := &copyOptions{copyOptions: &copy.Options{ReportWriter: os.Stdout}}
+	copyOptions := &copyOptions{copyOptions: &copy.Options{}}
 	opts = append(opts, withSourceAuth(src.AuthConfig()), withDestAuth(dest.AuthConfig()))
 	for _, opt := range opts {
 		opt(copyOptions)
@@ -50,9 +49,11 @@ func CopyImage(ctx context.Context, src, dest *ImageConfig, policyContext *signa
 		return false, err
 	}
 
-	msg := fmt.Sprintf("\nCopying %s image to %s...\n", trimRef(srcRef), trimRef(destRef))
-	if _, err := copyOptions.copyOptions.ReportWriter.Write([]byte(msg)); err != nil {
-		return false, err
+	if writer := copyOptions.copyOptions.ReportWriter; writer != nil {
+		msg := fmt.Sprintf("\nCopying %s image to %s...\n", trimRef(srcRef), trimRef(destRef))
+		if _, err := writer.Write([]byte(msg)); err != nil {
+			return false, err
+		}
 	}
 
 	if copyOptions.dryRun {

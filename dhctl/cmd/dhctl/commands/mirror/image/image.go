@@ -163,7 +163,7 @@ func (i *ImageConfig) extractImageFromFileRegistry() error {
 			digest = tagAndDigest[1]
 		}
 
-		if h.Name == fileInArchive || (dir == targetDir && (digest == i.Digest() || (digest == "" && tag == i.Tag()))) {
+		if h.Name == fileInArchive || (dir == targetDir && ((digest != "" && digest == i.Digest()) || (digest == "" && tag == i.Tag()))) {
 			return true, util.MkFile(resultFile, r, h.FileInfo())
 		}
 		return false, nil
