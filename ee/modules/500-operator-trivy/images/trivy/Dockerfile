@@ -7,6 +7,8 @@ ARG TRIVY_DB_VERSION=flant-latest
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
 WORKDIR /src
 RUN git clone --depth 1 --branch ${TRIVY_DB_VERSION} ${SOURCE_REPO}/aquasecurity/trivy-db.git && \
     git clone --depth 1 --branch ${TRIVY_VERSION} ${SOURCE_REPO}/aquasecurity/trivy.git && \

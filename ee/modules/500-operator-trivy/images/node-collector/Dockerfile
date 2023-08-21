@@ -4,6 +4,8 @@ ARG BASE_GOLANG_20_ALPINE
 FROM $BASE_GOLANG_20_ALPINE AS build
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
 WORKDIR /src
 RUN apk add --update --no-cache patch git
 RUN git clone --depth 1 --branch v0.0.6 ${SOURCE_REPO}/aquasecurity/k8s-node-collector.git .
