@@ -35,7 +35,7 @@ from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
 from: {{ $.Images.BASE_GOLANG_BUSTER }}
     {{- end }}
 git:
-- add: /ee/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:

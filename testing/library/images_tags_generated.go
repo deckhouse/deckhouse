@@ -368,7 +368,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet1274":               "imageHash-registrypackages-kubelet1274",
 		"kubernetesCni120":          "imageHash-registrypackages-kubernetesCni120",
 		"tomlMerge01":               "imageHash-registrypackages-tomlMerge01",
-		"virtWhatDebian1151Deb9u1":  "imageHash-registrypackages-virtWhatDebian1151Deb9u1",
+		"virtWhatDebian1191":        "imageHash-registrypackages-virtWhatDebian1191",
 	},
 	"runtimeAuditEngine": map[string]interface{}{
 		"falco":         "imageHash-runtimeAuditEngine-falco",

@@ -2,7 +2,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ .Images.BASE_ALPINE }}
 git:
-  - add: /
+  - add: /{{ .ModulePath }}
     to: /deckhouse
     includePaths:
       - modules/*/openapi
@@ -47,7 +47,7 @@ docker:
   ENTRYPOINT: ["/deckhouse-config-webhook"]
 ---
 {{ $webhookAbsPath := "/deckhouse/modules/003-deckhouse-config/images/deckhouse-config-webhook" }}
-{{ $webhookRelPath := "modules/003-deckhouse-config/images/deckhouse-config-webhook" }}
+{{ $webhookRelPath := printf "%smodules/003-deckhouse-config/images/deckhouse-config-webhook" .ModulePath }}
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_19_ALPINE }}
 shell:
@@ -77,7 +77,7 @@ git:
       - go.sum
     setup:
       - "**/*.go"
-- add: /
+- add: /{{ .ModulePath }}
   to: /deckhouse
   includePaths:
     - dhctl/go.mod
