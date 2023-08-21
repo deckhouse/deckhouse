@@ -23,7 +23,7 @@ Deckhouse will update as soon as a new release will be created if update windows
 
 Patch versions (e.g. updates from `1.26.1` to `1.26.2`) are installed without confirmation and without taking into account update windows.
 
-> You can also configure node disruption update windows by using the [`disruptions.automatic.windows`](../040-node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) parameter of the `NodeGroup` custom resource.
+> You can also configure node disruptive update windows by using the [`disruptions.automatic.windows`](../040-node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) parameter of the `NodeGroup` custom resource.
 
 ### Update windows configuration
 

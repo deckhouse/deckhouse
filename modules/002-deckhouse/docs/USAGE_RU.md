@@ -87,7 +87,7 @@ spec:
       mode: Manual
 ```
 
-Для подтверждения обновления, в соответствующем custom resource [`DeckhouseRelease`](cr.html#deckhouserelease) необходимо установить поле `approved` в `true`.
+Для подтверждения обновления в соответствующем custom resource [`DeckhouseRelease`](cr.html#deckhouserelease) поле `approved` необходимо установить в `true`.
 
 Пример подтверждения обновления на версию `v1.43.2`:
 
@@ -116,7 +116,7 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
-В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учёта patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [`DeckhouseRelease`](cr.html#deckhouserelease). Обычное обновление (не потенциально опасное), будет применяться автоматически.
+В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учёта patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [`DeckhouseRelease`](cr.html#deckhouserelease). Обычное обновление (не потенциально опасное) будет применяться автоматически.
 
 Пример подтверждения минорного потенциально опасного обновления Deckhouse `v1.36.4`:
 
