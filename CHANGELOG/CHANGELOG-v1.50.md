@@ -29,6 +29,8 @@
 ## Fixes
 
 
+ - **[candi]** Fix kubelet configuration step. [#5561](https://github.com/deckhouse/deckhouse/pull/5561)
+ - **[candi]** Fix old CSI mount cleaner. [#5548](https://github.com/deckhouse/deckhouse/pull/5548)
  - **[candi]** Revert migration to cgroupfs driver for containerd CRI. [#5539](https://github.com/deckhouse/deckhouse/pull/5539)
  - **[candi]** Set firmware explicitly for `vsphere_virtual_machine`. [#5457](https://github.com/deckhouse/deckhouse/pull/5457)
  - **[candi]** Remove usage of temp files when creating a `NodeUser`. [#5337](https://github.com/deckhouse/deckhouse/pull/5337)
@@ -38,6 +40,8 @@
     Ingress controller will restart.
  - **[keepalived]** Add info about [how to do manual IP switching](https://deckhouse.io/documentation/latest/modules/450-keepalived/faq.html#how-to-manually-switch-keepalived). [#5335](https://github.com/deckhouse/deckhouse/pull/5335)
  - **[loki]** Mount `/tmp` on `emptyDir` to fix retention. [#5400](https://github.com/deckhouse/deckhouse/pull/5400)
+ - **[metallb]** Fix error in speaker leader-election. [#5565](https://github.com/deckhouse/deckhouse/pull/5565)
+    metallb pods should restart.
  - **[operator-trivy]** Remove `upmeter` probes from trivy scanning. [#5364](https://github.com/deckhouse/deckhouse/pull/5364)
  - **[prometheus]** Fix alert expression when a `longterm-prometheus` fails to scrape the `main-prometheus` for whatever reason. [#5345](https://github.com/deckhouse/deckhouse/pull/5345)
  - **[user-authn]** Use global discovered `publishAPI` cert by default for generated kubeconfigs. [#5488](https://github.com/deckhouse/deckhouse/pull/5488)
