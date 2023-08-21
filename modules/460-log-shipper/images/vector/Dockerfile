@@ -13,16 +13,19 @@ RUN apt-get update \
 # https://github.com/confluentinc/librdkafka/commit/f8830a28652532009e3f16854cb9d5004d9de06b
 RUN apt-get update \
     && apt-get install -yq \
-      wget build-essential libsasl2-dev libcurl4-openssl-dev libzstd-dev libssl-dev zlib1g-dev libc6-dev unzip \
-    && wget https://github.com/edenhill/librdkafka/archive/v2.0.2.zip \
-    && unzip v2.0.2.zip \
-    && cd librdkafka-2.0.2 \
+      wget build-essential libsasl2-dev libcurl4-openssl-dev libzstd-dev libssl-dev zlib1g-dev libc6-dev unzip
+
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
+RUN git clone --depth 1 --branch v2.0.2 ${SOURCE_REPO}/confluentinc/librdkafka.git /librdkafka \
+    && cd /librdkafka \
     && ./configure \
     && make \
     && make install
 
 WORKDIR /vector
-RUN git clone --depth 1 --branch v0.31.0 https://github.com/vectordotdev/vector.git \
+RUN git clone --depth 1 --branch v0.31.0 ${SOURCE_REPO}/vectordotdev/vector.git \
     && cd vector
 
 # Download and cache dependencies
