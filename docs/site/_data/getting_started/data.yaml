@@ -147,10 +147,6 @@ installTypes:
         template: getting_started/global/STEP_FINISH.md
   openstack:
     iconPath: images/icons/platforms/corp_cloud_open_stack.png
-    extraIcons:
-      vk: images/icons/platforms/vk.png
-      ovh: images/icons/platforms/ovh.png
-      selectel: images/icons/platforms/selectel.png
     ee_only: true
     layout:
       code: standard
@@ -162,6 +158,123 @@ installTypes:
     name:
       en: OpenStack
       ru: OpenStack
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+  openstack_vk:
+    iconPath: images/icons/platforms/vk_logo.svg
+    ee_only: true
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Platform on VK Cloud (OpenStack)"
+      ru: "Deckhouse Platform в VK Cloud (OpenStack)"
+    type: cloud
+    name:
+      en: VK Cloud
+      ru: VK Cloud
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+  openstack_ovh:
+    iconPath: images/icons/platforms/ovhcloud_logo.svg
+    ee_only: true
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Platform on OVH (OpenStack)"
+      ru: "Deckhouse Platform в OVH (OpenStack)"
+    type: cloud
+    name:
+      en: OVH Cloud
+      ru: OVH Cloud
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+  openstack_selectel:
+    iconPath: images/icons/platforms/selectel_logo_mini.png
+    ee_only: true
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Platform on Selectel (OpenStack)"
+      ru: "Deckhouse Platform в Selectel (OpenStack)"
+    type: cloud
+    name:
+      en: Selectel
+      ru: Selectel
     steps:
       step2:
         name:
