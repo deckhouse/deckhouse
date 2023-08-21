@@ -170,7 +170,7 @@ As soon as a new version of Deckhouse appears on the release channel installed i
   - Manual update mode is set (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
   - The automatic update mode is set, and the [update windows](modules/002-deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come.
   - The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
-  - The [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
+  - The [update.notification.minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
 
 ### How do I get information about the upcoming update in advance?
 
