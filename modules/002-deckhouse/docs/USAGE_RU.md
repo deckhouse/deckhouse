@@ -27,7 +27,9 @@ spec:
 
 Patch-версии (например, обновления с `1.26.1` до `1.26.2`) устанавливаются без подтверждения и без учета окон обновлений.
 
-> Вы также можете настраивать окна disruption-обновлений узлов в custom resource'ах [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup) (параметр `disruptions.automatic.windows`).
+{% alert %}
+Вы также можете настраивать окна disruption-обновлений узлов в custom resource'ах [NodeGroup](../040-node-manager/cr.html#nodegroup) (параметр `disruptions.automatic.windows`).
+{% endalert %}
 
 ### Конфигурация окон обновлений
 
@@ -166,7 +168,7 @@ spec:
 ```
 
 {% alert %}
-Если не указать адрес в параметре [webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), то применение новой версии все равно будет отложено как минимум на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии можно считать появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
+Если не указать адрес в параметре [update.notification.webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), то применение новой версии все равно будет отложено как минимум на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии можно считать появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
 {% endalert %}
 
 ## Сбор информации для отладки
