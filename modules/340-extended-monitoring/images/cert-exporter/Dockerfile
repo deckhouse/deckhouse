@@ -13,11 +13,12 @@ RUN apk add --no-cache go git make
 RUN git clone --depth 1 --branch v2.0.1 ${SOURCE_REPO}/giantswarm/cert-exporter.git /cert-exporter
 
 WORKDIR /cert-exporter
-RUN make
-
+RUN make && \
+    chown -R 64535:64535 /cert-exporter/ && \
+    chmod 0700 /cert-exporter/cert-exporter
 FROM $BASE_DISTROLESS
 
-USER 1000
+USER 64535
 COPY --from=artifact /cert-exporter/cert-exporter /cert-exporter
 
 ENTRYPOINT ["/cert-exporter"]
