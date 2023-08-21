@@ -158,17 +158,8 @@ apiVersions:
                   The number of array elements must correspond to the number of `replicas`.
                 items:
                   type: string
-              additionalLabels: &instanceClassAdditionalLabels
-                type: object
-                description: |
-                  Additional labels.
-                x-doc-example: |
-                  ```yaml
-                  project: cms-production
-                  severity: critical
-                  ```
-                additionalProperties:
-                  type: string
+              additionalLabels:
+                $ref: '/deckhouse/candi/cloud-providers/yandex/openapi/common.yaml#/testField'
               networkType: &instanceClassNetworkType
                 type: string
                 description: |
@@ -271,7 +262,8 @@ apiVersions:
                 externalIPAddresses: *instanceClassExternalIPAddresses
                 externalSubnetID: *instanceClassExternalSubnetID
                 externalSubnetIDs: *instanceClassExternalSubnetIDs
-                additionalLabels: *instanceClassAdditionalLabels
+                additionalLabels:
+                  $ref: '/deckhouse/candi/cloud-providers/yandex/openapi/common.yaml#/testField'
                 networkType: *instanceClassNetworkType
                 coreFraction:
                   description: |

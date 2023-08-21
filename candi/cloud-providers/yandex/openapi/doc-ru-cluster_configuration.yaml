@@ -73,8 +73,7 @@ apiVersions:
 
                   Количество элементов массива должно соответствовать `replicas`.
               additionalLabels:
-                description: |
-                  Дополнительные лейблы, которые будут присвоены созданным инстансам.
+                $ref: '/deckhouse/openapi_lib/cloud-providers.yaml#/testField'
               networkType:
                 description: |
                   Тип сети.

@@ -1,0 +1,11 @@
+testField:
+  type: object
+  description: |
+    Ну как-то так. Просто набор безсмысленного текста чтобы что-то проверить
+  x-doc-example: |
+    ```yaml
+    project: cms-production
+    severity: critical
+    ```
+  additionalProperties:
+    type: string
