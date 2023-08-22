@@ -29,8 +29,8 @@ import (
 	"k8s.io/utils/pointer"
 
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 /**
@@ -46,13 +46,13 @@ Notes:
 */
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/deckhouse-config/sync",
+	Queue: "/modules/deckhouse/sync-configs",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                   "configs",
 			ApiVersion:             "deckhouse.io/v1alpha1",
 			Kind:                   "ModuleConfig",
-			WaitForSynchronization: pointer.BoolPtr(true),
+			WaitForSynchronization: pointer.Bool(true),
 			FilterFunc:             filterModuleConfig,
 		},
 		{
@@ -76,7 +76,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 // filterModuleSettings returns spec for ModuleConfig objects.
 func filterModuleConfig(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var cfg d8cfg_v1alpha1.ModuleConfig
+	var cfg d8v1alpha1.ModuleConfig
 
 	err := sdk.FromUnstructured(unstructured, &cfg)
 	if err != nil {
@@ -84,7 +84,7 @@ func filterModuleConfig(unstructured *unstructured.Unstructured) (go_hook.Filter
 	}
 
 	// Extract name and spec into empty ModuleConfig.
-	return &d8cfg_v1alpha1.ModuleConfig{
+	return &d8v1alpha1.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cfg.Name,
 		},
@@ -111,7 +111,7 @@ func updateGeneratedConfigMap(input *go_hook.HookInput) error {
 	possibleNames := d8config.Service().PossibleNames()
 	allConfigs := knownConfigsFromSnapshot(input.Snapshots["configs"], possibleNames)
 
-	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+	properCfgs := make([]*d8v1alpha1.ModuleConfig, 0)
 
 	for _, cfg := range allConfigs {
 		res := d8config.Service().ConfigValidator().Validate(cfg)
@@ -139,10 +139,10 @@ func updateGeneratedConfigMap(input *go_hook.HookInput) error {
 
 // knownConfigsFromSnapshot return type ModuleConfig items from untyped snapshot.
 // It uses possibleNames array to ignore ModuleConfig resources for unknown modules.
-func knownConfigsFromSnapshot(snapshot []go_hook.FilterResult, possibleNames set.Set) []*d8cfg_v1alpha1.ModuleConfig {
-	configs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+func knownConfigsFromSnapshot(snapshot []go_hook.FilterResult, possibleNames set.Set) []*d8v1alpha1.ModuleConfig {
+	configs := make([]*d8v1alpha1.ModuleConfig, 0)
 	for _, item := range snapshot {
-		cfg := item.(*d8cfg_v1alpha1.ModuleConfig)
+		cfg := item.(*d8v1alpha1.ModuleConfig)
 		// Ignore configurations for unknown modules.
 		if !possibleNames.Has(cfg.GetName()) {
 			continue

@@ -22,8 +22,8 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 type Status struct {
@@ -45,7 +45,7 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName string, externalModulesToRepo map[string]string) Status {
+func (s *StatusReporter) ForConfig(cfg *d8v1alpha1.ModuleConfig, bundleName string, externalModulesToRepo map[string]string) Status {
 	// Special case: unknown module name.
 	repo, isExternal := externalModulesToRepo[cfg.GetName()]
 

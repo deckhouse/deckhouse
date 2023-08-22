@@ -26,7 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager/test/mock"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 const (

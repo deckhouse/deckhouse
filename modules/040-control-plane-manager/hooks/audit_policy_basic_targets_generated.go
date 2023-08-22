@@ -70,7 +70,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"d8-vertical-pod-autoscaler-updater",
 	"dashboard",
 	"deckhouse",
-	"deckhouse-config-webhook",
 	"descheduler",
 	"dex",
 	"early-oom",
