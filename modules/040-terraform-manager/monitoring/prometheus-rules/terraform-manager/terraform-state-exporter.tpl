@@ -153,7 +153,7 @@
         Real Node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` state is `{{`{{ $labels.status }}`}}` comparing to Terraform state.
 
         It's important to make them equal.
-        First, check what will change by running the `dhctl terraform check` command.
+        First, run the `dhctl terraform check` command to check what will change.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
       summary: Terraform-state-exporter node state changed
 
