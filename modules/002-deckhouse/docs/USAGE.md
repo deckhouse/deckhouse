@@ -27,7 +27,9 @@ Deckhouse will update as soon as a new release will be created if update windows
 
 Patch versions (e.g. updates from `1.26.1` to `1.26.2`) are installed without confirmation and without taking into account update windows.
 
-> You can also configure node disruption update window in CR [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup) (the `disruptions.automatic.windows` parameter).
+{% alert %}
+You can also configure node disruption update window in CR [NodeGroup](../040-node-manager/cr.html#nodegroup) (the `disruptions.automatic.windows` parameter).
+{% endalert %}
 
 ### Update windows configuration
 
@@ -114,7 +116,7 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
-In this mode, it will be necessary to confirm each minor disruptive update with the `release.deckhouse.io/disruption-approved=true` annotation on the `DeckhouseRelease` resource.
+In this mode, it will be necessary to confirm each minor disruptive update with the `release.deckhouse.io/disruption-approved=true` annotation on the [DeckhouseRelease](cr.html#deckhouserelease) resource.
 
 An example of confirmation of a potentially dangerous Deckhouse minor update `v1.36.4`:
 
@@ -164,6 +166,10 @@ spec:
         webhook: https://release-webhook.mydomain.com
         minimalNotificationTime: 8h
 ```
+
+{% alert %}
+If you do not specify the address in the [update.notification.webhook](configuration.html#parameters-update-notification-webhook) parameter, but specify the time in the [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter, then the release will still be postponed for at least the time specified in the `minimalNotificationTime` parameter. In this case, the notification of the appearance of a new version can be considered the appearance of a [DeckhouseRelease](cr.html#deckhouserelease) resource with a name corresponding to the new version.
+{% endalert %}
 
 ## Collect debug info
 
