@@ -290,6 +290,7 @@ apiVersions:
                   type: string
                   description: |
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+                    Get a list of all available networks: `openstack network list`.
                   x-doc-required: true
                 additionalNetworks:
                   type: array
@@ -297,6 +298,7 @@ apiVersions:
                     type: string
                   description: |
                     Paths to networks that VirtualMachines' secondary NICs will connect to.
+                    Get a list of all available networks: `openstack network list`.
                   example:
                     - "BGP-network-VLAN-3894"
                     - "External-VLAN-3699"
@@ -436,6 +438,7 @@ apiVersions:
           externalNetworkName: &externalNetworkName
             description: |
               The name of the network for external connections.
+              Get a list of all available networks: `openstack network list`.
             type: string
       standardWithNoRouter:
         description: |
