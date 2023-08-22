@@ -298,7 +298,7 @@ apiVersions:
                     type: string
                   description: |
                     Paths to networks that VirtualMachines' secondary NICs will connect to.
-                    `openstack network list`
+                    Get a list of all available networks: `openstack network list`.
                   example:
                     - "BGP-network-VLAN-3894"
                     - "External-VLAN-3699"
