@@ -164,7 +164,7 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"exec", "deploy/terraform-state-exporter", "--", "dhctl", "terraform", "check", "--logger-type", "json", "-o", "json"},
 		},
 		{
-			File: "clusteralerts.json",
+			File: "alerts.json",
 			Cmd:  "bash",
 			Args: []string{"-c", `kubectl get clusteralerts.deckhouse.io -o json | jq '.items[]'`},
 		},
