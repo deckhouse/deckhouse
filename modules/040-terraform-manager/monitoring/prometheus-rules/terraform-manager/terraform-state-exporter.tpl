@@ -153,7 +153,7 @@
         Real Node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` state is `{{`{{ $labels.status }}`}}` comparing to Terraform state.
 
         It's important to make them equal.
-        First check what will change `dhctl terraform check`.
+        First, check what will change by running the `dhctl terraform check` command.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
       summary: Terraform-state-exporter node state changed
 
@@ -175,7 +175,7 @@
         Terraform-state-exporter can't check difference between Kubernetes cluster state and Terraform state.
 
         Probably, it occurred because Terraform-state-exporter had failed to run terraform with current state and config.
-        First check what will change `dhctl terraform check`.
+        First, check what will change by running the `dhctl terraform check` command.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
@@ -203,7 +203,7 @@
         Terraform-state-exporter can't check difference between Node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` state and Terraform state.
 
         Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
-        First check what will change `dhctl terraform check`.
+        First, check what will change by running the `dhctl terraform check` command.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
@@ -231,6 +231,6 @@
         Terraform-state-exporter found difference between node template from cluster provider configuration and from NodeGroup `{{`{{ $labels.name }}`}}`.
         Node template is `{{`{{ $labels.status }}`}}`.
 
-        First check what will change `dhctl terraform check`.
+        First, check what will change by running the `dhctl terraform check` command.
         Use `dhctl converge` command or manually adjust NodeGroup settings to fix the issue.
       summary: Terraform-state-exporter node template changed
