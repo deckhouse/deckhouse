@@ -14,61 +14,51 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package apis
+package validation
 
 import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
+	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
-func moduleConfigValidationHandler() http.Handler {
+func deckhouseCMValidationHandler() http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
-		switch review.Operation {
-		case kwhmodel.OperationDelete:
-			// Always allow deletion.
+		cmName := obj.GetName()
+
+		if cmName != os.Getenv("ADDON_OPERATOR_CONFIG_MAP") {
 			return allowResult("")
-
-		case kwhmodel.OperationConnect, kwhmodel.OperationUnknown:
-			return rejectResult(fmt.Sprintf("operation '%s' is not applicable", review.Operation))
 		}
 
-		cfg, ok := obj.(*d8v1alpha1.ModuleConfig)
-		if !ok {
-			return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
+		operation := "changing"
+		if review.Operation == kwhmodel.OperationDelete {
+			operation = "deleting"
 		}
 
-		// Allow changing configuration for unknown modules.
-		if !d8config.Service().PossibleNames().Has(cfg.Name) {
-			return allowResult(fmt.Sprintf("module name '%s' is unknown for deckhouse", cfg.Name))
+		if review.UserInfo.Username == "system:serviceaccount:d8-system:deckhouse" || review.UserInfo.Username == "system:serviceaccount:kube-system:generic-garbage-collector" {
+			return allowResult("")
 		}
 
-		// Check if spec.version value is valid and the version is the latest.
-		// Validate spec.settings using the OpenAPI schema.
-		res := d8config.Service().ConfigValidator().Validate(cfg)
-		if res.HasError() {
-			return rejectResult(res.Error)
-		}
+		log.Infof("Request to %s ConfigMap/%s by user %+v", string(review.Operation), cmName, review.UserInfo)
 
-		// Return allow with warning.
-		return allowResult(res.Warning)
+		return rejectResult(fmt.Sprintf("%s ConfigMap/%s is not allowed for %s. Use ModuleConfig resources to configure Deckhouse.", operation, cmName, review.UserInfo.Username))
 	})
 
 	// Create webhook.
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
-		ID:        "module-config-operations",
+		ID:        "deckhouse-cm-operations",
 		Validator: vf,
 		Logger:    validationLogger,
-		Obj:       &d8v1alpha1.ModuleConfig{},
+		Obj:       &v1.ConfigMap{},
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: validationLogger})

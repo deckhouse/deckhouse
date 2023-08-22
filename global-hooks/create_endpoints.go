@@ -28,6 +28,10 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+// We will create the EndpointSlice manually, because Deckhouse only goes to the Ready state after the 'first converge' of modules.
+// But Deckhouse itself has ValidationWebhooks that should be executed even when pod is not ready.
+// Endpoints created via service do not go to ready state in this case and we cannot use validation.
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
 }, generateDeckhouseEndpoints)

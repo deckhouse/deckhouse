@@ -34,6 +34,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
+	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/validation"
 	_ "github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-cloud-data-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-operator-prometheus-crd/hooks"
