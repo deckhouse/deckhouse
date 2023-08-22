@@ -65,8 +65,8 @@ func main() {
 
 	managerOpts := manager.Options{
 		LeaderElection:             true,
-		LeaderElectionNamespace:    "d8-storage-deckhouse-linstor-operator",
-		LeaderElectionID:           "d8-storage-deckhouse-linstor-operator-leader-election-helper",
+		LeaderElectionNamespace:    "d8-storage-d8-linstor-operator",
+		LeaderElectionID:           "d8-storage-d8-linstor-operator-leader-election-helper",
 		LeaderElectionResourceLock: "leases",
 		Scheme:                     scheme,
 		MetricsBindAddress:         cfgParams.MetricsPort,
