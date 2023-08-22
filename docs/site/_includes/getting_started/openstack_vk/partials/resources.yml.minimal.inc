@@ -11,13 +11,13 @@ spec:
   # [<ru>] Используемый flavor для данного инстанс-класса.
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  flavorName: Standard-2-4-50
+  flavorName: Standard-4-8-80
   rootDiskSize: 30
   # [<en>] VM image in use.
   # [<ru>] Используемый образ виртуальной машины.
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  imageName: ubuntu-22-04-cloud-amd64
+  imageName: Ubuntu-22.04-202208
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup

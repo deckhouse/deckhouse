@@ -78,7 +78,9 @@ standard:
 # [<en>] OpenStack API access parameters
 # [<ru>] параметры доступа к OpenStack API
 provider:
-  authURL: *!CHANGE_API_URL*
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+  authURL: https://infra.mail.ru:35357/v3/
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   domainName: users
@@ -110,12 +112,12 @@ masterNodeGroup:
     # [<ru>] Используемый flavor.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    flavorName: Standard-2-8-50
+    flavorName: Standard-4-8-80
     # [<en>] VM image in use.
     # [<ru>] Используемый образ виртуальной машины.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    imageName: ubuntu-22-04-cloud-amd64
+    imageName: Ubuntu-22.04-202208
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40

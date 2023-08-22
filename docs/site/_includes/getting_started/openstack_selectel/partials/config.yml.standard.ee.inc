@@ -78,22 +78,22 @@ standard:
 # [<en>] OpenStack API access parameters
 # [<ru>] параметры доступа к OpenStack API
 provider:
-  authURL: *!CHANGE_API_URL*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  domainName: users
+  authURL: 'https://api.selvpc.ru/identity/v3'
   # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
-  # [<ru>] Переменная OS_USER_DOMAIN_NAME из файла openrc.
+  # [<ru>] Переменная OS_USER_DOMAIN_NAME из openrc-файла.
+  domainName: *!CHANGE_DOMAINNAME*
   password: *!CHANGE_PASSWORD*
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  region: RegionOne
+  region: ru-3
   # [<en>] You might need to specify tenantName instead of tenantID.
   # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
   # [<ru>] Возможно вам нужно указать tenantName вместо tenantID.
   # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
   # tenantName: PROJECT_NAME
   tenantID: *!CHANGE_PROJECT_ID*
+  # [<en>] OS_USERNAME variable from the openrc file.
+  # [<ru>] Переменная OS_USERNAME из openrc-файла.
   username: *!CHANGE_USERNAME*
 masterNodeGroup:
   replicas: 1
@@ -104,18 +104,18 @@ masterNodeGroup:
     # [<ru>] <availability zone>: <volume type>
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    DP1: dp1-high-iops
+    ru-3a: "fast.ru-3a"
   instanceClass:
     # [<en>] Flavor in use.
     # [<ru>] Используемый flavor.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    flavorName: Standard-2-8-50
+    flavorName: m1.large
     # [<en>] VM image in use.
     # [<ru>] Используемый образ виртуальной машины.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    imageName: ubuntu-22-04-cloud-amd64
+    imageName: ubuntu-22.04
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40
