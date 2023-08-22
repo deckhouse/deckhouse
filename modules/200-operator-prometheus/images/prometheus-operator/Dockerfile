@@ -6,7 +6,7 @@ FROM $BASE_GOLANG_18_ALPINE as artifact
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
-RUN apk add --no-cache make git
+RUN apk add --no-cache git
 RUN git clone --depth 1 --branch v0.62.0 ${SOURCE_REPO}/prometheus-operator/prometheus-operator.git /prometheus-operator
 WORKDIR /prometheus-operator/
 

@@ -18,6 +18,9 @@ RUN apt install -y make bash git ca-certificates openssl openssh-client bzip2
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 RUN mkdir /prometheus && cd /prometheus \
   && git clone -b "${PROMETHEUS_VERSION}" --single-branch ${SOURCE_REPO}/prometheus/prometheus
 WORKDIR /prometheus/prometheus
@@ -50,14 +53,11 @@ RUN mkdir -p /prometheus && \
 FROM $BASE_DISTROLESS
 COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
 COPY --from=artifact /prometheus/prometheus/promtool                               /bin/promtool
-# COPY --from=artifact /prometheus/prometheus/documentation/examples/prometheus.yml  /etc/prometheus/prometheus.yml
 COPY --from=artifact /prometheus/prometheus/console_libraries/                     /usr/share/prometheus/console_libraries/
-# COPY --from=artifact /prometheus/prometheus/consoles/                              /usr/share/prometheus/consoles/
 COPY --from=artifact /consoles/                                                    /usr/share/prometheus/consoles/
 COPY --from=artifact /etc/                                                         /etc/prometheus/
 COPY --from=artifact /prometheus/                                                  /prometheus/
 
-USER 64535
 EXPOSE     9090
 VOLUME     [ "/prometheus" ]
 WORKDIR    /prometheus

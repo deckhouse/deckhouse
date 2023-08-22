@@ -8,5 +8,4 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o psi-monit
 
 FROM $BASE_ALPINE
 COPY --from=artifact /src/psi-monitor /
-
 ENTRYPOINT [ "/psi-monitor" ]

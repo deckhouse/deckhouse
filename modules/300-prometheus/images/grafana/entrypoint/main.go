@@ -70,61 +70,6 @@ func main() {
 		log.Fatalf("GF_PATHS_HOME='%s' is not readable.\nYou may have issues with file permissions, more information here: http://docs.grafana.org/installation/docker/#migrate-to-v51-or-later", gfPathsHome)
 	}
 
-	gfAWSProfile, ok := os.LookupEnv("GF_AWS_PROFILES")
-	if ok && gfAWSProfile != "" {
-
-		credentialsFile, err := os.OpenFile(
-			fmt.Sprintf("%s/.aws/credentials", gfPathsHome),
-			os.O_RDWR,
-			0600,
-		)
-		if err != nil {
-			log.Fatalf("open credentials file: %v", err)
-		}
-		defer credentialsFile.Close()
-		credentialsFile.Truncate(0)
-		credentialsFile.Seek(0, 0)
-
-		builder := strings.Builder{}
-		for _, profile := range strings.Split(gfAWSProfile, " ") {
-			accessKeyVarname := os.Getenv(
-				fmt.Sprintf("GF_AWS_%s_ACCESS_KEY_ID", strings.ToUpper(profile)),
-			)
-			secretKeyVarname := os.Getenv(
-				fmt.Sprintf("GF_AWS_%s_SECRET_ACCESS_KEY", strings.ToUpper(profile)),
-			)
-			regionVarname := os.Getenv(
-				fmt.Sprintf("GF_AWS_%s_REGION", strings.ToUpper(profile)),
-			)
-			if accessKeyVarname == "" || secretKeyVarname == "" {
-				continue
-			}
-
-			builder.Reset()
-			builder.WriteString("[")
-			builder.WriteString(profile)
-			builder.WriteString("]")
-			builder.WriteString("\n")
-			builder.WriteString("aws_access_key_id = ")
-			builder.WriteString(accessKeyVarname)
-			builder.WriteString("\n")
-			builder.WriteString("aws_secret_access_key = ")
-			builder.WriteString(secretKeyVarname)
-			builder.WriteString("\n")
-
-			if regionVarname != "" {
-				builder.WriteString("region = ")
-				builder.WriteString(regionVarname)
-				builder.WriteString("\n")
-			}
-
-			_, err := credentialsFile.WriteString(builder.String())
-			if err != nil {
-				log.Fatalf("write to credentials file: %v", err)
-			}
-		}
-	}
-
 	err = convertEnv()
 	if err != nil {
 		log.Fatalf("convert env: %v", err)

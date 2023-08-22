@@ -70,16 +70,25 @@ RUN apt-get update && \
     apt-get -y --no-install-recommends install git gcc musl
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
+
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 RUN make gen-go
 RUN go build -ldflags -w -ldflags "-linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
 RUN go run build.go build-cli
 
-FROM $BASE_GOLANG_20_ALPINE as runner
+FROM $BASE_GOLANG_20_ALPINE as entrypoint
 
-COPY /runner/ /app/
+COPY /entrypoint/ /app/
 WORKDIR /app/
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o grafana-runner main.go
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint main.go
+RUN chown -R 64535:64535 /app/ && \
+    chmod 0700 /app/entrypoint
 
 # ===================================================
 # Step 4. Final image.
@@ -157,7 +166,7 @@ RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
 
 FROM $BASE_DISTROLESS
 
-COPY --from=runner /app/grafana-runner /usr/local/bin/
+COPY --from=entrypoint /app/entrypoint /usr/local/bin/
 COPY --from=grafana-distr /usr/share/grafana/ /usr/share/grafana/
 COPY --from=grafana-distr /etc/grafana/ /etc/grafana/
 COPY --from=grafana-distr /var/lib/grafana/ /var/lib/grafana/
@@ -175,9 +184,6 @@ ENV BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
 
 WORKDIR $GF_PATHS_HOME
 
-ENV GODEBUG="netdns=cgo"
-USER 64535
-
 EXPOSE 3000
 
-ENTRYPOINT ["grafana-runner"]
+ENTRYPOINT ["entrypoint"]

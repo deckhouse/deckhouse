@@ -6,7 +6,10 @@ FROM $BASE_GOLANG_18_ALPINE as artifact
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
-RUN apk add --no-cache make git
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
+RUN apk add --no-cache git
 RUN git clone --depth 1 --branch v0.25.0 ${SOURCE_REPO}/prometheus/alertmanager.git /alertmanager
 WORKDIR /alertmanager/
 
@@ -18,5 +21,4 @@ FROM $BASE_DISTROLESS
 
 COPY --from=artifact /alertmanager/alertmanager /bin/
 
-USER nobody
 ENTRYPOINT ["/bin/alertmanager"]
