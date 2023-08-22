@@ -80,8 +80,8 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "deckhouse-enabled-modules.json",
-			Cmd:  "kubectl",
-			Args: []string{"get", "modules", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", "kubectl get modules -o json | jq '.items[]'"},
 		},
 		{
 			File: "events.json",
