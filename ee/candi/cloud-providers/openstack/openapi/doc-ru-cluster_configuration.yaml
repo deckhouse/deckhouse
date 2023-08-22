@@ -237,7 +237,7 @@ apiVersions:
           externalNetworkName: &externalNetworkName_ru
             description: |
               Имя сети для внешнего взаимодействия.
-              `openstack network list`
+              Получить список доступных сетей: `openstack network list`.
       standardWithNoRouter:
         description: |
           Настройки для схемы размещения [`StandardWithNoRouter`](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standardwithnorouter).
