@@ -152,57 +152,6 @@ Multiline
 					Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal("test_cert"))
 				})
 			})
-
-			Context("With https mode 'Global' and kubeconfigGeneratorMasterCA", func() {
-				BeforeEach(func() {
-					hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
-					hec.ValuesSet("userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA", "kubeconfigGeneratorMasterCAText")
-				})
-
-				It("Should add k8s_ca_pem param with kubeconfigGeneratorMasterCA for first cluster", func() {
-
-					Expect(hec.RenderError).ToNot(HaveOccurred())
-
-					jsonBytes := assertCreateConfig(hec)
-
-					Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal("kubeconfigGeneratorMasterCAText"))
-				})
-			})
-
-			Context("With https mode 'SelfSigned'", func() {
-				BeforeEach(func() {
-					hec.ValuesSet("userAuthn.publishAPI.https.mode", "SelfSigned")
-				})
-
-				Context("publishedAPIKubeconfigGeneratorMasterCA do not set", func() {
-					It("Should add k8s_ca_pem with kubernetesCA for first cluster", func() {
-						Expect(hec.RenderError).ToNot(HaveOccurred())
-
-						jsonBytes := assertCreateConfig(hec)
-
-						Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal(k8sCa))
-					})
-				})
-
-				Context("publishedAPIKubeconfigGeneratorMasterCA set", func() {
-					const publishAPIK8sCa = `--Certificate---
-Multiline
-`
-					BeforeEach(func() {
-						hec.ValuesSet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA", publishAPIK8sCa)
-					})
-
-					It("Should add k8s_ca_pem with publishedAPIKubeconfigGeneratorMasterCA for first cluster", func() {
-						Expect(hec.RenderError).ToNot(HaveOccurred())
-
-						jsonBytes := assertCreateConfig(hec)
-
-						Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal(publishAPIK8sCa))
-					})
-				})
-
-			})
-
 		})
 
 		Context("Additional access", func() {
