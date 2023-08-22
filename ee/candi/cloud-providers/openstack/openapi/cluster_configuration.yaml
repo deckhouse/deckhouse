@@ -290,7 +290,7 @@ apiVersions:
                   type: string
                   description: |
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
-                    `openstack network list`
+                    Get a list of all available networks: `openstack network list`.
                   x-doc-required: true
                 additionalNetworks:
                   type: array
