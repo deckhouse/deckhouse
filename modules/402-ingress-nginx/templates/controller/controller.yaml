@@ -214,19 +214,10 @@ spec:
         - --healthz-host=127.0.0.1
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
         lifecycle:
-  {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
-          postStart:
-            exec:
-              command: [ "/bin/bash", "-c", "echo -n ok > /tmp/healthz" ]
-          preStop:
-            exec:
-              command: [ "/bin/bash", "-c", "rm -f /tmp/healthz && /wait-shutdown" ]
-  {{- else }}
           preStop:
             exec:
               command:
                 - /wait-shutdown
-  {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
