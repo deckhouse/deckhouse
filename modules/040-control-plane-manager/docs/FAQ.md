@@ -28,13 +28,6 @@ Adding a master node to a static or hybrid cluster has no difference from adding
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
-1. **In the installer container**, run the following command and specify the required number of replicas using the `masterNodeGroup.replicas` parameter:
-
-   ```bash
-   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
-     --ssh-host <MASTER-NODE-0-HOST>
-   ```
-
 1. **In the installer container**, run the following command to check the state before working:
 
    ```bash
@@ -43,6 +36,13 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    ```
 
    The response should tell you that Terraform does not want to change anything.
+
+1. **In the installer container**, run the following command and specify the required number of replicas using the `masterNodeGroup.replicas` parameter:
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+     --ssh-host <MASTER-NODE-0-HOST>
+   ```
 
 1. **In the installer container**, run the following command to start scaling:
 
