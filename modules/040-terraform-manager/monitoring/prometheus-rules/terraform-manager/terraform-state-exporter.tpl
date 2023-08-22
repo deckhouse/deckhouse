@@ -231,6 +231,6 @@
         Terraform-state-exporter found difference between node template from cluster provider configuration and from NodeGroup `{{`{{ $labels.name }}`}}`.
         Node template is `{{`{{ $labels.status }}`}}`.
 
-        First, check what will change by running the `dhctl terraform check` command.
+        First, run the `dhctl terraform check` command to check what will change.
         Use `dhctl converge` command or manually adjust NodeGroup settings to fix the issue.
       summary: Terraform-state-exporter node template changed
