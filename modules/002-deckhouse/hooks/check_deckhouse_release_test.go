@@ -549,7 +549,7 @@ status:
 			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
-		It("Step by step update should not be successfully and allert fired", func() {
+		It("Step by step update should not be successfully and alert fired", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.0").Exists()).To(BeTrue())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
