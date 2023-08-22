@@ -32,24 +32,75 @@ import (
 // But Deckhouse itself has ValidationWebhooks that should be executed even when pod is not ready.
 // Endpoints created via service do not go to ready state in this case and we cannot use validation.
 
+const (
+	d8Namespace = "d8-system"
+	d8Name      = "deckhouse"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
 }, generateDeckhouseEndpoints)
 
 func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
+	ep := &v1.Endpoints{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Endpoints",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      d8Name,
+			Namespace: d8Namespace,
+			Labels: map[string]string{
+				"app":                        d8Name,
+				"module":                     d8Name,
+				"heritage":                   d8Name,
+				"kubernetes.io/service-name": d8Name,
+			},
+		},
+		Subsets: []v1.EndpointSubset{
+			{
+				Addresses: []v1.EndpointAddress{
+					{
+						IP:       os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS"),
+						Hostname: os.Getenv("DECKHOUSE_NODE_NAME"),
+						NodeName: pointer.String(os.Getenv("DECKHOUSE_NODE_NAME")),
+						TargetRef: &v1.ObjectReference{
+							Kind:       "Pod",
+							Namespace:  d8Namespace,
+							Name:       os.Getenv("DECKHOUSE_POD"),
+							APIVersion: "v1",
+						},
+					},
+				},
+				Ports: []v1.EndpointPort{
+					{
+						Name:     "self",
+						Port:     9650,
+						Protocol: v1.ProtocolTCP,
+					},
+					{
+						Name:     "webhook",
+						Port:     9651,
+						Protocol: v1.ProtocolTCP,
+					},
+				},
+			},
+		},
+	}
+
 	es := &discv1.EndpointSlice{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "EndpointSlice",
 			APIVersion: "discovery.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deckhouse",
-			Namespace: "d8-system",
+			Name:      d8Name,
+			Namespace: d8Namespace,
 			Labels: map[string]string{
-				"app":                        "deckhouse",
-				"module":                     "deckhouse",
-				"heritage":                   "deckhouse",
-				"kubernetes.io/service-name": "deckhouse",
+				"app":                        d8Name,
+				"module":                     d8Name,
+				"heritage":                   d8Name,
+				"kubernetes.io/service-name": d8Name,
 			},
 		},
 		AddressType: "IPv4",
@@ -64,7 +115,7 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 				Hostname: pointer.String(os.Getenv("DECKHOUSE_NODE_NAME")),
 				TargetRef: &v1.ObjectReference{
 					Kind:      "Pod",
-					Namespace: "d8-system",
+					Namespace: d8Namespace,
 					Name:      os.Getenv("DECKHOUSE_POD"),
 				},
 				NodeName: pointer.String(os.Getenv("DECKHOUSE_NODE_NAME")),
@@ -84,6 +135,7 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 		},
 	}
 
+	input.PatchCollector.Create(ep, object_patch.UpdateIfExists())
 	input.PatchCollector.Create(es, object_patch.UpdateIfExists())
 
 	return nil
