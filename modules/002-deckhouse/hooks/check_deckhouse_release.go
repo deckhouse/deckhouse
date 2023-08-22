@@ -555,7 +555,7 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) 
 		if r.MatchString(ver) {
 			newSemver, err := semver.NewVersion(ver)
 			if err != nil {
-				dcr.logger.Errorf("unable to parce semver from the registry Version: %v. This version will be skipped.", ver)
+				dcr.logger.Errorf("unable to parse semver from the registry Version: %v. This version will be skipped.", ver)
 				continue
 			}
 			collection = append(collection, newSemver)
