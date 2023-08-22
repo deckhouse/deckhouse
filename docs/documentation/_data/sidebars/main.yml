@@ -640,7 +640,7 @@ entries:
                 ru: Настройки
               url: /modules/340-monitoring-kubernetes-control-plane/configuration.html
         - title:
-            ru: Дополнительный мониторинг
+            ru: Расширенный мониторинг
             en: Extended monitoring
           folders:
             - title:
