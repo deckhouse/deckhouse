@@ -103,6 +103,8 @@ spec:
 
 Полученные `Application Name` и `Password` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
+Группы CROWD указываются в lowercase-формате для custom resource `DexProvider`.
+
 ### Bitbucket Cloud
 
 ```yaml
