@@ -438,7 +438,7 @@ apiVersions:
           externalNetworkName: &externalNetworkName
             description: |
               The name of the network for external connections.
-              `openstack network list`
+              Get a list of all available networks: `openstack network list`.
             type: string
       standardWithNoRouter:
         description: |
