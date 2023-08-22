@@ -268,7 +268,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/300-prometheus/images/grafana/runner"
+  directory: "/modules/300-prometheus/images/grafana/entrypoint"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -277,7 +277,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/300-prometheus/images/trickster/runner"
+  directory: "/modules/300-prometheus/images/trickster/entrypoint"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
