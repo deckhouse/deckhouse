@@ -103,6 +103,8 @@ To do this, go to `Applications` -> `Add application`.
 
 Paste the generated `Application Name` and `Password` into the [DexProvider](cr.html#dexprovider) custom resource.
 
+CROWD groups, specified in lowcase format for custom resource DexProvider.
+
 ### Bitbucket Cloud
 
 ```yaml
