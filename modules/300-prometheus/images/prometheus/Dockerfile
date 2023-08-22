@@ -47,6 +47,9 @@ RUN apt install -y make bash git ca-certificates openssl openssh-client bzip2
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 RUN mkdir /prometheus && cd /prometheus \
   && git clone -b "${PROMETHEUS_VERSION}" --single-branch ${SOURCE_REPO}/prometheus/prometheus
 

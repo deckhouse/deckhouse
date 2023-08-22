@@ -18,5 +18,4 @@ RUN chmod 0700 psi-monitor
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /src/psi-monitor /
-
 ENTRYPOINT [ "/psi-monitor" ]

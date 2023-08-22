@@ -13,6 +13,9 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch v1.1.5 ${SOURCE_REPO}/trickstercache/trickster.git /trickster
 WORKDIR /trickster/
@@ -39,12 +42,15 @@ RUN go build -ldflags="-s -w" -o entrypoint && \
 
 FROM $BASE_GOLANG_20_ALPINE as artifact1
 
-COPY /runner/ /app/
+COPY /entrypoint/ /app/
 WORKDIR /app/
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o trickster-runner && \
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint && \
     chown -R 64535:64535 /app/ && \
-    chmod 0700 /app/trickster-runner
+    chmod 0700 /app/entrypoint
 
 FROM $BASE_DISTROLESS
 
