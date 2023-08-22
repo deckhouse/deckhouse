@@ -203,7 +203,7 @@
         Terraform-state-exporter can't check difference between Node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` state and Terraform state.
 
         Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
-        First, check what will change by running the `dhctl terraform check` command.
+        First, run the `dhctl terraform check` command to check what will change.
         To converge state of Kubernetes cluster, use `dhctl converge` command.
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
