@@ -146,6 +146,10 @@ volumeBindingMode: WaitForFirstConsumer
 >
 > Snapshots are supported only for LVMThin pools.
 
+{% alert level="warning" %}
+The functionality is in experimental mode and may not work correctly.
+{% endalert %}
+
 Data backup is implemented using [volume snapshots](https://kubernetes.io/docs/concepts/storage/volume-snapshots/). Snapshots are supported by the [snapshot-controller](../045-snapshot-controller/) module, which is enabled automatically for supported CSI drivers in Kubernetes clusters versions 1.20 and higher.
 
 ### Creating a backup
