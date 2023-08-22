@@ -18,16 +18,13 @@ import (
 	"context"
 	"os"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -62,59 +59,10 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 			Expect(eps.Field("endpoints.0.targetRef.name").String()).To(Equal("deckhouse-test-1"))
 			Expect(len(eps.Field("ports").Array())).To(Equal(2))
 		})
-
-		It("Should delete old EndpointSlices", func() {
-			list, err := dependency.TestDC.MustGetK8sClient().DiscoveryV1().EndpointSlices("d8-system").List(context.Background(), metav1.ListOptions{LabelSelector: "app=deckhouse,heritage=deckhouse,endpointslice.kubernetes.io/managed-by=endpointslice-controller.k8s.io"})
-			Expect(err).To(BeNil())
-			Expect(len(list.Items)).To(Equal(0))
-		})
 	})
 })
 
 func generateEndpoints() {
-	epsYaml := `
----
-addressType: IPv4
-apiVersion: discovery.k8s.io/v1
-endpoints:
-- addresses:
-  - 10.241.0.32
-  conditions:
-    ready: true
-    serving: true
-    terminating: false
-  nodeName: main-master-2
-  targetRef:
-    kind: Pod
-    name: deckhouse-6cb4c7bcfd-jf265
-    namespace: d8-system
-    resourceVersion: "2238272329"
-    uid: fac9948d-d350-420d-8075-78b9e1fa66c8
-  zone: ru-central1-a
-kind: EndpointSlice
-metadata:
-  labels:
-    app: deckhouse
-    endpointslice.kubernetes.io/managed-by: endpointslice-controller.k8s.io
-    heritage: deckhouse
-    kubernetes.io/service-name: deckhouse
-    module: deckhouse
-  name: deckhouse-6hs6p
-  namespace: d8-system
-  ownerReferences:
-  - apiVersion: v1
-    controller: true
-    kind: Service
-    name: deckhouse
-ports:
-- name: self
-  port: 9650
-  protocol: TCP
-- name: webhook
-  port: 9651
-  protocol: TCP
-`
-
 	epYaml := `
 ---
 apiVersion: v1
@@ -145,10 +93,6 @@ subsets:
     port: 9651
     protocol: TCP
 `
-	var eps v1.EndpointSlice
-	_ = yaml.Unmarshal([]byte(epsYaml), &eps)
-	_, _ = dependency.TestDC.MustGetK8sClient().DiscoveryV1().EndpointSlices("d8-system").Create(context.TODO(), &eps, metav1.CreateOptions{})
-
 	var ep corev1.Endpoints
 	_ = yaml.Unmarshal([]byte(epYaml), &ep)
 	_, _ = dependency.TestDC.MustGetK8sClient().CoreV1().Endpoints("d8-system").Create(context.TODO(), &ep, metav1.CreateOptions{})

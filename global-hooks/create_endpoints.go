@@ -17,11 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"os"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -43,18 +39,9 @@ const (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
-}, dependency.WithExternalDependencies(generateDeckhouseEndpoints))
+}, generateDeckhouseEndpoints)
 
-func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Container) error {
-	client, err := dc.GetK8sClient()
-	if err != nil {
-		return err
-	}
-	err = cleanupOldEndpointSlices(client)
-	if err != nil {
-		return err
-	}
-
+func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 	ep := &v1.Endpoints{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Endpoints",
@@ -150,24 +137,6 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 
 	input.PatchCollector.Create(ep, object_patch.UpdateIfExists())
 	input.PatchCollector.Create(es, object_patch.UpdateIfExists())
-
-	return nil
-}
-
-// we have to clean old EndpointSlices, otherwise in a multi-master cluster it can lead to the Request Timeout error
-func cleanupOldEndpointSlices(client k8s.Client) error {
-	list, err := client.DiscoveryV1().EndpointSlices(d8Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: "app=deckhouse,heritage=deckhouse,endpointslice.kubernetes.io/managed-by=endpointslice-controller.k8s.io"})
-	if err != nil {
-		return err
-	}
-
-	policy := metav1.DeletePropagationBackground
-	for _, item := range list.Items {
-		err = client.DiscoveryV1().EndpointSlices(d8Namespace).Delete(context.Background(), item.Name, metav1.DeleteOptions{PropagationPolicy: &policy})
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
