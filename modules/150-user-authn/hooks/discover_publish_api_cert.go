@@ -72,8 +72,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func discoverPublishAPICA(input *go_hook.HookInput) error {
 	var (
-		secretPath = "userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA"
-		modePath   = "userAuthn.publishAPI.https.mode"
+		secretPath     = "userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA"
+		modePath       = "userAuthn.publishAPI.https.mode"
+		globalOptsPath = "userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA"
+		kubeCAPath     = "global.discovery.kubernetesCA"
 	)
 
 	caCertificates := make(map[string][]byte)
@@ -82,37 +84,49 @@ func discoverPublishAPICA(input *go_hook.HookInput) error {
 		caCertificates[publishCert.Name] = publishCert.Data
 	}
 
-	var secretKey string
-
+	var cert string
 	switch input.Values.Get(modePath).String() {
 	case "Global":
-		switch module.GetHTTPSMode("userAuthn", input) {
-		case "CertManager":
-			secretKey = "kubernetes-tls"
-		case "CustomCertificate":
-			secretKey = "kubernetes-tls-customcertificate"
-		case "OnlyInURI", "Disabled":
+		if input.Values.Exists(globalOptsPath) {
+			cert = input.Values.Get(globalOptsPath).String()
+		} else {
+			switch module.GetHTTPSMode("userAuthn", input) {
+			case "CertManager":
+				cert = getCert(input, "kubernetes-tls")
+			case "CustomCertificate":
+				cert = getCert(input, "kubernetes-tls-customcertificate")
+			case "OnlyInURI", "Disabled":
+			}
+			if cert == "" {
+				cert = input.Values.Get(kubeCAPath).String()
+			}
 		}
 	case "SelfSigned":
-		secretKey = "kubernetes-tls-selfsigned"
+		cert = getCert(input, "kubernetes-tls-selfsigned")
+		if cert == "" {
+			cert = input.Values.Get(kubeCAPath).String()
+		}
 	}
 
-	var cert []byte
+	input.Values.Set(secretPath, cert)
+	return nil
+}
+
+func getCert(input *go_hook.HookInput, secretKey string) string {
+	caCertificates := make(map[string][]byte)
+
+	var cert string
+	for _, s := range input.Snapshots["secret"] {
+		publishCert := s.(PublishAPICert)
+		caCertificates[publishCert.Name] = publishCert.Data
+	}
 
 	for _, name := range possiblePublishAPISecretNames {
 		if name == secretKey {
-			cert = caCertificates[name]
+			cert = string(caCertificates[name])
 			continue
 		}
-
 		input.PatchCollector.Delete("v1", "Secret", "d8-user-authn", name, object_patch.InBackground())
 	}
-
-	if len(cert) > 0 {
-		input.Values.Set(secretPath, string(cert))
-	} else {
-		input.Values.Remove(secretPath)
-	}
-
-	return nil
+	return cert
 }
