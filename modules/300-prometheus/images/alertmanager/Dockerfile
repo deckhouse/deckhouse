@@ -16,7 +16,7 @@ RUN apk add --no-cache git
 RUN git clone --depth 1 --branch v0.25.0 ${SOURCE_REPO}/prometheus/alertmanager.git /alertmanager
 WORKDIR /alertmanager/
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o alertmanager cmd/alertmanager/main.go && \
+RUN go build -ldflags="-s -w" -o alertmanager cmd/alertmanager/main.go && \
     chown -R 64535:64535 /alertmanager/ && \
     chmod 0700 /alertmanager/alertmanager
 
