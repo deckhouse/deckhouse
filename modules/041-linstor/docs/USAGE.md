@@ -1,9 +1,12 @@
 ---
 title: "The linstor module: configuration examples"
+description: Example of configuring the linstor Deckhouse module. LINSTOR storage configuration. Placing the application near the data (data locality). Migration of the application in case of problems with the node (storage-based fencing).
 ---
 
-> The functionality of the module is guaranteed only for stock kernels for distributions listed in the [list of supported OS](../../supported_versions.html#linux).
-> The functionality of the module with other kernels is possible but not guaranteed.
+{% alert %}
+The functionality of the module is guaranteed only for stock kernels for distributions listed in the [list of supported OS](../../supported_versions.html#linux).
+The functionality of the module with other kernels is possible but not guaranteed.
+{% endalert %}
 
 After enabling the module, the cluster is automatically configured to use LINSTOR, and all that remains is to configure the storage.
 
@@ -21,7 +24,9 @@ stringData:
   MASTER_PASSPHRASE: *!passphrase* # Master passphrase for LINSTOR
 ```
 
-> **Caution!** Choose a strong passphrase and store it securely. If it get lost, the encrypted data will be inaccessible.
+{% alert level="warning" %}
+Choose a strong passphrase and store it securely. If it get lost, the encrypted data will be inaccessible.
+{% endalert %}
 
 ## LINSTOR storage configuration
 
@@ -44,30 +49,30 @@ LINSTOR in Deckhouse can be configured by assigning special tag `linstor-<pool_n
 
    Add pools on all nodes where you plan to store your data. Use the same names for the storage pools on the different nodes if you want to achieve a general StorageClasses created for all of them.
 
-- To add an **LVM** pool, create a volume group with the `linstor-<pool_name>` tag, or the `linstor-<pool_name>` tag to an existing volume group.
+   - To add an **LVM** pool, create a volume group with the `linstor-<pool_name>` tag, or the `linstor-<pool_name>` tag to an existing volume group.
 
-    Example of command to create a volume group `vg0` with the `linstor-data` tag :
+     Example of command to create a volume group `vg0` with the `linstor-data` tag :
 
-    ```shell
-    vgcreate vg0 /dev/nvme0n1 /dev/nvme1n1 --add-tag linstor-data
-    ```
+     ```shell
+     vgcreate vg0 /dev/nvme0n1 /dev/nvme1n1 --add-tag linstor-data
+     ```
 
-    Example of command to add the `linstor-data` tag to an existing volume group `vg0`:
+     Example of command to add the `linstor-data` tag to an existing volume group `vg0`:
 
-    ```shell
-    vgchange vg0 --add-tag linstor-data
-    ```
+     ```shell
+     vgchange vg0 --add-tag linstor-data
+     ```
 
-- To add an **LVMThin** pool, create a LVM thin pool with the `linstor-<pool_name>` tag.
+   - To add an **LVMThin** pool, create a LVM thin pool with the `linstor-<pool_name>` tag.
 
-    Example of command to create the LVMThin pool `vg0/thindata` with the `linstor-data` tag:
+     Example of command to create the LVMThin pool `vg0/thindata` with the `linstor-data` tag:
 
-    ```shell
-    vgcreate vg0 /dev/nvme0n1 /dev/nvme1n1
-    lvcreate -l 100%FREE -T vg0/thindata --add-tag linstor-thindata
-    ```
+     ```shell
+     vgcreate vg0 /dev/nvme0n1 /dev/nvme1n1
+     lvcreate -l 100%FREE -T vg0/thindata --add-tag linstor-thindata
+     ```
 
-    > **Note!** The group itself should not have this tag configured.
+     > **Note!** The group itself should not have this tag configured.
 
 1. Check the creation of StorageClass.
 
