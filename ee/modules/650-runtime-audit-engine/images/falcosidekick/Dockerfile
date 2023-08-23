@@ -1,6 +1,22 @@
 # Based on https://github.com/falcosecurity/falcosidekick/blob/41d530807f1a0294c0276e4cb42af68c8b26a659/Dockerfile
-ARG BASE_ALPINE
-FROM $BASE_ALPINE
-COPY --from=falcosecurity/falcosidekick:2.26.0-amd64@sha256:e13135c2cb2f01457dcf4ebca941c78898ad80c33c94a95e9b94033693411a31 /app /app
-WORKDIR /app
-ENTRYPOINT ["./falcosidekick"]
+ARG BASE_GOLANG_18_ALPINE
+ARG BASE_DISTROLESS
+
+FROM $BASE_GOLANG_18_ALPINE as artifact
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
+WORKDIR /src
+RUN apk add --no-cache make git && \
+    git clone --branch v2.26.0 --depth 1 ${SOURCE_REPO}/falcosecurity/falcosidekick.git . && \
+    make falcodisekick && \
+    chown -R 64535:64535 /src/falcosidekick && \
+    chmod 0700 /src/falcosidekick
+
+FROM $BASE_DISTROLESS
+COPY --from=artifact /src/falcosidekick /falcosidekick
+ENTRYPOINT [ "/falcosidekick" ]
+
