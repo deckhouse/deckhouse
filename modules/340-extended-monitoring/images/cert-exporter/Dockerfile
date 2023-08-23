@@ -9,6 +9,9 @@ ARG COMMIT_REF=d6f0dcb883004146ca3453a9e2d0c66514afe327
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 RUN apk add --no-cache go git make
 RUN git clone --depth 1 --branch v2.0.1 ${SOURCE_REPO}/giantswarm/cert-exporter.git /cert-exporter
 
@@ -18,7 +21,6 @@ RUN make && \
     chmod 0700 /cert-exporter/cert-exporter
 FROM $BASE_DISTROLESS
 
-USER 64535
 COPY --from=artifact /cert-exporter/cert-exporter /cert-exporter
 
 ENTRYPOINT ["/cert-exporter"]

@@ -42,6 +42,10 @@ RUN cargo build \
 
 ### 2: Config reloader
 FROM $BASE_GOLANG_19_ALPINE as artifact
+
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 WORKDIR /src/
 COPY reloader/ /src/
 RUN apk add --no-cache git && \
