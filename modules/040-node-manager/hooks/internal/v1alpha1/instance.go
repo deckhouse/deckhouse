@@ -54,8 +54,8 @@ type InstanceStatus struct {
 	// Information about instance bootstrapping process
 	BootstrapStatus BootstrapStatus `json:"bootstrapStatus,omitempty"`
 
-	// Reference to a ClassInstance resource. Required.
-	ClassReference ClassReference `json:"classReference"`
+	// Reference to a ClassInstance resource.
+	ClassReference ClassReference `json:"classReference,omitempty"`
 }
 
 type ClassReference struct {

@@ -26,6 +26,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/kube-client/fake"
 	"github.com/gojuno/minimock/v3"
+	"github.com/pkg/errors"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
@@ -43,6 +45,7 @@ type Container interface {
 	MustGetK8sClient(options ...k8s.Option) k8s.Client
 	GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error)
 	GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error)
+	GetClientConfig() (*rest.Config, error)
 }
 
 var (
@@ -194,6 +197,26 @@ func (dc *dependencyContainer) GetVsphereClient(config *vsphere.ProviderClusterC
 	return client, nil
 }
 
+func (dc *dependencyContainer) GetClientConfig() (*rest.Config, error) {
+	if dc.isTestEnvironment() {
+		return TestDC.GetClientConfig()
+	}
+
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	caCert, err := os.ReadFile(config.TLSClientConfig.CAFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read CA file")
+	}
+
+	config.CAData = caCert
+
+	return config, nil
+}
+
 // WithExternalDependencies decorate function with external dependencies
 func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) error) func(input *go_hook.HookInput) error {
 	return func(input *go_hook.HookInput) error {
@@ -248,6 +271,20 @@ func (mdc *mockedDependencyContainer) GetVsphereClient(config *vsphere.ProviderC
 		return mdc.VsphereClient, nil
 	}
 	return nil, fmt.Errorf("no Vsphere client")
+}
+
+func (mdc *mockedDependencyContainer) GetClientConfig() (*rest.Config, error) {
+	return &rest.Config{
+		Host: "https://127.0.0.1:6443",
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData: []byte(`-----BEGIN CERTIFICATE-----
+MIIDZzCCAk+gAwIBAgIJAOTjZ2Z4Z7ZEMA0GCSqGSIb3DQEBCwUAMCExHzAdBgNV
+BAMTFmRlY2tob3VzZS1jbG91ZC1jYTAeFw0yMTA0MjQxNzQ5MjNaFw0zMjA0MjQx
+NzQ5MjNaMCExHzAdBgNVBAMTFmRlY2tob3VzZS1jbG91ZC1jYTCCASIwDQYJKoZI
+hvcNAQEBBQADggEPADCC
+-----END CERTIFICATE-----`),
+		},
+	}, nil
 }
 
 // SetK8sVersion change FakeCluster versions. KubeClient returns with resources of specified version

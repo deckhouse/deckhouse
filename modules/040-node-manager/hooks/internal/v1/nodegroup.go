@@ -70,6 +70,9 @@ type NodeGroupSpec struct {
 	// CRI parameters. Optional.
 	CRI CRI `json:"cri,omitempty"`
 
+	// staticInstances. Optional.
+	StaticInstances *StaticInstances `json:"staticInstances,omitempty"`
+
 	// cloudInstances. Optional.
 	CloudInstances CloudInstances `json:"cloudInstances,omitempty"`
 
@@ -126,6 +129,27 @@ type Docker struct {
 type NotManaged struct {
 	// Set custom path to CRI socket
 	CriSocketPath *string `json:"criSocketPath,omitempty"`
+}
+
+// StaticInstances is an extra parameters for NodeGroup with type Static.
+type StaticInstances struct {
+	// Label selector for StaticInstance resources. Optional.
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+
+	// Minimal amount of instances for the group. Required.
+	Count int32 `json:"count"`
+}
+
+type InfrastructureTemplateReference struct {
+	// Kind of a InfrastructureTemplateReference resource: StaticMachineTemplate
+	Kind string `json:"kind,omitempty"`
+
+	// Name of a InfrastructureTemplateReference resource.
+	Name string `json:"name,omitempty"`
+}
+
+func (i InfrastructureTemplateReference) IsEmpty() bool {
+	return i.Kind == "" && i.Name == ""
 }
 
 // CloudInstances is an extra parameters for NodeGroup with type Cloud.
