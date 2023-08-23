@@ -18,8 +18,8 @@ package hooks
 
 import (
 	"encoding/json"
+	"os"
 	"strconv"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -41,15 +41,18 @@ It uses AddonOperator dependency to get enabled state for all modules
 and get access to each module state.
 
 ModuleConfig status consists of:
-- 'enabled' field - describes a module's enabled state:
+- 'state' field - describes a module's enabled state:
+    * N/A - cannot get status, or module is ignored by a reason
     * Enabled
     * Disabled
     * Disabled by script - module is disabled by 'enabled' script
     * Enabled/Disabled by config - module state is determined by ModuleConfig
 - 'status' field - describes state of the module:
     * Unknown module name - ModuleConfig resource name is not a known module name.
-    * Running - ModuleRun task is in progress: module starts or reloads.
-    * Ready - helm install for module was successful.
+    * (NOT IMPLEMENTED) Running - ModuleRun task is in progress: module starts or reloads.
+    * (NOT IMPLEMENTED) Ready - helm install for module was successful.
+	* Converging - module is waiting for the first run.
+	* Ready - module successfully passed the initialization stage
     * HookError: ... - problem with module's hook.
     * ModuleError: ... - problem during installing helm chart.
 */
@@ -108,20 +111,11 @@ const (
 func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 	allConfigs := snapshotToModuleConfigList(input.Snapshots["configs"])
 
-	// Get bundle name from 'deckhouse' config.
-	bundleName := ""
-	for _, cfg := range allConfigs {
-		if cfg.GetName() == "deckhouse" {
-			if bundle, ok := cfg.Spec.Settings["bundle"].(string); ok {
-				bundleName = strings.Title(bundle) // nolint: staticcheck
-			}
-			break
-		}
-	}
+	bundleName := os.Getenv("DECKHOUSE_BUNDLE")
 
-	externalNames := d8config.Service().ExternalNames()
+	moduleNamesToSources := d8config.Service().ModuleToSourcesNames()
 	for _, cfg := range allConfigs {
-		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName, externalNames)
+		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName, moduleNamesToSources)
 		sPatch := makeStatusPatch(cfg, moduleStatus)
 		if sPatch != nil {
 			input.LogEntry.Debugf(

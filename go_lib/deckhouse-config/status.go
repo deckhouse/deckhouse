@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
+	"github.com/flant/addon-operator/pkg/module_manager"
 )
 
 type Status struct {
@@ -45,22 +46,17 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForConfig(cfg *d8v1alpha1.ModuleConfig, bundleName string, externalModulesToRepo map[string]string) Status {
+func (s *StatusReporter) ForConfig(cfg *d8v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string) Status {
 	// Special case: unknown module name.
-	repo, isExternal := externalModulesToRepo[cfg.GetName()]
+	moduleType, fromSource := modulesToSource[cfg.GetName()]
 
-	if !s.possibleNames.Has(cfg.GetName()) && !isExternal {
+	if !s.possibleNames.Has(cfg.GetName()) && !fromSource {
 		return Status{
 			State:   "N/A",
 			Version: "",
 			Status:  "Ignored: unknown module name",
 			Type:    "N/A",
 		}
-	}
-
-	moduleType := "Embedded"
-	if isExternal {
-		moduleType = fmt.Sprintf("External: %s", repo)
 	}
 
 	chain := conversion.Registry().Chain(cfg.GetName())
@@ -120,12 +116,28 @@ func (s *StatusReporter) ForConfig(cfg *d8v1alpha1.ModuleConfig, bundleName stri
 	stateMsg := "Disabled"
 	if s.moduleManager.IsModuleEnabled(cfg.GetName()) {
 		stateMsg = "Enabled"
+
 		lastHookErr := mod.State.GetLastHookErr()
 		if lastHookErr != nil {
 			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
 		}
 		if mod.State.LastModuleErr != nil {
 			statusMsgs = append(statusMsgs, fmt.Sprintf("ModuleError: %v", mod.State.LastModuleErr))
+		}
+
+		if len(statusMsgs) == 0 { // no errors were added
+			// Best effort alarm!
+			//
+			// Actually, this condition is not correct because the `CanRunHelm` status appears right before the first run.
+			// The right approach is to check the queue for the module run task.
+			// However, there are too many addon-operator internals involved.
+			// We should consider moving these statuses to the `Module` resource,
+			// which is directly controlled by addon-operator.
+			if mod.State.Phase == module_manager.CanRunHelm {
+				statusMsgs = append(statusMsgs, "Ready")
+			} else {
+				statusMsgs = append(statusMsgs, "Converging: module is waiting for the first run")
+			}
 		}
 	} else {
 		// Special case: no enabled flag in ModuleConfig, module disabled by bundle.
