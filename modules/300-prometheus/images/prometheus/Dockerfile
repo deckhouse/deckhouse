@@ -44,12 +44,6 @@ RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
 
 RUN apt install -y make bash git ca-certificates openssl openssh-client bzip2
 
-ARG SOURCE_REPO
-ENV SOURCE_REPO=${SOURCE_REPO}
-
-ARG GOPROXY
-ENV GOPROXY=${GOPROXY}
-
 RUN mkdir /prometheus && cd /prometheus \
   && git clone -b "${PROMETHEUS_VERSION}" --single-branch ${SOURCE_REPO}/prometheus/prometheus
 
@@ -107,6 +101,7 @@ COPY --from=artifact /prometheus/prometheus/console_libraries/                  
 COPY --from=artifact /consoles/                                                    /usr/share/prometheus/consoles/
 COPY --from=artifact /etc/                                                         /etc/prometheus/
 COPY --from=artifact /prometheus/                                                  /prometheus/
+COPY --from=artifact /probe_curl/curl                                              /usr/local/bin/
 
 RUN apk add --no-cache curl
 

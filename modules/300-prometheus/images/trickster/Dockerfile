@@ -14,7 +14,13 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 ARG GOPROXY
-ENV GOPROXY=${GOPROXY}
+ARG SOURCE_REPO
+
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
 RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch v1.1.5 ${SOURCE_REPO}/trickstercache/trickster.git /trickster
@@ -48,7 +54,12 @@ WORKDIR /app/
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint && \
+ENV GOPROXY=${GOPROXY} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
+RUN go build -ldflags="-s -w" -o entrypoint && \
     chown -R 64535:64535 /app/ && \
     chmod 0700 /app/entrypoint
 
