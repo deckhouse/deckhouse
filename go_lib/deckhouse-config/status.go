@@ -21,10 +21,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/module_manager"
+
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
-	"github.com/flant/addon-operator/pkg/module_manager"
 )
 
 type Status struct {
@@ -128,7 +129,7 @@ func (s *StatusReporter) ForConfig(cfg *d8v1alpha1.ModuleConfig, bundleName stri
 		if len(statusMsgs) == 0 { // no errors were added
 			// Best effort alarm!
 			//
-			// Actually, this condition is not correct because the `CanRunHelm` status appears right before the first run.
+			// Actually, this condition is not correct because the `CanRunHelm` status appears right before the first run.c
 			// The right approach is to check the queue for the module run task.
 			// However, there are too many addon-operator internals involved.
 			// We should consider moving these statuses to the `Module` resource,
