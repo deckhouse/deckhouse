@@ -80,8 +80,21 @@ allowedKubernetesVersions:
 mcmEmergencyBrake: false
 `
 
+const nodeManagerValues = `
+internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
+`
+
 const nodeManagerAWS = `
 internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
+
   clusterAutoscalerPriorities:
     "50":
     - ^xxx-staging-[0-9a-zA-Z]+$
@@ -138,6 +151,10 @@ internal:
 
 const nodeManagerAzure = `
 internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -213,6 +230,10 @@ internal:
 
 const nodeManagerGCP = `
 internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -260,6 +281,10 @@ internal:
 
 const faultyNodeManagerOpenstack = `
 internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -306,6 +331,10 @@ internal:
 
 const nodeManagerOpenstack = `
 internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -383,6 +412,10 @@ internal:
 
 const nodeManagerVsphere = `
 internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -461,6 +494,10 @@ internal:
 
 const nodeManagerYandex = `
 internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -519,6 +556,10 @@ internal:
 
 const nodeManagerStatic = `
 internal:
+  capiWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -562,7 +603,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 	Context("Prometheus rules", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues)
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerValues)
 			setBashibleAPIServerTLSValues(f)
 			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
 		})

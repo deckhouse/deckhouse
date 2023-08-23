@@ -29,6 +29,7 @@ var _ = Describe("Module :: node-manager :: helm template :: standby node", func
 	Context("Two NGs with standby", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager.internal.standbyNodeGroups", `[{name: standby-absolute, standby: 2, reserveCPU: "5500m", reserveMemory: "983Mi", taints: [{effect: NoExecute, key: ship-class, value: frigate}]}, {name: standby-percent, standby: 12, reserveCPU: "3400m", reserveMemory: 10Mi, taints: [{effect: NoExecute, key: ship-class, value: frigate}]}]`)
+			f.ValuesSetFromYaml("nodeManager.internal.capiWebhookCert", `{ca: string, crt: string, key: string}`)
 			f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{"master":1}`)
 			f.ValuesSetFromYaml("global.clusterConfiguration", `apiVersion: deckhouse.io/v1
 cloud:
