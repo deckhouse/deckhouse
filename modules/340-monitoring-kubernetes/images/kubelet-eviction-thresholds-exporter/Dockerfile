@@ -3,6 +3,9 @@ ARG BASE_DISTROLESS
 
 FROM $BASE_GOLANG_19_ALPINE as artifact
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 WORKDIR /src/
 COPY exporter/ /src/
 RUN apk add --no-cache git && \
