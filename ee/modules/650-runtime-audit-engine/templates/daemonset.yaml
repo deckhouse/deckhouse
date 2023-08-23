@@ -80,6 +80,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
+
       - name: falco
         # TODO(nabokihms): Fix 'Error response from daemon: invalid CapAdd: unknown capability: "CAP_BPF"'
         # Migrate to capabilities: "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE"
