@@ -72,7 +72,10 @@ COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
 
 ARG GOPROXY
-ENV GOPROXY=${GOPROXY}
+ENV GOPROXY=${GOPROXY} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
 RUN make gen-go
 RUN go build -ldflags -w -ldflags "-linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
@@ -84,9 +87,12 @@ COPY /entrypoint/ /app/
 WORKDIR /app/
 
 ARG GOPROXY
-ENV GOPROXY=${GOPROXY}
+ENV GOPROXY=${GOPROXY} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint main.go
+RUN go build -ldflags="-s -w" -o entrypoint main.go
 RUN chown -R 64535:64535 /app/ && \
     chmod 0700 /app/entrypoint
 
