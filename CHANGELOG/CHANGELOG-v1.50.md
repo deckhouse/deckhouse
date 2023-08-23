@@ -1,5 +1,10 @@
 # Changelog v1.50
 
+## [MALFORMED]
+
+
+ - #5392 unknown section "deckhouse-config"
+
 ## Know before update
 
 
@@ -24,6 +29,7 @@
  - **[node-manager]** Alert fires if Node has no config checksum annotation during a `NodeGroup` update. [#5443](https://github.com/deckhouse/deckhouse/pull/5443)
  - **[node-manager]** Add a short name for `NodeGroupConfiguration` (`ngc`). [#5367](https://github.com/deckhouse/deckhouse/pull/5367)
  - **[node-manager]** Make the versions of autoscaler correspond to the versions of Kubernetes. [#5158](https://github.com/deckhouse/deckhouse/pull/5158)
+ - **[user-authn]** Move publishAPI CA discovery logic to the hook. [#5584](https://github.com/deckhouse/deckhouse/pull/5584)
  - **[virtualization]** Allow specifying priority for virtual machines via the [PriorityClassName](https://deckhouse.io/documentation/latest/modules/490-virtualization/cr.html#virtualmachine-v1alpha1-spec-priorityclassname) parameter. [#5444](https://github.com/deckhouse/deckhouse/pull/5444)
 
 ## Fixes
@@ -34,7 +40,7 @@
  - **[candi]** Revert migration to cgroupfs driver for containerd CRI. [#5539](https://github.com/deckhouse/deckhouse/pull/5539)
  - **[candi]** Set firmware explicitly for `vsphere_virtual_machine`. [#5457](https://github.com/deckhouse/deckhouse/pull/5457)
  - **[candi]** Remove usage of temp files when creating a `NodeUser`. [#5337](https://github.com/deckhouse/deckhouse/pull/5337)
- - **[deckhouse-config]** Deckhouse-config-webhook successfully starts without the `external-module-manager` module. [#5392](https://github.com/deckhouse/deckhouse/pull/5392)
+ - **[control-plane-manager]** Hours and minutes can be used simultaneously in the `webhookCacheTTL` module configuration field. [#5417](https://github.com/deckhouse/deckhouse/pull/5417)
  - **[helm]** Find and notify deprecated helm releases for the current Kubernetes version + 2. [#5537](https://github.com/deckhouse/deckhouse/pull/5537)
  - **[ingress-nginx]** Fix `nginx_ingress_controller_ssl_expire_time_seconds`. [#5442](https://github.com/deckhouse/deckhouse/pull/5442)
     Ingress controller will restart.
@@ -44,7 +50,9 @@
     metallb pods should restart.
  - **[operator-trivy]** Remove `upmeter` probes from trivy scanning. [#5364](https://github.com/deckhouse/deckhouse/pull/5364)
  - **[prometheus]** Fix alert expression when a `longterm-prometheus` fails to scrape the `main-prometheus` for whatever reason. [#5345](https://github.com/deckhouse/deckhouse/pull/5345)
+ - **[terraform-manager]** Hours and minutes can be used simultaneously in the `autoConvergerPeriod` module configuration field. [#5417](https://github.com/deckhouse/deckhouse/pull/5417)
  - **[user-authn]** Use global discovered `publishAPI` cert by default for generated kubeconfigs. [#5488](https://github.com/deckhouse/deckhouse/pull/5488)
+ - **[user-authn]** Hours, minutes and seconds can be used simultaneously in the `idTokenTTL` configuration parameter . [#5417](https://github.com/deckhouse/deckhouse/pull/5417)
 
 ## Chore
 
