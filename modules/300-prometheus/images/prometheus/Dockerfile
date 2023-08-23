@@ -12,7 +12,7 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
-COPY probe_curl/ /probe_curl/
+COPY probe-curl/ /probe_curl/
 WORKDIR /probe_curl
 RUN go build -ldflags="-s -w" -o curl main.go && \
     chown -R 64535:64535 /probe_curl/ && \
