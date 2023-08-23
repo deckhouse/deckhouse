@@ -42,9 +42,9 @@ resources and a managed ConfigMap/deckhouse-generated-config-do-not-edit object
 instead of one untyped and unmanaged ConfigMap/deckhouse object.
 */
 
-// Use order:1 to run before all global hooks.
+// Use order:2 to run before all global hooks but after EndpointSlice creation.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 1},
+	OnStartup: &go_hook.OrderedConfig{Order: 2},
 }, dependency.WithExternalDependencies(migrateOrSyncModuleConfigs))
 
 // migrateOrSyncModuleConfigs runs on deckhouse-controller startup
