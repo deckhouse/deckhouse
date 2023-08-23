@@ -10,7 +10,7 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
 WORKDIR /src
-RUN apk add --no-cache make git && \
+RUN apk add --no-cache make git bash && \
     git clone --branch 2.26.0 --depth 1 ${SOURCE_REPO}/falcosecurity/falcosidekick.git . && \
     make falcodisekick && \
     chown -R 64535:64535 /src/falcosidekick && \
