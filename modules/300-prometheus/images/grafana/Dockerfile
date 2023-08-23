@@ -73,7 +73,7 @@ WORKDIR /usr/src/app/
 
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY} \
-    CGO_ENABLED=0 \
+    CGO_ENABLED=1 \
     GOOS=linux \
     GOARCH=amd64
 
