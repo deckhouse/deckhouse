@@ -11,7 +11,7 @@ ENV SOURCE_REPO=${SOURCE_REPO}
 
 WORKDIR /src
 RUN apk add --no-cache make git && \
-    git clone --branch v2.26.0 --depth 1 ${SOURCE_REPO}/falcosecurity/falcosidekick.git . && \
+    git clone --branch 2.26.0 --depth 1 ${SOURCE_REPO}/falcosecurity/falcosidekick.git . && \
     make falcodisekick && \
     chown -R 64535:64535 /src/falcosidekick && \
     chmod 0700 /src/falcosidekick
