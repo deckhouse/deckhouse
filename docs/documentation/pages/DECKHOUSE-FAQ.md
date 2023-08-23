@@ -380,7 +380,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    chmod 700 d8-pull.sh
    ```
 
-   > Note! Use the following commands if you want to upload images of Deckhouse v1.44 or older:
+   > Note! Use the following commands if you want to upload images of Deckhouse prior to v1.45.0:
    >
    > ```shell
    > curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-pull.sh
@@ -406,7 +406,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    chmod 700 d8-push.sh
    ```
 
-   > Note! Use the following commands if you want to upload images of Deckhouse v1.44 or older:
+   > Note! Use the following commands if you want to upload images of Deckhouse prior to v1.45.0:
    >
    > ```shell
    > curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-push.sh
