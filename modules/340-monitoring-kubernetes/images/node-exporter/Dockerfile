@@ -6,6 +6,9 @@ FROM $BASE_GOLANG_19_ALPINE as artifact
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 RUN apk add --no-cache git
 RUN git clone --depth 1 --branch v0.18.1 ${SOURCE_REPO}/prometheus/node_exporter.git /node_exporter
 WORKDIR /node_exporter/
@@ -14,6 +17,5 @@ FROM $BASE_DISTROLESS
 COPY --from=artifact /node_exporter/node_exporter /bin
 
 EXPOSE      9100
-USER        nobody
 
 ENTRYPOINT  [ "/bin/node_exporter" ]
