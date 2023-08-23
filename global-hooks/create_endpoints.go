@@ -37,6 +37,7 @@ const (
 	d8Name      = "deckhouse"
 )
 
+// should run before all hooks
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
 }, generateDeckhouseEndpoints)
