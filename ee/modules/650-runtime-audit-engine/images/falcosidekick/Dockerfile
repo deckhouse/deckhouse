@@ -4,10 +4,13 @@ ARG BASE_DISTROLESS
 
 FROM $BASE_GOLANG_18_ALPINE as artifact
 ARG GOPROXY
-ENV GOPROXY=${GOPROXY}
-
 ARG SOURCE_REPO
-ENV SOURCE_REPO=${SOURCE_REPO}
+
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
 WORKDIR /src
 RUN apk add --no-cache make git bash && \
@@ -19,4 +22,3 @@ RUN apk add --no-cache make git bash && \
 FROM $BASE_DISTROLESS
 COPY --from=artifact /src/falcosidekick /falcosidekick
 ENTRYPOINT [ "/falcosidekick" ]
-
