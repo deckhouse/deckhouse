@@ -160,6 +160,53 @@ $(document).ready(function(){
     })
 });
 
+$(document).ready(function(){
+  const lists = document.querySelectorAll('.docs ul.resources > li');
+  const allLists = document.querySelectorAll('.docs ul > li');
+
+  lists.forEach(list => {
+    list.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.target.classList.toggle('content-collapsed')
+      // const cls = e.target.classList;
+      // const cname = 'content-collapsed';
+      // cls.contains(cname) ? cls.remove(cname) : cls.add(cname);
+    })
+  })
+
+  allLists.forEach(list => {
+    const isResourcesList = list.querySelector('.resources__prop_type');
+    const isParent = list.querySelector('ul > li');
+
+    if (list.contains(isResourcesList) && isParent) {
+      const btn = document.createElement('button');
+
+      btn.classList.add('button_alt');
+      btn.innerText = document.documentElement.lang === 'ru' ? 'свернуть' : 'collapse';
+
+      list.prepend(btn);
+
+      btn.addEventListener('click', (e) => {
+        const parent = e.target.parentElement;
+        const lists = parent.querySelectorAll(`${parent.tagName} > ul > li`);
+
+        lists.forEach(list => list.classList.toggle('content-collapsed'));
+        if (btn.classList.contains('content-collapsed')) {
+          btn.innerText = document.documentElement.lang === 'ru' ? 'свернуть' : 'collapse';
+        } else {
+          btn.innerText = document.documentElement.lang === 'ru' ? 'развернуть' : 'expand';
+        }
+      })
+    }
+  })
+
+  const fakeLists = document.querySelectorAll(`.resources__prop_description > ul`);
+
+  fakeLists.forEach(list => {
+    list.parentElement.parentElement.querySelector('button.button_alt').remove();
+  });
+});
+
 const openDiagram = function () {
   const button = $('[data-open-scheme]');
   const wrap = $('.functionality-block__diagram-wrap')

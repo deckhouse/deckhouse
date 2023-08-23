@@ -1408,3 +1408,47 @@ select#contact-select {
     margin-left: 15px;
     padding: 1em 0 0 0;
 }
+
+.docs ul > li::before,
+.docs ul ul > li::before {
+  top: .8ex;
+  left: -2.5ex;
+  cursor: pointer;
+  border: .25ex solid #ffff;
+  height: 1ex;
+  width: 1ex;
+}
+
+.docs ul.resources button {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.docs ul > li.content-collapsed::before,
+.docs ul ul > li.content-collapsed::before {
+  top: 1ex;
+  left: -3ex;
+  cursor: pointer;
+  //border: .25ex solid #ffff;
+}
+
+
+.docs ul > li.content-collapsed > ul,
+.docs ul > li.content-collapsed > p,
+.docs ul > li.content-collapsed > div.highlighter-rouge,
+.docs ul > li.content-collapsed > div.resources__prop_description {
+  display: none;
+}
+
+.docs ul > li.content-collapsed {
+  background: #f8f6f0;
+}
+.docs ul > li.content-collapsed::before {
+  width: 2ex;
+  height: .5ex;
+}
+
+.docs ul ul > li::before {
+  background: #48c8;
+}
