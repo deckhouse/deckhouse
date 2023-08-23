@@ -28,6 +28,14 @@ title: "Управление control plane: FAQ"
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
+1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:
+
+   ```bash
+   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   Ответ должен сообщить вам, что Terraform не хочет ничего менять.
+
 1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество реплик в параметре `masterNodeGroup.replicas`:
 
    ```bash
