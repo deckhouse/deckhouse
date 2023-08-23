@@ -23,7 +23,7 @@ spec:
     namespaceSelector:
       matchNames:
       - d8-runtime-audit-engine
-  labelsFilter:
+  labelFilter:
   - operator: Regex
     values: ["\\{.*"] # to collect only JSON logs
     field: "message"
