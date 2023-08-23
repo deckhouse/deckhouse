@@ -25,6 +25,6 @@ export GO111MODULE=on
 
 GOOS=linux \
     go build \
-     -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \
+     -ldflags="-s -w -extldflags '-static' -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \
      -o ./deckhouse-controller \
      ./cmd/deckhouse-controller
