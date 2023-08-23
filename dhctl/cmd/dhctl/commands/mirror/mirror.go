@@ -27,6 +27,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/schollz/progressbar/v3"
+
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/types"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/mirror/image"
@@ -148,7 +150,7 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		defer policyContext.Destroy()
 
 		copyOpts := []image.CopyOption{
-			image.WithOutput(logger),
+			// image.WithOutput(logger),
 			image.WithSourceCertsDir(sourceTempCertsDir),
 			image.WithDestCertsDir(destTempCertsDir),
 		}
@@ -172,14 +174,23 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		copyLogger := logger.ProcessLogger()
 		copyLogger.LogProcessStart("Mirror images")
 		logger.LogDebugF("will push %d images to destination registry\n", len(allImagesToCopy))
+
+		bar := progressbar.Default(int64(len(allImagesToCopy)))
+
 		for _, src := range allImagesToCopy {
+			bar.Add(1)
+			hackString := "\n"
 			var exists bool
 			for errCount := 0; errCount < 3; errCount++ {
 				exists, err = copyImage(ctx, src, dest, policyContext, logger, copyOpts...)
 				if err == nil {
 					break
 				}
-				logger.LogDebugF("error copying image %s with tag %s and digest %s to %s: %v", src.Path(), src.Tag(), src.Digest(), dest.Path(), err)
+				fmt.Print(hackString)
+				hackString = ""
+				// bar.Set()
+				// currentIterNumber := bar.State().CurrentPercent
+				logger.LogErrorF("error copying image %s with tag %s and digest %s to %s: %v\n", src.Path(), src.Tag(), src.Digest(), dest.Path(), err)
 			}
 			if err != nil {
 				copyLogger.LogProcessFail()
@@ -192,6 +203,7 @@ func DefineMirrorCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 			updatedImages.set(src.WithNewRegistry(dest).Path(), src.Tag(), src.Digest())
 		}
+		bar.Close()
 		copyLogger.LogProcessEnd()
 
 		if !dryRun {
