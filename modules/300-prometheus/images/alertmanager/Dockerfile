@@ -3,11 +3,14 @@ ARG BASE_GOLANG_18_ALPINE
 
 FROM $BASE_GOLANG_18_ALPINE as artifact
 
-ARG SOURCE_REPO
-ENV SOURCE_REPO=${SOURCE_REPO}
-
 ARG GOPROXY
-ENV GOPROXY=${GOPROXY}
+ARG SOURCE_REPO
+
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
 RUN apk add --no-cache git
 RUN git clone --depth 1 --branch v0.25.0 ${SOURCE_REPO}/prometheus/alertmanager.git /alertmanager
