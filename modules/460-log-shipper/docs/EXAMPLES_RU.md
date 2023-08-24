@@ -365,6 +365,24 @@ spec:
   - loki-storage
 ```
 
+### Сборка логов без строки содержащей `GET /status" 200`
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: all-logs
+spec:
+  type: KubernetesPods
+  destinationRefs:
+  - loki-storage
+  labelFilter:
+  - field: message
+    operator: NotRegex
+    values:
+    - .*GET /status" 200$
+```
+
 ### Аудит событий kubelet'а
 
 ```yaml
