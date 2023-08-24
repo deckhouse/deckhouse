@@ -43,19 +43,34 @@ var processedStatus = func(sp *securityPolicy) func(obj *unstructured.Unstructur
 		objCopy := obj.DeepCopy()
 		err := sdk.FromUnstructured(objCopy, &currentSp)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot convert object to service policy: %v", err)
 		}
 
 		spBytes, err := json.Marshal(sp)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot marshal security policy: %v", err)
 		}
 
 		currentCheckSum := utils_checksum.CalculateChecksum(string(spBytes))
 
 		if checkSum == currentCheckSum {
+			observedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "observed", "checkSum")
+			if err != nil {
+				return nil, fmt.Errorf("cannot get observed checksum status field: %v", err)
+			}
+
+			if !found || checkSum != observedCheckSum {
+				if err := unstructured.SetNestedField(objCopy.Object, "False", "status", "deckhouse", "synced"); err != nil {
+					return nil, fmt.Errorf("cannot set synced status field: %v", err)
+				}
+			} else {
+				if err := unstructured.SetNestedField(objCopy.Object, "True", "status", "deckhouse", "synced"); err != nil {
+					return nil, fmt.Errorf("cannot set synced status field: %v", err)
+				}
+			}
+
 			if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "processed"); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("cannot set processed status field: %v", err)
 			}
 		} else {
 			return nil, fmt.Errorf("sp object has changed since last release")
@@ -75,30 +90,6 @@ func annotateSP(input *go_hook.HookInput) error {
 	for _, sp := range securityPolicies {
 		input.PatchCollector.Filter(processedStatus(&sp), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
 	}
-	/*
-		noticedAnnotation, found, err := unstructured.NestedString(spObj.Object, "metadata", "annotations", "deckhouse.io/admission-policy-engine-hook-noticed")
-		if err != nil {
-			return fmt.Errorf("cannot get security policy annotation: %v", err)
-		}
-
-		if !found || !checksumEqualsAnnotation(checkSum, noticedAnnotation) {
-			if err := unstructured.SetNestedField(spObj.Object, "False", "metadata", "annotations", "deckhouse.io/admission-policy-engine-hook-synced"); err != nil {
-				return fmt.Errorf("cannot set security policy object annotation: %v", err)
-			}
-		} else {
-			if err := unstructured.SetNestedField(spObj.Object, "True", "metadata", "annotations", "deckhouse.io/admission-policy-engine-hook-synced"); err != nil {
-				return fmt.Errorf("cannot set security policy object annotation: %v", err)
-			}
-		}
-
-		if err := unstructured.SetNestedField(spObj.Object, fmt.Sprintf("%s/%s", time.Now().Format(time.RFC3339), checkSum), "metadata", "annotations", "deckhouse.io/admission-policy-engine-hook-processed"); err != nil {
-			return fmt.Errorf("cannot set security policy annotation: %v", err)
-		}
-		_, err = spInterface.Update(context.TODO(), spObj, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("cannot update security policy object: %v", err)
-		}
-	}*/
 
 	return nil
 }

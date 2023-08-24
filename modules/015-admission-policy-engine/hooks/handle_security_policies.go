@@ -101,38 +101,6 @@ func handleSP(input *go_hook.HookInput) error {
 	return nil
 }
 
-/* set deckhouse.io/admission-policy-engine-hook-noticed and deckhouse.io/admission-policy-engine-hook-synced annotations
-func annotateWithNoticed(sp *securityPolicy, kubeClient k8s.Client) error {
-	spInterface := kubeClient.Dynamic().Resource(schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "securitypolicies"}).Namespace("")
-	spObj, err := spInterface.Get(context.TODO(), sp.Metadata.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	spBytes, err := json.Marshal(sp)
-	if err != nil {
-		return err
-	}
-	checkSum := utils_checksum.CalculateChecksum(string(spBytes))
-
-	processedAnnotation, found, err := unstructured.NestedString(spObj.Object, "metadata", "annotations", "deckhouse.io/admission-policy-engine-hook-processed")
-	if err != nil {
-		return err
-	}
-
-	if !found || !checksumEqualsAnnotation(checkSum, processedAnnotation) {
-		if err := unstructured.SetNestedField(spObj.Object, "False", "metadata", "annotations", "deckhouse.io/admission-policy-engine-hook-synced"); err != nil {
-			return err
-		}
-	}
-
-	if err := unstructured.SetNestedField(spObj.Object, fmt.Sprintf("%s/%s", time.Now().Format(time.RFC3339), checkSum), "metadata", "annotations", "deckhouse.io/admission-policy-engine-hook-noticed"); err != nil {
-		return err
-	}
-	_, err = spInterface.Update(context.TODO(), spObj, metav1.UpdateOptions{})
-	return err
-} */
-
 func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sp securityPolicy
 
