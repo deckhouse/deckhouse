@@ -161,10 +161,6 @@ spec:
         ports:
         - containerPort: 9101
           name: https-metrics
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 9101
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
