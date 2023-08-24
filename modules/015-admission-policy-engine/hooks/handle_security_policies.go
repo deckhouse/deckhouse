@@ -51,18 +51,28 @@ var observedStatus = func(sp *securityPolicy) func(obj *unstructured.Unstructure
 		objCopy := obj.DeepCopy()
 		err := sdk.FromUnstructured(objCopy, &currentSp)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot convert object to service policy: %v", err)
 		}
 
 		spBytes, err := json.Marshal(sp)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot marshal security policy: %v", err)
 		}
 
 		currentCheckSum := utils_checksum.CalculateChecksum(string(spBytes))
 		if checkSum == currentCheckSum {
+			processedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "processed", "checkSum")
+			if err != nil {
+				return nil, fmt.Errorf("cannot get processed checksum status field: %v", err)
+			}
+
+			if !found || checkSum != processedCheckSum {
+				if err := unstructured.SetNestedField(objCopy.Object, "False", "status", "deckhouse", "synced"); err != nil {
+					return nil, fmt.Errorf("cannot set synced status field: %v", err)
+				}
+			}
 			if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "observed"); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("cannot set observed status field: %v", err)
 			}
 		} else {
 			return nil, fmt.Errorf("sp object has changed since last snapshot")

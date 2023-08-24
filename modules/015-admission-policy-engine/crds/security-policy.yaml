@@ -39,7 +39,7 @@ spec:
                   type: object
                   properties:
                     synced:
-                      type: boolean
+                      type: string
                       description: True if last obseved version of the security policy was successfully applied in the cluster.
                     observed:
                       type: object
