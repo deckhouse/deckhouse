@@ -17,17 +17,12 @@ limitations under the License.
 package hooks
 
 import (
-//	"context"
+	//	"context"
 	"fmt"
-//	"time"
 
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	//utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
-	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	//"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // hook for setting CR statuses

@@ -22,8 +22,8 @@ import (
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
@@ -42,17 +42,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSP)
 
 var observedStatus = func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	sp, err := filterSP(obj)
+	objCopy := obj.DeepCopy()
+	sp, err := filterSP(objCopy)
 	spBytes, err := json.Marshal(sp)
 	if err != nil {
 		return nil, err
 	}
 
 	checkSum := utils_checksum.CalculateChecksum(string(spBytes))
-	if err := unstructured.SetNestedStringMap(obj.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "observed"); err != nil {
+	if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "observed"); err != nil {
 		return nil, err
 	}
-	return obj, nil
+	return objCopy, nil
 }
 
 func handleSP(input *go_hook.HookInput) error {
