@@ -15,9 +15,6 @@ RUN patch -p1 < 001-change-node-collector-config.patch
 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o node-collector ./cmd/node-collector/main.go
 
-RUN chown 64535:64535 node-collector
-RUN chmod 0700 node-collector
-
 FROM $BASE_DISTROLESS
 COPY --from=build /src/node-collector /usr/local/bin/
 ENTRYPOINT [ "/usr/local/bin/node-collector" ]
