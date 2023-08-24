@@ -23,7 +23,7 @@ addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 # Can be removed when Go 1.16 will be in use.
 export GO111MODULE=on
 
-GOOS=linux \
+CGO_ENABLED=0 GOOS=linux \
     go build \
      -ldflags="-s -w -extldflags '-static' -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \
      -o ./deckhouse-controller \
