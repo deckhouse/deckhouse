@@ -16,11 +16,13 @@ spec:
   versions:
     - name: v1alpha1
       additionalPrinterColumns:
-      - jsonPath: .metadata.annotations.deckhouse\.io/admission-policy-engine-hook-synced
-        name: Processed
+      - jsonPath: .status.deckhouse.synced
+        name: Synced
         type: string
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -30,6 +32,35 @@ spec:
 
             Each CustomResource `SecurityPolicy` describes rules for objects in a cluster.
           properties:
+            status:
+              type: object
+              properties:
+                deckhouse:
+                  type: object
+                  properties:
+                    synced:
+                      type: boolean
+                      description: True if last obseved version of the security policy was successfully applied in the cluster.
+                    observed:
+                      type: object
+                      description: Contains last timestamp when the security policy change was noted by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when a change of the security policy was noted by the operator.
+                        checkSum:
+                          type: string
+                          description: The checksum of last observed change of the security policy.
+                    processed:
+                      type: object
+                      description: Contains last timestamp when the security policy was applied in the cluster by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when the security policy was applied in the cluster.
+                        checkSum:
+                          type: string
+                          description: The checksum of last applied security policy.
             spec:
               type: object
               required: ["match", "policies"]

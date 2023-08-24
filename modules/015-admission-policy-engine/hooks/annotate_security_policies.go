@@ -17,42 +17,34 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
+//	"context"
 	"fmt"
-	"time"
+//	"time"
 
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	//utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
+	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	//"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	//"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // hook for setting CR statuses
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:       "/modules/admission-policy-engine/security_policies",
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
-}, dependency.WithExternalDependencies(annotateSP))
+}, annotateSP)
 
-func annotateSP(input *go_hook.HookInput, dc dependency.Container) error {
-	kubeClient, err := dc.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("cannot init Kubernetes client: %v", err)
-	}
-	spInterface := kubeClient.Dynamic().Resource(schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "securitypolicies"}).Namespace("")
-
+func annotateSP(input *go_hook.HookInput) error {
 	securityPolicies := make([]securityPolicy, 0)
 
-	err = json.Unmarshal([]byte(input.Values.Get("admissionPolicyEngine.internal.securityPolicies").String()), &securityPolicies)
+	err := json.Unmarshal([]byte(input.Values.Get("admissionPolicyEngine.internal.securityPolicies").String()), &securityPolicies)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal values: %v", err)
 	}
 
-	for _, sp := range securityPolicies {
+	/*for _, sp := range securityPolicies {
 		spObj, err := spInterface.Get(context.TODO(), sp.Metadata.Name, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("cannot get security policy object: %v", err)
@@ -86,7 +78,7 @@ func annotateSP(input *go_hook.HookInput, dc dependency.Container) error {
 		if err != nil {
 			return fmt.Errorf("cannot update security policy object: %v", err)
 		}
-	}
+	}*/
 
 	return nil
 }

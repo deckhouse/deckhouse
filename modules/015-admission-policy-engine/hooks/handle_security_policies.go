@@ -17,21 +17,15 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 )
 
@@ -45,14 +39,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterSP,
 		},
 	},
-}, dependency.WithExternalDependencies(handleSP))
+}, handleSP)
 
-func handleSP(input *go_hook.HookInput, dc dependency.Container) error {
-	kubeClient, err := dc.GetK8sClient()
+var observedStatus = func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	sp, err := filterSP(obj)
+	spBytes, err := json.Marshal(sp)
 	if err != nil {
-		return fmt.Errorf("cannot init Kubernetes client: %v", err)
+		return nil, err
 	}
 
+	checkSum := utils_checksum.CalculateChecksum(string(spBytes))
+	if err := unstructured.SetNestedStringMap(obj.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "observed"); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+func handleSP(input *go_hook.HookInput) error {
 	result := make([]*securityPolicy, 0)
 
 	snap := input.Snapshots["security-policies"]
@@ -61,10 +64,8 @@ func handleSP(input *go_hook.HookInput, dc dependency.Container) error {
 		sp := sn.(*securityPolicy)
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
-		// annotate an sp object as noticed
-		if err := annotateWithNoticed(sp, kubeClient); err != nil {
-			return fmt.Errorf("cannot annotate security policy: %v", err)
-		}
+		// set observed status
+		input.PatchCollector.Filter(observedStatus, "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
 	}
 
 	data, _ := json.Marshal(result)
@@ -74,7 +75,7 @@ func handleSP(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-// set deckhouse.io/admission-policy-engine-hook-noticed and deckhouse.io/admission-policy-engine-hook-synced annotations
+/* set deckhouse.io/admission-policy-engine-hook-noticed and deckhouse.io/admission-policy-engine-hook-synced annotations
 func annotateWithNoticed(sp *securityPolicy, kubeClient k8s.Client) error {
 	spInterface := kubeClient.Dynamic().Resource(schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "securitypolicies"}).Namespace("")
 	spObj, err := spInterface.Get(context.TODO(), sp.Metadata.Name, metav1.GetOptions{})
@@ -104,15 +105,7 @@ func annotateWithNoticed(sp *securityPolicy, kubeClient k8s.Client) error {
 	}
 	_, err = spInterface.Update(context.TODO(), spObj, metav1.UpdateOptions{})
 	return err
-}
-
-func checksumEqualsAnnotation(checkSum, annotation string) bool {
-	splitAnnotation := strings.Split(annotation, "/")
-	if len(splitAnnotation) != 2 {
-		return false
-	}
-	return splitAnnotation[1] == checkSum
-}
+} */
 
 func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sp securityPolicy
