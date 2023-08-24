@@ -480,7 +480,7 @@ module Jekyll
         end
 
         if attributes.is_a?(Hash) and attributes.has_key?("properties")
-            result.push(%Q(<ul ancestor="#{ancestorID}">))
+            result.push(%Q(<ul data-parent-name="#{ancestorID}">))
             attributes["properties"].sort.to_h.each do |key, value|
                 result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key), fullPath, resourceName, versionAPI))
             end
@@ -488,7 +488,7 @@ module Jekyll
         elsif attributes.is_a?(Hash) and  attributes.has_key?('items')
             if get_hash_value(attributes,'items','properties')
                 #  Array of objects
-                result.push(%Q(<ul ancestor="#{ancestorID}">))
+                result.push(%Q(<ul data-parent-name="#{ancestorID}">))
                 attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
                     result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath, resourceName, versionAPI))
                 end
@@ -499,7 +499,7 @@ module Jekyll
                 if (attributes['items'].keys & keysToShow).length > 0
                     lang = @context.registers[:page]["lang"]
                     i18n = @context.registers[:site].data["i18n"]["common"]
-                    result.push(%Q(<ul ancestor="#{ancestorID}">))
+                    result.push(%Q(<ul data-parent-name="#{ancestorID}">))
                     result.push(format_schema(nil, attributes['items'], attributes, get_hash_value(primaryLanguage,"items") , get_hash_value(fallbackLanguage,"items"), fullPath, resourceName, versionAPI))
                     result.push('</ul>')
                 end
