@@ -42,7 +42,7 @@ chmod +x /var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
   {{- end }}
 
 cat > /var/lib/bashible/bootstrap.sh <<"END"
-{{- include "bootstrap_script" (dict "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) | nindent 4 }}
+{{- include "bootstrap_script" (dict "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) }}
 END
 chmod +x /var/lib/bashible/bootstrap.sh
 
