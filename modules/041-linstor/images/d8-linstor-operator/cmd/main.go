@@ -45,7 +45,6 @@ func main() {
 	if err != nil {
 		klog.Fatalln(err)
 	}
-	log.Info("--- storage class ENV ---")
 	log.Info(config.SCStableReplicas + " " + cfgParams.SCStable.Replicas)
 	log.Info(config.SCStableQuorum + " " + cfgParams.SCStable.Quorum)
 	log.Info(config.SCBadReplicas + " " + cfgParams.SCBad.Replicas)
