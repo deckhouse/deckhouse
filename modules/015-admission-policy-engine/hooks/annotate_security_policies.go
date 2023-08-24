@@ -34,46 +34,38 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, annotateSP)
 
-var processedStatus = func(sp *securityPolicy) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	spBytes, _ := json.Marshal(sp)
-	checkSum := utils_checksum.CalculateChecksum(string(spBytes))
-
+var processedStatus = func(filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		var currentSp securityPolicy
 		objCopy := obj.DeepCopy()
-		err := sdk.FromUnstructured(objCopy, &currentSp)
+		filteredObj, err := filterFunc(objCopy)
 		if err != nil {
-			return nil, fmt.Errorf("cannot convert object to service policy: %v", err)
+			return nil, fmt.Errorf("cannot apply filterFunc to object: %v", err)
 		}
 
-		spBytes, err := json.Marshal(sp)
+		objBytes, err := json.Marshal(filteredObj)
 		if err != nil {
-			return nil, fmt.Errorf("cannot marshal security policy: %v", err)
+			return nil, fmt.Errorf("cannot marshal filtered object: %v", err)
 		}
 
-		currentCheckSum := utils_checksum.CalculateChecksum(string(spBytes))
+		objCheckSum := utils_checksum.CalculateChecksum(string(objBytes))
 
-		if checkSum == currentCheckSum {
-			observedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "observed", "checkSum")
-			if err != nil {
-				return nil, fmt.Errorf("cannot get observed checksum status field: %v", err)
-			}
+		observedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "observed", "checkSum")
+		if err != nil {
+			return nil, fmt.Errorf("cannot get observed checksum status field: %v", err)
+		}
 
-			if !found || checkSum != observedCheckSum {
-				if err := unstructured.SetNestedField(objCopy.Object, "False", "status", "deckhouse", "synced"); err != nil {
-					return nil, fmt.Errorf("cannot set synced status field: %v", err)
-				}
-			} else {
-				if err := unstructured.SetNestedField(objCopy.Object, "True", "status", "deckhouse", "synced"); err != nil {
-					return nil, fmt.Errorf("cannot set synced status field: %v", err)
-				}
-			}
-
-			if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "processed"); err != nil {
-				return nil, fmt.Errorf("cannot set processed status field: %v", err)
+		if !found || objCheckSum != observedCheckSum {
+			if err := unstructured.SetNestedField(objCopy.Object, "False", "status", "deckhouse", "synced"); err != nil {
+				return nil, fmt.Errorf("cannot set synced status field: %v", err)
 			}
 		} else {
-			return nil, fmt.Errorf("sp object has changed since last release")
+			if err := unstructured.SetNestedField(objCopy.Object, "True", "status", "deckhouse", "synced"); err != nil {
+				return nil, fmt.Errorf("cannot set synced status field: %v", err)
+			}
+		}
+
+		if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": objCheckSum}, "status", "deckhouse", "processed"); err != nil {
+			return nil, fmt.Errorf("cannot set processed status field: %v", err)
 		}
 		return objCopy, nil
 	}
@@ -88,7 +80,7 @@ func annotateSP(input *go_hook.HookInput) error {
 	}
 
 	for _, sp := range securityPolicies {
-		input.PatchCollector.Filter(processedStatus(&sp), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
+		input.PatchCollector.Filter(processedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
 	}
 
 	return nil

@@ -42,25 +42,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleSP)
 
-var observedStatus = func(sp *securityPolicy) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	spBytes, _ := json.Marshal(sp)
-	checkSum := utils_checksum.CalculateChecksum(string(spBytes))
+var observedStatus = func(snapshot go_hook.FilterResult, filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	snBytes, _ := json.Marshal(snapshot)
+	checkSum := utils_checksum.CalculateChecksum(string(snBytes))
 
 	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		var currentSp securityPolicy
 		objCopy := obj.DeepCopy()
-		err := sdk.FromUnstructured(objCopy, &currentSp)
+		filteredObj, err := filterFunc(objCopy)
 		if err != nil {
-			return nil, fmt.Errorf("cannot convert object to service policy: %v", err)
+			return nil, fmt.Errorf("cannot apply filterFunc to object: %v", err)
 		}
 
-		spBytes, err := json.Marshal(sp)
+		objBytes, err := json.Marshal(filteredObj)
 		if err != nil {
-			return nil, fmt.Errorf("cannot marshal security policy: %v", err)
+			return nil, fmt.Errorf("cannot marshal filtered object: %v", err)
 		}
 
-		currentCheckSum := utils_checksum.CalculateChecksum(string(spBytes))
-		if checkSum == currentCheckSum {
+		objCheckSum := utils_checksum.CalculateChecksum(string(objBytes))
+		if checkSum == objCheckSum {
 			processedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "processed", "checkSum")
 			if err != nil {
 				return nil, fmt.Errorf("cannot get processed checksum status field: %v", err)
@@ -75,7 +74,7 @@ var observedStatus = func(sp *securityPolicy) func(obj *unstructured.Unstructure
 				return nil, fmt.Errorf("cannot set observed status field: %v", err)
 			}
 		} else {
-			return nil, fmt.Errorf("sp object has changed since last snapshot")
+			return nil, fmt.Errorf("object has changed since last snapshot")
 		}
 		return objCopy, nil
 	}
@@ -88,10 +87,10 @@ func handleSP(input *go_hook.HookInput) error {
 
 	for _, sn := range snap {
 		sp := sn.(*securityPolicy)
+		// set observed status
+		input.PatchCollector.Filter(observedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
-		// set observed status
-		input.PatchCollector.Filter(observedStatus(sp), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
 	}
 
 	data, _ := json.Marshal(result)
