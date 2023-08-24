@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/clarketm/json"
@@ -41,19 +42,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleSP)
 
-var observedStatus = func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	objCopy := obj.DeepCopy()
-	sp, err := filterSP(objCopy)
-	spBytes, err := json.Marshal(sp)
-	if err != nil {
-		return nil, err
-	}
-
+var observedStatus = func(sp *securityPolicy) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	spBytes, _ := json.Marshal(sp)
 	checkSum := utils_checksum.CalculateChecksum(string(spBytes))
-	if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "observed"); err != nil {
-		return nil, err
+
+	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		var currentSp securityPolicy
+		objCopy := obj.DeepCopy()
+		err := sdk.FromUnstructured(objCopy, &currentSp)
+		if err != nil {
+			return nil, err
+		}
+
+		spBytes, err := json.Marshal(sp)
+		if err != nil {
+			return nil, err
+		}
+
+		currentCheckSum := utils_checksum.CalculateChecksum(string(spBytes))
+		if checkSum == currentCheckSum {
+			if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "observed"); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, fmt.Errorf("sp object has changed since last snapshot")
+		}
+		return objCopy, nil
 	}
-	return objCopy, nil
 }
 
 func handleSP(input *go_hook.HookInput) error {
@@ -66,7 +81,7 @@ func handleSP(input *go_hook.HookInput) error {
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
 		// set observed status
-		input.PatchCollector.Filter(observedStatus, "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
+		input.PatchCollector.Filter(observedStatus(sp), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
 	}
 
 	data, _ := json.Marshal(result)

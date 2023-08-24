@@ -23,6 +23,7 @@ import (
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+//	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
 // hook for setting CR statuses
@@ -31,6 +32,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, annotateSP)
 
+/* var processedStatus = func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	objCopy := obj.DeepCopy()
+	sp, err := filterSP(objCopy)
+	spBytes, err := json.Marshal(sp)
+	if err != nil {
+		return nil, err
+	}
+
+	checkSum := utils_checksum.CalculateChecksum(string(spBytes))
+	if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "observed"); err != nil {
+		return nil, err
+	}
+	return objCopy, nil
+} */
+
+
 func annotateSP(input *go_hook.HookInput) error {
 	securityPolicies := make([]securityPolicy, 0)
 
@@ -38,19 +55,17 @@ func annotateSP(input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal values: %v", err)
 	}
+	/*
+		input.PatchCollector.Filter(observedStatus, "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
 
-	/*for _, sp := range securityPolicies {
-		spObj, err := spInterface.Get(context.TODO(), sp.Metadata.Name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("cannot get security policy object: %v", err)
-		}
-
+	for _, sp := range securityPolicies {
 		spBytes, err := json.Marshal(sp)
 		if err != nil {
 			return fmt.Errorf("cannot marshal security policy object: %v", err)
 		}
 		checkSum := utils_checksum.CalculateChecksum(string(spBytes))
-
+		input.PatchCollector.Filter(processedStatus, "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
+	}
 		noticedAnnotation, found, err := unstructured.NestedString(spObj.Object, "metadata", "annotations", "deckhouse.io/admission-policy-engine-hook-noticed")
 		if err != nil {
 			return fmt.Errorf("cannot get security policy annotation: %v", err)
