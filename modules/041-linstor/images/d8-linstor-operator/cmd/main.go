@@ -3,24 +3,28 @@ package main
 import (
 	"context"
 	"fmt"
-	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	apiruntime "k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/klog/v2"
 	"linstor-operator/api/v1alpha1"
 	"linstor-operator/config"
 	"linstor-operator/pkg/controllers"
 	kubutils "linstor-operator/pkg/kubeutils"
 	"os"
 	goruntime "runtime"
+
+	"go.uber.org/zap/zapcore"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	v1storage "k8s.io/api/storage/v1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	apiruntime "k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
-	log                  = logf.Log.WithName("cmd")
 	resourcesSchemeFuncs = []func(*apiruntime.Scheme) error{
 		v1alpha1.AddToScheme,
 		clientgoscheme.AddToScheme,
@@ -31,6 +35,8 @@ var (
 func main() {
 
 	ctx, _ := context.WithCancel(context.Background())
+	log := zap.New(zap.Level(zapcore.Level(-1)), zap.UseDevMode(true))
+	log.WithName("cmd")
 
 	klog.Info(fmt.Sprintf("Go Version:%s ", goruntime.Version()))
 	klog.Info(fmt.Sprintf("OS/Arch:Go OS/Arch:%s/%s ", goruntime.GOOS, goruntime.GOARCH))
@@ -39,29 +45,29 @@ func main() {
 	if err != nil {
 		klog.Fatalln(err)
 	}
-	klog.Info("--- storage class ENV ---")
-	klog.Info(config.SCStableReplicas+" ", cfgParams.SCStable.Replicas)
-	klog.Info(config.SCStableQuorum+" ", cfgParams.SCStable.Quorum)
-	klog.Info(config.SCBadReplicas+" ", cfgParams.SCBad.Replicas)
-	klog.Info(config.SCBadQuorum+" ", cfgParams.SCBad.Quorum)
+	log.Info("--- storage class ENV ---")
+	log.Info(config.SCStableReplicas + " " + cfgParams.SCStable.Replicas)
+	log.Info(config.SCStableQuorum + " " + cfgParams.SCStable.Quorum)
+	log.Info(config.SCBadReplicas + " " + cfgParams.SCBad.Replicas)
+	log.Info(config.SCBadQuorum + " " + cfgParams.SCBad.Quorum)
 
 	// Create default config Kubernetes client
 	kConfig, err := kubutils.KubernetesDefaultConfigCreate()
 	if err != nil {
 		klog.Fatalln(err)
 	}
-	klog.Info("read Kubernetes config")
+	log.Info("read Kubernetes config")
 
 	// Setup scheme for all resources
 	scheme := runtime.NewScheme()
 	for _, f := range resourcesSchemeFuncs {
 		err := f(scheme)
 		if err != nil {
-			klog.Error("failed to add to scheme", err)
+			log.Error(err, "failed to add to scheme")
 			os.Exit(1)
 		}
 	}
-	klog.Info("read scheme CR")
+	log.Info("read scheme CR")
 
 	managerOpts := manager.Options{
 		LeaderElection:             true,
@@ -79,29 +85,37 @@ func main() {
 		os.Exit(1)
 	}
 
-	klog.Info("create kubernetes manager")
+	log.Info("create kubernetes manager")
 
 	if _, err := controllers.NewLinstorOperator(ctx, mgr, log); err != nil {
-		klog.Error("failed create controller NewLinstorOperator", err)
+		log.Error(err, "failed create controller NewLinstorOperator")
 		os.Exit(1)
 	}
 
-	klog.Info("controller LinstorOperator start")
+	// webHook
+	if err := builder.WebhookManagedBy(mgr).
+		For(&v1storage.StorageClass{}).
+		WithValidator(controllers.NewCSValidator(log)).
+		Complete(); err != nil {
+		klog.Errorf("error start webhook")
+	}
+
+	log.Info("controller LinstorOperator start")
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		klog.Error(err, "unable to set up health check")
+		log.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		klog.Error(err, "unable to set up ready check")
+		log.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
 	err = mgr.Start(ctx)
 	if err != nil {
-		klog.Error(err, "error start manager")
+		log.Error(err, "error start manager")
 		os.Exit(1)
 	}
 
-	klog.Info("starting the manager")
+	log.Info("starting the manager")
 }
