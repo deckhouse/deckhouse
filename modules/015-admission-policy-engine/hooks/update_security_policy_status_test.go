@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -26,29 +27,32 @@ import (
 )
 
 const securityPoliciesValues = `[
-	"metadata": {
-		"name": "foo"
-	},
-	"spec": {
-		"enforcementAction": Deny,
-		"match": {
-			"namespaceSelector": {
-				"labelSelector": {
-					"matchLabels": {
-						"operation-policy.deckhouse.io/enabled": "true"
+	{
+		"metadata": {
+			"name": "foo"
+		},
+		"spec": {
+			"enforcementAction": Deny,
+			"match": {
+				"namespaceSelector": {
+					"labelSelector": {
+						"matchLabels": {
+							"operation-policy.deckhouse.io/enabled": "true"
+						},
 					},
 				},
 			},
-		},
-		"policies": {
-			"allowHostNetwork": false,
-			"allowPrivilegeEscalation": false,
-			"allowPrivileged": false
+			"policies": {
+				"allowHostNetwork": false,
+				"allowPrivilegeEscalation": false,
+				"allowPrivileged": false
+			}
 		}
-	},
+	}
 ]`
-var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security policies statuses", func() {
-	f := HookExecutionConfigInit(fmt.Sprintf(`{"admissionPolicyEngine": {"internal": {"bootstrapped": true, "securityPolicies": %s} } }`, "[]"),
+
+var _ = FDescribe("Modules :: admission-policy-engine :: hooks :: update security policies statuses", func() {
+	f := HookExecutionConfigInit(`{"admissionPolicyEngine": {"internal": {"bootstrapped": true}}}`,
 		`{"admissionPolicyEngine":{}}`,
 	)
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
@@ -62,12 +66,15 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security
 
 	Context("Security Policy status is updated", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(testShortSecurityPolicy))
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.securityPolicies", []byte(securityPoliciesValues))
+			f.KubeStateSet(testShortSecurityPolicy)
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.RunHook()
 		})
 		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			fmt.Println("ASASAS")
+			fmt.Println(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").String())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(1))
 			const expectedStatus = `{
 				"deckhouse": {

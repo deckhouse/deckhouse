@@ -79,7 +79,6 @@ var SetObservedStatus = func(snapshot go_hook.FilterResult, filterFunc func(*uns
 }
 
 var SetProcessedStatus = func(filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-
 	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		objCopy := obj.DeepCopy()
 		filteredObj, err := filterFunc(objCopy)
