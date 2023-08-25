@@ -172,9 +172,9 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 В ситуации когда IngressNginxController размещен за балансировщиком нагрузки, рекомендуются сконфигурировать балансировщик для проверки доступности
 узлов IngressNginxController с помощью HTTP или TCP проверок. В то время как тестирование с помощью TCP пакетов представляет из себя простой и универсальный механизм проверки
 доступности, мы рекомендуем использовать проверку на основе HTTP-запросов со следующими параметрами:
-- Протокол: HTTP
-- Путь: /healthz
-- Порт: 80 (в случае использования inlet HostPort нужно указать номер порта, соответствующий [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport) настройке.
+- Протокол: `HTTP`
+- Путь: `/healthz`
+- Порт: `80` (в случае использования inlet `HostPort` нужно указать номер порта, соответствующий параметру [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport).
 
 ## Как настроить работу через MetalLB с доступом только из внутренней сети?
 

@@ -168,12 +168,12 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 ## How do I configure an external load balancer to check if IngressNginxController is available?
 
-In case an IngressNginxController is deployed behind a load balancer, it is advisable to configure your load balancer so that it would check
+In case an `IngressNginxController` is deployed behind a load balancer, it is advisable to configure your load balancer so that it would check
 the availability of the IngressNginxController's endpoints via a health check mechanism, periodically sending HTTP or TCP requests.
 While it is possible to test the endpoints simply by checking if a relevant TCP port is open, we recommend implementing HTTP checks with the following parameters:
-- Protocol: HTTP
-- Path: /healthz
-- Port: 80 (or relevant [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport) value in case of using HostPort inlet).
+- Protocol: `HTTP`
+- Path: `/healthz`
+- Port: `80` (or relevant [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport) value in case of using `HostPort` inlet).
 
 ## How do I configure MetalLB to be accessible from the internal network only?
 
