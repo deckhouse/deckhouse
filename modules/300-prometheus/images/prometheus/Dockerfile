@@ -63,7 +63,7 @@ COPY --from=artifact /consoles/                                                 
 COPY --from=artifact /etc/                                                         /etc/prometheus/
 COPY --from=artifact /prometheus/                                                  /prometheus/
 
-RUN apt install -y curl
+RUN apk add --no-cache curl
 
 EXPOSE     9090
 VOLUME     [ "/prometheus" ]
