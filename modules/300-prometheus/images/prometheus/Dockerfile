@@ -33,14 +33,14 @@ ENV GOPROXY=${GOPROXY} \
 
 ENV PROMETHEUS_VERSION=v2.44.0
 
-# RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
-#   apt install -y nodejs && \
-#   npm update -g npm && \
-#   npm install webpack -g && \
-#   npm config set registry http://registry.npmjs.org/ && \
-#   apt-key adv --fetch-keys http://dl.yarnpkg.com/debian/pubkey.gpg && \
-#   echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list && \
-#   apt update && apt install -y yarn
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
+  apt install -y nodejs && \
+  npm update -g npm && \
+  npm install webpack -g && \
+  npm config set registry http://registry.npmjs.org/ && \
+  apt-key adv --fetch-keys http://dl.yarnpkg.com/debian/pubkey.gpg && \
+  echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list && \
+  apt update && apt install -y yarn
 
 RUN apt install -y git ca-certificates openssl openssh-client
 
