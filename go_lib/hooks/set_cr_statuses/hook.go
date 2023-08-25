@@ -35,9 +35,17 @@ func getTimeStamp() string {
 	return curTime.Format(time.RFC3339)
 }
 
+func getCheckSum(bytes []byte) string {
+	checkSum := utils_checksum.CalculateChecksum(string(bytes))
+	if env, ok := os.LookupEnv("TEST_CONDITIONS_CALC_CHKSUM"); ok {
+		checkSum = env
+	}
+	return checkSum
+}
+
 var SetObservedStatus = func(snapshot go_hook.FilterResult, filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	snBytes, _ := json.Marshal(snapshot)
-	checkSum := utils_checksum.CalculateChecksum(string(snBytes))
+	checkSum := getCheckSum(snBytes)
 
 	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		objCopy := obj.DeepCopy()
@@ -51,7 +59,7 @@ var SetObservedStatus = func(snapshot go_hook.FilterResult, filterFunc func(*uns
 			return nil, fmt.Errorf("cannot marshal filtered object: %v", err)
 		}
 
-		objCheckSum := utils_checksum.CalculateChecksum(string(objBytes))
+		objCheckSum := getCheckSum(objBytes)
 		if checkSum == objCheckSum {
 			processedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "processed", "checkSum")
 			if err != nil {
@@ -68,7 +76,7 @@ var SetObservedStatus = func(snapshot go_hook.FilterResult, filterFunc func(*uns
 				}
 			}
 
-			if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": getTimeStamp(), "checkSum": checkSum}, "status", "deckhouse", "observed"); err != nil {
+			if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": getTimeStamp(), "checkSum": objCheckSum}, "status", "deckhouse", "observed"); err != nil {
 				return nil, fmt.Errorf("cannot set observed status field: %v", err)
 			}
 		} else {
@@ -91,7 +99,7 @@ var SetProcessedStatus = func(filterFunc func(*unstructured.Unstructured) (go_ho
 			return nil, fmt.Errorf("cannot marshal filtered object: %v", err)
 		}
 
-		objCheckSum := utils_checksum.CalculateChecksum(string(objBytes))
+		objCheckSum := getCheckSum(objBytes)
 
 		observedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "observed", "checkSum")
 		if err != nil {

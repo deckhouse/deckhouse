@@ -25,30 +25,32 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const securityPoliciesValues = `[
-	{
-		"metadata": {
-			"name": "foo"
-		},
-		"spec": {
-			"enforcementAction": Deny,
-			"match": {
-				"namespaceSelector": {
-					"labelSelector": {
-						"matchLabels": {
-							"operation-policy.deckhouse.io/enabled": "true"
+const (
+	securityPoliciesValues = `[
+		{
+			"metadata": {
+				"name": "foo"
+			},
+			"spec": {
+				"enforcementAction": Deny,
+				"match": {
+					"namespaceSelector": {
+						"labelSelector": {
+							"matchLabels": {
+								"operation-policy.deckhouse.io/enabled": "true"
+							},
 						},
 					},
 				},
-			},
-			"policies": {
-				"allowHostNetwork": false,
-				"allowPrivilegeEscalation": false,
-				"allowPrivileged": false
+				"policies": {
+					"allowHostNetwork": false,
+					"allowPrivilegeEscalation": false,
+					"allowPrivileged": false
+				}
 			}
 		}
-	}
-]`
+	]`
+)
 
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security policies statuses", func() {
 	f := HookExecutionConfigInit(`{"admissionPolicyEngine": {"internal": {"bootstrapped": true}}}`,
@@ -57,8 +59,12 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "SecurityPolicy", false)
 
-	const nowTime = "2023-03-03T16:49:52Z"
 	err := os.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", nowTime)
+	if err != nil {
+		panic(err)
+	}
+
+	err = os.Setenv("TEST_CONDITIONS_CALC_CHKSUM", checkSum)
 	if err != nil {
 		panic(err)
 	}
@@ -76,10 +82,14 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security
 			const expectedStatus = `{
 				"deckhouse": {
         				"observed": {
-						"checkSum": "20f60cb8ca390452875879f69229189a",
+						"checkSum": "123123123123123",
 						"lastTimestamp": "2023-03-03T16:49:52Z"
 					},
-					"synced": "False"
+        				"processed": {
+						"checkSum": "123123123123123",
+						"lastTimestamp": "2023-03-03T16:49:52Z"
+					},
+					"synced": "True"
 				}
 			}`
 			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("status").String()).To(MatchJSON(expectedStatus))
@@ -104,4 +114,10 @@ spec:
     allowHostNetwork: false
     allowPrivilegeEscalation: false
     allowPrivileged: false
+status:
+  deckhouse:
+    observed:
+      checkSum: "123123123123123"
+      lastTimestamp: "2023-03-03T16:49:52Z"
+    synced: "False"
 `

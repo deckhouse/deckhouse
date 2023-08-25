@@ -18,12 +18,42 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
           description: The resource for connecting additional Alertmanagers to Prometheus.
           required: ['spec']
           properties:
+            status:
+              type: object
+              properties:
+                deckhouse:
+                  type: object
+                  properties:
+                    synced:
+                      type: string
+                      description: True if last obseved version of the security policy was successfully applied in the cluster.
+                    observed:
+                      type: object
+                      description: Contains last timestamp when the security policy change was noted by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when a change of the security policy was noted by the operator.
+                        checkSum:
+                          type: string
+                          description: The checksum of last observed change of the security policy.
+                    processed:
+                      type: object
+                      description: Contains last timestamp when the security policy was applied in the cluster by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when the security policy was applied in the cluster.
+                        checkSum:
+                          type: string
             spec:
               type: object
               properties:
@@ -1249,3 +1279,7 @@ spec:
           name: Type
           description: 'Type of an Alertmanager.'
           type: string
+        - jsonPath: .status.deckhouse.synced
+          name: Synced
+          type: string
+          description: Status message if current version of the security policy was processed by the operator.

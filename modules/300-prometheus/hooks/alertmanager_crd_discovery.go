@@ -26,6 +26,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -110,7 +112,11 @@ func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.C
 	internalDeclaredAlertmanagers := make([]alertmanagerInternal, 0, len(snap))
 
 	for _, s := range snap {
+
 		am := s.(Alertmanager)
+
+		// set observed status
+		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(s, applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"))
 
 		// External AlertManagers by service or address
 		if _, ok, _ := unstructured.NestedMap(am.Spec, "external"); ok {
