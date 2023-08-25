@@ -101,7 +101,6 @@ COPY --from=artifact /prometheus/prometheus/console_libraries/                  
 COPY --from=artifact /consoles/                                                    /usr/share/prometheus/consoles/
 COPY --from=artifact /etc/                                                         /etc/prometheus/
 COPY --from=artifact /prometheus/                                                  /prometheus/
-COPY --from=artifact /probe_curl/curl                                              /usr/local/bin/
 
 RUN apk add --no-cache curl
 
