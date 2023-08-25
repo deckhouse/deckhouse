@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -51,7 +50,7 @@ const securityPoliciesValues = `[
 	}
 ]`
 
-var _ = FDescribe("Modules :: admission-policy-engine :: hooks :: update security policies statuses", func() {
+var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security policies statuses", func() {
 	f := HookExecutionConfigInit(`{"admissionPolicyEngine": {"internal": {"bootstrapped": true}}}`,
 		`{"admissionPolicyEngine":{}}`,
 	)
@@ -73,8 +72,6 @@ var _ = FDescribe("Modules :: admission-policy-engine :: hooks :: update securit
 		})
 		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			fmt.Println("ASASAS")
-			fmt.Println(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").String())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(1))
 			const expectedStatus = `{
 				"deckhouse": {
