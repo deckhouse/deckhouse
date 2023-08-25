@@ -17,14 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
@@ -42,44 +39,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleSP)
 
-var observedStatus = func(snapshot go_hook.FilterResult, filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	snBytes, _ := json.Marshal(snapshot)
-	checkSum := utils_checksum.CalculateChecksum(string(snBytes))
-
-	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		objCopy := obj.DeepCopy()
-		filteredObj, err := filterFunc(objCopy)
-		if err != nil {
-			return nil, fmt.Errorf("cannot apply filterFunc to object: %v", err)
-		}
-
-		objBytes, err := json.Marshal(filteredObj)
-		if err != nil {
-			return nil, fmt.Errorf("cannot marshal filtered object: %v", err)
-		}
-
-		objCheckSum := utils_checksum.CalculateChecksum(string(objBytes))
-		if checkSum == objCheckSum {
-			processedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "processed", "checkSum")
-			if err != nil {
-				return nil, fmt.Errorf("cannot get processed checksum status field: %v", err)
-			}
-
-			if !found || checkSum != processedCheckSum {
-				if err := unstructured.SetNestedField(objCopy.Object, "False", "status", "deckhouse", "synced"); err != nil {
-					return nil, fmt.Errorf("cannot set synced status field: %v", err)
-				}
-			}
-			if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": time.Now().Format(time.RFC3339), "checkSum": checkSum}, "status", "deckhouse", "observed"); err != nil {
-				return nil, fmt.Errorf("cannot set observed status field: %v", err)
-			}
-		} else {
-			return nil, fmt.Errorf("object has changed since last snapshot")
-		}
-		return objCopy, nil
-	}
-}
-
 func handleSP(input *go_hook.HookInput) error {
 	result := make([]*securityPolicy, 0)
 
@@ -88,7 +47,7 @@ func handleSP(input *go_hook.HookInput) error {
 	for _, sn := range snap {
 		sp := sn.(*securityPolicy)
 		// set observed status
-		input.PatchCollector.Filter(observedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
+		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
 	}
