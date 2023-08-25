@@ -2,7 +2,8 @@ ARG BASE_GOLANG_19_BULLSEYE
 ARG BASE_GOLANG_18_ALPINE
 ARG BASE_ALPINE
 
-FROM $BASE_GOLANG_18_ALPINE as promu_artifact
+FROM $BASE_GOLANG_18_ALPINE as artifact
+
 ARG GOPROXY
 ARG SOURCE_REPO
 
@@ -13,9 +14,9 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 RUN apk add --no-cache git
-RUN git clone --depth 1 --branch v0.14.0  ${SOURCE_REPO}/prometheus/promu
+RUN git clone --depth 1 --branch v0.14.0  ${SOURCE_REPO}/prometheus/promu.git /promu
+WORKDIR /promu/
 
-WORKDIR /promu
 RUN go build -ldflags="-s -w" -o promu ./main.go
 
 FROM $BASE_GOLANG_19_BULLSEYE as artifact
