@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
 var SetObservedStatus = func(snapshot go_hook.FilterResult, filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {

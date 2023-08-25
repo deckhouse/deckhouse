@@ -25,6 +25,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -33,6 +34,7 @@ import (
 	apimtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/conditions"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
@@ -417,6 +419,8 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 		)
 
 		patchNodeGroupStatus(input.PatchCollector, ngName, patch)
+		// set CR processed status
+		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", ngName, object_patch.WithSubresource("/status"))
 	}
 
 	return nil

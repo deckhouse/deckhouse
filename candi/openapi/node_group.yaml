@@ -1275,10 +1275,10 @@ spec:
         - name: Age
           type: date
           jsonPath: .metadata.creationTimestamp
-        - name: Processed
+        - name: Synced
+          jsonPath: .status.deckhouse.synced
           type: string
-          description: Status message if current version of a node group was processed by the operator.
-          jsonPath: .metadata.annotations.deckhouse\.io/node-manager-hook-synced
+          description: Status message if current version of the node group was processed by the operator.
       subresources:
         status: {}
       schema:
@@ -1396,6 +1396,32 @@ spec:
                       type:
                         description: Type of node group condition.
                         type: string
+                deckhouse:
+                  type: object
+                  properties:
+                    synced:
+                      type: string
+                      description: True if last obseved version of the security policy was successfully applied in the cluster.
+                    observed:
+                      type: object
+                      description: Contains last timestamp when the security policy change was noted by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when a change of the security policy was noted by the operator.
+                        checkSum:
+                          type: string
+                          description: The checksum of last observed change of the security policy.
+                    processed:
+                      type: object
+                      description: Contains last timestamp when the security policy was applied in the cluster by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when the security policy was applied in the cluster.
+                        checkSum:
+                          type: string
+                          description: The checksum of last applied security policy.
             spec:
               type: object
               required:
