@@ -42,7 +42,7 @@ RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
   echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list && \
   apt update && apt install -y yarn
 
-RUN apt install -y git ca-certificates openssl openssh-client
+RUN apt install -y make bash git ca-certificates openssl openssh-client bzip2
 
 RUN mkdir /prometheus && cd /prometheus \
   && git clone -b "${PROMETHEUS_VERSION}" --single-branch ${SOURCE_REPO}/prometheus/prometheus
