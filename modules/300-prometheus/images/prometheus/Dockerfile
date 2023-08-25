@@ -63,6 +63,8 @@ COPY --from=artifact /consoles/                                                 
 COPY --from=artifact /etc/                                                         /etc/prometheus/
 COPY --from=artifact /prometheus/                                                  /prometheus/
 
+RUN apt install -y curl
+
 EXPOSE     9090
 VOLUME     [ "/prometheus" ]
 WORKDIR    /prometheus
