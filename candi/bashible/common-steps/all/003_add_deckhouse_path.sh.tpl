@@ -24,9 +24,3 @@ EOF
 # done
 # so /etc/profile.d/02-deckhouse-path.sh should be executable
 chmod a+x /etc/profile.d/02-deckhouse-path.sh
-
-# also need to sure that path to deckhouse bin in root bashrc
-if grep -q "^PATH=" /root/.bashrc 2>/dev/null; then
-  sed 's/^PATH=.*//' -i /root/.bashrc
-fi
-echo "export PATH=/opt/deckhouse/bin:$PATH" >> /root/.bashrc
