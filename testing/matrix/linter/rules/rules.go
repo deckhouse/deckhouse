@@ -97,6 +97,17 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 	if err != nil {
 		panic(err)
 	}
+	// check probes only on containers without initContainers
+	livenessProbeErrList := containersLivenessProbesValid(object, containers)
+	for _, liveErr := range livenessProbeErrList {
+		l.ErrorsList.Add(liveErr)
+	}
+
+	readinessProbeErrList := containersReadinessProbesValid(object, containers)
+	for _, readiErr := range readinessProbeErrList {
+		l.ErrorsList.Add(readiErr)
+	}
+
 	initContainers, err := object.GetInitContainers()
 	if err != nil {
 		panic(err)
@@ -116,6 +127,36 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 		l.ErrorsList.Add(containerSecurityContext(object, containers))
 		l.ErrorsList.Add(containerPorts(object, containers))
 	}
+}
+
+func containersLivenessProbesValid(object storage.StoreObject, containers []v1.Container) []errors.LintRuleError {
+	errorList := make([]errors.LintRuleError, 0, len(containers))
+	for _, c := range containers {
+		if c.LivenessProbe == nil {
+			errorList = append(errorList, errors.NewLintRuleError(
+				"CONTAINER00X",
+				object.Identity()+"; container = "+c.Name,
+				c,
+				"Container liveness probes should be unspecified",
+			))
+		}
+	}
+	return errorList
+}
+
+func containersReadinessProbesValid(object storage.StoreObject, containers []v1.Container) []errors.LintRuleError {
+	errorList := make([]errors.LintRuleError, 0, len(containers))
+	for _, c := range containers {
+		if c.ReadinessProbe == nil {
+			errorList = append(errorList, errors.NewLintRuleError(
+				"CONTAINER00X",
+				object.Identity()+"; container = "+c.Name,
+				c,
+				"Container rediness probes should be unspecified",
+			))
+		}
+	}
+	return errorList
 }
 
 func containersImagePullPolicy(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
