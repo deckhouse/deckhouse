@@ -102,7 +102,7 @@ bb-yum-versionlock-add() {
 
 bb-yum-versionlock-delete() {
     for PACKAGE in "$@"; do
-        if yum versionlock list | grep -q "^[0-9]:$PACKAGE"; then
+        if yum versionlock list | grep -q "$PACKAGE"; then
             bb-log-info "Unlocking package version of '$PACKAGE'"
             yum versionlock delete "$PACKAGE"
             bb-exit-on-error "Failed to unlock package version of '$PACKAGE'"
