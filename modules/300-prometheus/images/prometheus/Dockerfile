@@ -1,7 +1,25 @@
 ARG BASE_GOLANG_19_BULLSEYE
+ARG BASE_GOLANG_18_ALPINE
 ARG BASE_ALPINE
 
+FROM $BASE_GOLANG_18_ALPINE as promu_artifact
+ARG GOPROXY
+ARG SOURCE_REPO
+
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
+RUN apk add --no-cache git
+RUN git clone --depth 1 --branch v0.14.0  ${SOURCE_REPO}/prometheus/promu
+
+WORKDIR /promu
+RUN go build -ldflags="-s -w" -o promu ./main.go
+
 FROM $BASE_GOLANG_19_BULLSEYE as artifact
+COPY --from=promu_artifact /promu/promu /bin/promu
 
 ARG GOPROXY
 ARG SOURCE_REPO
@@ -44,8 +62,9 @@ RUN git apply sample_limit_annotation.patch && \
   git apply successfully_sent_metric.patch && \
   go generate -tags plugins ./plugins && \
   # make build
-  go build -ldflags="-s -w" -o prometheus ./cmd/prometheus/main.go && \
-  go build -ldflags="-s -w" -o promtool ./cmd/promtool/*.go
+  # go build -ldflags="-s -w" -o prometheus ./cmd/prometheus/main.go && \
+  # go build -ldflags="-s -w" -o promtool ./cmd/promtool/*.go
+  /bin/promu build --prefix /prometheus/prometheus
 
 RUN mkdir -p /consoles && \
   cp /prometheus/prometheus/consoles/* /consoles && \
