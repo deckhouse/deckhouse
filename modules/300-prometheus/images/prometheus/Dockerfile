@@ -12,12 +12,6 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
-COPY probe-curl/ /probe_curl/
-WORKDIR /probe_curl
-RUN go build -ldflags="-s -w" -o curl main.go && \
-    chown -R 64535:64535 /probe_curl/ && \
-    chmod 0700 /probe_curl/curl
-
 ENV PROMETHEUS_VERSION=v2.44.0
 
 # RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
@@ -68,7 +62,6 @@ COPY --from=artifact /prometheus/prometheus/console_libraries/                  
 COPY --from=artifact /consoles/                                                    /usr/share/prometheus/consoles/
 COPY --from=artifact /etc/                                                         /etc/prometheus/
 COPY --from=artifact /prometheus/                                                  /prometheus/
-COPY --from=artifact /probe_curl/curl                                              /usr/local/bin/
 
 EXPOSE     9090
 VOLUME     [ "/prometheus" ]
