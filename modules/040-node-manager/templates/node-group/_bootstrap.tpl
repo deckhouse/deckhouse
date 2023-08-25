@@ -2,6 +2,7 @@
 #!/usr/bin/env bash
 
 set -Eeuo pipefail
+set -x
 
 function detect_bundle() {
   {{- .Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
