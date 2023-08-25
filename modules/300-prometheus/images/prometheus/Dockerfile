@@ -42,10 +42,6 @@ RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
   echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list && \
   apt update && apt install -y yarn
 
-WORKDIR /prometheus/prometheus/web/ui
-RUN npm install && \
-    npm run build
-
 RUN apt install -y git ca-certificates openssl openssh-client
 
 RUN mkdir /prometheus && cd /prometheus \
