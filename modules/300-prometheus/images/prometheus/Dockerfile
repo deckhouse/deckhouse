@@ -62,9 +62,6 @@ COPY successfully_sent_metric.patch ./
 RUN git apply sample_limit_annotation.patch && \
   git apply successfully_sent_metric.patch && \
   go generate -tags plugins ./plugins && \
-  # make build
-  # go build -ldflags="-s -w" -o prometheus ./cmd/prometheus/main.go && \
-  # go build -ldflags="-s -w" -o promtool ./cmd/promtool/*.go
   /bin/promu build --prefix /prometheus/prometheus
 
 RUN mkdir -p /consoles && \
