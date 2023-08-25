@@ -56,7 +56,7 @@ cat > /var/lib/bashible/bootstrap.sh <<"END"
   {{- end }}
   {{- $_ := set $proxy "noProxy" $noProxy }}
 {{- end }}
-{{- include "bootstrap_script" (dict "proxy" $dict "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) }}
+{{- include "bootstrap_script" (dict "proxy" $proxy "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) }}
 END
 chmod +x /var/lib/bashible/bootstrap.sh
 
