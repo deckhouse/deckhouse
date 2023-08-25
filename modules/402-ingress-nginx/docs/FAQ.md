@@ -166,6 +166,15 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 {% endraw %}
 [Here](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs) you can read more about how certificate authentication works.
 
+## How do I configure an external Load Balancer to check if IngressNginxController is available?
+
+In case an IngressNginxController is deployed behind a Load Balancer, it is advisable to configure Your Load Balancer so that it would check
+the avaiability of the IngressNginxController's endpoints via a health check mechanism, periodically sending HTTP or tcp requests.
+While it is possible to test the endpoints simply by checking if a relevant tcp port is open, we recommend implementing HTTP checks with the following parameters:
+- Protocol: HTTP
+- Path: /healthz
+- Port: 80 (or relevant [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport) value in case of using HostPort inlet).
+
 ## How do I configure MetalLB to be accessible from the internal network only?
 
 Below is an example of a MetalLB config with access from the internal network only.
