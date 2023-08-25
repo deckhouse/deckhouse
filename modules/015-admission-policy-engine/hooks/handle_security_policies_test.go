@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"os"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -31,6 +32,12 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "SecurityPolicy", false)
 
+	const nowTime = "2023-03-03T16:49:52Z"
+	err := os.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", nowTime)
+	if err != nil {
+		panic(err)
+	}
+
 	Context("Security Policy is set", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(testSecurityPolicy))
@@ -39,9 +46,122 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(1))
+			const expectedSpec = `{
+				"enforcementAction": "Deny",
+				"match": {
+					"namespaceSelector": {
+						"labelSelector": {
+							"matchLabels": {
+								"operation-policy.deckhouse.io/enabled": "true"
+							}
+						}
+					}
+				},
+				"policies": {
+					"allowHostIPC": true,
+					"allowHostNetwork": false,
+					"allowHostPID": false,
+					"allowPrivilegeEscalation": false,
+					"allowPrivileged": false,
+					"allowedAppArmor": [
+						"runtime/default"
+					],
+					"allowedCapabilities": [],
+					"allowedFlexVolumes": [
+						{
+							"driver": "vmware"
+						}
+					],
+					"allowedHostPaths": [
+						{
+							"pathPrefix": "/dev",
+							"readOnly": true
+						}
+					],
+					"allowedHostPorts": [
+						{
+							"max": 100,
+							"min": 10
+						}
+					],
+					"allowedProcMount": "Unmasked",
+					"allowedUnsafeSysctls": [
+						"*"
+					],
+					"allowedVolumes": [
+						"*"
+					],
+					"forbiddenSysctls": [
+						"user/example"
+					],
+					"fsGroup": {
+						"rule": "RunAsAny"
+					},
+					"readOnlyRootFilesystem": true,
+					"requiredDropCapabilities": [
+						"ALL"
+					],
+					"runAsGroup": {
+						"ranges": [
+							{
+								"max": 500,
+								"min": 300
+							}
+						],
+						"rule": "RunAsAny"
+					},
+					"runAsUser": {
+						"ranges": [
+							{
+								"max": 500,
+								"min": 300
+							}
+						],
+						"rule": "MustRunAs"
+					},
+					"seLinux": [
+						{
+							"role": "role",
+							"user": "user"
+						},
+						{
+							"level": "level",
+							"type": "type"
+						}
+					],
+					"seccompProfiles": {
+						"allowedLocalhostFiles": [
+							"*"
+						],
+						"allowedProfiles": [
+							"RuntimeDefault",
+							"Localhost"
+						]
+					},
+					"supplementalGroups": {
+						"ranges": [
+							{
+								"max": 1000,
+								"min": 500
+							}
+						],
+						"rule": "MustRunAs"
+					}
+				}
+			}`
+			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("spec").String()).To(MatchJSON(expectedSpec))
+			const expectedStatus = `{
+				"deckhouse": {
+					"observed": {
+						"checkSum": "20f60cb8ca390452875879f69229189a",
+						"lastTimestamp": "2023-03-03T16:49:52Z"
+					},
+					"synced": "False"
+				}
+			}`
+			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("status").String()).To(MatchJSON(expectedStatus))
 		})
 	})
-
 })
 
 var testSecurityPolicy = `
