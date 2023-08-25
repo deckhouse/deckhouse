@@ -1,5 +1,5 @@
 ARG BASE_GOLANG_19_BULLSEYE
-ARG BASE_DISTROLESS
+ARG BASE_ALPINE
 
 FROM $BASE_GOLANG_19_BULLSEYE as artifact
 
@@ -20,16 +20,16 @@ RUN go build -ldflags="-s -w" -o curl main.go && \
 
 ENV PROMETHEUS_VERSION=v2.44.0
 
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
-  apt install -y nodejs && \
-  npm update -g npm && \
-  npm install webpack -g && \
-  npm config set registry http://registry.npmjs.org/ && \
-  apt-key adv --fetch-keys http://dl.yarnpkg.com/debian/pubkey.gpg && \
-  echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list && \
-  apt update && apt install -y yarn
+# RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
+#   apt install -y nodejs && \
+#   npm update -g npm && \
+#   npm install webpack -g && \
+#   npm config set registry http://registry.npmjs.org/ && \
+#   apt-key adv --fetch-keys http://dl.yarnpkg.com/debian/pubkey.gpg && \
+#   echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list && \
+#   apt update && apt install -y yarn
 
-RUN apt install -y make bash git ca-certificates openssl openssh-client bzip2
+RUN apt install -y git ca-certificates openssl openssh-client bzip2
 
 RUN mkdir /prometheus && cd /prometheus \
   && git clone -b "${PROMETHEUS_VERSION}" --single-branch ${SOURCE_REPO}/prometheus/prometheus
@@ -42,7 +42,8 @@ COPY successfully_sent_metric.patch ./
 
 RUN git apply sample_limit_annotation.patch && \
   git apply successfully_sent_metric.patch && \
-  make build
+  go build -ldflags="-s -w" -o prometheus ./cmd/prometheus/main.go && \
+  go build -ldflags="-s -w" -o promtool ./cmd/promtool/*.go
 
 RUN mkdir -p /consoles && \
   cp /prometheus/prometheus/consoles/* /consoles && \
@@ -60,7 +61,7 @@ RUN mkdir -p /prometheus && \
     chmod 0700 /prometheus/prometheus/prometheus && \
     chmod 0700 /prometheus/prometheus/promtool
 
-FROM $BASE_DISTROLESS
+FROM $BASE_ALPINE
 COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
 COPY --from=artifact /prometheus/prometheus/promtool                               /bin/promtool
 COPY --from=artifact /prometheus/prometheus/console_libraries/                     /usr/share/prometheus/console_libraries/
