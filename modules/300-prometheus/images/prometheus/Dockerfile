@@ -23,19 +23,25 @@ RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
   echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list && \
   apt update && apt install -y yarn
 
+WORKDIR /prometheus/prometheus/web/ui
+RUN npm install && \
+    npm run build
+
 RUN apt install -y git ca-certificates openssl openssh-client
 
 RUN mkdir /prometheus && cd /prometheus \
   && git clone -b "${PROMETHEUS_VERSION}" --single-branch ${SOURCE_REPO}/prometheus/prometheus
 WORKDIR /prometheus/prometheus
 
-RUN go mod download
+RUN scripts/compress_assets.sh && \
+    go mod download
 
 COPY sample_limit_annotation.patch ./
 COPY successfully_sent_metric.patch ./
 
 RUN git apply sample_limit_annotation.patch && \
   git apply successfully_sent_metric.patch && \
+  go generate -tags plugins ./plugins && \
   go build -ldflags="-s -w" -o prometheus ./cmd/prometheus/main.go && \
   go build -ldflags="-s -w" -o promtool ./cmd/promtool/*.go
 
