@@ -277,15 +277,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/300-prometheus/images/prometheus/probe-curl"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/300-prometheus/images/trickster/entrypoint"
   labels:
   - "type/dependencies"
