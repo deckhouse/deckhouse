@@ -42,7 +42,21 @@ chmod +x /var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
   {{- end }}
 
 cat > /var/lib/bashible/bootstrap.sh <<"END"
-{{- include "bootstrap_script" (dict "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) }}
+{{- $proxy := dict }}
+{{- if hasKey $context.Values.global.clusterConfiguration "proxy" }}
+  {{- if hasKey $context.Values.global.clusterConfiguration.proxy "httpProxy" }}
+    {{- $_ := set $proxy "httpProxy" $context.Values.global.clusterConfiguration.proxy.httpProxy }}
+  {{- end }}
+  {{- if hasKey $context.Values.global.clusterConfiguration.proxy "httpsProxy" }}
+    {{- $_ := set $proxy "httpsProxy" $context.Values.global.clusterConfiguration.proxy.httpsProxy }}
+  {{- end }}
+  {{- $noProxy := list "127.0.0.1" "169.254.169.254" $context.Values.global.clusterConfiguration.clusterDomain $context.Values.global.clusterConfiguration.podSubnetCIDR $context.Values.global.clusterConfiguration.serviceSubnetCIDR }}
+  {{- if hasKey $context.Values.global.clusterConfiguration.proxy "noProxy" }}
+    {{- $noProxy = concat $noProxy $context.Values.global.clusterConfiguration.proxy.noProxy }}
+  {{- end }}
+  {{- $_ := set $proxy "noProxy" $noProxy }}
+{{- end }}
+{{- include "bootstrap_script" (dict "proxy" $dict "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) }}
 END
 chmod +x /var/lib/bashible/bootstrap.sh
 
