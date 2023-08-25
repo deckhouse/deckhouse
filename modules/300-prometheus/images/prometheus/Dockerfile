@@ -28,14 +28,14 @@ RUN apt install -y make bash git ca-certificates openssl openssh-client bzip2
 RUN mkdir /prometheus && cd /prometheus \
   && git clone -b "${PROMETHEUS_VERSION}" --single-branch ${SOURCE_REPO}/prometheus/prometheus
 
-# WORKDIR /prometheus/prometheus/web/ui
-# RUN npm install && \
-#     npm run build
+WORKDIR /prometheus/prometheus/web/ui
+RUN npm install && \
+    npm run build
 
 WORKDIR /prometheus/prometheus
 
-# RUN scripts/compress_assets.sh && \
-RUN go mod download
+RUN scripts/compress_assets.sh && \
+go mod download
 
 COPY sample_limit_annotation.patch ./
 COPY successfully_sent_metric.patch ./
@@ -43,9 +43,9 @@ COPY successfully_sent_metric.patch ./
 RUN git apply sample_limit_annotation.patch && \
   git apply successfully_sent_metric.patch && \
   go generate -tags plugins ./plugins && \
-  make build
-  # go build -ldflags="-s -w" -o prometheus ./cmd/prometheus/main.go && \
-  # go build -ldflags="-s -w" -o promtool ./cmd/promtool/*.go
+  # make build
+  go build -ldflags="-s -w" -o prometheus ./cmd/prometheus/main.go && \
+  go build -ldflags="-s -w" -o promtool ./cmd/promtool/*.go
 
 RUN mkdir -p /consoles && \
   cp /prometheus/prometheus/consoles/* /consoles && \
