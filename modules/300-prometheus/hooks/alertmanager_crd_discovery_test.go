@@ -28,7 +28,6 @@ import (
 	"context"
 
 	_ "github.com/flant/addon-operator/sdk"
-	hookcontext "github.com/flant/shell-operator/test/hook/context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -263,7 +262,8 @@ spec:
 	})
 
 	Context("Cluster has multiple custom alert managers", func() {
-		var alertManagers = []string{`
+		var alertManagers = `
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
 metadata:
@@ -292,7 +292,8 @@ spec:
           value: app-airflow
         receiver: test-alert-emailer
   type: Internal
-`, `apiVersion: deckhouse.io/v1alpha1
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
 metadata:
   name: airflow-alert-emailer
@@ -320,31 +321,9 @@ spec:
           value: app-airflow
         receiver: airflow-alert-emailer
   type: Internal
-`}
+`
 
 		const values = `
-- name: test-alert-emailer
-  receivers:
-    - emailConfigs:
-        - from: test
-          requireTLS: false
-          sendResolved: false
-          smarthost: test
-          to: test@test.ru
-      name: test-alert-emailer
-  route:
-    groupBy:
-      - job
-    groupInterval: 5m
-    groupWait: 30s
-    receiver: test-alert-emailer
-    repeatInterval: 4h
-    routes:
-      - matchers:
-          - name: namespace
-            regex: false
-            value: app-airflow
-        receiver: test-alert-emailer
 - name: airflow-alert-emailer
   receivers:
     - emailConfigs:
@@ -367,15 +346,31 @@ spec:
             regex: false
             value: app-airflow
         receiver: airflow-alert-emailer
+- name: test-alert-emailer
+  receivers:
+    - emailConfigs:
+        - from: test
+          requireTLS: false
+          sendResolved: false
+          smarthost: test
+          to: test@test.ru
+      name: test-alert-emailer
+  route:
+    groupBy:
+      - job
+    groupInterval: 5m
+    groupWait: 30s
+    receiver: test-alert-emailer
+    repeatInterval: 4h
+    routes:
+      - matchers:
+          - name: namespace
+            regex: false
+            value: app-airflow
+        receiver: test-alert-emailer
 `
 		BeforeEach(func() {
-			var contexts []hookcontext.GeneratedBindingContexts
-
-			for _, alertManager := range alertManagers {
-				contexts = append(contexts, f.KubeStateSetAndWaitForBindingContexts(alertManager, 1))
-			}
-
-			f.BindingContexts.Set(contexts...)
+			f.BindingContexts.Set(f.KubeStateSet(alertManagers))
 			f.RunHook()
 		})
 
