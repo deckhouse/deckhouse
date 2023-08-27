@@ -68,7 +68,7 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 	msGVR := schema.ParseGroupResource("modulesources.deckhouse.io").WithVersion("v1alpha1")
 	mrGVR := schema.ParseGroupResource("modulereleases.deckhouse.io").WithVersion("v1alpha1")
 
-	skipMigration := true
+	skipMigrationCount := 0
 
 	moduleSources, err := kubeCl.Dynamic().Resource(emsGVR).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -77,7 +77,7 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		input.LogEntry.Info("ExternalModuleSource resource is not in the cluster")
-		skipMigration = false
+		skipMigrationCount++
 	}
 
 	moduleReleases, err := kubeCl.Dynamic().Resource(emrGVR).List(context.TODO(), metav1.ListOptions{})
@@ -87,10 +87,10 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		input.LogEntry.Info("ExternalModuleRelease resource is not in the cluster")
-		skipMigration = false
+		skipMigrationCount++
 	}
 
-	if skipMigration {
+	if skipMigrationCount == 2 { // both resources are absent
 		input.LogEntry.Info("Skipping modules migration")
 		return nil
 	}
