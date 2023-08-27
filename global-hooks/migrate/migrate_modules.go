@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -101,14 +102,7 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for _, ms := range moduleSources.Items {
-		ms.SetKind("ModuleSource")
-		// Remove all fields like resource versions
-		ms.Object["metadata"] = map[string]interface{}{
-			"name":        ms.GetName(),
-			"namespace":   ms.GetNamespace(),
-			"labels":      ms.GetLabels(),
-			"annotations": ms.GetAnnotations(),
-		}
+		sanitizeUnstructured("ModuleSource", &ms)
 
 		_, err := kubeCl.Dynamic().Resource(msGVR).Create(context.TODO(), &ms, metav1.CreateOptions{})
 		if err != nil && !errors.IsAlreadyExists(err) {
@@ -117,7 +111,8 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for _, mr := range moduleReleases.Items {
-		mr.SetKind("ModuleRelease")
+		sanitizeUnstructured("ModuleRelease", &mr)
+
 		_, err := kubeCl.Dynamic().Resource(mrGVR).Create(context.TODO(), &mr, metav1.CreateOptions{})
 		if err != nil && !errors.IsAlreadyExists(err) {
 			return err
@@ -141,4 +136,15 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 	return nil
+}
+
+// Remove fields like resource version because otherwise the create requests will lead to an error
+func sanitizeUnstructured(kind string, o *unstructured.Unstructured) {
+	o.SetKind(kind)
+	o.Object["metadata"] = map[string]interface{}{
+		"name":        o.GetName(),
+		"namespace":   o.GetNamespace(),
+		"labels":      o.GetLabels(),
+		"annotations": o.GetAnnotations(),
+	}
 }
