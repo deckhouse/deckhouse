@@ -102,6 +102,14 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 
 	for _, ms := range moduleSources.Items {
 		ms.SetKind("ModuleSource")
+		// Remove all fields like resource versions
+		ms.Object["metadata"] = map[string]interface{}{
+			"name":        ms.GetName(),
+			"namespace":   ms.GetNamespace(),
+			"labels":      ms.GetLabels(),
+			"annotations": ms.GetAnnotations(),
+		}
+
 		_, err := kubeCl.Dynamic().Resource(msGVR).Create(context.TODO(), &ms, metav1.CreateOptions{})
 		if err != nil && !errors.IsAlreadyExists(err) {
 			return err
