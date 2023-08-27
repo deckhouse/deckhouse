@@ -96,7 +96,7 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	ensureRes := ensure_crds.EnsureCRDs("/deckhouse/modules/005-external-module-manager/crds/module-*.yaml", input, dc)
-	if err := ensureRes.ErrorOrNil(); err == nil {
+	if err := ensureRes.ErrorOrNil(); err != nil {
 		return err
 	}
 
