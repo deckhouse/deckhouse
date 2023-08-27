@@ -1,0 +1,5 @@
+user-authn:
+  features:
+    - summary: Move publishAPI CA discovery logic to the hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5584
+
