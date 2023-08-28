@@ -2,16 +2,19 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"go.uber.org/zap/zapcore"
 	"linstor-operator/api/v1alpha1"
 	"linstor-operator/config"
 	"linstor-operator/pkg/controllers"
 	kubutils "linstor-operator/pkg/kubeutils"
 	"os"
+	"os/signal"
 	goruntime "runtime"
-
-	"go.uber.org/zap/zapcore"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"syscall"
 
 	v1storage "k8s.io/api/storage/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -34,7 +37,7 @@ var (
 
 func main() {
 
-	ctx, _ := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	log := zap.New(zap.Level(zapcore.Level(-1)), zap.UseDevMode(true))
 	log.WithName("cmd")
 
@@ -45,10 +48,6 @@ func main() {
 	if err != nil {
 		klog.Fatalln(err)
 	}
-	log.Info(config.SCStableReplicas + " " + cfgParams.SCStable.Replicas)
-	log.Info(config.SCStableQuorum + " " + cfgParams.SCStable.Quorum)
-	log.Info(config.SCBadReplicas + " " + cfgParams.SCBad.Replicas)
-	log.Info(config.SCBadQuorum + " " + cfgParams.SCBad.Quorum)
 
 	// Create default config Kubernetes client
 	kConfig, err := kubutils.KubernetesDefaultConfigCreate()
@@ -68,13 +67,28 @@ func main() {
 	}
 	log.Info("read scheme CR")
 
+	// Create Kubernetes client
+	kClient, err := kubutils.CreateKubernetesClient(kConfig, scheme)
+	if err != nil {
+		klog.Fatalln(err)
+	}
+	klog.Info("create kubernetes client")
+
+	// Set options for webhook server.
+	myWebhookServer := webhook.NewServer(webhook.Options{})
+	if cfgParams.CertDir != "" {
+		myWebhookServer = webhook.NewServer(webhook.Options{CertDir: cfgParams.CertDir})
+	}
+
+	// webhookOpt := webhook.Options{CertDir: "/tmp/linstor-operator-certs"}
 	managerOpts := manager.Options{
-		LeaderElection:             true,
-		LeaderElectionNamespace:    "d8-storage-d8-linstor-operator",
-		LeaderElectionID:           "d8-storage-d8-linstor-operator-leader-election-helper",
+		LeaderElection:             false,
+		LeaderElectionNamespace:    "d8-linstor",
+		LeaderElectionID:           "d8-linstor-operator-leader-election-helper",
 		LeaderElectionResourceLock: "leases",
 		Scheme:                     scheme,
 		MetricsBindAddress:         cfgParams.MetricsPort,
+		WebhookServer:              myWebhookServer,
 	}
 
 	// Create a new Manager to provide shared dependencies and start components
@@ -86,10 +100,21 @@ func main() {
 
 	log.Info("create kubernetes manager")
 
-	if _, err := controllers.NewLinstorOperator(ctx, mgr, log); err != nil {
-		log.Error(err, "failed create controller NewLinstorOperator")
-		os.Exit(1)
-	}
+	// LinstorNodesReconciler
+	// stop := make(chan struct{})
+	go func() {
+		defer cancel()
+		err := controllers.NewLinstorNodesReconciler(ctx, kClient, log, cfgParams.ScanInterval)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				// only occurs if the context was cancelled, and it only can be cancelled on SIGINT
+				// stop <- struct{}{}
+				return
+			}
+			klog.Error(err, "failed create controller NewLinstorNodesReconciler")
+			os.Exit(1)
+		}
+	}()
 
 	// webHook
 	if err := builder.WebhookManagedBy(mgr).
@@ -117,4 +142,12 @@ func main() {
 	}
 
 	log.Info("starting the manager")
+
+	// Block waiting signals from OS.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+
+	<-ch
+	cancel()
+	// <-stop
 }

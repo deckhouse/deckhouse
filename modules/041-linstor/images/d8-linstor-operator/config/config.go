@@ -1,23 +1,20 @@
 package config
 
 import (
-	"fmt"
 	"os"
 )
 
 const (
 	MetricsPortEnv = "METRICS_PORT"
-
-	SCStableReplicas = "SC_STABLE_REPLICAS"
-	SCStableQuorum   = "SC_STABLE_QUORUM"
-
-	SCBadReplicas = "SC_BAD_REPICAS"
-	SCBadQuorum   = "SC_BAD_QUORUM"
+	CertDirEnv     = "CERT_DIR"
+	ScanInterval   = 10
 )
 
 type Options struct {
-	MetricsPort string
-	SCStable    struct {
+	MetricsPort  string
+	CertDir      string
+	ScanInterval int
+	SCStable     struct {
 		Replicas string
 		Quorum   string
 	}
@@ -30,29 +27,14 @@ type Options struct {
 func NewConfig() (*Options, error) {
 	var opts Options
 
-	opts.SCStable.Replicas = os.Getenv(SCStableReplicas)
-	if opts.SCStable.Replicas == "" {
-		return nil, fmt.Errorf("required %s env variable is not set", SCStableReplicas)
-	}
-	opts.SCStable.Quorum = os.Getenv(SCStableQuorum)
-	if opts.SCStable.Quorum == "" {
-		return nil, fmt.Errorf("required %s env variable is not set", SCStableQuorum)
-	}
-
-	opts.SCBad.Replicas = os.Getenv(SCBadReplicas)
-	if opts.SCBad.Replicas == "" {
-		return nil, fmt.Errorf("required %s env variable is not set", SCBadReplicas)
-	}
-
-	opts.SCBad.Quorum = os.Getenv(SCBadQuorum)
-	if opts.SCBad.Quorum == "" {
-		return nil, fmt.Errorf("required %s env variable is not set", SCBadQuorum)
-	}
-
 	opts.MetricsPort = os.Getenv(MetricsPortEnv)
 	if opts.MetricsPort == "" {
 		opts.MetricsPort = ":8080"
 	}
+
+	opts.CertDir = os.Getenv(CertDirEnv)
+
+	opts.ScanInterval = ScanInterval
 
 	return &opts, nil
 }

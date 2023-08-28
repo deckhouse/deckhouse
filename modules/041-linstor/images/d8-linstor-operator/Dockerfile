@@ -13,9 +13,4 @@ FROM amd64/ubuntu:jammy-20230624
 WORKDIR /root/
 COPY --from=builder /go/src/d8-linstor-operator/cmd .
 
-ENV SC_STABLE_REPLICAS=2
-ENV SC_STABLE_QUORUM=major
-ENV SC_BAD_REPICAS=1
-ENV SC_BAD_QUORUM=no
-
 CMD ["./lsopr"]
