@@ -103,6 +103,13 @@ apiVersions:
               description: |
                 The name of the VNet.
               type: string
+      serviceEndpoints:
+        description: |
+          The list of Service endpoints to associate with the subnet.
+        type: array
+        items:
+          type: string
+          enum: [Microsoft.AzureActiveDirectory, Microsoft.AzureCosmosDB, Microsoft.ContainerRegistry, Microsoft.EventHub, Microsoft.KeyVault, Microsoft.ServiceBus, Microsoft.Sql, Microsoft.Storage, Microsoft.Storage.Global, Microsoft.Web]
       masterNodeGroup:
         description: |
           The definition of the master's NodeGroup.
@@ -135,7 +142,7 @@ apiVersions:
               Partial contents of the [AzureInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass) fields.
             type: object
             required: [machineSize, urn]
-            properties: 
+            properties:
               machineSize: &instanceClassMachineSize
                 description: |
                   The type of instances to provision.

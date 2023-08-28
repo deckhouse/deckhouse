@@ -55,6 +55,9 @@ apiVersions:
             vnetName:
               description: |
                 Имя VNet.
+      serviceEndpoints:
+        description: |
+          Список конечных точек служб ассоциированных с подсетью.
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
