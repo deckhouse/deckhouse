@@ -30,6 +30,7 @@ spec:
       maxAllowed:
         cpu: 1000m
         memory: 2000Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: policy/v1
@@ -232,7 +233,7 @@ spec:
                     namespace: d8-system
                     apiGroup: apps
                     apiVersion: v1
-                    resource: statefulsets
+                    resource: deployment
                     subresource: http
                     name: debugSrv
           ports:
