@@ -19,7 +19,6 @@ import (
 	"os"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -57,7 +56,7 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 			Expect(eps.Field("endpoints.0.addresses.0").String()).To(Equal("192.168.1.1"))
 			Expect(eps.Field("endpoints.0.nodeName").String()).To(Equal("test-node"))
 			Expect(eps.Field("endpoints.0.targetRef.name").String()).To(Equal("deckhouse-test-1"))
-			Expect(len(eps.Field("ports").Array())).To(Equal(2))
+			Expect(len(eps.Field("ports").Array())).To(Equal(3))
 		})
 	})
 })
@@ -91,6 +90,9 @@ subsets:
     protocol: TCP
   - name: webhook
     port: 9651
+    protocol: TCP
+  - name: debug-server
+    port: 9652
     protocol: TCP
 `
 	var ep corev1.Endpoints

@@ -138,6 +138,10 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 				Name: pointer.String("webhook"),
 				Port: pointer.Int32(9651),
 			},
+			{
+				Name: pointer.String("debug-server"),
+				Port: pointer.Int32(9652),
+			},
 		},
 	}
 
