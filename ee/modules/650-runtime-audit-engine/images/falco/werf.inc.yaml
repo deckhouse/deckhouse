@@ -1,5 +1,17 @@
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromArtifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+{{- $falcoVersion := "0.35.1" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: falcosecurity/falco:0.35.1-slim@sha256:99478d303b189ea933d50a45c422f91abae167e9e52485f3d12bcc3f5a34cd69
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+    - apt-get update
+    - apt-get install tar gzip curl
+    - curl -sfL https://download.falco.org/packages/bin/x86_64/falco-{{ $falcoVersion }}-x86_64.tar.gz --output /tmp/falco.tar.gz
+    - tar -zxvf /tmp/falco.tar.gz --strip-components 1 --directory /
+    - rm -f /tmp/falco.tar.gz
+  install:
+    - "sed -i 's/time_format_iso_8601: false/time_format_iso_8601: true/' /etc/falco/falco.yaml"
+    - rm -df /lib/modules
+    - ln -s $HOST_ROOT/lib/modules /lib/modules
+docker:
+  CMD: ["/usr/bin/falco"]
