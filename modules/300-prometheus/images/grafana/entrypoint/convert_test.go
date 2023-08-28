@@ -26,13 +26,14 @@ const (
 	testEnv2          = "GF_TEST2__FILE"
 	expectedEnv1      = "GF_TEST1"
 	expectedEnv2      = "GF_TEST2"
-	expectedEnv1Value = "GF_TEST1"
-	expectedEnv2Value = "GF_TEST2"
+	testdata          = "testdata/test.txt"
+	expectedEnv1Value = "test\n"
+	expectedEnv2Value = "test\n"
 )
 
 func TestConvertEnv(t *testing.T) {
-	os.Setenv(testEnv1, expectedEnv1Value)
-	os.Setenv(testEnv2, expectedEnv2Value)
+	os.Setenv(testEnv1, testdata)
+	os.Setenv(testEnv2, testdata)
 	os.Unsetenv(expectedEnv1)
 	os.Unsetenv(expectedEnv2)
 
