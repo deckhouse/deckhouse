@@ -48,7 +48,7 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 			Expect(ep.Field("subsets.0.addresses.0.ip").String()).To(Equal("192.168.1.1"))
 			Expect(ep.Field("subsets.0.addresses.0.nodeName").String()).To(Equal("test-node"))
 			Expect(ep.Field("subsets.0.addresses.0.targetRef.name").String()).To(Equal("deckhouse-test-1"))
-			Expect(len(ep.Field("subsets.0.ports").Array())).To(Equal(2))
+			Expect(len(ep.Field("subsets.0.ports").Array())).To(Equal(3))
 		})
 
 		It("Should create EndpointSlice", func() {
