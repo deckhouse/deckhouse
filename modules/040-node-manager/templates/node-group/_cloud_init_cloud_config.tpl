@@ -55,7 +55,7 @@ write_files:
 - path: '/var/lib/bashible/bootstrap.sh'
   permissions: '0700'
   content: |
-    {{- include "bootstrap_script" (dict "proxy" $proxy "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) | nindent 4 }}
+    {{- include "bootstrap_script" (dict "proxy" $proxy "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) | indent 4 }}
 
 - path: '/var/lib/bashible/ca.crt'
   permissions: '0644'
