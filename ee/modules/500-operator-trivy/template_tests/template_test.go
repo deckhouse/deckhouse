@@ -153,7 +153,7 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Operator trivy configmap has set default namespace to target namespaces", func() {
+		It("Operator trivy configmap has set several namespaces in target namespaces", func() {
 			checkTrivyOperatorEnvs(f, "OPERATOR_TARGET_NAMESPACES", "test,test-1,test-2")
 		})
 	})
