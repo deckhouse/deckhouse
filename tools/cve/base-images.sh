@@ -71,6 +71,12 @@ function __main__() {
   htmlReportHeader > out/base-images.html
 
   for image in $BASE_IMAGES; do
+    # Some of our base images contain no layers.
+    # Trivy cannot scan such images because docker never implemented exporting them.
+    # We should not attempt to scan images that cannot be exported.
+    # Fixes https://github.com/deckhouse/deckhouse/issues/5020
+    docker manifest inspect $image | jq -e '.layers | length > 0' > /dev/null || continue
+
     echo "----------------------------------------------"
     echo "👾 Image: $image"
     echo ""
