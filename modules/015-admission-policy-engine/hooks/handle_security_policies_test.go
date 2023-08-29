@@ -17,18 +17,10 @@ limitations under the License.
 package hooks
 
 import (
-	"os"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"os"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
-)
-
-const (
-	checkSum = "123123123123123"
-	nowTime  = "2023-03-03T16:49:52Z"
 )
 
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security policies", func() {
@@ -38,16 +30,6 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 	)
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "SecurityPolicy", false)
-
-	err := os.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", nowTime)
-	if err != nil {
-		panic(err)
-	}
-
-	err = os.Setenv("TEST_CONDITIONS_CALC_CHKSUM", checkSum)
-	if err != nil {
-		panic(err)
-	}
 
 	Context("Security Policy is set", func() {
 		BeforeEach(func() {
@@ -161,16 +143,6 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 				}
 			}`
 			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("spec").String()).To(MatchJSON(expectedSpec))
-			const expectedStatus = `{
-				"deckhouse": {
-					"observed": {
-						"checkSum": "123123123123123",
-						"lastTimestamp": "2023-03-03T16:49:52Z"
-					},
-					"synced": "False"
-				}
-			}`
-			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("status").String()).To(MatchJSON(expectedStatus))
 		})
 	})
 })

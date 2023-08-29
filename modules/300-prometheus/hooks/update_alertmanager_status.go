@@ -22,7 +22,6 @@ import (
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 )
@@ -55,16 +54,16 @@ func updateAmStatus(input *go_hook.HookInput) error {
 
 	// update AMs' statuses
 	for _, am := range addressDeclaredAlertmanagers {
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"))
+		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus, "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name)
 	}
 
 	for _, am := range serviceDeclaredAlertmanagers {
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"))
+		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus, "deckhouse.io/v1alpha1", "customalertmanager", "", am.ResourceName)
 	}
 
 	for _, am := range internalDeclaredAlertmanagers {
 		name := am["name"].(string)
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", name, object_patch.WithSubresource("/status"))
+		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus, "deckhouse.io/v1alpha1", "customalertmanager", "", name)
 	}
 
 	return nil

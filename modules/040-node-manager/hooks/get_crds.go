@@ -27,13 +27,11 @@ import (
 	cljson "github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/autoscaler/capacity"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -295,8 +293,6 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	for _, v := range input.Snapshots["ngs"] {
 		nodeGroup := v.(NodeGroupCrdInfo)
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
-		// set observed status fields
-		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"))
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID

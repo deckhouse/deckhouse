@@ -50,6 +50,7 @@ const (
 			}
 		}
 	]`
+	nowTime = "2023-03-03T16:49:52Z"
 )
 
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security policies statuses", func() {
@@ -60,11 +61,6 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "SecurityPolicy", false)
 
 	err := os.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", nowTime)
-	if err != nil {
-		panic(err)
-	}
-
-	err = os.Setenv("TEST_CONDITIONS_CALC_CHKSUM", checkSum)
 	if err != nil {
 		panic(err)
 	}
@@ -81,15 +77,10 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(1))
 			const expectedStatus = `{
 				"deckhouse": {
-        				"observed": {
-						"checkSum": "123123123123123",
-						"lastTimestamp": "2023-03-03T16:49:52Z"
-					},
         				"processed": {
-						"checkSum": "123123123123123",
+						"generation": 0,
 						"lastTimestamp": "2023-03-03T16:49:52Z"
-					},
-					"synced": "True"
+					}
 				}
 			}`
 			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("status").String()).To(MatchJSON(expectedStatus))
@@ -114,10 +105,4 @@ spec:
     allowHostNetwork: false
     allowPrivilegeEscalation: false
     allowPrivileged: false
-status:
-  deckhouse:
-    observed:
-      checkSum: "123123123123123"
-      lastTimestamp: "2023-03-03T16:49:52Z"
-    synced: "False"
 `
