@@ -38,7 +38,7 @@ k8s:
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.24':
     status: available
-    patch: 16
+    patch: 17
     bashible: *bashible
     clusterAutoscalerPatch: 3
     ccm:
@@ -58,7 +58,7 @@ k8s:
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.25':
     status: available
-    patch: 12
+    patch: 13
     bashible: *bashible
     clusterAutoscalerPatch: 3
     ccm:
@@ -78,7 +78,7 @@ k8s:
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.26':
     status: available
-    patch: 7
+    patch: 8
     bashible: *bashible
     clusterAutoscalerPatch: 2
     ccm:
@@ -98,7 +98,7 @@ k8s:
       livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
   '1.27':
     status: preview
-    patch: 4
+    patch: 5
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     ccm:
