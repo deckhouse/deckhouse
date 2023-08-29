@@ -2,10 +2,14 @@ ARG BASE_DISTROLESS
 ARG BASE_GOLANG_20_ALPINE
 
 FROM $BASE_GOLANG_20_ALPINE AS build
-ARG SOURCE_REPO
-ENV SOURCE_REPO=${SOURCE_REPO}
 ARG GOPROXY
-ENV GOPROXY=${GOPROXY}
+ARG SOURCE_REPO
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
 WORKDIR /src
 RUN apk add --update --no-cache patch git
 RUN git clone --depth 1 --branch v0.14.0 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
@@ -18,7 +22,7 @@ RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
     patch -p1 < 002-skip-some-checks.patch && \
     patch -p1 < 003-fix-node-selector.patch
 
-RUN CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
+RUN go build -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
 
 RUN chown 64535:64535 operator-trivy
 RUN chmod 0700 operator-trivy
