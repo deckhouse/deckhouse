@@ -23,8 +23,10 @@ shell:
   beforeInstall:
   - apk add git
   install:
+  - cd /src
   - go mod download
   setup:
+  - cd /src
   - CGO_ENABLED=0 GOPROXY={{ env "GOPROXY" }} GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bashible-apiserver .
   - chown 64535:64535 bashible-apiserver
   - chmod 0700 bashible-apiserver
