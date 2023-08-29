@@ -84,6 +84,11 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 						Port:     9651,
 						Protocol: v1.ProtocolTCP,
 					},
+					{
+						Name:     "debug-server",
+						Port:     9652,
+						Protocol: v1.ProtocolTCP,
+					},
 				},
 			},
 		},
@@ -132,6 +137,10 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 			{
 				Name: pointer.String("webhook"),
 				Port: pointer.Int32(9651),
+			},
+			{
+				Name: pointer.String("debug-server"),
+				Port: pointer.Int32(9652),
 			},
 		},
 	}
