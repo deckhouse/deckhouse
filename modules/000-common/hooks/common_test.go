@@ -1,4 +1,3 @@
-	_ "github.com/deckhouse/deckhouse/modules/810-documentation/hooks/https"
 /*
 Copyright 2021 Flant JSC
 
