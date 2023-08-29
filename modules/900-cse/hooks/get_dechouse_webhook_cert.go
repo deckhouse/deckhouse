@@ -21,6 +21,7 @@ package hooks
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -52,17 +53,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, getAddmissionWebhookCertHandler)
 
 func applyAdmissionWebhookCertsSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
+	var secret v1.Secret
+	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
 		return nil, err
 	}
 
-	if secret.Name != "admission-webhook-certs" {
-		return nil, nil
-	}
-
-	return secret, nil
+	return certificate.Certificate{
+		CA:   string(secret.Data["ca.crt"]),
+		Cert: string(secret.Data["tls.crt"]),
+		Key:  string(secret.Data["tls.key"]),
+	}, nil
 }
 
 func getAddmissionWebhookCertHandler(input *go_hook.HookInput) error {
@@ -76,13 +77,17 @@ func getAddmissionWebhookCertHandler(input *go_hook.HookInput) error {
 		return fmt.Errorf("no admission-webhook-certs received")
 	}
 
-	secret := snapshots[0].(*v1.Secret)
+	cert := snapshots[0].(certificate.Certificate)
 
-	ca, ok := secret.Data["ca.crt"]
-	if !ok {
-		return fmt.Errorf("no admission-webhook-certs received")
-	}
-
-	input.Values.Set("deckhouse.internal.admissionWebhookCert.ca", string(ca))
+	input.Values.Set(
+		"cse.internal.admissionWebhookCert",
+		certValues{CA: cert.CA, Crt: cert.Cert, Key: cert.Key},
+	)
 	return nil
+}
+
+type certValues struct {
+	CA  string `json:"ca"`
+	Crt string `json:"crt"`
+	Key string `json:"key"`
 }

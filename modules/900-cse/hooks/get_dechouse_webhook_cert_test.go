@@ -49,21 +49,21 @@ metadata:
   namespace: d8-system
 type: kubernetes.io/tls
 `
-	f := HookExecutionConfigInit(`{"deckhouse":{"internal":{"admissionWebhookCert":{"ca":""}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"cse":{"internal":{"admissionWebhookCert":{"ca":""}}}}`, `{}`)
 	Context("Cluster initialization", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(state)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("webhook-handler-certs ca.crt exist in values", func() {
+		It("admission-webhook-certs ca.crt exist in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			webhookHandlerCerts := f.KubernetesResource("Secret", "d8-system", "admission-webhook-certs")
 			Expect(webhookHandlerCerts.Exists()).To(BeTrue())
 			data, err := base64.StdEncoding.DecodeString(webhookHandlerCerts.Field("data.ca\\.crt").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(data)).Should(ContainSubstring("foo"))
-			Expect(f.ValuesGet("deckhouse.internal.admissionWebhookCert.ca").String()).Should(ContainSubstring("foo"))
+			Expect(f.ValuesGet("cse.internal.admissionWebhookCert.ca").String()).Should(ContainSubstring("foo"))
 		})
 	})
 })

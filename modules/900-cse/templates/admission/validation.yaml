@@ -22,7 +22,7 @@ webhooks:
     failurePolicy: Ignore
     sideEffects: None
     clientConfig:
-      caBundle: {{ .Values.deckhouse.internal.admissionWebhookCert.ca | b64enc }}
+      caBundle: {{ .Values.cse.internal.admissionWebhookCert.ca | b64enc }}
       service:
         name: deckhouse
         namespace: d8-system
