@@ -63,6 +63,8 @@ if [[ "$count_default" != "1" ]]; then
   done
   if [[ "$cim_dev" != "" ]]; then
     metric=$(echo $ip_route_show_default_output | jq '.[] | select(.dev == "'$cim_dev'") | .metric')
+    cim_metric=""
+    cim_mac=""
     for i in  { 1 .. $count_default }; do
       i_dev=$(echo $ip_route_show_default_output | jq -r .[$i-1].dev)
       if [[ "$i_dev" != "$cim_dev"]]; then
@@ -70,13 +72,14 @@ if [[ "$count_default" != "1" ]]; then
         if [[ "$i_metric" == "$metric" ]]; then
           cim_mac=$(echo $ip_addr | jq -r '.[] | select(.ifname == "'$cim_dev'") | .address')
           cim_metric=$(expr $metric + 100)
-          cat_file "$cim_dev" "$cim_metric" "$cim_mac"
-
-          netplan generate
-          netplan apply
         fi
       fi
     done
+    if [[ "$cim_metric" != "" ]]; then
+      cat_file "$cim_dev" "$cim_metric" "$cim_mac"
+      netplan generate
+      netplan apply
+    fi
   fi
 fi
 
