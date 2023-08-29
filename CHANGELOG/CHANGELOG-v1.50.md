@@ -35,6 +35,7 @@
 ## Fixes
 
 
+ - **[candi]** Fixed CSI mount cleaner. [#5667](https://github.com/deckhouse/deckhouse/pull/5667)
  - **[candi]** Fix kubelet configuration step. [#5561](https://github.com/deckhouse/deckhouse/pull/5561)
  - **[candi]** Fix old CSI mount cleaner. [#5548](https://github.com/deckhouse/deckhouse/pull/5548)
  - **[candi]** Revert migration to cgroupfs driver for containerd CRI. [#5539](https://github.com/deckhouse/deckhouse/pull/5539)
