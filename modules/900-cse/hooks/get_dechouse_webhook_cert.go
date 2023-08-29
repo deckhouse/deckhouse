@@ -33,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/cse",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "deckhouse_webhook_cert",
+			Name:       "admission-webhook-certs",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -42,45 +42,45 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"webhook-handler-certs"},
+				MatchNames: []string{"admission-webhook-certs"},
 			},
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   applyDeckhouseWebhookSecretFilter,
+			FilterFunc:                   applyAdmissionWebhookCertsSecretFilter,
 		},
 	},
-}, getDeckhouseWebhookCertHandler)
+}, getAddmissionWebhookCertHandler)
 
-func applyDeckhouseWebhookSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyAdmissionWebhookCertsSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, err
 	}
 
-	if secret.Name != "webhook-handler-certs" {
+	if secret.Name != "admission-webhook-certs" {
 		return nil, nil
 	}
 
 	return secret, nil
 }
 
-func getDeckhouseWebhookCertHandler(input *go_hook.HookInput) error {
-	snapshots, ok := input.Snapshots["deckhouse_webhook_cert"]
+func getAddmissionWebhookCertHandler(input *go_hook.HookInput) error {
+	snapshots, ok := input.Snapshots["admission-webhook-certs"]
 	if !ok {
-		input.LogEntry.Info("No webhook-handler-certs received")
+		input.LogEntry.Info("No admission-webhook-certs received")
 		return nil
 	}
 
 	if len(snapshots) == 0 {
-		return fmt.Errorf("no webhook-handler-certs received")
+		return fmt.Errorf("no admission-webhook-certs received")
 	}
 
 	secret := snapshots[0].(*v1.Secret)
 
 	ca, ok := secret.Data["ca.crt"]
 	if !ok {
-		return fmt.Errorf("no webhook-handler-certs received")
+		return fmt.Errorf("no admission-webhook-certs received")
 	}
 
 	input.Values.Set("deckhouse.internal.admissionWebhookCert.ca", string(ca))

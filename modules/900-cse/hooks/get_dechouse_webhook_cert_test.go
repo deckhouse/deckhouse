@@ -41,11 +41,11 @@ metadata:
     meta.helm.sh/release-namespace: d8-system
   creationTimestamp: "2023-05-29T16:28:23Z"
   labels:
-    app: webhook-handler
+    app: deckhouse
     app.kubernetes.io/managed-by: Helm
     heritage: deckhouse
     module: deckhouse
-  name: webhook-handler-certs
+  name: admission-webhook-certs
   namespace: d8-system
 type: kubernetes.io/tls
 `
@@ -58,7 +58,7 @@ type: kubernetes.io/tls
 		})
 		It("webhook-handler-certs ca.crt exist in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			webhookHandlerCerts := f.KubernetesResource("Secret", "d8-system", "webhook-handler-certs")
+			webhookHandlerCerts := f.KubernetesResource("Secret", "d8-system", "admission-webhook-certs")
 			Expect(webhookHandlerCerts.Exists()).To(BeTrue())
 			data, err := base64.StdEncoding.DecodeString(webhookHandlerCerts.Field("data.ca\\.crt").String())
 			Expect(err).ShouldNot(HaveOccurred())
