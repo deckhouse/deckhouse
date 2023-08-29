@@ -5,7 +5,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Определяет конфигурацию источника сторонних модулей Deckhouse.
+            Определяет конфигурацию источника модулей Deckhouse.
           properties:
             spec:
               properties:
