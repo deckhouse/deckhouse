@@ -20,6 +20,7 @@ import (
 	"context"
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -29,6 +30,10 @@ import (
 
 func imageDigestValidationHandler() http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+		pod, ok := obj.(*corev1.Pod)
+		if ok {
+			log.Infof("%v", pod)
+		}
 		return allowResult("")
 	})
 
