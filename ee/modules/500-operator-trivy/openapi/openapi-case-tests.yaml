@@ -1,8 +1,14 @@
 positive:
   values:
-    - {}
+    - internal:
+        reportUpdater:
+          webhookCertificate:
+            ca: test
+            crt: test
+            key: test
+
   configValues:
-    - {}
+    - enableReportUpdater: true
 negative:
   configValues:
     - { somethingInConfig: yes }

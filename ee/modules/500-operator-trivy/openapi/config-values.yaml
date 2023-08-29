@@ -1,5 +1,13 @@
 type: object
 properties:
+  enableReportUpdater:
+    type: boolean
+    default: false
+    description: |
+      Enable the functionality of converting vulnerability reports.
+
+    x-doc-default: false
+    x-examples: [true, false]
   tolerations:
     type: array
     description: |

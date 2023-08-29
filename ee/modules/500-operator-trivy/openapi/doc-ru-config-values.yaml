@@ -1,5 +1,9 @@
 type: object
 properties:
+  enableReportUpdater:
+    description: |
+      Включение функционала конвертации отчетов уязвимостей.
+
   tolerations:
     description: |
       Опциональные tolerations для компонентов trivy operator и заданий сканирования (Jobs).
