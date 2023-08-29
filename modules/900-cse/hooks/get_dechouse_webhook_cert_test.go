@@ -19,15 +19,13 @@
 package hooks
 
 import (
-	"encoding/base64"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: CSE :: hooks :: get_dechouse_webhook_cert ::", func() {
+var _ = Describe("Modules :: CSE :: hooks :: get_dechouse_webhook_cert ::", func() {
 	state := `
 apiVersion: v1
 data:
@@ -58,12 +56,9 @@ type: kubernetes.io/tls
 		})
 		It("admission-webhook-certs ca.crt exist in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			webhookHandlerCerts := f.KubernetesResource("Secret", "d8-system", "admission-webhook-certs")
-			Expect(webhookHandlerCerts.Exists()).To(BeTrue())
-			data, err := base64.StdEncoding.DecodeString(webhookHandlerCerts.Field("data.ca\\.crt").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(data)).Should(ContainSubstring("foo"))
-			Expect(f.ValuesGet("cse.internal.admissionWebhookCert.ca").String()).Should(ContainSubstring("foo"))
+			admissionWebhookCerts := f.KubernetesResource("Secret", "d8-system", "admission-webhook-certs")
+			Expect(admissionWebhookCerts.Exists()).To(BeTrue())
+			Expect(f.ValuesGet("cse.internal.admissionWebhookCert.ca").String()).To(Equal("foo\n"))
 		})
 	})
 })
