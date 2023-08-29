@@ -88,9 +88,6 @@ spec:
           fieldPath: status.podIP
     - name: KUBE_RBAC_PROXY_CONFIG
       value: |
-        excludePaths:
-        - /-/ready
-        - /-/healthy
         upstreams:
         - upstream: http://127.0.0.1:9090/
           path: /
