@@ -29,8 +29,8 @@ DefaultEnvironment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_
 EOF
 
   {{- if eq .cri "Containerd" }}
-mkdir -p /etc/systemd/system/containerd.service.d/
-bb-sync-file /etc/systemd/system/containerd.service.d/proxy-environment.conf - << EOF
+mkdir -p /etc/systemd/system/containerd-deckhouse.service.d/
+bb-sync-file /etc/systemd/system/containerd-deckhouse.service.d/proxy-environment.conf - << EOF
 [Service]
 Environment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=${HTTPS_PROXY}" "https_proxy=${HTTPS_PROXY}" "NO_PROXY=${NO_PROXY}" "no_proxy=${NO_PROXY}"
 EOF
@@ -50,8 +50,8 @@ if [ -f /etc/systemd/system.conf.d/proxy-default-environment.conf ]; then
   _reload_systemd
 fi
 
-if [ -f /etc/systemd/system/containerd.service.d/proxy-environment.conf ]; then
-  rm -f /etc/systemd/system/containerd.service.d/proxy-environment.conf
+if [ -f /etc/systemd/system/containerd-deckhouse.service.d/proxy-environment.conf ]; then
+  rm -f /etc/systemd/system/containerd-deckhouse.service.d/proxy-environment.conf
   _reload_systemd
 fi
 

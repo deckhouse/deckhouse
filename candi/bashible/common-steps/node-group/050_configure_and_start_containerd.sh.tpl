@@ -15,7 +15,7 @@
 {{- if eq .cri "Containerd" }}
 _on_containerd_config_changed() {
   {{ if ne .runType "ImageBuilding" -}}
-  systemctl restart containerd.service
+  systemctl restart containerd-deckhouse.service
   {{- end }}
 }
 
