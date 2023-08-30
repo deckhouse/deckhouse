@@ -30,9 +30,10 @@ import (
 
 func imageDigestValidationHandler() http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+		logger := log.WithField("prefix", "image-digest-validation")
 		pod, ok := obj.(*corev1.Pod)
 		if ok {
-			log.Infof("%v", pod)
+			logger.WithField("pod", pod).Info("created pod")
 		}
 		return allowResult("")
 	})
