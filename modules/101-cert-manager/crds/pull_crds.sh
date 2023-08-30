@@ -30,7 +30,7 @@ for crd in $crds
 do
   file=${repo}/${crd}
   curl -s ${file} |
-    name=$name version=$version yq e 'del(.metadata.labels) | del(.metadata.annotations) | with(.metadata.annotations."cert-manager.io/inject-ca-from-secret" ; . = "d8-cert-manager/cert-manager-webhook-tls" | . style="single") | with(.metadata.labels ; . = {"heritage": "deckhouse", "app": env(name), "module": env(name), "app.kubernetes.io/name": env(name), "app.kubernetes.io/instance": env(name), "app.kubernetes.io/version": env(version)} | .. style="single")' > ${crd}
+    name=$name version=$version yq e 'del(.metadata.labels) | with(.metadata.labels ; . = {"heritage": "deckhouse", "app": env(name), "module": env(name), "app.kubernetes.io/name": env(name), "app.kubernetes.io/instance": env(name), "app.kubernetes.io/version": env(version)} | .. style="single")' > ${crd}
 
   # inject certificateOwnerRef
   if [[ $crd == "crd-certificates.yaml" ]]; then
