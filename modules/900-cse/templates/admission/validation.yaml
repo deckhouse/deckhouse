@@ -6,10 +6,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "image-digest-check-webhook")) | nindent 2 }}
 webhooks:
   - name: image-digest-check-webhook.deckhouse.io
-    matchExpressions:
-      - key: image-digest-check
-        operator: In
-        values: ["gost"]
+    namespaceSelector:
+      matchExpressions:
+        - key: image-digest-check
+          operator: In
+          values: ["gost"]
     rules:
       - apiGroups:
           - ""
