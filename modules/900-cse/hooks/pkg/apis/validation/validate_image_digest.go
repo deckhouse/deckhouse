@@ -33,7 +33,7 @@ func imageDigestValidationHandler() http.Handler {
 		logger := log.WithField("prefix", "image-digest-validation")
 		pod, ok := obj.(*corev1.Pod)
 		if ok {
-			logger.WithField("pod", pod).Info("created pod")
+			logger.WithField("podImages", getImagesFromPod(pod)).Info("created pod images")
 		}
 		return allowResult("")
 	})
@@ -47,4 +47,12 @@ func imageDigestValidationHandler() http.Handler {
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: validationLogger})
+}
+
+func getImagesFromPod(pod *corev1.Pod) []string {
+	images := []string{}
+	for _, container := range pod.Spec.Containers {
+		images = append(images, container.Image)
+	}
+	return images
 }
