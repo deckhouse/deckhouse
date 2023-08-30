@@ -59,10 +59,6 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
-require go.cypherpunks.ru/gogost/v5 v5.13.0
-
-replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0
-
 require (
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/go-openapi/strfmt v0.19.5
@@ -224,3 +220,7 @@ replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
+
+require go.cypherpunks.ru/gogost/v5 v5.13.0
+
+replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0
