@@ -50,7 +50,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"alerts-receiver",
 	"alliance-ingressgateway",
 	"alliance-metadata-exporter",
-	"cainjector",
 	"cert-exporter",
 	"cert-manager",
 	"cloud-controller-manager",

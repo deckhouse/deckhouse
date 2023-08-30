@@ -19,10 +19,8 @@ package template_tests
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	. "github.com/onsi/ginkgo"
 )
 
 func Test(t *testing.T) {
@@ -122,40 +120,10 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cert-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cert-manager", "deckhouse-registry")
 
-			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
 			certManager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
-
-			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/control-plane\":\"\"}"))
-			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
-- key: node-role.kubernetes.io/master
-- key: node-role.kubernetes.io/control-plane
-- key: dedicated.deckhouse.io
-  operator: Exists
-- key: dedicated
-  operator: Exists
-- key: DeletionCandidateOfClusterAutoscaler
-- key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
-- effect: NoSchedule
-  key: node.deckhouse.io/uninitialized
-  operator: Exists
-- key: node.kubernetes.io/not-ready
-- key: node.kubernetes.io/out-of-disk
-- key: node.kubernetes.io/memory-pressure
-- key: node.kubernetes.io/disk-pressure
-- key: node.kubernetes.io/pid-pressure
-- key: node.kubernetes.io/unreachable
-- key: node.kubernetes.io/network-unavailable
-`))
-			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
-			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
 			Expect(certManager.Exists()).To(BeTrue())
 			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
@@ -190,51 +158,10 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cert-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cert-manager", "deckhouse-registry")
 
-			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
 			certManager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
-			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/control-plane\":\"\"}"))
-			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
-- key: node-role.kubernetes.io/master
-- key: node-role.kubernetes.io/control-plane
-- key: dedicated.deckhouse.io
-  operator: Exists
-- key: dedicated
-  operator: Exists
-- key: DeletionCandidateOfClusterAutoscaler
-- key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
-- effect: NoSchedule
-  key: node.deckhouse.io/uninitialized
-  operator: Exists
-- key: node.kubernetes.io/not-ready
-- key: node.kubernetes.io/out-of-disk
-- key: node.kubernetes.io/memory-pressure
-- key: node.kubernetes.io/disk-pressure
-- key: node.kubernetes.io/pid-pressure
-- key: node.kubernetes.io/unreachable
-- key: node.kubernetes.io/network-unavailable
-`))
-			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(5))
-			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
-type: RollingUpdate
-rollingUpdate:
-  maxSurge: 0
-  maxUnavailable: 2
-`))
-			Expect(cainjector.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
-podAntiAffinity:
-  requiredDuringSchedulingIgnoredDuringExecution:
-  - labelSelector:
-      matchLabels:
-        app: cainjector
-    topologyKey: kubernetes.io/hostname
-`))
 			Expect(certManager.Exists()).To(BeTrue())
 			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
@@ -280,39 +207,10 @@ podAntiAffinity:
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cert-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cert-manager", "deckhouse-registry")
 
-			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
 			certManager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
-			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/control-plane\":\"\"}"))
-			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
-- key: node-role.kubernetes.io/master
-- key: node-role.kubernetes.io/control-plane
-- key: dedicated.deckhouse.io
-  operator: Exists
-- key: dedicated
-  operator: Exists
-- key: DeletionCandidateOfClusterAutoscaler
-- key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
-- effect: NoSchedule
-  key: node.deckhouse.io/uninitialized
-  operator: Exists
-- key: node.kubernetes.io/not-ready
-- key: node.kubernetes.io/out-of-disk
-- key: node.kubernetes.io/memory-pressure
-- key: node.kubernetes.io/disk-pressure
-- key: node.kubernetes.io/pid-pressure
-- key: node.kubernetes.io/unreachable
-- key: node.kubernetes.io/network-unavailable
-`))
-			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
-			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
 			Expect(certManager.Exists()).To(BeTrue())
 			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
@@ -347,51 +245,10 @@ podAntiAffinity:
 			namespace := f.KubernetesGlobalResource("Namespace", "d8-cert-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cert-manager", "deckhouse-registry")
 
-			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
 			certManager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
-			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/control-plane\":\"\"}"))
-			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
-- key: node-role.kubernetes.io/master
-- key: node-role.kubernetes.io/control-plane
-- key: dedicated.deckhouse.io
-  operator: Exists
-- key: dedicated
-  operator: Exists
-- key: DeletionCandidateOfClusterAutoscaler
-- key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
-- effect: NoSchedule
-  key: node.deckhouse.io/uninitialized
-  operator: Exists
-- key: node.kubernetes.io/not-ready
-- key: node.kubernetes.io/out-of-disk
-- key: node.kubernetes.io/memory-pressure
-- key: node.kubernetes.io/disk-pressure
-- key: node.kubernetes.io/pid-pressure
-- key: node.kubernetes.io/unreachable
-- key: node.kubernetes.io/network-unavailable
-`))
-			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(3))
-			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
-type: RollingUpdate
-rollingUpdate:
-  maxSurge: 0
-  maxUnavailable: 2
-`))
-			Expect(cainjector.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
-podAntiAffinity:
-  requiredDuringSchedulingIgnoredDuringExecution:
-  - labelSelector:
-      matchLabels:
-        app: cainjector
-    topologyKey: kubernetes.io/hostname
-`))
 			Expect(certManager.Exists()).To(BeTrue())
 			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
