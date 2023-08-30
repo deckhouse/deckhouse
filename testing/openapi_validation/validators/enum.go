@@ -160,7 +160,7 @@ var (
 		},
 		"candi/cloud-providers/azure/openapi/cluster_configuration.yaml": {
 			// ignore enum values
-			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items.enum",
+			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
 		},
 	}
 
