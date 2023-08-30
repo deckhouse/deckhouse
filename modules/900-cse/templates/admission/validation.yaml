@@ -5,7 +5,11 @@ metadata:
   name: image-digest-check-webhook
   {{- include "helm_lib_module_labels" (list . (dict "app" "image-digest-check-webhook")) | nindent 2 }}
 webhooks:
-  - name: modules.deckhouse-webhook.deckhouse.io
+  - name: image-digest-check-webhook.deckhouse.io
+    matchExpressions:
+      - key: image-digest-check
+        operator: In
+        values: ["gost"]
     rules:
       - apiGroups:
           - ""
@@ -15,7 +19,7 @@ webhooks:
           - "pods"
         operations:
           - CREATE
-        scope: Cluster
+        scope: Namespaced
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
