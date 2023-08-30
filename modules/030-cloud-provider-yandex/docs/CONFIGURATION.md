@@ -13,7 +13,7 @@ The module automatically creates StorageClasses covering all available disks in 
 | Type | StorageClass Name |
 ``
 |---|---|
-| network-hdd | network-hdd | |'
+| network-hdd | network-hdd | |
 | network-ssd | network-ssd | |
 | network-ssd-nonreplicated | network-ssd-nonreplicated | |
 | network-ssd-nonreplicated | network-ssd-nonreplicated | |
