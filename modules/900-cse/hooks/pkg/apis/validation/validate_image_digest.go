@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/gogost/v5/gost34112012256"
 	"github.com/google/go-containerregistry/pkg/name"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -32,6 +31,7 @@ import (
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
+	"go.cypherpunks.ru/gogost/v5/gost34112012256"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

@@ -57,8 +57,11 @@ require (
 	kubevirt.io/containerized-data-importer-api v1.55.2
 	sigs.k8s.io/controller-runtime v0.8.3
 	sigs.k8s.io/yaml v1.3.0
-	github.com/flant/gogost/v5/ v5.13.0
 )
+
+require go.cypherpunks.ru/gogost/v5 v5.13.0
+
+replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0
 
 require (
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
