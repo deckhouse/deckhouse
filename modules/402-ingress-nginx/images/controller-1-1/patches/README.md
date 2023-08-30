@@ -5,6 +5,7 @@
 After catching SIGTERM, ingress stops responding to the readiness probe.
 The combination of this patch and the `EndpointSliceTerminatingCondition` feature gate for kube-proxy helps us avoid
 traffic loss on rollout updates.
+Update: for external load balancers it's advisable to get 5xx if a SIGTERM was sent to the controller, we control this logic by applying/checking `D8s-External-Check` http header.
 
 Backport of the behavior of the later versions of ingress nginx controller.
 The `sleep` is needed to gracefully shut down ingress controllers behind a cloud load balancer.
