@@ -9,10 +9,10 @@ properties:
       admissionWebhookCert:
         type: object
         default: {}
-        # x-required-for-helm:
-        #   - crt
-        #   - key
-        #   - ca
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
         properties:
           crt:
             type: string
