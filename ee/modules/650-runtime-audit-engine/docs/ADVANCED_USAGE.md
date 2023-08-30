@@ -8,9 +8,11 @@ title: "The runtime-audit-engine module: advanced usage"
 
 ### Falco
 
-By default, the log level is set to `debug`.
+By default, the log level for `Falco` is set to `debug`.
 
 ### Falcosidekick
+
+By default, the debug logging for `Falcosidekick` is disabled.
 
 You can enable debugging logs by setting the `spec.settings.debugLogging` value to `true`:
 

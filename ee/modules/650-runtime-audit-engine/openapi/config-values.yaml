@@ -3,4 +3,4 @@ properties:
   debugLogging:
     type: boolean
     description: |
-      If true all outputs will print in stdout the payload they send.
+      If true, all events will be duplicated to stdout.
