@@ -78,6 +78,9 @@ spec:
 {{- end }}
 {{- end }}
           ports:
+            - containerPort: 9402
+              name: http-metrics
+              protocol: TCP
             - containerPort: 9403
               name: http-healthz
               protocol: TCP
@@ -127,7 +130,7 @@ spec:
                     subresource: prometheus-metrics
                     name: cert-manager
           ports:
-          - containerPort: 9403
+          - containerPort: 9404
             name: https-metrics
           resources:
             requests:
