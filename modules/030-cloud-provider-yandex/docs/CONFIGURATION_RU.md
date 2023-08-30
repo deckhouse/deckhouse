@@ -16,7 +16,7 @@ title: "Cloud provider — Yandex Cloud: настройки"
 | network-ssd | network-ssd | |
 | network-ssd-nonreplicated | network-ssd-nonreplicated | |
 | network-ssd-nonreplicated | network-ssd-nonreplicated | |
-| network-ssd-io-m3         | etwork-ssd-io-m3 | Размер дисков должен быть кратен 93 ГБ |                
+| network-ssd-io-m3         | etwork-ssd-io-m3 | Размер дисков должен быть кратен 93 ГБ |
 
 Вы можете отфильтровать ненужные StorageClass'ы с помощью параметра [exclude](#parameters-storageclass-exclude).
 
