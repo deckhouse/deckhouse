@@ -18,8 +18,12 @@ package validation
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
+	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
@@ -28,14 +32,36 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func imageDigestValidationHandler() http.Handler {
+type validationHandler struct {
+	logger            *log.Entry
+	registryTransport *http.Transport
+}
+
+func NewValidationHandler(skipVerify bool) *validationHandler {
+	logger := log.WithField("prefix", "image-digest-validation")
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	if skipVerify {
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	return &validationHandler{
+		logger:            logger,
+		registryTransport: customTransport,
+	}
+}
+
+func (vh *validationHandler) imageDigestValidationHandler() http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
-		logger := log.WithField("prefix", "image-digest-validation")
 		pod, ok := obj.(*corev1.Pod)
-		if ok {
-			logger.WithField("podImages", getImagesFromPod(pod)).Info("created pod images")
+		if !ok {
+			return rejectResult("incorrect pod data")
 		}
-		return allowResult("")
+		for _, image := range vh.GetImagesFromPod(pod) {
+			err := vh.CheckImageDigest(image)
+			if err != nil {
+				return rejectResult(err.Error())
+			}
+		}
+		return allowResult("all images is correct")
 	})
 
 	// Create webhook.
@@ -49,10 +75,39 @@ func imageDigestValidationHandler() http.Handler {
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: validationLogger})
 }
 
-func getImagesFromPod(pod *corev1.Pod) []string {
+func (vh *validationHandler) GetImagesFromPod(pod *corev1.Pod) []string {
 	images := []string{}
 	for _, container := range pod.Spec.Containers {
 		images = append(images, container.Image)
 	}
 	return images
+}
+
+func (vh *validationHandler) CheckImageDigest(imageName string) error {
+	ref, err := vh.ParseImageName(imageName)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	image, err := remote.Image(
+		ref,
+		remote.WithTransport(vh.registryTransport),
+		remote.WithContext(ctx),
+	)
+	if err != nil {
+		return err
+	}
+	imageDigest, err := image.Digest()
+	if err != nil {
+		return err
+	}
+	vh.logger.WithField("imageDigest", imageDigest.String()).WithField("imageName", imageName).Info("image from remote")
+	return nil
+}
+
+func (vh *validationHandler) ParseImageName(image string) (name.Reference, error) {
+	return name.ParseReference(image)
 }

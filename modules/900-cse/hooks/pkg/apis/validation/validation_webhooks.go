@@ -24,10 +24,14 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
-var validationLogger = kwhlogrus.NewLogrus(log.NewEntry(log.StandardLogger()))
+var (
+	validationLogger = kwhlogrus.NewLogrus(log.NewEntry(log.StandardLogger()))
+	vh               *validationHandler
+)
 
 func init() {
-	module.RegisterValidationHandler("/validate/v1/image-digest", imageDigestValidationHandler())
+	vh = NewValidationHandler(false)
+	module.RegisterValidationHandler("/validate/v1/image-digest", vh.imageDigestValidationHandler())
 }
 
 func allowResult(warnMsg string) (*kwhvalidating.ValidatorResult, error) {
