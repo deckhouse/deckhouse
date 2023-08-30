@@ -19,10 +19,14 @@ package validation
 import (
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/flant/gogost/v5/gost34112012256"
 	"github.com/google/go-containerregistry/pkg/name"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
@@ -35,6 +39,7 @@ import (
 type validationHandler struct {
 	logger            *log.Entry
 	registryTransport *http.Transport
+	defaultRegistry   string
 }
 
 func NewValidationHandler(skipVerify bool) *validationHandler {
@@ -46,6 +51,7 @@ func NewValidationHandler(skipVerify bool) *validationHandler {
 	return &validationHandler{
 		logger:            logger,
 		registryTransport: customTransport,
+		defaultRegistry:   name.DefaultRegistry,
 	}
 }
 
@@ -61,7 +67,7 @@ func (vh *validationHandler) imageDigestValidationHandler() http.Handler {
 				return rejectResult(err.Error())
 			}
 		}
-		return allowResult("all images is correct")
+		return allowResult("")
 	})
 
 	// Create webhook.
@@ -104,10 +110,56 @@ func (vh *validationHandler) CheckImageDigest(imageName string) error {
 	if err != nil {
 		return err
 	}
-	vh.logger.WithField("imageDigest", imageDigest.String()).WithField("imageName", imageName).Info("image from remote")
+
+	manifest, err := image.Manifest()
+	if err != nil {
+		return err
+	}
+
+	layers, err := image.Layers()
+	if err != nil {
+		return err
+	}
+
+	vh.logger.WithField(
+		"imageDigest", imageDigest.String(),
+	).WithField(
+		"imageName", imageName,
+	).WithField(
+		"annotations", manifest.Annotations,
+	).Info("image from remote")
+
+	gostLaersHash, err := vh.CalculateLaersGostHash(layers)
+	if err != nil {
+		return err
+	}
+
+	vh.logger.WithField("gostLayersHash", gostLaersHash).Info("image layers gost hash")
 	return nil
 }
 
 func (vh *validationHandler) ParseImageName(image string) (name.Reference, error) {
-	return name.ParseReference(image)
+	return name.ParseReference(image, name.WithDefaultRegistry(vh.defaultRegistry))
+}
+
+func (vh *validationHandler) CalculateLaersGostHash(layers []crv1.Layer) (string, error) {
+	layersDigestBuilder := strings.Builder{}
+	for _, layer := range layers {
+		digest, err := layer.Digest()
+		if err != nil {
+			return "", err
+		}
+		vh.logger.WithField("layerHash", digest.String()).Info("image layer hash")
+		layersDigestBuilder.WriteString(digest.String())
+	}
+
+	data := layersDigestBuilder.String()
+	hasher := gost34112012256.New()
+	_, err := hasher.Write([]byte(data))
+	if err != nil {
+		return "", err
+	}
+
+	gostHash := hex.EncodeToString(hasher.Sum(nil))
+	return gostHash, nil
 }
