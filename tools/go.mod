@@ -15,3 +15,5 @@ replace (
 	github.com/deckhouse/deckhouse/dhctl => ../dhctl
 	github.com/deckhouse/deckhouse/go_lib/cloud-data => ../go_lib/cloud-data
 )
+
+replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0
