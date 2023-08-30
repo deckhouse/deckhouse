@@ -11,10 +11,13 @@ title: "Cloud provider — Yandex Cloud: configuration"
 The module automatically creates StorageClasses covering all available disks in Yandex:
 
 | Type | StorageClass Name |
+``
 |---|---|
-| network-hdd | network-hdd |
-| network-ssd | network-ssd |
-| network-ssd-nonreplicated | network-ssd-nonreplicated |
+| network-hdd | network-hdd | |'
+| network-ssd | network-ssd | |
+| network-ssd-nonreplicated | network-ssd-nonreplicated | |
+| network-ssd-nonreplicated | network-ssd-nonreplicated | |
+| network-ssd-io-m3         | etwork-ssd-io-m3 | Disk size must be a multiple of 93 GB. |
 
 You can filter out the unnecessary StorageClasses via the [exclude](#parameters-storageclass-exclude) parameter.
 
