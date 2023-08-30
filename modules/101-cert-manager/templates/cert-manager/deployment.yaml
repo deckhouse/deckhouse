@@ -77,6 +77,20 @@ spec:
           {{- end }}
 {{- end }}
 {{- end }}
+          ports:
+            - containerPort: 9403
+              name: http-healthz
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              port: http-healthz
+              path: /livez
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 30
+            successThreshold: 1
+            failureThreshold: 8
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
