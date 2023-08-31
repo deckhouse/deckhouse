@@ -705,7 +705,7 @@ spec:
 
     distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
     curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    yam install -y nvidia-container-toolkit nvidia-driver
+    yum install -y nvidia-container-toolkit nvidia-driver
   nodeGroups:
   - gpu
   weight: 30
