@@ -100,7 +100,7 @@ spec:
 
     bb-log-info "Cluster DNS responded, got SPAAS service IP"
 
-    SPAAS_URL="https://${SPAAS_IP}:2020"
+    export SPAAS_URL="https://${SPAAS_IP}:2020"
 
     attempt=0
     until [[ "$(d8-curl -ks -w '%{http_code}' -o /dev/null $SPAAS_URL'/api/v1/hello')" == "200" ]]

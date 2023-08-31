@@ -35,3 +35,4 @@ shell:
     - chmod +x /install
     - chmod +x /uninstall
     - echo 'GIT-hash:123456' > /drbd/drbd/.drbd_git_revision
+    - sed -e "s/\<curl\>/d8-curl -k/g" -i /drbd/drbd/drbd-kernel-compat/gen_compat_patch.sh
