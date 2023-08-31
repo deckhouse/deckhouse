@@ -14,3 +14,9 @@
 
 rm -rf /var/lib/bashible/kubeadm
 bb-rp-remove kubeadm
+
+rm -f /tmp/bootstrap.sh
+rm -rf /tmp/candi-bundle*
+rm -f /tmp/bundle*.tar
+rm -f /tmp/kubeadm-config*
+rm -f /tmp/kubernetes-api-proxy.pid
