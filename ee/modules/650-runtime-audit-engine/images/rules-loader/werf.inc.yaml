@@ -40,7 +40,7 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_UBUNTU }}
 git:
-- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/requirements.txt
+- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
