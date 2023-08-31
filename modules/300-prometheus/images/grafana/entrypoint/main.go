@@ -126,15 +126,9 @@ func convertEnv() error {
 			return fmt.Errorf("error: both %s and %s are set (but are exclusive)", newParamName, splitedParam[0])
 		}
 
-		file, err := os.Open(splitedParam[1])
+		content, err := os.ReadFile(splitedParam[1])
 		if err != nil {
 			log.Fatalf("open file: %v", err)
-		}
-		defer file.Close()
-
-		content, err := io.ReadAll(file)
-		if err != nil {
-			log.Fatalf("reading file: %v", err)
 		}
 
 		os.Setenv(newParamName, string(content))
