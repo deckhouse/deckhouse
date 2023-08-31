@@ -15,7 +15,7 @@ import:
   to: /shell-operator
   before: setup
 git:
-  - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/hooks
+  - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
     to: /hooks
     stageDependencies:
       install:
