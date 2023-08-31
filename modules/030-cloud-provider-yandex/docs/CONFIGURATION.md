@@ -10,7 +10,7 @@ title: "Cloud provider — Yandex Cloud: configuration"
 
 The module automatically creates StorageClasses covering all available disks in Yandex:
 
-| Type | StorageClass Name |
+| Type | StorageClass Name | Comment |
 ``
 |---|---|
 | network-hdd | network-hdd | |
