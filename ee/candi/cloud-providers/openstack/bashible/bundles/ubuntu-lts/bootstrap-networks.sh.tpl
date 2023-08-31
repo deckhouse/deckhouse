@@ -42,7 +42,8 @@ network:
 BOOTSTRAP_NETWORK_EOF
 }
 
-{{- if .normal.apiserverEndpoints }}
+{{- if .normal }}
+{{-   if .normal.apiserverEndpoints }}
 ip_route_show_default_output=$(ip -json route show default)
 count_default=$(echo $ip_route_show_default_output | jq length)
 if [[ "$count_default" != "1" ]]; then
@@ -82,6 +83,7 @@ if [[ "$count_default" != "1" ]]; then
     fi
   fi
 fi
+{{-   end }}
 {{- end }}
 
 shopt -u extglob
