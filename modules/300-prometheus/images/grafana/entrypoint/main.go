@@ -18,11 +18,11 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	cp "github.com/otiai10/copy"
 	"golang.org/x/sys/unix"
@@ -97,7 +97,7 @@ func main() {
 
 	grafanaBin := "/usr/share/grafana/bin/grafana-server"
 
-	err = unix.Exec(grafanaBin, grafanaArgs, os.Environ())
+	err = syscall.Exec(grafanaBin, grafanaArgs, os.Environ())
 	if err != nil {
 		log.Fatalf("exec %s: %v", grafanaBin, err)
 	}
