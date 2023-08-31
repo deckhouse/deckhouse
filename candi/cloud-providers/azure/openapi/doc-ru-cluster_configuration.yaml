@@ -55,6 +55,11 @@ apiVersions:
             vnetName:
               description: |
                 Имя VNet.
+      serviceEndpoints:
+        description: |
+          Список Service Endpoints, ассоциированных с подсетью.
+
+          Service Endpoints для виртуальной сети позволяют прямо и безопасно подключаться к сервисам Azure по оптимизированному маршруту через магистральную сеть Azure. Они позволяют ограничить доступ к критически важным ресурсам сервисов Azure пределами отдельных виртуальных сетей. Через Service Endpoints приватные IP-адреса в виртуальной сети могут подключаться к эндпоинтам сервисов Azure, не используя публичный IP-адрес в виртуальной сети. Больше информации можно найти в [официальной документации](https://learn.microsoft.com/ru-ru/azure/virtual-network/virtual-network-service-endpoints-overview).
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.

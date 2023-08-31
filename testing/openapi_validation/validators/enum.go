@@ -158,6 +158,10 @@ var (
 			// ignore enum values
 			"properties.addressPools.items.properties.protocol",
 		},
+		"candi/cloud-providers/azure/openapi/cluster_configuration.yaml": {
+			// ignore enum values
+			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
+		},
 	}
 
 	arrayPathRegex = regexp.MustCompile(`\[\d+\]`)
