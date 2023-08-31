@@ -10,7 +10,7 @@ import:
       - usr/share/falco
       - usr/local/lib/python3.10
     before: setup
-  - image: {{  $.Images.BASE_SHELL_OPERATOR }}
+  - image: common/shell-operator
     add: /shell-operator
     to: /shell-operator
     before: setup
@@ -38,6 +38,7 @@ docker:
   CMD: ["start"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_UBUNTU }}
 git:
 - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/requirements.txt
   to: /requirements.txt
