@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -100,13 +101,18 @@ func copyFile(src, dst string) error {
 }
 
 func WatchNginxConf() {
+	err := nginxReload()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer watcher.Close()
 
-	err = watcher.Add(nginxNewConf)
+	err = watcher.Add(filepath.Dir(nginxNewConf))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -118,9 +124,7 @@ func WatchNginxConf() {
 				return
 			}
 
-			// k8s configmaps use symlinks,
-			// old file is deleted and a new link with the same name is created
-			if event.Op == fsnotify.Remove {
+			if event.Name == nginxNewConf {
 				err := nginxReload()
 				if err != nil {
 					SetHealthCheckStatus(false)
@@ -128,7 +132,6 @@ func WatchNginxConf() {
 				} else {
 					SetHealthCheckStatus(true)
 				}
-
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
