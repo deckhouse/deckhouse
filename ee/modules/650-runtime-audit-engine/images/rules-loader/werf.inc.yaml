@@ -6,9 +6,9 @@ import:
     add: /
     to: /
     includePaths:
-      - /usr/bin/falco
-      - /usr/share/falco
-      - /usr/local/lib/python3.10
+      - usr/bin/falco
+      - usr/share/falco
+      - usr/local/lib/python3.10
     before: setup
   - image: {{  $.Images.BASE_SHELL_OPERATOR }}
     add: /shell-operator
