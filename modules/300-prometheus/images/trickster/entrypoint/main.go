@@ -17,21 +17,14 @@ limitations under the License.
 package main
 
 import (
-	"io"
 	"log"
 	"os"
 	"strings"
-
-	"golang.org/x/sys/unix"
+	"syscall"
 )
 
 func main() {
-	confFile, err := os.Open("/etc/trickster/trickster.conf")
-	if err != nil {
-		log.Fatalf("open conf: %v", err)
-	}
-
-	content, err := io.ReadAll(confFile)
+	content, err := os.ReadFile("/etc/trickster/trickster.conf")
 	if err != nil {
 		log.Fatalf("reading conf: %v", err)
 	}
@@ -50,7 +43,7 @@ func main() {
 	builder.WriteString("--config=")
 	builder.WriteString(tmpfile.Name())
 
-	err = unix.Exec("/usr/local/bin/trickster", []string{"trickster", builder.String()}, os.Environ())
+	err = syscall.Exec("/usr/local/bin/trickster", []string{"trickster", builder.String()}, os.Environ())
 	if err != nil {
 		log.Fatal(err)
 	}
