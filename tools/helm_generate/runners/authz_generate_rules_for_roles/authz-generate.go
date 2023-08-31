@@ -25,7 +25,7 @@ Steps to use:
   - check diff for ./modules/140-user-authz/docs/README.md and ./modules/140-user-authz/docs/README_RU.md files
 */
 
-package main
+package authzgeneraterulesforroles
 
 import (
 	"bytes"
@@ -40,6 +40,7 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+	"tools/helm_generate/helper"
 
 	"github.com/Masterminds/sprig"
 	"github.com/deckhouse/deckhouse/testing/library/helm"
@@ -148,7 +149,8 @@ func isAliased(verbs string) (string, bool) {
 	return "", false
 }
 
-func main() {
+func run() {
+	// "github.com/deckhouse/deckhouse/testing/library" InitValues() can be used to seed render values.
 	renderContents, err := renderHelmTemplates("../modules/140-user-authz", `{"userAuthz":{"internal":{}},"global":{}}`)
 	if err != nil {
 		log.Fatalln(err)
@@ -175,7 +177,7 @@ func main() {
 		templateData.Roles = append(templateData.Roles, prepareClusterRoleForTemplate(roleName, neededClusterRoleExcludes[roleName], crVerbResourceMap))
 	}
 
-	readmeContent, err := renderTemplate("authz_generate_rules_for_roles/readme-placeholder.tpl", templateData)
+	readmeContent, err := renderTemplate("helm_generate/runners/authz_generate_rules_for_roles/readme-placeholder.tpl", templateData)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -193,13 +195,12 @@ func main() {
 
 // renderHelmTemplates renders helm template for chart directory "dir" with values "values"
 func renderHelmTemplates(dir, values string) (map[string]string, error) {
-	cwd, err := os.Getwd()
+	deckhouseRoot, err := helper.DeckhouseRoot()
 	if err != nil {
 		return nil, err
 	}
 
 	helmLibPath := "helm_lib/charts/deckhouse_lib_helm"
-	deckhouseRoot := filepath.Dir(cwd)
 	chartHelmLibPath := filepath.Join(deckhouseRoot, "modules/140-user-authz/charts/helm_lib")
 	if err := os.Remove(chartHelmLibPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
@@ -215,6 +216,10 @@ func renderHelmTemplates(dir, values string) (map[string]string, error) {
 		helmLibFullPath = filepath.Join("/deckhouse", helmLibPath)
 		_ = os.Symlink(helmLibFullPath, chartHelmLibPath)
 	}()
+
+	if err := os.Chdir(filepath.Join(deckhouseRoot, "tools")); err != nil {
+		return nil, err
+	}
 
 	r := helm.Renderer{}
 	return r.RenderChartFromDir(dir, values)
