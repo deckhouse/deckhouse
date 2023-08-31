@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -154,6 +155,11 @@ func (vh *validationHandler) CalculateLaersGostHash(layers []crv1.Layer) (string
 	}
 
 	data := layersDigestBuilder.String()
+
+	if len(data) == 0 {
+		return "", fmt.Errorf("invalid layers hash data")
+	}
+
 	hasher := gost34112012256.New()
 	_, err := hasher.Write([]byte(data))
 	if err != nil {
