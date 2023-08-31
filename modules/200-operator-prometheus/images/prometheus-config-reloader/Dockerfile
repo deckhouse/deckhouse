@@ -1,13 +1,26 @@
-# Based on https://github.com/prometheus-operator/prometheus-operator/blob/v0.62.0/cmd/prometheus-config-reloader/Dockerfile
-ARG BASE_ALPINE
-FROM quay.io/prometheus-operator/prometheus-config-reloader:v0.62.0@sha256:267b12235d10a810e49b2d40a3deda6256f92690b26997a199601a47283821b9 as artifact
+ARG BASE_DISTROLESS
+ARG BASE_GOLANG_18_ALPINE
 
-FROM $BASE_ALPINE
+FROM $BASE_GOLANG_18_ALPINE as artifact
 
-COPY --from=artifact /bin/prometheus-config-reloader /bin/
+ARG GOPROXY
+ARG SOURCE_REPO
 
-RUN chown nobody:nogroup /bin/prometheus-config-reloader
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
-USER nobody
+RUN apk add --no-cache git
+RUN git clone --depth 1 --branch v0.62.0 ${SOURCE_REPO}/prometheus-operator/prometheus-operator.git /prometheus-operator
+WORKDIR /prometheus-operator/
 
+RUN go build -ldflags="-s -w" -o prometheus-config-reloader cmd/prometheus-config-reloader/main.go && \
+    chown -R 64535:64535 /prometheus-operator/ && \
+    chmod 0700 /prometheus-operator/prometheus-config-reloader
+
+FROM $BASE_DISTROLESS
+
+COPY --from=artifact /prometheus-operator/prometheus-config-reloader /bin/
 ENTRYPOINT ["/bin/prometheus-config-reloader"]
