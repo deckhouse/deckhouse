@@ -16,7 +16,6 @@ The module automatically creates StorageClasses covering all available disks in 
 | network-hdd | network-hdd | |
 | network-ssd | network-ssd | |
 | network-ssd-nonreplicated | network-ssd-nonreplicated | |
-| network-ssd-nonreplicated | network-ssd-nonreplicated | |
 | network-ssd-io-m3         | network-ssd-io-m3 | Disk size must be a multiple of 93 GB. |
 
 You can filter out the unnecessary StorageClasses via the [exclude](#parameters-storageclass-exclude) parameter.
