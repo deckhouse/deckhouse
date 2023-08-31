@@ -3,10 +3,17 @@ ARG BASE_GOLANG_19_ALPINE
 
 # Based on https://github.com/deckhouse/k8s-image-availability-exporter/blob/master/Dockerfile
 FROM $BASE_GOLANG_19_ALPINE as artifact
+
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 WORKDIR /src
 ENV GOARCH=amd64
 RUN apk add patch git
-RUN git clone --depth 1 --branch v0.5.0 https://github.com/deckhouse/k8s-image-availability-exporter.git .
+RUN git clone --depth 1 --branch v0.5.0 ${SOURCE_REPO}/deckhouse/k8s-image-availability-exporter.git .
 COPY patches/001-support-legacy-annotation.patch /src/
 RUN patch -p1 < 001-support-legacy-annotation.patch
 RUN CGO_ENABLED=0 go build -a -ldflags '-s -w -extldflags "-static"' -o /k8s-image-availability-exporter main.go && \
@@ -15,5 +22,4 @@ RUN CGO_ENABLED=0 go build -a -ldflags '-s -w -extldflags "-static"' -o /k8s-ima
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /k8s-image-availability-exporter /k8s-image-availability-exporter
-USER 64535
 ENTRYPOINT ["/k8s-image-availability-exporter"]

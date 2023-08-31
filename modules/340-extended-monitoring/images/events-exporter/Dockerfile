@@ -17,6 +17,9 @@ ARG GOPROXY
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
 ENV GOARCH=amd64
 RUN apk add --no-cache make git && \
     git clone --branch v0.0.4 --depth 1 ${SOURCE_REPO}/nabokihms/events_exporter.git . && \
@@ -26,7 +29,5 @@ RUN apk add --no-cache make git && \
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /usr/local/src/events_exporter/bin/events_exporter /usr/local/bin/events_exporter
-
-USER 64535
 
 ENTRYPOINT ["events_exporter"]
