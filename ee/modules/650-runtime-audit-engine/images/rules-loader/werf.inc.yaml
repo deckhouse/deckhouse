@@ -2,18 +2,18 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_UBUNTU }}
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /
-    to: /
-    includePaths:
-      - usr/bin/falco
-      - usr/share/falco
-      - usr/local/lib/python3.10
-    before: setup
-  - image: common/shell-operator
-    add: /shell-operator
-    to: /shell-operator
-    before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+    - usr/bin/falco
+    - usr/share/falco
+    - usr/local/lib/python3.10
+  before: setup
+- image: common/shell-operator
+  add: /shell-operator
+  to: /shell-operator
+  before: setup
 git:
   - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/hooks
     to: /hooks
@@ -22,7 +22,6 @@ git:
         - '**/*'
 shell:
   beforeInstall:
-    - chmod +x /shell-operator
     - apt update -y
     - apt install -yq curl tini python3='3.10.6-1~22.04'
     # cleanup
@@ -46,15 +45,16 @@ git:
     install:
       - '**/*'
 shell:
-  install:
+  beforeInstall:
   - apt update -y
   - apt install -yq curl python3='3.10.6-1~22.04' python3-pip
-  - pip3 install -r requirements.txt
   - curl -sSfL https://download.falco.org/packages/bin/x86_64/falco-0.35.1-x86_64.tar.gz | tar -C /tmp -xzvf -
   - cp -f /tmp/falco-0.35.1-x86_64/usr/bin/falco /usr/bin/falco
   - cp -rf /tmp/falco-0.35.1-x86_64/usr/share/falco /usr/share/falco
-    # cleanup
+  # cleanup
   - apt-get clean autoclean
   - apt-get autoremove -y
   - rm -rf /var/lib/{apt,dpkg,cache,log}/
   - rm -rf /tmp/falco-*
+  install:
+  - pip3 install -r /requirements.txt
