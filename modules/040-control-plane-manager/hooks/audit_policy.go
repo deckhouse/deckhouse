@@ -122,7 +122,7 @@ func appendBasicPolicyRules(policy *audit.Policy) {
 	appendDropResourcesRule(audit.GroupResources{
 		Group:         "",
 		Resources:     []string{"configmaps"},
-		ResourceNames: []string{"cert-manager-controller"},
+		ResourceNames: []string{"cert-manager-cainjector-leader-election", "cert-manager-controller"},
 	})
 	// Drop verticalpodautoscalercheckpoints.
 	appendDropResourcesRule(audit.GroupResources{

@@ -15,6 +15,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"certManager": map[string]interface{}{
 		"certManagerAcmeSolver": "imageHash-certManager-certManagerAcmeSolver",
+		"certManagerCainjector": "imageHash-certManager-certManagerCainjector",
 		"certManagerController": "imageHash-certManager-certManagerController",
 		"certManagerWebhook":    "imageHash-certManager-certManagerWebhook",
 	},
