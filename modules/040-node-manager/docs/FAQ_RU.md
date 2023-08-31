@@ -842,6 +842,7 @@ spec:
           [plugins."io.containerd.grpc.v1.cri".registry.configs]
             [plugins."io.containerd.grpc.v1.cri".registry.configs."artifactory.proxy".auth]
               auth = "AAAABBBCCCDDD=="
+    EOF
   nodeGroups:
     - "*"
   weight: 49
