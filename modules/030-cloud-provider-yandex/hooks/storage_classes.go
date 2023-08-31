@@ -33,6 +33,10 @@ var storageClassesConfig = []storage_class.StorageClass{
 		Name: "network-ssd-nonreplicated",
 		Type: "network-ssd-nonreplicated",
 	},
+	&storage_class.SimpleStorageClass{
+		Name: "network-ssd-io-m3",
+		Type: "network-ssd-io-m3",
+	},
 }
 
 var _ = storage_class.RegisterHook("cloudProviderYandex", storageClassesConfig)

@@ -55,6 +55,10 @@ cloudProviderYandex:
   {
 	"name": "network-ssd-nonreplicated",
 	"type": "network-ssd-nonreplicated"
+  },
+  {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3"
   }
 ]
 `))
