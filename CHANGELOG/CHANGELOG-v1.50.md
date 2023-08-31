@@ -1,9 +1,5 @@
 # Changelog v1.50
 
-## [MALFORMED]
-
-
- - #5392 unknown section "deckhouse-config"
 
 ## Know before update
 
@@ -41,6 +37,7 @@
  - **[candi]** Revert migration to cgroupfs driver for containerd CRI. [#5539](https://github.com/deckhouse/deckhouse/pull/5539)
  - **[candi]** Set firmware explicitly for `vsphere_virtual_machine`. [#5457](https://github.com/deckhouse/deckhouse/pull/5457)
  - **[candi]** Remove usage of temp files when creating a `NodeUser`. [#5337](https://github.com/deckhouse/deckhouse/pull/5337)
+ - **[deckhouse-config]** Deckhouse-config-webhook successfully starts without the `external-module-manager` module. [#5392](https://github.com/deckhouse/deckhouse/pull/5392)
  - **[control-plane-manager]** Hours and minutes can be used simultaneously in the `webhookCacheTTL` module configuration field. [#5417](https://github.com/deckhouse/deckhouse/pull/5417)
  - **[helm]** Find and notify deprecated helm releases for the current Kubernetes version + 2. [#5537](https://github.com/deckhouse/deckhouse/pull/5537)
  - **[ingress-nginx]** Fix `nginx_ingress_controller_ssl_expire_time_seconds`. [#5442](https://github.com/deckhouse/deckhouse/pull/5442)
