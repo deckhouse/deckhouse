@@ -12,3 +12,5 @@ properties:
           The same as in the Pods `spec.nodeSelector` parameter in Kubernetes.
 
           If parameter is omitted, Linstor nodes will be placed on all nodes.
+
+          **Caution!** Changing this parameter does not result in data redistribution. If node with data no longer matches the `nodeSelector`, data on that node will become inaccessible.
