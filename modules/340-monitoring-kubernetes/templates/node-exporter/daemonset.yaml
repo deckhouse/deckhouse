@@ -101,6 +101,7 @@ spec:
         - name: textfile
           readOnly: true
           mountPath: /host/textfile
+          mountPropagation: HostToContainer
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
