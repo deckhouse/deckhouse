@@ -122,7 +122,7 @@ securityContext:
 {{- define "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" -}}
 {{- /* Template context with .Values, .Chart, etc */ -}}
 {{- /* List of capabilities */ -}}
-securityContext:
+securityContext :
   readOnlyRootFilesystem: true
   allowPrivilegeEscalation: false
   capabilities:
