@@ -11,7 +11,10 @@ COPY exporter/ /src/
 RUN apk add --no-cache git && \
     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o loop main.go && \
     chown -R 64535:64535 /src/ && \
-    chmod 0700 /src/loop
+    chmod 0700 /src/loop && \
+    mkdir -p /var/run/node-exporter-textfile && \
+    chown -R 64535:64535 /var/run/node-exporter-textfile && \
+    chmod 0600 /var/run/node-exporter-textfile
 
 FROM $BASE_DISTROLESS
 
