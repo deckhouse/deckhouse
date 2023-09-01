@@ -378,7 +378,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return nil
 		})
 
-		log.Success("Deckhouse cluster was created successfully!")
+		log.Success("Deckhouse cluster was created successfully!\n")
 
 		if metaConfig.ClusterType == config.CloudClusterType {
 			_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
