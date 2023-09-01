@@ -122,6 +122,7 @@ spec:
           mountPath: /host/
         - name: textfile
           mountPath: /var/run/node-exporter-textfile
+          mountPropagation: HostToContainer
         - name: dockersock
           mountPath: /var/run/docker.sock
         - name: containerddir
