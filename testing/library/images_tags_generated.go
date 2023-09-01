@@ -136,6 +136,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
 		"pause":                     "imageHash-common-pause",
+		"shellOperator":             "imageHash-common-shellOperator",
 	},
 	"containerizedDataImporter": map[string]interface{}{
 		"cdiApiserver":    "imageHash-containerizedDataImporter-cdiApiserver",
