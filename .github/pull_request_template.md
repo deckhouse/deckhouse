@@ -26,6 +26,12 @@ If it doesn't matter whether the changes will be backported into the patch relea
 Delete the section if the PR is for release, and not for the patch release.
 -->
 
+## Manual testing proofs
+<!---
+  Please add screenshots, commands outputs, console capture (for ex. https://www.redhat.com/sysadmin/linux-script-command)
+  with proofs that your PR is working correctly.
+-->
+
 ## What is the expected result?
 <!---
   How can one check these changes after applying?  
