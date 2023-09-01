@@ -1,5 +1,6 @@
 ---
 title: "Модуль terraform-manager"
+description: Описание модуля terraform-manager Deckhouse. Модуль следит за приведением объектов в кластере к состоянию, описанному в Terraform state.   
 ---
 
 Модуль предоставляет инструменты для работы с состоянием Terraform в кластере Kubernetes.
