@@ -3,8 +3,7 @@ Copyright 2023 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-// https://github.com/aquasecurity/trivy-operator/blob/84df941b628441c285c08850bf73fd0e5fd3aa05/pkg/apis/aquasecurity/v1alpha1/compliance_types.go
-
+// https://github.com/aquasecurity/trivy-operator/blob/v0.15.1/pkg/apis/aquasecurity/v1alpha1/common_types.go
 package v1alpha1
 
 import (
@@ -17,8 +16,8 @@ import (
 // +kubebuilder:resource:scope=Cluster,shortName={compliance}
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="The age of the report"
-// +kubebuilder:printcolumn:name="Fail",type=integer,JSONPath=`.status.totalCounts.failCount`,priority=1,description="The number of checks that failed"
-// +kubebuilder:printcolumn:name="Pass",type=integer,JSONPath=`.status.totalCounts.passCount`,priority=1,description="The number of checks that passed"
+// +kubebuilder:printcolumn:name="Fail",type=integer,JSONPath=`.status.summary.failCount`,priority=1,description="The number of checks that failed"
+// +kubebuilder:printcolumn:name="Pass",type=integer,JSONPath=`.status.summary.passCount`,priority=1,description="The number of checks that passed"
 
 // ClusterComplianceReport is a specification for the ClusterComplianceReport resource.
 type ClusterComplianceReport struct {

@@ -16,3 +16,9 @@ properties:
             properties:
               knownRanges:
                 description: "Список диапазонов портов, которые будут разрешены в привязке hostPort."
+
+  trivyProvider:
+    description: "настройки trivy провайдера"
+    properties:
+      enable:
+        description: "включить trivy-provider (только в EE)"

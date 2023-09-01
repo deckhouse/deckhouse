@@ -6,6 +6,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	"admissionPolicyEngine": map[string]interface{}{
 		"constraintExporter": "imageHash-admissionPolicyEngine-constraintExporter",
 		"gatekeeper":         "imageHash-admissionPolicyEngine-gatekeeper",
+		"trivyProvider":      "imageHash-admissionPolicyEngine-trivyProvider",
 	},
 	"basicAuth": map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",

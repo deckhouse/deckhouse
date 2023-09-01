@@ -36,3 +36,12 @@ properties:
                     max:
                       type: integer
 
+  trivyProvider:
+    type: object
+    default: {}
+    description: "trivy provider settings"
+    properties:
+      enable:
+        type: boolean
+        default: false
+        description: "enable trivy provider (EE only)"

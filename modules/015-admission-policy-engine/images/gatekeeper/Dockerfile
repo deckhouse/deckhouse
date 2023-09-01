@@ -16,7 +16,7 @@ ENV GOPROXY=${GOPROXY} \
 WORKDIR /src
 
 RUN apk add --no-cache git
-RUN git clone --depth 1 --branch v3.10.0 ${SOURCE_REPO}/open-policy-agent/gatekeeper.git .
+RUN git clone --depth 1 --branch v3.13.0 ${SOURCE_REPO}/open-policy-agent/gatekeeper.git .
 RUN go build -mod vendor -ldflags="-s -w" -o gatekeeper
 
 RUN chown 64535:64535 gatekeeper

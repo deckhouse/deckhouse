@@ -78,7 +78,7 @@ spec:
         - --logtostderr
         - --health-addr=:9090
         - --prometheus-port=8888
-        - --enable-external-data=false
+        - --enable-external-data=true
         - --metrics-backend=prometheus
         - --disable-cert-rotation=true
         env:

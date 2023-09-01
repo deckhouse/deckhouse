@@ -23,8 +23,12 @@ import (
 	"strings"
 )
 
-var resourceFileRe = regexp.MustCompile(`openapi/config-values.y[a]?ml$|crds/.+.y[a]?ml$|openapi/cluster_configuration.y[a]?ml$|openapi/instance_class.y[a]?ml$|openapi/node_group.y[a]?ml$`)
-var docFileRe = regexp.MustCompile(`\.md$`)
+var (
+	resourceFileRe = regexp.MustCompile(`openapi/config-values.y[a]?ml$|crds/.+.y[a]?ml$|openapi/cluster_configuration.y[a]?ml$|openapi/instance_class.y[a]?ml$|openapi/node_group.y[a]?ml$`)
+	docFileRe      = regexp.MustCompile(`\.md$`)
+
+	excludeFileRe = regexp.MustCompile("crds/native/.+.y[a]?ml$")
+)
 
 func RunDocChangesValidation(info *DiffInfo) (exitCode int) {
 	fmt.Printf("Run 'doc changes' validation ...\n")
@@ -53,7 +57,7 @@ func RunDocChangesValidation(info *DiffInfo) (exitCode int) {
 			continue
 		}
 
-		if resourceFileRe.MatchString(fileName) {
+		if resourceFileRe.MatchString(fileName) && !excludeFileRe.MatchString(fileName) {
 			msgs.Add(checkResourceFile(fileName, info))
 			continue
 		}
