@@ -25,8 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/helm"
 )
 
-func run() error {
-	renderContent, err := renderHelmTemplate("340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl")
+func run(templateName string) error {
+	renderContent, err := renderHelmTemplate(templateName)
 	if err != nil {
 		return err
 	}

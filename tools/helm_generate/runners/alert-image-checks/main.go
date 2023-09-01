@@ -22,12 +22,18 @@ import (
 
 type ImageChecks struct {
 	fs *flag.FlagSet
+
+	template string
 }
 
 func NewImageChecks() *ImageChecks {
 	ic := &ImageChecks{
 		fs: flag.NewFlagSet("alert-image-checks", flag.ContinueOnError),
 	}
+
+	ic.fs.StringVar(&ic.template, "template",
+		"340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl",
+		"path to the template, that should be rendered starting from the module name")
 
 	return ic
 }
@@ -41,5 +47,5 @@ func (ic *ImageChecks) Init(args []string) error {
 }
 
 func (ic *ImageChecks) Run() error {
-	return run()
+	return run(ic.template)
 }
