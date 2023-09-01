@@ -71,9 +71,9 @@ data:
 			f.ValuesSet(hook.PasswordInternalKey(), []byte(`password`))
 			f.RunHook()
 		})
-		It("should clean password from values", func() {
+		It("shouldn't clean password from values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse(), "should delete internal value")
+			Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeTrue(), "shouldn't delete internal value")
 		})
 	})
 
@@ -107,9 +107,9 @@ data:
 				f.ValuesSetFromYaml(hook.ExternalAuthKey(), []byte(`{"authURL": "test"}`))
 				f.RunHook()
 			})
-			It("should clean password from values", func() {
+			It("shouldn't clean password from values", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse(), "should delete internal value")
+				Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeTrue(), "shouldn't delete internal value")
 			})
 		})
 

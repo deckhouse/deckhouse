@@ -105,14 +105,7 @@ func (h *Hook) Filter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 // It generates new password if there is no password in the configuration
 // and no Secret found.
 func (h *Hook) Handle(input *go_hook.HookInput) error {
-	externalAuthKey := h.ExternalAuthKey()
 	passwordInternalKey := h.PasswordInternalKey()
-
-	// Clear password from internal values if an external authentication is enabled.
-	if input.Values.Exists(externalAuthKey) {
-		input.Values.Remove(passwordInternalKey)
-		return nil
-	}
 
 	// Try to restore generated password from the Secret, or generate a new one.
 	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.Snapshots[secretBindingName])
