@@ -14,6 +14,7 @@ import (
 	"github.com/onsi/gomega/types"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
@@ -59,15 +60,18 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 
 		Expect(cmdData["scanJob.tolerations"].String()).To(tolerations)
 		Expect(cmdData["scanJob.nodeSelector"].String()).To(nodeSelector)
+	}
 
+	operatorDeploy := func(f *Config) object_store.KubeObject {
+		deploy := f.KubernetesResource("Deployment", "d8-operator-trivy", "operator")
+		Expect(deploy.Exists()).To(BeTrue())
+		return deploy
 	}
 
 	checkTrivyOperatorEnvs := func(f *Config, name, value string) {
-		deploy := f.KubernetesResource("Deployment", "d8-operator-trivy", "operator")
-		Expect(deploy.Exists()).To(BeTrue())
+		deploy := operatorDeploy(f)
 
 		operatorContainer := deploy.Field(`spec.template.spec.containers.0.env`).Array()
-
 		for _, env := range operatorContainer {
 			if env.Get("name").String() == name {
 				Expect(env.Get("value").String()).To(Equal(value))
@@ -75,6 +79,12 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 			}
 		}
 		Fail(fmt.Sprintf("env %s not found in operator-trivy container", name))
+	}
+
+	checkTrivyOperatorDeploy := func(f *Config, tolerations, nodeSelector types.GomegaMatcher) {
+		deploy := operatorDeploy(f)
+		Expect(deploy.Field("spec.template.spec.tolerations")).To(tolerations)
+		Expect(deploy.Field("spec.template.spec.nodeSelector")).To(nodeSelector)
 	}
 
 	BeforeEach(func() {
@@ -92,8 +102,12 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Operator trivy configmap has proper tolerations and nodeSelector", func() {
-			checkTrivyOperatorCM(f, Equal(""), Equal(""))
+		It("Operator trivy has proper tolerations and nodeSelector", func() {
+			cmTolerations := `[{"key":"node-role.kubernetes.io/master"},{"key":"node-role.kubernetes.io/control-plane"},{"key":"dedicated.deckhouse.io","operator":"Exists"},{"key":"dedicated","operator":"Exists"},{"key":"DeletionCandidateOfClusterAutoscaler"},{"key":"ToBeDeletedByClusterAutoscaler"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
+			deployTolerations := `[{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-trivy"},{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
+			nodeSelector := `{"node-role.deckhouse.io/system":""}`
+			checkTrivyOperatorCM(f, MatchJSON(cmTolerations), MatchJSON(nodeSelector))
+			checkTrivyOperatorDeploy(f, MatchJSON(deployTolerations), MatchJSON(nodeSelector))
 		})
 	})
 
@@ -107,10 +121,12 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Operator trivy configmap has proper tolerations and nodeSelector", func() {
-			tolerations := `[{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"}]`
+		It("Operator trivy has proper tolerations and nodeSelector", func() {
+			cmTolerations := `[{"key":"node-role.kubernetes.io/master"},{"key":"node-role.kubernetes.io/control-plane"},{"key":"dedicated.deckhouse.io","operator":"Exists"},{"key":"dedicated","operator":"Exists"},{"key":"DeletionCandidateOfClusterAutoscaler"},{"key":"ToBeDeletedByClusterAutoscaler"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
+			deployTolerations := `[{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
 			nodeSelector := `{"test-label":"test-value"}`
-			checkTrivyOperatorCM(f, MatchJSON(tolerations), MatchJSON(nodeSelector))
+			checkTrivyOperatorCM(f, MatchJSON(cmTolerations), MatchJSON(nodeSelector))
+			checkTrivyOperatorDeploy(f, MatchJSON(deployTolerations), MatchJSON(nodeSelector))
 		})
 	})
 
