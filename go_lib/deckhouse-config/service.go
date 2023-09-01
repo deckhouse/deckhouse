@@ -40,12 +40,12 @@ func InitService(mm ModuleManager) {
 	possibleNames.Add("global")
 
 	serviceInstance = &ConfigService{
-		moduleManager:   mm,
-		possibleNames:   possibleNames,
-		transformer:     NewTransformer(possibleNames),
-		configValidator: NewConfigValidator(mm.GetValuesValidator()),
-		statusReporter:  NewModuleInfo(mm, possibleNames),
-		externalNames:   make(map[string]string),
+		moduleManager:        mm,
+		possibleNames:        possibleNames,
+		transformer:          NewTransformer(possibleNames),
+		configValidator:      NewConfigValidator(mm.GetValuesValidator()),
+		statusReporter:       NewModuleInfo(mm, possibleNames),
+		moduleNamesToSources: make(map[string]string),
 	}
 }
 
@@ -63,8 +63,8 @@ type ConfigService struct {
 	configValidator *ConfigValidator
 	statusReporter  *StatusReporter
 
-	externalNamesLock sync.RWMutex
-	externalNames     map[string]string
+	moduleNamesToSourcesMu sync.RWMutex
+	moduleNamesToSources   map[string]string
 }
 
 func (srv *ConfigService) PossibleNames() set.Set {
@@ -83,31 +83,30 @@ func (srv *ConfigService) StatusReporter() *StatusReporter {
 	return srv.statusReporter
 }
 
-func (srv *ConfigService) SetExternalNames(allExternalNamesToRepos map[string]string) {
-	srv.externalNamesLock.Lock()
-	defer srv.externalNamesLock.Unlock()
+func (srv *ConfigService) SetModuleNameToSources(allModuleNamesToSources map[string]string) {
+	srv.moduleNamesToSourcesMu.Lock()
+	srv.moduleNamesToSources = allModuleNamesToSources
+	srv.moduleNamesToSourcesMu.Unlock()
 
-	srv.externalNames = allExternalNamesToRepos
-	for moduleName, source := range allExternalNamesToRepos {
+	for moduleName, source := range allModuleNamesToSources {
 		srv.moduleManager.SetModuleSource(moduleName, source)
 	}
 }
 
-func (srv *ConfigService) AddExternalModuleName(moduleName, moduleSource string) {
-	srv.externalNamesLock.Lock()
-	defer srv.externalNamesLock.Unlock()
-
-	srv.externalNames[moduleName] = moduleSource
+func (srv *ConfigService) AddModuleNameToSource(moduleName, moduleSource string) {
+	srv.moduleNamesToSourcesMu.Lock()
+	srv.moduleNamesToSources[moduleName] = moduleSource
+	srv.moduleNamesToSourcesMu.Unlock()
 
 	srv.moduleManager.SetModuleSource(moduleName, moduleSource)
 }
 
-func (srv *ConfigService) ExternalNames() map[string]string {
-	srv.externalNamesLock.RLock()
-	defer srv.externalNamesLock.RUnlock()
+func (srv *ConfigService) ModuleToSourcesNames() map[string]string {
+	srv.moduleNamesToSourcesMu.RLock()
+	defer srv.moduleNamesToSourcesMu.RUnlock()
 
 	res := make(map[string]string)
-	for module, repo := range srv.externalNames {
+	for module, repo := range srv.moduleNamesToSources {
 		res[module] = repo
 	}
 

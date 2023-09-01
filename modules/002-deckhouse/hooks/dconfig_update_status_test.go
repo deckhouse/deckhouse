@@ -77,11 +77,18 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			Expect(promCfg.Field("status.state").String()).To(Equal("Enabled"), "should update status")
 		})
 
-		It("Should be embedded", func() {
+		It("Should be with the empty type", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.type").String()).To(Equal("Embedded"), "should update status")
+			Expect(promCfg.Field("status.type").String()).To(Equal(""), "should update status")
+		})
+
+		It("Should be ready", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
+			Expect(promCfg.Field("status.status").String()).To(Equal("Converging: module is waiting for the first run"), "should update status")
 		})
 	})
 
@@ -108,15 +115,25 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			Expect(promCfg.Field("status.state").String()).To(ContainSubstring("Disabled"), "should be disabled by script, got %s", promCfg.Field("status").String())
 		})
 
-		It("Should be embedded", func() {
+		It("Should be with the empty type", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.type").String()).To(Equal("Embedded"), "should update status")
+			Expect(promCfg.Field("status.type").String()).To(Equal(""), "should update status")
+		})
+
+		It("Should be disabled by enabled script", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
+			Expect(promCfg.Field("status.status").String()).To(
+				Equal("Info: turned off by 'enabled'-script, refer to the module documentation"),
+				"should update status",
+			)
 		})
 	})
 
-	Context("External module", func() {
+	Context("Module from a module source", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(moduleConfigYaml)
 
@@ -127,7 +144,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			Expect(err).ShouldNot(HaveOccurred())
 			d8config.InitService(mm)
 
-			d8config.Service().SetExternalNames(map[string]string{
+			d8config.Service().SetModuleNameToSources(map[string]string{
 				"module-one": "repo.one/modules",
 			})
 
@@ -135,11 +152,18 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			f.RunHook()
 		})
 
-		It("Should be external with repo", func() {
+		It("Should be with repo", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.type").String()).To(Equal("External: repo.one/modules"), "should update status")
+			Expect(promCfg.Field("status.type").String()).To(Equal("repo.one/modules"), "should update status")
+		})
+
+		It("Should be ready", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
+			Expect(promCfg.Field("status.status").String()).To(Equal("Converging: module is waiting for the first run"), "should update status")
 		})
 	})
 

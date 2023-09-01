@@ -25,7 +25,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
@@ -50,10 +49,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:                         "Module",
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"type": "external"},
-			},
-			FilterFunc: filterExternalModule,
+			FilterFunc:                   filterExternalModule,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -75,7 +71,10 @@ func cleanupReleases(input *go_hook.HookInput) error {
 
 	moduleReleases := make(map[string][]deprecatedRelease, 0)
 	outdatedModuleReleases := make(map[string][]deprecatedRelease, 0)
-	enabledModules := set.NewFromSnapshot(input.Snapshots["modules"])
+
+	// TODO(nabokihms): Instead of subscribing to Kubernetes objects,
+	//   make it available through global values like `enabledModules`
+	availableModules := set.NewFromSnapshot(input.Snapshots["modules"])
 
 	for _, sn := range snap {
 		if sn == nil {
@@ -90,7 +89,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 
 	// for absent modules - delete all ExternalModuleRelease resources
 	for moduleName, releases := range moduleReleases {
-		if enabledModules.Has(moduleName) {
+		if availableModules.Has(moduleName) {
 			continue
 		}
 
