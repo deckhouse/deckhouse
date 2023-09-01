@@ -48,12 +48,13 @@ kubectl logs job.batch/kube-bench
 * состояние очереди Deckhouse
 * Deckhouse values (без каких-либо конфиденциальных данных)
 * список включенных модулей
-* манифесты controller'ов и pod'ов manifests из всех пространств имен Deckhouse
-* состояние `nodes`
-* состояние `nodegroups`
-* состояние `machines`
-* все объекты `deckhousereleases`
 * `events` из всех пространств имен
+* манифесты controller'ов и pod'ов manifests из всех пространств имен Deckhouse
+* все объекты `nodegroups`
+* все объекты `nodes`
+* все объекты `machines`
+* Данные о текущей версии пода deckhouse
+* все объекты `deckhousereleases`
 * логи Deckhouse
 * логи machine controller manager
 * логи cloud controller manager
@@ -61,8 +62,9 @@ kubectl logs job.batch/kube-bench
 * логи Vertical Pod Autoscaler admission controller
 * логи Vertical Pod Autoscaler recommender
 * логи Vertical Pod Autoscaler updater
-* все горящие уведомления в Prometheus
+* логи Prometheus
 * метрики terraform-state-exporter
+* все горящие уведомления в Prometheus
 
 ## Как отлаживать проблемы в Pod'ах при помощи ephemeral containers?
 
