@@ -19,5 +19,6 @@ RUN apk add --no-cache git && \
 FROM $BASE_DISTROLESS
 
 COPY --from=artifact /src/loop /
+COPY --from=artifact /var/run/node-exporter-textfile /var/run/node-exporter-textfile
 
 ENTRYPOINT ["/loop"]
