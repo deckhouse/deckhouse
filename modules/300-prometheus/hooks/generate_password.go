@@ -26,4 +26,13 @@ const (
 	authSecretName  = "basic-auth"
 )
 
-var _ = generate_password.RegisterHook(moduleValuesKey, authSecretNS, authSecretName)
+var (
+	generatePasswordSettings = generate_password.HookSettings{
+		ModuleName:                 moduleValuesKey,
+		Namespace:                  authSecretNS,
+		SecretName:                 authSecretName,
+		KeepPasswordOnExternalAuth: true,
+	}
+)
+
+var _ = generate_password.RegisterHook(generatePasswordSettings)

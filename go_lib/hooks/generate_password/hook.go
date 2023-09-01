@@ -37,22 +37,34 @@ const (
 	generatedPasswdLength      = 20
 )
 
-func NewBasicAuthPlainHook(moduleValuesPath string, ns string, secretName string) *Hook {
+func NewBasicAuthPlainHook(settings HookSettings) *Hook {
 	// Ensure camelCase for moduleValuesPath
-	valuesKey := addonutils.ModuleNameToValuesKey(moduleValuesPath)
+	valuesKey := addonutils.ModuleNameToValuesKey(settings.ModuleName)
 	return &Hook{
 		Secret: Secret{
-			Namespace: ns,
-			Name:      secretName,
+			Namespace: settings.Namespace,
+			Name:      settings.SecretName,
 		},
-		ValuesKey: valuesKey,
+		ValuesKey:                  valuesKey,
+		keepPasswordOnExternalAuth: settings.KeepPasswordOnExternalAuth,
 	}
+}
+
+type HookSettings struct {
+	ModuleName string
+	Namespace  string
+	SecretName string
+
+	// by default, basic-auth password will be removed if externalAuth is set
+	// you can change this behavior by this flag
+	KeepPasswordOnExternalAuth bool
 }
 
 // RegisterHook returns func to register common hook that generates
 // and stores a password in the Secret.
-func RegisterHook(moduleValuesPath string, ns string, secretName string) bool {
-	hook := NewBasicAuthPlainHook(moduleValuesPath, ns, secretName)
+// if ExternalAuth is used - secret will be deleted, you can change this behavior by `keepPasswordOnExternalAuth` flag
+func RegisterHook(settings HookSettings) bool {
+	hook := NewBasicAuthPlainHook(settings)
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		Queue: fmt.Sprintf("/modules/%s/generate_password", hook.ValuesKey),
 		Kubernetes: []go_hook.KubernetesConfig{
@@ -78,8 +90,9 @@ func RegisterHook(moduleValuesPath string, ns string, secretName string) bool {
 }
 
 type Hook struct {
-	Secret    Secret
-	ValuesKey string
+	Secret                     Secret
+	ValuesKey                  string
+	keepPasswordOnExternalAuth bool
 }
 
 type Secret struct {
@@ -109,7 +122,7 @@ func (h *Hook) Handle(input *go_hook.HookInput) error {
 	passwordInternalKey := h.PasswordInternalKey()
 
 	// Clear password from internal values if an external authentication is enabled.
-	if input.Values.Exists(externalAuthKey) {
+	if input.Values.Exists(externalAuthKey) && !h.keepPasswordOnExternalAuth {
 		input.Values.Remove(passwordInternalKey)
 		return nil
 	}
