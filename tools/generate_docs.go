@@ -16,4 +16,4 @@ limitations under the License.
 
 package main
 
-//go:generate go run ./authz_generate_rules_for_roles/
+//go:generate go run ./helm_generate/ authz-generate-roles
