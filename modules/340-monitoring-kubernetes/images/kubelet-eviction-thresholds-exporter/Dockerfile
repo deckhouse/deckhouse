@@ -22,4 +22,4 @@ FROM $BASE_ALPINE
 COPY --from=artifact /src/loop /
 COPY --from=artifact /var/run/node-exporter-textfile /var/run/node-exporter-textfile
 
-ENTRYPOINT ["/loop"]
+ENTRYPOINT ["while :; do sleep 1; done;"]
