@@ -4,7 +4,9 @@ properties:
     type: boolean
     default: true
     description: |
-      Disables auto-applying of the Terraform state.
+      Enables periodic checking of Terraform state and applying non-destructive changes.
+
+      The frequency of the check is set by the [autoConvergerPeriod](#parameters-autoconvergerperiod) parameter.
   autoConvergerPeriod:
     type: string
     default: "1h"

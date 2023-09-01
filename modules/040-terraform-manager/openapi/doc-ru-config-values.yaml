@@ -1,7 +1,9 @@
 properties:
   autoConvergerEnabled:
     description: |
-      Включает проверку состояния Terraform'а и примененине недеструктивных изменений.
+      Включает периодическую проверку состояния Terraform'а и применение недеструктивных изменений.
+
+      Периодичность проверки задается параметром [autoConvergerPeriod](#parameters-autoconvergerperiod).
   autoConvergerPeriod:
     description: |
       Промежуток времени, через который проверяется состояние Terraform'а.
