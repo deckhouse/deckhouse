@@ -1213,7 +1213,7 @@
       "type": "table"
     },
     {
-      "description": "Difference between the last timestamp in the Prometheus tsdb and the current time. It shows how far in the past users can see.",
+      "description": "Difference between the oldest timestamp in the Prometheus tsdb and the current time. It shows how far in the past Prometheus instance collect the stats.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1320,7 +1320,7 @@
         {
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (service) (time() - prometheus_tsdb_lowest_timestamp_seconds) / 60 / 60 / 24",
+          "expr": "max by (service) (time() - prometheus_tsdb_lowest_timestamp_seconds{service=~\"prometheus|prometheus-longterm\", namespace=\"d8-monitoring\"}) / 60 / 60 / 24",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1328,7 +1328,7 @@
           "refId": "A"
         }
       ],
-      "title": "Metrics Interval",
+      "title": "Oldest metrics in Prometheus",
       "transformations": [
         {
           "id": "filterFieldsByName",
