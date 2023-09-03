@@ -388,7 +388,7 @@ func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode stri
 				}
 
 				if ok {
-					log.InfoLn("Deckhouse pod is Ready!")
+					log.Success("Deckhouse pod is Ready!\n")
 					return nil
 				}
 
