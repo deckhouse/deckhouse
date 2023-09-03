@@ -90,7 +90,7 @@ spec:
         - '--collector.filesystem.ignored-fs-types'
         - '^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$'
         - '--collector.textfile.directory'
-        - '/host/textfile'
+        - '/host/textfile*/*.prom'
         - '--collector.netstat.fields'
         - '^(.*_(InErrors|InErrs)|Ip_Forwarding|Ip(6|Ext)_(InOctets|OutOctets)|Icmp6?_(InMsgs|OutMsgs)|TcpExt_.*|Tcp_(ActiveOpens|InSegs|OutSegs|PassiveOpens|RetransSegs|CurrEstab)|Udp6?_(InDatagrams|OutDatagrams|NoPorts))$'
         volumeMounts:
@@ -101,6 +101,10 @@ spec:
         - name: textfile
           readOnly: true
           mountPath: /host/textfile
+          mountPropagation: HostToContainer
+        - name: textfile-1
+          readOnly: true
+          mountPath: /host/textfile-1
           mountPropagation: HostToContainer
         resources:
           requests:
@@ -120,7 +124,7 @@ spec:
         - name: root
           readOnly:  true
           mountPath: /host/
-        - name: textfile
+        - name: textfile-1
           mountPath: /var/run/node-exporter-textfile
         - name: dockersock
           mountPath: /var/run/docker.sock
@@ -189,3 +193,5 @@ spec:
         name: kube
       imagePullSecrets:
       - name: deckhouse-registry
+      - emptyDir:
+        name: textfile-1
