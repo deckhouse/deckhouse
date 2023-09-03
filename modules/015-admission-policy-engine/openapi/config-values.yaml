@@ -39,7 +39,9 @@ properties:
   trivyProvider:
     type: object
     default: {}
-    description: "trivy provider settings"
+    description: |
+      Trivy provider settings.
+      Trivy provider will deny creation of the `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` with vulnerable images in namespaces with `security.deckhouse.io/trivy-provider: ""` label.
     properties:
       enable:
         type: boolean

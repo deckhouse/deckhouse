@@ -9,6 +9,10 @@ metadata:
 spec:
   enforcementAction: deny
   match:
+    scope: Namespaced
+    namespaceSelector:
+      matchLabels:
+        security.deckhouse.io/trivy-provider: ""
     kinds:
       - apiGroups: ["apps"]
         kinds: ["Deployment", "DaemonSet", "StatefulSet"]
