@@ -193,5 +193,5 @@ spec:
         name: kube
       imagePullSecrets:
       - name: deckhouse-registry
-      - emptyDir:
+      - emptyDir: {}
         name: textfile-1
