@@ -15,7 +15,7 @@ import (
 var _ = Describe("Flant integration :: hooks :: envs_from_deckhouse_secret ", func() {
 	f := HookExecutionConfigInit(`{"flantIntegration":{"internal":{}}}`, `{}`)
 
-	Context("Without d8-deckhouse-flant-integration secret", func() {
+	Context("Without deckhouse-discovery secret", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 0))
 			f.RunHook()
@@ -27,7 +27,7 @@ var _ = Describe("Flant integration :: hooks :: envs_from_deckhouse_secret ", fu
 		})
 	})
 
-	Context("With d8-deckhouse-flant-integration secret", func() {
+	Context("With deckhouse-discovery secret", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 apiVersion: v1
@@ -38,7 +38,7 @@ kind: Secret
 metadata:
   labels:
     heritage: deckhouse
-  name: d8-deckhouse-flant-integration
+  name: deckhouse-discovery
   namespace: d8-system
 type: Opaque
 `, 0))
