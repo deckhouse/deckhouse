@@ -22,6 +22,30 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
+type Options struct {
+	SSHUser             string
+	SSHBastionUser      string
+	SSHAgentPrivateKeys []string
+}
+
+func NewClientWithOptions(opts Options) (*Client, error) {
+	settings := session.NewSession(session.Input{
+		User:        opts.SSHUser,
+		BastionUser: opts.SSHBastionUser,
+	})
+
+	privKeys, err := app.ParseSSHPrivateKeyPaths(opts.SSHAgentPrivateKeys)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing ssh agent private keys %v: %w", opts.SSHAgentPrivateKeys, err)
+	}
+
+	return &Client{
+		Settings:                     settings,
+		PrivateKeys:                  privKeys,
+		ReinitializeAgentPrivateKeys: true,
+	}, nil
+}
+
 func NewClientFromFlags() *Client {
 	settings := session.NewSession(session.Input{
 		AvailableHosts: app.SSHHosts,
@@ -34,7 +58,8 @@ func NewClientFromFlags() *Client {
 	})
 
 	return &Client{
-		Settings: settings,
+		Settings:    settings,
+		PrivateKeys: app.SSHPrivateKeys,
 	}
 }
 
