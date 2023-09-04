@@ -29,7 +29,7 @@ import (
 
 var _ = Describe("Modules :: cilium-hubble :: hooks :: generate_password", func() {
 	var (
-		hook = generate_password.NewBasicAuthPlainHook(moduleValuesKey, authSecretNS, authSecretName)
+		hook = generate_password.NewBasicAuthPlainHook(generatePasswordSettings)
 
 		testPassword    = generate_password.GeneratePassword()
 		testPasswordB64 = base64.StdEncoding.EncodeToString([]byte(
