@@ -118,6 +118,7 @@ spec:
     bb-log-info "SPAAS service is accessible, starting DRBD building"
 
     cd /opt/deckhouse/drbd
+    make clean || true
     make
     make install
     cd drbd
