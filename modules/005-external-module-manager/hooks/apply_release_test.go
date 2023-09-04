@@ -42,9 +42,9 @@ global:
 external-module-manager:
   internal: {}
 `, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "ExternalModuleRelease", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleRelease", false)
 
-	Context("Cluster has pending ExternalModuleRelease", func() {
+	Context("Cluster has pending ModuleRelease", func() {
 		BeforeEach(func() {
 			var err error
 			tmpDir, err = os.MkdirTemp(os.TempDir(), "exrelease-*")
@@ -57,7 +57,7 @@ external-module-manager:
 			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ExternalModuleRelease
+kind: ModuleRelease
 metadata:
   name: echoserver-v0.0.1
 spec:
@@ -77,7 +77,7 @@ status:
 
 		It("module symlink should be created", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Deployed"))
 			moduleLinks, err := os.ReadDir(tmpDir + "/modules")
 			if err != nil {
 				Fail(err.Error())
@@ -86,7 +86,7 @@ status:
 			Expect(moduleLinks[0].Name()).To(Equal("900-echoserver"))
 		})
 
-		Context("ExternalModuleRelease was deleted", func() {
+		Context("ModuleRelease was deleted", func() {
 			BeforeEach(func() {
 				st := f.KubeStateSet(``)
 				f.BindingContexts.Set(st)
@@ -105,7 +105,7 @@ status:
 		})
 	})
 
-	Context("Cluster has ExternalModuleRelease with custom weight", func() {
+	Context("Cluster has ModuleRelease with custom weight", func() {
 		BeforeEach(func() {
 			var err error
 			tmpDir, err = os.MkdirTemp(os.TempDir(), "exrelease-*")
@@ -118,7 +118,7 @@ status:
 			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ExternalModuleRelease
+kind: ModuleRelease
 metadata:
   name: echoserver-v0.0.1
 spec:
@@ -139,7 +139,7 @@ status:
 
 		It("module symlink should be created with custom weight", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Deployed"))
 			moduleLinks, err := os.ReadDir(tmpDir + "/modules")
 			if err != nil {
 				Fail(err.Error())
@@ -148,13 +148,13 @@ status:
 			Expect(moduleLinks[0].Name()).To(Equal("987-echoserver"))
 		})
 
-		Context("ExternalModuleRelease was changed with another weight", func() {
+		Context("ModuleRelease was changed with another weight", func() {
 			BeforeEach(func() {
 				f.KubeStateSet(``) // Empty cluster
 				st := f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ExternalModuleRelease
+kind: ModuleRelease
 metadata:
   name: echoserver-v0.0.1
 spec:
@@ -165,7 +165,7 @@ status:
   phase: Deployed
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ExternalModuleRelease
+kind: ModuleRelease
 metadata:
   name: echoserver-v0.0.2
 spec:
@@ -182,8 +182,8 @@ status:
 
 			It("should change module symlink", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Superseded"))
-				Expect(f.KubernetesGlobalResource("ExternalModuleRelease", "echoserver-v0.0.2").Field("status.phase").String()).To(Equal("Deployed"))
+				Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Superseded"))
+				Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.2").Field("status.phase").String()).To(Equal("Deployed"))
 				moduleLinks, err := os.ReadDir(tmpDir + "/modules")
 				if err != nil {
 					Fail(err.Error())

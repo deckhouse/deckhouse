@@ -10,7 +10,7 @@ spec:
             spec:
               properties:
                 moduleName:
-                  description: Название стороннего модуля.
+                  description: Название модуля.
                 version:
                   description: Версия модуля в данном релизе.
                 weight:

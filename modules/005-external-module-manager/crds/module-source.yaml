@@ -1,8 +1,7 @@
-### DEPRECATED, DO NOT EDIT
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: externalmodulesources.deckhouse.io
+  name: modulesources.deckhouse.io
   labels:
     heritage: deckhouse
     module: external-module-manager
@@ -10,9 +9,11 @@ spec:
   group: deckhouse.io
   scope: Cluster
   names:
-    plural: externalmodulesources
-    singular: externalmodulesource
-    kind: ExternalModuleSource
+    plural: modulesources
+    singular: modulesource
+    kind: ModuleSource
+    shortNames:
+      - ms
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -44,7 +45,7 @@ spec:
                       type: string
                       description: URL of the container registry.
                       x-examples:
-                        - registry.deckhouse.io/deckhouse/external-modules
+                        - registry.example.io/deckhouse/modules
                     dockerCfg:
                       type: string
                       description: Container registry access token in Base64.
