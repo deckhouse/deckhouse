@@ -70,10 +70,9 @@ data:
 			f.ValuesSetFromYaml(hook.ExternalAuthKey(), []byte(`{"authURL": "test"}`))
 			f.RunHook()
 		})
-		It("should keep password from values", func() {
+		It("should delete password from values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeTrue(), "should delete internal value")
-			Expect(f.ValuesGet(hook.PasswordInternalKey()).String()).Should(Equal(testPassword))
+			Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse(), "should delete internal value")
 		})
 	})
 
@@ -100,18 +99,5 @@ data:
 				Expect(pass).ShouldNot(BeEmpty())
 			})
 		})
-
-		Context("giving external auth configuration without previous basic-auth", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-				f.ValuesSetFromYaml(hook.ExternalAuthKey(), []byte(`{"authURL": "test"}`))
-				f.RunHook()
-			})
-			It("should generate basic-auth password", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeTrue(), "should generate a new password")
-			})
-		})
-
 	})
 })
