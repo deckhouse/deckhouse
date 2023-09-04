@@ -67,6 +67,9 @@ func (vh *validationHandler) imageDigestValidationHandler() http.Handler {
 		if !ok {
 			return rejectResult("incorrect pod data")
 		}
+
+		vh.logger.WithField("pod.status", pod.Status.ContainerStatuses).Debug("")
+
 		for _, image := range vh.GetImagesFromPod(pod) {
 			err := vh.CheckImageDigest(image)
 			if err != nil {
