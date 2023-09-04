@@ -32,6 +32,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
+/* Migration: Delete after Deckhouse release 1.53
+This migration is implemented as a global hook because it must happen
+before the rolling update of the validating webhook from the 002-deckhouse module.
+Otherwise, the webhook will prevent any interactions with ExternalModule* resources.
+*/
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(modulesCRMigrate))
