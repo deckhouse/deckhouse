@@ -103,29 +103,6 @@ func (vh *validationHandler) CheckImageDigest(imageName string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	index, err := remote.Index(ref,
-		remote.WithTransport(vh.registryTransport),
-		remote.WithContext(ctx),
-	)
-	if err != nil {
-		return err
-	}
-
-	indexDigest, err := index.Digest()
-	if err != nil {
-		return err
-	}
-
-	indexManifest, err := index.IndexManifest()
-	if err != nil {
-		return err
-	}
-
-	vh.logger.WithField(
-		"indexDigest", indexDigest,
-	).WithField(
-		"indexManifest", indexManifest,
-	).Debug("index info")
 
 	image, err := remote.Image(
 		ref,
