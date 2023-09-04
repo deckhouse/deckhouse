@@ -128,13 +128,13 @@ func (vh *validationHandler) CheckImageDigest(imageName string) error {
 		"imageName", imageName,
 	).WithField(
 		"annotations", manifest.Annotations,
-	).Info("image from remote")
+	).Debug("image from remote")
 
 	gostLayersHash, err := vh.CalculateLaersGostHash(image)
 	if err != nil {
 		return err
 	}
-	vh.logger.WithField("gostLayersHash", ByteHashToString(gostLayersHash)).Info("image layers gost hash")
+	vh.logger.WithField("gostLayersHash", ByteHashToString(gostLayersHash)).Debug("image layers gost hash")
 
 	return vh.CompareImageGostHash(image, gostLayersHash)
 }
@@ -155,7 +155,7 @@ func (vh *validationHandler) CalculateLaersGostHash(image crv1.Image) ([]byte, e
 		if err != nil {
 			return nil, err
 		}
-		vh.logger.WithField("layerHash", digest.String()).Info("image layer hash")
+		vh.logger.WithField("layerHash", digest.String()).Debug("image layer hash")
 		layersDigestBuilder.WriteString(digest.String())
 	}
 
@@ -184,13 +184,12 @@ func (vh *validationHandler) CompareImageGostHash(image crv1.Image, gostHash []b
 	if !ok {
 		return fmt.Errorf("the image does not contain gost digest")
 	}
-	vh.logger.WithField("imageGostHashStr", imageGostHashStr).Info("imageGostHashStr")
+	vh.logger.WithField("imageGostHashStr", imageGostHashStr).Debug("imageGostHashStr")
 
 	imageGostHashByte, err := hex.DecodeString(imageGostHashStr)
 	if err != nil {
 		return fmt.Errorf("invalid gost image digest: %w", err)
 	}
-	vh.logger.WithField("imageGostHashByte", imageGostHashByte).Info("imageGostHashByte")
 
 	if subtle.ConstantTimeCompare(imageGostHashByte, gostHash) == 0 {
 		return fmt.Errorf("invalid gost image digest comparation")
