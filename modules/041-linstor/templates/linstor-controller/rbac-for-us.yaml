@@ -80,6 +80,7 @@ rules:
       - list
       - create
       - delete
+      - deletecollection
       - update
       - patch
 ---

@@ -13,22 +13,8 @@ This patch passes through `/usr/lib` directory into kernel-module-injector and s
 
 - Upstream: https://github.com/piraeusdatastore/piraeus-operator/pull/475
 
-### Add SELinux params for enforced mode
-
-This is proposition from upstream, made for set satellite usable in enforced SELinux mode. 
-
-- Upstream: https://github.com/piraeusdatastore/piraeus-operator/pull/477
-
-
 ### Add metrics port
 
 Add the securedMetricsPort parameter to the linstorcontrollers.piraeus.linbit.com crd. If this parameter is set, then port for scraping metrics will be added to linstor-controller service and K8S_AWAIT_ELECTION_SERVICE_PORTS_JSON env var of the linstor-controller deployment. This is required when using service monitor to monitor the linstor controller in HA mode.
 
 - Upstream: https://github.com/piraeusdatastore/piraeus-operator/pull/495
-
-
-### Bump k8s api versions and client for piraeus operator
-
-Bump k8s api versions and client for piraeus operator.
-
-- Upstream: https://github.com/piraeusdatastore/piraeus-operator/pull/504
