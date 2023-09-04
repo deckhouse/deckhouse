@@ -184,13 +184,16 @@ func (vh *validationHandler) CompareImageGostHash(image crv1.Image, gostHash []b
 	if !ok {
 		return fmt.Errorf("the image does not contain gost digest")
 	}
+	vh.logger.WithField("imageGostHashStr", imageGostHashStr).Info("imageGostHashStr")
+
 	imageGostHashByte, err := hex.DecodeString(imageGostHashStr)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid gost image digest: %w", err)
 	}
+	vh.logger.WithField("imageGostHashByte", imageGostHashByte).Info("imageGostHashByte")
 
 	if subtle.ConstantTimeCompare(imageGostHashByte, gostHash) == 0 {
-		return fmt.Errorf("invalid gost image digest")
+		return fmt.Errorf("invalid gost image digest comparation")
 	}
 
 	return nil
