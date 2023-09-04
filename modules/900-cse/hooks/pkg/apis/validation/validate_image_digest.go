@@ -18,6 +18,7 @@ package validation
 
 import (
 	"context"
+	"crypto/subtle"
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
@@ -35,6 +36,10 @@ import (
 	"go.cypherpunks.ru/gogost/v5/gost34112012256"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	gostHashAnnotationKey = "gost-digest"
 )
 
 type validationHandler struct {
@@ -117,11 +122,6 @@ func (vh *validationHandler) CheckImageDigest(imageName string) error {
 		return err
 	}
 
-	layers, err := image.Layers()
-	if err != nil {
-		return err
-	}
-
 	vh.logger.WithField(
 		"imageDigest", imageDigest.String(),
 	).WithField(
@@ -130,25 +130,30 @@ func (vh *validationHandler) CheckImageDigest(imageName string) error {
 		"annotations", manifest.Annotations,
 	).Info("image from remote")
 
-	gostLaersHash, err := vh.CalculateLaersGostHash(layers)
+	gostLayersHash, err := vh.CalculateLaersGostHash(image)
 	if err != nil {
 		return err
 	}
+	vh.logger.WithField("gostLayersHash", ByteHashToString(gostLayersHash)).Info("image layers gost hash")
 
-	vh.logger.WithField("gostLayersHash", gostLaersHash).Info("image layers gost hash")
-	return nil
+	return vh.CompareImageGostHash(image, gostLayersHash)
 }
 
 func (vh *validationHandler) ParseImageName(image string) (name.Reference, error) {
 	return name.ParseReference(image, name.WithDefaultRegistry(vh.defaultRegistry))
 }
 
-func (vh *validationHandler) CalculateLaersGostHash(layers []crv1.Layer) (string, error) {
+func (vh *validationHandler) CalculateLaersGostHash(image crv1.Image) ([]byte, error) {
+	layers, err := image.Layers()
+	if err != nil {
+		return nil, err
+	}
+
 	layersDigestBuilder := strings.Builder{}
 	for _, layer := range layers {
 		digest, err := layer.Digest()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		vh.logger.WithField("layerHash", digest.String()).Info("image layer hash")
 		layersDigestBuilder.WriteString(digest.String())
@@ -157,15 +162,40 @@ func (vh *validationHandler) CalculateLaersGostHash(layers []crv1.Layer) (string
 	data := layersDigestBuilder.String()
 
 	if len(data) == 0 {
-		return "", fmt.Errorf("invalid layers hash data")
+		return nil, fmt.Errorf("invalid layers hash data")
 	}
 
 	hasher := gost34112012256.New()
-	_, err := hasher.Write([]byte(data))
+	_, err = hasher.Write([]byte(data))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	gostHash := hex.EncodeToString(hasher.Sum(nil))
-	return gostHash, nil
+	return hasher.Sum(nil), nil
+}
+
+func (vh *validationHandler) CompareImageGostHash(image crv1.Image, gostHash []byte) error {
+	manifest, err := image.Manifest()
+	if err != nil {
+		return err
+	}
+
+	imageGostHashStr, ok := manifest.Annotations[gostHashAnnotationKey]
+	if !ok {
+		return fmt.Errorf("the image does not contain gost digest")
+	}
+	imageGostHashByte, err := hex.DecodeString(imageGostHashStr)
+	if err != nil {
+		return err
+	}
+
+	if subtle.ConstantTimeCompare(imageGostHashByte, gostHash) == 0 {
+		return fmt.Errorf("invalid gost image digest")
+	}
+
+	return nil
+}
+
+func ByteHashToString(in []byte) string {
+	return hex.EncodeToString(in)
 }
