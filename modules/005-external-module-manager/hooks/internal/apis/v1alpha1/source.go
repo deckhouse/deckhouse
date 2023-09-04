@@ -37,12 +37,14 @@ type ModuleSource struct {
 }
 
 type ModuleSourceSpec struct {
-	Registry struct {
-		Repo      string `json:"repo"`
-		DockerCFG string `json:"dockerCfg"`
-		CA        string `json:"ca"`
-	} `json:"registry"`
-	ReleaseChannel string `json:"releaseChannel"`
+	Registry       ModuleSourceSpecRegistry `json:"registry"`
+	ReleaseChannel string                   `json:"releaseChannel"`
+}
+
+type ModuleSourceSpecRegistry struct {
+	Repo      string `json:"repo"`
+	DockerCFG string `json:"dockerCfg"`
+	CA        string `json:"ca"`
 }
 
 type ModuleSourceStatus struct {

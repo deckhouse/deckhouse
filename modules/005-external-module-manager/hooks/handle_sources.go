@@ -76,30 +76,30 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleSource))
 
 func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ex v1alpha1.ModuleSource
+	var ms v1alpha1.ModuleSource
 
-	err := sdk.FromUnstructured(obj, &ex)
+	err := sdk.FromUnstructured(obj, &ms)
 	if err != nil {
 		return nil, err
 	}
 
 	// remove unused fields
-	newex := v1alpha1.ModuleSource{
-		TypeMeta: ex.TypeMeta,
+	newms := v1alpha1.ModuleSource{
+		TypeMeta: ms.TypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ex.Name,
+			Name: ms.Name,
 		},
-		Spec: ex.Spec,
+		Spec: ms.Spec,
 		Status: v1alpha1.ModuleSourceStatus{
-			ModuleErrors: ex.Status.ModuleErrors,
+			ModuleErrors: ms.Status.ModuleErrors,
 		},
 	}
 
-	if newex.Spec.ReleaseChannel == "" {
-		newex.Spec.ReleaseChannel = defaultReleaseChannel
+	if newms.Spec.ReleaseChannel == "" {
+		newms.Spec.ReleaseChannel = defaultReleaseChannel
 	}
 
-	return newex, nil
+	return newms, nil
 }
 
 func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
