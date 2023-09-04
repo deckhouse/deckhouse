@@ -177,7 +177,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"metricsScraper": "imageHash-dashboard-metricsScraper",
 	},
 	"deckhouse": map[string]interface{}{
-		"imagesCopier":   "imageHash-deckhouse-imagesCopier",
 		"webhookHandler": "imageHash-deckhouse-webhookHandler",
 	},
 	"delivery": map[string]interface{}{
