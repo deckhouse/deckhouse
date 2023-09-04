@@ -28,10 +28,9 @@ const (
 
 var (
 	generatePasswordSettings = generate_password.HookSettings{
-		ModuleName:                 moduleValuesKey,
-		Namespace:                  authSecretNS,
-		SecretName:                 authSecretName,
-		KeepPasswordOnExternalAuth: true,
+		ModuleName: moduleValuesKey,
+		Namespace:  authSecretNS,
+		SecretName: authSecretName,
 	}
 )
 

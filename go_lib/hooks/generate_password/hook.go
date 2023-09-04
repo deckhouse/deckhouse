@@ -45,8 +45,7 @@ func NewBasicAuthPlainHook(settings HookSettings) *Hook {
 			Namespace: settings.Namespace,
 			Name:      settings.SecretName,
 		},
-		ValuesKey:                  valuesKey,
-		keepPasswordOnExternalAuth: settings.KeepPasswordOnExternalAuth,
+		ValuesKey: valuesKey,
 	}
 }
 
@@ -54,10 +53,6 @@ type HookSettings struct {
 	ModuleName string
 	Namespace  string
 	SecretName string
-
-	// by default, basic-auth password will be removed if externalAuth is set
-	// you can change this behavior by this flag
-	KeepPasswordOnExternalAuth bool
 }
 
 // RegisterHook returns func to register common hook that generates
