@@ -52,7 +52,7 @@ spec:
     #   kernel-lt             --> kernel-lt-devel
     #   kernel-lt-core        --> kernel-lt-devel
     package_name="$(rpm -qf --qf "%{NAME}" "/lib/modules/${kernel_version_in_use}" | sed 's/\(-modules-core\)\?$//g; s/\(-core\)\?$/-devel/g')"
-    bb-yum-install "${package_name}-${version_in_use}"
+    bb-yum-install "${package_name}-${kernel_version_in_use}"
 
     # Remove unused kernel-headers
     packages_to_remove="$(rpm -q "$package_name" | grep -Ev "^${package_name}-${kernel_version_in_use}$" || true)"
@@ -125,7 +125,7 @@ spec:
     make
     make install
     cd drbd
-    cp *.ko /lib/modules/$version_in_use/kernel/drivers/
+    cp *.ko /lib/modules/${kernel_version_in_use}/kernel/drivers/
     echo 'drbd' | tee -a /etc/modules
     depmod
     modprobe drbd
