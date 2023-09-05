@@ -63,7 +63,7 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 				Addresses: []v1.EndpointAddress{
 					{
 						IP:       os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS"),
-						Hostname: os.Getenv("DECKHOUSE_NODE_NAME"),
+						Hostname: os.Getenv("HOSTNAME"),
 						NodeName: pointer.String(os.Getenv("DECKHOUSE_NODE_NAME")),
 						TargetRef: &v1.ObjectReference{
 							Kind:       "Pod",
@@ -118,7 +118,7 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 					Serving:     pointer.Bool(true),
 					Terminating: pointer.Bool(false),
 				},
-				Hostname: pointer.String(os.Getenv("DECKHOUSE_NODE_NAME")),
+				Hostname: pointer.String(os.Getenv("HOSTNAME")),
 				TargetRef: &v1.ObjectReference{
 					Kind:      "Pod",
 					Namespace: d8Namespace,

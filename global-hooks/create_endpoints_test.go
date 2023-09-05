@@ -35,6 +35,7 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 		BeforeEach(func() {
 			os.Setenv("ADDON_OPERATOR_LISTEN_ADDRESS", "192.168.1.1")
 			os.Setenv("DECKHOUSE_NODE_NAME", "test-node")
+			os.Setenv("HOSTNAME", "test-master-1")
 			os.Setenv("DECKHOUSE_POD", "deckhouse-test-1")
 			f.KubeStateSet("")
 			generateEndpoints()
@@ -47,6 +48,7 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 			ep := f.KubernetesResource("Endpoints", "d8-system", "deckhouse")
 			Expect(ep.Field("subsets.0.addresses.0.ip").String()).To(Equal("192.168.1.1"))
 			Expect(ep.Field("subsets.0.addresses.0.nodeName").String()).To(Equal("test-node"))
+			Expect(ep.Field("subsets.0.addresses.0.hostname").String()).To(Equal("test-master-1"))
 			Expect(ep.Field("subsets.0.addresses.0.targetRef.name").String()).To(Equal("deckhouse-test-1"))
 			Expect(len(ep.Field("subsets.0.ports").Array())).To(Equal(3))
 		})
@@ -56,6 +58,7 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 
 			Expect(eps.Field("endpoints.0.addresses.0").String()).To(Equal("192.168.1.1"))
 			Expect(eps.Field("endpoints.0.nodeName").String()).To(Equal("test-node"))
+			Expect(eps.Field("endpoints.0.hostname").String()).To(Equal("test-master-1"))
 			Expect(eps.Field("endpoints.0.targetRef.name").String()).To(Equal("deckhouse-test-1"))
 			Expect(len(eps.Field("ports").Array())).To(Equal(3))
 		})
