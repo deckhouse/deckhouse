@@ -43,7 +43,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, generateDeckhouseEndpoints)
 
 func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
-	hostname := ""
 	// hostname = os.Getenv("HOSTNAME")
 	// At this moment we don't use Hostname because of 2 reasons:
 	// 1. According to the endpoint controller, it should be set only when:
@@ -79,7 +78,6 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 				Addresses: []v1.EndpointAddress{
 					{
 						IP:       address,
-						Hostname: hostname,
 						NodeName: pointer.String(nodeName),
 						TargetRef: &v1.ObjectReference{
 							Kind:       "Pod",
@@ -134,7 +132,6 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 					Serving:     pointer.Bool(true),
 					Terminating: pointer.Bool(false),
 				},
-				Hostname: pointer.String(hostname),
 				TargetRef: &v1.ObjectReference{
 					Kind:      "Pod",
 					Namespace: d8Namespace,
