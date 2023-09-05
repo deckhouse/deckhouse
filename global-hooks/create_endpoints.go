@@ -43,6 +43,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, generateDeckhouseEndpoints)
 
 func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
+	// hostname := os.Getenv("HOSTNAME")
+	// At this moment we don't use Hostname because of 2 reasons:
+	// 1. According to the endpoint controller, it should be set only when:
+	//		len(pod.Spec.Hostname) > 0 && pod.Spec.Subdomain == svc.Name && svc.Namespace == pod.Namespace
+	//    https://github.com/kubernetes/kubernetes/blob/v1.27.5/pkg/controller/util/endpoint/controller_utils.go#L116
+	//
+	// 2. Deckhouse is a singleton now. Probably we will need it, when we will make a HA mode
+	// 		Pay attention!! That hostname could be like 'ip-10-0-3-207.eu-central-1.compute.internal' on the EKS installations for example,
+	// 		so it wouldn't validate via RFC1123 DNS Subdomain.
+	//		We have to lowercase the value and cut it until the first dot or something like that
+
+	nodeName := os.Getenv("DECKHOUSE_NODE_NAME")
+	podName := os.Getenv("DECKHOUSE_POD")
+	address := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
+
 	ep := &v1.Endpoints{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Endpoints",
@@ -62,13 +77,12 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 			{
 				Addresses: []v1.EndpointAddress{
 					{
-						IP:       os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS"),
-						Hostname: os.Getenv("DECKHOUSE_NODE_NAME"),
-						NodeName: pointer.String(os.Getenv("DECKHOUSE_NODE_NAME")),
+						IP:       address,
+						NodeName: pointer.String(nodeName),
 						TargetRef: &v1.ObjectReference{
 							Kind:       "Pod",
 							Namespace:  d8Namespace,
-							Name:       os.Getenv("DECKHOUSE_POD"),
+							Name:       podName,
 							APIVersion: "v1",
 						},
 					},
@@ -112,19 +126,18 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 		AddressType: "IPv4",
 		Endpoints: []discv1.Endpoint{
 			{
-				Addresses: []string{os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")},
+				Addresses: []string{address},
 				Conditions: discv1.EndpointConditions{
 					Ready:       pointer.Bool(true),
 					Serving:     pointer.Bool(true),
 					Terminating: pointer.Bool(false),
 				},
-				Hostname: pointer.String(os.Getenv("DECKHOUSE_NODE_NAME")),
 				TargetRef: &v1.ObjectReference{
 					Kind:      "Pod",
 					Namespace: d8Namespace,
-					Name:      os.Getenv("DECKHOUSE_POD"),
+					Name:      podName,
 				},
-				NodeName: pointer.String(os.Getenv("DECKHOUSE_NODE_NAME")),
+				NodeName: pointer.String(nodeName),
 				Zone:     nil,
 				Hints:    nil,
 			},
