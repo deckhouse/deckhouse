@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
 /* Migration: Delete after Deckhouse release 1.53
@@ -39,7 +38,7 @@ Otherwise, the webhook will prevent any interactions with ExternalModule* resour
 */
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 10},
+	OnStartup: &go_hook.OrderedConfig{Order: 15},
 }, dependency.WithExternalDependencies(modulesCRMigrate))
 
 func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
@@ -47,8 +46,6 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
-
-	fmt.Println("1 ASDSAD")
 
 	modulesMigrationCM := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -63,12 +60,10 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 
 	_, err = kubeCl.CoreV1().ConfigMaps(modulesMigrationCM.Namespace).Get(context.TODO(), modulesMigrationCM.Name, metav1.GetOptions{})
 	if err == nil {
-		fmt.Println("2 SKIP")
 		input.LogEntry.Info("Modules migration configmap exists, skipping the migration")
 		return nil
 	}
 	if !errors.IsNotFound(err) {
-		fmt.Println("3 ERR", err)
 		return err
 	}
 
@@ -84,20 +79,15 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 	moduleSources, err := kubeCl.Dynamic().Resource(emsGVR).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			fmt.Println("4 ERR", err)
 			return err
 		}
-		fmt.Println("5 ERR", err)
 
 		input.LogEntry.Info("ExternalModuleSource resource is not in the cluster")
 		skipMigrationCount++
 	}
 
-	fmt.Println("6")
-
 	moduleReleases, err := kubeCl.Dynamic().Resource(emrGVR).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		fmt.Println("7 ERR", err)
 		if !errors.IsNotFound(err) {
 			return err
 		}
@@ -107,16 +97,8 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	if skipMigrationCount == 2 { // both resources are absent
-		fmt.Println("8 HERE", err)
 		input.LogEntry.Info("Skipping modules migration")
 		return nil
-	}
-
-	ensureRes := ensure_crds.EnsureCRDs("/deckhouse/modules/005-external-module-manager/crds/module-*.yaml", input, dc)
-	fmt.Println("9  ENSURE", ensureRes)
-	if err := ensureRes.ErrorOrNil(); err != nil {
-		fmt.Println("10  ENSUYRE", err)
-		return err
 	}
 
 	for _, ms := range moduleSources.Items {
@@ -124,7 +106,6 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 
 		_, err := kubeCl.Dynamic().Resource(msGVR).Create(context.TODO(), &ms, metav1.CreateOptions{})
 		if err != nil && !errors.IsAlreadyExists(err) {
-			fmt.Println("11 xxx", err)
 			return err
 		}
 	}
@@ -134,35 +115,27 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 
 		_, err := kubeCl.Dynamic().Resource(mrGVR).Create(context.TODO(), &mr, metav1.CreateOptions{})
 		if err != nil && !errors.IsAlreadyExists(err) {
-			fmt.Println("12 xxx", err)
 			return err
 		}
 	}
 
-	fmt.Println("13")
-
 	err = kubeCl.Dynamic().Resource(emsGVR).DeleteCollection(context.TODO(), metav1.DeleteOptions{}, metav1.ListOptions{})
 	if err != nil {
-		fmt.Println("14", err)
 		input.LogEntry.Info("cannot delete external module sources", err)
 		return nil
 	}
 
 	err = kubeCl.Dynamic().Resource(emrGVR).DeleteCollection(context.TODO(), metav1.DeleteOptions{}, metav1.ListOptions{})
 	if err != nil {
-		fmt.Println("15", err)
 		input.LogEntry.Info("cannot delete external module releases", err)
 		return nil
 	}
 
-	fmt.Println("16")
-
 	_, err = kubeCl.CoreV1().ConfigMaps(modulesMigrationCM.Namespace).Create(context.TODO(), modulesMigrationCM, metav1.CreateOptions{})
 	if err != nil {
-		fmt.Println("17", err)
 		return err
 	}
-	fmt.Println("18")
+
 	return nil
 }
 
