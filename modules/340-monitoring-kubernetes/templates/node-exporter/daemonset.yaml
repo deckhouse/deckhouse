@@ -102,7 +102,7 @@ spec:
           readOnly: true
           mountPath: /host/textfile
           mountPropagation: HostToContainer
-        - name: textfile-1
+        - name: textfile-kubelet-eviction-thresholds-exporter
           readOnly: true
           mountPath: /host/textfile-kubelet-eviction-thresholds-exporter
           mountPropagation: HostToContainer
