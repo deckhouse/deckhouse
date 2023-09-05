@@ -17,7 +17,7 @@ mount:
   to: /go/pkg
 shell:
   install:
-  - apk add mercurial make bash git
+  - apk add git
   setup:
   - mkdir /src && cd /src
   - git clone --depth 1 --branch v0.36.0-flant.13 {{ env "SOURCE_REPO" | default "https://github.com" }}/deckhouse/mcm.git .
