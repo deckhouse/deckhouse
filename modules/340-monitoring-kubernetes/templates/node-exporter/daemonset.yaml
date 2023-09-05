@@ -90,7 +90,7 @@ spec:
         - '--collector.filesystem.fs-types-exclude'
         - '^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$'
         - '--collector.textfile.directory'
-        - '/host/textfile*/*.prom'
+        - '/host/textfile*/'
         - '--collector.netstat.fields'
         - '^(.*_(InErrors|InErrs)|Ip_Forwarding|Ip(6|Ext)_(InOctets|OutOctets)|Icmp6?_(InMsgs|OutMsgs)|TcpExt_.*|Tcp_(ActiveOpens|InSegs|OutSegs|PassiveOpens|RetransSegs|CurrEstab)|Udp6?_(InDatagrams|OutDatagrams|NoPorts))$'
         volumeMounts:
@@ -104,7 +104,7 @@ spec:
           mountPropagation: HostToContainer
         - name: textfile-1
           readOnly: true
-          mountPath: /host/textfile-1
+          mountPath: /host/textfile-kubelet-eviction-thresholds-exporter
           mountPropagation: HostToContainer
         resources:
           requests:
@@ -124,7 +124,7 @@ spec:
         - name: root
           readOnly:  true
           mountPath: /host/
-        - name: textfile-1
+        - name: textfile-kubelet-eviction-thresholds-exporter
           mountPath: /var/run/node-exporter-textfile
         - name: dockersock
           mountPath: /var/run/docker.sock
@@ -192,6 +192,6 @@ spec:
           medium: Memory
         name: kube
       - emptyDir:
-        name: textfile-1
+        name: textfile-kubelet-eviction-thresholds-exporter
       imagePullSecrets:
       - name: deckhouse-registry
