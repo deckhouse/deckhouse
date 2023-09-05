@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
 /* Migration: Delete after Deckhouse release 1.53
@@ -39,7 +38,7 @@ Otherwise, the webhook will prevent any interactions with ExternalModule* resour
 */
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 10},
+	OnStartup: &go_hook.OrderedConfig{Order: 15},
 }, dependency.WithExternalDependencies(modulesCRMigrate))
 
 func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
@@ -102,11 +101,6 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	ensureRes := ensure_crds.EnsureCRDs("/deckhouse/modules/005-external-module-manager/crds/module-*.yaml", input, dc)
-	if err := ensureRes.ErrorOrNil(); err != nil {
-		return err
-	}
-
 	for _, ms := range moduleSources.Items {
 		sanitizeUnstructured("ModuleSource", &ms)
 
@@ -141,6 +135,7 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
