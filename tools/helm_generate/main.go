@@ -18,6 +18,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -46,16 +47,18 @@ func run(args []string) error {
 
 	for _, cmd := range cmds {
 		if cmd.Name() == subcommand {
-			cmd.Init(os.Args[2:])
+			if err := cmd.Init(os.Args[2:]); errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
 			return cmd.Run()
 		}
 	}
 
-	return fmt.Errorf("unknown runner: %s", subcommand)
+	return fmt.Errorf("unknown runner name: %s", subcommand)
 }
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		log.Fatalln(err)
+		log.Print(err)
 	}
 }

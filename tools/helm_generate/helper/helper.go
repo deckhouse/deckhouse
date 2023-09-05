@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 )
 
 const defaultPerm = 0777
@@ -17,14 +16,11 @@ func DeckhouseRoot() (path string, err error) {
 		return "", err
 	}
 
-	r := regexp.MustCompile("/deckhouse")
-	sub := r.Split(cwd, 2)
-	if len(sub) != 2 {
-		return "", errors.New("dir: Incorrect utility launch directory")
+	if filepath.Base(cwd) != "tools" {
+		return "", errors.New("wrong directory. Run tools from .. deckhouse/tools/ directory")
 	}
-	root := filepath.Join(sub[0], "/deckhouse")
 
-	return root, err
+	return filepath.Dir(cwd), err
 }
 
 // NewRenderDir create a new temporary directory following the defalt helm template.
