@@ -43,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, generateDeckhouseEndpoints)
 
 func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
-	// hostname = os.Getenv("HOSTNAME")
+	// hostname := os.Getenv("HOSTNAME")
 	// At this moment we don't use Hostname because of 2 reasons:
 	// 1. According to the endpoint controller, it should be set only when:
 	//		len(pod.Spec.Hostname) > 0 && pod.Spec.Subdomain == svc.Name && svc.Namespace == pod.Namespace
