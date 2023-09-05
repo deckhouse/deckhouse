@@ -3,11 +3,14 @@ ARG BASE_DISTROLESS
 FROM $BASE_GOLANG_17_ALPINE as artifact
 RUN apk add --no-cache make git patch
 
-ARG SOURCE_REPO
-ENV SOURCE_REPO=${SOURCE_REPO}
-
 ARG GOPROXY
-ENV GOPROXY=${GOPROXY}
+ARG SOURCE_REPO
+
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
 # Build KSM from sources in case of future patching
 RUN mkdir -p /src/kube-state-metrics && \
