@@ -191,7 +191,7 @@ spec:
       - emptyDir:
           medium: Memory
         name: kube
-      imagePullSecrets:
-      - name: deckhouse-registry
       - emptyDir:
         name: textfile-1
+      imagePullSecrets:
+      - name: deckhouse-registry
