@@ -208,26 +208,20 @@ spec:
                   x-doc-default: false
                 namespaceSelector:
                   description: |
-                    Defines a set of namespaces accessible by the user, using labelSelector values.
+                    Defines a set of namespaces accessible by the user, using the value of the `namespaceSelector.labelSelector` parameter.
 
-                    Compatibility with limit limitNamespaces and allowAccessToSysytemNamespaces:
-                    * If this field is set, the limitNamespaces and allowAccessToSystemNamesapces values are ignored for the current clusterAuthorizationRule.
-                    * The fields limitNamespaces and allowAccessToSystemNamesapces are deprecated.
+                    If the parameter `namespaceSelector` is specified, the values of the parameters `limitNamespaces` and `allowAccessToSystemNamespaces` **are ignored**. Thus, all namespaces with labels that fall under the conditions specified in the `namespace Selector.labelSelector` parameter, including system namespaces, will be available. If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters.
 
-                    The decision making process:
-                    * If the field is defined, then only the namespaces matching labelSelector's criteria are accessible.
-                    * If the field is not defined, then all namespaces are accessible.
-
-                    Option available **only** if [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
+                    Is available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter is enabled.
                   type: object
                   required:
                     - labelSelector
                   properties:
                     labelSelector:
                       description: |
-                         Contains labelselector definitions.
+                         Defines label selector-based filter of namespaces.
 
-                         If both matchExpressions and matchLabels parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
+                         If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
                       type: object
                       minProperties: 1
                       properties:
