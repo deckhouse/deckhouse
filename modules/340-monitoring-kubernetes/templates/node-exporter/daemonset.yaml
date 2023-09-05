@@ -79,15 +79,15 @@ spec:
         - '--no-collector.wifi'
         - '--collector.ntp.server-is-local'
         - '--collector.processes'
-        - '--collector.filesystem.ignored-mount-points'
+        - '--collector.filesystem.mount-points-exclude'
         - '(^/(dev|proc|sys|run)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)|(/kubelet/)'
 # we want to ignore veth devices. Justification - https://github.com/prometheus-operator/kube-prometheus/pull/1224
 # veth.* - for veth interfaces.
 # [a-f0-9]{15} - for OVN veth interfaces.
 # lxc.* - for Cilium veth interfaces.
         - '--collector.netclass.ignored-devices=^(veth.*|lxc.*|[a-f0-9]{15})$'
-        - '--collector.netdev.ignored-devices=^(veth.*|lxc.*|[a-f0-9]{15})$'
-        - '--collector.filesystem.ignored-fs-types'
+        - '--collector.netdev.device-exclude=^(veth.*|lxc.*|[a-f0-9]{15})$'
+        - '--collector.filesystem.fs-types-exclude'
         - '^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$'
         - '--collector.textfile.directory'
         - '/host/textfile*/*.prom'
