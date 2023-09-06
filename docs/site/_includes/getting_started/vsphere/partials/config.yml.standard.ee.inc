@@ -69,6 +69,11 @@ provider:
   # [<en>] Set to true if vCenter has a self-signed certificate,
   # [<en>] otherwise set false (or delete the string below with the insecure parameter).
   insecure: *!CHANGE_INSECURE*
+# [<ru>] Укажите false, если vSphere DRS выключен,
+# [<ru>] иначе укажите true (или удалите строку с параметром useNestedResourcePool).
+# [<en>] Set to false if vSphere DRS is turned off,
+# [<en>] otherwise set true (or delete the string below with the useNestedResourcePool parameter).
+useNestedResourcePool: *!CHANGE_INSECURE*
 # [<en>] Path to a Folder in which VirtualMachines will be created.
 # [<en>] The folder itself will be created by the Deckhouse Installer.
 # [<ru>] Путь до Folder, в котором будут создаваться виртуальные машины.
