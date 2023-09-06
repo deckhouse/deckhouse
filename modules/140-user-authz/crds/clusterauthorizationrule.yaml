@@ -204,7 +204,7 @@ spec:
                     Option available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
 
                     Deprecated. Use the [namespaceSelector](#clusterauthorizationrule-v1-spec-namespaceselector) field instead.
-                  x-doc-d8Revision: ee
+                  x-doc-d8Revision: eewewqe
                   x-doc-default: false
                 namespaceSelector:
                   description: |
