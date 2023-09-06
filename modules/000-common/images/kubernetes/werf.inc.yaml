@@ -30,6 +30,7 @@ shell:
   - apk add --no-cache make bash git patch rsync gcc musl-dev
   install:
   - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ .GOPROXY }}
   - mkdir /src
   - git clone --depth 1 --branch v{{ $full_version }} {{ .SOURCE_REPO }}/kubernetes/kubernetes.git /src
   - cd /src
