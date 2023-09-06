@@ -64,7 +64,7 @@ properties:
           # this spec is validated by CRD's openapi spec
           type: object
           additionalProperties: true
-      trivyProvider:
+      denyVulnerableImages:
         type: object
         default: {}
         properties:

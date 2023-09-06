@@ -24,13 +24,13 @@ import (
 )
 
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle trivy provider registry secrets", func() {
-	f := HookExecutionConfigInit(`{"admissionPolicyEngine":{"internal":{"trivyProvider": {}}}}`, ``)
+	f := HookExecutionConfigInit(`{"admissionPolicyEngine":{"internal":{"denyVulnerableImages": {}}}}`, ``)
 
 	BeforeEach(func() {
-		f.BindingContexts.Set(f.KubeStateSet(testTrivyProviderSecrets))
+		f.BindingContexts.Set(f.KubeStateSet(testDenyVulnerableImagesSecrets))
 	})
 
-	Context("Hook doesn't run with trivyProvider disabled", func() {
+	Context("Hook doesn't run with denyVulnerableImages disabled", func() {
 		BeforeEach(func() {
 			f.RunHook()
 		})
@@ -40,13 +40,13 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle trivy pr
 		})
 
 		It("should not store data in values", func() {
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyProvider.dockerConfigJson").String()).To(Equal(""))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.denyVulnerableImages.dockerConfigJson").String()).To(Equal(""))
 		})
 	})
 
 	Context("Registry secrets data is stored in values", func() {
 		BeforeEach(func() {
-			f.ValuesSet("admissionPolicyEngine.trivyProvider.enable", true)
+			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enable", true)
 			f.RunHook()
 		})
 
@@ -55,13 +55,13 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle trivy pr
 		})
 
 		It("should store data in values", func() {
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyProvider.dockerConfigJson").String()).To(MatchJSON(testTrivyProviderSecretsValues))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.denyVulnerableImages.dockerConfigJson").String()).To(MatchJSON(testDenyVulnerableImagesSecretsValues))
 		})
 	})
 })
 
 const (
-	testTrivyProviderSecrets = `
+	testDenyVulnerableImagesSecrets = `
 ---
 apiVersion: v1
 kind: Secret
@@ -77,32 +77,19 @@ apiVersion: v1
 kind: Secret
 type: kubernetes.io/dockerconfigjson
 metadata:
-  name: test-2
+  name: deckhouse-registry-1
   namespace: d8-admission-policy-engine
 data:
   # base64 -w0 <<< '{"auths":{"registry.test-2.com":{"username":"test-2","password":"password-2"}}}' && echo
   .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS50ZXN0LTIuY29tIjp7InVzZXJuYW1lIjoidGVzdC0yIiwicGFzc3dvcmQiOiJwYXNzd29yZC0yIn19fQo=
----
-apiVersion: v1
-kind: Secret
-type: kubernetes.io/dockerconfigjson
-metadata:
-  name: test-3
-  namespace: d8-admission-policy-engine
-data:
-  # base64 -w0 <<< '{"auths":{"registry.test-3.com":{"auth":"dGVzdC0zOnBhc3N3b3JkLTMK"}}}' && echo
-  .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS50ZXN0LTMuY29tIjp7ImF1dGgiOiJkR1Z6ZEMwek9uQmhjM04zYjNKa0xUTUsifX19Cg==
 `
 
-	testTrivyProviderSecretsValues = `
+	testDenyVulnerableImagesSecretsValues = `
 {
   "auths":{
      "registry.test-2.com":{
         "username":"test-2",
         "password":"password-2"
-     },
-     "registry.test-3.com":{
-        "auth":"dGVzdC0zOnBhc3N3b3JkLTMK"
      }
   }
 }
