@@ -106,7 +106,7 @@ func registrySecretToAuthnConfig(secret *corev1.Secret) (*dockerConfig, error) {
 }
 
 func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Container) error {
-	if !input.Values.Get("admissionPolicyEngine.denyVulnerableImages.enable").Bool() {
+	if !input.Values.Get("admissionPolicyEngine.denyVulnerableImages.enabled").Bool() {
 		return nil
 	}
 

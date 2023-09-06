@@ -46,7 +46,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle trivy pr
 
 	Context("Registry secrets data is stored in values", func() {
 		BeforeEach(func() {
-			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enable", true)
+			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enabled", true)
 			f.RunHook()
 		})
 
