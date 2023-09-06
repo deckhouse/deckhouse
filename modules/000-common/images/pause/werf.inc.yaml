@@ -16,9 +16,9 @@ shell:
     - apk add --no-cache make bash git patch rsync gcc musl-dev
   install:
     - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ .GOPROXY }}
+    - export GOPROXY={{ $.GOPROXY }}
     - mkdir /src
-    - git clone --depth 1 --branch v1.28.0 {{ .SOURCE_REPO }}/kubernetes/kubernetes.git /src
+    - git clone --depth 1 --branch v1.28.0 {{ $.SOURCE_REPO }}/kubernetes/kubernetes.git /src
     - cd /src
     - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 linux/pause.c
     - strip /pause-linux-amd64
