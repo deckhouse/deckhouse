@@ -29,5 +29,5 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 
 	Namespace:            "d8-admission-policy-engine",
 	TLSSecretName:        "trivy-provider-webhook-server-cert",
-	FullValuesPathPrefix: "admissionPolicyEngine.internal.trivyProvider.webhook",
+	FullValuesPathPrefix: "admissionPolicyEngine.internal.denyVulnerableImages.webhook",
 })

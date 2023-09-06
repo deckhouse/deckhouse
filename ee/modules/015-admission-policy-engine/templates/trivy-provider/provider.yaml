@@ -8,5 +8,5 @@ metadata:
 spec:
   url: https://trivy-provider.d8-{{ .Chart.Name }}:8443/validate
   timeout: 12
-  caBundle: {{ .Values.admissionPolicyEngine.internal.trivyProvider.webhook.ca | b64enc | quote }}
+  caBundle: {{ .Values.admissionPolicyEngine.internal.denyVulnerableImages.webhook.ca | b64enc | quote }}
 {{- end }}

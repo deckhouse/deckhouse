@@ -58,7 +58,7 @@ modules:
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{"admissionPolicyEngine": {"trivyProvider": {}, "podSecurityStandards": {}, "internal": {"operationPolicies": [
+	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"operationPolicies": [
     {
       "metadata": {
         "name": "foo"
@@ -163,7 +163,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 		`
 
 		BeforeEach(func() {
-			f.ValuesSet("admissionPolicyEngine.trivyProvider.enable", true)
+			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enabled", true)
 			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
 		})
 
@@ -189,8 +189,8 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 		Context("enabled operator-trivy module", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd", "prometheus", "operator-prometheus-crd", "operator-trivy"]`)
-				f.ValuesSetFromYaml("admissionPolicyEngine.internal.trivyProvider.webhook", `{"ca": "ca", "crt": "crt", "key": "key"}`)
-				f.ValuesSetFromYaml("admissionPolicyEngine.internal.trivyProvider.dockerConfigJson", `{"auths": {"registry.test.com": {"auth": "dXNlcjpwYXNzd29yZAo="}}}`)
+				f.ValuesSetFromYaml("admissionPolicyEngine.internal.denyVulnerableImages.webhook", `{"ca": "ca", "crt": "crt", "key": "key"}`)
+				f.ValuesSetFromYaml("admissionPolicyEngine.internal.denyVulnerableImages.dockerConfigJson", `{"auths": {"registry.test.com": {"auth": "dXNlcjpwYXNzd29yZAo="}}}`)
 				f.HelmRender()
 			})
 

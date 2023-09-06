@@ -82,7 +82,7 @@ spec:
 
 {{- define "trivy.provider.enabled" }}
   {{- $context := . }}
-  {{- if and ($context.Values.global.enabledModules | has "operator-trivy") ($context.Values.admissionPolicyEngine.trivyProvider.enable) }}
+  {{- if and ($context.Values.global.enabledModules | has "operator-trivy") ($context.Values.admissionPolicyEngine.denyVulnerableImages.enabled) }}
     {{- print "true" }}
   {{- end }}
   {{- print "" }}
