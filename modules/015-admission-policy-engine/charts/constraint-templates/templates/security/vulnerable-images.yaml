@@ -29,6 +29,11 @@ spec:
           count(input.review.object.spec.containers[_].image) > 0
           imgs := input.review.object.spec.containers[_].image
         }
+        
+        retrieve_images[imgs] {
+          count(input.review.object.spec.initContainers[_].image) > 0
+          imgs := input.review.object.spec.initContainers[_].image
+        }
 
         retrieve_images[imgs] {
           count(input.review.object.spec.template.spec.containers) > 0
