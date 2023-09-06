@@ -44,6 +44,6 @@ mount:
 shell:
   install:
     - cd /src
-    - GOPROXY={{ env "GOPROXY" }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o kubernetes-api-proxy-reloader cmd/main.go
+    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o kubernetes-api-proxy-reloader cmd/main.go
     - chown 64535:64535 kubernetes-api-proxy-reloader
     - chmod 0700 kubernetes-api-proxy-reloader

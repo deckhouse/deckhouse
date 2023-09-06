@@ -25,7 +25,6 @@ shell:
   install:
     - apk add git
     - mkdir /src && cd /src
-    - git clone -b v3.5.9 --depth 1 {{ env "SOURCE_REPO" | default "https://github.com"}}/etcd-io/etcd.git .
-    - cd server && GOPROXY={{ env "GOPROXY" }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /etcd . && cd ..
-    - cd etcdctl && GOPROXY={{ env "GOPROXY" }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /etcdctl . && cd ..
-
+    - git clone -b v3.5.9 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git .
+    - cd server && GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /etcd . && cd ..
+    - cd etcdctl && GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /etcdctl . && cd ..
