@@ -18,5 +18,4 @@ git:
   to: /hooks
   stageDependencies:
     beforeSetup:
-    install:
       - '**/*'
