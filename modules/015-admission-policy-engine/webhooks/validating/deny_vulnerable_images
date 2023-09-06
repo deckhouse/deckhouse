@@ -41,7 +41,7 @@ kubernetesValidating:
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE]
+    operations:  ["CREATE", "UPDATE"]
     resources:   ["moduleconfigs"]
     scope:       "Cluster"
 EOF
