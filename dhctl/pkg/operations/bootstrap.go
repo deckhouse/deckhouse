@@ -55,6 +55,19 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
+		err := log.Process("bootstrap", "Create /opt/deckhouse{bin,tmp}", func() error {
+			if err := sshClient.Command("mkdir", "-p", "/opt/deckhouse/bin").Sudo().Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p /opt/deckhouse/bin: %w", err)
+			}
+			if err := sshClient.Command("mkdir", "-p", "-m", "1777", "/opt/deckhouse/tmp").Sudo().Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p -m 1777 /opt/deckhouse/tmp: %w", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("cannot create /opt/deckhouse/ directories: %w", err)
+		}
+
 		for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 			err := log.Process("default", bootstrapScript, func() error {
