@@ -14,6 +14,9 @@ WORKDIR /src
 RUN apk add --update --no-cache patch git
 RUN git clone --depth 1 --branch v0.14.0 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
 
+# some patches are applied to dependencies
+RUN go mod vendor
+
 COPY patches/001-add-registry-secret-as-dockerconfigjson.patch /src
 COPY patches/002-skip-some-checks.patch /src
 COPY patches/003-fix-node-selector.patch /src
