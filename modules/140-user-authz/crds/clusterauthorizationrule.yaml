@@ -216,13 +216,6 @@ spec:
                   type: object
                   required:
                     - labelSelector
-                  properties:
-                    labelSelector:
-                    labelSelector:
-                    labelSelector:
-                    labelSelector:
-                    labelSelector:
-                    labelSelector:
                     labelSelector:
                     labelSelector:
                     labelSelector:
