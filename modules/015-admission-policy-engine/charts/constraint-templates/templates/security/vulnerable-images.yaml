@@ -29,7 +29,7 @@ spec:
           count(input.review.object.spec.containers[_].image) > 0
           imgs := input.review.object.spec.containers[_].image
         }
-        
+
         retrieve_images[imgs] {
           count(input.review.object.spec.initContainers[_].image) > 0
           imgs := input.review.object.spec.initContainers[_].image
@@ -39,10 +39,10 @@ spec:
           count(input.review.object.spec.template.spec.containers) > 0
           imgs := input.review.object.spec.template.spec.containers[_].image
         }
-        
+
         retrieve_images[imgs] {
-          count(input.review.object.spec.template.spec. initContainers) > 0
-          imgs := input.review.object.spec.template.spec. initContainers[_].image
+          count(input.review.object.spec.template.spec.initContainers) > 0
+          imgs := input.review.object.spec.template.spec.initContainers[_].image
         }
 
         response_deny_request(response) {
