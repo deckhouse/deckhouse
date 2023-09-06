@@ -20,5 +20,5 @@ shell:
     - mkdir /src
     - git clone --depth 1 --branch v1.28.0 {{ $.SOURCE_REPO }}/kubernetes/kubernetes.git /src
     - cd /src
-    - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 linux/pause.c
+    - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 build/pause/linux/pause.c
     - strip /pause-linux-amd64
