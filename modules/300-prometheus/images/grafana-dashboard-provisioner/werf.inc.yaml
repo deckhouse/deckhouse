@@ -16,5 +16,7 @@ git:
       - '**/*'
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
-  install:
-    - '**/*'
+  stageDependencies:
+    beforeSetup:
+    install:
+      - '**/*'
