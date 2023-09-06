@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/jellydator/ttlcache/v3"
 	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
@@ -39,14 +40,25 @@ import (
 )
 
 const (
-	gostHashAnnotationKey = "gost-digest"
+	gostHashAnnotationKey       = "gost-digest"
+	cacheEvictionDurationSecond = 60 * 5
 )
 
-type validationHandler struct {
-	logger            *log.Entry
-	registryTransport *http.Transport
-	defaultRegistry   string
-}
+type (
+	imageMetadata struct {
+		imageName       string
+		imageDigest     string
+		imageGostDigest string
+		layersDigest    []string
+	}
+	validationHandler struct {
+		logger             *log.Entry
+		registryTransport  *http.Transport
+		defaultRegistry    string
+		imageHashCache     *ttlcache.Cache[string, string]
+		imageMetadataCache *ttlcache.Cache[string, *imageMetadata]
+	}
+)
 
 func NewValidationHandler(skipVerify bool) *validationHandler {
 	logger := log.WithField("prefix", "image-digest-validation")
@@ -58,26 +70,41 @@ func NewValidationHandler(skipVerify bool) *validationHandler {
 		logger:            logger,
 		registryTransport: customTransport,
 		defaultRegistry:   name.DefaultRegistry,
+		imageHashCache: ttlcache.New[string, string](
+			ttlcache.WithTTL[string, string](
+				time.Duration(cacheEvictionDurationSecond * time.Second),
+			),
+		),
+		imageMetadataCache: ttlcache.New[string, *imageMetadata](
+			ttlcache.WithTTL[string, *imageMetadata](
+				ttlcache.NoTTL,
+			),
+		),
 	}
 }
 
 func (vh *validationHandler) imageDigestValidationHandler() http.Handler {
-	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
-		pod, ok := obj.(*corev1.Pod)
-		if !ok {
-			return rejectResult("incorrect pod data")
-		}
-
-		vh.logger.WithField("pod.status", pod.Status.ContainerStatuses).Debug("")
-
-		for _, image := range vh.GetImagesFromPod(pod) {
-			err := vh.CheckImageDigest(image)
-			if err != nil {
-				return rejectResult(err.Error())
+	vf := kwhvalidating.ValidatorFunc(
+		func(ctx context.Context,
+			review *model.AdmissionReview,
+			obj metav1.Object,
+		) (result *kwhvalidating.ValidatorResult, err error) {
+			pod, ok := obj.(*corev1.Pod)
+			if !ok {
+				return rejectResult("incorrect pod data")
 			}
-		}
-		return allowResult("")
-	})
+
+			vh.logger.WithField("pod.status", pod.Status.ContainerStatuses).Debug("")
+
+			for _, image := range vh.GetImagesFromPod(pod) {
+				err := vh.CheckImageDigest(image)
+				if err != nil {
+					return rejectResult(err.Error())
+				}
+			}
+			return allowResult("")
+		},
+	)
 
 	// Create webhook.
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
@@ -98,10 +125,10 @@ func (vh *validationHandler) GetImagesFromPod(pod *corev1.Pod) []string {
 	return images
 }
 
-func (vh *validationHandler) CheckImageDigest(imageName string) error {
+func (vh *validationHandler) GetImageFromRegistry(imageName string) (crv1.Image, error) {
 	ref, err := vh.ParseImageName(imageName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -113,16 +140,86 @@ func (vh *validationHandler) CheckImageDigest(imageName string) error {
 		remote.WithContext(ctx),
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	return image, nil
+}
+
+func (vh *validationHandler) CachedImageMetadata(imageName string) *imageMetadata {
+	imageHashItem := vh.imageHashCache.Get(imageName)
+	if imageHashItem == nil {
+		vh.logger.WithField("imageName", imageName).Debug("CachedImageMetadata: imageDigest not found")
+		return nil
+	}
+
+	imageMetadataItem := vh.imageMetadataCache.Get(imageHashItem.Value())
+	if imageMetadataItem == nil {
+		vh.logger.WithField(
+			"imageName", imageName,
+		).WithField(
+			"imageHash", imageHashItem.Value(),
+		).Debug("CachedImageMetadata: imageMetadata not found")
+		return nil
+	}
+	im := imageMetadataItem.Value()
+
+	vh.logger.WithField("imageMetadata", im).Debug("CachedImageMetadata")
+	return im
+}
+
+func (vh *validationHandler) CacheImageMetadata(im *imageMetadata) {
+	vh.imageHashCache.Set(
+		im.imageName,
+		im.imageDigest,
+		ttlcache.DefaultTTL,
+	)
+
+	vh.imageMetadataCache.Set(im.imageDigest, im, ttlcache.NoTTL)
+	vh.logger.WithField("imageMetadata", im).Debug("CacheImageMetadata")
+}
+
+func (vh *validationHandler) GetImageMetadata(imageName string) (*imageMetadata, error) {
+	if im := vh.CachedImageMetadata(imageName); im != nil {
+		return im, nil
+	}
+
+	result := &imageMetadata{imageName: imageName}
+
+	image, err := vh.GetImageFromRegistry(imageName)
+	if err != nil {
+		return nil, err
+	}
+
 	imageDigest, err := image.Digest()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	result.imageDigest = imageDigest.String()
 
 	manifest, err := image.Manifest()
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	imageGostDigestStr, ok := manifest.Annotations[gostHashAnnotationKey]
+	if !ok {
+		return nil, fmt.Errorf("the image does not contain gost digest")
+	}
+	result.imageGostDigest = imageGostDigestStr
+	vh.logger.Debug("")
+
+	layers, err := image.Layers()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, layer := range layers {
+		digest, err := layer.Digest()
+		if err != nil {
+			return nil, err
+		}
+		result.layersDigest = append(result.layersDigest, digest.String())
 	}
 
 	vh.logger.WithField(
@@ -131,35 +228,41 @@ func (vh *validationHandler) CheckImageDigest(imageName string) error {
 		"imageName", imageName,
 	).WithField(
 		"annotations", manifest.Annotations,
+	).WithField(
+		"imageGostDigestStr", imageGostDigestStr,
 	).Debug("image from remote")
 
-	gostLayersHash, err := vh.CalculateLaersGostHash(image)
+	vh.CacheImageMetadata(result)
+
+	return result, nil
+}
+
+func (vh *validationHandler) CheckImageDigest(imageName string) error {
+	im, err := vh.GetImageMetadata(imageName)
 	if err != nil {
 		return err
 	}
-	vh.logger.WithField("gostLayersHash", ByteHashToString(gostLayersHash)).Debug("image layers gost hash")
 
-	return vh.CompareImageGostHash(image, gostLayersHash)
-}
-
-func (vh *validationHandler) ParseImageName(image string) (name.Reference, error) {
-	return name.ParseReference(image, name.WithDefaultRegistry(vh.defaultRegistry))
-}
-
-func (vh *validationHandler) CalculateLaersGostHash(image crv1.Image) ([]byte, error) {
-	layers, err := image.Layers()
+	gostLayersHash, err := vh.CalculateLaersGostHash(im)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	vh.logger.WithField(
+		"gostLayersHash", ByteHashToString(gostLayersHash),
+	).Debug("image layers gost hash")
 
+	return vh.CompareImageGostHash(im, gostLayersHash)
+}
+
+func (vh *validationHandler) ParseImageName(imageName string) (name.Reference, error) {
+	return name.ParseReference(imageName, name.WithDefaultRegistry(vh.defaultRegistry))
+}
+
+func (vh *validationHandler) CalculateLaersGostHash(im *imageMetadata) ([]byte, error) {
 	layersDigestBuilder := strings.Builder{}
-	for _, layer := range layers {
-		digest, err := layer.Digest()
-		if err != nil {
-			return nil, err
-		}
-		vh.logger.WithField("layerHash", digest.String()).Debug("image layer hash")
-		layersDigestBuilder.WriteString(digest.String())
+	for _, digest := range im.layersDigest {
+		vh.logger.WithField("layerHash", digest).Debug("image layer hash")
+		layersDigestBuilder.WriteString(digest)
 	}
 
 	data := layersDigestBuilder.String()
@@ -169,7 +272,7 @@ func (vh *validationHandler) CalculateLaersGostHash(image crv1.Image) ([]byte, e
 	}
 
 	hasher := gost34112012256.New()
-	_, err = hasher.Write([]byte(data))
+	_, err := hasher.Write([]byte(data))
 	if err != nil {
 		return nil, err
 	}
@@ -177,19 +280,8 @@ func (vh *validationHandler) CalculateLaersGostHash(image crv1.Image) ([]byte, e
 	return hasher.Sum(nil), nil
 }
 
-func (vh *validationHandler) CompareImageGostHash(image crv1.Image, gostHash []byte) error {
-	manifest, err := image.Manifest()
-	if err != nil {
-		return err
-	}
-
-	imageGostHashStr, ok := manifest.Annotations[gostHashAnnotationKey]
-	if !ok {
-		return fmt.Errorf("the image does not contain gost digest")
-	}
-	vh.logger.WithField("imageGostHashStr", imageGostHashStr).Debug("imageGostHashStr")
-
-	imageGostHashByte, err := hex.DecodeString(imageGostHashStr)
+func (vh *validationHandler) CompareImageGostHash(im *imageMetadata, gostHash []byte) error {
+	imageGostHashByte, err := hex.DecodeString(im.imageGostDigest)
 	if err != nil {
 		return fmt.Errorf("invalid gost image digest: %w", err)
 	}
