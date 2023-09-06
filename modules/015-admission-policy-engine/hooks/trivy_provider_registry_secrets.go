@@ -23,8 +23,6 @@ import (
 	"time"
 
 	"github.com/clarketm/json"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -33,6 +31,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -70,7 +71,7 @@ func fileterTrivyProviderSecrets(obj *unstructured.Unstructured) (go_hook.Filter
 	}
 	config, err := registrySecretToAuthnConfig(&secret)
 	if err != nil {
-		if errors.Is(err, ErrSecretWithNoData) || errors.Is(err, ErrNotDockerCfgJsonType) || errors.Is(err, ErrNoDockerConfigJsonKey) {
+		if errors.Is(err, ErrSecretWithNoData) || errors.Is(err, ErrNotDockerCfgJSONType) || errors.Is(err, ErrNoDockerConfigJSONKey) {
 			return nil, nil
 		}
 		return nil, err
@@ -80,13 +81,13 @@ func fileterTrivyProviderSecrets(obj *unstructured.Unstructured) (go_hook.Filter
 
 var (
 	ErrSecretWithNoData      = errors.New("secret has nil data")
-	ErrNotDockerCfgJsonType  = fmt.Errorf("secret is not '%s' type", corev1.SecretTypeDockerConfigJson)
-	ErrNoDockerConfigJsonKey = fmt.Errorf("secret doesn't have '%s' key", corev1.DockerConfigJsonKey)
+	ErrNotDockerCfgJSONType  = fmt.Errorf("secret is not '%s' type", corev1.SecretTypeDockerConfigJson)
+	ErrNoDockerConfigJSONKey = fmt.Errorf("secret doesn't have '%s' key", corev1.DockerConfigJsonKey)
 )
 
 func registrySecretToAuthnConfig(secret *corev1.Secret) (*dockerConfig, error) {
 	if secret.Type != corev1.SecretTypeDockerConfigJson {
-		return nil, fmt.Errorf("%w: name=%s, namespace=%s", ErrNotDockerCfgJsonType, secret.GetName(), secret.GetNamespace())
+		return nil, fmt.Errorf("%w: name=%s, namespace=%s", ErrNotDockerCfgJSONType, secret.GetName(), secret.GetNamespace())
 	}
 
 	if secret.Data == nil {
@@ -95,7 +96,7 @@ func registrySecretToAuthnConfig(secret *corev1.Secret) (*dockerConfig, error) {
 
 	rawCreds, ok := secret.Data[corev1.DockerConfigJsonKey]
 	if !ok {
-		return nil, fmt.Errorf("%w: name=%s, namespace=%s", ErrNoDockerConfigJsonKey, secret.GetName(), secret.GetNamespace())
+		return nil, fmt.Errorf("%w: name=%s, namespace=%s", ErrNoDockerConfigJSONKey, secret.GetName(), secret.GetNamespace())
 	}
 
 	config := new(dockerConfig)
@@ -166,7 +167,7 @@ func registrySecretValueToAuthnConfig(ctx context.Context, registrySecretValue g
 	}
 	registrySecret, err := k8sClient.CoreV1().Secrets(namespace).Get(ctx, name, v1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("can't get registry secret: %w", err)
+		return nil, fmt.Errorf("can't get registry secret from namespace '%s': %w", namespace, err)
 	}
 	return registrySecretToAuthnConfig(registrySecret)
 }

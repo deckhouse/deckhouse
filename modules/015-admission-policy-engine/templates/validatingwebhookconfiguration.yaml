@@ -52,7 +52,7 @@ webhooks:
   - apiGroups: [""]
     apiVersions: ["*"]
     resources: ["pods"]
-    operations: ["CREATE", "UPDATE"]
+    operations: ["CREATE"]
 
   {{/* Include tracked resources because in the next webhook there is exception for namespaces with 'security.deckhouse.io/trivy-provider' label */}}
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}

@@ -17,8 +17,12 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -46,10 +50,18 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle trivy pr
 
 	Context("Registry secrets data is stored in values", func() {
 		BeforeEach(func() {
+			_, err := f.KubeClient().CoreV1().Secrets(testDenyVulnerableImagesSecret.GetNamespace()).Create(context.Background(), testDenyVulnerableImagesSecret, metav1.CreateOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+
 			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enabled", true)
+			f.ValuesSetFromYaml("admissionPolicyEngine.denyVulnerableImages.registrySecrets", []byte(`[{"name": "test-2", "namespace": "default"}]`))
 			f.RunHook()
 		})
 
+		AfterEach(func() {
+			err := f.KubeClient().CoreV1().Secrets(testDenyVulnerableImagesSecret.GetNamespace()).Delete(context.Background(), testDenyVulnerableImagesSecret.GetName(), metav1.DeleteOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+		})
 		It("Executes successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
@@ -59,6 +71,18 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle trivy pr
 		})
 	})
 })
+var (
+	testDenyVulnerableImagesSecret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-2",
+			Namespace: "default",
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(`{"auths":{"registry.test-3.com":{"username":"test-3","password":"password-3"}}}`),
+		},
+	}
+)
 
 const (
 	testDenyVulnerableImagesSecrets = `
@@ -77,7 +101,7 @@ apiVersion: v1
 kind: Secret
 type: kubernetes.io/dockerconfigjson
 metadata:
-  name: deckhouse-registry-1
+  name: deckhouse-registry
   namespace: d8-admission-policy-engine
 data:
   # base64 -w0 <<< '{"auths":{"registry.test-2.com":{"username":"test-2","password":"password-2"}}}' && echo
@@ -87,10 +111,14 @@ data:
 	testDenyVulnerableImagesSecretsValues = `
 {
   "auths":{
-     "registry.test-2.com":{
-        "username":"test-2",
-        "password":"password-2"
-     }
+    "registry.test-2.com":{
+      "username":"test-2",
+      "password":"password-2"
+    },
+    "registry.test-3.com": {
+      "username": "test-3",
+      "password": "password-3"
+    }
   }
 }
 `
