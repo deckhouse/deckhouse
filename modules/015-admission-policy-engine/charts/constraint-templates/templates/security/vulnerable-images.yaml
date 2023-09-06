@@ -34,6 +34,11 @@ spec:
           count(input.review.object.spec.template.spec.containers) > 0
           imgs := input.review.object.spec.template.spec.containers[_].image
         }
+        
+        retrieve_images[imgs] {
+          count(input.review.object.spec.template.spec. initContainers) > 0
+          imgs := input.review.object.spec.template.spec. initContainers[_].image
+        }
 
         response_deny_request(response) {
           count(response.errors) > 0
