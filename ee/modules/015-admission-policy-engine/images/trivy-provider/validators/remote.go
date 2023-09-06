@@ -70,16 +70,11 @@ func (v *remoteValidator) scanImageReport(ctx context.Context, img string) exter
 
 	v.logger.Info("validate", "image", img, "vulnerabilities found", scanReport.Results.Failed())
 	if scanReport.Results.Failed() {
-		results, err := json.Marshal(scanReport.Results)
-		if err != nil {
-			return externaldata.Item{
-				Key:   img,
-				Error: fmt.Errorf("unable to marshal scan results: %w", err).Error(),
-			}
-		}
+		vulnDescription := mutateResult(scanReport.Results)
+
 		return externaldata.Item{
 			Key:   img,
-			Error: fmt.Errorf("vulnerabilities found in image: %s", results).Error(),
+			Error: vulnDescription,
 		}
 	}
 
@@ -87,4 +82,32 @@ func (v *remoteValidator) scanImageReport(ctx context.Context, img string) exter
 		Key:   img,
 		Value: "vulnerabilities not found",
 	}
+}
+
+func mutateResult(results types.Results) string {
+	vulnIDs := make([]string, 0)
+	misIDs := make([]string, 0)
+	for _, result := range results {
+		for _, vuln := range result.Vulnerabilities {
+			vulnIDs = append(vulnIDs, vuln.VulnerabilityID)
+		}
+
+		for _, mis := range result.Misconfigurations {
+			if mis.Status == types.StatusFailure {
+				misIDs = append(misIDs, mis.ID)
+			}
+		}
+	}
+
+	if len(vulnIDs) > 0 {
+		return fmt.Sprintf("vulnerabilities: %v", vulnIDs)
+	}
+
+	if len(misIDs) > 0 {
+		return fmt.Sprintf("misconfigurations: %v", misIDs)
+	}
+
+	data, _ := json.Marshal(results)
+
+	return fmt.Sprintf("image contain errors: %s", data)
 }
