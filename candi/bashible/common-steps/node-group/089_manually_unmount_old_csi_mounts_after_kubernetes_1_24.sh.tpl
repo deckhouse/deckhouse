@@ -51,6 +51,8 @@ fi
 bb-sync-file /var/lib/bashible/old-csi-mount-cleaner.sh - << "EOF"
 #!/bin/bash
 
+set -euo pipefail
+
 # $@ - messages
 function echo_err() {
   echo "$@" 1>&2;
@@ -59,12 +61,33 @@ function echo_err() {
 log_period_minutes=2
 
 declare -a old_mounts
+declare -a old_rbd_uids
+
+mount_output="$(mount)"
 
 grep_pattern='(?<=is still mounted by other references \[)\/var\/lib\/kubelet\/plugins\/kubernetes\.io\/csi\/pv\/.+?(?=])'
 mapfile -t old_mounts < <(journalctl --since "$log_period_minutes min ago" -u kubelet.service | \
   grep -Po "$grep_pattern" | \
   sort -u)
 
+grep_pattern='(?<=failed \(an error \(exit status 16\) occurred while running rbd args: \[unmap kube\/csi-vol-).+(?= --device-type krbd)'
+mapfile -t old_rbd_uids < <(journalctl --since "$log_period_minutes min ago" -u kubelet.service | \
+  grep -Po "$grep_pattern" | \
+  sort -u)
+
+for uid in "${old_rbd_uids[@]}"; do
+  rbd_mounts="$(grep "$uid" <<<"$mount_output" | grep globalmount | awk '{print $3}')"
+
+  if [[ "$(wc -l <<<"$rbd_mounts")" != "1" ]]; then
+    continue
+  fi
+
+  if out=$(umount "$rbd_mounts" 2>&1); then
+    echo_err "Mountpoint $mount successfully unmounted"
+  else
+    echo_err "Mountpoint $mount failed to unmount: $out"
+  fi
+done
 
 for mount in "${old_mounts[@]}"; do
     if out=$(umount "$mount" 2>&1); then
