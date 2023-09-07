@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/jellydator/ttlcache/v3"
 	log "github.com/sirupsen/logrus"
@@ -125,7 +124,7 @@ func (vh *validationHandler) GetImagesFromPod(pod *corev1.Pod) []string {
 	return images
 }
 
-func (vh *validationHandler) GetImageFromRegistry(imageName string) (crv1.Image, error) {
+func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string) (*imageMetadata, error) {
 	ref, err := vh.ParseImageName(imageName)
 	if err != nil {
 		return nil, err
@@ -143,7 +142,41 @@ func (vh *validationHandler) GetImageFromRegistry(imageName string) (crv1.Image,
 		return nil, err
 	}
 
-	return image, nil
+	im := &imageMetadata{imageName: imageName}
+	imageDigest, err := image.Digest()
+	if err != nil {
+		return nil, err
+	}
+	im.imageDigest = imageDigest.String()
+
+	manifest, err := image.Manifest()
+	if err != nil {
+		return nil, err
+	}
+
+	imageGostDigestStr, ok := manifest.Annotations[gostHashAnnotationKey]
+	if !ok {
+		return nil, fmt.Errorf("the image does not contain gost digest")
+	}
+	im.imageGostDigest = imageGostDigestStr
+
+	layers, err := image.Layers()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, layer := range layers {
+		digest, err := layer.Digest()
+		if err != nil {
+			return nil, err
+		}
+		im.layersDigest = append(im.layersDigest, digest.String())
+	}
+
+	vh.logger.WithField(
+		"imageMetadata", im,
+	).Debug("GetImageMetadataFromRegistry")
+	return im, nil
 }
 
 func (vh *validationHandler) CachedImageMetadata(imageName string) *imageMetadata {
@@ -169,6 +202,11 @@ func (vh *validationHandler) CachedImageMetadata(imageName string) *imageMetadat
 }
 
 func (vh *validationHandler) CacheImageMetadata(im *imageMetadata) {
+	if im == nil {
+		vh.logger.Warningf("CacheImageMetadata: image metadata is nil")
+		return
+	}
+
 	vh.imageHashCache.Set(
 		im.imageName,
 		im.imageDigest,
@@ -184,57 +222,14 @@ func (vh *validationHandler) GetImageMetadata(imageName string) (*imageMetadata,
 		return im, nil
 	}
 
-	result := &imageMetadata{imageName: imageName}
-
-	image, err := vh.GetImageFromRegistry(imageName)
+	im, err := vh.GetImageMetadataFromRegistry(imageName)
 	if err != nil {
 		return nil, err
 	}
 
-	imageDigest, err := image.Digest()
-	if err != nil {
-		return nil, err
-	}
-	result.imageDigest = imageDigest.String()
+	vh.CacheImageMetadata(im)
 
-	manifest, err := image.Manifest()
-	if err != nil {
-		return nil, err
-	}
-
-	imageGostDigestStr, ok := manifest.Annotations[gostHashAnnotationKey]
-	if !ok {
-		return nil, fmt.Errorf("the image does not contain gost digest")
-	}
-	result.imageGostDigest = imageGostDigestStr
-	vh.logger.Debug("")
-
-	layers, err := image.Layers()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, layer := range layers {
-		digest, err := layer.Digest()
-		if err != nil {
-			return nil, err
-		}
-		result.layersDigest = append(result.layersDigest, digest.String())
-	}
-
-	vh.logger.WithField(
-		"imageDigest", imageDigest.String(),
-	).WithField(
-		"imageName", imageName,
-	).WithField(
-		"annotations", manifest.Annotations,
-	).WithField(
-		"imageGostDigestStr", imageGostDigestStr,
-	).Debug("image from remote")
-
-	vh.CacheImageMetadata(result)
-
-	return result, nil
+	return im, nil
 }
 
 func (vh *validationHandler) CheckImageDigest(imageName string) error {
