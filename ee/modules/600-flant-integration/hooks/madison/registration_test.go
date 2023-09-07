@@ -154,6 +154,58 @@ data:
 		})
 	})
 
+	Context("Connect request failed", func() {
+		f := HookExecutionConfigInit(valuesWithLicenseOnly, ``)
+
+		BeforeEach(func() {
+			buf := bytes.NewBufferString(fmt.Sprintf(`{"error": "foobar", "auth_key":"%s"}`, madisonTestAuthKey))
+			rc := io.NopCloser(buf)
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					Header:     map[string][]string{"Content-Type": {"application/json"}},
+					Status:     "Internal Server Error",
+					StatusCode: http.StatusInternalServerError,
+					Body:       rc,
+				}, nil)
+
+			f.KubeStateSet(madisonNS)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should fail with error message", func() {
+			Expect(f).ToNot(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("500 Internal Server Error: foobar"))
+		})
+	})
+
+	Context("Connect request failed without error message", func() {
+		f := HookExecutionConfigInit(valuesWithLicenseOnly, ``)
+
+		BeforeEach(func() {
+			buf := bytes.NewBufferString(`{"message":"Unauthorized"}`)
+			rc := io.NopCloser(buf)
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					Header:     map[string][]string{"Content-Type": {"application/json"}},
+					Status:     "Unauthorized",
+					StatusCode: http.StatusUnauthorized,
+					Body:       rc,
+				}, nil)
+
+			f.KubeStateSet(madisonNS)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should fail with error message", func() {
+			Expect(f).ToNot(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("401 Unauthorized"))
+		})
+	})
+
 	Context("createMadisonPayload", func() {
 		table.DescribeTable("createMadisonPayload",
 			func(domainTemplate string, schema string, want madisonRequestData) {
