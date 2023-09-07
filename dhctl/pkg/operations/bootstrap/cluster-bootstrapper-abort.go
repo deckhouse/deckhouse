@@ -55,7 +55,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort() error {
 
 	cachePath := metaConfig.CachePath()
 	log.InfoF("State config for prefix %s:  %s", metaConfig.ClusterPrefix, cachePath)
-	if err = cache.Init(cachePath); err != nil {
+	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState}); err != nil {
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 	}
 	stateCache := cache.Global()
@@ -127,7 +127,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort() error {
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
-		if err = cache.Init(sshClient.Check().String()); err != nil {
+		if err = cache.InitWithOptions(sshClient.Check().String(), cache.CacheOptions{InitialState: b.InitialState}); err != nil {
 			return fmt.Errorf(bootstrapAbortInvalidCacheMessage, sshClient.Check().String(), err)
 		}
 		destroyer = destroy.NewClusterDestroyer(&destroy.Params{
