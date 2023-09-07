@@ -18,7 +18,7 @@
 # on Dockerfiles and updating them to the latest versions from GitHub
 #
 # Usage: [DRBDONLY=1] hack/update.sh [./images]
-# Test
+# Test 2
 sed_regex=""
 targets="$(grep -rl '^ARG [A-Z_]*_\(VERSION\|COMMIT_REF\)=' $@)"
 versions=$(grep -r '^ARG [A-Z_]*_\(VERSION\|COMMIT_REF\)=' $targets | awk '{print $NF}' | sort -u)
