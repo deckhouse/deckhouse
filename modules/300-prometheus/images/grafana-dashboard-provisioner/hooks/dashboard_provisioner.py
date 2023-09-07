@@ -16,7 +16,7 @@
 
 import json
 import os, time
-from shell_operator import hook
+from deckhouse import hook
 from slugify import slugify
 
 root_path = f"/etc/grafana/dashboards/"

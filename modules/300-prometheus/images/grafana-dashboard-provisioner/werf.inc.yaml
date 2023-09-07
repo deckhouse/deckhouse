@@ -1,0 +1,22 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ .Images.BASE_SHELL_OPERATOR }}
+fromCacheVersion: "2023-09-07.0"
+shell:
+  beforeInstall:
+  - apk add --no-cache python3 py3-pip
+  install:
+  - pip3 install -r /tmp/requirements.txt
+  - apk del py3-pip
+  - rm -rf /var/cache/apk/*
+  - rm -f /tmp/requirements.txt
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+  to: /tmp/requirements.txt
+  stageDependencies:
+    install:
+      - '**/*'
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+  to: /hooks
+  stageDependencies:
+    install:
+      - '**/*'
