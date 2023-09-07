@@ -30,7 +30,8 @@ RUN patch -p1 < /src/stale-cache.patch && \
     patch -p1 < /src/secure-listen-address.patch && \
     make build && \
     cp /src/_output/kube-rbac-proxy-linux-$(go env GOARCH) /kube-rbac-proxy && \
-    chown 64535:64535 /kube-rbac-proxy && chmod 0700 /kube-rbac-proxy
+    chown 64535:64535 /kube-rbac-proxy && \
+    chmod 0700 /kube-rbac-proxy
 
 FROM $BASE_DISTROLESS
 COPY --from=build /kube-rbac-proxy /kube-rbac-proxy

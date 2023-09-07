@@ -14,7 +14,9 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
-RUN go build -ldflags="-w -s" -o check-kernel-version check-kernel-version.go && chown 64535:64535 check-kernel-version && chmod 0755 check-kernel-version
+RUN go build -ldflags="-w -s" -o check-kernel-version check-kernel-version.go && \
+    chown 64535:64535 check-kernel-version && \
+    chmod 0755 check-kernel-version
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /src/check-kernel-version /
