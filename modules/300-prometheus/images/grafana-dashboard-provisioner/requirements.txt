@@ -1,2 +1,2 @@
-deckouse==0.0.8
+deckouse==0.4.7
 python-slugify==8.0.1
