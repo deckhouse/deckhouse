@@ -196,6 +196,7 @@ func runFileParser(fileName string, data map[interface{}]interface{}, resultC ch
 			"enum":             validators.NewEnumValidator(),
 			"highAvailability": validators.NewHAValidator(),
 			"https":            validators.NewHAValidator(),
+			"keyNames":         validators.NewKeyNameValidator(),
 		},
 		resultC: resultC,
 	}
