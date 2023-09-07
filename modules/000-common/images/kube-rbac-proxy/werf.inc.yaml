@@ -33,4 +33,4 @@ shell:
   - make build
   - cp /src/_output/kube-rbac-proxy-linux-$(go env GOARCH) /kube-rbac-proxy
   - chown 64535:64535 /kube-rbac-proxy
-  - chmod 0700 /kube-rbac-proxy
+  - chmod 0755 /kube-rbac-proxy
