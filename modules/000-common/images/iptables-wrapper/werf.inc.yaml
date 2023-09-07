@@ -21,6 +21,6 @@ shell:
   - git reset --hard 680003b3c6e93b471a59ecc9ae87a8f9054b82f3
   install:
   - cd /src
-  - GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build go build -ldflags="-s -w" -o iptables-wrapper main.go
+  - GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o iptables-wrapper main.go
   - chown 64535:64535 iptables-wrapper
   - chmod 0755 iptables-wrapper
