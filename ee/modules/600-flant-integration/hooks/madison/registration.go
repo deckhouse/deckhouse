@@ -8,6 +8,7 @@ package madison
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -217,18 +218,19 @@ func doMadisonRequest(req *http.Request, dc dependency.Container, logEntry *logr
 	defer resp.Body.Close()
 
 	var madisonResp madisonAuthKeyResp
-	body, err := io.ReadAll(resp.Body)
+	err = json.NewDecoder(resp.Body).Decode(&madisonResp)
 	if err != nil {
-		return "", fmt.Errorf("cannot read response body: %v", err)
-	}
-	err = json.Unmarshal(body, &madisonResp)
-	if err != nil {
-		logEntry.Errorf("json unmarshaling failed, body=%q: %v", body, err)
+		body, _ := io.ReadAll(resp.Body)
+		logEntry.Errorf("json unmarshaling failed(body: %q): %v", string(body), err)
 		return "", err
 	}
 
-	if madisonResp.Error != "" {
-		return "", fmt.Errorf(madisonResp.Error)
+	if resp.StatusCode != http.StatusOK {
+		errMsg := fmt.Sprintf("%d %s", resp.StatusCode, resp.Status)
+		if madisonResp.Error != "" {
+			errMsg += ": " + madisonResp.Error
+		}
+		return "", errors.New(errMsg)
 	}
 
 	return madisonResp.AuthKey, nil
