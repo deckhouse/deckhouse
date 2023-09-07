@@ -1,10 +1,11 @@
-{{- $version := "9.2.5" }}
+{{- $version := "9.2.4" }}
+{{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
     add: /
     to: /
     includePaths:
@@ -18,7 +19,7 @@ docker:
     version: all
     drbd: {{ $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALPINE }}
 
 git:
