@@ -25,7 +25,7 @@ shell:
   beforeInstall:
   - mkdir -p /src
   - apk add --update --no-cache patch git
-  - git clone --depth 1 --branch v0.11.0 {{ .SOURCE_REPO }}/brancz/kube-rbac-proxy/kube-rbac-proxy.git /src
+  - git clone --depth 1 --branch v0.11.0 {{ .SOURCE_REPO }}/brancz/kube-rbac-proxy.git /src
   install:
   - cd /src
   - find /patches -name '*.patch' -exec git apply {} \;
