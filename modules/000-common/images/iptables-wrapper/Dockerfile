@@ -17,8 +17,8 @@ ENV GOPROXY=${GOPROXY} \
 RUN apk add --update --no-cache patch git && \
     git clone ${SOURCE_REPO}/kubernetes-sigs/iptables-wrappers/iptables-wrappers.git /src && \
     cd /src && git reset --hard 680003b3c6e93b471a59ecc9ae87a8f9054b82f3 && \
-    go build -ldflags="-s -w" -o iptables-wrapper main.go && ё \
-    chown 64535:64535 iptables-wrapper && ё \
+    go build -ldflags="-s -w" -o iptables-wrapper main.go && \
+    chown 64535:64535 iptables-wrapper && \
     chmod 0755 iptables-wrapper
 
 FROM $BASE_DISTROLESS
