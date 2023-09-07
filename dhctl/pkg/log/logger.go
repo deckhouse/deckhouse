@@ -40,13 +40,21 @@ func init() {
 }
 
 func InitLogger(loggerType string) {
+	InitLoggerWithOptions(loggerType, LoggerOptions{})
+}
+
+type LoggerOptions struct {
+	OutStream io.Writer
+}
+
+func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	switch loggerType {
 	case "pretty":
-		defaultLogger = NewPrettyLogger()
+		defaultLogger = NewPrettyLogger(opts)
 	case "simple":
-		defaultLogger = NewSimpleLogger()
+		defaultLogger = NewSimpleLogger(opts)
 	case "json":
-		defaultLogger = NewJSONLogger()
+		defaultLogger = NewJSONLogger(opts)
 	default:
 		panic("unknown logger type: " + app.LoggerType)
 	}
@@ -116,7 +124,7 @@ type PrettyLogger struct {
 	processTitles map[string]styleEntry
 }
 
-func NewPrettyLogger() *PrettyLogger {
+func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	err := logboek.Init()
 	if err != nil {
 		panic(fmt.Errorf("can't start logging system: %w", err))
@@ -126,6 +134,14 @@ func NewPrettyLogger() *PrettyLogger {
 	// Adds fixed width ↵ , but breaks copy-pasta and tabs
 	if !app.IsDebug {
 		logboek.EnableFitMode()
+	}
+
+	if opts.OutStream != nil {
+		logboek.Error.SetStream(opts.OutStream)
+		logboek.Warn.SetStream(opts.OutStream)
+		logboek.Default.SetStream(opts.OutStream)
+		logboek.Info.SetStream(opts.OutStream)
+		logboek.Debug.SetStream(opts.OutStream)
 	}
 
 	return &PrettyLogger{
@@ -219,9 +235,8 @@ type SimpleLogger struct {
 	logger *logrus.Entry
 }
 
-func NewSimpleLogger() *SimpleLogger {
+func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
 	l := &logrus.Logger{
-		Out:   os.Stdout,
 		Level: logrus.DebugLevel,
 		Formatter: &logrus.TextFormatter{
 			DisableColors:   true,
@@ -229,14 +244,21 @@ func NewSimpleLogger() *SimpleLogger {
 			FullTimestamp:   true,
 		},
 	}
+
+	if opts.OutStream != nil {
+		l.Out = opts.OutStream
+	} else {
+		l.Out = os.Stdout
+	}
+
 	// l.Formatter = &logrus.JSONFormatter{}
 	return &SimpleLogger{
 		logger: logrus.NewEntry(l),
 	}
 }
 
-func NewJSONLogger() *SimpleLogger {
-	simpleLogger := NewSimpleLogger()
+func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
+	simpleLogger := NewSimpleLogger(opts)
 	simpleLogger.logger.Logger.Formatter = &logrus.JSONFormatter{}
 
 	return simpleLogger
