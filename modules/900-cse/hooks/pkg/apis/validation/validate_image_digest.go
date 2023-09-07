@@ -44,18 +44,18 @@ const (
 )
 
 type (
-	imageMetadata struct {
-		imageName       string
-		imageDigest     string
-		imageGostDigest string
-		layersDigest    []string
+	ImageMetadata struct {
+		ImageName       string
+		ImageDigest     string
+		ImageGostDigest string
+		LayersDigest    []string
 	}
 	validationHandler struct {
 		logger             *log.Entry
 		registryTransport  *http.Transport
 		defaultRegistry    string
 		imageHashCache     *ttlcache.Cache[string, string]
-		imageMetadataCache *ttlcache.Cache[string, *imageMetadata]
+		imageMetadataCache *ttlcache.Cache[string, *ImageMetadata]
 	}
 )
 
@@ -74,8 +74,8 @@ func NewValidationHandler(skipVerify bool) *validationHandler {
 				time.Duration(cacheEvictionDurationSecond * time.Second),
 			),
 		),
-		imageMetadataCache: ttlcache.New[string, *imageMetadata](
-			ttlcache.WithTTL[string, *imageMetadata](
+		imageMetadataCache: ttlcache.New[string, *ImageMetadata](
+			ttlcache.WithTTL[string, *ImageMetadata](
 				ttlcache.NoTTL,
 			),
 		),
@@ -124,7 +124,7 @@ func (vh *validationHandler) GetImagesFromPod(pod *corev1.Pod) []string {
 	return images
 }
 
-func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string) (*imageMetadata, error) {
+func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string) (*ImageMetadata, error) {
 	ref, err := vh.ParseImageName(imageName)
 	if err != nil {
 		return nil, err
@@ -142,12 +142,12 @@ func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string) (*im
 		return nil, err
 	}
 
-	im := &imageMetadata{imageName: imageName}
+	im := &ImageMetadata{ImageName: imageName}
 	imageDigest, err := image.Digest()
 	if err != nil {
 		return nil, err
 	}
-	im.imageDigest = imageDigest.String()
+	im.ImageDigest = imageDigest.String()
 
 	manifest, err := image.Manifest()
 	if err != nil {
@@ -158,7 +158,7 @@ func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string) (*im
 	if !ok {
 		return nil, fmt.Errorf("the image does not contain gost digest")
 	}
-	im.imageGostDigest = imageGostDigestStr
+	im.ImageGostDigest = imageGostDigestStr
 
 	layers, err := image.Layers()
 	if err != nil {
@@ -170,7 +170,7 @@ func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string) (*im
 		if err != nil {
 			return nil, err
 		}
-		im.layersDigest = append(im.layersDigest, digest.String())
+		im.LayersDigest = append(im.LayersDigest, digest.String())
 	}
 
 	vh.logger.WithField(
@@ -179,7 +179,7 @@ func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string) (*im
 	return im, nil
 }
 
-func (vh *validationHandler) CachedImageMetadata(imageName string) *imageMetadata {
+func (vh *validationHandler) CachedImageMetadata(imageName string) *ImageMetadata {
 	imageHashItem := vh.imageHashCache.Get(imageName)
 	if imageHashItem == nil {
 		vh.logger.WithField("imageName", imageName).Debug("CachedImageMetadata: imageDigest not found")
@@ -210,23 +210,23 @@ func (vh *validationHandler) CachedImageMetadata(imageName string) *imageMetadat
 	return im
 }
 
-func (vh *validationHandler) CacheImageMetadata(im *imageMetadata) {
+func (vh *validationHandler) CacheImageMetadata(im *ImageMetadata) {
 	if im == nil {
 		vh.logger.Warningf("CacheImageMetadata: image metadata is nil")
 		return
 	}
 
 	vh.imageHashCache.Set(
-		im.imageName,
-		im.imageDigest,
+		im.ImageName,
+		im.ImageDigest,
 		ttlcache.DefaultTTL,
 	)
 
-	vh.imageMetadataCache.Set(im.imageDigest, im, ttlcache.NoTTL)
+	vh.imageMetadataCache.Set(im.ImageDigest, im, ttlcache.NoTTL)
 	vh.logger.WithField("imageMetadata", *im).Debug("CacheImageMetadata")
 }
 
-func (vh *validationHandler) GetImageMetadata(imageName string) (*imageMetadata, error) {
+func (vh *validationHandler) GetImageMetadata(imageName string) (*ImageMetadata, error) {
 	if im := vh.CachedImageMetadata(imageName); im != nil {
 		return im, nil
 	}
@@ -262,9 +262,9 @@ func (vh *validationHandler) ParseImageName(imageName string) (name.Reference, e
 	return name.ParseReference(imageName, name.WithDefaultRegistry(vh.defaultRegistry))
 }
 
-func (vh *validationHandler) CalculateLaersGostHash(im *imageMetadata) ([]byte, error) {
+func (vh *validationHandler) CalculateLaersGostHash(im *ImageMetadata) ([]byte, error) {
 	layersDigestBuilder := strings.Builder{}
-	for _, digest := range im.layersDigest {
+	for _, digest := range im.LayersDigest {
 		vh.logger.WithField("layerHash", digest).Debug("image layer hash")
 		layersDigestBuilder.WriteString(digest)
 	}
@@ -284,8 +284,8 @@ func (vh *validationHandler) CalculateLaersGostHash(im *imageMetadata) ([]byte, 
 	return hasher.Sum(nil), nil
 }
 
-func (vh *validationHandler) CompareImageGostHash(im *imageMetadata, gostHash []byte) error {
-	imageGostHashByte, err := hex.DecodeString(im.imageGostDigest)
+func (vh *validationHandler) CompareImageGostHash(im *ImageMetadata, gostHash []byte) error {
+	imageGostHashByte, err := hex.DecodeString(im.ImageGostDigest)
 	if err != nil {
 		return fmt.Errorf("invalid gost image digest: %w", err)
 	}
