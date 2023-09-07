@@ -37,7 +37,7 @@ func checkMapForBannedKey(m map[interface{}]interface{}, banned []string) error 
 		if strKey, ok := k.(string); ok {
 			for _, ban := range banned {
 				if strKey == ban {
-					return fmt.Errorf("%s is invalid name for property")
+					return fmt.Errorf("%s is invalid name for property", ban)
 				}
 			}
 		}
