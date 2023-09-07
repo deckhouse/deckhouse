@@ -17,7 +17,7 @@ ENV GOPROXY=${GOPROXY} \
 RUN apk add --update --no-cache patch git && \
     git clone ${SOURCE_REPO}/kubernetes-sigs/iptables-wrappers/tarball/5792812d9e5a5bb7f22d79d557bbfeece253343d /src && \
     cd /src && git reset --hard 680003b3c6e93b471a59ecc9ae87a8f9054b82f3 && \
-    go build -ldflags="-s -w" -o iptables-wrapper main.go &&  chown 64535:64535 iptables-wrapper && chmod 0755 check-kernel-version
+    go build -ldflags="-s -w" -o iptables-wrapper main.go && chown 64535:64535 iptables-wrapper && chmod 0755 check-kernel-version
 
 FROM $BASE_DISTROLESS
 COPY --from=builder /src/iptables-wrapper /
