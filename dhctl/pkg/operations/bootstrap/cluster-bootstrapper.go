@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -72,7 +73,8 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	// TODO(dhctl-for-commander): add initial state and on-phase callback param
+	InitialState operations.DhctlState
+	OnPhaseFunc  operations.OnPhaseFunc
 
 	ConfigPath              string
 	ResourcesPath           string
@@ -166,6 +168,40 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
+func (b *ClusterBootstrapper) onInitialState(stateCache state.Cache, nextPhase operations.OperationPhase, nextPhaseCritical bool) (bool, error) {
+	return b.onPhase("", stateCache, nextPhase, nextPhaseCritical)
+}
+
+func (b *ClusterBootstrapper) onFinalState(finalState operations.DhctlState) error {
+	if b.OnPhaseFunc == nil {
+		return nil
+	}
+	err := b.OnPhaseFunc(operations.FinalizationPhase, finalState, "", false)
+	if errors.Is(err, operations.StopOperationCondition) {
+		return nil
+	} else {
+		return err
+	}
+}
+
+func (b *ClusterBootstrapper) onPhase(completedPhase operations.OperationPhase, stateCache state.Cache, nextPhase operations.OperationPhase, nextPhaseCritical bool) (bool, error) {
+	if b.OnPhaseFunc == nil {
+		return false, nil
+	}
+
+	completedPhaseState, err := operations.ExtractDhctlState(stateCache)
+	if err != nil {
+		return false, fmt.Errorf("unable to extract dhctl state: %w", err)
+	}
+
+	err = b.OnPhaseFunc(completedPhase, completedPhaseState, nextPhase, nextPhaseCritical)
+	if errors.Is(err, operations.StopOperationCondition) {
+		return true, nil
+	} else {
+		return false, err
+	}
+}
+
 func (b *ClusterBootstrapper) Bootstrap() error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
@@ -190,7 +226,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	// next init cache
 	cachePath := metaConfig.CachePath()
 	// TODO: if opts.InitialState has been specified — use it
-	if err = cache.Init(cachePath); err != nil {
+	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}
@@ -200,6 +236,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	if app.DropCache {
 		stateCache.Clean()
 		stateCache.Delete(state.TombstoneKey)
+	}
+
+	if shouldStop, err := b.onInitialState(stateCache, operations.BaseInfraPhase, true); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
 	}
 
 	sshClient := ssh.NewClientFromFlags()
@@ -328,11 +370,23 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		resourcesToCreate = parsedResources
 	}
 
+	if shouldStop, err := b.onPhase(operations.BaseInfraPhase, stateCache, operations.ExecuteBashibleBundlePhase, false); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
+
 	if err := WaitForSSHConnectionOnMaster(sshClient); err != nil {
 		return err
 	}
 	if err := RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
 		return err
+	}
+
+	if shouldStop, err := b.onPhase(operations.ExecuteBashibleBundlePhase, stateCache, operations.InstallDeckhousePhase, false); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
 	}
 
 	kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
@@ -352,9 +406,21 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
+	if shouldStop, err := b.onPhase(operations.InstallDeckhousePhase, stateCache, operations.CreateResourcesPhase, false); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
+
 	err = createResources(kubeCl, resourcesToCreate, metaConfig)
 	if err != nil {
 		return err
+	}
+
+	if shouldStop, err := b.onPhase(operations.CreateResourcesPhase, stateCache, operations.ExecPostBootstrapPhase, false); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
 	}
 
 	if app.PostBootstrapScriptPath != "" {
@@ -364,6 +430,17 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		if err := postScriptExecutor.Execute(); err != nil {
 			return err
 		}
+	}
+
+	if shouldStop, err := b.onPhase(operations.ExecPostBootstrapPhase, stateCache, operations.FinalizationPhase, false); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
+
+	finalState, err := operations.ExtractDhctlState(stateCache)
+	if err != nil {
+		return fmt.Errorf("unable to extract dhctl state: %w", err)
 	}
 
 	_ = log.Process("bootstrap", "Clear cache", func() error {
@@ -391,7 +468,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		})
 	}
 
-	return nil
+	return b.onFinalState(finalState)
 }
 
 func printBanner() {

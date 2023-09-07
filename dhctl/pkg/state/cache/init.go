@@ -41,7 +41,7 @@ var (
 
 var globalCache state.Cache = &cache.DummyCache{}
 
-func choiceCache(identity string) (state.Cache, error) {
+func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
 	tmpDir := filepath.Join(app.CacheDir, stringsutil.Sha256Encode(identity))
 	log.DebugF("Cache dir %s\n", tmpDir)
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
@@ -49,6 +49,9 @@ func choiceCache(identity string) (state.Cache, error) {
 	}
 
 	if app.CacheKubeNamespace == "" {
+		if opts.InitialState != nil {
+			return cache.NewStateCacheWithInitialState(tmpDir, opts.InitialState)
+		}
 		return cache.NewStateCache(tmpDir)
 	}
 
@@ -87,16 +90,24 @@ func choiceCache(identity string) (state.Cache, error) {
 	return k8sCache, nil
 }
 
-func initCache(identity string) error {
+func initCache(identity string, opts CacheOptions) error {
 	var err error
 	once.Do(func() {
-		globalCache, err = choiceCache(identity)
+		globalCache, err = choiceCache(identity, opts)
 	})
 	return err
 }
 
+type CacheOptions struct {
+	InitialState map[string][]byte
+}
+
 func Init(identity string) error {
-	return initCache(identity)
+	return initCache(identity, CacheOptions{})
+}
+
+func InitWithOptions(identity string, opts CacheOptions) error {
+	return initCache(identity, opts)
 }
 
 func Global() state.Cache {

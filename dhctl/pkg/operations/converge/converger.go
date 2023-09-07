@@ -16,8 +16,9 @@ package converge
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
