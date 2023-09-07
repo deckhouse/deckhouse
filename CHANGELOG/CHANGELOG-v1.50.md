@@ -31,6 +31,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix migration of cluster from one edition to another. [#5746](https://github.com/deckhouse/deckhouse/pull/5746)
  - **[candi]** Fixed CSI mount cleaner. [#5667](https://github.com/deckhouse/deckhouse/pull/5667)
  - **[candi]** Fix kubelet configuration step. [#5561](https://github.com/deckhouse/deckhouse/pull/5561)
  - **[candi]** Fix old CSI mount cleaner. [#5548](https://github.com/deckhouse/deckhouse/pull/5548)
