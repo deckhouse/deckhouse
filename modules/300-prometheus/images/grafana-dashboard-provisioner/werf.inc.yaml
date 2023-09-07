@@ -12,10 +12,10 @@ git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /tmp/requirements.txt
   stageDependencies:
-    beforeSetup:
+    install:
       - '**/*'
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
   stageDependencies:
-    beforeSetup:
+    install:
       - '**/*'

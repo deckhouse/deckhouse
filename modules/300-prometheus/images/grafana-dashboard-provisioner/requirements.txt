@@ -1,2 +1,2 @@
-deckhouse==0.4.7
+shell-operator==0.0.8
 python-slugify==8.0.1
