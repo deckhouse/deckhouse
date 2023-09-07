@@ -14,7 +14,6 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - mkdir -p /src
   - apk add --update --no-cache patch git
   - git clone {{ .SOURCE_REPO }}/kubernetes-sigs/iptables-wrappers.git /src
   - cd /src
