@@ -24,7 +24,7 @@ mount:
 shell:
   beforeInstall:
   - mkdir -p /src
-  - apk add --update --no-cache patch git
+  - apk add --update --no-cache git make patch
   - git clone --depth 1 --branch v0.11.0 {{ .SOURCE_REPO }}/brancz/kube-rbac-proxy.git /src
   install:
   - cd /src
