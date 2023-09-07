@@ -4,6 +4,7 @@ fromCacheVersion: "2023-09-07.0"
 shell:
   beforeInstall:
   - apk add --no-cache python3 py3-pip
+  install:
   - pip3 install -r /tmp/requirements.txt
   - apk del py3-pip
   - rm -rf /var/cache/apk/*
