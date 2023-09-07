@@ -661,7 +661,7 @@ args:
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
   SOURCE_REPO: {{ .SOURCE_REPO }}
   GOPROXY: {{ .GOPROXY }}
-  {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless" "common/iptables-wrapper")) }}
+  {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
 dependencies:
 - image: common/distroless
   imports:
