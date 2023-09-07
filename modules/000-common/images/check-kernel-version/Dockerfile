@@ -1,11 +1,21 @@
-ARG BASE_SCRATCH
+ARG BASE_DISTROLESS
 ARG BASE_GOLANG_17_ALPINE
+
 FROM $BASE_GOLANG_17_ALPINE as artifact
 WORKDIR /src
 COPY src /src/
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o check-kernel-version check-kernel-version.go
+ARG GOPROXY
+ARG SOURCE_REPO
 
-FROM $BASE_SCRATCH
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
+RUN go build -ldflags="-w -s" -o check-kernel-version check-kernel-version.go && chown 64535:64535 check-kernel-version && chmod 0755 check-kernel-version
+
+FROM $BASE_DISTROLESS
 COPY --from=artifact /src/check-kernel-version /
 ENTRYPOINT [ "/check-kernel-version" ]
