@@ -192,12 +192,21 @@ func (vh *validationHandler) CachedImageMetadata(imageName string) *imageMetadat
 			"imageName", imageName,
 		).WithField(
 			"imageHash", imageHashItem.Value(),
-		).Debug("CachedImageMetadata: imageMetadata not found")
+		).Info("CachedImageMetadata: imageMetadata not found")
 		return nil
 	}
 	im := imageMetadataItem.Value()
 
-	vh.logger.WithField("imageMetadata", im).Debug("CachedImageMetadata")
+	if im == nil {
+		vh.logger.WithField(
+			"imageName", imageName,
+		).WithField(
+			"imageHash", imageHashItem.Value(),
+		).Warning("CachedImageMetadata: return nil from cache item")
+		return nil
+	}
+
+	vh.logger.WithField("imageMetadata", *im).Debug("CachedImageMetadata")
 	return im
 }
 
@@ -214,7 +223,7 @@ func (vh *validationHandler) CacheImageMetadata(im *imageMetadata) {
 	)
 
 	vh.imageMetadataCache.Set(im.imageDigest, im, ttlcache.NoTTL)
-	vh.logger.WithField("imageMetadata", im).Debug("CacheImageMetadata")
+	vh.logger.WithField("imageMetadata", *im).Debug("CacheImageMetadata")
 }
 
 func (vh *validationHandler) GetImageMetadata(imageName string) (*imageMetadata, error) {
@@ -284,7 +293,7 @@ func (vh *validationHandler) CompareImageGostHash(im *imageMetadata, gostHash []
 	if subtle.ConstantTimeCompare(imageGostHashByte, gostHash) == 0 {
 		return fmt.Errorf("invalid gost image digest comparation")
 	}
-
+	vh.logger.Debug("CompareImageGostHash success")
 	return nil
 }
 
