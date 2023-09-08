@@ -40,6 +40,9 @@ RUN patch -p1 -l < ./build_go.patch
 COPY ./patches/run_sh.patch .
 RUN patch -p1 < ./run_sh.patch
 
+# Download flant-statusmap-panel plugin.
+ARG STATUSMAP_VERSION
+RUN git clone --depth 1 --branch v${STATUSMAP_VERSION} ${SOURCE_REPO}/flant/grafana-statusmap.git /grafana-statusmap
 
 # ===================================================
 # Step 2. Frontend.
@@ -55,6 +58,10 @@ ENV NODE_ENV production
 ENV NODE_OPTIONS "--max_old_space_size=8000"
 RUN yarn build
 
+COPY --from=src-files /grafana-statusmap /grafana-statusmap
+WORKDIR /grafana-statusmap
+RUN yarn install
+RUN yarn build
 
 # ===================================================
 # Step 3. Backend binaries.
@@ -153,11 +160,8 @@ RUN echo Add bundled plugins: ${BUNDLED_PLUGINS} && \
 # Save path with bundled plugins.
 ENV BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
 
-# Download flant-statusmap-panel plugin.
-ARG STATUSMAP_VERSION
-ARG SOURCE_REPO
-ENV SOURCE_REPO=${SOURCE_REPO}
-RUN git clone --depth 1 --branch v${STATUSMAP_VERSION} ${SOURCE_REPO}/flant/grafana-statusmap.git ${GF_PATHS_PLUGINS}/grafana-statusmap
+# Copy flant-statusmap-panel plugin.
+COPY --from=js-builder /grafana-statusmap ${GF_PATHS_PLUGINS}/grafana-statusmap
 
 # Home Dashboard
 COPY ./grafana_home_dashboard.json /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
