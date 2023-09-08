@@ -17,7 +17,7 @@
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
   systemctl daemon-reload
-  systemctl enable containerd.service
+  systemctl enable containerd-deckhouse.service
 {{ if ne .runType "ImageBuilding" -}}
   bb-flag-set containerd-need-restart
 {{- end }}
