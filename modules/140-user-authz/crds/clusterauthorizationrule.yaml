@@ -210,7 +210,9 @@ spec:
                   description: |
                     Defines a set of namespaces accessible by the user, using the value of the `namespaceSelector.labelSelector` parameter.
 
-                    If the parameter `namespaceSelector` is specified, the values of the parameters `limitNamespaces` and `allowAccessToSystemNamespaces` **are ignored**. Thus, all namespaces with labels that fall under the conditions specified in the `namespace Selector.labelSelector` parameter, including system namespaces, will be available. If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters.
+                    If the parameter `namespaceSelector` is specified, the values of the parameters `limitNamespaces` and `allowAccessToSystemNamespaces` **are ignored**. Thus, all namespaces with labels that fall under the conditions specified in the `namespace Selector.labelSelector` parameter, including system namespaces, will be available.
+
+                    If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters. If none of the parameters `namespaceSelector`, `limitNamespaces` and `allowAccessToSystemNamespaces` are specified, then all namespaces will be available, except for the system ones (`kube-*`, `d8-*`, `loghouse`, `default`).
 
                     Is available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter is enabled.
                   type: object
