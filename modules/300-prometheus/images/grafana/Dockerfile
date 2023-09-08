@@ -6,7 +6,7 @@ ARG BASE_UBUNTU
 ARG BASE_DISTROLESS
 ARG GRAFANA_VERSION="8.5.13"
 ARG STATUSMAP_VERSION="0.5.1"
-ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel"
+ARG BUNDLED_PLUGINS="petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel"
 
 # This Dockerfile is based on Dockerfile from https://github.com/grafana/grafana/blob/v8.5.2/Dockerfile
 # Changes:
@@ -58,9 +58,12 @@ ENV NODE_ENV production
 ENV NODE_OPTIONS "--max_old_space_size=8000"
 RUN yarn build
 
+FROM $BASE_NODE_16_ALPINE as grafana-statusmap
 COPY --from=src-files /grafana-statusmap /grafana-statusmap
 WORKDIR /grafana-statusmap
+RUN apk --no-cache add git
 RUN yarn install
+ENV NODE_ENV production
 RUN yarn build
 
 # ===================================================
@@ -119,7 +122,7 @@ ENV PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_DATA="/var/lib/grafana" \
     GF_PATHS_HOME="/usr/share/grafana" \
     GF_PATHS_LOGS="/var/log/grafana" \
-    GF_PATHS_PLUGINS="/var/lib/grafana/plugins" \
+    GF_PATHS_PLUGINS="/usr/share/grafana/plugins-bundled" \
     GF_PATHS_PROVISIONING="/etc/grafana/provisioning"
 
 WORKDIR $GF_PATHS_HOME
@@ -161,7 +164,7 @@ RUN echo Add bundled plugins: ${BUNDLED_PLUGINS} && \
 ENV BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
 
 # Copy flant-statusmap-panel plugin.
-COPY --from=js-builder /grafana-statusmap ${GF_PATHS_PLUGINS}/grafana-statusmap
+COPY --from=grafana-statusmap /grafana-statusmap/dist/ ${GF_PATHS_PLUGINS}/flant-statusmap-panel/
 
 # Home Dashboard
 COPY ./grafana_home_dashboard.json /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
@@ -172,7 +175,8 @@ RUN chown -R 64535:64535 /usr/share/grafana && \
     chown -R 64535:64535 /var/lib/grafana && \
     chown -R 64535:64535 /var/log/grafana
 
-RUN chmod 0700 ./bin/grafana-server && chmod 0700 ./bin/grafana-cli
+RUN chmod 0700 ./bin/grafana-server && \
+    chmod 0700 ./bin/grafana-cli
 
 FROM $BASE_DISTROLESS
 
@@ -187,7 +191,7 @@ ENV PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_DATA="/var/lib/grafana" \
     GF_PATHS_HOME="/usr/share/grafana" \
     GF_PATHS_LOGS="/var/log/grafana" \
-    GF_PATHS_PLUGINS="/var/lib/grafana/plugins" \
+    GF_PATHS_PLUGINS="/usr/share/grafana/plugins-bundled" \
     GF_PATHS_PROVISIONING="/etc/grafana/provisioning"
 
 ENV BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
