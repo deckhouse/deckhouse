@@ -74,18 +74,23 @@ apiVersions:
             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
       podSubnetCIDR:
         type: string
-        description: Address space of the cluster's Pods.
+        description: |
+          Address space of the cluster's Pods.
+
+          > Caution! You won't be able to change the parameter in a working cluster.
       podSubnetNodeCIDRPrefix:
         type: string
         description: |
           The prefix of Pod network on a node.
 
-          > Caution! Don't change the parameter in a working cluster.
+          > Caution! You won't be able to change the parameter in a working cluster.
         default: "24"
       serviceSubnetCIDR:
         type: string
         description: |
           Address space of the cluster's services.
+
+          > Caution! You won't be able to change the parameter in a working cluster.
       clusterDomain:
         type: string
         description: Cluster domain (used for local routing).
