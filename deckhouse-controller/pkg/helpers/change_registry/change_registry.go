@@ -113,17 +113,10 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		secretYaml, _ := yaml.Marshal(deckhouseSecret)
 		deploymentYaml, _ := yaml.Marshal(deckhouseDeploy)
 		logEntry.Println("------------------------------")
-		logEntry.Println("Deployment bashible-apiserver will be scaled to 0 replicas")
-		logEntry.Println("------------------------------")
 		logEntry.Printf("New Secret will be applied:\n%s\n", secretYaml)
 		logEntry.Println("------------------------------")
 		logEntry.Printf("New Deployment will be applied:\n%s\n", deploymentYaml)
 	} else {
-		logEntry.Println("Scaling-down bashible-apiserver...")
-		if err := scaleBashibleAPIServerDeployment(ctx, kubeCl, 0); err != nil {
-			return err
-		}
-
 		logEntry.Println("Updating deckhouse image pull secret...")
 		if err := updateImagePullSecret(ctx, kubeCl, deckhouseSecret); err != nil {
 			return err
@@ -418,23 +411,4 @@ func authHeaderWithBearer(header http.Header) bool {
 	}
 
 	return strings.ToLower(header.Get(wwwAuthHeader)) == bearer
-}
-
-func scaleBashibleAPIServerDeployment(ctx context.Context, kubeCl kclient.KubeClient, replicas int32) error {
-	scaling, err := kubeCl.AppsV1().
-		Deployments("d8-cloud-instance-manager").
-		GetScale(ctx, "bashible-apiserver", metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("apps/v1 GetScale for bashible-apiserver: %w", err)
-	}
-
-	scaling.Spec.Replicas = replicas
-	_, err = kubeCl.AppsV1().
-		Deployments("d8-cloud-instance-manager").
-		UpdateScale(ctx, "bashible-apiserver", scaling, metav1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("apps/v1 UpdateScale for bashible-apiserver: %w", err)
-	}
-
-	return nil
 }
