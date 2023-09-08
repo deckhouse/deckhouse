@@ -30,6 +30,7 @@ import (
 
 	"d8.io/bashible/pkg/apis/bashible/v1alpha1"
 	"d8.io/bashible/pkg/apiserver"
+	"d8.io/bashible/pkg/apiserver/readyz"
 	bashibleopenapi "d8.io/bashible/pkg/generated/openapi"
 )
 
@@ -96,7 +97,7 @@ func (o *BashibleServerOptions) Complete() error {
 }
 
 // Config returns config for the api server given BashibleServerOptions
-func (o *BashibleServerOptions) Config() (*apiserver.Config, error) {
+func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Config, error) {
 	// TODO have a "real" external address
 	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
@@ -114,6 +115,13 @@ func (o *BashibleServerOptions) Config() (*apiserver.Config, error) {
 		return nil, err
 	}
 
+	deployInformer := serverConfig.SharedInformerFactory.Apps().V1().Deployments().Informer()
+	deployHealthChecker, err := readyz.NewDeploymentReadinessCheck(stopCh, deployInformer, "d8-system", "deckhouse")
+	if err != nil {
+		return nil, fmt.Errorf("readyz.NewDeploymentReadinessCheck: %w", err)
+	}
+	serverConfig.ReadyzChecks = append(serverConfig.ReadyzChecks, deployHealthChecker)
+
 	config := &apiserver.Config{
 		GenericConfig: serverConfig,
 		ExtraConfig:   apiserver.ExtraConfig{},
@@ -123,7 +131,7 @@ func (o *BashibleServerOptions) Config() (*apiserver.Config, error) {
 
 // RunBashibleServer starts a new BashibleServer given BashibleServerOptions
 func (o BashibleServerOptions) RunBashibleServer(stopCh <-chan struct{}) error {
-	config, err := o.Config()
+	config, err := o.Config(stopCh)
 	if err != nil {
 		return err
 	}
