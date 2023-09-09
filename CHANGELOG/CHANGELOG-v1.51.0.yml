@@ -21,6 +21,10 @@ cloud-provider-azure:
   features:
     - summary: Add `serviceEndpoints` parameter in a provider cluster configuration.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5659
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix `ignoreVolumeMicroversion` parameter appliance for Kubernetes version > 1.24.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5778
 cloud-provider-yandex:
   features:
     - summary: Add storage class for the new disk type — `network-ssd-io-m3`.
@@ -176,6 +180,9 @@ operator-trivy:
       pull_request: https://github.com/deckhouse/deckhouse/pull/5662
 prometheus:
   features:
+    - summary: Images are based now on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5783
+      impact: alertmanager, prometheus, grafana, trickster pods will be restarted.
     - summary: Images are based now on a distroless image.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5402
       impact: alertmanager, prometheus, grafana, trickster pods will be restarted.
