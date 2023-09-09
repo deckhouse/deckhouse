@@ -37,6 +37,8 @@
  - **[loki]** Images are based on a distroless image. [#5391](https://github.com/deckhouse/deckhouse/pull/5391)
  - **[monitoring-kubernetes]** Images are based on a distroless image. [#5378](https://github.com/deckhouse/deckhouse/pull/5378)
  - **[operator-trivy]** Use customized trivy binary. [#5399](https://github.com/deckhouse/deckhouse/pull/5399)
+ - **[prometheus]** Images are based now on a distroless image. [#5783](https://github.com/deckhouse/deckhouse/pull/5783)
+    alertmanager, prometheus, grafana, trickster pods will be restarted.
  - **[prometheus]** Images are based now on a distroless image. [#5402](https://github.com/deckhouse/deckhouse/pull/5402)
     alertmanager, prometheus, grafana, trickster pods will be restarted.
  - **[prometheus-metrics-adapter]** All images are now based on a distroless image. [#5519](https://github.com/deckhouse/deckhouse/pull/5519)
@@ -50,6 +52,7 @@
  - **[candi]** AWS node's `root_block_device` is now marked with tags from `AWSClusterConfiguration`. [#5650](https://github.com/deckhouse/deckhouse/pull/5650)
  - **[candi]** Fix migration of cluster from one edition to another. [#5603](https://github.com/deckhouse/deckhouse/pull/5603)
  - **[candi]** Changed the command output for `yum versionlock delete` if it is dnf. [#5492](https://github.com/deckhouse/deckhouse/pull/5492)
+ - **[cloud-provider-openstack]** Fix `ignoreVolumeMicroversion` parameter appliance for Kubernetes version > 1.24. [#5778](https://github.com/deckhouse/deckhouse/pull/5778)
  - **[deckhouse]** Made it possible to configure `minimalNotificationTime` without configuring the notification webhook. [#5491](https://github.com/deckhouse/deckhouse/pull/5491)
  - **[deckhouse]** Automatically update Deckhouse minor versions step by step. [#5453](https://github.com/deckhouse/deckhouse/pull/5453)
  - **[deckhouse-controller]** Skip defaulting an array without items schema to prevent panic [#5711](https://github.com/deckhouse/deckhouse/pull/5711)
