@@ -3,7 +3,7 @@ properties:
   tolerations:
     type: array
     description: |
-      Operator and scan jobs tolerations.
+      Optional `tolerations` for trivy operator and scan jobs.
 
       The same as `spec.tolerations` for the Kubernetes pod.
 
@@ -36,7 +36,7 @@ properties:
     x-examples:
       - disktype: ssd
     description: |
-      Operator and scan jobs nodeSelector.
+      Optional `nodeSelector` for trivy operator and scan jobs.
 
       The same as `spec.nodeSelector` for the Kubernetes pod.
 
