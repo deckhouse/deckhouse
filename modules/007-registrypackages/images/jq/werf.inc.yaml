@@ -8,6 +8,10 @@ import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
+  includePaths:
+  - install
+  - uninstall
+  - jq
   before: setup
 docker:
   LABEL:
@@ -16,7 +20,7 @@ docker:
     jq: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+from: {{ $.Images.BASE_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -28,3 +32,6 @@ import:
   add: /usr/bin/jq
   to: /jq
   before: setup
+shell:
+  setup:
+  - chmod +x /jq /install /uninstall
