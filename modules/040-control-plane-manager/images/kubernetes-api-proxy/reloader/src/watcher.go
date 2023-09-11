@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	nginxConf    = "/etc/nginx/nginx.conf"
-	nginxNewConf = "/etc/nginx/nginx_new.conf"
+	nginxConf    = "/etc/nginx/config/nginx.conf"
+	nginxNewConf = "/etc/nginx/config/nginx_new.conf"
 )
 
 func nginxReload() error {
