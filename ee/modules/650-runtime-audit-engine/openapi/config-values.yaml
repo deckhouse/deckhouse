@@ -1,2 +1,6 @@
 type: object
-properties: {}
+properties:
+  debugLogging:
+    type: boolean
+    description: |
+      If true, all events will be duplicated to stdout.

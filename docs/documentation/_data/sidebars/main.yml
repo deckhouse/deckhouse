@@ -984,12 +984,16 @@ entries:
                   url: /modules/650-runtime-audit-engine/configuration.html
                 - title: Custom Resources
                   url: /modules/650-runtime-audit-engine/cr.html
-            - title: FAQ
-              url: /modules/650-runtime-audit-engine/faq.html
+            - title:
+                en: Advanced Usage
+                ru: Расширенная конфигурация
+              url: /modules/650-runtime-audit-engine/advanced_usage.html
             - title:
                 en: Examples
                 ru: Примеры
               url: /modules/650-runtime-audit-engine/examples.html
+            - title: FAQ
+              url: /modules/650-runtime-audit-engine/faq.html
         - title:
             en: Other modules
             ru: Другие модули
