@@ -140,6 +140,7 @@ function node_cleanup() {
   rm -rf /etc/systemd/system/bashible*
   rm -rf /etc/systemd/system/sysctl-tuner*
   rm -rf /etc/systemd/system/kubelet*
+  rm -rf /lib/systemd/system/containerd.service
 
   while true; do
     msg="Reboot required. Reboot the node? [yes/no]: "
