@@ -1,4 +1,4 @@
-{{- $version := "8.0.1" }}
+{{- $version := "8.2.1" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -31,7 +31,7 @@ shell:
   - apk add --no-cache git build-base clang openssl-dev nghttp2-dev nghttp2-static libssh2-dev libssh2-static openssl-libs-static zlib-static autoconf automake libtool
   setup:
   - export CC=clang
-  - git clone --depth 1 --branch curl-8_2_1 {{ .SOURCE_REPO }}/curl/curl.git
+  - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} {{ $.SOURCE_REPO }}/curl/curl.git
   - cd /curl
   - autoreconf -fi
   - LDFLAGS="-static" PKG_CONFIG="pkg-config --static" ./configure --disable-shared --enable-static --disable-ldap --enable-ipv6 --enable-unix-sockets --with-ssl --with-libssh2

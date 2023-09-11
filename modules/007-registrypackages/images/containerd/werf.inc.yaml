@@ -42,18 +42,17 @@ shell:
   - apt-get update
   - apt-get install -y patch libbtrfs-dev libseccomp-dev
   install:
+  - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
   - cd /src
-  - git clone https://github.com/containerd/containerd.git
+  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git
   - cd containerd
-  - git checkout tags/v{{ $containerd_version }}
   - git config --global user.email "builder@deckhouse.io"
   - make STATIC=1 all
   - mv bin/* /
   - cd /src
-  - git clone https://github.com/opencontainers/runc
+  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc
   - cd runc
-  - git checkout tags/v{{ $runc_version }}
   - git config --global user.email "builder@deckhouse.io"
   - make static
   - mv runc /runc
