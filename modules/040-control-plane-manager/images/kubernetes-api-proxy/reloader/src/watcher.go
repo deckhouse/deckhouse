@@ -40,7 +40,7 @@ func nginxReload() error {
 	if err != nil {
 		return err
 	}
-	if !equal {
+	if equal {
 		log.Printf("%s and %s are equal, skipping reload...", nginxConf, nginxNewConf)
 		return nil
 	}
