@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,3 +19,4 @@ rm -f /tmp/bootstrap.sh
 rm -rf /tmp/candi-bundle*
 rm -f /tmp/bundle*.tar
 rm -f /tmp/kubeadm-config*
+rm -f /tmp/node_cleanup.sh
