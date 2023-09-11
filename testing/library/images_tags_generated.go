@@ -341,7 +341,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"crictl125":        "imageHash-registrypackages-crictl125",
 		"crictl126":        "imageHash-registrypackages-crictl126",
 		"crictl127":        "imageHash-registrypackages-crictl127",
-		"d8Curl801":        "imageHash-registrypackages-d8Curl801",
+		"d8Curl821":        "imageHash-registrypackages-d8Curl821",
 		"drbd":             "imageHash-registrypackages-drbd",
 		"jq16":             "imageHash-registrypackages-jq16",
 		"kubeadm12317":     "imageHash-registrypackages-kubeadm12317",
