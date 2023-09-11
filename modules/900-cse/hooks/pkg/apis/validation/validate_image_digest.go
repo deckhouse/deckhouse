@@ -209,6 +209,7 @@ func (vh *validationHandler) GetAuthConfigsFromSecret(secretName string, namespa
 	vh.logger.Debugf("secret from kube %+v", secret)
 
 	if data, ok := secret.Data[".dockerconfigjson"]; ok {
+		vh.logger.Debugf("data: %s", string(data))
 		var secretData map[string]map[string]*authn.AuthConfig
 		err := json.Unmarshal(data, &secretData)
 		if err != nil {
