@@ -52,7 +52,7 @@ func TestCheckHashEqualityAndInequality(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	areHashesEqual, err := checkFileHashEquality(file1EqualPath, file2EqualPath)
+	areHashesEqual, err := fileContentsEqual(file1EqualPath, file2EqualPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func TestCheckHashEqualityAndInequality(t *testing.T) {
 		t.Errorf("expected hash equality, got false")
 	}
 
-	areHashesUnequal, err := checkFileHashEquality(file1UnequalPath, file2UnequalPath)
+	areHashesUnequal, err := fileContentsEqual(file1UnequalPath, file2UnequalPath)
 	if err != nil {
 		t.Fatal(err)
 	}

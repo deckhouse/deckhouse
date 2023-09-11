@@ -36,12 +36,13 @@ const (
 
 func nginxReload() error {
 	// Check if nginx.conf has changed and test the new configuration
-	changed, err := checkFileHashEquality(nginxConf, nginxNewConf)
+	equal, err := fileContentsEqual(nginxConf, nginxNewConf)
 	if err != nil {
 		return err
 	}
-	if !changed {
+	if !equal {
 		log.Printf("%s and %s are equal, skipping reload...", nginxConf, nginxNewConf)
+		return nil
 	}
 
 	output, err := exec.Command("nginx", "-t", "-c", nginxNewConf).CombinedOutput()

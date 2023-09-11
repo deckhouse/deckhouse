@@ -39,7 +39,7 @@ func calculateHash(filePath string) ([]byte, error) {
 	return hash.Sum(nil), nil
 }
 
-func checkFileHashEquality(file1Path, file2Path string) (bool, error) {
+func fileContentsEqual(file1Path, file2Path string) (bool, error) {
 	hash1, err := calculateHash(file1Path)
 	if err != nil {
 		return false, fmt.Errorf("error calculating hash for %s: %s\n", file1Path, err)
