@@ -21,11 +21,13 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/jellydator/ttlcache/v3"
@@ -36,6 +38,8 @@ import (
 	"go.cypherpunks.ru/gogost/v5/gost34112012256"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const (
@@ -50,12 +54,16 @@ type (
 		ImageGostDigest string
 		LayersDigest    []string
 	}
+
 	validationHandler struct {
-		logger             *log.Entry
-		registryTransport  *http.Transport
-		defaultRegistry    string
-		imageHashCache     *ttlcache.Cache[string, string]
-		imageMetadataCache *ttlcache.Cache[string, *ImageMetadata]
+		logger                *log.Entry
+		registryTransport     *http.Transport
+		defaultRegistry       string
+		imageHashCache        *ttlcache.Cache[string, string]
+		imageMetadataCache    *ttlcache.Cache[string, *ImageMetadata]
+		imagePullSecretsCache *ttlcache.Cache[string, struct{}]
+		registryAuthCache     *ttlcache.Cache[string, *authn.AuthConfig]
+		kubeClient            *kubernetes.Clientset
 	}
 )
 
@@ -65,6 +73,12 @@ func NewValidationHandler(skipVerify bool) *validationHandler {
 	if skipVerify {
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+
+	kubeClient, err := newKubeClient()
+	if err != nil {
+		logger.WithError(err).Warning("can't init kubernetes client in cluster")
+	}
+
 	return &validationHandler{
 		logger:            logger,
 		registryTransport: customTransport,
@@ -79,7 +93,32 @@ func NewValidationHandler(skipVerify bool) *validationHandler {
 				ttlcache.NoTTL,
 			),
 		),
+		imagePullSecretsCache: ttlcache.New[string, struct{}](
+			ttlcache.WithTTL[string, struct{}](
+				time.Duration(cacheEvictionDurationSecond * time.Second),
+			),
+		),
+		registryAuthCache: ttlcache.New[string, *authn.AuthConfig](
+			ttlcache.WithTTL[string, *authn.AuthConfig](
+				ttlcache.NoTTL,
+			),
+		),
+		kubeClient: kubeClient,
 	}
+}
+
+func newKubeClient() (*kubernetes.Clientset, error) {
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+	// creates the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
 }
 
 func (vh *validationHandler) imageDigestValidationHandler() http.Handler {
@@ -93,10 +132,12 @@ func (vh *validationHandler) imageDigestValidationHandler() http.Handler {
 				return rejectResult("incorrect pod data")
 			}
 
-			vh.logger.WithField("pod.status", pod.Status.ContainerStatuses).Debug("")
-
+			hasAuth, err := vh.updateRegistrySecrets(pod)
+			if err != nil {
+				return rejectResult(err.Error())
+			}
 			for _, image := range vh.GetImagesFromPod(pod) {
-				err := vh.CheckImageDigest(image)
+				err := vh.CheckImageDigest(image, hasAuth)
 				if err != nil {
 					return rejectResult(err.Error())
 				}
@@ -116,6 +157,57 @@ func (vh *validationHandler) imageDigestValidationHandler() http.Handler {
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: validationLogger})
 }
 
+func (vh *validationHandler) updateRegistrySecrets(pod *corev1.Pod) (bool, error) {
+	if len(pod.Spec.ImagePullSecrets) == 0 {
+		return false, nil
+	}
+
+	for _, secret := range pod.Spec.ImagePullSecrets {
+		if vh.imagePullSecretsCache.Has(secret.Name) {
+			continue
+		}
+
+		vh.imagePullSecretsCache.Set(secret.Name, struct{}{}, ttlcache.NoTTL)
+		authConfigMap, err := vh.GetAuthConfigsFromSecret(secret.Name, pod.GetNamespace())
+		if err != nil {
+			vh.logger.WithError(err).Warning("get registry AuthConfig from secret")
+			continue
+		}
+
+		vh.updateRegistryAuthCache(authConfigMap)
+	}
+
+	return true, nil
+}
+
+func (vh *validationHandler) updateRegistryAuthCache(authConfigMap map[string]*authn.AuthConfig) {
+	for address, authConfig := range authConfigMap {
+		vh.registryAuthCache.Set(address, authConfig, ttlcache.NoTTL)
+	}
+}
+
+func (vh *validationHandler) GetAuthConfigsFromSecret(secretName string, namespace string) (map[string]*authn.AuthConfig, error) {
+	result := map[string]*authn.AuthConfig{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	secret, err := vh.kubeClient.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	if data, ok := secret.Data[".dockerconfigjson"]; ok {
+		var secretData map[string]map[string]*authn.AuthConfig
+		err := json.Unmarshal(data, &secretData)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 func (vh *validationHandler) GetImagesFromPod(pod *corev1.Pod) []string {
 	images := []string{}
 	for _, container := range pod.Spec.Containers {
@@ -124,7 +216,7 @@ func (vh *validationHandler) GetImagesFromPod(pod *corev1.Pod) []string {
 	return images
 }
 
-func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string) (*ImageMetadata, error) {
+func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string, hasAuth bool) (*ImageMetadata, error) {
 	ref, err := vh.ParseImageName(imageName)
 	if err != nil {
 		return nil, err
@@ -133,10 +225,24 @@ func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string) (*Im
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	image, err := remote.Image(
-		ref,
+	options := []remote.Option{
 		remote.WithTransport(vh.registryTransport),
 		remote.WithContext(ctx),
+	}
+
+	if hasAuth {
+		address := ref.Name()
+		authConfigItem := vh.registryAuthCache.Get(address)
+		if authConfigItem == nil {
+			return nil, fmt.Errorf("can't get authConfig from cache")
+		}
+
+		options = append(options, remote.WithAuth(authn.FromConfig(*authConfigItem.Value())))
+	}
+
+	image, err := remote.Image(
+		ref,
+		options...,
 	)
 	if err != nil {
 		return nil, err
@@ -226,12 +332,12 @@ func (vh *validationHandler) CacheImageMetadata(im *ImageMetadata) {
 	vh.logger.WithField("imageMetadata", *im).Debug("CacheImageMetadata")
 }
 
-func (vh *validationHandler) GetImageMetadata(imageName string) (*ImageMetadata, error) {
+func (vh *validationHandler) GetImageMetadata(imageName string, hasAuth bool) (*ImageMetadata, error) {
 	if im := vh.CachedImageMetadata(imageName); im != nil {
 		return im, nil
 	}
 
-	im, err := vh.GetImageMetadataFromRegistry(imageName)
+	im, err := vh.GetImageMetadataFromRegistry(imageName, hasAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -241,8 +347,8 @@ func (vh *validationHandler) GetImageMetadata(imageName string) (*ImageMetadata,
 	return im, nil
 }
 
-func (vh *validationHandler) CheckImageDigest(imageName string) error {
-	im, err := vh.GetImageMetadata(imageName)
+func (vh *validationHandler) CheckImageDigest(imageName string, hasAuth bool) error {
+	im, err := vh.GetImageMetadata(imageName, hasAuth)
 	if err != nil {
 		return err
 	}
