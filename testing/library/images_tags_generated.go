@@ -335,7 +335,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
 	},
 	"registrypackages": map[string]interface{}{
-		"conntrackDebian1462":       "imageHash-registrypackages-conntrackDebian1462",
 		"containerd1620":            "imageHash-registrypackages-containerd1620",
 		"crictl123":                 "imageHash-registrypackages-crictl123",
 		"crictl124":                 "imageHash-registrypackages-crictl124",
@@ -365,7 +364,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet1275":               "imageHash-registrypackages-kubelet1275",
 		"kubernetesCni120":          "imageHash-registrypackages-kubernetesCni120",
 		"tomlMerge01":               "imageHash-registrypackages-tomlMerge01",
-		"virtWhatDebian1191":        "imageHash-registrypackages-virtWhatDebian1191",
 	},
 	"runtimeAuditEngine": map[string]interface{}{
 		"falco":         "imageHash-runtimeAuditEngine-falco",

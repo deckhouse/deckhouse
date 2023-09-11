@@ -12,7 +12,7 @@ git:
 import:
 - artifact: jq
   add: /usr/bin/jq
-  to: /
+  to: /jq
   before: setup
 docker:
   LABEL:
