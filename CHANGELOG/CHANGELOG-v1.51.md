@@ -58,6 +58,7 @@
  - **[deckhouse-controller]** Skip defaulting an array without items schema to prevent panic [#5711](https://github.com/deckhouse/deckhouse/pull/5711)
  - **[deckhouse-controller]** Add Prometeus logs to the debugging information. [#5616](https://github.com/deckhouse/deckhouse/pull/5616)
  - **[deckhouse-controller]** Improve the readability of raw debugging information. [#5499](https://github.com/deckhouse/deckhouse/pull/5499)
+ - **[external-module-manager]** Add the check to prevent nil pointer dereference to the modules migration hook. [#5793](https://github.com/deckhouse/deckhouse/pull/5793)
  - **[external-module-manager]** Fix race condition while handling source on Deckhouse startup. [#5598](https://github.com/deckhouse/deckhouse/pull/5598)
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
