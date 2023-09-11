@@ -1,5 +1,5 @@
 ---
-title: "The runtime-audit-engine module: usage"
+title: "The runtime-audit-engine module: FAQ"
 ---
 
 {% raw %}
@@ -56,8 +56,11 @@ spec:
         sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
 ```
 
-> Alerts work best in combination with event storage, such as Elasticsearch or Loki. Alerts warn the user about suspicious activity on a node.
-> Once an alert is received, we recommend that you check event storage and examine the events that triggered it.
+{% endraw %}
+{% alert %}
+Alerts work best in combination with event storage, such as Elasticsearch or Loki. Alerts warn the user about suspicious activity on a node.
+Once an alert is received, we recommend that you check event storage and examine the events that triggered it.
+{% endalert %}
 
 ## How to apply the Falco rules found on the Internet
 
@@ -105,5 +108,3 @@ spec:
         - process
         - mitre_privilege_escalation
 ```
-
-{% endraw %}

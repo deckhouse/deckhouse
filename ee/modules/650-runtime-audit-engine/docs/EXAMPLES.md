@@ -1,5 +1,6 @@
 ---
-title: "Module runtime-audit-engine: examples"
+title: "The runtime-audit-engine module: examples"
+description: Examples of using the runtime-audit-engine Deckhouse module.
 ---
 
 ## Adding a single rule
@@ -79,3 +80,35 @@ spec:
         (command=%proc.cmdline pid=%proc.pid connection=%fd.name sport=%fd.sport user=%user.name %container.info image=%container.image)
       priority: Notice
 ```
+
+## Adding a rule to send notifications when a shell is run in a container
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: FalcoAuditRules
+metadata:
+  name: run-shell-in-container
+spec:
+  rules:
+  - macro: 
+      name: container
+      condition: container.id != host
+  
+  - macro: 
+      name: spawned_process
+      condition: evt.type = execve and evt.dir=<
+  
+  - rule: 
+      name: run_shell_in_container
+      desc: a shell was spawned by a non-shell program in a container. Container entrypoints are excluded.
+      condition: container and proc.name = bash and spawned_process and proc.pname exists and not proc.pname in (bash, docker)
+      output: "Shell spawned in a container other than entrypoint (user=%user.name container_id=%container.id container_name=%container.name shell=%proc.name parent=%proc.pname cmdline=%proc.cmdline)"
+      priority: Warning
+```
+
+## More examples
+
+If you need more examples of rules, you can follow the links below:
+
+- [falco rules repository](https://github.com/falcosecurity/rules/blob/32b635394c40a56f8bdeb334c60a46e2edd9908c/rules/application_rules.yaml)
+- [artifacthub falco rules](https://artifacthub.io/packages/search?kind=1&sort=relevance&page=1)
