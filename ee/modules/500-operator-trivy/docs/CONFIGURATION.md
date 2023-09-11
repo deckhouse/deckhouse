@@ -1,7 +1,6 @@
 ---
 title: "The operator-trivy module: configuration"
+description: Settings of the operator-trivy Deckhouse module.
 ---
 
-{% include module-bundle.liquid %}
-
-The module does not have any mandatory parameters.
+<!-- SCHEMA -->

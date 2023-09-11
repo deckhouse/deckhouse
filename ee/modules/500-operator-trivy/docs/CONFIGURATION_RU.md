@@ -1,7 +1,6 @@
 ---
 title: "Модуль operator-trivy: настройки"
+description: Настройки модуля operator-trivy Deckhouse.
 ---
 
-{% include module-bundle.liquid %}
-
-У модуля нет обязательных настроек.
+<!-- SCHEMA -->
