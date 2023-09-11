@@ -116,9 +116,9 @@ function node_cleanup() {
     fi
   done
 
-  systemctl stop kubernetes-api-proxy.service
-  systemctl stop kubernetes-api-proxy-configurator.service
-  systemctl stop kubernetes-api-proxy-configurator.timer
+  systemctl stop kubernetes-api-proxy.service 2>/dev/null || true
+  systemctl stop kubernetes-api-proxy-configurator.service 2>/dev/null || true
+  systemctl stop kubernetes-api-proxy-configurator.timer 2>/dev/null || true
 
   systemctl stop bashible.service bashible.timer
   systemctl stop kubelet.service
