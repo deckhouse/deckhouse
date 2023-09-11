@@ -27,7 +27,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache make bash git mercurial patch rsync
+  - apk add --no-cache make git
   install:
   - cd /src
   - GOPROXY={{ env "GOPROXY" }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go
