@@ -1,5 +1,6 @@
 ---
 title: "The runtime-audit-engine module: advanced usage"
+description: Examples of deeper use of the runtime-audit-engine Deckhouse module.
 ---
 
 {% raw %}
@@ -14,7 +15,7 @@ By default, the log level for `Falco` is set to `debug`.
 
 By default, the debug logging for `Falcosidekick` is disabled.
 
-You can enable debugging logs by setting the `spec.settings.debugLogging` value to `true`:
+To enable debugging logging set the `spec.settings.debugLogging` parameter to `true`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -50,7 +51,7 @@ Use the following command to run all events with the Pod in Kubernetes cluster:
 kubectl run falco-event-generator --image=falcosecurity/event-generator run
 ```
 
-If you need to implement an action then you can follow this [guide](https://github.com/falcosecurity/event-generator/blob/main/events/README.md).
+If you need to implement an action, use this [guide](https://github.com/falcosecurity/event-generator/blob/main/events/README.md).
 
 ## Emulating a Falcosidekick event
 
@@ -92,22 +93,22 @@ You can use the [Falcosidekick](https://github.com/falcosecurity/falcosidekick) 
 - Example of the output part:
   
   ```json
-    {
-      "metric": {
-        "__name__": "falco_events",
-        "container": "kube-rbac-proxy",
-        "instance": "192.168.199.60:8766",
-        "job": "runtime-audit-engine",
-        "node": "dev-master-0",
-        "priority": "Debug",
-        "rule": "Test rule",
-        "tier": "cluster"
-      },
-      "value": [
-        1687150913.828,
-        "2"
-      ]
-    }
+  {
+    "metric": {
+      "__name__": "falco_events",
+      "container": "kube-rbac-proxy",
+      "instance": "192.168.199.60:8766",
+      "job": "runtime-audit-engine",
+      "node": "dev-master-0",
+      "priority": "Debug",
+      "rule": "Test rule",
+      "tier": "cluster"
+    },
+    "value": [
+      1687150913.828,
+      "2"
+    ]
+  }
   ```
 
 {% endraw %}

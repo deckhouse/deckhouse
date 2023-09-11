@@ -1,5 +1,6 @@
 ---
 title: "The runtime-audit-engine module: examples"
+description: Examples of using the runtime-audit-engine Deckhouse module.
 ---
 
 ## Adding a single rule

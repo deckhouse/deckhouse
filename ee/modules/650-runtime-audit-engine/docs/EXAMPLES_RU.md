@@ -1,5 +1,6 @@
 ---
 title: "Модуль runtime-audit-engine: примеры"
+description: Примеры использования модуля runtime-audit-engine Deckhouse.
 ---
 
 ## Добавление одного правила

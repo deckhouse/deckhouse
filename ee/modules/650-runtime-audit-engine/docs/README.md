@@ -1,5 +1,6 @@
 ---
 title: "The runtime-audit-engine module"
+description: Overview of the runtime-audit-engine Deckhouse module, which implements a runtime threats detection engine in the Kubernetes cluster.
 ---
 
 ## Overview

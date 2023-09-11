@@ -1,5 +1,6 @@
 ---
 title: "Модуль runtime-audit-engine: расширенная конфигурация"
+description: Примеры более глубокого использования модуля runtime-audit-engine Deckhouse.
 ---
 
 {% raw %}
@@ -12,7 +13,9 @@ title: "Модуль runtime-audit-engine: расширенная конфигу
 
 ### Falcosidekick
 
-Для включения отладочного логирования вы можете установить значение `spec.settings.debugLogging` равным `true`:
+По умолчанию отладочное логирование выключено в `Falcosidekick`.
+
+Для включения отладочного логирования установите параметр `spec.settings.debugLogging` в `true`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -48,7 +51,7 @@ kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 kubectl run falco-event-generator --image=falcosecurity/event-generator run
 ```
 
-Если вам нужно реализовать действие, вы можете воспользоваться этим [руководством](https://github.com/falcosecurity/event-generator/blob/main/events/README.md).
+Если вам нужно реализовать действие, воспользуйтесь [руководством](https://github.com/falcosecurity/event-generator/blob/main/events/README.md).
 
 ## Эмуляция события Falcosidekick
 
@@ -90,22 +93,22 @@ kubectl run falco-event-generator --image=falcosecurity/event-generator run
 - Пример вывода:
 
   ```json
-    {
-      "metric": {
-        "__name__": "falco_events",
-        "container": "kube-rbac-proxy",
-        "instance": "192.168.199.60:8766",
-        "job": "runtime-audit-engine",
-        "node": "dev-master-0",
-        "priority": "Debug",
-        "rule": "Test rule",
-        "tier": "cluster"
-      },
-      "value": [
-        1687150913.828,
-        "2"
-      ]
-    }
+  {
+    "metric": {
+      "__name__": "falco_events",
+      "container": "kube-rbac-proxy",
+      "instance": "192.168.199.60:8766",
+      "job": "runtime-audit-engine",
+      "node": "dev-master-0",
+      "priority": "Debug",
+      "rule": "Test rule",
+      "tier": "cluster"
+    },
+    "value": [
+      1687150913.828,
+      "2"
+    ]
+  }
   ```
 
 {% endraw %}
