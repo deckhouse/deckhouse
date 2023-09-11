@@ -100,7 +100,7 @@ function node_cleanup() {
     return
   fi
 
-  if bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
+  if kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq -e '
     .status.conditions[] | select(.reason=="KubeletReady").status == "True"
   '; then
     return
@@ -129,6 +129,7 @@ function node_cleanup() {
   rm -rf /var/lib/bashible
   rm -rf /var/cache/registrypackages
   rm -rf /etc/kubernetes
+  rm -rf /etc/containerd/*
   rm -rf /var/lib/kubelet
   rm -rf /var/lib/docker
   rm -rf /var/lib/containerd
