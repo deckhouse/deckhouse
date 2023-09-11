@@ -111,6 +111,8 @@ external-module-manager:
     - summary: Support custom CA for `ExternalModuleSource`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5498
   fixes:
+    - summary: Add the check to prevent nil pointer dereference to the modules migration hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5793
     - summary: Fix race condition while handling source on Deckhouse startup.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5598
 flant-integration:
