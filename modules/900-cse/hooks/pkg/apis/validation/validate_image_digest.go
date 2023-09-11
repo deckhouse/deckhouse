@@ -244,7 +244,7 @@ func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string, hasA
 	}
 
 	if hasAuth {
-		address := ref.Name()
+		address := ref.Context().Registry.Name()
 		vh.logger.Debugf("address %s for get authConfig", address)
 		authConfigItem := vh.registryAuthCache.Get(address)
 		if authConfigItem == nil {
