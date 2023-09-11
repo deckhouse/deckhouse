@@ -101,21 +101,25 @@ func modulesCRMigrate(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	for _, ms := range moduleSources.Items {
-		sanitizeUnstructured("ModuleSource", &ms)
+	if moduleSources != nil {
+		for _, ms := range moduleSources.Items {
+			sanitizeUnstructured("ModuleSource", &ms)
 
-		_, err := kubeCl.Dynamic().Resource(msGVR).Create(context.TODO(), &ms, metav1.CreateOptions{})
-		if err != nil && !errors.IsAlreadyExists(err) {
-			return err
+			_, err := kubeCl.Dynamic().Resource(msGVR).Create(context.TODO(), &ms, metav1.CreateOptions{})
+			if err != nil && !errors.IsAlreadyExists(err) {
+				return err
+			}
 		}
 	}
 
-	for _, mr := range moduleReleases.Items {
-		sanitizeUnstructured("ModuleRelease", &mr)
+	if moduleReleases != nil {
+		for _, mr := range moduleReleases.Items {
+			sanitizeUnstructured("ModuleRelease", &mr)
 
-		_, err := kubeCl.Dynamic().Resource(mrGVR).Create(context.TODO(), &mr, metav1.CreateOptions{})
-		if err != nil && !errors.IsAlreadyExists(err) {
-			return err
+			_, err := kubeCl.Dynamic().Resource(mrGVR).Create(context.TODO(), &mr, metav1.CreateOptions{})
+			if err != nil && !errors.IsAlreadyExists(err) {
+				return err
+			}
 		}
 	}
 
