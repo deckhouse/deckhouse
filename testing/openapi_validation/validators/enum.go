@@ -72,6 +72,20 @@ var (
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.access",
 		},
+		"modules/015-admission-policy-engine/crds/operation-policy.yaml": {
+			// probes are inherited from Kubernetes
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredProbes.items",
+			// requests and limits are cpu and memory, they are taken from kubernetes
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredResources.properties.requests.items",
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredResources.properties.limits.items",
+		},
+		"modules/015-admission-policy-engine/crds/security-policy.yaml": {
+			// volumes are inherited from kubernetes
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.allowedVolumes.items",
+			// capabilities names are hardcoded, it's not ours
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.allowedCapabilities.items",
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredDropCapabilities.items",
+		},
 		"modules/030-cloud-provider-azure/openapi/config-values.yaml": {
 			// ignore Azure disk types
 			"properties.storageClass.properties.provision.items.properties.type",
@@ -83,6 +97,11 @@ var (
 			"properties.storageClass.properties.provision.items.oneOf[*].properties.type",
 		},
 		"modules/030-cloud-provider-openstack/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
+		},
+		// for local tests run
+		"ee/modules/030-cloud-provider-openstack/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.discoveryData.properties.apiVersion",
 		},
