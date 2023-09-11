@@ -136,6 +136,7 @@ func (vh *validationHandler) imageDigestValidationHandler() http.Handler {
 			if err != nil {
 				return rejectResult(err.Error())
 			}
+			vh.logger.Debugf("hasAuth, %v", hasAuth)
 			for _, image := range vh.GetImagesFromPod(pod) {
 				err := vh.CheckImageDigest(image, hasAuth)
 				if err != nil {
@@ -159,15 +160,18 @@ func (vh *validationHandler) imageDigestValidationHandler() http.Handler {
 
 func (vh *validationHandler) updateRegistrySecrets(pod *corev1.Pod) (bool, error) {
 	if len(pod.Spec.ImagePullSecrets) == 0 {
+		vh.logger.Debug("updateRegistrySecrets: ImagePullSecrets empty")
 		return false, nil
 	}
 
 	for _, secret := range pod.Spec.ImagePullSecrets {
 		if vh.imagePullSecretsCache.Has(secret.Name) {
+			vh.logger.Debugf("updateRegistrySecrets: imagePullSecretsCache has secret %s, skipped", secret.Name)
 			continue
 		}
 
-		vh.imagePullSecretsCache.Set(secret.Name, struct{}{}, ttlcache.NoTTL)
+		vh.imagePullSecretsCache.Set(secret.Name, struct{}{}, ttlcache.DefaultTTL)
+		vh.logger.Debugf("updateRegistrySecrets: imagePullSecretsCache secret %s added to cache", secret.Name)
 		authConfigMap, err := vh.GetAuthConfigsFromSecret(secret.Name, pod.GetNamespace())
 		if err != nil {
 			vh.logger.WithError(err).Warning("get registry AuthConfig from secret")
@@ -182,6 +186,11 @@ func (vh *validationHandler) updateRegistrySecrets(pod *corev1.Pod) (bool, error
 
 func (vh *validationHandler) updateRegistryAuthCache(authConfigMap map[string]*authn.AuthConfig) {
 	for address, authConfig := range authConfigMap {
+		vh.logger.WithField(
+			"address", address,
+		).WithField(
+			"authCongig.Username", authConfig.Username,
+		).Debug("registryAuthCache: add authConfig to cache")
 		vh.registryAuthCache.Set(address, authConfig, ttlcache.NoTTL)
 	}
 }
@@ -232,6 +241,7 @@ func (vh *validationHandler) GetImageMetadataFromRegistry(imageName string, hasA
 
 	if hasAuth {
 		address := ref.Name()
+		vh.logger.Debugf("address %s for get authConfig", address)
 		authConfigItem := vh.registryAuthCache.Get(address)
 		if authConfigItem == nil {
 			return nil, fmt.Errorf("can't get authConfig from cache")
