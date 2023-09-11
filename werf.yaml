@@ -496,7 +496,6 @@ ansible:
         --disable-docs
       make LDFLAGS=-all-static
       make prefix=/usr install
-
 ---
 image: dev/install
 from: {{ .Images.BASE_ALPINE }}
