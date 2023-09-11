@@ -160,6 +160,7 @@ chmod +x $BOOTSTRAP_DIR/bashible.sh
 {{- end }}
 
 {{- define "node_cleanup" -}}
+
 function node_cleanup() {
   if bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
     .status.conditions[] | select(.reason=="KubeletReady").status == "True"
