@@ -1,5 +1,6 @@
 ---
 title: "The operator-trivy module: FAQ"
+description: How to view resources that have not passed CIS compliance checks in the operator-trivy Deckhouse module.
 ---
 {% raw %}
 

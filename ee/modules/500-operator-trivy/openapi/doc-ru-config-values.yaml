@@ -2,15 +2,15 @@ type: object
 properties:
   tolerations:
     description: |
-      tolerations для Scan Jobs и trivy operator.
+      Опциональные tolerations для компонентов trivy operator и заданий сканирования (Jobs).
 
       Структура, аналогичная `spec.tolerations` Kubernetes pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   nodeSelector:
     description: |
-      tolerations для Scan Jobs и trivy operator.
+      Опциональный селектор для компонентов trivy operator и заданий сканирования (Jobs).
 
-        Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
-        Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
