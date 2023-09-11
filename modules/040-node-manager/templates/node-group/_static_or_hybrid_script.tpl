@@ -140,6 +140,16 @@ function node_cleanup() {
   rm -rf /etc/systemd/system/bashible*
   rm -rf /etc/systemd/system/sysctl-tuner*
   rm -rf /etc/systemd/system/kubelet*
+
+  while true; do
+    msg="Reboot required. Reboot the node? [yes/no]: "
+    read -p "$msg" confirm
+    if [ "$confirm" == "yes" ]; then
+      reboot
+    elif [ "$confirm" == "no" ]; then
+      exit 0
+    fi
+  done
 }
 node_cleanup
 {{- end }}
