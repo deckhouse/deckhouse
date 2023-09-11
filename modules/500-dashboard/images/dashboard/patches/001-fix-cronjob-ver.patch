@@ -1,0 +1,11 @@
+--- a/dashboard-2.7.0/src/app/backend/resource/cronjob/jobs.go    2022-09-16 18:33:19
++++ b/dashboard-2.7.0/src/app/backend/resource/cronjob/jobs-new.go        2023-09-08 21:58:42
+@@ -48,7 +48,7 @@
+ func GetCronJobJobs(client client.Interface, metricClient metricapi.MetricClient,
+        dsQuery *dataselect.DataSelectQuery, namespace, name string, active bool) (*job.JobList, error) {
+
+-       cronJob, err := client.BatchV1beta1().CronJobs(namespace).Get(context.TODO(), name, meta.GetOptions{})
++       cronJob, err := client.BatchV1().CronJobs(namespace).Get(context.TODO(), name, meta.GetOptions{})
+        if err != nil {
+                return emptyJobList, err
+        }
