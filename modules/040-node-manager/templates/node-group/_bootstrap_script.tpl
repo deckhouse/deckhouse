@@ -54,8 +54,6 @@ fi
 
   {{- end }}
 
-  {{- include "node_cleanup" $context }}
-
   {{- include "node_group_bashible_bootstrap_script_download_bashible" $context }}
 
     {{- /*
@@ -157,50 +155,4 @@ export PATH="/opt/deckhouse/bin:$PATH"
   */}}
 get_bundle bashible "${BUNDLE}.{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
 chmod +x $BOOTSTRAP_DIR/bashible.sh
-{{- end }}
-
-{{- define "node_cleanup" -}}
-
-function node_cleanup() {
-  if bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
-    .status.conditions[] | select(.reason=="KubeletReady").status == "True"
-  ')"; then
-    return
-  fi
-
-  while true; do
-    msg="The node is not ready. Perhaps the bootstrap failed. Run node cleanup? [yes/no]: "
-    read -p "$msg" confirm
-    if [ "$confirm" == "yes" ]; then
-      break
-    else if [ "$confirm" == "no" ]; then
-      return
-    fi
-  done
-
-  systemctl stop kubernetes-api-proxy.service
-  systemctl stop kubernetes-api-proxy-configurator.service
-  systemctl stop kubernetes-api-proxy-configurator.timer
-
-  systemctl stop bashible.service bashible.timer
-  systemctl stop kubelet.service
-  systemctl stop containerd
-
-  for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
-
-  rm -rf /var/lib/bashible
-  rm -rf /var/cache/registrypackages
-  rm -rf /etc/kubernetes
-  rm -rf /var/lib/kubelet
-  rm -rf /var/lib/docker
-  rm -rf /var/lib/containerd
-  rm -rf /etc/cni
-  rm -rf /var/lib/cni
-  rm -rf /var/lib/etcd
-  rm -rf /etc/systemd/system/kubernetes-api-proxy*
-  rm -rf /etc/systemd/system/bashible*
-  rm -rf /etc/systemd/system/sysctl-tuner*
-  rm -rf /etc/systemd/system/kubelet*
-}
-node_cleanup
 {{- end }}
