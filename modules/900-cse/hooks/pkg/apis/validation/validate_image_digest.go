@@ -177,6 +177,7 @@ func (vh *validationHandler) updateRegistrySecrets(pod *corev1.Pod) (bool, error
 			vh.logger.WithError(err).Warning("get registry AuthConfig from secret")
 			continue
 		}
+		vh.logger.WithField("authConfigMap", authConfigMap).Debug("authConfigs from secret")
 
 		vh.updateRegistryAuthCache(authConfigMap)
 	}
@@ -206,14 +207,14 @@ func (vh *validationHandler) GetAuthConfigsFromSecret(secretName string, namespa
 		return nil, err
 	}
 
-	vh.logger.Debugf("secret from kube %+v", secret)
-
 	if data, ok := secret.Data[".dockerconfigjson"]; ok {
-		vh.logger.Debugf("data: %s", string(data))
 		var secretData map[string]map[string]*authn.AuthConfig
 		err := json.Unmarshal(data, &secretData)
 		if err != nil {
 			return nil, err
+		}
+		for address, authConfig := range secretData["auths"] {
+			result[address] = authConfig
 		}
 	}
 
