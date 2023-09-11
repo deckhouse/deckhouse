@@ -99,10 +99,10 @@ function node_cleanup() {
   if [ ! -f /etc/kubernetes/kubelet.conf ]; then
     return
   fi
-  
+
   if bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
     .status.conditions[] | select(.reason=="KubeletReady").status == "True"
-  ')"; then
+  '; then
     return
   fi
 
