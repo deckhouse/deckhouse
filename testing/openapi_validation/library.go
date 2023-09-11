@@ -58,6 +58,11 @@ func GetOpenAPIYAMLFiles(rootPath string) ([]string, error) {
 			return nil
 		}
 
+		// ignore matrix test specs
+		if strings.HasSuffix(path, "-tests.yaml") {
+			return nil
+		}
+
 		if strings.HasPrefix(info.Name(), "doc-ru-") {
 			return nil
 		}
