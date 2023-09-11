@@ -4,6 +4,8 @@
   {{- $bootstrap_token := index . 2 -}}
 #!/bin/bash
 
+{{ include "node_cleanup" $context }}
+
 mkdir -p /var/lib/bashible
 
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
@@ -83,8 +85,6 @@ chmod 0600 /var/lib/bashible/bootstrap-token
 
 touch /var/lib/bashible/first_run
 
-{{- include "node_cleanup" $context }}
-
 checkBashible=$(systemctl is-active bashible.timer)
 if [[ "$checkBashible" != "active" ]]; then
   /var/lib/bashible/bootstrap.sh
@@ -96,6 +96,10 @@ fi
 {{- define "node_cleanup" -}}
 
 function node_cleanup() {
+  if [ ! -f /etc/kubernetes/kubelet.conf ]; then
+    return
+  fi
+  
   if bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
     .status.conditions[] | select(.reason=="KubeletReady").status == "True"
   ')"; then
@@ -107,7 +111,7 @@ function node_cleanup() {
     read -p "$msg" confirm
     if [ "$confirm" == "yes" ]; then
       break
-    else if [ "$confirm" == "no" ]; then
+    elif [ "$confirm" == "no" ]; then
       return
     fi
   done
