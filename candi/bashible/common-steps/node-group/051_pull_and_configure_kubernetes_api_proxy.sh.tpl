@@ -40,7 +40,7 @@ spec:
     imagePullPolicy: IfNotPresent
     command: ["/kubernetes-api-proxy-reloader"]
     volumeMounts:
-    - mountPath: /etc/nginx
+    - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf
   priorityClassName: system-node-critical
   volumes:
