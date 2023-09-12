@@ -201,7 +201,7 @@ func runFileParser(fileName string, data map[interface{}]interface{}, resultC ch
 			"enum":             validators.NewEnumValidator(),
 			"highAvailability": validators.NewHAValidator(),
 			"https":            validators.NewHAValidator(),
-			"keyNames":         validators.NewKeyNameValidator(),
+			"keyNames":         newConditionalValidator(isDechkouseCRD(data), validators.NewKeyNameValidator()),
 		},
 		resultC: resultC,
 	}
@@ -254,4 +254,23 @@ func (fp fileParser) parseValue(upperKey string, v interface{}) {
 
 type validator interface {
 	Run(fileName, absoulteKey string, value interface{}) error
+}
+
+type conditionalValidator struct {
+	condition bool
+	validator validator
+}
+
+func newConditionalValidator(condition bool, validatorFact validator) conditionalValidator {
+	return conditionalValidator{
+		condition: condition,
+		validator: validatorFact,
+	}
+}
+
+func (cv conditionalValidator) Run(file, absoluteKey string, value interface{}) error {
+	if cv.condition {
+		return cv.validator.Run(file, absoluteKey, value)
+	}
+	return nil
 }
