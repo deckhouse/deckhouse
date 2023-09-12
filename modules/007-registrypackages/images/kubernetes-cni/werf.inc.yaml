@@ -47,7 +47,7 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-  - apk add --no-cache git bash
+  - apk add --no-cache git bash make
   setup:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git
