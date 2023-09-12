@@ -52,7 +52,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git
     - cd /plugins
-    - CGO_ENABLED=0 ./build_linux.sh "-ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'"
+    - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'
     - cp -f bin/* /
     - cd /
     - git clone --depth 1 --branch v{{ $flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git
