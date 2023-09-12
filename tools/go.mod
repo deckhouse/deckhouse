@@ -15,3 +15,5 @@ replace (
 	github.com/deckhouse/deckhouse/dhctl => ../dhctl
 	github.com/deckhouse/deckhouse/go_lib/cloud-data => ../go_lib/cloud-data
 )
+
+replace github.com/flant/shell-operator => github.com/flant/shell-operator v1.3.2-0.20230911172604-d965e9a98cd7
