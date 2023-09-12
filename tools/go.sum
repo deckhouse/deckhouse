@@ -822,7 +822,7 @@ github.com/fatih/structtag v1.2.0 h1:/OdNE99OxoI/PqaW/SuSK9uxxT3f/tcSZgon/ssNSx4
 github.com/fatih/structtag v1.2.0/go.mod h1:mBJUNpUnHmRKrKlQQlmCrh5PuhftFbNv8Ys4/aAZl94=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/flant/addon-operator v1.2.1/go.mod h1:ESyT888iuDIGkP92R/Bqmr4+czMXi0u5UN8xXyIAwiA=
+github.com/flant/addon-operator v1.2.2-0.20230912153913-8562d8556cbd/go.mod h1:sZmXq+eY/L4Cp2asIwf2riqYdz7MYS3WnaJmj9VD3HA=
 github.com/flant/kube-client v0.25.0/go.mod h1:BPNhiy57FgJmnSBXy0l8AwBN6F9SHOfgFgHi3UG2Jrw=
 github.com/flant/kube-client v0.26.1/go.mod h1:BPNhiy57FgJmnSBXy0l8AwBN6F9SHOfgFgHi3UG2Jrw=
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
@@ -849,7 +849,6 @@ github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2H
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/globalsign/mgo v0.0.0-20180905125535-1ca0a4f7cbcb/go.mod h1:xkRDCp4j0OGD1HRkm4kmhM+pmpv3AKq5SU7GMg4oO/Q=
 github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8/go.mod h1:xkRDCp4j0OGD1HRkm4kmhM+pmpv3AKq5SU7GMg4oO/Q=
-github.com/go-chi/chi/v5 v5.0.8/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-chi/chi/v5 v5.0.10/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-critic/go-critic v0.5.6 h1:siUR1+322iVikWXoV75I1YRfNaC/yaLzhdF9Zwd8Tus=
 github.com/go-critic/go-critic v0.5.6/go.mod h1:cVjj0DfqewQVIlIAGexPCaGaZDAqGE29PYDDADIVNEo=
