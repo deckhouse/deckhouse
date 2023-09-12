@@ -827,7 +827,6 @@ github.com/flant/kube-client v0.25.0/go.mod h1:BPNhiy57FgJmnSBXy0l8AwBN6F9SHOfgF
 github.com/flant/kube-client v0.26.1/go.mod h1:BPNhiy57FgJmnSBXy0l8AwBN6F9SHOfgFgHi3UG2Jrw=
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
-github.com/flant/shell-operator v1.3.1/go.mod h1:CC6dzopKrJeO/905ahJfm4w/cJTiOHKAqKo/uD6J9UI=
 github.com/flant/shell-operator v1.3.2-0.20230911172604-d965e9a98cd7/go.mod h1:0Sb2td567MG7qRrPMz5Mqx4Y/6JWot/pKJMYFUGlikU=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/form3tech-oss/jwt-go v3.2.3+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
