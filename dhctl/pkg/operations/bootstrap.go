@@ -55,17 +55,17 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
-		err := log.Process("bootstrap", "Create /opt/deckhouse{bin,tmp}", func() error {
-			if err := sshClient.Command("mkdir", "-p", "/opt/deckhouse/bin").Sudo().Run(); err != nil {
-				return fmt.Errorf("ssh: mkdir -p /opt/deckhouse/bin: %w", err)
+		err := log.Process("bootstrap", fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), func() error {
+			if err := sshClient.Command("mkdir", "-p", app.DeckhouseNodeBinPath).Sudo().Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p %s: %w", app.DeckhouseNodeBinPath, err)
 			}
-			if err := sshClient.Command("mkdir", "-p", "-m", "1777", "/opt/deckhouse/tmp").Sudo().Run(); err != nil {
-				return fmt.Errorf("ssh: mkdir -p -m 1777 /opt/deckhouse/tmp: %w", err)
+			if err := sshClient.Command("mkdir", "-p", "-m", "1777", app.DeckhouseNodeTmpPath).Sudo().Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
 			}
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("cannot create /opt/deckhouse/ directories: %w", err)
+			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
 		}
 
 		for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
