@@ -49,10 +49,8 @@ The main part of a rule is a conditional expression (which uses the [conditions 
 
 ### Embedded rules
 
-There are several built-in rules that cannot be disabled.  
-These rules are aimed at detecting Deckhouse security problems as well as security problems affecting the `runtime-audit-engine` module.
+There is a built-in set of rules that cannot be disabled. It helps to identify problems with Deckhouse security as well as security problems affecting the `runtime-audit-engine` module.
 
-- `/etc/falco/falco_rules.yaml` — syscall rules;
 - `/etc/falco/k8s_audit_rules.yaml` — Kubernetes audit rules.
 
 
