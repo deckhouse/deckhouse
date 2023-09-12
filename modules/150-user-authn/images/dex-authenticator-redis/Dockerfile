@@ -4,6 +4,7 @@ ARG BASE_DISTROLESS
 FROM $BASE_ALPINE as artifact
 WORKDIR /src
 ARG SOURCE_REPO
+
 ENV SOURCE_REPO=${SOURCE_REPO}
 
 RUN apk add coreutils curl gcc make musl-dev openssl-dev git

@@ -1,10 +1,14 @@
 ARG BASE_DISTROLESS
 ARG BASE_GOLANG_20_ALPINE
 FROM $BASE_GOLANG_20_ALPINE as artifact
-ARG SOURCE_REPO
-ENV SOURCE_REPO=${SOURCE_REPO}
 ARG GOPROXY
-ENV GOPROXY=${GOPROXY}
+ARG SOURCE_REPO
+
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
 RUN apk add bash git make
 
@@ -17,15 +21,10 @@ RUN git clone ${SOURCE_REPO}/mintel/dex-k8s-authenticator.git . && \
   git apply --whitespace=fix /already_logged.patch && \
   go mod download && \
   mkdir -p /app/app/bin && \
-  CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o /app/app/bin/dex-k8s-authenticator .
+  go build -ldflags '-s -w' -o /app/app/bin/dex-k8s-authenticator .
 
 RUN chown 64535:64535 /app/app/bin/dex-k8s-authenticator
 RUN chmod 0700 /app/app/bin/dex-k8s-authenticator
-
-# set up nsswitch.conf for Go's "netgo" implementation
-# Go stdlib completely ignores /etc/hosts file without it
-# https://github.com/moby/moby/issues/34544
-RUN echo "hosts: files dns" > /etc/nsswitch.conf
 
 FROM $BASE_DISTROLESS
 

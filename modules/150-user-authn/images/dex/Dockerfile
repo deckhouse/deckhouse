@@ -1,4 +1,3 @@
-# Based on https://github.com/dexidp/dex/blob/v2.35.3/Dockerfile
 ARG BASE_GOLANG_20_ALPINE
 ARG BASE_DISTROLESS
 FROM $BASE_GOLANG_20_ALPINE as artifact

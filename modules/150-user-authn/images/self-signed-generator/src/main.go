@@ -17,225 +17,91 @@ limitations under the License.
 package main
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
-	"encoding/pem"
 	"fmt"
-	"log"
-	"math/big"
 	"os"
-	"time"
+
+	"github.com/cloudflare/cfssl/cli"
+	"github.com/cloudflare/cfssl/cli/sign"
+	"github.com/cloudflare/cfssl/config"
+	"github.com/cloudflare/cfssl/csr"
+	"github.com/cloudflare/cfssl/helpers"
+	"github.com/cloudflare/cfssl/selfsign"
+	"github.com/cloudflare/cfssl/signer"
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	selfSignedTLSCertLocation = "/certs/tls.crt"
+	selfSignedTLSKeyLocation  = "/certs/tls.key"
 )
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "generate-crowd-proxy-certs" {
-		generateCrowdProxyCerts()
+		cert, err := generateSelfSignedCertFromFrontProxyCA()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Printf("Certificate: %s", base64.StdEncoding.EncodeToString(cert))
+
 		return
 	}
 
-	generateAndSaveSelfSignedCaAndCert(os.Args[1:])
+	err := generateAndSaveSelfSignedCertAndKey(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
-func generateAndSaveSelfSignedCaAndCert(certHosts []string) {
-	// Generate a CA private key
-	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+// Function to generate a CA and key
+func generateAndSaveSelfSignedCertAndKey(certHosts []string) error {
+	req := csr.New()
+	req.CN = certHosts[0]
+	req.Hosts = certHosts
+
+	csrGen := &csr.Generator{Validator: nil}
+	request, key, err := csrGen.ProcessRequest(req)
 	if err != nil {
-		log.Fatalf("Failed to generate CA private key: %v", err)
+		return err
 	}
 
-	// Create a self-signed CA certificate
-	caTemplate := &x509.Certificate{
-		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: "CA"},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(10, 0, 0), // Valid for 10 years
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}
-	caBytes, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caPrivateKey.PublicKey, caPrivateKey)
+	priv, err := helpers.ParsePrivateKeyPEM(key)
 	if err != nil {
-		log.Fatalf("Failed to create CA certificate: %v", err)
+		return err
 	}
 
-	// Save the CA private key to a file
-	caPrivateKeyFile, err := os.Create("/certs/ca.key")
+	cert, err := selfsign.Sign(priv, request, config.DefaultConfig())
 	if err != nil {
-		log.Fatalf("Failed to create CA private key file: %v", err)
-	}
-	err = pem.Encode(caPrivateKeyFile, &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(caPrivateKey),
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	caPrivateKeyFile.Close()
-
-	// Save the CA certificate to a file
-	caCertificateFile, err := os.Create("/certs/ca.crt")
-	if err != nil {
-		log.Fatalf("Failed to create CA certificate file: %v", err)
-	}
-	err = pem.Encode(caCertificateFile, &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: caBytes,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	caCertificateFile.Close()
-
-	// Generate a private key for the server certificate
-	serverPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		log.Fatalf("Failed to generate server private key: %v", err)
+		return err
 	}
 
-	// Sign the server certificate with the CA certificate and private key
-	serverCertificate, err := x509.CreateCertificate(rand.Reader, &x509.Certificate{
-		SerialNumber:          big.NewInt(2),
-		Subject:               pkix.Name{CommonName: "Self-signed"},
-		DNSNames:              certHosts,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(10, 0, 0),
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		IsCA:                  false,
-	}, caTemplate, serverPrivateKey.Public(), caPrivateKey)
+	err = os.WriteFile(selfSignedTLSCertLocation, cert, 0600)
 	if err != nil {
-		log.Fatalf("Failed to sign server certificate: %v", err)
+		return err
+	}
+	err = os.WriteFile(selfSignedTLSKeyLocation, key, 0600)
+	if err != nil {
+		return err
 	}
 
-	// Save the server private key to a file
-	serverPrivateKeyFile, err := os.Create("/certs/tls.key")
-	if err != nil {
-		log.Fatalf("Failed to create server private key file: %v", err)
-	}
-	err = pem.Encode(serverPrivateKeyFile, &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(serverPrivateKey),
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	serverPrivateKeyFile.Close()
-
-	// Save the server certificate to a file
-	serverCertificateFile, err := os.Create("/certs/tls.crt")
-	if err != nil {
-		log.Fatalf("Failed to create server certificate file: %v", err)
-	}
-	err = pem.Encode(serverCertificateFile, &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: serverCertificate,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	serverCertificateFile.Close()
-
-	log.Print("Self-signed certificate, key, and CA certificate, key generated successfully.")
+	return nil
 }
 
-func generateCrowdProxyCerts() {
-	csrRawEncoded, ok := os.LookupEnv("CSR")
-	if ok == false {
-		log.Fatal(`Failed to lookup env variable "CSR"`)
-	}
-
-	csrRaw, err := base64.StdEncoding.DecodeString(csrRawEncoded)
+func generateSelfSignedCertFromFrontProxyCA() ([]byte, error) {
+	conf, err := config.LoadConfig([]byte(`{"CN":"front-proxy-client","hosts":[""],"key":{"algo": "rsa","size": 2048},"signing":{"default":{"expiry":"72h","usages":["signing","key encipherment","requestheader-client"]}}}`))
 	if err != nil {
-		log.Fatalf("Failed to to decode base64-encoded CSR: %s", csrRawEncoded)
+		return nil, err
 	}
 
-	caCert, caKey, csr, err := parseFrontProxyCaAndCsr("/etc/kubernetes/pki/front-proxy-ca.crt", "/etc/kubernetes/pki/front-proxy-ca.key", string(csrRaw))
+	s, err := sign.SignerFromConfig(cli.Config{
+		CAFile:    "/etc/kubernetes/pki/front-proxy-ca.crt",
+		CAKeyFile: "/etc/kubernetes/pki/front-proxy-ca.key",
+		CFG:       conf,
+	})
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	// Generate a random serial number for the new certificate
-	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
-	if err != nil {
-		log.Fatal("Failed to generate serial number: %s", err)
-	}
-
-	// Set the certificate template for the new certificate
-	template := x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject:      csr.Subject,
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(10 * 365 * 24 * time.Hour), // Valid for 10 years
-	}
-
-	// Sign the new certificate using the CA private key
-	certBytes, err := x509.CreateCertificate(rand.Reader, &template, caCert, csr.PublicKey, caKey)
-	if err != nil {
-		log.Fatalf("Failed to sign certificate: %s", err)
-	}
-
-	// Generate the PEM encoded certificate
-	cert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
-	if cert == nil {
-		log.Fatalf("Failed to encode certificate to PEM: %s", certBytes)
-	}
-
-	fmt.Printf("Certificate: %s", base64.StdEncoding.EncodeToString(cert))
-
-	return
-}
-
-func parseFrontProxyCaAndCsr(caCertPath, caKeyPath, csrRaw string) (*x509.Certificate, *rsa.PrivateKey, *x509.CertificateRequest, error) {
-	caCertRaw, err := os.ReadFile(caCertPath)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	caKeyRaw, err := os.ReadFile(caKeyPath)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Parse the CA certificate
-	caCertBlock, _ := pem.Decode(caCertRaw)
-	if caCertBlock == nil || caCertBlock.Type != "CERTIFICATE" {
-		log.Println("Failed to parse CA certificate")
-		return nil, nil, nil, err
-	}
-	caCertificate, err := x509.ParseCertificate(caCertBlock.Bytes)
-	if err != nil {
-		log.Println("Failed to parse CA certificate:", err)
-		return nil, nil, nil, err
-	}
-
-	// Parse the CA private key
-	caKeyBlock, _ := pem.Decode(caKeyRaw)
-	if caKeyBlock == nil || caKeyBlock.Type != "RSA PRIVATE KEY" {
-		log.Println("Failed to parse CA private key")
-		return nil, nil, nil, err
-	}
-	caPrivateKey, err := x509.ParsePKCS1PrivateKey(caKeyBlock.Bytes)
-	if err != nil {
-		log.Println("Failed to parse CA private key:", err)
-		return nil, nil, nil, err
-	}
-
-	// Parse the CSR
-	csrBlock, _ := pem.Decode([]byte(csrRaw))
-	if csrBlock == nil || csrBlock.Type != "CERTIFICATE REQUEST" {
-		log.Println("Failed to parse CSR")
-		return nil, nil, nil, err
-	}
-
-	// Parse the CSR certificate request
-	csr, err := x509.ParseCertificateRequest(csrBlock.Bytes)
-	if err != nil {
-		log.Println("Failed to parse CSR:", err)
-		return nil, nil, nil, err
-	}
-
-	return caCertificate, caPrivateKey, csr, nil
+	return s.Sign(signer.SignRequest{Request: os.Getenv("CSR")})
 }
