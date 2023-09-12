@@ -58,4 +58,4 @@ shell:
     - git clone --depth 1 --branch v{{ $flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git
     - cd /cni-plugin
     - make build_linux
-    - cp -f /root/go/src/github.com/flannel-io/cni-plugin/dist/flannel-amd64 /flannel
+    - cp -f  /go/src/github.com/flannel-io/cni-plugin/dist/flannel-amd64 /flannel
