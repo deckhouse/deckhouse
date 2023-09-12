@@ -17,7 +17,9 @@ limitations under the License.
 package src
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -35,11 +37,15 @@ const (
 )
 
 func nginxReload() error {
+	if _, err := os.Stat(nginxConf); errors.Is(err, fs.ErrNotExist) {
+		err := copyFile(nginxNewConf, nginxConf)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Check if nginx.conf has changed and test the new configuration
 	equal, err := fileContentsEqual(nginxConf, nginxNewConf)
-	if err != nil {
-		return err
-	}
 	if equal {
 		log.Printf("%s and %s are equal, skipping reload...", nginxConf, nginxNewConf)
 		return nil
