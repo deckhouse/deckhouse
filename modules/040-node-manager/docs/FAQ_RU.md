@@ -1,5 +1,6 @@
 ---
 title: "Управление узлами: FAQ"
+description: Управление узлами кластера Kubernetes. Добавление, удаление узлов в кластере. Изменение CRI узла. 
 search: добавить ноду в кластер, добавить узел в кластер, настроить узел с GPU, эфемерные узлы
 ---
 {% raw %}
@@ -225,7 +226,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Если узел в nodeGroup не обновляется (значение `UPTODATE` при выполнении команды `kubectl get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, то нужно посмотреть логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
 
-To view the logs of the `bashible` service on a specific node, run the following command:
+Чтобы посмотреть логи сервиса `bashible`, выполните на узле следующую команду:
 
 ```shell
 journalctl -fu bashible
