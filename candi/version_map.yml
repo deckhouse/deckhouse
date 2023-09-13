@@ -31,7 +31,7 @@ k8s:
     csi:
       openstack: v1.23.1
       provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
-      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
+      attacher: v4.2.0
       resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
       registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
       snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
@@ -51,7 +51,7 @@ k8s:
     csi:
       openstack: v1.24.2
       provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
-      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
+      attacher: v4.2.0
       resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
       registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
       snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
@@ -71,7 +71,7 @@ k8s:
     csi:
       openstack: v1.25.3
       provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
-      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
+      attacher: v4.2.0
       resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
       registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
       snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
@@ -91,7 +91,7 @@ k8s:
     csi:
       openstack: v1.26.1
       provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
-      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
+      attacher: v4.2.0
       resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
       registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
       snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
@@ -111,7 +111,7 @@ k8s:
     csi:
       openstack: v1.27.1
       provisioner: v3.5.0@sha256:d078dc174323407e8cc6f0f9abd4efaac5db27838f1564d0253d5e3233e3f17f
-      attacher: v4.3.0@sha256:4eb73137b66381b7b5dfd4d21d460f4b4095347ab6ed4626e0199c29d8d021af
+      attacher: v4.3.0
       resizer: v1.8.0@sha256:2e2b44393539d744a55b9370b346e8ebd95a77573064f3f9a8caf18c22f4d0d0
       registrar: v2.8.0@sha256:f6717ce72a2615c7fbc746b4068f788e78579c54c43b8716e5ce650d97af2df1
       snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
