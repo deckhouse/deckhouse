@@ -47,6 +47,23 @@ func checkMapForBannedKey(m map[interface{}]interface{}, banned []string) error 
 				return err
 			}
 		}
+		if nestedSlise, ok := v.([]interface{}); ok {
+			for _, item := range nestedSlise {
+				if strKey, ok := item.(string); ok {
+					for _, ban := range banned {
+						if strKey == ban {
+							return fmt.Errorf("%s is invalid name for property %s", ban, strKey)
+						}
+					}
+				}
+				if nestedMap, ok := item.(map[interface{}]interface{}); ok {
+					err := checkMapForBannedKey(nestedMap, banned)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
 	}
 	return nil
 }
