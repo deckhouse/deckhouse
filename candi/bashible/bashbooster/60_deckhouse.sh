@@ -42,23 +42,7 @@ bb-deckhouse-get-disruptive-update-approval() {
          jq -ne --argjson n "$node_data" '(($n.isDisruptionApproved | not) and ($n.isDisruptionRequired)) or ($n.isDisruptionApproved)' >/dev/null
     do
         nodeGroupName="$(jq -nr --argjson n "$node_data" '$n.nodeGroupName')"
-        attempt_ng=0
-        until
-            disruptionsApprovalMode="$(
-              bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get ng "$nodeGroupName" -o json | jq -r '.spec.disruptions.approvalMode')"
-        do
-          attempt=$(( attempt + 1 ))
-          if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-              bb-log-error "ERROR: Failed to annotate Node with annotation 'update.node.deckhouse.io/disruption-required='."
-              exit 1
-          fi
-
-          attempt_ng=$(( attempt_ng + 1 ))
-          if [ -n "${MAX_RETRIES-}" ] && [ "$attempt_ng" -gt "${MAX_RETRIES}" ]; then
-              bb-log-error "ERROR: Failed to get NodeGroup $nodeGroupName."
-              exit 1
-          fi
-
+        disruptionsApprovalMode={{ .nodeGroup.spec.disruptions.approvalMode }}
           if [ "$disruptionsApprovalMode" == "RollingUpdate" ]; then
             bb-kubectl \
               --kubeconfig=/etc/kubernetes/kubelet.conf \
@@ -70,7 +54,6 @@ bb-deckhouse-get-disruptive-update-approval() {
               --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
               annotate node "$(hostname -s)" update.node.deckhouse.io/disruption-required= || { bb-log-info "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
           fi
-        done
     done
 
     bb-log-info "Disruption required, waiting for approval"
