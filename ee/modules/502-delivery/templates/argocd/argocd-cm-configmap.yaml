@@ -13,4 +13,5 @@ data:
     issuer: https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
     clientID: dex-client-argocd@d8-{{ .Chart.Name }}
     clientSecret: $dex-client-argocd:clientSecret
+  oidc.tls.insecure.skip.verify: "true"
   {{- end }}
