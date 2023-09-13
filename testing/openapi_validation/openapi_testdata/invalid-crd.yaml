@@ -1,0 +1,31 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: testobject.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: testing
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: testobjects
+    singular: testobject
+    kind: TestObject
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          properties:
+            spec:
+              type: object
+              properties:
+                foobar:
+                  type: string
+                  default: 'baz'
+                  x-examples: ["foor", "barr"]

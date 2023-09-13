@@ -49,30 +49,51 @@ func TestValidationOpenAPI(t *testing.T) {
 
 // TestValidators test that validation hooks are working
 func TestValidators(t *testing.T) {
-	apiFiles := []string{deckhousePath + "testing/openapi_validation/openapi_testdata/values.yaml"}
+	t.Run("Test Openapi values validators", func(t *testing.T) {
+		apiFiles := []string{deckhousePath + "testing/openapi_validation/openapi_testdata/values.yaml"}
 
-	filesC := make(chan fileValidation, len(apiFiles))
-	resultC := RunOpenAPIValidator(filesC)
+		filesC := make(chan fileValidation, len(apiFiles))
+		resultC := RunOpenAPIValidator(filesC)
 
-	for _, apiFile := range apiFiles {
-		filesC <- fileValidation{
-			filePath: apiFile,
+		for _, apiFile := range apiFiles {
+			filesC <- fileValidation{
+				filePath: apiFile,
+			}
 		}
-	}
-	close(filesC)
+		close(filesC)
 
-	for res := range resultC {
-		assert.Error(t, res.validationError)
-		err, ok := res.validationError.(*multierror.Error)
-		require.True(t, ok)
-		require.Len(t, err.Errors, 6)
+		for res := range resultC {
+			assert.Error(t, res.validationError)
+			err, ok := res.validationError.(*multierror.Error)
+			require.True(t, ok)
+			require.Len(t, err.Errors, 6)
 
-		// we can't guarantee order here, thats why test contains
-		assert.Contains(t, res.validationError.Error(), "properties.https is invalid: must have no default value")
-		assert.Contains(t, res.validationError.Error(), "Enum 'properties.https.properties.mode.enum' is invalid: value 'disabled' must start with Capital letter")
-		assert.Contains(t, res.validationError.Error(), "Enum 'properties.https.properties.mode.enum' is invalid: value: 'Cert-Manager' must be in CamelCase")
-		assert.Contains(t, res.validationError.Error(), "Enum 'properties.https.properties.mode.enum' is invalid: value: 'Some:Thing' must be in CamelCase")
-		assert.Contains(t, res.validationError.Error(), "Enum 'properties.https.properties.mode.enum' is invalid: value: 'Any.Thing' must be in CamelCase")
-		assert.Contains(t, res.validationError.Error(), "properties.highAvailability is invalid: must have no default value")
-	}
+			// we can't guarantee order here, thats why test contains
+			assert.Contains(t, res.validationError.Error(), "properties.https is invalid: must have no default value")
+			assert.Contains(t, res.validationError.Error(), "Enum 'properties.https.properties.mode.enum' is invalid: value 'disabled' must start with Capital letter")
+			assert.Contains(t, res.validationError.Error(), "Enum 'properties.https.properties.mode.enum' is invalid: value: 'Cert-Manager' must be in CamelCase")
+			assert.Contains(t, res.validationError.Error(), "Enum 'properties.https.properties.mode.enum' is invalid: value: 'Some:Thing' must be in CamelCase")
+			assert.Contains(t, res.validationError.Error(), "Enum 'properties.https.properties.mode.enum' is invalid: value: 'Any.Thing' must be in CamelCase")
+			assert.Contains(t, res.validationError.Error(), "properties.highAvailability is invalid: must have no default value")
+		}
+	})
+
+	t.Run("test CRD validators", func(t *testing.T) {
+		crdFiles := []string{deckhousePath + "testing/openapi_validation/openapi_testdata/invalid-crd.yaml"}
+
+		filesC := make(chan fileValidation, len(crdFiles))
+		resultC := RunOpenAPIValidator(filesC)
+
+		for _, crdFile := range crdFiles {
+			filesC <- fileValidation{
+				filePath: crdFile,
+			}
+		}
+		close(filesC)
+
+		require.Greater(t, len(resultC), 0)
+		for res := range resultC {
+			assert.Error(t, res.validationError)
+		}
+	})
 }
