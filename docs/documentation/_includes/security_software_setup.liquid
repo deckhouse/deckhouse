@@ -1,0 +1,5 @@
+{% for folder in site.data.deckhouse-used-directories.directories %}
+- `{{ folder.path }}` — 
+{%- if folder.module %}({% if page.lang == 'ru' %}модуль `{{ folder.module }}`{% else %}the `{{ folder.module }}` module {% endif %}) {% endif -%}
+{{ folder.description[page.lang]}}
+{% endfor %}
