@@ -1,6 +1,7 @@
 ---
 title: "Managing nodes: FAQ"
 search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
+description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in a cluster. Changing the CRI of the node.
 ---
 {% raw %}
 
@@ -225,7 +226,7 @@ This is only needed if you have to move a static node from one cluster to anothe
 
 If a node in a nodeGroup is not updated (the value of `UPTODATE` when executing the `kubectl get nodegroup` command is less than the value of `NODES`) or you assume some other problems that may be related to the `node-manager` module, then you need to look at the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
 
-You can browse its logs using the following command:
+To view the logs of the `bashible` service on a specific node, run the following command:
 
 ```shell
 journalctl -fu bashible
