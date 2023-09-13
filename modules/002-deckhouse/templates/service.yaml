@@ -8,7 +8,7 @@ metadata:
 spec:
   ports:
     - name: self
-      port: 8080
+      port: 9889
       targetPort: 9650
       protocol: TCP
     - name: webhook
