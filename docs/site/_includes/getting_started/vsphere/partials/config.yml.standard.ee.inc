@@ -119,9 +119,9 @@ masterNodeGroup:
     memory: 8192
     rootDiskSize: 50
     # [<en>] The name of the image, taking into account the vCenter folder path.
-    # [<en>] Example: "folder/my-ubuntu-packer-image".
+    # [<en>] Example: "folder/ubuntu-jammy-22.04".
     # [<ru>] Имя образа, созданного с учетом папки размещения образа в vCenter.
-    # [<ru>] Пример: "folder/my-ubuntu-packer-image".
+    # [<ru>] Пример: "folder/ubuntu-jammy-22.04".
     template: *!CHANGE_TEMPLATE_NAME*
     datastore: *!CHANGE_DATASTORE_NAME*
     # [<en>] Main network connected to node.
