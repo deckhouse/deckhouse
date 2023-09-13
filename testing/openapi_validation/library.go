@@ -188,6 +188,14 @@ func isDechkouseCRD(data map[interface{}]interface{}) bool {
 	return false
 }
 
+func (fp fileParser) parseForWrongKeys(m map[interface{}]interface{}) {
+	keysValidator := validators.NewKeyNameValidator()
+	err := keysValidator.Run(fp.fileName, "allfile", m)
+	if err != nil {
+		fp.resultC <- err
+	}
+}
+
 func runFileParser(fileName string, data map[interface{}]interface{}, resultC chan error) {
 	// exclude external CRDs
 	if isCRD(data) && !isDechkouseCRD(data) {
@@ -201,11 +209,14 @@ func runFileParser(fileName string, data map[interface{}]interface{}, resultC ch
 			"enum":             validators.NewEnumValidator(),
 			"highAvailability": validators.NewHAValidator(),
 			"https":            validators.NewHAValidator(),
-			"keyNames":         newConditionalValidator(isDechkouseCRD(data), validators.NewKeyNameValidator()),
+			//"keyNames":         validators.NewKeyNameValidator(),
 		},
 		resultC: resultC,
 	}
 
+	if isDechkouseCRD(data) {
+		fileParser.parseForWrongKeys(data)
+	}
 	go fileParser.startParsing(data, resultC)
 }
 
@@ -254,23 +265,4 @@ func (fp fileParser) parseValue(upperKey string, v interface{}) {
 
 type validator interface {
 	Run(fileName, absoulteKey string, value interface{}) error
-}
-
-type conditionalValidator struct {
-	condition bool
-	validator validator
-}
-
-func newConditionalValidator(condition bool, validatorFact validator) conditionalValidator {
-	return conditionalValidator{
-		condition: condition,
-		validator: validatorFact,
-	}
-}
-
-func (cv conditionalValidator) Run(file, absoluteKey string, value interface{}) error {
-	if cv.condition {
-		return cv.validator.Run(file, absoluteKey, value)
-	}
-	return nil
 }

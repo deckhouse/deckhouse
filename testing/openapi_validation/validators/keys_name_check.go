@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	bannedNames = []string{"x-example", "examples"}
+	bannedNames = []string{"x-examples", "examples"}
 )
 
 type KeyNameValidator struct {
@@ -37,7 +37,7 @@ func checkMapForBannedKey(m map[interface{}]interface{}, banned []string) error 
 		if strKey, ok := k.(string); ok {
 			for _, ban := range banned {
 				if strKey == ban {
-					return fmt.Errorf("%s is invalid name for property", ban)
+					return fmt.Errorf("%s is invalid name for property %s", ban, strKey)
 				}
 			}
 		}
@@ -59,7 +59,7 @@ func (knv KeyNameValidator) Run(file, absoluteKey string, value interface{}) err
 	}
 	err := checkMapForBannedKey(object, bannedNames)
 	if err != nil {
-		return fmt.Errorf("%s file contain key %s with wrong property: %w", file, absoluteKey, err)
+		return fmt.Errorf("%s file validation error: wrong property: %w", file, err)
 	}
 	return nil
 }
