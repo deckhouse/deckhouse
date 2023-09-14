@@ -255,7 +255,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"linstorServer":             "imageHash-linstor-linstorServer",
 		"piraeusHaController":       "imageHash-linstor-piraeusHaController",
 		"piraeusOperator":           "imageHash-linstor-piraeusOperator",
-		"sdsDrbdOperator":           "imageHash-linstor-sdsDrbdOperator"
 		"spaas":                     "imageHash-linstor-spaas",
 	},
 	"localPathProvisioner": map[string]interface{}{
