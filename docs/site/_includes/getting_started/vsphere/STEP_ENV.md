@@ -7,7 +7,7 @@
 * **Datacenter** with a tag in [`k8s-region`](#creating-tags-and-tag-categories) category.
 * **Cluster** with a tag in [`k8s-zone`](#creating-tags-and-tag-categories) category.
 * **Datastore** with required [tags](#datastore-configuration).
-* **Template** — [prepared](#preparing-a-virtual-machine-image) VM image.
+* **Template** — the [prepared](#preparing-a-virtual-machine-image) VM image.
 
 ## vSphere configuration
 
@@ -15,7 +15,7 @@
 
 You'll need the vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) to proceed with the rest of the guide.
 
-After installation, set environment variables to work with vCenter:
+After the installation is complete, set the environment variables required to work with vCenter:
 
 {% snippetcut %}
 ```shell
@@ -28,9 +28,9 @@ export GOVC_INSECURE=1
 
 ### Creating tags and tag categories
 
-VMware vSphere doesn't have "regions" and "zones". It has `Datacenter` and `Cluster` objects. To establish relation between these and "regions"/"zones" we'll use tags that fall into two tag categories. One for "region" tags and another for "zones tags".
+Instead of "regions" and "zones", VMware vSphere provides `Datacenter` and `Cluster` objects. We will use tags to match them with "regions"/"zones". These tags fall into two categories: one for "regions" tags and the other for "zones" tags.
 
-Create tag category with commands:
+Create a tag category using the following commands:
 
 {% snippetcut %}
 ```shell
@@ -39,7 +39,7 @@ govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
 {% endsnippetcut %}
 
-Create tags in each category. If you intend to use multiple "zones" (`Cluster`), create a tag for each of them:
+Create tags in each category. If you intend to use multiple "zones" (`Cluster`), create a tag for each one of them:
 
 {% snippetcut %}
 ```shell
@@ -72,7 +72,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 For dynamic `PersistentVolume` provisioning, a `Datastore` must be available on **each** ESXi host (shared datastore).
 {% endalert %}
 
-`StorageClass` objects will be created automatically for each `Datastore` that is tagged with "region" and "zone" tags:
+`StorageClass` objects will be created automatically for each `Datastore` tagged with the "region" and "zone" tags:
 
 {% snippetcut %}
 ```shell
@@ -92,9 +92,9 @@ We've intentionally skipped User creation since there are many ways to authentic
 This all-encompassing Role should be enough for all Deckhouse components. If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
-You have to create a role with a following list of permissions and assign it to `vCenter`.
+You have to create a role with the following list of permissions and assign it to `vCenter`.
 
-Create role with the command:
+Create a role with the following command:
 
 {% snippetcut %}
 ```shell
@@ -105,7 +105,7 @@ govc role.create deckhouse \
 ```
 {% endsnippetcut %}
 
-Assign the role to a user on `vCenter` object:
+Assign the role to a user on the `vCenter` object:
 
 {% snippetcut %}
 ```shell
@@ -115,7 +115,7 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 ### Preparing a virtual machine image
 
-It is recommended to use a pre-built cloud image/OVA file provided by a OS vendor to create a `Template`:
+It is recommended to use a pre-built cloud image/OVA file provided by the OS vendor to create a `Template`:
 
 * [**Ubuntu**](https://cloud-images.ubuntu.com/)
 * [**Debian**](https://cloud.debian.org/images/cloud/)
