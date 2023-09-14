@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -49,7 +50,15 @@ func main() {
 	if bundledPluginsPath != "" && gfInstallPlugins != "" && gfPathsPlugins != bundledPluginsPath {
 		_, err = os.Stat(bundledPluginsPath)
 		if err == nil {
-			err := cp.Copy(bundledPluginsPath, gfPathsPlugins)
+			opt := cp.Options{
+				OnError: func(src, dest string, err error) error {
+					if strings.Contains(errors.Join(err, errors.New("")).Error(), "chmod /etc/grafana/plugins: operation not permitted") {
+						return nil
+					}
+					return err
+				},
+			}
+			err := cp.Copy(bundledPluginsPath, gfPathsPlugins, opt)
 			if err != nil {
 				log.Fatalf("copy plugins: %v", err)
 			}
