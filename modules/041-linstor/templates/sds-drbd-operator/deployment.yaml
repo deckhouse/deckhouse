@@ -20,12 +20,12 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-      - containerName: "sds-drbd-operator"
-        minAllowed:
-          {{- include "sds_drbd_operator_resources" . | nindent 8 }}
-        maxAllowed:
-          cpu: 200m
-          memory: 100Mi
+    - containerName: "sds-drbd-operator"
+      minAllowed:
+        {{- include "sds_drbd_operator_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 200m
+        memory: 100Mi
 {{- end }}
 ---
 apiVersion: apps/v1
