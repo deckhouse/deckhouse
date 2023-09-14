@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/cloudflare/cfssl/cli"
+	"github.com/cloudflare/cfssl/cli/genkey"
 	"github.com/cloudflare/cfssl/cli/sign"
 	"github.com/cloudflare/cfssl/config"
 	"github.com/cloudflare/cfssl/csr"
@@ -60,7 +61,7 @@ func generateAndSaveSelfSignedCertAndKey(certHosts []string) error {
 	req.CN = certHosts[0]
 	req.Hosts = certHosts
 
-	csrGen := &csr.Generator{Validator: nil}
+	csrGen := &csr.Generator{Validator: genkey.Validator}
 	request, key, err := csrGen.ProcessRequest(req)
 	if err != nil {
 		return err
