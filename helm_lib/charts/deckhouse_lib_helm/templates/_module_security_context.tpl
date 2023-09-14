@@ -39,6 +39,7 @@ securityContext:
   runAsNonRoot: true
   runAsUser: 64535
   runAsGroup: 64535
+  fsGroup: 64535
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . }} */ -}}
