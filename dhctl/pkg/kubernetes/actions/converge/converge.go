@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
@@ -57,6 +58,8 @@ var (
 )
 
 type Runner struct {
+	*phases.PhasedExecutionContext
+
 	kubeCl         *client.KubernetesClient
 	changeSettings *terraform.ChangeActionSettings
 	lockRunner     *InLockRunner
@@ -67,8 +70,18 @@ type Runner struct {
 	stateCache dstate.Cache
 }
 
+type RunnerOptions struct {
+	OnPhaseFunc phases.OnPhaseFunc
+}
+
 func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner) *Runner {
+	return NewRunnerWithOptions(kubeCl, lockRunner, RunnerOptions{})
+}
+
+func NewRunnerWithOptions(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, opts RunnerOptions) *Runner {
 	return &Runner{
+		PhasedExecutionContext: phases.NewPhasedExecutionContext(opts.OnPhaseFunc),
+
 		kubeCl:         kubeCl,
 		changeSettings: &terraform.ChangeActionSettings{},
 		lockRunner:     lockRunner,
@@ -125,8 +138,20 @@ func (r *Runner) converge() error {
 		return err
 	}
 
+	if err := r.PhasedExecutionContext.Init(r.stateCache); err != nil {
+		return err
+	}
+
 	if !r.isSkip(PhaseBaseInfra) {
+		if shouldStop, err := r.PhasedExecutionContext.Start(phases.BaseInfraPhase, true); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
 		if err := r.updateClusterState(metaConfig); err != nil {
+			return err
+		}
+		if err := r.PhasedExecutionContext.Stop(r.stateCache); err != nil {
 			return err
 		}
 	} else {
@@ -135,6 +160,12 @@ func (r *Runner) converge() error {
 
 	if r.isSkip(PhaseAllNodes) {
 		log.InfoLn("Skip converge nodes")
+		return r.PhasedExecutionContext.Finalize()
+	}
+
+	if shouldStop, err := r.PhasedExecutionContext.Start(phases.AllNodesPhase, true); err != nil {
+		return err
+	} else if shouldStop {
 		return nil
 	}
 
@@ -190,7 +221,8 @@ func (r *Runner) converge() error {
 			return err
 		}
 	}
-	return nil
+
+	return r.PhasedExecutionContext.StopAndFinalize(r.stateCache)
 }
 
 func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {

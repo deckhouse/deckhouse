@@ -79,7 +79,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
-		return bootstraper.Abort()
+		return bootstraper.Abort(app.ForceAbortFromCache)
 	})
 
 	return cmd
