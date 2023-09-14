@@ -21,7 +21,7 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: "lvm volume group"
+          description: "LVM volume group"
           properties:
             spec:
               type: object
