@@ -19,6 +19,22 @@ source /shell_lib.sh
 function __config__(){
   cat <<EOF
 configVersion: v1
+kubernetes:
+  - name: endpoints
+    apiVersion: v1
+    kind: Endpoints
+    queue: "endpoints-config"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    nameSelector:
+      matchNames:
+      - kubernetes
+    jqFilter: |
+      {
+        "count": (.subsets[].addresses | length )
+      }
 kubernetesValidating:
 - name: d8-cluster-configuration-secret.deckhouse.io
   group: main
@@ -37,55 +53,50 @@ EOF
 function __main__() {
   # Secret kube-system/d8-cluster-configuration cannot be deleted
   if context::jq -e -r '.review.request.operation == "DELETE"' >/dev/null 2>&1; then
-    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"it is forbidden to delete secret d8-cluster-configuration"}
-EOF
+    echo '{"allowed":false, "message":"it is forbidden to delete secret d8-cluster-configuration"}' > "$VALIDATING_RESPONSE_PATH"
     return 0
   fi
 
-  # podSubnetNodeCIDRPrefix cannot be changed in running cluster
   if context::jq -e -r '.review.request.operation == "UPDATE"' >/dev/null 2>&1; then
-    oldPrefix="$(context::jq -r '.review.request.oldObject.data."cluster-configuration.yaml"' | base64 -d | yq eval '.podSubnetNodeCIDRPrefix' -)"
-    newPrefix="$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d | yq eval '.podSubnetNodeCIDRPrefix' -)"
+    oldConfig=$(context::jq -r '.review.request.oldObject.data."cluster-configuration.yaml"' | base64 -d)
+    newConfig=$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d)
 
+    # podSubnetNodeCIDRPrefix cannot be changed in a running cluster
+    oldPrefix=$(yq eval '.podSubnetNodeCIDRPrefix' - <<< "$oldConfig")
+    newPrefix=$(yq eval '.podSubnetNodeCIDRPrefix' - <<< "$newConfig")
     if [ "${oldPrefix}" != "${newPrefix}" ]; then
-      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"it is forbidden to change podSubnetNodeCIDRPrefix in running cluster"}
-EOF
+      echo '{"allowed":false, "message":"it is forbidden to change podSubnetNodeCIDRPrefix in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
+      return 0
+    fi
+
+    # podSubnetCIDR cannot be changed in a running cluster
+    oldPodCIDR=$(yq eval '.podSubnetCIDR' - <<< "$oldConfig")
+    newPodCIDR=$(yq eval '.podSubnetCIDR' - <<< "$newConfig")
+    if [ "${oldPodCIDR}" != "${newPodCIDR}" ]; then
+      echo '{"allowed":false, "message":"it is forbidden to change podSubnetCIDR in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
+      return 0
+    fi
+
+    # serviceSubnetCIDR cannot be changed in a running cluster
+    oldServiceCIDR=$(yq eval '.serviceSubnetCIDR' - <<< "$oldConfig")
+    newServiceCIDR=$(yq eval '.serviceSubnetCIDR' - <<< "$newConfig")
+    if [ "${oldServiceCIDR}" != "${newServiceCIDR}" ]; then
+      echo '{"allowed":false, "message":"it is forbidden to change serviceSubnetCIDR in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
+      return 0
+    fi
+
+    # defaultCRI cannot be changed if count of endpoints < 3
+    endpointsCount=$(context::jq -r '.snapshots.endpoints[].filterResult.count')
+    oldDefaultCRI=$(yq eval '.defaultCRI // "Containerd"' - <<< "$oldConfig")
+    newDefaultCRI=$(yq eval '.defaultCRI // "Containerd"' - <<< "$newConfig")
+    if [[ ("${newDefaultCRI}" != "${oldDefaultCRI}") && ("${endpointsCount}" -lt 3) ]]; then
+      echo '{"allowed":true, "warnings":["it is disruptive to change defaultCRI type for cluster with apiserver endpoints < 3"]}' > "$VALIDATING_RESPONSE_PATH"
       return 0
     fi
   fi
 
-  # podSubnetCIDR cannot be changed in running cluster
-    if context::jq -e -r '.review.request.operation == "UPDATE"' >/dev/null 2>&1; then
-      oldPodSubnet="$(context::jq -r '.review.request.oldObject.data."cluster-configuration.yaml"' | base64 -d | yq eval '.podSubnetCIDR' -)"
-      newPodSubnet="$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d | yq eval '.podSubnetCIDR' -)"
-
-      if [ "${oldPodSubnet}" != "${newPodSubnet}" ]; then
-        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-  {"allowed":false, "message":"it is forbidden to change podSubnetCIDR in running cluster"}
-EOF
-        return 0
-      fi
-    fi
-
-  # serviceSubnetCIDR cannot be changed in running cluster
-    if context::jq -e -r '.review.request.operation == "UPDATE"' >/dev/null 2>&1; then
-      oldServiceSubnet="$(context::jq -r '.review.request.oldObject.data."cluster-configuration.yaml"' | base64 -d | yq eval '.serviceSubnetCIDR' -)"
-      newServiceSubnet="$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d | yq eval '.serviceSubnetCIDR' -)"
-
-      if [ "${oldServiceSubnet}" != "${newServiceSubnet}" ]; then
-        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-  {"allowed":false, "message":"it is forbidden to change serviceSubnetCIDR in running cluster"}
-EOF
-        return 0
-      fi
-    fi
-
   # allowed response
-  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":true}
-EOF
+  echo '{"allowed":true}' > "$VALIDATING_RESPONSE_PATH"
 }
 
 hook::run "$@"
