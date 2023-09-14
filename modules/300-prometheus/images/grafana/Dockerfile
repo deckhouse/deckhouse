@@ -170,7 +170,8 @@ COPY --from=grafana-statusmap /grafana-statusmap/dist/ ${GF_PATHS_PLUGINS}/flant
 COPY ./grafana_home_dashboard.json /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
 COPY ./web/ /usr/share/grafana/public/img/
 
-RUN chown -R 64535:64535 /usr/share/grafana && \
+RUN mkdir -p /etc/grafana/plugins && \
+    chown -R 64535:64535 /usr/share/grafana && \
     chown -R 64535:64535 /etc/grafana && \
     chown -R 64535:64535 /var/lib/grafana && \
     chown -R 64535:64535 /var/log/grafana
