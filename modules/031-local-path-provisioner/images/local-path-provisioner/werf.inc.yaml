@@ -1,6 +1,3 @@
-{{- $localPathProvisionerCommit := "755e331a276d4dd26f84377db5504a38109df8fb"}}
-{{- $localPathProvisionerVersion := "0.0.21"}}
-
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALPINE }}
@@ -29,12 +26,10 @@ mount:
 shell:
   beforeInstall:
     - apk add --no-cache git
-  install:
     - export GOPROXY={{ $.GOPROXY }}
     - mkdir /src
-    - git clone --depth 1 {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
+    - git clone --depth 1 --branch v.0.21 {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
     - cd /src
-    - git checkout {{ $localPathProvisionerCommit }}
     - for ifile in $(ls /patches/*.patch); do git apply $ifile; done
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner
     - chown -R 64535:64535 /local-path-provisioner
