@@ -184,14 +184,6 @@ spec:
             path: /ping
           initialDelaySeconds: 15
           periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            port: 8443
-            scheme: HTTPS
-            path: /.well-known/openid-configuration
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          failureThreshold: 5
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
