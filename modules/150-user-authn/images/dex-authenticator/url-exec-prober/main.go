@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -31,7 +32,9 @@ func main() {
 
 	url := os.Args[1]
 
-	client := http.Client{}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	client := &http.Client{Transport: customTransport}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
