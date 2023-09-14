@@ -1,5 +1,5 @@
-{{$localPathProvisionerCommit := "755e331a276d4dd26f84377db5504a38109df8fb"}}
-{{$localPathProvisionerVersion := "0.0.21"}}
+{{- $localPathProvisionerCommit := "755e331a276d4dd26f84377db5504a38109df8fb"}}
+{{- $localPathProvisionerVersion := "0.0.21"}}
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
