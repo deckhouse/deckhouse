@@ -60,5 +60,6 @@ func run(args []string) error {
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		log.Print(err)
+		os.Exit(1)
 	}
 }

@@ -20,12 +20,13 @@ import (
 	"flag"
 )
 
-const defaltTemplate = "340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl"
+const defaultTemplate = "modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl"
 
 type ImageChecks struct {
 	fs *flag.FlagSet
 
 	template string
+	helpers  string
 }
 
 func NewImageChecks() *ImageChecks {
@@ -33,7 +34,8 @@ func NewImageChecks() *ImageChecks {
 		fs: flag.NewFlagSet("alert-image-checks", flag.ContinueOnError),
 	}
 
-	ic.fs.StringVar(&ic.template, "template", defaltTemplate, "path to the template, that should be rendered starting from the module name")
+	ic.fs.StringVar(&ic.template, "template", defaultTemplate, "path to the template, that should be rendered starting from the deckhouse root")
+	ic.fs.StringVar(&ic.helpers, "helpers", "", "path to the helpers directory if needed")
 
 	return ic
 }
@@ -47,5 +49,5 @@ func (ic *ImageChecks) Init(args []string) error {
 }
 
 func (ic *ImageChecks) Run() error {
-	return run(ic.template)
+	return run(ic.template, ic.helpers)
 }

@@ -39,7 +39,7 @@ func DeckhouseRoot() (path string, err error) {
 	return filepath.Dir(cwd), err
 }
 
-// NewRenderDir create a new temporary directory following the defalt helm template.
+// NewRenderDir create a new temporary directory following the default helm template.
 func NewRenderDir(chartName string) (path string, err error) {
 	renderdir, err := os.MkdirTemp("", "renderdir")
 	if err != nil {
