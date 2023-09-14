@@ -35,9 +35,6 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "sds-drbd-operator")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "any-node" "storage-problems") | nindent 2 }}
-  {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
   selector:
     matchLabels:
       app: sds-drbd-operator
@@ -46,6 +43,10 @@ spec:
       labels:
         app: sds-drbd-operator
     spec:
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
         - name: fox-registry
       serviceAccountName: sds-drbd-operator
