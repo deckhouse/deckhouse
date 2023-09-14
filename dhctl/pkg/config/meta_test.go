@@ -239,6 +239,28 @@ func TestPrepareRegistry(t *testing.T) {
 			require.Equal(t, cfg.Registry, expectedData)
 		})
 	})
+
+	t.Run("Validate registryDockerCfg", func(t *testing.T) {
+		t.Run("Expect successful validation", func(t *testing.T) {
+			creds := "{\"auths\": { \"registry.deckhouse.io\": {}}}"
+			dockerCfg := base64.StdEncoding.EncodeToString([]byte(creds))
+
+			err := validateRegistryDockerCfg(dockerCfg)
+			require.NoError(t, err)
+		})
+
+		t.Run("Expect failed validation", func(t *testing.T) {
+			host := "some-bad-host:1434/deckhouse"
+			creds := fmt.Sprintf("{\"auths\": { \"%s\": {}}}", host)
+			dockerCfg := base64.StdEncoding.EncodeToString([]byte(creds))
+
+			err := validateRegistryDockerCfg(dockerCfg)
+			require.EqualErrorf(t,
+				err,
+				fmt.Sprintf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", host),
+				err.Error())
+		})
+	})
 }
 
 func TestParseRegistryData(t *testing.T) {
