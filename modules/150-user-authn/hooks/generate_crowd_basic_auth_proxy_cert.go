@@ -161,7 +161,7 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	}
 
 	registry := input.Values.Get("global.modulesImages.registry.base").String()
-	digest := input.Values.Get("global.modulesImages.digests.userAuthn.cfssl").String()
+	digest := input.Values.Get("global.modulesImages.digests.userAuthn.selfSignedGenerator").String()
 	job := generateJob(registry, digest, base64.StdEncoding.EncodeToString(gcsr))
 
 	foreground := v1.DeletePropagationForeground
@@ -278,10 +278,9 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "deckhouse-registry"}},
 					Containers: []corev1.Container{
 						{
-							Name:    "generator",
-							Image:   fmt.Sprintf("%s@%s", registry, digest),
-							Command: []string{"bash", "-c"},
-							Args:    []string{script},
+							Name:  "generator",
+							Image: fmt.Sprintf("%s@%s", registry, digest),
+							Args:  []string{"generate-crowd-proxy-certs"},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "CSR",
@@ -348,19 +347,6 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 		},
 	}
 }
-
-// ways are hardcoded because we know where these files exist on the Deckhouse clusters
-// if you want to grep client-ca-file from kube-apiserver command line, use `ps auxww` to avoid line clipping
-var (
-	script = `set -e
-ca_path="/etc/kubernetes/pki/front-proxy-ca.crt"
-key_path="/etc/kubernetes/pki/front-proxy-ca.key"
-
-csr_config='{"CN":"front-proxy-client","hosts":[""],"key":{"algo": "rsa","size": 2048},"signing":{"default":{"expiry":"72h","usages":["signing","key encipherment","requestheader-client"]}}}'
-signed_cert=$(echo $CSR | base64 -d | cfssl sign -ca=$ca_path -ca-key=$key_path -config=<(echo $csr_config) - )
-echo "Certificate: $(echo $signed_cert | jq .cert -r | base64 | tr -d '\n')"
-`
-)
 
 const (
 	testingCert = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUIwRENDQVRHZ0F3SUJBZ0lCQVRBS0JnZ3Foa2pPUFFRREJEQVNNUkF3RGdZRFZRUUtFd2RCWTIxbElFTnYKTUI0WERUQTVNVEV4TURJek1EQXdNRm9YRFRFd01EVXdPVEl6TURBd01Gb3dFakVRTUE0R0ExVUVDaE1IUVdOdApaU0JEYnpDQm16QVFCZ2NxaGtqT1BRSUJCZ1VyZ1FRQUl3T0JoZ0FFQVpaWWN3dlJTdVp0SkxtS25PTUM2NUh3Ck1OQ01YZU5EbWUybFBDUnJta2FQazBJUEpVU1Rta0JndmRxeDR1cG1NVTZ0VGtZSlUyTjNsZnVxTUU4RGh0dHQKQUM1eHNxeWcrMEdCaXZhZTM0NXlzVzNnMFMyWlJzTjA5M0IvampxTUpMbjNROEwyUDAydHJZaEd0Wm8yeG0wMgp3UWVWL0J2SjhKWUlla3FDU1h2Q1Q2cnhvelV3TXpBT0JnTlZIUThCQWY4RUJBTUNCYUF3RXdZRFZSMGxCQXd3CkNnWUlLd1lCQlFVSEF3RXdEQVlEVlIwVEFRSC9CQUl3QURBS0JnZ3Foa2pPUFFRREJBT0JqQUF3Z1lnQ1FnRzcKTlRtQ0JMQXl1bXhQY2NtY2dodmYxK2NiOXh6TVYwd3RBUVNlL2RxaURUWk81QmZ3blVGWjBUY0NZSXNCak1uUwoxbnNNamFnckQvUDdJc2UrVmZaQkhRSkNBZmdkT0JJMzRuQXcrampGWTR6SUMxOVoraHFzMjZaZ1UvREcwQVJ1CnNNVXFWMjJBb1dWUEQ0S2tEUklZR0lxK3h0WGJyTnR3TW9rQ0lNTExobWZFK3ZPVAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="

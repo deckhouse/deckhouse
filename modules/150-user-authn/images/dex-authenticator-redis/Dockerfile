@@ -1,18 +1,21 @@
-# Based on https://github.com/docker-library/redis/blob/master/5/alpine/Dockerfile
 ARG BASE_ALPINE
+ARG BASE_DISTROLESS
 
-FROM redis:5.0.10-alpine3.12@sha256:cab1de051c243a956749397af796d50bf235c7183e88bc4667259f66cad4f748 as artifact
+FROM $BASE_ALPINE as artifact
+WORKDIR /src
+ARG SOURCE_REPO
 
-FROM $BASE_ALPINE
-RUN addgroup -S -g 1000 redis && adduser -S -G redis -u 999 redis
-RUN apk add --no-cache 'su-exec>=0.2' tzdata
-RUN mkdir /data && chown redis:redis /data
+ENV SOURCE_REPO=${SOURCE_REPO}
 
-VOLUME /data
-WORKDIR /data
+RUN apk add coreutils curl gcc make musl-dev openssl-dev git
+RUN git clone --branch 7.0.9 --depth 1 ${SOURCE_REPO}/redis/redis.git .
+RUN make CFLAGS="-static" LDFLAGS="-static"
 
-COPY --from=artifact /usr/local/bin/ /usr/local/bin/
-ENTRYPOINT ["docker-entrypoint.sh"]
+RUN chown 64535:64535 /src/src/redis-server
+RUN chmod 0700 /src/src/redis-server
 
-EXPOSE 6379
-CMD ["redis-server"]
+FROM $BASE_DISTROLESS
+
+COPY --from=artifact /src/src/redis-server /redis-server
+
+ENTRYPOINT ["/redis-server"]
