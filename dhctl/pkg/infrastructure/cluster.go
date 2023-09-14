@@ -17,6 +17,7 @@ package infrastructure
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -36,12 +37,24 @@ type BaseInfraController interface {
 type ClusterInfra struct {
 	stateLoader StateLoader
 	cache       state.Cache
+
+	*phases.PhasedExecutionContext
 }
 
 func NewClusterInfra(terraState StateLoader, cache state.Cache) *ClusterInfra {
+	return NewClusterInfraWithOptions(terraState, cache, ClusterInfraOptions{})
+}
+
+type ClusterInfraOptions struct {
+	PhasedExecutionContext *phases.PhasedExecutionContext
+}
+
+func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, opts ClusterInfraOptions) *ClusterInfra {
 	return &ClusterInfra{
 		stateLoader: terraState,
 		cache:       cache,
+
+		PhasedExecutionContext: opts.PhasedExecutionContext,
 	}
 }
 
@@ -54,6 +67,14 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 	clusterState, nodesState, err := r.stateLoader.PopulateClusterState()
 	if err != nil {
 		return err
+	}
+
+	if r.PhasedExecutionContext != nil {
+		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
 	}
 
 	for nodeGroupName, nodeGroupStates := range nodesState {
@@ -69,5 +90,21 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 		}
 	}
 
-	return NewBaseInfraController(metaConfig, r.cache).Destroy(clusterState, autoApprove)
+	if r.PhasedExecutionContext != nil {
+		if shouldStop, err := r.PhasedExecutionContext.SwitchPhase(phases.BaseInfraPhase, true, r.cache); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
+	}
+
+	if err := NewBaseInfraController(metaConfig, r.cache).Destroy(clusterState, autoApprove); err != nil {
+		return err
+	}
+
+	if r.PhasedExecutionContext != nil {
+		return r.PhasedExecutionContext.CommitState(r.cache)
+	} else {
+		return nil
+	}
 }

@@ -16,6 +16,7 @@ package converge
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -30,18 +31,22 @@ import (
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient *ssh.Client
+	SSHClient    *ssh.Client
+	InitialState phases.DhctlState
+	OnPhaseFunc  phases.OnPhaseFunc
 
 	*client.KubernetesInitParams
 }
 
 type Converger struct {
 	*Params
+	*phases.PhasedExecutionContext
 }
 
 func NewConverger(params *Params) *Converger {
 	return &Converger{
-		Params: params,
+		Params:                 params,
+		PhasedExecutionContext: phases.NewPhasedExecutionContext(params.OnPhaseFunc),
 	}
 }
 
@@ -50,15 +55,16 @@ func NewConverger(params *Params) *Converger {
 // TODO(remove-global-app):  applyParams will not be needed anymore then.
 //
 // applyParams overrides app.* options that are explicitly passed using Params struct
-func (b *Converger) applyParams() error {
-	if b.KubernetesInitParams != nil {
-		app.KubeConfigInCluster = b.KubernetesInitParams.KubeConfigInCluster
-		app.KubeConfig = b.KubernetesInitParams.KubeConfig
-		app.KubeConfigContext = b.KubernetesInitParams.KubeConfigContext
+func (c *Converger) applyParams() error {
+	if c.KubernetesInitParams != nil {
+		app.KubeConfigInCluster = c.KubernetesInitParams.KubeConfigInCluster
+		app.KubeConfig = c.KubernetesInitParams.KubeConfig
+		app.KubeConfigContext = c.KubernetesInitParams.KubeConfigContext
 	}
 	return nil
 }
 
+// FIXME(dhctl-for-commander): optionally initialize config-path from parameter, use specified config instead of in-cluster
 func (c *Converger) Converge() error {
 	if err := c.applyParams(); err != nil {
 		return err
@@ -89,26 +95,30 @@ func (c *Converger) Converge() error {
 		return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 	}
 
-	// TODO(dhctl-for-commander): optionally initialize state from parameter
-	// TODO(dhctl-for-commander): optionally initialize config from parameter
-	err = cache.Init(cacheIdentity)
+	err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{InitialState: c.InitialState})
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
 	}
 	inLockRunner := converge.NewInLockLocalRunner(kubeCl, "local-converger")
 
-	runner := converge.NewRunner(kubeCl, inLockRunner)
+	stateCache := cache.Global()
+
+	if err := c.PhasedExecutionContext.Init(stateCache); err != nil {
+		return err
+	}
+	defer c.PhasedExecutionContext.Finalize(stateCache)
+
+	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache, converge.RunnerOptions{PhasedExecutionContext: c.PhasedExecutionContext})
 	runner.WithChangeSettings(&terraform.ChangeActionSettings{
 		AutoDismissDestructive: false,
 	})
 
-	// TODO(dhctl-for-commander): OnPhase support for converge
 	err = runner.RunConverge()
 	if err != nil {
 		return fmt.Errorf("converge problem: %v", err)
 	}
 
-	return nil
+	return c.PhasedExecutionContext.Complete()
 }
 
 func (c *Converger) AutoConverge() error {
@@ -134,7 +144,7 @@ func (c *Converger) AutoConverge() error {
 
 	app.DeckhouseTimeout = 1 * time.Hour
 
-	runner := converge.NewRunner(kubeCl, inLockRunner).
+	runner := converge.NewRunner(kubeCl, inLockRunner, cache.Global(), converge.RunnerOptions{}).
 		WithChangeSettings(&terraform.ChangeActionSettings{
 			AutoDismissDestructive: true,
 			AutoApprove:            true,

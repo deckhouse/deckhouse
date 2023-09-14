@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func (b *ClusterBootstrapper) Abort() error {
+func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -40,14 +40,14 @@ func (b *ClusterBootstrapper) Abort() error {
 		log.WarnLn(bootstrapAbortCheckMessage)
 	}
 
-	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort() })
+	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(forceAbortFromCache) })
 }
 
 type Destroyer interface {
 	DestroyCluster(autoApprove bool) error
 }
 
-func (b *ClusterBootstrapper) doRunBootstrapAbort() error {
+func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
 	metaConfig, err := config.ParseConfig(app.ConfigPath)
 	if err != nil {
 		return err
@@ -89,13 +89,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort() error {
 		if err != nil {
 			return err
 		}
-		if !ok || app.ForceAbortFromCache {
-			log.DebugF(fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, app.ForceAbortFromCache))
+		if !ok || forceAbortFromCache {
+			log.DebugF(fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache))
 			terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
 			destroyer = infrastructure.NewClusterInfra(terraStateLoader, stateCache)
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
-			if app.ForceAbortFromCache {
+			if forceAbortFromCache {
 				logMsg = "Force aborting from cache"
 			}
 
@@ -127,12 +127,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort() error {
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
-		if err = cache.InitWithOptions(sshClient.Check().String(), cache.CacheOptions{InitialState: b.InitialState}); err != nil {
+		if err = cache.InitWithOptions(sshClient.Check().String(), cache.CacheOptions{}); err != nil {
 			return fmt.Errorf(bootstrapAbortInvalidCacheMessage, sshClient.Check().String(), err)
 		}
 		destroyer = destroy.NewClusterDestroyer(&destroy.Params{
-			SSHClient:  sshClient,
-			StateCache: cache.Global(),
+			SSHClient:   sshClient,
+			StateCache:  cache.Global(),
+			OnPhaseFunc: b.OnPhaseFunc,
 
 			SkipResources: app.SkipResources,
 		})

@@ -16,7 +16,6 @@ package bootstrap
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -30,10 +29,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
@@ -73,9 +72,9 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	InitialState               operations.DhctlState
+	InitialState               phases.DhctlState
 	DisableBootstrapClearCache bool
-	OnPhaseFunc                operations.OnPhaseFunc
+	OnPhaseFunc                phases.OnPhaseFunc
 
 	ConfigPath              string
 	ResourcesPath           string
@@ -93,13 +92,14 @@ type Params struct {
 
 type ClusterBootstrapper struct {
 	*Params
-
+	*phases.PhasedExecutionContext
 	reinitializeSSHPrivateKeys bool
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 	return &ClusterBootstrapper{
-		Params: params,
+		Params:                 params,
+		PhasedExecutionContext: phases.NewPhasedExecutionContext(params.OnPhaseFunc),
 	}
 }
 
@@ -169,40 +169,6 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
-func (b *ClusterBootstrapper) onInitialState(stateCache state.Cache, nextPhase operations.OperationPhase, nextPhaseCritical bool) (bool, error) {
-	return b.onPhase("", stateCache, nextPhase, nextPhaseCritical)
-}
-
-func (b *ClusterBootstrapper) onFinalState(finalState operations.DhctlState) error {
-	if b.OnPhaseFunc == nil {
-		return nil
-	}
-	err := b.OnPhaseFunc(operations.FinalizationPhase, finalState, "", false)
-	if errors.Is(err, operations.StopOperationCondition) {
-		return nil
-	} else {
-		return err
-	}
-}
-
-func (b *ClusterBootstrapper) onPhase(completedPhase operations.OperationPhase, stateCache state.Cache, nextPhase operations.OperationPhase, nextPhaseCritical bool) (bool, error) {
-	if b.OnPhaseFunc == nil {
-		return false, nil
-	}
-
-	completedPhaseState, err := operations.ExtractDhctlState(stateCache)
-	if err != nil {
-		return false, fmt.Errorf("unable to extract dhctl state: %w", err)
-	}
-
-	err = b.OnPhaseFunc(completedPhase, completedPhaseState, nextPhase, nextPhaseCritical)
-	if errors.Is(err, operations.StopOperationCondition) {
-		return true, nil
-	} else {
-		return false, err
-	}
-}
-
 func (b *ClusterBootstrapper) Bootstrap() error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
@@ -226,7 +192,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	// next init cache
 	cachePath := metaConfig.CachePath()
-	// TODO: if opts.InitialState has been specified — use it
 	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
@@ -239,11 +204,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		stateCache.Delete(state.TombstoneKey)
 	}
 
-	if shouldStop, err := b.onInitialState(stateCache, operations.BaseInfraPhase, true); err != nil {
+	if err := b.PhasedExecutionContext.Init(stateCache); err != nil {
 		return err
-	} else if shouldStop {
-		return nil
 	}
+	defer b.PhasedExecutionContext.Finalize(stateCache)
 
 	sshClient := ssh.NewClientFromFlags()
 	sshClient.ReinitializeAgentPrivateKeys = b.reinitializeSSHPrivateKeys
@@ -270,6 +234,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 	metaConfig.UUID = clusterUUID
+
+	if shouldStop, err := b.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
 
 	deckhouseInstallConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
@@ -371,7 +341,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		resourcesToCreate = parsedResources
 	}
 
-	if shouldStop, err := b.onPhase(operations.BaseInfraPhase, stateCache, operations.ExecuteBashibleBundlePhase, false); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -384,7 +354,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	if shouldStop, err := b.onPhase(operations.ExecuteBashibleBundlePhase, stateCache, operations.InstallDeckhousePhase, false); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallDeckhousePhase, false, stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -407,7 +377,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
-	if shouldStop, err := b.onPhase(operations.InstallDeckhousePhase, stateCache, operations.CreateResourcesPhase, false); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.CreateResourcesPhase, false, stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -418,7 +388,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	if shouldStop, err := b.onPhase(operations.CreateResourcesPhase, stateCache, operations.ExecPostBootstrapPhase, false); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecPostBootstrapPhase, false, stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -433,15 +403,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
-	if shouldStop, err := b.onPhase(operations.ExecPostBootstrapPhase, stateCache, operations.FinalizationPhase, false); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.FinalizationPhase, false, stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
-	}
-
-	finalState, err := operations.ExtractDhctlState(stateCache)
-	if err != nil {
-		return fmt.Errorf("unable to extract dhctl state: %w", err)
 	}
 
 	if !b.DisableBootstrapClearCache {
@@ -471,7 +436,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		})
 	}
 
-	return b.onFinalState(finalState)
+	return b.PhasedExecutionContext.CommitAndComplete(stateCache)
 }
 
 func printBanner() {

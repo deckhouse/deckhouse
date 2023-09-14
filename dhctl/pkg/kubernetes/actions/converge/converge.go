@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -57,6 +57,8 @@ var (
 )
 
 type Runner struct {
+	*phases.PhasedExecutionContext
+
 	kubeCl         *client.KubernetesClient
 	changeSettings *terraform.ChangeActionSettings
 	lockRunner     *InLockRunner
@@ -67,15 +69,21 @@ type Runner struct {
 	stateCache dstate.Cache
 }
 
-func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner) *Runner {
+type RunnerOptions struct {
+	PhasedExecutionContext *phases.PhasedExecutionContext
+}
+
+func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateCache dstate.Cache, opts RunnerOptions) *Runner {
 	return &Runner{
+		PhasedExecutionContext: opts.PhasedExecutionContext,
+
 		kubeCl:         kubeCl,
 		changeSettings: &terraform.ChangeActionSettings{},
 		lockRunner:     lockRunner,
 
 		excludedNodes: make(map[string]bool),
 		skipPhases:    make(map[Phase]bool),
-		stateCache:    cache.Global(),
+		stateCache:    stateCache,
 	}
 }
 
@@ -126,8 +134,22 @@ func (r *Runner) converge() error {
 	}
 
 	if !r.isSkip(PhaseBaseInfra) {
+		if r.PhasedExecutionContext != nil {
+			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true); err != nil {
+				return err
+			} else if shouldStop {
+				return nil
+			}
+		}
+
 		if err := r.updateClusterState(metaConfig); err != nil {
 			return err
+		}
+
+		if r.PhasedExecutionContext != nil {
+			if err := r.PhasedExecutionContext.CommitState(r.stateCache); err != nil {
+				return err
+			}
 		}
 	} else {
 		log.InfoLn("Skip converge base infrastructure")
@@ -136,6 +158,14 @@ func (r *Runner) converge() error {
 	if r.isSkip(PhaseAllNodes) {
 		log.InfoLn("Skip converge nodes")
 		return nil
+	}
+
+	if r.PhasedExecutionContext != nil {
+		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
 	}
 
 	var nodesState map[string]NodeGroupTerraformState
@@ -190,7 +220,12 @@ func (r *Runner) converge() error {
 			return err
 		}
 	}
-	return nil
+
+	if r.PhasedExecutionContext != nil {
+		return r.PhasedExecutionContext.CommitState(r.stateCache)
+	} else {
+		return nil
+	}
 }
 
 func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
