@@ -7,12 +7,14 @@ FROM golang:1.19.12-alpine3.18 as patchbuilder
 
 WORKDIR /src/
 RUN apk add --no-cache git patch make zip wget && \
-    wget -c https://github.com/kubernetes/dashboard/archive/refs/tags/v2.7.0.zip && \
-    unzip v2.7.0.zip
-COPY patches/001-fix-cronjob-ver.patch /src/
-RUN patch -u dashboard-2.7.0/src/app/backend/resource/cronjob/jobs.go -i 001-fix-cronjob-ver.patch --ignore-whitespace --fuzz 3 && \
-    cd dashboard-2.7.0 && go mod download
-WORKDIR /src/dashboard-2.7.0/src/app/backend/
+    git clone https://github.com/kubernetes/dashboard && \
+    cd dashboard && \
+    git config --global user.email "beastlex@gmail.com" && \
+    git config --global user.name "Alexander Zverev" && \
+    git checkout v2.7.0 && \
+    git cherry-pick f79f3a5e25df152df6164ddfaf2ffc1f09e5058f && \
+    go mod download
+WORKDIR /src/dashboard/src/app/backend/
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags "-X github.com/kubernetes/dashboard/src/app/backend/client.Version=v2.7.0" -o dashboard .
 
 
@@ -22,7 +24,7 @@ COPY --from=artifact /etc/passwd /etc/passwd
 COPY --from=artifact /public /public
 COPY --from=artifact /locale_conf.json /locale_conf.json
 # COPY --from=artifact /dashboard /dashboard
-COPY --from=patchbuilder /src/dashboard-2.7.0/src/app/backend/dashboard /dashboard
+COPY --from=patchbuilder /src/dashboard/src/app/backend/dashboard /dashboard
 
 # Inject logout button to be able to change user if token authentication is used
 ADD ./logout_button.js /public/logout_button.js
