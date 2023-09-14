@@ -2,7 +2,8 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: d8-sds-drbd-operator
+  name: d8:{{ .Chart.Name }}:sds-drbd-operator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "sds-drbd-operator")) | nindent 2 }}
 rules:
   - apiGroups:
       - ""

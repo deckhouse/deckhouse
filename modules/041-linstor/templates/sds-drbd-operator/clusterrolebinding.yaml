@@ -2,12 +2,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8-sds-drbd-operator
+  name: d8:{{ .Chart.Name }}:sds-drbd-operator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "sds-drbd-operator")) | nindent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: d8-sds-drbd-operator
-    namespace: d8-linstor
+    name: sds-drbd-operator
+    namespace: d8-{{ .Chart.Name }}
 roleRef:
   kind: ClusterRole
-  name: d8-sds-drbd-operator
+  name: sds-drbd-operator
   apiGroup: rbac.authorization.k8s.io
