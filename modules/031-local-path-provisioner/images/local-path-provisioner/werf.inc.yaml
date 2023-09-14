@@ -9,10 +9,10 @@ shell:
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /local-path-provisioner
-    to: /local-path-provisioner
+    to: /usr/bin/local-path-provisioner
     before: setup
 docker:
-  ENTRYPOINT: ["/local-path-provisioner"]
+  ENTRYPOINT: ["/usr/bin/local-path-provisioner"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
