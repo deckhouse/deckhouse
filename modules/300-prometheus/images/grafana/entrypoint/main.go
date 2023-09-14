@@ -149,6 +149,12 @@ func convertEnv() error {
 func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 	fmt.Println("DEBUG_gfPathsPlugins: ", gfPathsPlugins)
 	fmt.Println("DEBUG_gfInstallPlugins: ", gfInstallPlugins)
+	fileInfo, _ := os.Lstat("/usr/share/grafana/bin/grafana-cli")
+	fmt.Println("Name : ", fileInfo.Name())
+	fmt.Println("Size : ", fileInfo.Size())
+	fmt.Println("Mode/permission : ", fileInfo.Mode())
+	fmt.Println("Sys : ", fileInfo.Sys())
+
 	if gfInstallPlugins == "" {
 		return nil
 	}
