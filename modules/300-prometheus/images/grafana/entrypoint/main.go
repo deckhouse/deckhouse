@@ -147,11 +147,14 @@ func convertEnv() error {
 }
 
 func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
+	fmt.Println("DEBUG_gfPathsPlugins: ", gfPathsPlugins)
+	fmt.Println("DEBUG_gfInstallPlugins: ", gfInstallPlugins)
 	if gfInstallPlugins == "" {
 		return nil
 	}
 
 	for _, plugin := range strings.Split(gfInstallPlugins, ",") {
+
 		if strings.Contains(plugin, ";") {
 			bit := strings.Split(plugin, ";")
 			cmd := exec.Command(
