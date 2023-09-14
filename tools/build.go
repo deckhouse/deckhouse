@@ -63,7 +63,6 @@ var nothingButGoHooksExcludes = []string{
 	"monitoring",
 	"openapi",
 	"oss.yaml",
-	"packer",
 	"cloud-instance-manager",
 	"values_matrix_test.yaml",
 	"values.yaml",

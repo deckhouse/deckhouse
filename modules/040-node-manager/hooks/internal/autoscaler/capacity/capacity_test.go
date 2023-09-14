@@ -206,7 +206,7 @@ spec:
   memory: 10240
   numCPUs: 4
   rootDiskSize: 30
-  template: Templates/ubuntu-focal-20.04-packer
+  template: Templates/ubuntu-jammy-22.04
 `
 
 	yandexSpec = `

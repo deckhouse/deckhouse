@@ -147,7 +147,7 @@ apiVersions:
               mainNetworkIPAddresses:
                 type: array
                 description: |
-                  A list of static IP addresses (with a CIDR prefix) sequentially allocated to master nodes in the `mainNetwork`.
+                  A list of static IP addresses (with a CIDR prefix) sequentially allocated to nodes in the `mainNetwork`.
 
                   By default, the DHCP client is enabled.
                 x-examples:
