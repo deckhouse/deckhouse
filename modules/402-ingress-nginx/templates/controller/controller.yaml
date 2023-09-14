@@ -41,7 +41,7 @@ spec:
       {{- $resourcesRequestsVPA_CPU := $resourcesRequestsVPA.cpu | default dict }}
       {{- $resourcesRequestsVPA_Memory := $resourcesRequestsVPA.memory | default dict }}
   updatePolicy:
-    up402-ingress-nginxdateMode: {{ $resourcesRequestsVPA.mode | default "Initial" | quote }}
+    updateMode: {{ $resourcesRequestsVPA.mode | default "Initial" | quote }}
   resourcePolicy:
     containerPolicies:
     - containerName: controller
