@@ -23,7 +23,8 @@
       "inputs": [
         "internal_metrics"
       ],
-      "address": "127.0.0.1:9090"
+      "address": "127.0.0.1:9090",
+      "suppress_timestamp": true
     }
   }
 }
