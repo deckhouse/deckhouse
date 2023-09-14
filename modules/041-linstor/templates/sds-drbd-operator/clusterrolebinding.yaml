@@ -1,0 +1,13 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8-sds-drbd-operator
+subjects:
+  - kind: ServiceAccount
+    name: d8-sds-drbd-operator
+    namespace: d8-linstor
+roleRef:
+  kind: ClusterRole
+  name: d8-sds-drbd-operator
+  apiGroup: rbac.authorization.k8s.io

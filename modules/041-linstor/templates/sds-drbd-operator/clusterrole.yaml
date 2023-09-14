@@ -1,0 +1,45 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8-sds-drbd-operator
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - list
+  - apiGroups:
+      - storage.deckhouse.io
+    resources:
+      - blockdevices
+      - lvmchangerequests
+      - linstorstorageclasses
+      - linstorstoragepools
+      - lvmvolumegroups
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+      - watch
+      - update
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+    verbs:
+      - create
+      - delete
+      - list
+      - get
+      - watch
