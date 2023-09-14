@@ -225,7 +225,16 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	showWarningAboutUsageDontUsePublicImagesFlagIfNeed()
 
-	preflightCheck := preflight.NewPreflightCheck(sshClient)
+	deckhouseInstallConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
+	if err != nil {
+		return err
+	}
+
+	// During full bootstrap we use the "kubeadm and deckhouse on master nodes" hack
+	deckhouseInstallConfig.KubeadmBootstrap = true
+	deckhouseInstallConfig.MasterNodeSelector = true
+
+	preflightCheck := preflight.NewPreflightCheck(sshClient, deckhouseInstallConfig)
 
 	bootstrapState := NewBootstrapState(stateCache)
 
@@ -240,15 +249,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	} else if shouldStop {
 		return nil
 	}
-
-	deckhouseInstallConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
-	if err != nil {
-		return err
-	}
-
-	// During full bootstrap we use the "kubeadm and deckhouse on master nodes" hack
-	deckhouseInstallConfig.KubeadmBootstrap = true
-	deckhouseInstallConfig.MasterNodeSelector = true
 
 	var nodeIP string
 	var devicePath string

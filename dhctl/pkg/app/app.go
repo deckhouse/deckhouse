@@ -25,8 +25,9 @@ import (
 )
 
 const (
-	AppName     = "dhctl"
-	VersionFile = "/deckhouse/version"
+	AppName                  = "dhctl"
+	VersionFile              = "/deckhouse/version"
+	DeckhouseImageDigestFile = "/deckhouse/image_digest"
 
 	// NodeDeckhouseDirectoryPath deckhouse operating directory path.
 	NodeDeckhouseDirectoryPath = "/opt/deckhouse"
@@ -40,7 +41,7 @@ const (
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
 
 var (
-	AppVersion = "dev"
+	AppVersion = "local"
 
 	ConfigPath  = ""
 	SanityCheck = false
