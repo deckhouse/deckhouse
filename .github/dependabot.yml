@@ -259,6 +259,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/150-user-authn/images/dex-authenticator/url-exec-prober"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/150-user-authn/images/self-signed-generator/src"
   labels:
   - "type/dependencies"
