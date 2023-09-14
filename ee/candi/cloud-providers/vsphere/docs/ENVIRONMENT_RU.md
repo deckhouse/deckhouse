@@ -82,7 +82,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 Ввиду разнообразия подключаемых к vSphere SSO-провайдеров, шаги по созданию пользователя в данной статье не рассматриваются.
 
 Роль, которую предлагается создать далее, включает в себя все возможные права для всех компонентов Deckhouse.
-При необходимости получения более гранулярных прав обратитесь в техподдержку Deckhouse.
+Если нужны более гранулярные права, обратитесь в техподдержку Deckhouse.
 {% endalert %}
 
 Необходимо создать роль с указанными правами и прикрепить её к `vCenter`, где нужно развернуть кластер Kubernetes.
@@ -121,7 +121,7 @@ Deckhouse использует `cloud-init` для настройки вирту
 
 * cloud-init
 * open-vm-tools
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если версия `cloud-init` старше чем 21.3)
+* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (для версий `cloud-init` старше 21.3)
 
 ## Инфраструктура
 
