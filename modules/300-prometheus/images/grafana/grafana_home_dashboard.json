@@ -649,7 +649,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by (cluster_version) (etcd_cluster_version{job=\"kube-etcd3\"})",
+          "expr": "max by (server_version) (etcd_server_version{job=\"kube-etcd3\"})",
           "instant": true,
           "interval": "",
           "legendFormat": "{{ version }}",
