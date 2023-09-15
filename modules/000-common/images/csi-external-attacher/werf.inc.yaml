@@ -20,11 +20,10 @@ from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 shell:
   beforeInstall:
     - apk add --no-cache make bash git patch rsync gcc musl-dev
-    - git clone --depth 1 --branch {{ $value.csi.attacher }} https://{{ $.SOURCE_REPO }}/deckhouse/3p/kubernetes-csi/external-attacher.git /src
+    - git clone --depth 1 --branch {{ $value.csi.attacher }} {{ $.SOURCE_REPO }}/deckhouse/3p/kubernetes-csi/external-attacher.git /src
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
-    - mkdir /src
     - cd /src
     - make build
     - cp bin/csi-attacher /csi-attacher
