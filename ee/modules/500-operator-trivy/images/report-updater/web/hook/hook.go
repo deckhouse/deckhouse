@@ -14,7 +14,7 @@ import (
 
 	"report-updater/vulndb"
 
-	v1alpha1 "github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
+	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
 )
 
@@ -87,7 +87,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if admissionReviewReq, err = h.mutateRequest(admissionReviewReq); err != nil {
-		h.logger.Fatalf("cannot mutate request: %v", err)
+		h.logger.Fatalf("cannot mutate report: %s: %v", admissionReviewReq.Request.Name, err)
 	}
 
 	respData, err := json.Marshal(admissionReviewReq)
@@ -110,7 +110,7 @@ func (h *Handler) mutateRequest(review *admissionv1.AdmissionReview) (*admission
 
 	patchType := admissionv1.PatchTypeJSONPatch
 
-	h.logger.Println("mutate request", review.Request.Name)
+	h.logger.Println("mutate report", review.Request.Name)
 
 	var admissionReviewResponse = &admissionv1.AdmissionReview{
 		Response: &admissionv1.AdmissionResponse{
