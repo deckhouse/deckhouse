@@ -53,12 +53,8 @@ spec:
       - name: deckhouse-registry
       serviceAccountName: report-updater
       automountServiceAccountToken: true
-    {{- with (include "nodeSelector" . | fromJson) }}
-      {{ . | toYaml | nindent 6 }}
-    {{- end }}
-    {{- with (include "tolerations" . | fromJson) }}
-      {{ . | toYaml | nindent 6 }}
-    {{- end }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       containers:
