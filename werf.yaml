@@ -182,7 +182,7 @@ docker:
 ---
 image: dev-prebuild
 fromImage: common-base
-fromCacheVersion: "2023-02-16.0"
+fromCacheVersion: "2023-10-09.0"
 git:
 - add: /
   to: /deckhouse
@@ -269,13 +269,32 @@ ansible:
       echo -e "#!/bin/bash\nexec tini -- /deckhouse/deckhouse-controller/entrypoint.sh" > /deckhouse/deckhouse
       chmod +x /deckhouse/deckhouse
 
-  - name: "Run deckhouse from nobody"
+  - name: "Create symlink to grant entrypoint.sh write permission"
+    shell: |
+      ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
+
+  - name: "Create deckhouse group"
+    group:
+      name: deckhouse
+      gid: 64535
+
+  - name: "Create deckhouse user"
+    user:
+      name: deckhouse
+      password: "!"
+      uid: 64535
+      group: deckhouse
+      comment: deckhouse
+      home: /
+      shell: /sbin/nologin
+
+  - name: "Run deckhouse from dedicated user"
     file:
       path: /deckhouse/
       state: directory
       recurse: yes
-      owner: 65534
-      group: 65534
+      owner: 64535
+      group: 64535
 
 docker:
   ENV:
