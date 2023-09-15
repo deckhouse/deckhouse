@@ -64,7 +64,7 @@ func (h *Handler) createPatch(req *admissionv1.AdmissionReview) ([]patchOperatio
 				patches = append(patches, patchOperation{
 					Op:    "replace",
 					Path:  fmt.Sprintf("/report/vulnerabilities/%d/vulnerabilityID", k),
-					Value: entry.IDs[0],
+					Value: strings.Replace(entry.IDs[0], "BDU:", "BDU-", 1),
 				})
 			}
 		}
