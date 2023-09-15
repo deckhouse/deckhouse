@@ -1,3 +1,5 @@
+{{- $enabledNamespaces := .Values.operatorTrivy | dig "internal" "enabledNamespaces" (list) }}
+
 {{- if .Values.operatorTrivy.enableReportUpdater }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -8,12 +10,16 @@ metadata:
 webhooks:
 - name: mutating-webhook.report-updater.deckhouse.io
   namespaceSelector:
+    matchExpressions:
+      - key: "kubernetes.io/metadata.name"
+        operator: "In"
+        values: {{ gt (len $enabledNamespaces) 0 | ternary $enabledNamespaces (list "default") | toYaml | nindent 10 }}
   rules:
   - apiGroups:   ["aquasecurity.github.io"]
     apiVersions: ["v1alpha1"]
-    operations:  ["CREATE"]
+    operations:  ["CREATE", "UPDATE"]
     resources:   ["vulnerabilityreports"]
-    scope:       "*"
+    scope:       "Namespaced"
   clientConfig:
     service:
       namespace: d8-{{ .Chart.Name }}

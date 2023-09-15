@@ -81,7 +81,7 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 		err := s.handler.CheckBDU()
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Ok."))
+			w.Write([]byte("OK"))
 			return
 		}
 

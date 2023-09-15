@@ -37,7 +37,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "report-updater")) | nindent 2 }}
 spec:
-  replicas: 1
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   revisionHistoryLimit: 2
   strategy:
     type: Recreate
