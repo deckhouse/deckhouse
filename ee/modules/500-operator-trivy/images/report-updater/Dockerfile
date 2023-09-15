@@ -1,6 +1,6 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_19_ALPINE
-FROM $BASE_GOLANG_19_ALPINE as artifact
+ARG BASE_GOLANG_20_ALPINE
+FROM $BASE_GOLANG_20_ALPINE as artifact
 WORKDIR /src/report-updater
 COPY main.go go.mod go.sum /src/report-updater/
 COPY vulndb /src/report-updater/vulndb/

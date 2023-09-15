@@ -110,7 +110,7 @@ func (h *Handler) mutateRequest(review *admissionv1.AdmissionReview) (*admission
 
 	patchType := admissionv1.PatchTypeJSONPatch
 
-	h.logger.Println("mutate request", review.Name)
+	h.logger.Println("mutate request", review.Request.Name)
 
 	var admissionReviewResponse = &admissionv1.AdmissionReview{
 		Response: &admissionv1.AdmissionResponse{
