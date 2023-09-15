@@ -25,6 +25,8 @@ bb-deckhouse-get-disruptive-update-approval() {
       return 0
     fi
 
+    disruptionsApprovalMode="$1"
+
     bb-log-info "Disruption required, asking for approval"
 
     bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/disruption-required='."
@@ -42,7 +44,6 @@ bb-deckhouse-get-disruptive-update-approval() {
          jq -ne --argjson n "$node_data" '(($n.isDisruptionApproved | not) and ($n.isDisruptionRequired)) or ($n.isDisruptionApproved)' >/dev/null
     do
         nodeGroupName="$(jq -nr --argjson n "$node_data" '$n.nodeGroupName')"
-        disruptionsApprovalMode={{ .nodeGroup.spec.disruptions.approvalMode }}
           if [ "$disruptionsApprovalMode" == "RollingUpdate" ]; then
             bb-kubectl \
               --kubeconfig=/etc/kubernetes/kubelet.conf \
