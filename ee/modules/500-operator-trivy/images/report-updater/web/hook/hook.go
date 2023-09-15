@@ -66,6 +66,8 @@ func (h *Handler) createPatch(req *admissionv1.AdmissionReview) ([]patchOperatio
 					Path:  fmt.Sprintf("/report/vulnerabilities/%d/vulnerabilityID", k),
 					Value: strings.Replace(entry.IDs[0], "BDU:", "BDU-", 1),
 				})
+			} else {
+				h.logger.Printf("BDU match not found for %s\n", v.VulnerabilityID)
 			}
 		}
 	}
