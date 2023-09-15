@@ -1,25 +1,30 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
   - image: common/pause
     add: /pause
     to: /pause
     before: setup
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /usr/local/bin
+    add: /
     to: /usr/bin
     includePaths:
     - etcd
     - etcdctl
     before: setup
-shell:
-  install:
-  - mkdir -p /var/etcd /var/lib/etcd
-  - |
-    echo "hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4" >> /etc/nsswitch.conf
 docker:
   ENTRYPOINT: ["/usr/bin/etcd"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: "gcr.io/etcd-development/etcd:v3.5.7@sha256:7238b08a6bad494e84ed1c632a62d39bdeed1f929950a05c1a32b6d4490a0047"
+from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - apk add git
+    - mkdir /src && cd /src
+    - git clone -b v3.5.9 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git .
+    - cd server && GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /etcd . && cd ..
+    - cd etcdctl && GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /etcdctl . && cd ..
