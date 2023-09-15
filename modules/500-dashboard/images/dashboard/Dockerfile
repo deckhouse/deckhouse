@@ -23,7 +23,6 @@ FROM $BASE_ALPINE
 COPY --from=artifact /etc/passwd /etc/passwd
 COPY --from=artifact /public /public
 COPY --from=artifact /locale_conf.json /locale_conf.json
-# COPY --from=artifact /dashboard /dashboard
 COPY --from=patchbuilder /src/dashboard/src/app/backend/dashboard /dashboard
 
 # Inject logout button to be able to change user if token authentication is used
