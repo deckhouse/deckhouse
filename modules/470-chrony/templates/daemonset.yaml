@@ -10,12 +10,34 @@ kind: VerticalPodAutoscaler
 metadata:
   name: chrony
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
     name: chrony
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "chrony"
+      minAllowed:
+        {{- include "chrony_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: chrony-master
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: chrony-master
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -33,44 +55,41 @@ kind: DaemonSet
 metadata:
   name: chrony
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "deckhouse.io/chrony-location" "worker")) | nindent 2 }}
 spec:
   updateStrategy:
     type: RollingUpdate
   selector:
     matchLabels:
       app: chrony
+      deckhouse.io/chrony-location: worker
   template:
     metadata:
       labels:
-        tier: node
         app: chrony
+        deckhouse.io/chrony-location: worker
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       containers:
       - name: chrony
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_TIME" "CHOWN" "DAC_OVERRIDE" "FOWNER" "FSETID" "KILL" "SETGID" "SETUID" "SETPCAP" "NET_BIND_SERVICE" "NET_RAW" "SYS_CHROOT" "MKNOD" "AUDIT_WRITE" "SETFCAP")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "chrony") }}
         env:
-{{ $ntpServers := list }}
-{{- range $value := .Values.chrony.ntpServers }}
-  {{- if regexMatch "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$" $value }}
-    {{ $ntpServers = append $ntpServers $value }}
-  {{ else }}
-    {{ $ntpServers = append $ntpServers (printf "%s." ($value | trimSuffix ".")) }}
-  {{- end }}
-{{ end }}
-        - name: NTP_SERVERS
-          value: {{ join " " $ntpServers | quote }}
+        - name: NTP_ROLE
+          value: "client"
+        - name: CHRONY_MASTERS_SERVICE
+          value: {{ printf "chrony-masters.d8-%s.svc.%s" .Chart.Name .Values.global.clusterConfiguration.clusterDomain | quote }}
         ports:
         - name: ntp
           containerPort: 123
+          protocol: UDP
+        - name: chrony
+          containerPort: 323
           protocol: UDP
         livenessProbe:
           exec:
@@ -104,3 +123,106 @@ spec:
           path: /etc/timezone
       - name: chrony
         emptyDir: {}
+---
+{{ $ntpServers := list }}
+{{- range $value := .Values.chrony.ntpServers }}
+  {{- if regexMatch "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$" $value }}
+    {{ $ntpServers = append $ntpServers $value }}
+  {{ else }}
+    {{ $ntpServers = append $ntpServers (printf "%s." ($value | trimSuffix ".")) }}
+  {{- end }}
+{{ end }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: chrony-master
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "deckhouse.io/chrony-location" "master")) | nindent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: chrony
+      deckhouse.io/chrony-location: master
+  template:
+    metadata:
+      labels:
+        app: chrony
+        deckhouse.io/chrony-location: master
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      imagePullSecrets:
+        - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      containers:
+        - name: chrony
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_TIME" "CHOWN" "DAC_OVERRIDE" "FOWNER" "FSETID" "KILL" "SETGID" "SETUID" "SETPCAP" "NET_BIND_SERVICE" "NET_RAW" "SYS_CHROOT" "MKNOD" "AUDIT_WRITE" "SETFCAP")) | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "chrony") }}
+          env:
+            - name: NTP_SERVERS
+              value: {{ join " " $ntpServers | quote }}
+            - name: NTP_ROLE
+              value: "server"
+          ports:
+            - name: ntp
+              containerPort: 123
+              protocol: UDP
+            - name: chrony
+              containerPort: 323
+              protocol: UDP
+          livenessProbe:
+            exec:
+              command:
+                - chronyc
+                - tracking
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 15
+          volumeMounts:
+            - name: tz-config
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: tzdata-config
+              mountPath: /etc/timezone
+              readOnly: true
+            - name: chrony
+              mountPath: /run/chrony
+          resources:
+            requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "chrony_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+        - name: tz-config
+          hostPath:
+            path: /etc/localtime
+        - name: tzdata-config
+          hostPath:
+            path: /etc/timezone
+        - name: chrony
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chrony-masters
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
+spec:
+  clusterIP: None
+  selector:
+    app: chrony
+    deckhouse.io/chrony-location: master
+  ports:
+    - protocol: UDP
+      port: 123
+      name: ntp
+    - protocol: UDP
+      port: 323
+      name: chrony

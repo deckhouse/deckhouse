@@ -62,7 +62,7 @@ nodeSelector:
 {{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "without-storage-problems") }} */ -}}
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}  {{- /* Template context with .Values, .Chart, etc */ -}}
-  {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }} {{- /* base strategy, one of "frontend" "monitoring" "system" any-node" "wildcard" */ -}}
+  {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }} {{- /* base strategy, one of "frontend" "monitoring" "system" any-node" "wildcard" "only-masters" */ -}}
   {{- $additionalStrategies := tuple }} {{- /* list of additional strategies. To add strategy list it with prefix "with-", to remove strategy list it with prefix "without-". */ -}}
   {{- if eq $strategy "custom" }}
     {{ if lt (len .) 3 }}
@@ -107,6 +107,10 @@ tolerations:
     {{- /* System: Nodes for system components: prometheus, dns, cert-manager */ -}}
     {{- else if eq $strategy "system" }}
       {{- include "_helm_lib_system_tolerations" $context }}
+
+    {{- /* Only master nodes */ -}}
+    {{- else if eq $strategy "master" }}
+      {{- include "_helm_lib_master_tolerations" $context }}
     {{- end }}
 
     {{- /* Additional strategies */ -}}
@@ -135,7 +139,7 @@ tolerations:
 {{- /* Verify base strategy. */ -}}
 {{- /* Fails if strategy not in allowed list */ -}}
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
-  {{ if not (has . (list "custom" "frontend" "monitoring" "system" "any-node" "wildcard" )) }}
+  {{ if not (has . (list "custom" "frontend" "monitoring" "system" "any-node" "wildcard" "master")) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
@@ -201,6 +205,14 @@ tolerations:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+{{- end }}
+
+{{- /* Base strategy that tolerates nodes with "node-role.kubernetes.io/control-plane: NoSchedule" taints. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "master") }} */ -}}
+{{- define "_helm_lib_master_tolerations" }}
+- key: node-role.kubernetes.io/control-plane
+  operator: "Exists"
+  effect: "NoSchedule"
 {{- end }}
 
 
