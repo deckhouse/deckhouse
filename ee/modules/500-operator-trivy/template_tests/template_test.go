@@ -178,7 +178,7 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 		})
 	})
 
-	FContext("Operator trivy with enableReportUpdater", func() {
+	Context("Operator trivy with enableReportUpdater", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("operatorTrivy", reportUpdaterValues)
 			f.ValuesSet("operatorTrivy.internal.reportUpdater.webhookCertificate.ca", "test")
@@ -190,8 +190,8 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 
 		It("Everything must render properly for cluster", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			ss := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "operator-trivy-report-updater")
-			fmt.Println(ss.ToYaml())
+			rwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "operator-trivy-report-updater")
+			Expect(rwh.Exists()).To(BeTrue())
 		})
 	})
 })
