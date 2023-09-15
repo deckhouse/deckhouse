@@ -38,7 +38,7 @@ exit 0
 {{- end }}
 
 bb-log-info "{{ .nodeGroup }}"
-bb-deckhouse-get-disruptive-update-approval {{ .nodeGroup.spec.disruptions.approvalMode | default "Automatic" | quote }}
+bb-deckhouse-get-disruptive-update-approval {{ .nodeGroup.disruptions.approvalMode | default "Automatic" | quote }}
 
 bb-log-info "Rebooting machine after bootstrap process completed"
 bb-flag-unset reboot
