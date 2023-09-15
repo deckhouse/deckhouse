@@ -313,7 +313,7 @@
                 "value": [
                   {
                     "options": {
-                      "pattern": "BDU:(.+)",
+                      "pattern": "BDU-(.+)",
                       "result": {
                         "index": 0,
                         "text": "https://bdu.fstec.ru/vul/$1"
