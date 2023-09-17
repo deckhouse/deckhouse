@@ -85,7 +85,7 @@ ARG GOPROXY
 ENV GOPROXY=${GOPROXY} \
     CGO_ENABLED=1 \
     GOOS=linux \
-    GOARCH=amd64
+    GOARCH=amd64 \
     CC=/usr/bin/musl-gcc
 
 RUN make gen-go
