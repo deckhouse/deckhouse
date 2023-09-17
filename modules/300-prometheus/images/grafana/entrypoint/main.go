@@ -38,7 +38,7 @@ func main() {
 
 	_, err := os.Stat(gfPathsPlugins)
 	if os.IsNotExist(err) {
-		err := os.MkdirAll(gfPathsPlugins, 0600)
+		err := os.MkdirAll(gfPathsPlugins, 0660)
 		if err != nil {
 			log.Fatalf("create plugins folder: %v", err)
 		}
@@ -48,6 +48,11 @@ func main() {
 	}
 
 	if bundledPluginsPath != "" && gfInstallPlugins != "" && gfPathsPlugins != bundledPluginsPath {
+		fstatDest, err := os.Stat(gfPathsPlugins)
+		if err != nil {
+			log.Fatalf("file info error: path: %s err: %v", gfPathsPlugins, err)
+		}
+
 		_, err = os.Stat(bundledPluginsPath)
 		if err == nil {
 			opt := cp.Options{
@@ -57,6 +62,8 @@ func main() {
 					}
 					return err
 				},
+				// add permissions from destination folder
+				PermissionControl: cp.AddPermission(fstatDest.Mode()),
 			}
 			err := cp.Copy(bundledPluginsPath, gfPathsPlugins, opt)
 			if err != nil {
