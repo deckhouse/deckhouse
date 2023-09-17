@@ -161,14 +161,16 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 	for _, plugin := range strings.Split(gfInstallPlugins, ",") {
 
 		if strings.Contains(plugin, ";") {
-			bit := strings.Split(plugin, ";")
+			part := strings.Split(plugin, ";")
 			cmd := exec.Command(
 				"grafana-cli",
-				fmt.Sprintf("--pluginUrl %s", bit[0]),
-				fmt.Sprintf("--pluginsDir %s", gfPathsPlugins),
+				"--pluginUrl",
+				part[0],
+				"--pluginsDir",
+				gfPathsPlugins,
 				"plugins",
 				"install",
-				bit[1],
+				part[1],
 			)
 
 			if stdout, err := cmd.CombinedOutput(); err != nil {
@@ -178,7 +180,8 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 		}
 		cmd := exec.Command(
 			"grafana-cli",
-			fmt.Sprintf("--pluginsDir %s", gfPathsPlugins),
+			"--pluginsDir",
+			gfPathsPlugins,
 			"plugins",
 			"install",
 			plugin,
