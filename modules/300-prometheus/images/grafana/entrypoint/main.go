@@ -172,7 +172,7 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 			)
 
 			if stdout, err := cmd.CombinedOutput(); err != nil {
-				return fmt.Errorf("%v | %v", stdout, err)
+				return fmt.Errorf("%v | %v", string(stdout), err)
 			}
 			continue
 		}
@@ -184,7 +184,7 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 			plugin,
 		)
 		if stdout, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("%v | %v", stdout, err)
+			return fmt.Errorf("%v | %v", string(stdout), err)
 		}
 	}
 	return nil
