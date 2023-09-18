@@ -7,8 +7,8 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /
-    to: /
+    add: /csi-node-driver-registrar
+    to: /csi-node-driver-registrar
     includePaths:
       - csi-node-driver-registrar
     before: setup
@@ -16,6 +16,18 @@ docker:
   ENTRYPOINT: ["/csi-node-driver-registrar"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: registry.k8s.io/sig-storage/csi-node-driver-registrar:{{ $value.csi.registrar }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+shell:
+  beforeInstall:
+    - apk add --no-cache make bash git patch rsync gcc musl-dev
+    - git clone --depth 1 --branch {{ $value.csi.registrar }} {{ $.SOURCE_REPO }}/kubernetes-csi/node-driver-registrar.git /src
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd /src
+    - make build
+    - cp bin/csi-node-driver-registrar /csi-node-driver-registrar
+    - chown 64535:64535 /csi-node-driver-registrar
+    - chmod 0755 /csi-node-driver-registrar
   {{- end }}
 {{- end }}
