@@ -29,8 +29,5 @@ shell:
     - cp bin/csi-snapshotter /csi-snapshotter
     - chown 64535:64535 /csi-snapshotter
     - chmod 0755 /csi-snapshotter
-
-
-from: registry.k8s.io/sig-storage/csi-snapshotter:{{ $value.csi.snapshotter }}
   {{- end }}
 {{- end }}
