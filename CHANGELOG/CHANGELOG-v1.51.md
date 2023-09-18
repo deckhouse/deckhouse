@@ -53,6 +53,7 @@
  - **[candi]** Fix migration of cluster from one edition to another. [#5603](https://github.com/deckhouse/deckhouse/pull/5603)
  - **[candi]** Changed the command output for `yum versionlock delete` if it is dnf. [#5492](https://github.com/deckhouse/deckhouse/pull/5492)
  - **[cloud-provider-openstack]** Fix `ignoreVolumeMicroversion` parameter appliance for Kubernetes version > 1.24. [#5778](https://github.com/deckhouse/deckhouse/pull/5778)
+ - **[deckhouse]** Move deckhouse `kube-rbac-proxy` port to `9889`, to avoid conflicts with user applications. [#5815](https://github.com/deckhouse/deckhouse/pull/5815)
  - **[deckhouse]** Made it possible to configure `minimalNotificationTime` without configuring the notification webhook. [#5491](https://github.com/deckhouse/deckhouse/pull/5491)
  - **[deckhouse]** Automatically update Deckhouse minor versions step by step. [#5453](https://github.com/deckhouse/deckhouse/pull/5453)
  - **[deckhouse-controller]** Skip defaulting an array without items schema to prevent panic [#5711](https://github.com/deckhouse/deckhouse/pull/5711)
@@ -62,11 +63,13 @@
  - **[external-module-manager]** Fix race condition while handling source on Deckhouse startup. [#5598](https://github.com/deckhouse/deckhouse/pull/5598)
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
- - **[linstor]** Fix rare issues with building the DRBD module when changing the kernels. [#5758](https://github.com/deckhouse/deckhouse/pull/5758)
  - **[linstor]** Revert the commit that updated the versions of Linstor and DRBD (revert https://github.com/deckhouse/deckhouse/pull/5469 ). [#5755](https://github.com/deckhouse/deckhouse/pull/5755)
  - **[monitoring-kubernetes]** Revert `node-exporter` `kube-rbac-proxy` liveness probe. [#5642](https://github.com/deckhouse/deckhouse/pull/5642)
  - **[operator-trivy]** Fix constant creation and deletion of node-collector pods. [#5688](https://github.com/deckhouse/deckhouse/pull/5688)
  - **[operator-trivy]** Fix handling empty list in operator trivy deployment in `OPERATOR_TARGET_NAMESPACES` env (set `default` value). [#5662](https://github.com/deckhouse/deckhouse/pull/5662)
+ - **[prometheus]** Fixed permissions for existing files after changing GID and UID. [#5847](https://github.com/deckhouse/deckhouse/pull/5847)
+ - **[prometheus]** The etcd version in the home dashboard is fixed. [#5842](https://github.com/deckhouse/deckhouse/pull/5842)
+ - **[prometheus]** Fixed issue with adding custom Grafana plugins. [#5834](https://github.com/deckhouse/deckhouse/pull/5834)
  - **[prometheus]** Fix external auth handling for alertmanager. [#5706](https://github.com/deckhouse/deckhouse/pull/5706)
  - **[runtime-audit-engine]** Add read-only root for the `falco` container. [#5664](https://github.com/deckhouse/deckhouse/pull/5664)
     `runtime-audit-engine` pods should be restarted.
@@ -78,5 +81,6 @@
     Kubernetes control plane components will restart, kubelet will restart.
  - **[ingress-nginx]** Fix `ingress-nginx` healthz handler replying with 200 unconditionally. [#5613](https://github.com/deckhouse/deckhouse/pull/5613)
     All Ingress nginx controllers' pods will be recreated consecutively. Ingress nginx pods will stop to reply on :8080/healthz in favour of :80/healthz. Some LB's health checks might need readjusting.
+ - **[prometheus]** Move grafana to distroless. [#5834](https://github.com/deckhouse/deckhouse/pull/5834)
  - **[runtime-audit-engine]** Move rules-reloader build to werf. [#5694](https://github.com/deckhouse/deckhouse/pull/5694)
 
