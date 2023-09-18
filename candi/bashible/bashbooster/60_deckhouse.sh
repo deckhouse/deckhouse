@@ -26,6 +26,7 @@ bb-deckhouse-get-disruptive-update-approval() {
     fi
 
     disruptionsApprovalMode="$1"
+    bb-log-info "Disruptions ApprovalMode: $disruptionsApprovalMode"
 
     bb-log-info "Disruption required, asking for approval"
 
