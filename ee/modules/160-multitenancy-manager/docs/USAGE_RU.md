@@ -53,7 +53,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
    user    user@cluster
    ```
 
-1. Создайте шаблон проекты с помощью ресурса [ProjectType](cr.html#projecttype):
+1. Создайте шаблон проекта с помощью ресурса [ProjectType](cr.html#projecttype):
 
    - в [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) опишите [роли](../140-user-authz/cr.html#authorizationrule-v1alpha1-spec-accesslevel), которые нужно выдать пользователям/группам/`ServiceAccount`'ам;
    - в [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) опишите шаблоны ресурсов, которые требуется создать при настройке изолированных проектов;
@@ -182,13 +182,13 @@ title: "Модуль multitenancy-manager: примеры конфигураци
                  port: 53
    ```
 
-   Чтобы создать шаблон проекты, выполните следующую команду:
+   Чтобы создать шаблон проекта, выполните следующую команду:
 
    ```shell
    kubectl create -f project-type.yaml
    ```
 
-   Проверьте, что шаблон проекты успешно создался, выполнив следующую команду:
+   Проверьте, что шаблон проекта успешно создался, выполнив следующую команду:
 
    ```shell
    kubectl get projecttypes.deckhouse.io
