@@ -369,6 +369,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
+		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallAdditionalMastersAndStaticNodes, true, stateCache); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
+
 		err := converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(func() error {
 			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH)
 		})

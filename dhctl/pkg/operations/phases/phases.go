@@ -25,14 +25,15 @@ type OnPhaseFunc func(completedPhase OperationPhase, completedPhaseState DhctlSt
 type OperationPhase string
 
 const (
-	BaseInfraPhase             OperationPhase = "BaseInfra"
-	ExecuteBashibleBundlePhase OperationPhase = "ExecuteBashibleBundle"
-	InstallDeckhousePhase      OperationPhase = "InstallDeckhouse"
-	CreateResourcesPhase       OperationPhase = "CreateResources"
-	DeleteResourcesPhase       OperationPhase = "DeleteResources"
-	ExecPostBootstrapPhase     OperationPhase = "ExecPostBootstrap"
-	AllNodesPhase              OperationPhase = "AllNodes"
-	FinalizationPhase          OperationPhase = "Finalization"
+	BaseInfraPhase                         OperationPhase = "BaseInfra"
+	ExecuteBashibleBundlePhase             OperationPhase = "ExecuteBashibleBundle"
+	InstallDeckhousePhase                  OperationPhase = "InstallDeckhouse"
+	CreateResourcesPhase                   OperationPhase = "CreateResources"
+	InstallAdditionalMastersAndStaticNodes OperationPhase = "InstallAdditionalMastersAndStaticNodes"
+	DeleteResourcesPhase                   OperationPhase = "DeleteResources"
+	ExecPostBootstrapPhase                 OperationPhase = "ExecPostBootstrap"
+	AllNodesPhase                          OperationPhase = "AllNodes"
+	FinalizationPhase                      OperationPhase = "Finalization"
 )
 
 var (
