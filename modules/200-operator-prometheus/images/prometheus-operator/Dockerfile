@@ -13,6 +13,7 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 RUN apk add --no-cache git
+RUN echo ${SOURCE_REPO}
 RUN git clone --depth 1 --branch v0.68.0 ${SOURCE_REPO}/prometheus-operator/prometheus-operator.git /prometheus-operator
 WORKDIR /prometheus-operator/
 
