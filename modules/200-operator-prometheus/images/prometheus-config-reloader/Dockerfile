@@ -1,7 +1,7 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_18_ALPINE
+ARG BASE_GOLANG_20_ALPINE
 
-FROM $BASE_GOLANG_18_ALPINE as artifact
+FROM $BASE_GOLANG_20_ALPINE as artifact
 
 ARG GOPROXY
 ARG SOURCE_REPO
@@ -13,7 +13,7 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 RUN apk add --no-cache git
-RUN git clone --depth 1 --branch v0.62.0 ${SOURCE_REPO}/prometheus-operator/prometheus-operator.git /prometheus-operator
+RUN git clone --depth 1 --branch v0.68.0 ${SOURCE_REPO}/prometheus-operator/prometheus-operator.git /prometheus-operator
 WORKDIR /prometheus-operator/
 
 RUN go build -ldflags="-s -w" -o prometheus-config-reloader cmd/prometheus-config-reloader/main.go && \
