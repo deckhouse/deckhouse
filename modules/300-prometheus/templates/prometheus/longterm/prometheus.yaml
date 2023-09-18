@@ -65,7 +65,7 @@ spec:
   - command:
     - sh
     - -c
-    - chown -R 64535:64535 /prometheus-db/*
+    - chown -vR 64535:64535 /prometheus-db/*
     image: {{ include "helm_lib_module_image" (list . "prometheus") }}
     imagePullPolicy: IfNotPresent
     name: fix-permissions
