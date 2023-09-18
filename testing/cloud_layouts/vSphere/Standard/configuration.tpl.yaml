@@ -59,7 +59,7 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template: Templates/ubuntu-jammy-22.04
+    template: Templates/ubuntu-jammy-22.04-packer
     mainNetwork: msk3-k8s-1203
     additionalNetworks:
     - DEVOPS_36
