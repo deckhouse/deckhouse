@@ -14,12 +14,12 @@ apiVersions:
             description: |
               Адрес container registry с образами Deckhouse.
 
-              Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например прокси-сервер в закрытом окружении).
+              Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например, прокси-сервер в закрытом окружении).
 
               Адрес учитывает используемую редакцию Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
           registryDockerCfg:
             description: |
-              Строка с правами доступа к стороннему registry, зашифрованная в Base64.
+              Строка с правами доступа к стороннему container registry, зашифрованная в Base64.
           registryCA:
             description: |
               Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
@@ -52,4 +52,4 @@ apiVersions:
                   ... секция параметров модуля
               ```
 
-              **Внимание!** В `configOverrides` для включения/отключения модуля и указания его настроек используется название модуля в **camelCase** (например, `userAuthn`). После установки Deckhouse, для управления модулем используется ресурс moduleConfig с названием модуля в **snake-case** (например, `user-authn`).
+              **Внимание!** В `configOverrides` для включения/отключения модуля и указания его настроек используется название модуля в **camelCase** (например, `userAuthn`). После установки Deckhouse для управления модулем используется ресурс moduleConfig с названием модуля в **snake-case** (например, `user-authn`).
