@@ -75,9 +75,9 @@ Changes are applied automatically once the resource configuration is saved.
 The module is configured using the `ModuleConfig` custom resource , whose name is the same as the module name (in kebab-case). The `ModuleConfig` custom resource has the following fields:
 
 - `metadata.name` — the name of the module in kebab-case (e.g, `prometheus`, `node-manager`).
-- `spec.version` — version of the module settings schema. It is an integer greater than zero. This field is mandatory if `spec.settings` is not empty. You can find the latest version number in the module's documentation under *"Settings"*.
+- `spec.version` — version of the module settings schema. It is an integer greater than zero. This field is mandatory if `spec.settings` is not empty. You can find the latest version number in the module's documentation under *Settings*.
   - Deckhouse is backward-compatible with older versions of the module's settings schema. If an outdated version of the schema is used, a warning stating that you need to update the module's schema will be displayed when editing or viewing the custom resource.
-- `spec.settings` — module settings. This field is optional if the `spec.enabled` field is used. For a description of the available settings, see *"Settings "* in the module's documentation.
+- `spec.settings` — module settings. This field is optional if the `spec.enabled` field is used. For a description of the available settings, see *Settings* in the module's documentation.
 - `spec.enabled` — this optional field allows you to explicitly [enable or disable the module](#enabling-and-disabling-the-module). The module may be enabled by default based on the [bundle in use](#module-bundles) if this parameter is not set.
 
 > Deckhouse doesn't modify `ModuleConfig` resources. As part of the Infrastructure as Code (IaC) approach, you can store ModuleConfigs in a version control system and use Helm, kubectl, and other familiar tools for deploy.
