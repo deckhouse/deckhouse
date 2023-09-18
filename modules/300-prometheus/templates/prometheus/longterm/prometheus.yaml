@@ -61,6 +61,21 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
+  initContainers:
+  - command:
+    - sh
+    - -c
+    - chown -R 64535:64535 /prometheus-db/*
+    image: {{ include "helm_lib_module_image" (list . "prometheus") }}
+    imagePullPolicy: IfNotPresent
+    name: fix-permissions
+    securityContext:
+      runAsNonRoot: false
+      runAsUser: 0
+    volumeMounts:
+    - mountPath: /prometheus-db
+      name: prometheus-longterm-db
+      subPath: prometheus-db
   containers:
   - name: prometheus
     startupProbe:
