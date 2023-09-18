@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Описывает шаблон окружения.
+            Описывает шаблон проекта.
 
             Этот на этот ресурс ссылается ресурс [Project](cr.html#project).
           properties:
@@ -13,8 +13,7 @@ spec:
               properties:
                 namespaceMetadata:
                   description:
-                    Лейблы и аннотации, которые применяются к создаваемым
-                    пространствам имен при настройке окружения.
+                    Лейблы и аннотации, которые применяются к создаваемым пространствам имен при настройке проекта.
                   properties:
                     annotations:
                       description: ""
@@ -26,39 +25,38 @@ spec:
                     (параметр [resourcesTemplate](#projecttype-v1alpha1-spec-resourcestemplate)).
                 resourcesTemplate:
                   description: |
-                    Шаблоны ресурсов в формате `helm`, которые требуется создать при настройке нового окружения.
+                    Helm-шаблоны ресурсов, которые будут созданы при настройке нового проекта.
 
-                    Шаблоны совместимы со всеми функциями `helm`. Читайте подробнее про [создание изолированных окружений](usage.html#создание-изолированного-окружения)...
+                    Шаблоны совместимы со всеми функциями `helm`. Читайте подробнее про [создание изолированных проектов](usage.html#создание-изолированного-проекта)...
 
                     В шаблонах доступны также следующие параметры (`values`):
-                    - `{{ .projectName }}` — имя `Project` (окружения), для которого рендерится шаблон.
+                    - `{{ .projectName }}` — имя `Project` (проекта), для которого рендерится шаблон.
                     - `{{ .projectTypeName }}` — имя `ProjectType`.
-                    - `{{ .params }}` — словарь пользовательских значений, описанных в параметре [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) и определенных в параметре [.spec.template](cr.html#project-v1alpha1-spec-template).
+                    - `{{ .params }}` — словарь входных параметров, описанных в поле [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) и определенных в поле [.spec.template](cr.html#project-v1alpha1-spec-template).
 
                     > **Внимание!** Указывать поля `.metadata.namespace` для объектов необязательно,
-                    > так как они автоматически проставятся из названия окружения (CR `Project`).
+                    > так как они автоматически будет заданы равными имени проекта (CR `Project`).
                 subjects:
                   description:
                     Список ServiceAccount'ов, групп (`Group`) и пользователей
-                    (`User`) для предоставления доступа к созданному окружению.
+                    (`User`) для предоставления доступа к созданному проекту.
                   items:
                     description: ""
                     properties:
                       kind:
-                        description:
-                          Kind целевого ресурса для применения доступа к
-                          окружению. (`ServiceAccount`, `Group` или `User`).
+                        description: |
+                          Kind ресурса: `ServiceAccount`, `Group` или `User`).
                       name:
-                        description: Имя целевого ресурса для применения доступа к окружению.
+                        description: Имя ресурса.
                       namespace:
                         description: |
-                          Пространство имен (`namespace`) целевого ресурса для применения доступа окружению.
+                          Пространство имен (`namespace`) для ServiceAccount.
 
-                          Требуется только при использовании ServiceAccount'а из другого пространства имен (`namespace`).
+                          Требуется только для ServiceAccount'а из другого пространства имен.
                       role:
-                        description:
+                        description: |
                           Уровень доступа из [модуля user-authz](../140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel),
-                          который выдается на окружение для целевого ресурса.
+                          который выдается субъекту.
             status:
               description: ""
               properties:

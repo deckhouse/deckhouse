@@ -23,7 +23,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Describes the environment template.
+            Describes the template of project resources and the OpenAPI schema for the template parameters.
 
             This resource is referenced by the [Project](cr.html#project) CR.
           properties:
@@ -31,8 +31,7 @@ spec:
               properties:
                 namespaceMetadata:
                   description:
-                    Labels and annotations that apply to created
-                    namespaces when setting up the environment.
+                    Labels and annotations that apply to created namespaces when setting up the project.
                   properties:
                     annotations:
                       additionalProperties:
@@ -51,22 +50,21 @@ spec:
                   type: object
                 resourcesTemplate:
                   description: |
-                    Resource templates in `helm` format to be created when setting up a new environment.
+                    Helm template of resources that will be created when setting up a new project.
 
-                    Templates are fully compatible with all `helm` functions. Read more about [creating an isolated Environment](usage.html#creating-an-isolated-environment)...
+                    Templates are fully compatible with all `helm` functions. Read more about [creating an isolated Environment](usage.html#creating-an-isolated-project)...
 
                     The following values are also available in templates:
-                    - `{{ .projectName }}` — the name of the `Project` (environment) for which the template is being rendered.
+                    - `{{ .projectName }}` — the name of the `Project` for which the template is being rendered.
                     - `{{ .projectTypeName }}` — the name of the `ProjectType`.
                     - `{{ .params }}` — a dictionary of custom values, described in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) parameter and defined in the [.spec.template](cr.html#project-v1alpha1-spec-template) parameter.
 
                     > **Note!** Specifying `.metadata.namespace` fields for objects is optional,
-                    > as they are automatically set with the name of the created environment (CR `Project`).
+                    > as they are automatically set with the name of the created project (CR `Project`).
                   type: string
                 subjects:
                   description:
-                    List of ServiceAccounts, Groups and Users to provide
-                    access to the created environment (project).
+                    List of ServiceAccounts, Groups and Users to provide access to the created project.
                   items:
                     oneOf:
                       - properties:
@@ -94,23 +92,21 @@ spec:
                           - role
                     properties:
                       kind:
-                        description:
-                          Kind of the target resource to apply access to the
-                          environment (`ServiceAccount`, `Group` or `User`).
+                        description: |
+                          Kind of the subject resource: `ServiceAccount`, `Group` or `User`.
                         enum:
                           - ServiceAccount
                           - User
                           - Group
                         type: string
                       name:
-                        description:
-                          The name of the target resource to apply access
-                          to the environment.
+                        description: |
+                          The name of the subject.
                         minLength: 1
                         type: string
                       namespace:
-                        description:
-                          The namespace of the target resource to apply environment access to.
+                        description: |
+                          The namespace of the ServiceAccount resource.
 
                           Required only when using `ServiceAccount` from another namespace.
                         pattern: "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
