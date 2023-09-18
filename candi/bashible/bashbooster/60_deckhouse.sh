@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ bb-deckhouse-get-disruptive-update-approval() {
     fi
 
     disruptionsApprovalMode="$1"
-    bb-log-info "Disruptions ApprovalMode: _${disruptionsApprovalMode}_"
+    bb-log-info "Disruptions ApprovalMode: ${disruptionsApprovalMode}"
 
     bb-log-info "Disruption required, asking for approval"
 
@@ -44,7 +44,6 @@ bb-deckhouse-get-disruptive-update-approval() {
          jq -ne --argjson n "$node_data" '(($n.isDisruptionApproved | not) and ($n.isDisruptionRequired)) or ($n.isDisruptionApproved)' >/dev/null
     do
         nodeGroupName="$(jq -nr --argjson n "$node_data" '$n.nodeGroupName')"
-        bb-log-info "DEBUG_nodeGroupName: ${nodeGroupName}"
           if [ "$disruptionsApprovalMode" == "RollingUpdate" ]; then
             bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/rolling-update='."
             bb-kubectl \

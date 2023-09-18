@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,9 +37,7 @@ kill -KILL $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
 exit 0
 {{- end }}
 
-bb-log-info "DEBUG_nodeGroup_obj: {{ .nodeGroup }}"
-bb-log-info "DEBUG_approvalMode: {{ .nodeGroup.disruptions.approvalMode }}"
-bb-deckhouse-get-disruptive-update-approval {{ .nodeGroup.disruptions.approvalMode | default "Automatic" | quote }}
+bb-deckhouse-get-disruptive-update-approval {{ .nodeGroup.disruptions.approvalMode | default "Manual" | quote }}
 
 bb-log-info "Rebooting machine after bootstrap process completed"
 bb-flag-unset reboot
