@@ -3,11 +3,11 @@ title: "Модуль multitenancy-manager: примеры конфигураци
 ---
 {% raw %}
 
-## Создание изолированного проекты
+## Создание изолированного проекта
 
-Выполните следующие шаги для создания изолированного проекты в кластере Kubernetes:
+Выполните следующие шаги для создания изолированного проекта в кластере Kubernetes:
 
-1. Создайте двух [статичных пользователей](../150-user-authn/usage.html#пример-создания-статического-пользователя) с доступом до изолированного проекты.
+1. Создайте двух [статичных пользователей](../150-user-authn/usage.html#пример-создания-статического-пользователя) с доступом до изолированного проекта.
 
    Создайте файл `users.yaml` со следующим содержимым (описание ресурсов `User`):
 
@@ -58,7 +58,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
    - в [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) опишите [роли](../140-user-authz/cr.html#authorizationrule-v1alpha1-spec-accesslevel), которые нужно выдать пользователям/группам/`ServiceAccount`'ам;
    - в [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) опишите шаблоны ресурсов, которые требуется создать при настройке изолированных проектов;
    - в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) опишите спецификацию OpenAPI для значений (`values`), которые используются в описанных шаблонах ([.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate));
-   - в [.spec.namespaceMetadata](cr.html#projecttype-v1alpha1-spec-namespacemetadata) опишите лейблы и аннотации, которые необходимо проставить на `Namespace` при настройке проекты.
+   - в [.spec.namespaceMetadata](cr.html#projecttype-v1alpha1-spec-namespacemetadata) опишите лейблы и аннотации, которые необходимо проставить на `Namespace` при настройке проекта.
 
    В примере ниже в параметре [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) шаблона описаны [роли](../150-user-authn/cr.html#user), которые требуется выдать созданным выше пользователям для новых проектов. В параметре [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) шаблона описываются три ресурса: `NetworkPolicy` (ограничивает сетевую доступность Подов вне создаваемого `Namespace`, кроме `kube-dns`), `LimitRange` и `ResourceQuota`. В шаблоне реурсов используются параметры, описанные в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
 
@@ -201,7 +201,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
    test-project-type   true
    ```
 
-1. Создайте проект с помощью ресурса [Project](cr.html#project), указав в поле [.spec.projectTypeName](cr.html#project-v1alpha1-spec-projecttypename) имя созданного ранее шаблона проекты. Поле [.spec.template](cr.html#project-v1alpha1-spec-template) заполните значениями, которые подходят для [.spec.openAPI ProjectType](cr.html#projecttype-v1alpha1-spec-openapi).
+1. Создайте проект с помощью ресурса [Project](cr.html#project), указав в поле [.spec.projectTypeName](cr.html#project-v1alpha1-spec-projecttypename) имя созданного ранее шаблона проекта. Поле [.spec.template](cr.html#project-v1alpha1-spec-template) заполните значениями, которые подходят для [.spec.openAPI ProjectType](cr.html#projecttype-v1alpha1-spec-openapi).
 
    Сохраните следующее содержимое (описание ресурса `Project`) в файл `project.yaml`:
 
@@ -244,7 +244,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
    test-project   true    Test case from Deckhouse documentation
    ```
 
-1. Проверьте ресурсы, созданные в рамках изолированного проекты.
+1. Проверьте ресурсы, созданные в рамках изолированного проекта.
 
    Примеры команд и результатов их работы:
 
