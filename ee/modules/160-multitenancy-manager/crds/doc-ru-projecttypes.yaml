@@ -25,7 +25,7 @@ spec:
                     (параметр [resourcesTemplate](#projecttype-v1alpha1-spec-resourcestemplate)).
                 resourcesTemplate:
                   description: |
-                    Helm-шаблоны ресурсов, которые будут созданы при настройке нового проекта.
+                    Helm-шаблон для ресурсов, которые будут созданы при настройке нового проекта.
 
                     Шаблоны совместимы со всеми функциями `helm`. Читайте подробнее про [создание изолированных проектов](usage.html#создание-изолированного-проекта)...
 
@@ -34,8 +34,7 @@ spec:
                     - `{{ .projectTypeName }}` — имя `ProjectType`.
                     - `{{ .params }}` — словарь входных параметров, описанных в поле [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) и определенных в поле [.spec.template](cr.html#project-v1alpha1-spec-template).
 
-                    > **Внимание!** Для объектов без поля `.metadata.namespace` оно будет автоматически присвоено
-                    > равным имени проекта (CR `Project`).
+                    > Поле `.metadata.namespace` объекта по умолчанию соответствует имени проекта (CR `Project`), но вы можете явно задать другое значение.
                 subjects:
                   description:
                     Список ServiceAccount'ов, групп (`Group`) и пользователей

@@ -16,7 +16,7 @@ spec:
                 template:
                   description: |
                     Входные параметры для [шаблона ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) из типа проекта (CR [ProjectType](cr.html#projecttype)). Должны подходить под
-                    OpenAPI-спецификацию, указанной в типе проекта (поле [openAPI](cr.html#projecttype-v1alpha1-spec-openapi)).
+                    OpenAPI-спецификацию, указанную в типе проекта (поле [openAPI](cr.html#projecttype-v1alpha1-spec-openapi)).
             status:
               description: ""
               properties:

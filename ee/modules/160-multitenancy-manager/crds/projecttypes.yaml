@@ -59,8 +59,7 @@ spec:
                     - `{{ .projectTypeName }}` — the name of the `ProjectType`.
                     - `{{ .params }}` — a dictionary of custom values, described in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) parameter and defined in the [.spec.template](cr.html#project-v1alpha1-spec-template) parameter.
 
-                    > **Note!** Objects with missing `.metadata.namespace` will be assigned with one
-                    > set to the name of the created project (CR `Project`).
+                    > By default, the object's `.metadata.namespace` parameter equals the project name (CR `Project`), but you can explicitly set a different value.
                   type: string
                 subjects:
                   description:
