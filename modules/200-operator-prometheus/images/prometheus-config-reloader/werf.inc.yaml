@@ -1,9 +1,8 @@
 {{- $version := "0.68.0" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-fromCacheVersion: 1
 import:
-- artifact: {{ $.ModuleName }}/prometheus-operator-artiifact-{{ $version | replace "." "-" }}
+- artifact: {{ $.ModuleName }}/prometheus-operator-artifact-{{ $version | replace "." "-" }}
   add: /prometheus-operator/prometheus-config-reloader
   to: /bin/prometheus-config-reloader
   before: setup
