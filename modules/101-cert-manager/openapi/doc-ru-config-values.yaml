@@ -58,3 +58,7 @@ properties:
   maxConcurrentChallenges:
     description: |
       Максимальное количество одновременных Challenges в статусе `processing`
+  enableCAInjector:
+    description: |
+      Включить CAInjector. Он необходим только для инъекции CA сертификатов в `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` и `APIService`.
+      Deckhouse не использует CAInjector, поэтому включать нужно только в том случае, если вы используете в своих сервисах пользовательские инъекции CA.
