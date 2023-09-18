@@ -21,12 +21,14 @@ rules:
   - prometheuses
   - prometheuses/status
   - prometheuses/finalizers
+  - prometheusagents
   - thanosrulers
   - thanosrulers/finalizers
   - servicemonitors
   - podmonitors
   - probes
   - prometheusrules
+  - scrapeconfigs
   verbs:
   - '*'
 - apiGroups:
@@ -55,6 +57,7 @@ rules:
   - services
   - services/finalizers
   - endpoints
+  - endpointslices
   verbs:
   - get
   - create
