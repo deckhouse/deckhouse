@@ -30,7 +30,6 @@ bb-deckhouse-get-disruptive-update-approval() {
 
     bb-log-info "Disruption required, asking for approval"
 
-    bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/disruption-required='."
     attempt=0
     until
         node_data="$(
@@ -45,12 +44,16 @@ bb-deckhouse-get-disruptive-update-approval() {
          jq -ne --argjson n "$node_data" '(($n.isDisruptionApproved | not) and ($n.isDisruptionRequired)) or ($n.isDisruptionApproved)' >/dev/null
     do
         nodeGroupName="$(jq -nr --argjson n "$node_data" '$n.nodeGroupName')"
+        bb-log-info "DEBUG_nodeGroupName: ${nodeGroupName}"
           if [ "$disruptionsApprovalMode" == "RollingUpdate" ]; then
+            bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/rolling-update='."
             bb-kubectl \
               --kubeconfig=/etc/kubernetes/kubelet.conf \
               --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
               annotate node "$(hostname -s)" update.node.deckhouse.io/rolling-update= || { bb-log-info "Retry setting update.node.deckhouse.io/rolling-update= annotation on Node in 10 sec..."; sleep 10; }
+            exit 0
           else
+            bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/disruption-required='."
             bb-kubectl \
               --kubeconfig=/etc/kubernetes/kubelet.conf \
               --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
