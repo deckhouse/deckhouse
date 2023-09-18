@@ -15,7 +15,7 @@ RUN apk add --no-cache git patch make zip && \
     git cherry-pick f79f3a5e25df152df6164ddfaf2ffc1f09e5058f && \
     go mod download
 WORKDIR /src/dashboard/src/app/backend/
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags "-X github.com/kubernetes/dashboard/src/app/backend/client.Version=v2.7.0" -o dashboard .
+RUN go build -a -installsuffix cgo -ldflags "-X github.com/kubernetes/dashboard/src/app/backend/client.Version=v2.7.0" -o dashboard .
 
 
 FROM $BASE_ALPINE
