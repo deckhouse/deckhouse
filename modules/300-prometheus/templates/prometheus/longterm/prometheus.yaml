@@ -65,7 +65,7 @@ spec:
   - command:
     - sh
     - -c
-    - if [ "$(ls -1 /prometheus-db | wc -l)" -gt 0 ]; then chown -vR 64535:64535 /prometheus-db/*; fi
+    - chown -vfR 64535:64535 /prometheus-db/
     image: {{ include "helm_lib_module_image" (list . "prometheus") }}
     imagePullPolicy: IfNotPresent
     name: fix-permissions
