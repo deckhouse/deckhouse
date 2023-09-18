@@ -3,11 +3,11 @@ title: "The multitenancy-manager module: usage"
 ---
 {% raw %}
 
-## Creating an isolated environment
+## Creating an isolated project
 
-Follow these steps to create an isolated environment in a kubernetes cluster:
+Follow these steps to create an isolated project in a kubernetes cluster:
 
-1. Create two [static users](../150-user-authn/usage.html#an-example-of-creating-a-static-user) who need to be given access to the isolated environment:
+1. Create two [static users](../150-user-authn/usage.html#an-example-of-creating-a-static-user) who need to be given access to the isolated project:
 
    Create a `users.yaml` file with the following contents (CR `User`):
 
@@ -53,14 +53,14 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    user    user@cluster
    ```
 
-1. Create an environment template using the [ProjectType](cr.html#projecttype) custom resource:
+1. Create an project type using the [ProjectType](cr.html#projecttype) custom resource:
 
    - in the [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) field, describe [roles](../140-user-authz/cr.html#authorizationrule-v1alpha1-spec-accesslevel) to be given to users/groups/`ServiceAccount`s;
-   - in the [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) field, describe the resource templates that you want to create when setting up isolated environments;
+   - in the [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) field, describe the resource templates that you want to create when setting up isolated projects;
    - in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) field, define the OpenAPI specification for `values` used in the template ([.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate));
-   - in the [.spec.namespaceMetadata](cr.html#projecttype-v1alpha1-spec-namespacemetadata) field, describe labels and annotations that need to be set for the `Namespace` when setting up the environment.
+   - in the [.spec.namespaceMetadata](cr.html#projecttype-v1alpha1-spec-namespacemetadata) field, describe labels and annotations that need to be set for the `Namespace` when setting up the project.
 
-   In the example below, the [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) field of the template contains [roles](../150-user-authn/cr.html#user) to be assigned to the users created above in the new environments. The [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) field contains three resources: `NetworkPolicy` (limits network accessibility of Pods outside the created `Namespace`, except for the `kube-dns`), `LimitRange` and `ResourceQuota`. The resource template uses the parameters described in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) field (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
+   In the example below, the [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) field of the template contains [roles](../150-user-authn/cr.html#user) to be assigned to the users created above in the new projects. The [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) field contains three resources: `NetworkPolicy` (limits network accessibility of Pods outside the created `Namespace`, except for the `kube-dns`), `LimitRange` and `ResourceQuota`. The resource template uses the parameters described in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) field (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
 
    Create a `project-type.yaml` file with the following contents (CR `ProjectType`):
 
@@ -182,13 +182,13 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
                  port: 53
    ```
 
-   Run the following command to create an environment template:
+   Run the following command to create an project type:
 
    ```shell
    kubectl create -f project-type.yaml
    ```
 
-   Check that the environment template has been created successfully by running the following command:
+   Check that the project type has been created successfully by running the following command:
 
    ```shell
    kubectl get projecttypes.deckhouse.io
@@ -201,7 +201,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    test-project-type   true
    ```
 
-1. Create an environment using the [Project](cr.html#project) CR, specifying the name of the environment template you created earlier in the [.spec.projectTypeName](cr.html#project-v1alpha1-spec-projecttypename) field. Fill in the [.spec.template](cr.html#project-v1alpha1-spec-template) field with values suitable for [.spec.openAPI ProjectType](cr.html#projecttype-v1alpha1-spec-openapi).
+1. Create an project using the [Project](cr.html#project) CR, specifying the name of the project type you created earlier in the [.spec.projectTypeName](cr.html#project-v1alpha1-spec-projecttypename) field. Fill in the [.spec.template](cr.html#project-v1alpha1-spec-template) field with values suitable for [.spec.openAPI ProjectType](cr.html#projecttype-v1alpha1-spec-openapi).
 
    Create a `project.yaml` file with the following contents (CR `Project`):
 
@@ -225,13 +225,13 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
          memory: 5Gi
    ```
 
-   Run the following command to create an environment:
+   Run the following command to create an project:
 
    ```shell
    kubectl create -f project.yaml
    ```
 
-   Check that the environment has been created successfully by running the following command:
+   Check that the project has been created successfully by running the following command:
 
    ```shell
    kubectl get projects.deckhouse.io
@@ -244,7 +244,7 @@ Follow these steps to create an isolated environment in a kubernetes cluster:
    test-project   true    Test case from Deckhouse documentation
    ```
 
-1. Check the resources created within the isolated environment.
+1. Check the resources created within the isolated project.
 
    Examples of commands and their output:
 

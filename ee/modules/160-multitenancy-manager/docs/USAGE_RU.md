@@ -3,11 +3,11 @@ title: "Модуль multitenancy-manager: примеры конфигураци
 ---
 {% raw %}
 
-## Создание изолированного окружения
+## Создание изолированного проекты
 
-Выполните следующие шаги для создания изолированного окружения в кластере Kubernetes:
+Выполните следующие шаги для создания изолированного проекты в кластере Kubernetes:
 
-1. Создайте двух [статичных пользователей](../150-user-authn/usage.html#пример-создания-статического-пользователя) с доступом до изолированного окружения.
+1. Создайте двух [статичных пользователей](../150-user-authn/usage.html#пример-создания-статического-пользователя) с доступом до изолированного проекты.
 
    Создайте файл `users.yaml` со следующим содержимым (описание ресурсов `User`):
 
@@ -53,14 +53,14 @@ title: "Модуль multitenancy-manager: примеры конфигураци
    user    user@cluster
    ```
 
-1. Создайте шаблон окружения с помощью ресурса [ProjectType](cr.html#projecttype):
+1. Создайте шаблон проекты с помощью ресурса [ProjectType](cr.html#projecttype):
 
    - в [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) опишите [роли](../140-user-authz/cr.html#authorizationrule-v1alpha1-spec-accesslevel), которые нужно выдать пользователям/группам/`ServiceAccount`'ам;
-   - в [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) опишите шаблоны ресурсов, которые требуется создать при настройке изолированных окружений;
+   - в [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) опишите шаблоны ресурсов, которые требуется создать при настройке изолированных проектов;
    - в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) опишите спецификацию OpenAPI для значений (`values`), которые используются в описанных шаблонах ([.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate));
-   - в [.spec.namespaceMetadata](cr.html#projecttype-v1alpha1-spec-namespacemetadata) опишите лейблы и аннотации, которые необходимо проставить на `Namespace` при настройке окружения.
+   - в [.spec.namespaceMetadata](cr.html#projecttype-v1alpha1-spec-namespacemetadata) опишите лейблы и аннотации, которые необходимо проставить на `Namespace` при настройке проекты.
 
-   В примере ниже в параметре [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) шаблона описаны [роли](../150-user-authn/cr.html#user), которые требуется выдать созданным выше пользователям для новых окружений. В параметре [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) шаблона описываются три ресурса: `NetworkPolicy` (ограничивает сетевую доступность Подов вне создаваемого `Namespace`, кроме `kube-dns`), `LimitRange` и `ResourceQuota`. В шаблоне реурсов используются параметры, описанные в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
+   В примере ниже в параметре [.spec.subjects](cr.html#projecttype-v1alpha1-spec-subjects) шаблона описаны [роли](../150-user-authn/cr.html#user), которые требуется выдать созданным выше пользователям для новых проектов. В параметре [.spec.resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) шаблона описываются три ресурса: `NetworkPolicy` (ограничивает сетевую доступность Подов вне создаваемого `Namespace`, кроме `kube-dns`), `LimitRange` и `ResourceQuota`. В шаблоне реурсов используются параметры, описанные в [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) (`requests.cpu`, `requests.memory`, `requests.storage`, `limits.cpu`, `limit.memory`).
 
    Создайте файл `project-type.yaml` со следующим содержимым (описание ресурсов `ProjectType`):
 
@@ -182,13 +182,13 @@ title: "Модуль multitenancy-manager: примеры конфигураци
                  port: 53
    ```
 
-   Чтобы создать шаблон окружения, выполните следующую команду:
+   Чтобы создать шаблон проекты, выполните следующую команду:
 
    ```shell
    kubectl create -f project-type.yaml
    ```
 
-   Проверьте, что шаблон окружения успешно создался, выполнив следующую команду:
+   Проверьте, что шаблон проекты успешно создался, выполнив следующую команду:
 
    ```shell
    kubectl get projecttypes.deckhouse.io
@@ -201,7 +201,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
    test-project-type   true
    ```
 
-1. Создайте окружение с помощью ресурса [Project](cr.html#project), указав в поле [.spec.projectTypeName](cr.html#project-v1alpha1-spec-projecttypename) имя созданного ранее шаблона окружения. Поле [.spec.template](cr.html#project-v1alpha1-spec-template) заполните значениями, которые подходят для [.spec.openAPI ProjectType](cr.html#projecttype-v1alpha1-spec-openapi).
+1. Создайте проект с помощью ресурса [Project](cr.html#project), указав в поле [.spec.projectTypeName](cr.html#project-v1alpha1-spec-projecttypename) имя созданного ранее шаблона проекты. Поле [.spec.template](cr.html#project-v1alpha1-spec-template) заполните значениями, которые подходят для [.spec.openAPI ProjectType](cr.html#projecttype-v1alpha1-spec-openapi).
 
    Сохраните следующее содержимое (описание ресурса `Project`) в файл `project.yaml`:
 
@@ -225,13 +225,13 @@ title: "Модуль multitenancy-manager: примеры конфигураци
          memory: 5Gi
    ```
 
-   С помощью команды ниже создайте окружение:
+   С помощью команды ниже создайте проект:
 
    ```shell
    kubectl create -f project.yaml
    ```
 
-   Проверьте, что окружение успешно создалось, выполнив следующую команду:
+   Проверьте, что проект успешно создалось, выполнив следующую команду:
 
    ```shell
    kubectl get projects.deckhouse.io
@@ -244,7 +244,7 @@ title: "Модуль multitenancy-manager: примеры конфигураци
    test-project   true    Test case from Deckhouse documentation
    ```
 
-1. Проверьте ресурсы, созданные в рамках изолированного окружения.
+1. Проверьте ресурсы, созданные в рамках изолированного проекты.
 
    Примеры команд и результатов их работы:
 
