@@ -36,6 +36,7 @@ EOF
 
 function __main__() {
   projectTypeName=$(context::jq -r '.review.request.object.spec.projectTypeName')
+  test=$(context::jq -er --arg projectTypeName "$projectTypeName" '.snapshots.projects[])
 
   if usedInProjectName="$(context::jq -er --arg projectTypeName "$projectTypeName" '.snapshots.projects[].filterResult | select(.projectTypeName == $projectTypeName) | .name' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
@@ -45,7 +46,7 @@ EOF
   fi
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":true}
+{"allowed":true, "message":"$test"}
 EOF
 
 }
