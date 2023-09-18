@@ -1,4 +1,5 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
+{{- $curlVersion := "8.2.1" }}
+  {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.clusterAutoscalerPatch }}
 ---
@@ -40,6 +41,10 @@ import:
   - artifact: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/cluster-autoscaler/cluster-autoscaler
     to: /cluster-autoscaler
+    before: setup
+  - artifact: 007-registrypackages/d8-curl-artifact-{{ $curlVersion | replace "." "-" }}
+    add: /d8-curl
+    to: /curl
     before: setup
 docker:
   ENV:
