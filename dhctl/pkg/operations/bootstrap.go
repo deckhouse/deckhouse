@@ -190,7 +190,8 @@ const dependencyCmd = "type"
 
 func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
-		var dependencyArgs = []string{"sudo", "rm", "tar"}
+		dependencyArgs := []string{"sudo", "rm", "tar", "mount", "awk", "grep", "cut", "sed", "shopt",
+			"mkdir", "cp", "join"}
 
 		for _, args := range dependencyArgs {
 			output, err := sshClient.Command(dependencyCmd, args).CombinedOutput()
