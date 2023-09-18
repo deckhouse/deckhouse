@@ -34,8 +34,8 @@ spec:
                     - `{{ .projectTypeName }}` — имя `ProjectType`.
                     - `{{ .params }}` — словарь входных параметров, описанных в поле [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) и определенных в поле [.spec.template](cr.html#project-v1alpha1-spec-template).
 
-                    > **Внимание!** Указывать поля `.metadata.namespace` для объектов необязательно,
-                    > так как они автоматически будет заданы равными имени проекта (CR `Project`).
+                    > **Внимание!** Для объектов без поля `.metadata.namespace` оно будет автоматически присвоено
+                    > равным имени проекта (CR `Project`).
                 subjects:
                   description:
                     Список ServiceAccount'ов, групп (`Group`) и пользователей
@@ -45,7 +45,7 @@ spec:
                     properties:
                       kind:
                         description: |
-                          Kind ресурса: `ServiceAccount`, `Group` или `User`).
+                          Kind ресурса.
                       name:
                         description: Имя ресурса.
                       namespace:
