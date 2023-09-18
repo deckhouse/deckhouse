@@ -8,7 +8,7 @@ FROM $BASE_GOLANG_19_ALPINE as patchbuilder
 
 WORKDIR /src/
 RUN apk add --no-cache git patch make zip && \
-    git clone https://github.com/kubernetes/dashboard && \
+    git clone ${SOURCE_REPO}/kubernetes/dashboard && \
     cd dashboard && \
     git config --global user.email "builder@deckhouse.io" && \
     git checkout v2.7.0 && \
