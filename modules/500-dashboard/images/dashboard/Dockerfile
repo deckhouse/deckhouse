@@ -6,6 +6,15 @@ FROM kubernetesui/dashboard:v2.7.0@sha256:2e500d29e9d5f4a086b908eb8dfe7ecac57d2a
 # to fix dashboard can display cronjobs v1
 FROM $BASE_GOLANG_19_ALPINE as patchbuilder
 
+ARG GOPROXY
+ARG SOURCE_REPO
+
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
 WORKDIR /src/
 RUN apk add --no-cache git patch make zip && \
     git clone ${SOURCE_REPO}/kubernetes/dashboard && \
