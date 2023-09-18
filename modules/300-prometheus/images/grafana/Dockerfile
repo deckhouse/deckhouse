@@ -77,7 +77,7 @@ FROM $BASE_GOLANG_17_BUSTER as go-builder
 ARG GRAFANA_VERSION
 ENV GRAFANA_VERSION=${GRAFANA_VERSION}
 RUN apt-get update && \
-    apt-get -y --no-install-recommends install git gcc musl
+    apt-get -y --no-install-recommends install git gcc musl musl-tools
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
 
@@ -85,11 +85,12 @@ ARG GOPROXY
 ENV GOPROXY=${GOPROXY} \
     CGO_ENABLED=1 \
     GOOS=linux \
-    GOARCH=amd64
+    GOARCH=amd64 \
+    CC=/usr/bin/musl-gcc
 
 RUN make gen-go
-RUN go build -ldflags -w -ldflags "-linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
-RUN go run build.go build-cli
+RUN go build -ldflags -w -ldflags "-X main.version=${GRAFANA_VERSION} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
+RUN go build -ldflags -w -ldflags "-X main.version=${GRAFANA_VERSION} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana-cli ./pkg/cmd/grafana-cli
 
 FROM $BASE_GOLANG_20_ALPINE as entrypoint
 

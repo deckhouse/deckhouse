@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -37,7 +38,7 @@ func main() {
 
 	_, err := os.Stat(gfPathsPlugins)
 	if os.IsNotExist(err) {
-		err := os.MkdirAll(gfPathsPlugins, 0600)
+		err := os.MkdirAll(gfPathsPlugins, 0660)
 		if err != nil {
 			log.Fatalf("create plugins folder: %v", err)
 		}
@@ -47,9 +48,24 @@ func main() {
 	}
 
 	if bundledPluginsPath != "" && gfInstallPlugins != "" && gfPathsPlugins != bundledPluginsPath {
+		fstatDest, err := os.Stat(gfPathsPlugins)
+		if err != nil {
+			log.Fatalf("file info error: path: %s err: %v", gfPathsPlugins, err)
+		}
+
 		_, err = os.Stat(bundledPluginsPath)
 		if err == nil {
-			err := cp.Copy(bundledPluginsPath, gfPathsPlugins)
+			opt := cp.Options{
+				OnError: func(src, dest string, err error) error {
+					if strings.Contains(errors.Join(err, errors.New("")).Error(), "chmod /etc/grafana/plugins: operation not permitted") {
+						return nil
+					}
+					return err
+				},
+				// add permissions from destination folder
+				PermissionControl: cp.AddPermission(fstatDest.Mode()),
+			}
+			err := cp.Copy(bundledPluginsPath, gfPathsPlugins, opt)
 			if err != nil {
 				log.Fatalf("copy plugins: %v", err)
 			}
@@ -80,7 +96,7 @@ func main() {
 
 	err = installPlugins(gfInstallPlugins, gfPathsPlugins)
 	if err != nil {
-		log.Fatalf("convert env: %v", err)
+		log.Fatalf("install plugins: %v", err)
 	}
 
 	grafanaArgs := []string{
@@ -143,30 +159,35 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 	}
 
 	for _, plugin := range strings.Split(gfInstallPlugins, ",") {
+
 		if strings.Contains(plugin, ";") {
-			bit := strings.Split(plugin, ";")
+			part := strings.Split(plugin, ";")
 			cmd := exec.Command(
 				"grafana-cli",
-				fmt.Sprintf("--pluginUrl %s", bit[0]),
-				fmt.Sprintf("--pluginsDir %s", gfPathsPlugins),
+				"--pluginUrl",
+				part[0],
+				"--pluginsDir",
+				gfPathsPlugins,
 				"plugins",
 				"install",
-				bit[1],
+				part[1],
 			)
-			if err := cmd.Run(); err != nil {
-				return err
+
+			if stdout, err := cmd.CombinedOutput(); err != nil {
+				return fmt.Errorf("%v | %v", string(stdout), err)
 			}
 			continue
 		}
 		cmd := exec.Command(
 			"grafana-cli",
-			fmt.Sprintf("--pluginsDir %s", gfPathsPlugins),
+			"--pluginsDir",
+			gfPathsPlugins,
 			"plugins",
 			"install",
 			plugin,
 		)
-		if err := cmd.Run(); err != nil {
-			return err
+		if stdout, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("%v | %v", string(stdout), err)
 		}
 	}
 	return nil
