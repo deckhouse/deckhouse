@@ -117,7 +117,7 @@ spec:
         livenessProbe:
           exec:
             command:
-            - curl
+            - /curl
             - -f
             - http://127.0.0.1:8085/health-check
           failureThreshold: 6
