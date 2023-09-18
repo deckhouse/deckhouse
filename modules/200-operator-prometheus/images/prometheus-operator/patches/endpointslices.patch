@@ -1,4 +1,26 @@
 ---
+Index: pkg/prometheus/promcfg.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
+--- a/pkg/prometheus/promcfg.go	(revision 52526e3b0cfb5f3deaa967998ff88a5133f1ec0f)
++++ b/pkg/prometheus/promcfg.go	(date 1695069841555)
+@@ -1567,7 +1567,12 @@
+ 		// config as well, make sure to path the right namespace here.
+ 		cfg = addTLStoYaml(cfg, "", am.TLSConfig)
+
+-		cfg = append(cfg, cg.generateK8SSDConfig(monitoringv1.NamespaceSelector{}, am.Namespace, apiserverConfig, store, kubernetesSDRoleEndpoint, nil))
++		role := kubernetesSDRoleEndpoint
++		if cg.EndpointSliceSupported() {
++			role = kubernetesSDRoleEndpointSlice
++		}
++
++		cfg = append(cfg, cg.generateK8SSDConfig(monitoringv1.NamespaceSelector{}, am.Namespace, apiserverConfig, store, role, nil))
+
+ 		if am.BearerTokenFile != "" {
+ 			cfg = append(cfg, yaml.MapItem{Key: "bearer_token_file", Value: am.BearerTokenFile})
 Index: pkg/prometheus/server/operator.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
