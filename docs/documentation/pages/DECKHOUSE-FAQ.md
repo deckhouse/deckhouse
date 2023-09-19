@@ -237,7 +237,7 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
   46.4.145.194    DGRAM  registry.deckhouse.io
   ```
   
-  If the retrieved IP addresses do not match, inspect the DNS settings on the host. Specifically, check the list of domains in the search parameter of the `/etc/resolv.conf` file (it affects name resolution in the Deckhouse pod). If the search parameter of the `/etc/resolv.conf` file includes a domain where wildcard record resolution is configured, it may result in incorrect resolution of the IP address of the Deckhouse container registry (see example).
+  If the retrieved IP addresses do not match, inspect the DNS settings on the host. Specifically, check the list of domains in the `search` parameter of the `/etc/resolv.conf` file (it affects name resolution in the Deckhouse pod). If the `search` parameter of the `/etc/resolv.conf` file includes a domain where wildcard record resolution is configured, it may result in incorrect resolution of the IP address of the Deckhouse container registry (see example).
   
 {% offtopic title="Example of DNS settings that may cause errors in resolving the IP address of the Deckhouse container registry..." %}
 
@@ -439,14 +439,14 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
-* Run `deckhouse-controller helper change-registry` inside the `deckhouse` Pod with the new registry settings.
+* Run `deckhouse-controller helper change-registry` inside the Deckhouse Pod with the new registry settings.
   * Example:
 
     ```shell
     kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user my-user --password my-password registry.example.com/deckhouse
     ```
 
-  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` in the `deckhouse` Pod and add the `--ca-file ca.crt` option to the script or put the content of CA into a variable.
+  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` in the Deckhouse Pod and add the `--ca-file ca.crt` option to the script or put the content of CA into a variable.
 
     ```shell
     $ CA_CONTENT=$(cat <<EOF
