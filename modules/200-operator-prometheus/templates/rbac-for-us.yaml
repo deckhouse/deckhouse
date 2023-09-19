@@ -53,12 +53,19 @@ rules:
   - list
   - delete
 - apiGroups:
+  - "discovery.k8s.io"
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - ""
   resources:
   - services
   - services/finalizers
   - endpoints
-  - endpointslices
   verbs:
   - get
   - create
