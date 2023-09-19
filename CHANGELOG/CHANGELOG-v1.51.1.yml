@@ -1,3 +1,7 @@
+candi:
+  fixes:
+    - summary: Fix `cluster-autoscaler` liveness probe.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5869
 deckhouse:
   fixes:
     - summary: Move deckhouse `kube-rbac-proxy` port to `9889`, to avoid conflicts with user applications.
