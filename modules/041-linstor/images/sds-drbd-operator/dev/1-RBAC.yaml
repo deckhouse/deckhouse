@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: d8-sds-drbd-operator
+  namespace: d8-linstor
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8-sds-drbd-operator
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - list
+  - apiGroups:
+      - storage.deckhouse.io
+    resources:
+      - blockdevices
+      - lvmchangerequests
+      - linstorstorageclasses
+      - linstorstoragepools
+      - lvmvolumegroups
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+      - watch
+      - update
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+    verbs:
+      - create
+      - delete
+      - list
+      - get
+      - watch
+  - apiGroups: [""]
+    resources:
+      - secrets
+      - nodes
+    verbs:
+      - list
+      - get
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8-sds-drbd-operator
+subjects:
+  - kind: ServiceAccount
+    name: d8-sds-drbd-operator
+    namespace: d8-linstor
+roleRef:
+  kind: ClusterRole
+  name: d8-sds-drbd-operator
+  apiGroup: rbac.authorization.k8s.io

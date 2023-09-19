@@ -34,9 +34,9 @@ var (
 
 func main() {
 	log := zap.New(zap.Level(zapcore.Level(-1)), zap.UseDevMode(true))
-	//logf.SetLogger(zap.New(zap.Level(zapcore.Level(-1)), zap.UseDevMode(true)))
-	//log := logf.Log.WithName("cmd")
-	//log.WithName("cmd")
+	// logf.SetLogger(zap.New(zap.Level(zapcore.Level(-1)), zap.UseDevMode(true)))
+	// log := logf.Log.WithName("cmd")
+	// log.WithName("cmd")
 
 	ctx, _ := context.WithCancel(context.Background())
 
@@ -47,7 +47,6 @@ func main() {
 	if err != nil {
 		log.Error(err, "error read configuration")
 	}
-	log.Info(config.NodeName + " " + cfgParams.NodeName)
 
 	// Create default config Kubernetes client
 	kConfig, err := kubutils.KubernetesDefaultConfigCreate()
@@ -68,19 +67,20 @@ func main() {
 	log.Info("read scheme CR")
 
 	// ---- server webhook ----------
-	//myWebhookServer := webhook.NewServer(webhook.Options{
+	// myWebhookServer := webhook.NewServer(webhook.Options{
 	//
-	//})
+	// })
 
 	managerOpts := manager.Options{
-		//LeaderElection:             true,
-		//LeaderElectionNamespace:    "d8-storage-configurator",
-		//LeaderElectionID:           "r", // uniq in cluster
-		//LeaderElectionResourceLock: "leases",
+		// LeaderElection:             true,
+		// LeaderElectionNamespace:    "d8-storage-configurator",
+		// LeaderElectionID:           "r", // uniq in cluster
+		// LeaderElectionResourceLock: "leases",
 		Scheme:             scheme,
 		MetricsBindAddress: cfgParams.MetricsPort,
 		Logger:             log,
-		//WebhookServer: myWebhookServer,
+		Namespace:          "d8-linstor", // TODO: заменить на cache options
+		// WebhookServer: myWebhookServer,
 	}
 
 	mgr, err := manager.New(kConfig, managerOpts)
@@ -94,19 +94,11 @@ func main() {
 	lc, err := lclient.NewClient()
 
 	// --------------------------------------------
-
-	//if _, err := controller.NewConsumableBlockDevice(ctx, mgr, log, config.NodeName); err != nil {
-	//	log.Error(err, "failed create controller ConsumableBlockDevice")
-	//	os.Exit(1)
-	//}
-	//
-	////log.Info("controller ConsumableBlockDevice start")
-
-	//if _, err := controller.NewLVMChangeRequest(ctx, mgr, mgr.GetLogger(), config.NodeName); err != nil {
-	//	log.Error(err, "failed create controller NewLVMChangeRequest", err)
-	//	os.Exit(1)
-	//}
-	//log.Info("controller LVMChangeRequest start")
+	if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval); err != nil {
+		log.Error(err, "failed create controller NewLinstorNode", err)
+		os.Exit(1)
+	}
+	log.Info("controller NewLinstorNode start")
 
 	if _, err := controller.NewLinstorStorageClass(ctx, mgr); err != nil {
 		log.Error(err, "failed create controller NewLinstorStorageClass")
@@ -119,12 +111,6 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("controller NewLinstorStoragePool start")
-
-	//if err = webhook.NewAdmissionStorageClass(mgr); err != nil {
-	//	log.Error(err, "failed create StorageClass webhook")
-	//	os.Exit(1)
-	//}
-	//log.Info("webhook NewAdmissionStorageClass start")
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		log.Error(err, "unable to set up health check")
