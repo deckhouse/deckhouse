@@ -42,10 +42,6 @@ import:
     add: /src/cluster-autoscaler/cluster-autoscaler
     to: /cluster-autoscaler
     before: setup
-  - artifact: registrypackages/d8-curl-artifact-{{ $curlVersion | replace "." "-" }}
-    add: /d8-curl
-    to: /curl
-    before: setup
 docker:
   ENV:
     container: docker

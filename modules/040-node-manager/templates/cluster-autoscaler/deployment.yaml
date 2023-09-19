@@ -115,11 +115,10 @@ spec:
         - name: CONTROL_NAMESPACE
           value: d8-cloud-instance-manager
         livenessProbe:
-          exec:
-            command:
-            - /curl
-            - -f
-            - http://127.0.0.1:8085/health-check
+          httpGet:
+            path: /health-check
+            port: 8443
+            scheme: HTTPS
           failureThreshold: 6
           periodSeconds: 5
           successThreshold: 1
@@ -144,6 +143,8 @@ spec:
           value: "0.0.0.0"
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
+            excludePaths:
+            - /health-check
             upstreams:
             - upstream: http://127.0.0.1:8085/metrics
               path: /metrics
