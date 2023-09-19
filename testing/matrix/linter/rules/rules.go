@@ -81,8 +81,8 @@ func skipObjectContainerIfNeeded(o *storage.StoreObject, c *v1.Container) bool {
 		o.Unstructured.GetName() == "chrony" && c.Name == "chrony" {
 		return true
 	}
-	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-chrony" &&
-		o.Unstructured.GetName() == "chrony-master" && c.Name == "chrony" {
+	if o.Unstructured.GetKind() == "Deployment" && o.Unstructured.GetNamespace() == "d8-chrony" &&
+		o.Unstructured.GetName() == "chrony-master" && c.Name == "chrony-server" {
 		return true
 	}
 
