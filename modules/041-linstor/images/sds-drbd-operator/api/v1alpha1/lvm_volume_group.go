@@ -11,6 +11,10 @@ type LvmVolumeGroup struct {
 	Spec              struct {
 		Type              string `json:"type"`
 		ActuaLvgOnTheNode string `json:"actualvgonthenode"`
+		ThinPool          struct {
+			Name string `json:"name,omitempty"`
+			Size string `json:"size,omitempty"`
+		} `json:"thinpool,omitempty"`
 	} `json:"spec"`
 	Status struct {
 		Nodes []struct {

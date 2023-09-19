@@ -9,7 +9,11 @@ type LinstorStoragePool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              struct {
-		LvmVolumeGroupsNames []string `json:"lvmvolumegroupsnames"`
+		Type            string `json:"type"`
+		LvmVolumeGroups []struct {
+			Name         string `json:"name"`
+			ThinPoolName string `json:"thinPoolName"`
+		} `json:"lvmvolumegroups"`
 	} `json:"spec"`
 	Status struct {
 		Phase  string `json:"phase"`

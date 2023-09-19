@@ -2,9 +2,11 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	lclient "github.com/LINBIT/golinstor/client"
 	"k8s.io/client-go/util/workqueue"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -18,6 +20,8 @@ import (
 
 const (
 	LinstorStoragePoolControllerName = "linstor-storage-pool-controller"
+	TypeLVMThin                      = "LVMThin"
+	TypeLVM                          = "LVM"
 )
 
 func NewLinstorStoragePool(
@@ -43,7 +47,6 @@ func NewLinstorStoragePool(
 		handler.Funcs{
 			CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.RateLimitingInterface) {
 				// ----------------------- get LinstorStoragePool ----------------------------------
-				log.Info("get LinstorStoragPool " + e.Object.GetName())
 				lsp, err := getLinstorStoragePool(ctx, cl, e.Object.GetNamespace(), e.Object.GetName())
 				if err != nil {
 					log.Error(err, "error get LinstorStoragePool ")
@@ -51,8 +54,13 @@ func NewLinstorStoragePool(
 				}
 				// ----------------------- get LinstorStorageClass ----------------------------------
 
-				// ----------------------- update LinstorStoragePool --------------------------------
-				if Double(lsp.Spec.LvmVolumeGroupsNames) {
+				if lsp.Status.Phase == "Completed" {
+					log.Info("linstor pool " + lsp.Name + " " + lsp.Status.Phase)
+					return
+				}
+
+				doubleNodes, err := validateVolumeGroup(ctx, cl, lsp)
+				if err != nil || doubleNodes == 1 {
 					lsp.Status.Phase = "Failed"
 					lsp.Status.Reason = "lvmVolumeGroupsNames is contains doubles"
 					err = updateLinstorStoragePool(ctx, cl, lsp)
@@ -62,17 +70,46 @@ func NewLinstorStoragePool(
 					return
 				}
 
-				for _, gn := range lsp.Spec.LvmVolumeGroupsNames {
-					group, err := getLvmVolumeGroup(ctx, cl, e.Object.GetNamespace(), gn)
+				var name, vg string
+				var lvmType lclient.ProviderKind
+
+				for _, gn := range lsp.Spec.LvmVolumeGroups {
+					if lsp.Spec.Type == TypeLVMThin && len(gn.ThinPoolName) == 0 {
+						log.Error(errors.New("linstor storage pool"), "type TypeLVMThin but ThinPoolName not set")
+						lsp.Status.Phase = "Failed"
+						lsp.Status.Reason = "type TypeLVMThin but ThinPoolName not set"
+						err = updateLinstorStoragePool(ctx, cl, lsp)
+						if err != nil {
+							log.Error(err, "error updateLinstorStoragePool")
+						}
+						return
+					}
+
+					switch lsp.Spec.Type {
+					case TypeLVM:
+						name = gn.Name
+
+					case TypeLVMThin:
+						name = gn.ThinPoolName
+					}
+
+					group, err := getLvmVolumeGroup(ctx, cl, e.Object.GetNamespace(), name)
 					if err != nil {
 						log.Error(err, "error getLvmVolumeGroup")
 						return
 					}
 
-					fmt.Println("-----------------------------------------------------------")
-					fmt.Println("group.Spec.ActuaLvgOnTheNode", group.Spec.ActuaLvgOnTheNode)
-					fmt.Println("group.Status.Nodes", group.Status.Nodes)
-					fmt.Println("-----------------------------------------------------------")
+					switch lsp.Spec.Type {
+					case TypeLVM:
+						name = gn.Name
+						lvmType = lclient.LVM
+						vg = group.Spec.ActuaLvgOnTheNode
+
+					case TypeLVMThin:
+						name = gn.ThinPoolName
+						lvmType = lclient.LVM_THIN
+						vg = group.Spec.ActuaLvgOnTheNode + "/thin" + group.Spec.ThinPool.Name
+					}
 
 					if len(group.Status.Nodes) != 1 {
 						lsp.Status.Phase = "Failed"
@@ -94,40 +131,54 @@ func NewLinstorStoragePool(
 					storagePool := lclient.StoragePool{
 						StoragePoolName: lsp.Name,
 						NodeName:        group.Status.Nodes[0].Name,
-						ProviderKind:    lclient.LVM,
+						ProviderKind:    lvmType,
 						Props: map[string]string{
-							"StorDriver/LvmVg": group.Spec.ActuaLvgOnTheNode,
+							"StorDriver/LvmVg": vg,
 						},
 					}
 
 					start := time.Now()
+					lspGet, err := lc.Nodes.GetStoragePool(ctx, group.Status.Nodes[0].Name, lsp.Name)
+					if err == lclient.NotFoundError {
 
-					err = lc.Nodes.CreateStoragePool(ctx, group.Status.Nodes[0].Name, storagePool)
-					if err != nil {
-						log.Error(err, "CreateStoragePool")
-
-						err := lc.Nodes.DeleteStoragePool(ctx, group.Status.Nodes[0].Name, lsp.Name)
-						if err != nil {
-							log.Error(err, "DeleteStoragePool")
+						fmt.Println("lspGet.NodeName =======>  ", lspGet.NodeName)
+						if lspGet.NodeName == group.Status.Nodes[0].Name {
+							lsp.Status.Phase = "Failed"
+							lsp.Status.Reason = lspGet.NodeName + " node has already been used"
+							err = updateLinstorStoragePool(ctx, cl, lsp)
+							if err != nil {
+								log.Error(err, lspGet.NodeName+" node has already been used")
+							}
 						}
 
-						lsp.Status.Phase = "Failed"
-						log.Info("lsp status phase = " + lsp.Status.Phase)
-						log.Info("deleting storage pool " + lsp.Name)
-						err = updateLinstorStoragePool(ctx, cl, lsp)
+						log.Info("creating pool " + lsp.Name)
+						err = lc.Nodes.CreateStoragePool(ctx, group.Status.Nodes[0].Name, storagePool)
 						if err != nil {
-							log.Error(err, "error updateLinstorStoragePool")
+							log.Error(err, "CreateStoragePool")
+
+							err := lc.Nodes.DeleteStoragePool(ctx, group.Status.Nodes[0].Name, lsp.Name)
+							if err != nil {
+								log.Error(err, "DeleteStoragePool")
+							}
+
+							lsp.Status.Phase = "Failed"
+							log.Info("lsp status phase = " + lsp.Status.Phase)
+							log.Info("deleting storage pool " + lsp.Name)
+							err = updateLinstorStoragePool(ctx, cl, lsp)
+							if err != nil {
+								log.Error(err, "error updateLinstorStoragePool")
+							}
+							log.Info("deleted storage pool " + lsp.Name)
+							return
 						}
-						log.Info("deleted storage pool " + lsp.Name)
-						return
 					}
 
 					duration := time.Since(start)
-					log.Info("create time : " + duration.String())
-					log.Info("created storage pool " + lsp.Name)
+					log.Info("time spent on pool creation : " + duration.String())
+					log.Info("pool created " + lsp.Name)
 
 					lsp.Status.Phase = "Completed"
-					log.Info("lsp status phase = " + lsp.Status.Phase)
+					lsp.Status.Reason = "pool creation completed"
 					err = updateLinstorStoragePool(ctx, cl, lsp)
 					if err != nil {
 						log.Error(err, "")
@@ -148,30 +199,65 @@ func NewLinstorStoragePool(
 					log.Error(err, "error get  ObjectOld LinstorStoragePool")
 				}
 
-				if len(newLSP.Spec.LvmVolumeGroupsNames) > len(oldLSP.Spec.LvmVolumeGroupsNames) {
+				if reflect.DeepEqual(oldLSP.Spec, newLSP.Spec) {
+					return
+				}
 
-					if Double(newLSP.Spec.LvmVolumeGroupsNames) {
-						newLSP.Status.Phase = "Failed"
-						newLSP.Status.Reason = "lvmVolumeGroupsNames is contains doubles"
-						err = updateLinstorStoragePool(ctx, cl, newLSP)
-						if err != nil {
-							log.Error(err, "error updateLinstorStoragePool")
-						}
-						return
+				if oldLSP.Spec.Type != newLSP.Spec.Type {
+					newLSP.Status.Phase = "Failed"
+					newLSP.Status.Reason = "Can't change the LVM type"
+					err = updateLinstorStoragePool(ctx, cl, newLSP)
+					fmt.Println("----------- oldLSP.Spec.Type != newLSP.Spec.Type ----------- ")
+					if err != nil {
+						fmt.Println("errror updateLinstorStoragePool oldLSP.Spec.Type != newLSP.Spec.Type ")
+						fmt.Println(err)
+						log.Error(err, "updateLinstorStoragePool")
 					}
+					return
+				}
 
-					for _, gn := range newLSP.Spec.LvmVolumeGroupsNames {
+				var name, vg string
+				var lvmType lclient.ProviderKind
+
+				log.Info("-------------------- LVM Group ---------------------------")
+				for _, og := range oldLSP.Spec.LvmVolumeGroups {
+					log.Info("LvmVolumeGroupsNames old groups LVM " + og.Name)
+					log.Info("LvmVolumeGroupsNames old groups Thin LVM" + og.ThinPoolName)
+				}
+
+				for _, ng := range newLSP.Spec.LvmVolumeGroups {
+					log.Info("LvmVolumeGroupsNames new groups LVM " + ng.Name)
+					log.Info("LvmVolumeGroupsNames new groups Thin LVM" + ng.ThinPoolName)
+
+					switch newLSP.Spec.Type {
+					case TypeLVM:
+						name = ng.Name
+					case TypeLVMThin:
+						name = ng.ThinPoolName
+					}
+				}
+				log.Info("-------------------- LVM Group ---------------------------")
+
+				if len(newLSP.Spec.LvmVolumeGroups) > len(oldLSP.Spec.LvmVolumeGroups) {
+
+					for _, gn := range newLSP.Spec.LvmVolumeGroups {
 						fmt.Println("gn ", gn)
-						group, err := getLvmVolumeGroup(ctx, cl, newLSP.GetNamespace(), gn)
+						group, err := getLvmVolumeGroup(ctx, cl, newLSP.GetNamespace(), name)
 						if err != nil {
 							log.Error(err, "error getLvmVolumeGroup")
 							return
 						}
 
-						fmt.Println("-----------------------------------------------------------")
-						fmt.Println("group.Spec.ActuaLvgOnTheNode", group.Spec.ActuaLvgOnTheNode)
-						fmt.Println("group.Status.Nodes", group.Status.Nodes)
-						fmt.Println("-----------------------------------------------------------")
+						if newLSP.Spec.Type != oldLSP.Spec.Type {
+							switch newLSP.Spec.Type {
+							case TypeLVM:
+								lvmType = lclient.LVM
+								vg = group.Spec.ActuaLvgOnTheNode
+							case TypeLVMThin:
+								lvmType = lclient.LVM_THIN
+								vg = group.Spec.ActuaLvgOnTheNode + "/thin" + group.Spec.ThinPool.Name
+							}
+						}
 
 						if len(group.Status.Nodes) != 1 {
 							newLSP.Status.Phase = "Failed"
@@ -194,9 +280,9 @@ func NewLinstorStoragePool(
 						storagePool := lclient.StoragePool{
 							StoragePoolName: newLSP.Name,
 							NodeName:        group.Status.Nodes[0].Name,
-							ProviderKind:    lclient.LVM,
+							ProviderKind:    lvmType,
 							Props: map[string]string{
-								"StorDriver/LvmVg": group.Spec.ActuaLvgOnTheNode,
+								"StorDriver/LvmVg": vg,
 							},
 						}
 
@@ -204,6 +290,7 @@ func NewLinstorStoragePool(
 						if err != nil {
 							log.Error(err, "CreateStoragePool")
 							newLSP.Status.Phase = "Failed"
+							newLSP.Status.Reason = "Failed CreateStoragePool"
 							err = updateLinstorStoragePool(ctx, cl, newLSP)
 							if err != nil {
 								log.Error(err, "error updateLinstorStoragePool")
@@ -275,4 +362,34 @@ func getLvmVolumeGroup(ctx context.Context, cl client.Client, namespace, name st
 		return nil, err
 	}
 	return obj, err
+}
+
+func validateVolumeGroup(ctx context.Context, cl client.Client, lsp *v1alpha1.LinstorStoragePool) (int, error) {
+	var name string
+	var tempNameNode []string
+
+	for _, g := range lsp.Spec.LvmVolumeGroups {
+
+		switch lsp.Spec.Type {
+		case TypeLVM:
+			name = g.Name
+
+		case TypeLVMThin:
+			name = g.ThinPoolName
+		}
+
+		group, err := getLvmVolumeGroup(ctx, cl, lsp.Namespace, name)
+		if err != nil {
+			return 0, err
+		}
+
+		for _, n := range group.Status.Nodes {
+			tempNameNode = append(tempNameNode, n.Name)
+		}
+	}
+
+	if Double(tempNameNode) {
+		return 1, nil
+	}
+	return 0, nil
 }

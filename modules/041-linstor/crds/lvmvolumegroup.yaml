@@ -21,7 +21,7 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: "LVM volume group"
+          description: "lvm volume group"
           properties:
             spec:
               type: object
@@ -30,6 +30,13 @@ spec:
                   type: string
                 actualvgonthenode:
                   type: string
+                thinpool:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    size:
+                      type: string
             status:
               type: object
               properties:
@@ -40,3 +47,4 @@ spec:
                     properties:
                       name:
                         type: string
+
