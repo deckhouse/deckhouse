@@ -49,6 +49,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix `cluster-autoscaler` liveness probe. [#5869](https://github.com/deckhouse/deckhouse/pull/5869)
  - **[candi]** AWS node's `root_block_device` is now marked with tags from `AWSClusterConfiguration`. [#5650](https://github.com/deckhouse/deckhouse/pull/5650)
  - **[candi]** Fix migration of cluster from one edition to another. [#5603](https://github.com/deckhouse/deckhouse/pull/5603)
  - **[candi]** Changed the command output for `yum versionlock delete` if it is dnf. [#5492](https://github.com/deckhouse/deckhouse/pull/5492)
