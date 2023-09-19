@@ -31,8 +31,7 @@ spec:
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready]
-      separator: ""
-      regex: "true"
+      regex: ".*true.*"
       action: keep
   - scheme: https
     port: https-metrics
@@ -50,8 +49,7 @@ spec:
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready]
-      separator: ""
-      regex: "true"
+      regex: ".*true.*"
       action: keep
   - scheme: https
     port: https-metrics
@@ -69,6 +67,5 @@ spec:
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready]
-      separator: ""
-      regex: "true"
+      regex: ".*true.*"
       action: keep

@@ -32,8 +32,7 @@ spec:
       - __meta_kubernetes_pod_label_app
       targetLabel: app
     - sourceLabels: [__meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready]
-      separator: ""
-      regex: "true"
+      regex: ".*true.*"
       action: keep
   {{- end }}
 {{- end }}
