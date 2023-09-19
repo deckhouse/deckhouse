@@ -175,33 +175,27 @@ You cannot set `nodeSelector` and `tolerations` for modules:
 ### Module features that depend on its type
 
 {% raw %}
-* The *monitoring*-related modules (operator-prometheus, prometheus and vertical-pod-autoscaler):
+* The *monitoring*-related modules (`operator-prometheus`, `prometheus` and `vertical-pod-autoscaler`):
   * Deckhouse examines nodes to determine a [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector) in the following order:
-    * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster.
-    * It checks if a node with the <code>node-role.deckhouse.io/monitoring</code> label is present in the cluster.
-    * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster.
+    1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster.
+    1. It checks if a node with the `node-role.deckhouse.io/monitoring` label is present in the cluster.
+    1. It checks if a node with the `node-role.deckhouse.io/system` label is present in the cluster.
   * Tolerations to add (note that tolerations are added all at once):
-    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`
-
-      E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}</code>.
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}</code>.
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>.
-* The *frontend*-related modules (nginx-ingress only):
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` (e.g., `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`).
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}`.
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
+* The *frontend*-related modules (`nginx-ingress` only):
   * Deckhouse examines nodes to determine a nodeSelector in the following order:
-    * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster.
-    * It checks if a node with the <code>node-role.deckhouse.io/frontend</code> label is present in the cluster.
+    1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster.
+    1. It checks if a node with the `node-role.deckhouse.io/frontend` label is present in the cluster.
   * Tolerations to add (note that tolerations are added all at once):
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>.
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}</code>.
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`.
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}`.
 * Other modules:
   * Deckhouse examines nodes to determine a nodeSelector in the following order:
-    * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster;
-
-      E.g., <code>node-role.deckhouse.io/cert-manager</code>);
-    * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster.
+    1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster (e.g., `node-role.deckhouse.io/cert-manager`).
+    1. It checks if a node with the `node-role.deckhouse.io/system` label is present in the cluster.
   * Tolerations to add (note that tolerations are added all at once):
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
-
-      E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}</code>;
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>.
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` (e.g., `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`).
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
 {% endraw %}

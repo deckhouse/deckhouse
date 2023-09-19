@@ -178,31 +178,25 @@ user-authn          Disabled   1                    12h
 {% raw %}
 * Модули *monitoring* (`operator-prometheus`, `prometheus` и `vertical-pod-autoscaler`):
   * Порядок поиска узлов (для определения [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector)):
-    * наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`;
-    * наличие узла с лейблом `node-role.deckhouse.io/monitoring`;
-    * наличие узла с лейблом `node-role.deckhouse.io/system`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/monitoring`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/system`.
   * Добавляемые toleration'ы (добавляются одновременно все):
-    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`.
-
-      Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`;
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` (например, `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`);
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}`;
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
 * Модули *frontend* (исключительно модуль `ingress-nginx`):
   * Порядок поиска узлов (для определения `nodeSelector`):
-    * наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`;
-    * наличие узла с лейблом `node-role.deckhouse.io/frontend`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/frontend`.
   * Добавляемые toleration'ы (добавляются одновременно все):
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}`.
 * Все остальные модули:
   * Порядок поиска узлов (для определения `nodeSelector`):
-    * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
-
-      Например: `node-role.deckhouse.io/cert-manager`;
-    * Наличие узла с лейблом `node-role.deckhouse.io/system`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME` (например, `node-role.deckhouse.io/cert-manager`).
+    1. Наличие узла с лейблом `node-role.deckhouse.io/system`.
   * Добавляемые toleration'ы (добавляются одновременно все):
-    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`.
-
-      Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`;
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` (например, `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`);
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
 {% endraw %}
