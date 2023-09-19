@@ -94,43 +94,23 @@ func main() {
 	lc, err := lclient.NewClient()
 
 	// --------------------------------------------
-
-	// if _, err := controller.NewConsumableBlockDevice(ctx, mgr, log, config.NodeName); err != nil {
-	//	log.Error(err, "failed create controller ConsumableBlockDevice")
-	//	os.Exit(1)
-	// }
-	//
-	// //log.Info("controller ConsumableBlockDevice start")
-
-	// if _, err := controller.NewLVMChangeRequest(ctx, mgr, mgr.GetLogger(), config.NodeName); err != nil {
-	//	log.Error(err, "failed create controller NewLVMChangeRequest", err)
-	//	os.Exit(1)
-	// }
-	// log.Info("controller LVMChangeRequest start")
-
 	if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval); err != nil {
 		log.Error(err, "failed create controller NewLinstorNode", err)
 		os.Exit(1)
 	}
 	log.Info("controller NewLinstorNode start")
 
-	// if _, err := controller.NewLinstorStorageClass(ctx, mgr); err != nil {
-	// 	log.Error(err, "failed create controller NewLinstorStorageClass")
-	// 	os.Exit(1)
-	// }
-	// log.Info("controller NewLinstorStorageClass start")
-	//
-	// if _, err := controller.NewLinstorStoragePool(ctx, mgr, lc); err != nil {
-	// 	log.Error(err, "failed create controller NewLinstorStoragePool", err)
-	// 	os.Exit(1)
-	// }
-	// log.Info("controller NewLinstorStoragePool start")
+	if _, err := controller.NewLinstorStorageClass(ctx, mgr); err != nil {
+		log.Error(err, "failed create controller NewLinstorStorageClass")
+		os.Exit(1)
+	}
+	log.Info("controller NewLinstorStorageClass start")
 
-	// if err = webhook.NewAdmissionStorageClass(mgr); err != nil {
-	//	log.Error(err, "failed create StorageClass webhook")
-	//	os.Exit(1)
-	// }
-	// log.Info("webhook NewAdmissionStorageClass start")
+	if _, err := controller.NewLinstorStoragePool(ctx, mgr, lc); err != nil {
+		log.Error(err, "failed create controller NewLinstorStoragePool", err)
+		os.Exit(1)
+	}
+	log.Info("controller NewLinstorStoragePool start")
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		log.Error(err, "unable to set up health check")
