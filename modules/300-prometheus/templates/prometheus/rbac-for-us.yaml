@@ -18,6 +18,7 @@ rules:
   resources:
   - services
   - endpoints
+  - endpointslices
   - pods
   - nodes
   verbs: ["get", "list", "watch"]
