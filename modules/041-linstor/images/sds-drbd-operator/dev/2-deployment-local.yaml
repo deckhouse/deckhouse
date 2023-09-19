@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: d8-sds-drbd-operator
+  namespace: d8-linstor
+spec:
+  selector:
+    matchLabels:
+      app: d8-sds-drbd-operator
+  template:
+    metadata:
+      labels:
+        app: d8-sds-drbd-operator
+    spec:
+      serviceAccountName: d8-sds-drbd-operator
+      containers:
+        - name: d8-sds-drbd-operator
+          image: "kind-registry:5000/d8-sds-drbd-operator:latest"
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true
+            seLinuxOptions:
+              level: s0
+              type: spc_t
+          env:
+            - name: LS_USER_CERTIFICATE
+              valueFrom:
+                secretKeyRef:
+                  name: linstor-client-https-cert
+                  key: tls.crt
+            - name: LS_USER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: linstor-client-https-cert
+                  key: tls.key
+            - name: LS_ROOT_CA
+              valueFrom:
+                secretKeyRef:
+                  name: linstor-client-https-cert
+                  key: ca.crt
+            - name: LS_CONTROLLERS
+              value: https://linstor.d8-linstor.svc:3371
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: host-device-dir
+              mountPath: /dev/
+            - name: host-sys-dir
+              mountPath: /sys/
+            - name: host-root
+              mountPath: /host-root/
+              mountPropagation: HostToContainer
+      volumes:
+        - name: host-device-dir
+          hostPath:
+            path: /dev
+            type: ""
+        - name: host-sys-dir
+          hostPath:
+            path: /sys/
+            type: Directory
+        - name: host-root
+          hostPath:
+            path: /
