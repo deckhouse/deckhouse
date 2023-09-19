@@ -36,8 +36,7 @@ EOF
 
 function __main__() {
   projectTypeName=$(context::jq -r '.review.request.object.spec.projectTypeName')
-
-  if usedInProjectName="$(context::jq -er --arg projectTypeName "$projectTypeName" '.snapshots.projects[].filterResult | select(.projectTypeName == $projectTypeName) | .projectTypeName' 2>&1)"; then
+  if usedInProjectName="$(context::jq -er --arg typeName "$projectTypeName" '.snapshots.projects[].filterResult | select(.projectTypeName == $typeName) | .projectTypeName' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"projects.deckhouse.io \"$projectTypeName\", projectTypeName cannot be deleted. It is used in the project \"$usedInProjectName\"" }
 EOF
