@@ -3,7 +3,7 @@
 
   {{ $label := "__meta_kubernetes_pod_ready" }}
   {{- if eq $scrapeType "service" }}
-    {{ $label = "__meta_kubernetes_endpoint_ready" }}
+    {{ $label = "__meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready" }}
   {{- end }}
 
 # Check whether pod is ready or the annotation on it allows scarping unready pods
