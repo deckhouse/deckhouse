@@ -15,6 +15,8 @@
 */}}
 #!/bin/bash
 export LANG=C
+mkdir -p /opt/deckhouse/tmp
+export TMPDIR=/opt/deckhouse/tmp
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
 export HTTP_PROXY={{ .proxy.httpProxy | quote }}

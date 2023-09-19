@@ -78,7 +78,7 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 
 	remotePath := "."
 	if u.sudo {
-		remotePath = "/tmp/" + scriptName
+		remotePath = filepath.Join(app.DeckhouseNodeTmpPath, scriptName)
 	}
 	err = NewFile(u.Session).Upload(u.ScriptPath, remotePath)
 	if err != nil {
@@ -88,7 +88,7 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	var cmd *Command
 	var scriptFullPath string
 	if u.sudo {
-		scriptFullPath = u.pathWithEnv("/tmp/" + scriptName)
+		scriptFullPath = u.pathWithEnv(filepath.Join(app.DeckhouseNodeTmpPath, scriptName))
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Sudo()
 	} else {
 		scriptFullPath = u.pathWithEnv("./" + scriptName)
@@ -142,15 +142,15 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 
 	tomb.RegisterOnShutdown("Delete bashible bundle folder", func() { _ = os.Remove(bundleLocalFilepath) })
 
-	// upload to /tmp
-	err = NewFile(u.Session).Upload(bundleLocalFilepath, "/tmp")
+	// upload to node's deckhouse tmp directory
+	err = NewFile(u.Session).Upload(bundleLocalFilepath, app.DeckhouseNodeTmpPath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
 
 	// sudo:
-	// tar xpof /tmp/bundle.tar -C /var/lib && /var/lib/bashible/bashible.sh args...
-	tarCmdline := fmt.Sprintf("tar xpof /tmp/%s -C /var/lib && /var/lib/%s/%s %s", bundleName, bundleDir, u.ScriptPath, strings.Join(u.Args, " "))
+	// tar xpof ${app.DeckhouseNodeTmpPath}/bundle.tar -C /var/lib && /var/lib/bashible/bashible.sh args...
+	tarCmdline := fmt.Sprintf("tar xpof %s/%s -C /var/lib && /var/lib/%s/%s %s", app.DeckhouseNodeTmpPath, bundleName, bundleDir, u.ScriptPath, strings.Join(u.Args, " "))
 	bundleCmd := NewCommand(u.Session, tarCmdline).Sudo()
 
 	// Buffers to implement output handler logic

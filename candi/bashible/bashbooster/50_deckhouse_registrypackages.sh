@@ -84,6 +84,8 @@ bb-rp-install() {
       continue
     fi
 
+    trap "rm -rf ${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}" ERR
+
     local DIGESTS=""
     DIGESTS="$(bb-rp-get-digests "${DIGEST}")"
 
@@ -122,6 +124,7 @@ bb-rp-install() {
     rm -rf "${TMPDIR}"
 
     bb-event-fire "bb-package-installed" "${PACKAGE}"
+    trap - ERR
   done
 }
 
