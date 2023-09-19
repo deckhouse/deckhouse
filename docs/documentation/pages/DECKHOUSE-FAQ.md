@@ -336,7 +336,7 @@ Configuration:
 * Fill in the fields on the Create page  as follows:
   * `Name` must contain the name of the repository you created earlier, e.g., `d8-proxy`.
   * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` must contain a dedicated port for the created repository, e.g., `8123` or other.
-  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to [work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms). Note, however, that anonymous access [won't work](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories) unless it is explicitly enabled in Settings -> Security -> Anonymous Access and the `anonymous` user has been granted access rights to the created repository.
+  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to [work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms). Note, however, that anonymous access [won't work](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories) unless it is explicitly enabled in *Settings* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
   * `Remote storage` must be set to `https://registry.deckhouse.io/`.
   * You can disable `Auto blocking enabled` and `Not found cache enabled` for debugging purposes, otherwise they must be enabled.
   * `Maximum Metadata Age` must be set to 0.
@@ -564,7 +564,7 @@ After saving the changes, Deckhouse will bring the cluster configuration to the 
 
 Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'local' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
 
-Regardless of the cloud provider used, its settings can be changed using the command:
+Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
 kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
@@ -654,7 +654,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
-   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE editions. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
+   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
 
    ```shell
    grep -ri 'deckhouse.io/deckhouse/ee' /etc/kubernetes | grep -v backup
@@ -733,7 +733,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
-   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE editions. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
+   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
 
    ```shell
    grep -ri 'deckhouse.io/deckhouse/ce' /etc/kubernetes | grep -v backup

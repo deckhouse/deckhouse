@@ -179,12 +179,12 @@ properties:
         description: |
           Опциональный селектор для компонентa istiod. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
-          Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
       tolerations:
         description: |
           Опциональные tolerations для компонента istiod. Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
-          Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
       resourcesManagement:
         description: |
           Настройки управления ресурсами istiod.
@@ -241,12 +241,12 @@ properties:
     description: |
       Опциональный селектор для компонентов istio-operator, metadata-exporter и kiali. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Опциональные tolerations для компонентов istio-operator, metadata-exporter и kiali. Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   https:
     description: |
       Тип сертификата используемого для публичных веб-интерфейсов модуля.
