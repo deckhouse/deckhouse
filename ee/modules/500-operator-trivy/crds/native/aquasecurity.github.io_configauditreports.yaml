@@ -1,4 +1,4 @@
-# from https://github.com/aquasecurity/trivy-operator/tree/main/deploy/crd
+# from https://github.com/aquasecurity/trivy-operator/tree/v0.15.1/deploy/helm/crds
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -6,20 +6,21 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: clusterinfraassessmentreports.aquasecurity.github.io
+  name: configauditreports.aquasecurity.github.io
 spec:
   group: aquasecurity.github.io
   names:
-    kind: ClusterInfraAssessmentReport
-    listKind: ClusterInfraAssessmentReportList
-    plural: clusterinfraassessmentreports
+    kind: ConfigAuditReport
+    listKind: ConfigAuditReportList
+    plural: configauditreports
     shortNames:
-    - clusterinfraassessment
-    singular: clusterinfraassessmentreport
-  scope: Cluster
+    - configaudit
+    - configaudits
+    singular: configauditreport
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: The name of the infra assessement scanner
+    - description: The name of the config audit scanner
       jsonPath: .report.scanner.name
       name: Scanner
       type: string
@@ -50,7 +51,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterInfraAssessmentReport is a specification for the ClusterInfraAssessmentReport
+        description: ConfigAuditReport is a specification for the ConfigAuditReport
           resource.
         properties:
           apiVersion:
@@ -137,7 +138,7 @@ spec:
                 - version
                 type: object
               summary:
-                description: InfraAssessmentSummary counts failed checks by severity.
+                description: ConfigAuditSummary counts failed checks by severity.
                 properties:
                   criticalCount:
                     description: CriticalCount is the number of failed checks with
@@ -160,10 +161,11 @@ spec:
                 - lowCount
                 - mediumCount
                 type: object
+              updateTimestamp:
+                format: date-time
+                type: string
             required:
             - checks
-            - scanner
-            - summary
             type: object
         required:
         - report

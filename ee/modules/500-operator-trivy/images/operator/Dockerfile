@@ -12,7 +12,7 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src
 RUN apk add --update --no-cache patch git
-RUN git clone --depth 1 --branch v0.14.0 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
+RUN git clone --depth 1 --branch v0.15.1 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
 
 # some patches are applied to dependencies
 RUN go mod vendor

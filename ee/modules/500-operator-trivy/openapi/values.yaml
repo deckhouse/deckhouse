@@ -13,3 +13,8 @@ properties:
           type: string
         x-examples:
           - ["test1", "test2"]
+      effectiveStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
