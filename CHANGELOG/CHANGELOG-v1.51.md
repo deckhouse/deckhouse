@@ -84,4 +84,5 @@
     All Ingress nginx controllers' pods will be recreated consecutively. Ingress nginx pods will stop to reply on :8080/healthz in favour of :80/healthz. Some LB's health checks might need readjusting.
  - **[prometheus]** Move grafana to distroless. [#5834](https://github.com/deckhouse/deckhouse/pull/5834)
  - **[runtime-audit-engine]** Move rules-reloader build to werf. [#5694](https://github.com/deckhouse/deckhouse/pull/5694)
+ - **[user-authz]** Remove the alert about deprecated ClusterAuthroizationRule spec. [#5885](https://github.com/deckhouse/deckhouse/pull/5885)
 
