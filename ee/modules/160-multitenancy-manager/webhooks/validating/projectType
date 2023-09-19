@@ -39,6 +39,7 @@ function __main__() {
   test=$(context::jq -r '.snapshots.projects[]')
   cat <<EOF > "$VALIDATION_RESPONSE_PATH"
 {"allowed":false, "message": $test}
+EOF
 
   if usedInProjectName="$(context::jq -er --arg projectTypeName "$projectTypeName" '.snapshots.projects[].filterResult | select(.projectTypeName == $projectTypeName) | .name' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
