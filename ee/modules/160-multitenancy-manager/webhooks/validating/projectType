@@ -35,14 +35,11 @@ EOF
 }
 
 function __main__() {
-  projectTypeName=$(context::jq -r '.review.request.object.spec.projectTypeName')
-  test='.snapshots'
-   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":$test }
-EOF
-  if usedInProjectName="$(context::jq -er --arg typeName "$projectTypeName" '.snapshots.projects[].filterResult | select(.projectTypeName == $typeName) | .projectTypeName' 2>&1)"; then
+projectTypeName=$(context::jq -r '.review.request.oldObject.metadata.name')
+
+  if usedInProjectName="$(context::jq -er --arg typeName "$projectTypeName" '[.snapshots.projects[].filterResult | select(.projectTypeName == $typeName) | .projectName] | first' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"projects.deckhouse.io \"$projectTypeName\", projectTypeName cannot be deleted. It is used in the project \"$usedInProjectName\"" }
+{"allowed":false, "message":"ProjectType \"$projectTypeName\" cannot be deleted. It is used in the Project \"$usedInProjectName\"" }
 EOF
     return 0
   fi
