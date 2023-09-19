@@ -38,7 +38,7 @@ function __main__() {
   projectTypeName=$(context::jq -r '.review.request.object.spec.projectTypeName')
   test='.snapshots'
    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":true, "message":$test }
+{"allowed":false, "message":$test }
 EOF
   if usedInProjectName="$(context::jq -er --arg typeName "$projectTypeName" '.snapshots.projects[].filterResult | select(.projectTypeName == $typeName) | .projectTypeName' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
