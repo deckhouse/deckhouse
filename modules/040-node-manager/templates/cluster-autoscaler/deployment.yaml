@@ -140,14 +140,16 @@ spec:
         - "--livez-path=/livez"
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:
             - /health-check
             upstreams:
-            - upstream: http://127.0.0.1:8085/metrics
-              path: /metrics
+            - upstream: http://127.0.0.1:8085/
+              path: /
               authorization:
                 resourceAttributes:
                   namespace: d8-cloud-instance-manager
