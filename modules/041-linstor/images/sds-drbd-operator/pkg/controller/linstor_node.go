@@ -154,7 +154,6 @@ func reconcileLinstorNodes(ctx context.Context, lc *lclient.Client, selectedK8sN
 	}
 
 	// Create new Linstor node if it doesn't exist
-	// linstorNodes := []string{}
 
 	for _, selectedK8sNode := range selectedK8sNodes.Items {
 		findMatch := false
@@ -166,7 +165,7 @@ func reconcileLinstorNodes(ctx context.Context, lc *lclient.Client, selectedK8sN
 		}
 
 		if findMatch {
-			break
+			continue
 		}
 
 		fmt.Printf("Create LINSTOR node: %s\n", selectedK8sNode.Name)
@@ -206,7 +205,7 @@ func reconcileLinstorNodes(ctx context.Context, lc *lclient.Client, selectedK8sN
 			}
 		}
 		if findMatch {
-			break
+			continue
 		}
 
 		// drain and delete node
@@ -241,15 +240,3 @@ func getLabelsFromConfig(secret v1.Secret) (map[string]string, error) {
 	labels := secretConfig.NodeSelector
 	return labels, err
 }
-
-// func GetKubernetesSecretByName(ctx context.Context, cl client.Client, namespace string, name string) (*v1.Secret, error) {
-// 	obj := &v1.Secret{}
-// 	err := cl.Get(ctx, client.ObjectKey{
-// 		Name:      name,
-// 		Namespace: namespace,
-// 	}, obj)
-// 	if err != nil {
-// 		return obj, err
-// 	}
-// 	return obj, err
-// }
