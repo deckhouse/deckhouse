@@ -92,6 +92,8 @@ type Params struct {
 type ClusterBootstrapper struct {
 	*Params
 	*phases.PhasedExecutionContext
+	*phases.OperationWithState
+
 	reinitializeSSHPrivateKeys bool
 }
 
@@ -99,6 +101,7 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 	return &ClusterBootstrapper{
 		Params:                 params,
 		PhasedExecutionContext: phases.NewPhasedExecutionContext(params.OnPhaseFunc),
+		OperationWithState:     phases.NewOperationWithState(nil),
 	}
 }
 
@@ -197,6 +200,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	stateCache := cache.Global()
+	b.OperationWithState.Init(stateCache)
 
 	if app.DropCache {
 		stateCache.Clean()

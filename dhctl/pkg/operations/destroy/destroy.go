@@ -41,6 +41,7 @@ type ClusterDestroyer struct {
 	skipResources bool
 
 	*phases.PhasedExecutionContext
+	*phases.OperationWithState
 }
 
 func NewClusterDestroyer(params *Params) *ClusterDestroyer {
@@ -61,6 +62,7 @@ func NewClusterDestroyer(params *Params) *ClusterDestroyer {
 		skipResources: params.SkipResources,
 
 		PhasedExecutionContext: pec,
+		OperationWithState:     phases.NewOperationWithState(params.StateCache),
 	}
 }
 

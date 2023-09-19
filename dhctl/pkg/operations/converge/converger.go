@@ -41,12 +41,14 @@ type Params struct {
 type Converger struct {
 	*Params
 	*phases.PhasedExecutionContext
+	*phases.OperationWithState
 }
 
 func NewConverger(params *Params) *Converger {
 	return &Converger{
 		Params:                 params,
 		PhasedExecutionContext: phases.NewPhasedExecutionContext(params.OnPhaseFunc),
+		OperationWithState:     phases.NewOperationWithState(nil),
 	}
 }
 
@@ -100,6 +102,7 @@ func (c *Converger) Converge() error {
 	if err != nil {
 		return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
 	}
+	c.OperationWithState.Init(cache.Global())
 	inLockRunner := converge.NewInLockLocalRunner(kubeCl, "local-converger")
 
 	runner := converge.NewRunnerWithOptions(kubeCl, inLockRunner, converge.RunnerOptions{OnPhaseFunc: c.OnPhaseFunc})

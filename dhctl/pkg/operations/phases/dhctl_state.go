@@ -14,3 +14,21 @@ func ExtractDhctlState(stateCache state.Cache) (res DhctlState, err error) {
 	})
 	return
 }
+
+type OperationWithState struct {
+	stateCache state.Cache
+}
+
+func NewOperationWithState(stateCache state.Cache) *OperationWithState {
+	return &OperationWithState{
+		stateCache: stateCache,
+	}
+}
+
+func (op *OperationWithState) Init(stateCache state.Cache) {
+	op.stateCache = stateCache
+}
+
+func (op *OperationWithState) GetCacheState() (DhctlState, error) {
+	return ExtractDhctlState(op.stateCache)
+}
