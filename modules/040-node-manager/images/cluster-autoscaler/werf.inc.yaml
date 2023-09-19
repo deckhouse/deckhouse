@@ -1,5 +1,4 @@
-{{- $curlVersion := "8.2.1" }}
-  {{- range $key, $value := .CandiVersionMap.k8s }}
+{{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.clusterAutoscalerPatch }}
 ---
