@@ -1,13 +1,13 @@
 {{- define "base_relabeling" }}
   {{- $scrapeType := . }}
 
-  {{ $label := "__meta_kubernetes_pod_ready" }}
+  {{ $readyLabels := list "__meta_kubernetes_pod_ready" }}
   {{- if eq $scrapeType "service" }}
-    {{ $label = "__meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready" }}
+    {{ $readyLabels = list "__meta_kubernetes_endpoint_ready" "__meta_kubernetes_endpointslice_endpoint_conditions_ready" }}
   {{- end }}
 
 # Check whether pod is ready or the annotation on it allows scarping unready pods
-- sourceLabels: [{{ $label }}, __meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_allows_unready_pods]
+- sourceLabels: [{{ join "," $readyLabels }}, __meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_allows_unready_pods]
   regex: ^(.*)true(.*)$
   action: keep
 
@@ -82,13 +82,13 @@ tlsConfig:
   {{- $scrapeType := index . 0 }}
   {{- $schema := index . 1 }}
 
-  {{ $label := "__meta_kubernetes_pod_container_port_name" }}
+  {{ $portNameLabels := list "__meta_kubernetes_pod_container_port_name" }}
   {{- if eq $scrapeType "service" }}
-    {{ $label = "__meta_kubernetes_endpoint_port_name, __meta_kubernetes_endpointslice_port_name" }}
+    {{ $portNameLabels = list "__meta_kubernetes_endpoint_port_name" "__meta_kubernetes_endpointslice_port_name" }}
   {{- end }}
 
   {{ if eq $schema "http" }}
-- sourceLabels: [{{ $label }}]
+- sourceLabels: [{{ join "," $portNameLabels }}]
   regex: ".*https-metrics.*"
   action: drop
 
@@ -96,12 +96,14 @@ tlsConfig:
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_istio_mtls
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
-  - {{ $label }}
+  {{- range $portNameLabels }}
+  - {{ . }}
+  {{- end }}
   regex: "^true;;;(.*)|;;;.*http-metrics.*$"
   action: keep
 
   {{ else if eq $schema "istio-mtls" }}
-- sourceLabels: [{{ $label }}]
+- sourceLabels: [{{ join "," $portNameLabels }}]
   regex: "https-metrics"
   action: drop
 
@@ -109,12 +111,14 @@ tlsConfig:
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_istio_mtls
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
-  - {{ $label }}
+  {{- range $portNameLabels }}
+  - {{ . }}
+  {{- end }}
   regex: "^true;true;;(.*)|;true;;.*http-metrics.*$"
   action: keep
 
   {{ else }}
-- sourceLabels: [{{ $label }}]
+- sourceLabels: [{{ join "," $portNameLabels }}]
   regex: ".*http-metrics.*"
   action: drop
 
@@ -122,7 +126,9 @@ tlsConfig:
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_istio_mtls
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
-  - {{ $label }}
+  {{- range $portNameLabels }}
+  - {{ . }}
+  {{- end }}
   regex: "^true;;true;(.*)|;;;.*https-metrics.*$"
   action: keep
   {{ end }}
