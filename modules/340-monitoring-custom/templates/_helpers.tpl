@@ -99,12 +99,12 @@ tlsConfig:
   {{- range $portNameLabels }}
   - {{ . }}
   {{- end }}
-  regex: "^true;;;(.*)|;;;.*http-metrics.*$"
+  regex: "^true;;;(.*)|;;;;?http-metrics;?$"
   action: keep
 
   {{ else if eq $schema "istio-mtls" }}
 - sourceLabels: [{{ join "," $portNameLabels }}]
-  regex: "https-metrics"
+  regex: ".*https-metrics.*"
   action: drop
 
 - sourceLabels:
@@ -114,7 +114,7 @@ tlsConfig:
   {{- range $portNameLabels }}
   - {{ . }}
   {{- end }}
-  regex: "^true;true;;(.*)|;true;;.*http-metrics.*$"
+  regex: "^true;true;;(.*)|;true;;;?http-metrics;?$"
   action: keep
 
   {{ else }}
@@ -129,7 +129,7 @@ tlsConfig:
   {{- range $portNameLabels }}
   - {{ . }}
   {{- end }}
-  regex: "^true;;true;(.*)|;;;.*https-metrics.*$"
+  regex: "^true;;true;(.*)|;;;;?https-metrics;?$"
   action: keep
   {{ end }}
 
