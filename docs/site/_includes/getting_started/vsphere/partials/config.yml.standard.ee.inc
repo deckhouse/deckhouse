@@ -96,7 +96,7 @@ sshPublicKey: *!CHANGE_SSH_KEY*
 # [<en>] Name of the External Network which has access to the Internet.
 # [<en>] IP addresses from the External Network sets as ExternalIP of Node object.
 # [<en>] Optional parameter.
-# [<ru>] Имя External Network, у которой есть доступ в Интернет.
+# [<ru>] Имя External Network, у которой есть доступ в интернет.
 # [<ru>] IP-адреса из External Network проставляются как ExternalIP объекта Node.
 # [<ru>] Опциональный параметр.
 externalNetworkNames:

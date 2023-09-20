@@ -127,16 +127,16 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   pmacctEnabled:
     description: |
       Включить логирование пользовательской активности через VPN в JSON-формате.
-      
+
       Все соединения внутри `tun` интерфейсов будут собраны через `libpcap` и записаны в лог
       в виде `{"event_type": "purge", "ip_src": "172.25.175.10", "ip_dst": "10.222.0.10", "port_src": 32172, "port_dst": 53, "ip_proto": "udp", "packets": 1, "bytes": 53}`.
     type: boolean

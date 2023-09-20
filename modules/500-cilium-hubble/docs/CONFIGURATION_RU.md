@@ -19,7 +19,7 @@ title: "Модуль cilium-hubble: настройки"
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
 ```
 
-Чтобы сгенерировать новый пароль, нужно удалить секрет:
+Чтобы сгенерировать новый пароль, нужно удалить Secret:
 
 ```shell
 kubectl -n d8-cni-cilium delete secret/hubble-basic-auth

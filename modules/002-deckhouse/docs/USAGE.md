@@ -54,7 +54,7 @@ spec:
           to: "22:00"
 ```
 
-You can also set up updates on certain days, for example, on Tuesdays and Saturdays from 18:00 to 19:30 (UTC):
+You can also set up updates on certain days, for example, on Tuesdays and Saturdays from 6 p.m. to 7:30 p.m. (UTC):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

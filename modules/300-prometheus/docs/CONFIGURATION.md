@@ -20,7 +20,7 @@ Use kubectl to see password:
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values prometheus -o json | jq '.prometheus.internal.auth.password'
 ```
 
-Delete secret to re-generate password:
+Delete the Secret to re-generate password:
 
 ```shell
 kubectl -n d8-monitoring delete secret/basic-auth

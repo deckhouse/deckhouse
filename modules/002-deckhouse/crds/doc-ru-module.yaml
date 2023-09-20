@@ -16,4 +16,4 @@ spec:
                 state:
                   description: 'Состояние модуля (включен или выключен).'
                 source:
-                  description: 'Имя ModuleSource если модуль скачан из него (иначе пусто)'
+                  description: 'Имя ModuleSource, если модуль скачан из него (иначе пусто).'

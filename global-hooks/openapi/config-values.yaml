@@ -227,7 +227,7 @@ properties:
           noProxy:
             deprecated: true
             description: |
-              List of no proxy IP and domain entries. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
+              List of no proxy IP and domain entries. Use a domain name with a dot prefix for wildcard domains (e.g., `.example.com`).
             type: array
             items:
               type: string
