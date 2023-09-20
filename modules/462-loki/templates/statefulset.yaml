@@ -41,7 +41,7 @@ spec:
         - sh
         - -c
         - chown -vfR 64535:64535 /loki/
-        image: {{ include "helm_lib_module_image" (list . "loki") }}
+        image: {{ include "helm_lib_module_image" (list . "alpine") }}
         imagePullPolicy: IfNotPresent
         name: fix-permissions
         securityContext:
