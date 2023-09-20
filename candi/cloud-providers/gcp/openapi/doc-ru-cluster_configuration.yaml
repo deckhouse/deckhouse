@@ -4,7 +4,7 @@ apiVersions:
     description: |
       Описывает конфигурацию облачного кластера в GCP.
 
-      Используется cloud-провайдером если control plane кластера размещен в облаке.
+      Используется cloud-провайдером, если control plane кластера размещен в облаке.
 
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
@@ -20,14 +20,14 @@ apiVersions:
         description: Публичный ключ для доступа на узлы под пользователем `user`.
       sshAllowList:
         description: |
-          Список CIDR, разрешенных для подключения к узлам по ssh.
+          Список CIDR, разрешенных для подключения к узлам по SSH.
 
-          По умолчанию, с любого адреса.
+          По умолчанию — с любого адреса.
       labels:
         description: |
           Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
 
-          Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
+          Если поменять теги в рабочем кластере, после конвержа необходимо пересоздать все машины, чтобы теги применились.
 
           Подробнее про лейблы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
 
@@ -36,7 +36,7 @@ apiVersions:
         description: |
           Список GCP VPC networks, с которыми будет объединена сеть кластера.
 
-          Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
+          Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
@@ -44,7 +44,7 @@ apiVersions:
           > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
         properties:
           replicas:
-            description: Сколько master-узлов создавать. Важно иметь нечётное количество мастеров для обеспечения кворума.
+            description: Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
           additionalNetworkTags:
             description: |
               Список дополнительных тегов.
@@ -54,7 +54,7 @@ apiVersions:
             description: |
               Список дополнительных label'ов.
 
-              Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+              Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
           instanceClass:
             description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
             properties: &instanceClassProperties_ru
@@ -71,20 +71,20 @@ apiVersions:
 
                   Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
 
-                  > **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
+                  > **Внимание!** Сейчас поддерживаются и тестируются только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
               diskSizeGb:
                 description: Размер root-диска. Значение указывается в `ГиБ`.
               etcdDiskSizeGb:
                 description: Размер диска для etcd. Значение указывается в `ГиБ`.
               disableExternalIP:
                 description: |
-                  Запретить ли назначение внешнего IP для инстанса.
+                  Устанавливает, запретить назначение внешнего IP для инстанса или нет.
 
                   Параметр доступен только для layout `Standard`.
 
                   `true` — узлы не имеют публичных адресов, доступ в интернет осуществляется через `CloudNAT`.
 
-                  `false` — для узлов создаются статические публичные адреса, они же используются для One-to-one NAT.
+                  `false` — для узлов создаются статические публичные адреса, они же используются для One-to-One NAT.
           zones:
             description: Список зон, в которых допустимо создавать статичные-узлы.
       nodeGroups:
@@ -113,7 +113,7 @@ apiVersions:
               description: |
                 Список дополнительных label'ов.
 
-                Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
             instanceClass:
               description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
               properties:
@@ -126,7 +126,7 @@ apiVersions:
 
           `Standard` — включает режим [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits). [Подробнее...](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#standard).
 
-          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP адреса. [Подробнее...](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat).
+          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP-адреса. [Подробнее...](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat).
       standard:
         description: Настройки для схемы размещения `Standard`.
         properties:
@@ -138,10 +138,10 @@ apiVersions:
         description: Параметры подключения к API GCP.
         properties:
           region:
-            description: Имя региона в котором будут заказываться инстансы.
+            description: Имя региона, в котором будут заказываться инстансы.
           serviceAccountJSON:
             description: |
-              Ключ к Service Account'у с правами Project Admin (`service account key`), в JSON-формате.
+              Ключ к Service Account'у с правами Project Admin (`service account key`) в JSON-формате.
 
               [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) `service account key`.
       zones:
