@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — Azure: подготовка окружения"
+description: "Настройка Azure для работы облачного провайдера Deckhouse."
 ---
 
 > **Внимание!** Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region), в которых доступны `Availability Zones`.

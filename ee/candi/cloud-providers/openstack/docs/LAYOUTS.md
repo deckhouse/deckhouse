@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider - OpenStack: Layouts"
+description: "Schemes of placement and interaction of resources in OpenStack when working with the Deckhouse cloud provider."
 ---
 
 Four layouts are supported. Below is more information about each of them.

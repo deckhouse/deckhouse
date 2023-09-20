@@ -70,7 +70,7 @@ apiVersions:
         items:
           type: string
         description: |
-          A list of CIDR's allowed to connect to nodes via ssh.
+          A list of CIDR's allowed to connect to nodes via SSH.
 
           By default, `*`.
       vNetCIDR:
@@ -121,7 +121,9 @@ apiVersions:
         properties:
           replicas:
             description: |
-              The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+              The number of master nodes to create.
+
+              It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
           zones:
@@ -168,9 +170,9 @@ apiVersions:
                   az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
                   ```
 
-                  **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
+                  By default, the image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                  > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
+                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
                 type: string
               enableExternalIP: &instanceClassEnableExternalIP
                 description: |

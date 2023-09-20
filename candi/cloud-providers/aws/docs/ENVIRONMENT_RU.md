@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — AWS: подготовка окружения"
+description: "Настройка AWS для работы облачного провайдера Deckhouse."
 ---
 
 Для работы `cloud-provider` и `machine-controller-manager` требуется доступ в API AWS из-под IAM-пользователя, который обладает достаточным набором прав.

@@ -1,12 +1,13 @@
 ---
 title: "Cloud provider — Azure: схемы размещения"
+description: "Описание схем размещения и взаимодействия ресурсов в Azure при работе облачного провайдера Deckhouse."
 ---
 
 > **Внимание!** Поддерживаются только те [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region), в которых доступны `Availability Zones`.
 
 ## Standard
 
-* Для кластера создается отдельная [resorce group](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal).
+* Для кластера создается отдельная [ресурсная группа](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal) (resource group).
 * По умолчанию каждому инстансу динамически выделяется один внешний IP-адрес, который используется только для доступа в интернет. На каждый IP-адрес для SNAT доступно 64000 портов.
 * Поддерживается [NAT Gateway](https://docs.microsoft.com/en-us/azure/virtual-network/nat-overview) ([тарификация](https://azure.microsoft.com/en-us/pricing/details/virtual-network/)). Она позволяет использовать статические публичные IP-адреса для SNAT.
 * Публичные IP-адреса можно назначить как на master-узлы, так и на узлы, созданные Terraform.

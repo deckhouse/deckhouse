@@ -59,7 +59,7 @@ apiVersions:
 
                   Получить список всех доступных образов можно командой: `openstack image list`.
 
-                  > **Внимание!** Сейчас поддерживаются и тестируются только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
               rootDiskSize:
                 description: |
                   Размер root-диска. Значение указывается в гигабайтах.
@@ -156,7 +156,8 @@ apiVersions:
                 mainNetwork:
                   description: |
                     Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
-                    Получить список доступных сетей: `openstack network list`.
+
+                    Получить список доступных сетей можно следующей командой: `openstack network list`.
                 additionalNetworks:
                   description: |
                     Список сетей, которые будут подключены к инстансу.

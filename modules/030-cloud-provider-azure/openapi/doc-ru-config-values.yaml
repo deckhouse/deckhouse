@@ -21,10 +21,14 @@ properties:
                 Имя будущего класса.
             type:
               description: |
-                Тип Azure диска. В [документации Azure](https://docs.microsoft.com/ru-ru/azure/storage/common/storage-account-overview#types-of-storage-accounts) больше информации.
+                Тип Azure диска.
+
+                Дополнительную информацию можно найти в [документации Azure](https://docs.microsoft.com/ru-ru/azure/storage/common/storage-account-overview#types-of-storage-accounts).
             cachingMode:
               description: |
-                Желаемый режим кэширования. Если размер диска превышает 4 TiB, необходимо использовать `cachineMode: None`. Обратитесь к [документации Azure](https://docs.microsoft.com/ru-ru/azure/virtual-machines/premium-storage-performance#disk-caching) за дополнительной информацией.
+                Желаемый режим кэширования. Если размер диска превышает 4 TiB, необходимо использовать `cachineMode: None`.
+
+                Дополнительную информацию можно найти в [документации Azure](https://docs.microsoft.com/ru-ru/azure/virtual-machines/premium-storage-performance#disk-caching).
             diskIOPSReadWrite:
               description: |
                 Количество IOPS (лимит 300 IOPS/GiB, максимум 160 K IOPS на диск).

@@ -42,9 +42,9 @@ spec:
                       - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`;
                       - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`.
 
-                    **По умолчанию** образ из `AzureCloudDiscoveryData` (образ, из которого был создан мастер при развертывании кластера).
+                    По умолчанию используется образ из `AzureCloudDiscoveryData` (образ, из которого был создан мастер-узел при развертывании кластера).
 
-                    > **Внимание!** Сейчас поддерживаются и тестируются только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
+                    Список поддерживаемых ОС и их версий можно найти в [документации](https://deckhouse.ru/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
                 diskSizeGb:
                   description: |
                     Размер root-диска. Значение указывается в `ГиБ`.

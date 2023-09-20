@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider - VMware vSphere: подготовка окружения"
+description: "Настройка VMware vSphere для работы облачного провайдера Deckhouse."
 ---
 
 <!-- АВТОР! Не забудь актуализировать getting started если это необходимо -->
