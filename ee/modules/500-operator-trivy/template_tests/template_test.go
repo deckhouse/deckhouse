@@ -49,7 +49,7 @@ nodeSelector:
 `
 
 	reportUpdaterValues = `
-enableReportUpdater: true
+linkCVEtoBDU: true
  `
 )
 
@@ -178,7 +178,7 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 		})
 	})
 
-	Context("Operator trivy with enableReportUpdater", func() {
+	Context("Operator trivy with linkCVEtoBDU", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("operatorTrivy", reportUpdaterValues)
 			f.ValuesSet("operatorTrivy.internal.reportUpdater.webhookCertificate.ca", "test")

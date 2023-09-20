@@ -8,7 +8,7 @@ positive:
             key: test
 
   configValues:
-    - enableReportUpdater: true
+    - linkCVEtoBDU: true
 negative:
   configValues:
     - { somethingInConfig: yes }

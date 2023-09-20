@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	initValuesString       = `{"operatorTrivy":{"enableReportUpdater": false, "internal":{"reportUpdater":{}}}}`
+	initValuesString       = `{"operatorTrivy":{"linkCVEtoBDU": false, "internal":{"reportUpdater":{}}}}`
 	initConfigValuesString = `{}`
 )
 
@@ -102,12 +102,12 @@ var _ = Describe("Operator trivy hooks :: gen webhook certs ::", func() {
 		})
 	})
 
-	Context("Empty cluster with enableReportUpdater, onBeforeHelm", func() {
+	Context("Empty cluster with linkCVEtoBDU, onBeforeHelm", func() {
 		BeforeEach(func() {
 			// TODO we need to unset cluster state between contexts.
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSet("operatorTrivy.enableReportUpdater", true)
+			f.ValuesSet("operatorTrivy.linkCVEtoBDU", true)
 			f.RunHook()
 		})
 

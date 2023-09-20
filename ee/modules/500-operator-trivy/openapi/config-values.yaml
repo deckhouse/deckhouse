@@ -1,10 +1,10 @@
 type: object
 properties:
-  enableReportUpdater:
+  linkCVEtoBDU:
     type: boolean
     default: false
     description: |
-      Enable the functionality of converting vulnerability reports.
+      Convert vulnerability reports. Convert CVE database vulnerabilities to BDU database records.
 
     x-doc-default: false
     x-examples: [true, false]

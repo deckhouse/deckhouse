@@ -1,4 +1,4 @@
-{{- if .Values.operatorTrivy.enableReportUpdater }}
+{{- if .Values.operatorTrivy.linkCVEtoBDU }}
 ---
 apiVersion: v1
 kind: Service

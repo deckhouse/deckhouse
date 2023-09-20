@@ -20,7 +20,7 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 	BeforeHookCheck: func(input *go_hook.HookInput) bool {
 		var (
 			secretExists         = len(input.Snapshots[tls_certificate.SnapshotKey]) > 0
-			reportUpdaterEnabled = input.Values.Get("operatorTrivy.enableReportUpdater").Bool()
+			reportUpdaterEnabled = input.Values.Get("operatorTrivy.linkCVEtoBDU").Bool()
 		)
 
 		return secretExists || reportUpdaterEnabled

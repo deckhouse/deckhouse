@@ -1,4 +1,4 @@
-{{- if .Values.operatorTrivy.enableReportUpdater }}
+{{- if .Values.operatorTrivy.linkCVEtoBDU }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
