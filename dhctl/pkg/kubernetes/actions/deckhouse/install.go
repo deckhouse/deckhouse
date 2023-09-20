@@ -179,9 +179,8 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				// deckhouse create manifests: create resource: admission webhook "validate-cm.deckhouse-config-webhook.deckhouse.io" denied the request:
 				// changing ConfigMap/deckhouse is not allowed for kubernetes-admin. Use ModuleConfig resources to configure Deckhouse.
 				// after restart bootstrap
-				cm := manifest.(*apiv1.ConfigMap)
 				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
-					Get(context.TODO(), cm.GetName(), metav1.GetOptions{})
+					Get(context.TODO(), "deckhouse-generated-config-do-not-edit", metav1.GetOptions{})
 				if k8serror.IsNotFound(err) {
 					_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
 						Create(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
