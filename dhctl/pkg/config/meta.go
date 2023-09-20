@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -85,6 +86,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
 		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
 
+		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg); err != nil {
+			return nil, err
+		}
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 		m.Registry.CA = m.DeckhouseConfig.RegistryCA
@@ -137,6 +141,46 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	}
 
 	return m, nil
+}
+
+func validateRegistryDockerCfg(cfg string) error {
+	// cause CE version might have empty registryDockerCfg field
+	if cfg == "" {
+		return nil
+	}
+
+	regcrd, err := base64.StdEncoding.DecodeString(cfg)
+	if err != nil {
+		return fmt.Errorf("unable to decode registryDockerCfg: %w", err)
+	}
+
+	var creds struct {
+		Auths map[string]interface{} `json:"auths"`
+	}
+
+	if err = json.Unmarshal(regcrd, &creds); err != nil {
+		return fmt.Errorf("unable to unmarshal docker credentials: %w", err)
+	}
+
+	// The regexp match string with this pattern:
+	// ^([a-z]|\d)+ - string starts with a [a-z] letter or a number
+	// (\.?|\-?) - next symbol might be '.' or '-' and repeated zero or one times
+	// (([a-z]|\d)+(\.|\-|))* - middle part of string might have [a-z] letters, numbers, '.' or ':',
+	// and moreover '.' or ':' symbols can't be doubled or goes next to each other
+	// ([a-z]|\d+|([a-z]|\d)\:\d+)$ - string might be ended by [a-z] letter or number (if we have single host) or
+	// [a-z] letter or number with ':' symbol, and moreover there might be only numbers after ':' symbol
+	regx, err := regexp.Compile(`^([a-z]|\d)+(\.?|\-?)(([a-z]|\d)+(\.|\-|))*([a-z]|\d+|([a-z]|\d)\:\d+)$`)
+	if err != nil {
+		return fmt.Errorf("unable to compile regexp by pattern: %w", err)
+	}
+
+	for k := range creds.Auths {
+		if !regx.MatchString(k) {
+			return fmt.Errorf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", k)
+		}
+	}
+
+	return nil
 }
 
 // MergeDeckhouseConfig returns deckhouse config merged from different sources
