@@ -29,6 +29,10 @@ gitWorktree:
 ---
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
+
+# rust proxy settings
+{{- $_ := set . "CRATESPROXY" (env "CRATESPROXY") }}
+
 ---
 {{- define "base components" }}
   - name: "Install jo"
@@ -660,6 +664,7 @@ args:
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
   SOURCE_REPO: {{ .SOURCE_REPO }}
   GOPROXY: {{ .GOPROXY }}
+  CRATESPROXY: {{ .CRATESPROXY }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
 dependencies:
 - image: common/distroless
@@ -711,6 +716,7 @@ dependencies:
   {{- $_ := set $ctx "TF" $Root.TF }}
   {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
+  {{- $_ := set $ctx "CRATESPROXY" $Root.CRATESPROXY }}
 
 ---
 {{ include "module_image_template" $ctx }}
