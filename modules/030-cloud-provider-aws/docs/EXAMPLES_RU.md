@@ -24,18 +24,18 @@ spec:
 
 Поддерживаются следующие параметры в дополнение к существующим в upstream:
 
-1. `service.beta.kubernetes.io/aws-load-balancer-type` — может иметь значение `none`, что приведёт к созданию **только** Target Group, без какого-либо LoadBalanacer'а.
+1. `service.beta.kubernetes.io/aws-load-balancer-type` — может иметь значение `none`, что приведет к созданию **только** Target Group, без какого-либо LoadBalanacer'а.
 2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — используется в связке с `service.beta.kubernetes.io/aws-load-balancer-type: none`:
    * Возможные значения:
      * `tcp` (по умолчанию);
      * `tls`;
      * `http`;
      * `https`.
-   * **Внимание!** При изменении этого параметра `cloud-controller-manager` попытается пересоздать Target Group. Если к ней уже привязаны NLB или ALB, то удалить Target Group не получится, и он будет бесконечно пытаться это сделать. В таком случае необходимо вручную отсоединить NLB или ALB от Target Group.
+   * **Внимание!** При изменении этого параметра `cloud-controller-manager` попытается пересоздать Target Group. Если к ней уже привязаны NLB или ALB, удалить Target Group не получится и он будет бесконечно пытаться это сделать. В таком случае необходимо вручную отсоединить NLB или ALB от Target Group.
 
 ## Настройка политик безопасности на узлах
 
-Вариантов, зачем может понадобиться ограничить или наоборот расширить входящий или исходящий трафик на виртуальных машинах кластера в AWS, может быть множество. Например:
+Вариантов, зачем может понадобиться ограничить или, наоборот, расширить входящий или исходящий трафик на виртуальных машинах кластера в AWS, может быть множество. Например:
 
 * Разрешить подключение к узлам кластера с виртуальных машин из другой подсети.
 * Разрешить подключение к портам статического узла для работы приложения.
@@ -49,7 +49,7 @@ spec:
 - для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`;
 - для статических узлов — в секции `nodeGroups` в конфигурации, описывающей соответствующую nodeGroup, в поле `additionalSecurityGroups`.
 
-Поле `additionalSecurityGroups` — содержит массив строк с именами security groups.
+Поле `additionalSecurityGroups` содержит массив строк с именами security groups.
 
 ## Установка дополнительных security groups на эфемерных узлах
 
@@ -59,7 +59,7 @@ spec:
 
 Необходимо указать аннотацию на объекте Service: `service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-foo, subnet-bar`.
 
-Получить список текущих подсетей, используемых для конкретной установки:
+Чтобы получить список текущих подсетей, используемых для конкретной установки, выполните следующую команду:
 
 ```bash
 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json \
