@@ -62,6 +62,7 @@
  - **[deckhouse-controller]** Improve the readability of raw debugging information. [#5499](https://github.com/deckhouse/deckhouse/pull/5499)
  - **[external-module-manager]** Add the check to prevent nil pointer dereference to the modules migration hook. [#5793](https://github.com/deckhouse/deckhouse/pull/5793)
  - **[external-module-manager]** Fix race condition while handling source on Deckhouse startup. [#5598](https://github.com/deckhouse/deckhouse/pull/5598)
+ - **[flant-integration]** Fix rendering config in the case of the absence `clusterConfiguration`. [#5898](https://github.com/deckhouse/deckhouse/pull/5898)
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
  - **[linstor]** Revert the commit that updated the versions of Linstor and DRBD (revert https://github.com/deckhouse/deckhouse/pull/5469 ). [#5755](https://github.com/deckhouse/deckhouse/pull/5755)
