@@ -43,6 +43,10 @@ entries:
             en: Revision comparison
             ru: Сравнение редакций
           url: /revision-comparison.html
+        - title:
+            en: Security software settings
+            ru: Настройка ПО безопасности
+          url: /security_software_setup.html
         - title: FAQ
           url: /deckhouse-faq.html
         - title:
