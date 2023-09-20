@@ -20,7 +20,8 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-const globalValues = `
+const (
+	globalValues = `
 deckhouseVersion: dev
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-integration", "operator-prometheus-crd", "log-shipper"]
 clusterConfiguration:
@@ -36,18 +37,36 @@ clusterConfiguration:
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
+    proxy:
+      httpProxy: "http://1.2.3.4"
+      httpsProxy: "http://1.2.3.4"
+      noProxy:
+      - domain.com
 discovery:
   prometheusScrapeInterval: 30
   clusterControlPlaneIsHighlyAvailable: true
   clusterMasterCount: 3
   d8SpecificNodeCountByRole:
     system: 1
-  kubernetesVersion: 1.19.8
+  kubernetesVersion: 1.25.1
+modules:
+  placement: {}
+`
+	globalValuesWithoutClusterConfiguration = `
+deckhouseVersion: dev
+enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-integration", "operator-prometheus-crd", "log-shipper"]
+discovery:
+  prometheusScrapeInterval: 30
+  clusterControlPlaneIsHighlyAvailable: true
+  clusterMasterCount: 3
+  d8SpecificNodeCountByRole:
+    system: 1
+  kubernetesVersion: 1.25.1
 modules:
   placement: {}
 `
 
-const moduleValues = `
+	moduleValues = `
 contacts: 10
 doNotChargeForRockSolid: false
 planIsBoughtAsBundle: false
@@ -83,7 +102,7 @@ internal:
   terraformManagerEnabled: true
 `
 
-const moduleValuesNoLogs = `
+	moduleValuesNoLogs = `
 contacts: 10
 doNotChargeForRockSolid: false
 planIsBoughtAsBundle: false
@@ -117,6 +136,7 @@ internal:
     key: string
   terraformManagerEnabled: true
 `
+)
 
 var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -125,7 +145,7 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 	nsMonitoringName := "d8-monitoring"
 	chartName := "flant-integration"
 
-	Context("Cluster", func() {
+	Context("Cluster with clusterConfiguration values", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -214,10 +234,11 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			config, err := base64.StdEncoding.DecodeString(s.Field(`data.agent-scraping-service\.yaml`).String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(config)).To(ContainSubstring("remote_write"))
+			Expect(string(config)).To(ContainSubstring("proxy_url"))
 		})
 	})
 
-	Context("Cluster", func() {
+	Context("Cluster with clusterConfiguration values, but module values no logs", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -248,4 +269,44 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			Expect(clc.Exists()).To(BeFalse())
 		})
 	})
+
+	Context("Cluster without clusterConfiguration values", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesWithoutClusterConfiguration)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("flantIntegration", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			namespace := f.KubernetesGlobalResource("Namespace", nsName)
+			registrySecret := f.KubernetesResource("Secret", nsName, "deckhouse-registry")
+
+			sa := f.KubernetesResource("ServiceAccount", nsName, "pricing")
+			s := f.KubernetesResource("Secret", nsName, "grafana-agent-config")
+			pm := f.KubernetesResource("PodMonitor", nsMonitoringName, "pricing")
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:"+chartName+":pricing")
+			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:"+chartName+":pricing")
+			cld := f.KubernetesGlobalResource("ClusterLogDestination", "flant-integration-loki-storage")
+			clc := f.KubernetesGlobalResource("ClusterLoggingConfig", "flant-integration-d8-logs")
+
+			Expect(namespace.Exists()).To(BeTrue())
+			Expect(registrySecret.Exists()).To(BeTrue())
+			Expect(sa.Exists()).To(BeTrue())
+			Expect(pm.Exists()).To(BeTrue())
+			Expect(cr.Exists()).To(BeTrue())
+			Expect(crb.Exists()).To(BeTrue())
+			Expect(cld.Exists()).To(BeTrue())
+			Expect(clc.Exists()).To(BeTrue())
+
+			Expect(s.Exists()).To(BeTrue())
+			config, err := base64.StdEncoding.DecodeString(s.Field(`data.agent-scraping-service\.yaml`).String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(config)).To(ContainSubstring("remote_write"))
+			Expect(string(config)).ToNot(ContainSubstring("proxy_url"))
+		})
+	})
+
 })
