@@ -47,7 +47,7 @@ prometheus:
         action: labeldrop
     remote_write:
     - url: {{ .Values.flantIntegration.metrics.url }}
-  {{- if .Values.global.clusterConfiguration.proxy }}
+  {{- if dig "clusterConfiguration" "proxy" false .Values.global }}
     {{- $proxy := "" }}
     {{- if .Values.global.clusterConfiguration.proxy.httpProxy }}
       {{- $proxy = .Values.global.clusterConfiguration.proxy.httpProxy }}
