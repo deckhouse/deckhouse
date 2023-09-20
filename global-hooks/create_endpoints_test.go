@@ -18,6 +18,8 @@ import (
 	"context"
 	"os"
 
+	v1 "k8s.io/api/discovery/v1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -36,8 +38,9 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 			os.Setenv("ADDON_OPERATOR_LISTEN_ADDRESS", "192.168.1.1")
 			os.Setenv("DECKHOUSE_NODE_NAME", "test-node")
 			os.Setenv("DECKHOUSE_POD", "deckhouse-test-1")
-			f.KubeStateSet("")
+			f.KubeStateSet(oldEndpointSliceYaml)
 			generateEndpoints()
+			generateOldEndpointSlice()
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			f.RunHook()
 		})
@@ -58,6 +61,10 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 			Expect(eps.Field("endpoints.0.nodeName").String()).To(Equal("test-node"))
 			Expect(eps.Field("endpoints.0.targetRef.name").String()).To(Equal("deckhouse-test-1"))
 			Expect(len(eps.Field("ports").Array())).To(Equal(3))
+		})
+
+		It("Should remove old endpointslices", func() {
+			Expect(f.KubernetesResource("EndpointSlice", d8Namespace, "deckhouse-old").Exists()).To(BeFalse())
 		})
 	})
 })
@@ -99,4 +106,54 @@ subsets:
 	var ep corev1.Endpoints
 	_ = yaml.Unmarshal([]byte(epYaml), &ep)
 	_, _ = dependency.TestDC.MustGetK8sClient().CoreV1().Endpoints("d8-system").Create(context.TODO(), &ep, metav1.CreateOptions{})
+}
+
+const oldEndpointSliceYaml = `
+addressType: IPv4
+apiVersion: discovery.k8s.io/v1
+endpoints:
+- addresses:
+  - 172.16.42.12
+  conditions:
+    ready: true
+    serving: true
+    terminating: false
+  nodeName: test-1
+  targetRef:
+    kind: Pod
+    name: deckhouse-794c777669-8vrg6
+    namespace: d8-system
+    resourceVersion: "2739276166"
+    uid: 0ec6ad04-7aec-4be5-a1a6-b905e519f9be
+kind: EndpointSlice
+metadata:
+  labels:
+    app: deckhouse
+    app.kubernetes.io/managed-by: Helm
+    endpointslice.kubernetes.io/managed-by: endpointslice-controller.k8s.io
+    heritage: deckhouse
+    kubernetes.io/service-name: deckhouse
+    module: deckhouse
+  name: deckhouse-old
+  namespace: d8-system
+  ownerReferences:
+  - apiVersion: v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Service
+    name: deckhouse
+    uid: 5546653a-64ef-4d32-9bf2-c0cc7b0deded
+ports:
+- name: self
+  port: 9650
+  protocol: TCP
+- name: webhook
+  port: 9651
+  protocol: TCP
+`
+
+func generateOldEndpointSlice() {
+	var eps v1.EndpointSlice
+	_ = yaml.Unmarshal([]byte(oldEndpointSliceYaml), &eps)
+	_, _ = dependency.TestDC.MustGetK8sClient().DiscoveryV1().EndpointSlices("d8-system").Create(context.TODO(), &eps, metav1.CreateOptions{})
 }
