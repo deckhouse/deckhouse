@@ -20,8 +20,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -29,6 +27,8 @@ import (
 	discv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 // We will create the EndpointSlice manually, because Deckhouse only goes to the Ready state after the 'first converge' of modules.
