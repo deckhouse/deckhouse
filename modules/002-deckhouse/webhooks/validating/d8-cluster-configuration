@@ -60,29 +60,32 @@ function __main__() {
   if context::jq -e -r '.review.request.operation == "UPDATE"' >/dev/null 2>&1; then
     oldConfig=$(context::jq -r '.review.request.oldObject.data."cluster-configuration.yaml"' | base64 -d)
     newConfig=$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d)
+    unsafeMode=$(context::jq -r '.review.request.object.metadata.annotations."deckhouse.io/allow-unsafe"')
 
-    # podSubnetNodeCIDRPrefix cannot be changed in a running cluster
-    oldPrefix=$(yq eval '.podSubnetNodeCIDRPrefix' - <<< "$oldConfig")
-    newPrefix=$(yq eval '.podSubnetNodeCIDRPrefix' - <<< "$newConfig")
-    if [ "${oldPrefix}" != "${newPrefix}" ]; then
-      echo '{"allowed":false, "message":"it is forbidden to change podSubnetNodeCIDRPrefix in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
-      return 0
-    fi
+    if [ "${unsafeMode}" == null ]; then
+      # podSubnetNodeCIDRPrefix cannot be changed in a running cluster in a safe mode
+      oldPrefix=$(yq eval '.podSubnetNodeCIDRPrefix' - <<< "$oldConfig")
+      newPrefix=$(yq eval '.podSubnetNodeCIDRPrefix' - <<< "$newConfig")
+      if [ "${oldPrefix}" != "${newPrefix}" ]; then
+        echo '{"allowed":false, "message":"it is forbidden to change podSubnetNodeCIDRPrefix in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
+        return 0
+      fi
 
-    # podSubnetCIDR cannot be changed in a running cluster
-    oldPodCIDR=$(yq eval '.podSubnetCIDR' - <<< "$oldConfig")
-    newPodCIDR=$(yq eval '.podSubnetCIDR' - <<< "$newConfig")
-    if [ "${oldPodCIDR}" != "${newPodCIDR}" ]; then
-      echo '{"allowed":false, "message":"it is forbidden to change podSubnetCIDR in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
-      return 0
-    fi
+      # podSubnetCIDR cannot be changed in a running cluster in a safe mode
+      oldPodCIDR=$(yq eval '.podSubnetCIDR' - <<< "$oldConfig")
+      newPodCIDR=$(yq eval '.podSubnetCIDR' - <<< "$newConfig")
+      if [ "${oldPodCIDR}" != "${newPodCIDR}" ]; then
+        echo '{"allowed":false, "message":"it is forbidden to change podSubnetCIDR in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
+        return 0
+      fi
 
-    # serviceSubnetCIDR cannot be changed in a running cluster
-    oldServiceCIDR=$(yq eval '.serviceSubnetCIDR' - <<< "$oldConfig")
-    newServiceCIDR=$(yq eval '.serviceSubnetCIDR' - <<< "$newConfig")
-    if [ "${oldServiceCIDR}" != "${newServiceCIDR}" ]; then
-      echo '{"allowed":false, "message":"it is forbidden to change serviceSubnetCIDR in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
-      return 0
+      # serviceSubnetCIDR cannot be changed in a running cluster in a safe mode
+      oldServiceCIDR=$(yq eval '.serviceSubnetCIDR' - <<< "$oldConfig")
+      newServiceCIDR=$(yq eval '.serviceSubnetCIDR' - <<< "$newConfig")
+      if [ "${oldServiceCIDR}" != "${newServiceCIDR}" ]; then
+        echo '{"allowed":false, "message":"it is forbidden to change serviceSubnetCIDR in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
+        return 0
+      fi
     fi
 
     # defaultCRI cannot be changed if count of endpoints < 3
