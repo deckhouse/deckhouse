@@ -22,6 +22,10 @@ import (
 	kubutils "st2/pkg/kubeutils"
 )
 
+const (
+	OperatorNamespace = "d8-linstor"
+)
+
 var (
 	resourcesSchemeFuncs = []func(*apiruntime.Scheme) error{
 		v1alpha1.AddToScheme,
@@ -79,7 +83,7 @@ func main() {
 		Scheme:             scheme,
 		MetricsBindAddress: cfgParams.MetricsPort,
 		Logger:             log,
-		Namespace:          "d8-linstor", // TODO: заменить на cache options
+		Namespace:          OperatorNamespace, // TODO: заменить на cache options
 		// WebhookServer: myWebhookServer,
 	}
 
@@ -94,7 +98,7 @@ func main() {
 	lc, err := lclient.NewClient()
 
 	// --------------------------------------------
-	if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval); err != nil {
+	if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval, OperatorNamespace); err != nil {
 		log.Error(err, "failed create controller NewLinstorNode", err)
 		os.Exit(1)
 	}

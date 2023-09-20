@@ -6,6 +6,7 @@ import (
 	lclient "github.com/LINBIT/golinstor/client"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/util/workqueue"
 	"net"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +37,7 @@ func NewLinstorNode(
 	lc *lclient.Client,
 	configSecretName string,
 	interval int,
+	operatorNamespace string,
 ) (controller.Controller, error) {
 	cl := mgr.GetClient()
 	log := mgr.GetLogger()
@@ -50,31 +52,64 @@ func NewLinstorNode(
 		return nil, err
 	}
 
-	// err = c.Watch(
-	// 	source.Kind(mgr.GetCache(), &v1.Node{}),
-	// 	handler.Funcs{
-	// 		CreateFunc: func(ctx context.Context, e event.CreateEvent, limitingInterface workqueue.RateLimitingInterface) {
-	// 			log.Info("NODES: CREATE Event. NODE_NAME: " + e.Object.GetName())
-	// 			for k, v := range e.Object.GetLabels() {
-	// 				log.Info("NODES: CREATE Event. NODE_LABEL: " + k + ":" + v)
-	// 			}
-	//
-	// 		},
-	// 		UpdateFunc: func(ctx context.Context, e event.UpdateEvent, limitingInterface workqueue.RateLimitingInterface) {
-	// 			log.Info("NODES: UPDATE Event. NEW NAME:" + e.ObjectNew.GetName())
-	// 			for k, v := range e.ObjectNew.GetLabels() {
-	// 				log.Info("NODES: CREATE Event. NEW NODE_LABEL: " + k + ":" + v)
-	// 			}
-	// 		},
-	// 		DeleteFunc: func(ctx context.Context, e event.DeleteEvent, limitingInterface workqueue.RateLimitingInterface) {
-	// 			log.Info("NODES: DELETE Event. NAME:" + e.Object.GetName())
-	// 		},
-	// 		GenericFunc: nil,
-	// 	})
-	//
-	// if err != nil {
-	// 	return nil, err
-	// }
+	err = c.Watch(
+		source.Kind(mgr.GetCache(), &v1.Node{}),
+		handler.Funcs{ // TODO: проверять, что изменились labels. Если изменились, то выполняем reconcile, такой же как в секретах
+			CreateFunc: func(ctx context.Context, e event.CreateEvent, limitingInterface workqueue.RateLimitingInterface) {
+				reconcileObj := e.Object
+
+				log.Info("NODES: CREATE Event. NODE_NAME: " + reconcileObj.GetName())
+				for k, v := range reconcileObj.GetLabels() {
+					log.Info("NODES: CREATE Event. NODE_LABEL: " + k + ":" + v)
+				}
+
+				configSecret, err := GetKubernetesSecretByName(ctx, cl, configSecretName, operatorNamespace)
+				if err != nil {
+					log.Error(err, "Failed get secret"+operatorNamespace+"/"+configSecretName+" with config")
+					return
+				}
+				nodeSelector, err := GetNodeSelectorFromConfig(*configSecret)
+				selector := labels.Set(nodeSelector)
+
+				if selector.AsSelector().Matches(labels.Set(reconcileObj.GetLabels())) {
+					log.Info("Node " + reconcileObj.GetName() + " Matches selector")
+				} else {
+					log.Info("Node " + reconcileObj.GetName() + " DOESN'T match selector")
+				}
+
+			},
+			UpdateFunc: func(ctx context.Context, e event.UpdateEvent, limitingInterface workqueue.RateLimitingInterface) {
+				reconcileObj := e.ObjectNew
+
+				log.Info("NODES: UPDATE Event. NEW NAME:" + reconcileObj.GetName())
+				for k, v := range reconcileObj.GetLabels() {
+					log.Info("NODES: UPDATE Event. NEW NODE_LABEL: " + k + ":" + v)
+				}
+
+				configSecret, err := GetKubernetesSecretByName(ctx, cl, configSecretName, operatorNamespace)
+				if err != nil {
+					log.Error(err, "Failed get secret"+operatorNamespace+"/"+configSecretName+" with config")
+					return
+				}
+				nodeSelector, err := GetNodeSelectorFromConfig(*configSecret)
+				selector := labels.Set(nodeSelector)
+
+				if selector.AsSelector().Matches(labels.Set(reconcileObj.GetLabels())) {
+					log.Info("Node " + reconcileObj.GetName() + " Matches selector")
+				} else {
+					log.Info("Node " + reconcileObj.GetName() + " DOESN'T match selector")
+				}
+
+			},
+			DeleteFunc: func(ctx context.Context, e event.DeleteEvent, limitingInterface workqueue.RateLimitingInterface) {
+				log.Info("NODES: DELETE Event. NAME:" + e.Object.GetName())
+			},
+			GenericFunc: nil,
+		})
+
+	if err != nil {
+		return nil, err
+	}
 
 	err = c.Watch(
 		source.Kind(mgr.GetCache(), &v1.Secret{}),
@@ -98,7 +133,7 @@ func NewLinstorNode(
 						fmt.Printf("Node: %s\n", node.Name)
 					}
 
-					err = reconcileLinstorNodes(ctx, lc, selectedK8sNodes)
+					err = ReconcileLinstorNodes(ctx, lc, selectedK8sNodes)
 					if err != nil {
 						log.Error(err, "Failed reconcile LINSTOR nodes")
 						return
@@ -125,7 +160,7 @@ func NewLinstorNode(
 						fmt.Printf("Node: %s\n", node.Name)
 					}
 
-					err = reconcileLinstorNodes(ctx, lc, selectedK8sNodes)
+					err = ReconcileLinstorNodes(ctx, lc, selectedK8sNodes)
 					if err != nil {
 						log.Error(err, "Failed reconcile LINSTOR nodes")
 						return
@@ -145,7 +180,16 @@ func NewLinstorNode(
 
 }
 
-func reconcileLinstorNodes(ctx context.Context, lc *lclient.Client, selectedK8sNodes v1.NodeList) error {
+func GetKubernetesSecretByName(ctx context.Context, cl client.Client, secretName string, secretNamespace string) (*v1.Secret, error) {
+	secret := &v1.Secret{}
+	err := cl.Get(ctx, client.ObjectKey{
+		Name:      secretName,
+		Namespace: secretNamespace,
+	}, secret)
+	return secret, err
+}
+
+func ReconcileLinstorNodes(ctx context.Context, lc *lclient.Client, selectedK8sNodes v1.NodeList) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, reachableTimeout)
 	defer cancel()
 	linstorNodes, err := lc.Nodes.GetAll(timeoutCtx, &lclient.ListOpts{})
@@ -222,21 +266,21 @@ func GetKubernetesNodes(ctx context.Context, cl client.Client, obj client.Object
 	if !ok {
 		return selectedK8sNodes, fmt.Errorf("err in type conversion from object to v1.Secret")
 	}
-	nodesLabels, err := getLabelsFromConfig(*secret)
+	nodeSelector, err := GetNodeSelectorFromConfig(*secret)
 	if err != nil {
 		return selectedK8sNodes, err
 	}
 
-	err = cl.List(ctx, &selectedK8sNodes, client.MatchingLabels(nodesLabels))
+	err = cl.List(ctx, &selectedK8sNodes, client.MatchingLabels(nodeSelector))
 	return selectedK8sNodes, err
 }
 
-func getLabelsFromConfig(secret v1.Secret) (map[string]string, error) {
+func GetNodeSelectorFromConfig(secret v1.Secret) (map[string]string, error) {
 	var secretConfig sdsapi.SdsDRBDOperatorConfig
 	err := yaml.Unmarshal(secret.Data["config"], &secretConfig)
 	if err != nil {
 		return nil, err
 	}
-	labels := secretConfig.NodeSelector
-	return labels, err
+	nodeSelector := secretConfig.NodeSelector
+	return nodeSelector, err
 }
