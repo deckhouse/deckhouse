@@ -1,0 +1,5 @@
+flant-integration:
+  fixes:
+    - summary: Fix rendering config in the case of the absence `clusterConfiguration`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5898
+
