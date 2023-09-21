@@ -47,11 +47,11 @@ type StaticInstanceReconciler struct {
 	Config *rest.Config
 }
 
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticinstances,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticinstances/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticinstances/finalizers,verbs=update
+//+kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances/finalizers,verbs=update
 
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticinstancecredentials,verbs=get;list;watch
+//+kubebuilder:rbac:groups=deckhouse.io,resources=sshcredentials,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -124,7 +124,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, errors.New("NodeGroup does not have staticInstances field")
 	}
 
-	credentials := &infrav1.StaticInstanceCredentials{}
+	credentials := &infrav1.SSHCredentials{}
 	credentialsKey := client.ObjectKey{
 		Namespace: staticInstance.Namespace,
 		Name:      staticInstance.Spec.CredentialsRef.Name,
@@ -136,7 +136,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			conditions.MarkFalse(staticInstance, infrav1.StaticInstanceAddedToNodeGroupCondition, infrav1.StaticInstanceWaitingForCredentialsRefReason, clusterv1.ConditionSeverityInfo, "")
 		}
 
-		return ctrl.Result{}, errors.Wrap(err, "failed to get StaticInstanceCredentials")
+		return ctrl.Result{}, errors.Wrap(err, "failed to get SSHCredentials")
 	}
 
 	instanceScope.Credentials = credentials

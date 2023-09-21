@@ -105,7 +105,7 @@ var _ = BeforeSuite(func() {
 	err = (&StaticMachine{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&StaticInstanceCredentials{}).SetupWebhookWithManager(mgr)
+	err = (&SSHCredentials{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&StaticMachineTemplate{}).SetupWebhookWithManager(mgr)

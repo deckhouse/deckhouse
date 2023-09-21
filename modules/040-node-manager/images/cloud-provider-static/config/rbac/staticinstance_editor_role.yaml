@@ -12,7 +12,7 @@ metadata:
   name: staticinstance-editor-role
 rules:
 - apiGroups:
-  - infrastructure.cluster.x-k8s.io
+  - deckhouse.io
   resources:
   - staticinstances
   verbs:
@@ -24,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - infrastructure.cluster.x-k8s.io
+  - deckhouse.io
   resources:
   - staticinstances/status
   verbs:

@@ -12,7 +12,7 @@ spec:
     listKind: StaticInstanceList
     plural: staticinstances
     singular: staticinstance
-  scope: Namespaced
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - description: Static instance state

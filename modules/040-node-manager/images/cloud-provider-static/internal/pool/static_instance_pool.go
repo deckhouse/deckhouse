@@ -46,7 +46,7 @@ func (p *StaticInstancePool) PickStaticInstance(
 
 	staticInstance := staticInstances[rand.Intn(len(staticInstances))]
 
-	credentials := &infrav1.StaticInstanceCredentials{}
+	credentials := &infrav1.SSHCredentials{}
 	credentialsKey := client.ObjectKey{
 		Namespace: staticInstance.Namespace,
 		Name:      staticInstance.Spec.CredentialsRef.Name,

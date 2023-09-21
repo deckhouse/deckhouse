@@ -37,11 +37,10 @@ and deletes "node.deckhouse.io/uninitialized" taint.
 */
 
 const (
-	NodeGroupNameLabel                     = "node.deckhouse.io/group"
-	LastAppliedNodeTemplateAnnotation      = "node-manager.deckhouse.io/last-applied-node-template"
-	ManagedByCloudProviderStaticAnnotation = "node-manager.deckhouse.io/managed-by-cloud-provider-static"
-	NodeUnininitalizedTaintKey             = "node.deckhouse.io/uninitialized"
-	masterNodeRoleKey                      = "node-role.kubernetes.io/master"
+	NodeGroupNameLabel                = "node.deckhouse.io/group"
+	LastAppliedNodeTemplateAnnotation = "node-manager.deckhouse.io/last-applied-node-template"
+	NodeUnininitalizedTaintKey        = "node.deckhouse.io/uninitialized"
+	masterNodeRoleKey                 = "node-role.kubernetes.io/master"
 )
 
 type NodeSettings struct {
@@ -68,14 +67,6 @@ func desiredNodeSettingsFromNodeGroupFilter(obj *unstructured.Unstructured) (go_
 		Annotations: nodeGroup.Spec.NodeTemplate.Annotations,
 		Labels:      nodeGroup.Spec.NodeTemplate.Labels,
 		Taints:      nodeGroup.Spec.NodeTemplate.Taints,
-	}
-
-	if !nodeGroup.Spec.StaticInstances.IsEmpty() {
-		if settings.Annotations == nil {
-			settings.Annotations = make(map[string]string)
-		}
-
-		settings.Annotations[ManagedByCloudProviderStaticAnnotation] = "true"
 	}
 
 	// base64 decoding is not needed in Go.

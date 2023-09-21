@@ -18,10 +18,10 @@ package hooks
 
 import (
 	"context"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"os"
 
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -110,22 +110,22 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 
 	secretForServiceAccountToken := kubeconfig.GenerateSecretForServiceAccountToken(cluster, clusterAPIServiceAccountName)
 
-	//secretUnstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(secretForServiceAccountToken)
-	//if err != nil {
-	//	return errors.Wrap(err, "failed to convert secret to unstructured")
-	//}
-	//
-	//input.PatchCollector.Create(secretUnstructured, object_patch.UpdateIfExists())
-
-	_, err = k8sClient.CoreV1().Secrets(secretForServiceAccountToken.Namespace).Create(context.TODO(), secretForServiceAccountToken, metav1.CreateOptions{})
-	if err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return errors.Wrap(err, "failed to create secret")
-		}
-	}
-
 	secretForServiceAccountToken, err = k8sClient.CoreV1().Secrets(secretForServiceAccountToken.Namespace).Get(context.TODO(), secretForServiceAccountToken.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			_, err = k8sClient.CoreV1().Secrets(secretForServiceAccountToken.Namespace).Create(context.TODO(), secretForServiceAccountToken, metav1.CreateOptions{})
+			if err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					return errors.Wrap(err, "failed to create secret")
+				}
+			}
+
+			secretForServiceAccountToken, err = k8sClient.CoreV1().Secrets(secretForServiceAccountToken.Namespace).Get(context.TODO(), secretForServiceAccountToken.Name, metav1.GetOptions{})
+			if err != nil {
+				return errors.Wrap(err, "failed to get secret after creation")
+			}
+		}
+
 		return errors.Wrap(err, "failed to get secret")
 	}
 

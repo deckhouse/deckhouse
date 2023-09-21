@@ -8,8 +8,8 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_staticclusters.yaml
 - bases/infrastructure.cluster.x-k8s.io_staticmachines.yaml
 - bases/infrastructure.cluster.x-k8s.io_staticmachinetemplates.yaml
-- bases/infrastructure.cluster.x-k8s.io_staticinstances.yaml
-- bases/infrastructure.cluster.x-k8s.io_staticinstancecredentials.yaml
+- bases/deckhouse.io_staticinstances.yaml
+- bases/deckhouse.io_sshcredentials.yaml
 - bases/infrastructure.cluster.x-k8s.io_staticcontrolplanes.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
@@ -20,7 +20,7 @@ patches:
 - path: patches/webhook_in_staticmachines.yaml
 - path: patches/webhook_in_staticmachinetemplates.yaml
 - path: patches/webhook_in_staticinstances.yaml
-- path: patches/webhook_in_staticinstancecredentials.yaml
+- path: patches/webhook_in_sshcredentials.yaml
 #- path: patches/webhook_in_staticcontrolplanes.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
@@ -30,7 +30,7 @@ patches:
 - path: patches/cainjection_in_staticmachines.yaml
 - path: patches/cainjection_in_staticmachinetemplates.yaml
 - path: patches/cainjection_in_staticinstances.yaml
-- path: patches/cainjection_in_staticinstancecredentials.yaml
+- path: patches/cainjection_in_sshcredentials.yaml
 #- path: patches/cainjection_in_staticcontrolplanes.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 

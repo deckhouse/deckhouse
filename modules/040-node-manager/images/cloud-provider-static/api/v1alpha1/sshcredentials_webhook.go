@@ -28,9 +28,9 @@ import (
 )
 
 // log is for logging in this package.
-var staticinstancecredentialslog = logf.Log.WithName("staticinstancecredentials-resource")
+var sshcredentialslog = logf.Log.WithName("sshcredentials-resource")
 
-func (r *StaticInstanceCredentials) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *SSHCredentials) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
@@ -38,13 +38,13 @@ func (r *StaticInstanceCredentials) SetupWebhookWithManager(mgr ctrl.Manager) er
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-//+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstancecredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticinstancecredentials,verbs=create;update,versions=v1alpha1,name=mstaticinstancecredentials.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha1-sshcredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha1,name=msshcredentials.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Defaulter = &StaticInstanceCredentials{}
+var _ webhook.Defaulter = &SSHCredentials{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *StaticInstanceCredentials) Default() {
-	staticinstancecredentialslog.Info("default", "name", r.Name)
+func (r *SSHCredentials) Default() {
+	sshcredentialslog.Info("default", "name", r.Name)
 
 	if r.Spec.SSHPort == 0 {
 		r.Spec.SSHPort = 22
@@ -52,13 +52,13 @@ func (r *StaticInstanceCredentials) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstancecredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticinstancecredentials,verbs=create;update,versions=v1alpha1,name=vstaticinstancecredentials.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha1-sshcredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha1,name=vsshcredentials.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &StaticInstanceCredentials{}
+var _ webhook.Validator = &SSHCredentials{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticInstanceCredentials) ValidateCreate() (admission.Warnings, error) {
-	staticinstancecredentialslog.Info("validate create", "name", r.Name)
+func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
+	sshcredentialslog.Info("validate create", "name", r.Name)
 
 	privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
 	if err != nil {
@@ -74,8 +74,8 @@ func (r *StaticInstanceCredentials) ValidateCreate() (admission.Warnings, error)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticInstanceCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	staticinstancecredentialslog.Info("validate update", "name", r.Name)
+func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	sshcredentialslog.Info("validate update", "name", r.Name)
 
 	privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
 	if err != nil {
@@ -91,8 +91,8 @@ func (r *StaticInstanceCredentials) ValidateUpdate(old runtime.Object) (admissio
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticInstanceCredentials) ValidateDelete() (admission.Warnings, error) {
-	staticinstancecredentialslog.Info("validate delete", "name", r.Name)
+func (r *SSHCredentials) ValidateDelete() (admission.Warnings, error) {
+	sshcredentialslog.Info("validate delete", "name", r.Name)
 
 	return nil, nil
 }

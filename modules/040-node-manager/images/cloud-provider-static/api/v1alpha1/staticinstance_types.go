@@ -28,7 +28,7 @@ import (
 const (
 	// InstanceFinalizer allows ReconcileStaticInstance to clean up Static resources associated with StaticInstance before
 	// removing it from the apiserver.
-	InstanceFinalizer = "staticinstance.infrastructure.cluster.x-k8s.io"
+	InstanceFinalizer = "staticinstance.deckhouse.io"
 )
 
 // StaticInstanceSpec defines the desired state of StaticInstance
@@ -78,6 +78,7 @@ const (
 )
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:scope=Cluster
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.currentStatus.phase",description="Static instance state"
 //+kubebuilder:printcolumn:name="Node",type="string",JSONPath=".status.nodeRef.name",description="Node associated with this static instance"
@@ -93,6 +94,7 @@ type StaticInstance struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:scope=Cluster
 
 // StaticInstanceList contains a list of StaticInstance
 type StaticInstanceList struct {

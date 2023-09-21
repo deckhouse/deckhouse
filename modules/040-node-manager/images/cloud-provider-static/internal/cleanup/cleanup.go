@@ -74,7 +74,7 @@ func cleanup(instanceScope *scope.InstanceScope) error {
 	}
 
 	go func() {
-		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("test -d /var/lib/bashible && export NODE_NAME='%s' && echo '%s' | base64 -d | bash", instanceScope.Instance.Status.NodeRef.Name, base64.StdEncoding.EncodeToString(cleanupScript)), nil)
+		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("export PROVIDER_ID='%s' && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, base64.StdEncoding.EncodeToString(cleanupScript)), nil)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to cleanup StaticInstance: failed to exec ssh command")
 		}

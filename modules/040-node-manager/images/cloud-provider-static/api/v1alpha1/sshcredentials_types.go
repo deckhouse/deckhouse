@@ -23,8 +23,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// StaticInstanceCredentialsSpec defines the desired state of StaticInstanceCredentials
-type StaticInstanceCredentialsSpec struct {
+// SSHCredentialsSpec defines the desired state of SSHCredentials
+type SSHCredentialsSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -39,33 +39,35 @@ type StaticInstanceCredentialsSpec struct {
 	SSHExtraArgs string `json:"sshExtraArgs,omitempty"`
 }
 
-// StaticInstanceCredentialsStatus defines the observed state of StaticInstanceCredentials
-type StaticInstanceCredentialsStatus struct {
+// SSHCredentialsStatus defines the observed state of SSHCredentials
+type SSHCredentialsStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:scope=Cluster
 //+kubebuilder:subresource:status
 
-// StaticInstanceCredentials is the Schema for the staticinstancecredentials API
-type StaticInstanceCredentials struct {
+// SSHCredentials is the Schema for the sshcredentials API
+type SSHCredentials struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   StaticInstanceCredentialsSpec   `json:"spec,omitempty"`
-	Status StaticInstanceCredentialsStatus `json:"status,omitempty"`
+	Spec   SSHCredentialsSpec   `json:"spec,omitempty"`
+	Status SSHCredentialsStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:scope=Cluster
 
-// StaticInstanceCredentialsList contains a list of StaticInstanceCredentials
-type StaticInstanceCredentialsList struct {
+// SSHCredentialsList contains a list of SSHCredentials
+type SSHCredentialsList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []StaticInstanceCredentials `json:"items"`
+	Items           []SSHCredentials `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&StaticInstanceCredentials{}, &StaticInstanceCredentialsList{})
+	SchemeBuilder.Register(&SSHCredentials{}, &SSHCredentialsList{})
 }

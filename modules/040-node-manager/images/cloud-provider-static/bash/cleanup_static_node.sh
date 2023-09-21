@@ -2,6 +2,15 @@
 
 # TODO: remove /opt/deckhouse and disable kubelet
 
+set -e
+
+test -d /var/lib/bashible
+
+if [[ $(cat /var/lib/bashible/node-spec-provider-id) != "$PROVIDER_ID" ]]; then
+  echo "Provider ID mismatch. Expected: $PROVIDER_ID, got: $(cat /var/lib/bashible/node-spec-provider-id)"
+  exit 1
+fi
+
 # Stop all the services and running containers:
 systemctl stop bashible.service bashible.timer
 systemctl stop kubelet.service

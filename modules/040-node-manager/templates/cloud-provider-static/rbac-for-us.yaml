@@ -71,6 +71,40 @@ rules:
   verbs:
     - get
 - apiGroups:
+    - deckhouse.io
+  resources:
+    - sshcredentials
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - staticinstances
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - staticinstances/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - staticinstances/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
     - staticclusters
@@ -118,40 +152,6 @@ rules:
     - infrastructure.cluster.x-k8s.io
   resources:
     - staticcontrolplanes/status
-  verbs:
-    - get
-    - patch
-    - update
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticinstancecredentials
-  verbs:
-    - get
-    - list
-    - watch
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticinstances
-  verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticinstances/finalizers
-  verbs:
-    - update
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticinstances/status
   verbs:
     - get
     - patch

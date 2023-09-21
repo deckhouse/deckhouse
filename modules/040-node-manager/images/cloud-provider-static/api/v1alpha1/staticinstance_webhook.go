@@ -36,7 +36,7 @@ func (r *StaticInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-//+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstance,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticinstances,verbs=create;update,versions=v1alpha1,name=mstaticinstance.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha1-staticinstance,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=create;update,versions=v1alpha1,name=mstaticinstance.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &StaticInstance{}
 
@@ -46,7 +46,7 @@ func (r *StaticInstance) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticinstances,verbs=create;update,versions=v1alpha1,name=vstaticinstance.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha1-staticinstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=create;update,versions=v1alpha1,name=vstaticinstance.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &StaticInstance{}
 
@@ -56,8 +56,8 @@ func (r *StaticInstance) ValidateCreate() (admission.Warnings, error) {
 
 	var errs field.ErrorList
 
-	if r.Spec.CredentialsRef != nil && r.Spec.CredentialsRef.Kind != "StaticInstanceCredentials" {
-		errs = append(errs, field.Forbidden(field.NewPath("spec", "credentialsRef", "kind"), "must be a StaticInstanceCredentials"))
+	if r.Spec.CredentialsRef != nil && r.Spec.CredentialsRef.Kind != "SSHCredentials" {
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "credentialsRef", "kind"), "must be a SSHCredentials"))
 	}
 
 	return aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, errs)
@@ -69,8 +69,8 @@ func (r *StaticInstance) ValidateUpdate(old runtime.Object) (admission.Warnings,
 
 	var errs field.ErrorList
 
-	if r.Spec.CredentialsRef != nil && r.Spec.CredentialsRef.Kind != "StaticInstanceCredentials" {
-		errs = append(errs, field.Forbidden(field.NewPath("spec", "credentialsRef", "kind"), "must be a StaticInstanceCredentials"))
+	if r.Spec.CredentialsRef != nil && r.Spec.CredentialsRef.Kind != "SSHCredentials" {
+		errs = append(errs, field.Forbidden(field.NewPath("spec", "credentialsRef", "kind"), "must be a SSHCredentials"))
 	}
 
 	return aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, errs)

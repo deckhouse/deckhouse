@@ -61,7 +61,7 @@ resources:
     namespaced: true
   domain: cluster.x-k8s.io
   group: infrastructure
-  kind: StaticInstanceCredentials
+  kind: SSHCredentials
   path: cloud-provider-static/api/v1alpha1
   version: v1alpha1
   webhooks:

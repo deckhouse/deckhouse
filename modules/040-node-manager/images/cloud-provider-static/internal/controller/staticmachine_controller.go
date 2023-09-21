@@ -349,7 +349,7 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 
 	instanceScope.MachineScope = machineScope
 
-	credentials := &infrav1.StaticInstanceCredentials{}
+	credentials := &infrav1.SSHCredentials{}
 	credentialsKey := client.ObjectKey{
 		Namespace: staticInstance.Namespace,
 		Name:      staticInstance.Spec.CredentialsRef.Name,

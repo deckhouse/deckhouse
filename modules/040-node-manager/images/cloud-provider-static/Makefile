@@ -161,21 +161,3 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-
-setup:
-	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.0/cert-manager.yaml
-	kustomize build config/default | ./hack/tools/bin/envsubst | kubectl apply -f -
-	mkdir cloud-provider-static
-	go mod init cloud-provider-static
-	kubebuilder init --domain cluster.x-k8s.io
-	kubebuilder create api --group infrastructure --version v1alpha1 --kind StaticCluster
-	kubebuilder create webhook --group infrastructure --version v1alpha1 --kind StaticInstance --defaulting --programmatic-validation
-	make manifests
-	make docker-build
-	make install deploy
-	kubectl apply -f cluster.yaml
-
-redeploy:
-	make docker-build
-	make undeploy
-	make install deploy

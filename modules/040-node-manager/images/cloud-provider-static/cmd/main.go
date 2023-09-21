@@ -123,8 +123,8 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticMachine")
 		os.Exit(1)
 	}
-	if err = (&infrav1.StaticInstanceCredentials{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "StaticInstanceCredentials")
+	if err = (&infrav1.SSHCredentials{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "SSHCredentials")
 		os.Exit(1)
 	}
 	if err = (&infrav1.StaticMachineTemplate{}).SetupWebhookWithManager(mgr); err != nil {

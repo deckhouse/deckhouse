@@ -10,14 +10,14 @@ webhooks:
     service:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
-      path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstance
+      path: /mutate-deckhouse-io-v1alpha1-staticinstance
     caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
         - UPDATE
       apiGroups:
-        - infrastructure.cluster.x-k8s.io
+        - deckhouse.io
       apiVersions:
         - v1alpha1
       resources:
@@ -28,23 +28,23 @@ webhooks:
   sideEffects: None
   admissionReviewVersions:
     - v1
-- name: mstaticinstancecredentials.kb.io
+- name: msshcredentials.kb.io
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
-      path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstancecredentials
+      path: /mutate-deckhouse-io-v1alpha1-sshcredentials
     caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
         - UPDATE
       apiGroups:
-        - infrastructure.cluster.x-k8s.io
+        - deckhouse.io
       apiVersions:
         - v1alpha1
       resources:
-        - staticinstancecredentials
+        - sshcredentials
       scope: '*'
   failurePolicy: Fail
   matchPolicy: Equivalent
@@ -109,14 +109,14 @@ webhooks:
     service:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstance
+      path: /validate-deckhouse-io-v1alpha1-staticinstance
     caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
         - UPDATE
       apiGroups:
-        - infrastructure.cluster.x-k8s.io
+        - deckhouse.io
       apiVersions:
         - v1alpha1
       resources:
@@ -127,23 +127,23 @@ webhooks:
   sideEffects: None
   admissionReviewVersions:
     - v1
-- name: vstaticinstancecredentials.kb.io
+- name: vsshcredentials.kb.io
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticinstancecredentials
+      path: /validate-deckhouse-io-v1alpha1-sshcredentials
     caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
         - UPDATE
       apiGroups:
-        - infrastructure.cluster.x-k8s.io
+        - deckhouse.io
       apiVersions:
         - v1alpha1
       resources:
-        - staticinstancecredentials
+        - sshcredentials
       scope: '*'
   failurePolicy: Fail
   matchPolicy: Equivalent

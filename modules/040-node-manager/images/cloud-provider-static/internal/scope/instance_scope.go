@@ -19,7 +19,7 @@ type InstanceScope struct {
 	MachineScope *MachineScope
 
 	Instance    *infrav1.StaticInstance
-	Credentials *infrav1.StaticInstanceCredentials
+	Credentials *infrav1.SSHCredentials
 }
 
 // NewInstanceScope creates a new instance scope.
