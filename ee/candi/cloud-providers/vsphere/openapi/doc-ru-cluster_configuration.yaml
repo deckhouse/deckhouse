@@ -162,10 +162,10 @@ apiVersions:
             > **Внимание!** Отключение этого параметра не отключает NTP-демоны в гостевой ОС, а лишь отключает корректировки времени со стороны ESXi.
         externalNetworkNames:
           description: |
-            Имена сетей (не полный путь, а просто имя), подключенных к виртуальным машинам и используемых vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
+            Имена сетей (не полный путь, а просто имя), подключенных к виртуальным машинам и используемых `vsphere-cloud-controller-manager` для проставления ExternalIP в `.status.addresses` в Node API объект.
         internalNetworkNames:
           description: |
-            Имена сетей (не полный путь, а просто имя), подключенных к виртуальным машинам и используемых vsphere-cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
+            Имена сетей (не полный путь, а просто имя), подключенных к виртуальным машинам и используемых `vsphere-cloud-controller-manager` для проставления InternalIP в `.status.addresses` в Node API объект.
         internalNetworkCIDR:
           description: |
             Подсеть для master-узлов во внутренней сети.
@@ -206,7 +206,7 @@ apiVersions:
               description:  Установите `true`, если vCenter использует самоподписанный сертификат.
         nsxt:
           description: |
-            Поддержка cloud controller manager'ом LoadBalancer'ов в Vsphere через NSX-T.
+            Поддержка cloud controller manager'ом балансировщиков (LoadBalancer) в Vsphere через NSX-T.
           properties:
             defaultIpPoolName:
               description: |
@@ -219,7 +219,7 @@ apiVersions:
                 Имя профиля по умолчанию, используемого для UDP-соединений в NSX-T.
             size:
               description: |
-                Размер сервиса LoadBalancer.
+                Размер сервиса балансировщика (LoadBalancer).
             tier1GatewayPath:
               description: |
                 Путь к политике NSX-T tier1 gateway.
@@ -237,12 +237,12 @@ apiVersions:
                 Должен быть установлен в `true`, если NSX-T использует самоподписанный сертификат.
             loadBalancerClass:
               description: |
-                Дополнительная секция, определяющая LoadBalancer Class'ы (чтобы использовать Class, установите аннотацию `loadbalancer.vmware.io/class: <class name>` на SVC).
+                Дополнительная секция, определяющая классы балансировщика (LoadBalancer Class) (чтобы использовать класс, установите аннотацию `loadbalancer.vmware.io/class: <ИМЯ КЛАССА>` на SVC).
               items:
                 properties:
                   name:
                     description: |
-                      Имя LoadBalancer Class'а для установки аннотации `loadbalancer.vmware.io/class: <class name>` в SVC.
+                      Имя класса балансировщика (LoadBalancer Class) для установки аннотации `loadbalancer.vmware.io/class: <ИМЯ КЛАССА>` в SVC.
                   ipPoolName:
                     description: |
                       Имя пула IP-адресов.

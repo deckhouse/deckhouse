@@ -23,7 +23,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the configuration for Deckhouse module.
+            Defines the configuration of the Deckhouse module. The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).
           required:
             - spec
           properties:

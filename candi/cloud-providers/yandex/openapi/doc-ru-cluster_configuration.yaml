@@ -188,7 +188,9 @@ apiVersions:
               Идентификатор директории.
           serviceAccountJSON:
             description: |
-              Ключ к service account'у в JSON-формате, выдаваемый [yc iam key create](environment.html).
+              Ключ к service account'у в JSON-формате.
+
+              Получить его можно с помощью команды `[yc iam key create](environment.html)`.
       zones:
         description: |
           Глобальное ограничение набора зон, с которыми работает данный cloud-провайдер.

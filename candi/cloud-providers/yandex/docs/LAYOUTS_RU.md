@@ -76,7 +76,7 @@ dhcpOptions:
 
 В данной схеме размещения NAT (любого вида) не используется, а каждому узлу выдается публичный IP-адрес.
 
-> **Внимание!** В модуле `cloud-provider-yandex` пока нет поддержки Security Groups, поэтому все узлы кластера будут смотреть наружу.
+> **Внимание!** В модуле `cloud-provider-yandex` пока нет поддержки групп безопасности (security group), поэтому все узлы кластера будут смотреть *наружу*.
 
 ![Схема размещения WithoutNAT в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-withoutnat.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
