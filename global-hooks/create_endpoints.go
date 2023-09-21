@@ -161,12 +161,17 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 		},
 	}
 
+	// TODO: remove this part after Deckhouse release 1.56
+	// we have to remove old endpointslices here also, to prevent block on cm/deckhouse check
+	err := cleanupOldEndpoints(input, dc)
+	if err != nil {
+		return err
+	}
+
 	input.PatchCollector.Create(ep, object_patch.UpdateIfExists())
 	input.PatchCollector.Create(es, object_patch.UpdateIfExists())
 
-	// TODO: remove this part after Deckhouse release 1.55
-	// we have to remove old endpointslices here also, to prevent block on cm/deckhouse check
-	return cleanupOldEndpoints(input, dc)
+	return nil
 }
 
 func cleanupOldEndpoints(input *go_hook.HookInput, dc dependency.Container) error {
@@ -180,8 +185,19 @@ func cleanupOldEndpoints(input *go_hook.HookInput, dc dependency.Container) erro
 		return err
 	}
 
+	if len(list.Items) > 0 {
+		// remove selector from deckhouse service to prevent endpointslices creation
+		patch := map[string]interface{}{
+			"spec": map[string]interface{}{
+				"selector": nil,
+			},
+		}
+
+		input.PatchCollector.MergePatch(patch, "v1", "Service", d8Namespace, d8Name)
+	}
+
 	for _, es := range list.Items {
-		input.PatchCollector.Delete(es.APIVersion, es.Kind, es.Namespace, es.Name)
+		input.PatchCollector.Delete("discovery.k8s.io/v1", "EndpointSlice", d8Namespace, es.Name)
 	}
 
 	return nil
