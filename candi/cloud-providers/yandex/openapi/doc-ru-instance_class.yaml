@@ -41,12 +41,12 @@ spec:
                     Размер диска у инстансов. Значение указывается в `ГиБ`.
                 assignPublicIPAddress:
                   description: |
-                    Присваивать ли публичные IP-адреса инстансам.
+                    Необходимость присвоения публичных IP-адресов инстансам.
                 mainSubnet:
                   description: |
                     Переопределение имени основного subnet, к которому будет подключен инстанс.
 
-                    По умолчанию используется subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
+                    По умолчанию используется subnet для зоны из конфига Deckhouse `zoneToSubnetIdMap`.
                 additionalSubnets:
                   description: |
                     Список subnet, которые будут подключены к инстансу.
@@ -102,7 +102,7 @@ spec:
                   description: |
                     Переопределение имени основного subnet, к которому будет подключен инстанс.
 
-                    По умолчанию используется subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
+                    По умолчанию используется subnet для зоны из параметра `zoneToSubnetIdMap`.
                 additionalSubnets:
                   description: |
                     Список subnet, которые будут подключены к инстансу.
