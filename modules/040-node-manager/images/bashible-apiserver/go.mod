@@ -1,6 +1,6 @@
 // This is a generated file. Do not edit directly.
 
-module bashible-apiserver
+module d8.io/bashible
 
 go 1.19
 
@@ -130,4 +130,4 @@ require (
 )
 
 // replace for flant/kube-client
-replace k8s.io/client-go => k8s.io/client-go v0.28.0-alpha.2
+replace k8s.io/client-go => k8s.io/client-go v0.20.2
