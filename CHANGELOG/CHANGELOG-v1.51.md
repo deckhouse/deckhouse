@@ -54,6 +54,7 @@
  - **[deckhouse]** Move deckhouse `kube-rbac-proxy` port to `9889`, to avoid conflicts with user applications. [#5815](https://github.com/deckhouse/deckhouse/pull/5815)
  - **[deckhouse]** Made it possible to configure `minimalNotificationTime` without configuring the notification webhook. [#5491](https://github.com/deckhouse/deckhouse/pull/5491)
  - **[deckhouse]** Automatically update Deckhouse minor versions step by step. [#5453](https://github.com/deckhouse/deckhouse/pull/5453)
+ - **[deckhouse-controller]** Do not purge unknown helm releases. [#5918](https://github.com/deckhouse/deckhouse/pull/5918)
  - **[deckhouse-controller]** Skip defaulting an array without items schema to prevent panic [#5711](https://github.com/deckhouse/deckhouse/pull/5711)
  - **[deckhouse-controller]** Add Prometeus logs to the debugging information. [#5616](https://github.com/deckhouse/deckhouse/pull/5616)
  - **[deckhouse-controller]** Improve the readability of raw debugging information. [#5499](https://github.com/deckhouse/deckhouse/pull/5499)
