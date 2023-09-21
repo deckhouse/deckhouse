@@ -37,7 +37,26 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 			os.Setenv("ADDON_OPERATOR_LISTEN_ADDRESS", "192.168.1.1")
 			os.Setenv("DECKHOUSE_NODE_NAME", "test-node")
 			os.Setenv("DECKHOUSE_POD", "deckhouse-test-1")
-			f.KubeStateSet(oldEndpointSliceYaml)
+			f.KubeStateSet(oldEndpointSliceYaml + `
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deckhouse
+  namespace: d8-system
+spec:
+  ports:
+  - name: self
+    port: 8080
+    protocol: TCP
+    targetPort: 9650
+  - name: webhook
+    port: 9651
+    protocol: TCP
+    targetPort: 9651
+  selector:
+    app: deckhouse
+`)
 			generateEndpoints()
 			generateOldEndpointSlice()
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
@@ -64,6 +83,7 @@ var _ = Describe("Global hooks :: create_endpoints ", func() {
 
 		It("Should remove old endpointslices", func() {
 			Expect(f.KubernetesResource("EndpointSlice", d8Namespace, "deckhouse-old").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Service", d8Namespace, d8Name).Field("spec.selector").Exists()).To(BeFalse())
 		})
 	})
 })
