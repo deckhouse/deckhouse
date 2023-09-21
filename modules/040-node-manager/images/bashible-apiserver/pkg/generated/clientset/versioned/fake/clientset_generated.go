@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "bashible-apiserver/pkg/generated/clientset/versioned"
-	bashiblev1alpha1 "bashible-apiserver/pkg/generated/clientset/versioned/typed/bashible/v1alpha1"
-	fakebashiblev1alpha1 "bashible-apiserver/pkg/generated/clientset/versioned/typed/bashible/v1alpha1/fake"
+	clientset "d8.io/bashible/generated/clientset/versioned"
+	bashiblev1alpha1 "d8.io/bashible/generated/clientset/versioned/typed/bashible/v1alpha1"
+	fakebashiblev1alpha1 "d8.io/bashible/generated/clientset/versioned/typed/bashible/v1alpha1/fake"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"

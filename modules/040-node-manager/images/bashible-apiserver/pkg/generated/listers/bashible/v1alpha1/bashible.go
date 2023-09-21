@@ -19,7 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
+	v1alpha1 "d8.io/bashible/apis/bashible/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"

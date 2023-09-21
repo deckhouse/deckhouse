@@ -24,7 +24,7 @@ import (
 	"k8s.io/component-base/logs"
 	"k8s.io/klog/v2"
 
-	"bashible-apiserver/pkg/cmd/server"
+	"d8.io/bashible/cmd/server"
 )
 
 func main() {

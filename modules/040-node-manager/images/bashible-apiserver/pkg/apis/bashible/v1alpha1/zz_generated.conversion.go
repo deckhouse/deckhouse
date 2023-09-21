@@ -22,7 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	bashible "bashible-apiserver/pkg/apis/bashible"
+	bashible "d8.io/bashible/apis/bashible"
 	unsafe "unsafe"
 
 	conversion "k8s.io/apimachinery/pkg/conversion"

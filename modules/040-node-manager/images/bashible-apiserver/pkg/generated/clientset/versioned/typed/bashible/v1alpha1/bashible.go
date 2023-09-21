@@ -19,9 +19,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
-	bashiblev1alpha1 "bashible-apiserver/pkg/generated/applyconfiguration/bashible/v1alpha1"
-	scheme "bashible-apiserver/pkg/generated/clientset/versioned/scheme"
+	v1alpha1 "d8.io/bashible/apis/bashible/v1alpha1"
+	bashiblev1alpha1 "d8.io/bashible/generated/applyconfiguration/bashible/v1alpha1"
+	scheme "d8.io/bashible/generated/clientset/versioned/scheme"
 	"context"
 	json "encoding/json"
 	"fmt"

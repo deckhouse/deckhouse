@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 
-	"bashible-apiserver/pkg/template"
+	"d8.io/bashible/template"
 )
 
 type CachesManager interface {

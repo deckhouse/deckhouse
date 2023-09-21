@@ -31,12 +31,12 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"bashible-apiserver/pkg/apis/bashible/v1alpha1.Bashible":            schema_pkg_apis_bashible_v1alpha1_Bashible(ref),
-		"bashible-apiserver/pkg/apis/bashible/v1alpha1.BashibleList":        schema_pkg_apis_bashible_v1alpha1_BashibleList(ref),
-		"bashible-apiserver/pkg/apis/bashible/v1alpha1.Bootstrap":           schema_pkg_apis_bashible_v1alpha1_Bootstrap(ref),
-		"bashible-apiserver/pkg/apis/bashible/v1alpha1.BootstrapList":       schema_pkg_apis_bashible_v1alpha1_BootstrapList(ref),
-		"bashible-apiserver/pkg/apis/bashible/v1alpha1.NodeGroupBundle":     schema_pkg_apis_bashible_v1alpha1_NodeGroupBundle(ref),
-		"bashible-apiserver/pkg/apis/bashible/v1alpha1.NodeGroupBundleList": schema_pkg_apis_bashible_v1alpha1_NodeGroupBundleList(ref),
+		"d8.io/bashible/apis/bashible/v1alpha1.Bashible":            schema_pkg_apis_bashible_v1alpha1_Bashible(ref),
+		"d8.io/bashible/apis/bashible/v1alpha1.BashibleList":        schema_pkg_apis_bashible_v1alpha1_BashibleList(ref),
+		"d8.io/bashible/apis/bashible/v1alpha1.Bootstrap":           schema_pkg_apis_bashible_v1alpha1_Bootstrap(ref),
+		"d8.io/bashible/apis/bashible/v1alpha1.BootstrapList":       schema_pkg_apis_bashible_v1alpha1_BootstrapList(ref),
+		"d8.io/bashible/apis/bashible/v1alpha1.NodeGroupBundle":     schema_pkg_apis_bashible_v1alpha1_NodeGroupBundle(ref),
+		"d8.io/bashible/apis/bashible/v1alpha1.NodeGroupBundleList": schema_pkg_apis_bashible_v1alpha1_NodeGroupBundleList(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroup":                     schema_pkg_apis_meta_v1_APIGroup(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroupList":                 schema_pkg_apis_meta_v1_APIGroupList(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIResource":                  schema_pkg_apis_meta_v1_APIResource(ref),
@@ -178,7 +178,7 @@ func schema_pkg_apis_bashible_v1alpha1_BashibleList(ref common.ReferenceCallback
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("bashible-apiserver/pkg/apis/bashible/v1alpha1.Bashible"),
+										Ref:     ref("d8.io/bashible/apis/bashible/v1alpha1.Bashible"),
 									},
 								},
 							},
@@ -189,7 +189,7 @@ func schema_pkg_apis_bashible_v1alpha1_BashibleList(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"bashible-apiserver/pkg/apis/bashible/v1alpha1.Bashible", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+			"d8.io/bashible/apis/bashible/v1alpha1.Bashible", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
@@ -268,7 +268,7 @@ func schema_pkg_apis_bashible_v1alpha1_BootstrapList(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("bashible-apiserver/pkg/apis/bashible/v1alpha1.Bootstrap"),
+										Ref:     ref("d8.io/bashible/apis/bashible/v1alpha1.Bootstrap"),
 									},
 								},
 							},
@@ -279,7 +279,7 @@ func schema_pkg_apis_bashible_v1alpha1_BootstrapList(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"bashible-apiserver/pkg/apis/bashible/v1alpha1.Bootstrap", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+			"d8.io/bashible/apis/bashible/v1alpha1.Bootstrap", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
@@ -368,7 +368,7 @@ func schema_pkg_apis_bashible_v1alpha1_NodeGroupBundleList(ref common.ReferenceC
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("bashible-apiserver/pkg/apis/bashible/v1alpha1.NodeGroupBundle"),
+										Ref:     ref("d8.io/bashible/apis/bashible/v1alpha1.NodeGroupBundle"),
 									},
 								},
 							},
@@ -379,7 +379,7 @@ func schema_pkg_apis_bashible_v1alpha1_NodeGroupBundleList(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"bashible-apiserver/pkg/apis/bashible/v1alpha1.NodeGroupBundle", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+			"d8.io/bashible/apis/bashible/v1alpha1.NodeGroupBundle", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 

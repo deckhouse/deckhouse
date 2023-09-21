@@ -19,8 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
-	bashiblev1alpha1 "bashible-apiserver/pkg/generated/applyconfiguration/bashible/v1alpha1"
+	v1alpha1 "d8.io/bashible/apis/bashible/v1alpha1"
+	bashiblev1alpha1 "d8.io/bashible/generated/applyconfiguration/bashible/v1alpha1"
 	"context"
 	json "encoding/json"
 	"fmt"

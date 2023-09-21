@@ -1,6 +1,6 @@
 // This is a generated file. Do not edit directly.
 
-module bashible-apiserver
+module d8.io/bashible
 
 go 1.19
 
