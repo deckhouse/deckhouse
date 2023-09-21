@@ -38,7 +38,6 @@ exit 0
 {{- end }}
 
 bb-deckhouse-get-disruptive-update-approval
-
 bb-log-info "Rebooting machine after bootstrap process completed"
 bb-flag-unset reboot
 
