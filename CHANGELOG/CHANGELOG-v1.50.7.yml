@@ -1,0 +1,5 @@
+linstor:
+  fixes:
+    - summary: Fix rare issues with building the DRBD module when changing the kernels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5758
+

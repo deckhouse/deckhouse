@@ -1,5 +1,9 @@
 # Changelog v1.50
 
+## [MALFORMED]
+
+
+ - #5392 unknown section "deckhouse-config"
 
 ## Know before update
 
@@ -38,12 +42,12 @@
  - **[candi]** Revert migration to cgroupfs driver for containerd CRI. [#5539](https://github.com/deckhouse/deckhouse/pull/5539)
  - **[candi]** Set firmware explicitly for `vsphere_virtual_machine`. [#5457](https://github.com/deckhouse/deckhouse/pull/5457)
  - **[candi]** Remove usage of temp files when creating a `NodeUser`. [#5337](https://github.com/deckhouse/deckhouse/pull/5337)
- - **[deckhouse-config]** Deckhouse-config-webhook successfully starts without the `external-module-manager` module. [#5392](https://github.com/deckhouse/deckhouse/pull/5392)
  - **[control-plane-manager]** Hours and minutes can be used simultaneously in the `webhookCacheTTL` module configuration field. [#5417](https://github.com/deckhouse/deckhouse/pull/5417)
  - **[helm]** Find and notify deprecated helm releases for the current Kubernetes version + 2. [#5537](https://github.com/deckhouse/deckhouse/pull/5537)
  - **[ingress-nginx]** Fix `nginx_ingress_controller_ssl_expire_time_seconds`. [#5442](https://github.com/deckhouse/deckhouse/pull/5442)
     Ingress controller will restart.
  - **[keepalived]** Add info about [how to do manual IP switching](https://deckhouse.io/documentation/latest/modules/450-keepalived/faq.html#how-to-manually-switch-keepalived). [#5335](https://github.com/deckhouse/deckhouse/pull/5335)
+ - **[linstor]** Fix rare issues with building the DRBD module when changing the kernels. [#5758](https://github.com/deckhouse/deckhouse/pull/5758)
  - **[linstor]** Using an internal SPAAS service instead of the external one when building DRBD. [#5690](https://github.com/deckhouse/deckhouse/pull/5690)
  - **[loki]** Mount `/tmp` on `emptyDir` to fix retention. [#5400](https://github.com/deckhouse/deckhouse/pull/5400)
  - **[metallb]** Fix error in speaker leader-election. [#5565](https://github.com/deckhouse/deckhouse/pull/5565)
