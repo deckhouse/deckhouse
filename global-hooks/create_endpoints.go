@@ -180,6 +180,17 @@ func cleanupOldEndpoints(input *go_hook.HookInput, dc dependency.Container) erro
 		return err
 	}
 
+	if len(list.Items) > 0 {
+		// remove selector from deckhouse service to prevent endpointslices creation
+		patch := map[string]interface{}{
+			"spec": map[string]interface{}{
+				"selector": nil,
+			},
+		}
+
+		input.PatchCollector.MergePatch(patch, "v1", "Service", d8Namespace, d8Name)
+	}
+
 	for _, es := range list.Items {
 		input.PatchCollector.Delete("discovery.k8s.io/v1", "EndpointSlice", d8Namespace, es.Name)
 	}
