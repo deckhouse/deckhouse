@@ -11,8 +11,7 @@ title: "Cloud provider — Yandex Cloud: configuration"
 The module automatically creates StorageClasses covering all available disks in Yandex:
 
 | Type | StorageClass Name | Comment |
-``
-|---|---|
+|---|---|---|
 | network-hdd | network-hdd | |
 | network-ssd | network-ssd | |
 | network-ssd-nonreplicated | network-ssd-nonreplicated | |

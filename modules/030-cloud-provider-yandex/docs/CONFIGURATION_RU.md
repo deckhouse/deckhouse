@@ -9,9 +9,9 @@ title: "Cloud provider — Yandex Cloud: настройки"
 ## Storage
 
 Модуль автоматически создаёт StorageClass'ы, покрывающие все варианты дисков в Yandex:
-``
+
 | Тип | Имя StorageClass | Комментарии |
-|---|---|
+|---|---|---|
 | network-hdd | network-hdd | |'
 | network-ssd | network-ssd | |
 | network-ssd-nonreplicated | network-ssd-nonreplicated | |
