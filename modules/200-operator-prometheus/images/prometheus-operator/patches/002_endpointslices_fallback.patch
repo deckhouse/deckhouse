@@ -1,0 +1,86 @@
+---
+Index: pkg/prometheus/promcfg.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
+--- a/pkg/prometheus/promcfg.go	(revision 8eae904d83dc054310a99e5671da0a70cd7d10c2)
++++ b/pkg/prometheus/promcfg.go	(date 1695303996376)
+@@ -1351,6 +1351,7 @@
+ 	relabelings = append(relabelings, generateRelabelConfig(labeler.GetRelabelingConfigs(m.TypeMeta, m.ObjectMeta, ep.RelabelConfigs))...)
+
+ 	relabelings = generateAddressShardingRelabelingRules(relabelings, shards)
++	relabelings = generateFallbackEndpointSliceRelabeling(relabelings)
+ 	cfg = append(cfg, yaml.MapItem{Key: "relabel_configs", Value: relabelings})
+
+ 	cfg = cg.AddLimitsToYAML(cfg, sampleLimitKey, m.Spec.SampleLimit, cpf.EnforcedSampleLimit)
+@@ -2665,3 +2666,68 @@
+ 		Value: cfg,
+ 	}, nil
+ }
++
++var (
++	endpointSlicesToEndpointsMap = map[string]string{
++		"__meta_kubernetes_endpointslice_name":                                     "__meta_kubernetes_endpoints_name",
++		"__meta_kubernetes_endpointslice_endpoint_topology_kubernetes_io_hostname": "__meta_kubernetes_endpoint_node_name",
++		"__meta_kubernetes_endpointslice_endpoint_conditions_ready":                "__meta_kubernetes_endpoint_ready",
++		"__meta_kubernetes_endpointslice_port_name":                                "__meta_kubernetes_endpoint_port_name",
++		"__meta_kubernetes_endpointslice_port_protocol":                            "__meta_kubernetes_endpoint_port_protocol",
++		"__meta_kubernetes_endpointslice_address_target_kind":                      "__meta_kubernetes_endpoint_address_target_kind",
++		"__meta_kubernetes_endpointslice_address_target_name":                      "__meta_kubernetes_endpoint_address_target_name",
++	}
++
++	endpointSlicesLabelsAndAnnotations = map[string]string{
++		"__meta_kubernetes_endpointslice_label_":             "__meta_kubernetes_endpoints_label_",
++		"__meta_kubernetes_endpointslice_labelpresent_":      "__meta_kubernetes_endpoints_labelpresent_",
++		"__meta_kubernetes_endpointslice_annotation_":        "__meta_kubernetes_endpoints_annotation_",
++		"__meta_kubernetes_endpointslice_annotationpresent_": "__meta_kubernetes_endpoints_annotationpresent_",
++	}
++)
++
++func generateFallbackEndpointSliceRelabeling(relabelings []yaml.MapSlice) []yaml.MapSlice {
++	extraLabels := make([]yaml.MapSlice, 0)
++	for _, rl := range relabelings {
++		for _, ri := range rl {
++			if key, ok := ri.Key.(string); !ok || key != "source_labels" {
++				continue
++			}
++
++			values, ok := ri.Value.([]string)
++			if !ok {
++				continue
++			}
++
++			for _, value := range values {
++				if !strings.HasPrefix(value, "__meta_kubernetes_endpointslice_") {
++					continue
++				}
++
++				// match strict keys
++				if endpointKey, ok := endpointSlicesToEndpointsMap[value]; ok {
++					extraLabels = append(extraLabels, yaml.MapSlice{
++						{Key: "source_labels", Value: []string{value}},
++						{Key: "target_label", Value: endpointKey},
++						{Key: "regex", Value: "(.+)"},
++						{Key: "replacement", Value: "${1}"},
++					})
++					continue
++				}
++
++				// match prefix keys, like labels and annotations
++				for k, v := range endpointSlicesLabelsAndAnnotations {
++					if strings.HasPrefix(value, k) {
++						extraLabels = append(extraLabels, yaml.MapSlice{
++							{Key: "action", Value: "labelmap"},
++							{Key: "regex", Value: k + "(.+)"},
++							{Key: "replacement", Value: v + "${1}"},
++						})
++					}
++				}
++			}
++		}
++	}
++
++	return append(relabelings, extraLabels...)
++}
