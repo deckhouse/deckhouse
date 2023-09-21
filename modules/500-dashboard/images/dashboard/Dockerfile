@@ -21,6 +21,7 @@ RUN apk add --no-cache git patch make zip && \
     cd dashboard && \
     git config --global user.email "builder@deckhouse.io" && \
     git checkout v2.7.0 && \
+    # Use batch/v1 for fetching cronjob jobs https://github.com/kubernetes/dashboard/pull/7465
     git cherry-pick f79f3a5e25df152df6164ddfaf2ffc1f09e5058f && \
     go mod download
 WORKDIR /src/dashboard/src/app/backend/
