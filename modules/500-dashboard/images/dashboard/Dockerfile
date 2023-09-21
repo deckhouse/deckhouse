@@ -17,7 +17,7 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src/
 RUN apk add --no-cache git patch make zip && \
-    git clone https://${SOURCE_REPO}/kubernetes/dashboard && \
+    git clone ${SOURCE_REPO}/kubernetes/dashboard && \
     cd dashboard && \
     git config --global user.email "builder@deckhouse.io" && \
     git checkout v2.7.0 && \
