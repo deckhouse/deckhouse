@@ -17,13 +17,13 @@ limitations under the License.
 package registry
 
 import (
-	"bashible-apiserver/pkg/registry/bashible/bootstrap"
+	"d8.io/bashible/registry/bashible/bootstrap"
 
 	"k8s.io/apiserver/pkg/registry/rest"
 
-	"bashible-apiserver/pkg/registry/bashible/bashible"
-	"bashible-apiserver/pkg/registry/bashible/nodegroupbundle"
-	"bashible-apiserver/pkg/template"
+	"d8.io/bashible/registry/bashible/bashible"
+	"d8.io/bashible/registry/bashible/nodegroupbundle"
+	"d8.io/bashible/template"
 )
 
 func GetStorage(rootDir string, bashibleContext *template.BashibleContext, stepsStorage *template.StepsStorage, manager CachesManager) map[string]rest.Storage {

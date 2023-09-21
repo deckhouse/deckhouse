@@ -34,10 +34,10 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 
-	"bashible-apiserver/pkg/apis/bashible"
-	"bashible-apiserver/pkg/apis/bashible/install"
-	bashibleregistry "bashible-apiserver/pkg/registry"
-	"bashible-apiserver/pkg/template"
+	"d8.io/bashible/apis/bashible"
+	"d8.io/bashible/apis/bashible/install"
+	bashibleregistry "d8.io/bashible/registry"
+	"d8.io/bashible/template"
 )
 
 var (
