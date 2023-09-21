@@ -17,7 +17,9 @@ limitations under the License.
 package controller
 
 import (
-	infrav1 "cloud-provider-static/api/v1alpha1"
+	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
+	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
+	"cloud-provider-static/internal/controller/infrastructure"
 	"cloud-provider-static/internal/scope"
 	"cloud-provider-static/internal/util"
 	"context"
@@ -72,7 +74,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	logger.Info("Reconciling StaticInstance")
 
-	staticInstance := &infrav1.StaticInstance{}
+	staticInstance := &deckhousev1.StaticInstance{}
 	err = r.Get(ctx, req.NamespacedName, staticInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -124,7 +126,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, errors.New("NodeGroup does not have staticInstances field")
 	}
 
-	credentials := &infrav1.SSHCredentials{}
+	credentials := &deckhousev1.SSHCredentials{}
 	credentialsKey := client.ObjectKey{
 		Namespace: staticInstance.Namespace,
 		Name:      staticInstance.Spec.CredentialsRef.Name,
@@ -179,7 +181,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
 	// If the StaticInstance doesn't have finalizer, add it.
-	if controllerutil.AddFinalizer(instanceScope.Instance, infrav1.InstanceFinalizer) {
+	if controllerutil.AddFinalizer(instanceScope.Instance, deckhousev1.InstanceFinalizer) {
 		err := instanceScope.Patch(ctx)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to add finalizer")
@@ -187,7 +189,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 	}
 
 	if instanceScope.Instance.Status.CurrentStatus == nil || instanceScope.Instance.Status.CurrentStatus.Phase == "" {
-		instanceScope.SetPhase(infrav1.StaticInstanceStatusCurrentStatusPhasePending)
+		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
 		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 
@@ -200,7 +202,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 	}
 
 	if instanceScope.MachineScope != nil {
-		instances := &infrav1.StaticInstanceList{}
+		instances := &deckhousev1.StaticInstanceList{}
 
 		labelSelector, err := metav1.LabelSelectorAsSelector(&instanceScope.MachineScope.StaticMachine.Spec.LabelSelector)
 		if err != nil {
@@ -240,10 +242,10 @@ func (r *StaticInstanceReconciler) reconcileDelete(
 ) (ctrl.Result, error) {
 	switch instanceScope.GetPhase() {
 	case "":
-	case infrav1.StaticInstanceStatusCurrentStatusPhasePending:
-	case infrav1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
 		return ctrl.Result{Requeue: true}, nil
-	case infrav1.StaticInstanceStatusCurrentStatusPhaseRunning:
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
 		if instanceScope.MachineScope != nil {
 			err := r.Client.Delete(ctx, instanceScope.MachineScope.Machine)
 			if err != nil {
@@ -252,11 +254,11 @@ func (r *StaticInstanceReconciler) reconcileDelete(
 
 			return ctrl.Result{Requeue: true}, nil
 		}
-	case infrav1.StaticInstanceStatusCurrentStatusPhaseCleaning:
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	if controllerutil.RemoveFinalizer(instanceScope.Instance, infrav1.InstanceFinalizer) {
+	if controllerutil.RemoveFinalizer(instanceScope.Instance, deckhousev1.InstanceFinalizer) {
 		err := instanceScope.Patch(ctx)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer")
@@ -268,7 +270,7 @@ func (r *StaticInstanceReconciler) reconcileDelete(
 
 func (r *StaticInstanceReconciler) getStaticMachine(
 	ctx context.Context,
-	staticInstance *infrav1.StaticInstance,
+	staticInstance *deckhousev1.StaticInstance,
 ) (*scope.MachineScope, error) {
 	logger := log.FromContext(ctx)
 
@@ -292,7 +294,7 @@ func (r *StaticInstanceReconciler) getStaticMachine(
 
 	var ok bool
 
-	machineScope, ok, err := NewMachineScope(ctx, r.Client, r.Config, staticMachine)
+	machineScope, ok, err := controller.NewMachineScope(ctx, r.Client, r.Config, staticMachine)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a machine scope")
 	}
@@ -306,6 +308,6 @@ func (r *StaticInstanceReconciler) getStaticMachine(
 // SetupWithManager sets up the controller with the Manager.
 func (r *StaticInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1.StaticInstance{}).
+		For(&deckhousev1.StaticInstance{}).
 		Complete(r)
 }

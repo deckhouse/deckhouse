@@ -17,7 +17,8 @@ limitations under the License.
 package controller
 
 import (
-	infrav1 "cloud-provider-static/api/v1alpha1"
+	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
+	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
 	"cloud-provider-static/internal/bootstrap"
 	"cloud-provider-static/internal/cleanup"
 	"cloud-provider-static/internal/pool"
@@ -254,7 +255,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
 	switch instanceScope.GetPhase() {
-	case infrav1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
 		instanceScope.Logger.Info("StaticInstance is bootstrapping")
 
 		estimated := DefaultStaticInstanceBootstrapTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
@@ -276,7 +277,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		}
 
 		return ctrl.Result{}, nil
-	case infrav1.StaticInstanceStatusCurrentStatusPhaseRunning:
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
 		instanceScope.Logger.Info("StaticInstance is running")
 
 		if !instanceScope.MachineScope.StaticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -287,7 +288,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 
 			return ctrl.Result{Requeue: true}, nil
 		}
-	case infrav1.StaticInstanceStatusCurrentStatusPhaseCleaning:
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
 		instanceScope.Logger.Info("StaticInstance is cleaning")
 
 		estimated := DefaultStaticInstanceCleanupTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
@@ -318,7 +319,7 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 	ctx context.Context,
 	machineScope *scope.MachineScope,
 ) (*scope.InstanceScope, error) {
-	instances := &infrav1.StaticInstanceList{}
+	instances := &deckhousev1.StaticInstanceList{}
 	uidSelector := fields.OneTermEqualSelector("status.machineRef.uid", string(machineScope.StaticMachine.UID))
 
 	err := r.List(
@@ -349,7 +350,7 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 
 	instanceScope.MachineScope = machineScope
 
-	credentials := &infrav1.SSHCredentials{}
+	credentials := &deckhousev1.SSHCredentials{}
 	credentialsKey := client.ObjectKey{
 		Namespace: staticInstance.Namespace,
 		Name:      staticInstance.Spec.CredentialsRef.Name,
@@ -369,10 +370,10 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := mgr.GetFieldIndexer().IndexField(
 		context.Background(),
-		&infrav1.StaticInstance{},
+		&deckhousev1.StaticInstance{},
 		"status.machineRef.uid",
 		func(rawObj client.Object) []string {
-			staticInstance := rawObj.(*infrav1.StaticInstance)
+			staticInstance := rawObj.(*deckhousev1.StaticInstance)
 
 			if staticInstance.Status.MachineRef == nil {
 				return nil
@@ -386,10 +387,10 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	err = mgr.GetFieldIndexer().IndexField(
 		context.Background(),
-		&infrav1.StaticInstance{},
+		&deckhousev1.StaticInstance{},
 		"status.currentStatus.phase",
 		func(rawObj client.Object) []string {
-			staticInstance := rawObj.(*infrav1.StaticInstance)
+			staticInstance := rawObj.(*deckhousev1.StaticInstance)
 
 			if staticInstance.Status.CurrentStatus == nil {
 				return []string{""}
@@ -417,7 +418,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1.StaticMachine{}).
 		Watches(
-			&infrav1.StaticInstance{},
+			&deckhousev1.StaticInstance{},
 			handler.EnqueueRequestsFromMapFunc(r.StaticInstanceToStaticMachineMapFunc(infrav1.GroupVersion.WithKind("StaticMachine"))),
 		).
 		Complete(r)
@@ -427,7 +428,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Machine events and returns reconciliation requests for an infrastructure provider object
 func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
 	return func(ctx context.Context, object client.Object) []reconcile.Request {
-		staticInstance, ok := object.(*infrav1.StaticInstance)
+		staticInstance, ok := object.(*deckhousev1.StaticInstance)
 		if !ok {
 			return nil
 		}

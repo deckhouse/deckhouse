@@ -32,6 +32,7 @@ type SSHCredentialsSpec struct {
 	PrivateSSHKey string `json:"privateSSHKey"`
 	SudoPassword  string `json:"sudoPassword,omitempty"`
 
+	//+kubebuilder:default:=22
 	//+kubebuilder:validation:Minimum=1
 	//+kubebuilder:validation:Maximum=65535
 	SSHPort int `json:"sshPort,omitempty"`
@@ -39,23 +40,15 @@ type SSHCredentialsSpec struct {
 	SSHExtraArgs string `json:"sshExtraArgs,omitempty"`
 }
 
-// SSHCredentialsStatus defines the observed state of SSHCredentials
-type SSHCredentialsStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
-
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:scope=Cluster
-//+kubebuilder:subresource:status
 
 // SSHCredentials is the Schema for the sshcredentials API
 type SSHCredentials struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SSHCredentialsSpec   `json:"spec,omitempty"`
-	Status SSHCredentialsStatus `json:"status,omitempty"`
+	Spec SSHCredentialsSpec `json:"spec,omitempty"`
 }
 
 //+kubebuilder:object:root=true

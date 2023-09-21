@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"cloud-provider-static/api/deckhouse.io/v1alpha1"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -99,13 +100,13 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&StaticInstance{}).SetupWebhookWithManager(mgr)
+	err = (&v1alpha1.StaticInstance{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&StaticMachine{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&SSHCredentials{}).SetupWebhookWithManager(mgr)
+	err = (&v1alpha1.SSHCredentials{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&StaticMachineTemplate{}).SetupWebhookWithManager(mgr)

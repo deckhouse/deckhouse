@@ -1,7 +1,8 @@
 package bootstrap
 
 import (
-	infrav1 "cloud-provider-static/api/v1alpha1"
+	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
+	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
 	"cloud-provider-static/internal/providerid"
 	"cloud-provider-static/internal/scope"
 	"cloud-provider-static/internal/ssh"
@@ -20,7 +21,7 @@ import (
 
 // Bootstrap runs the bootstrap script on StaticInstance.
 func Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	if instanceScope.GetPhase() != infrav1.StaticInstanceStatusCurrentStatusPhasePending {
+	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
 		return errors.New("StaticInstance is not pending")
 	}
 
@@ -41,7 +42,7 @@ func Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
 		UID:        instanceScope.MachineScope.StaticMachine.UID,
 	}
 
-	instanceScope.SetPhase(infrav1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
+	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
 
 	err = instanceScope.Patch(ctx)
 	if err != nil {
@@ -119,7 +120,7 @@ func FinishBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope
 
 	conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceBootstrapSucceededCondition)
 
-	instanceScope.SetPhase(infrav1.StaticInstanceStatusCurrentStatusPhaseRunning)
+	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning)
 
 	err = instanceScope.Patch(ctx)
 	if err != nil {

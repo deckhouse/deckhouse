@@ -1,7 +1,7 @@
 package pool
 
 import (
-	infrav1 "cloud-provider-static/api/v1alpha1"
+	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
 	"cloud-provider-static/internal/scope"
 	"context"
 	"github.com/pkg/errors"
@@ -35,7 +35,7 @@ func (p *StaticInstancePool) PickStaticInstance(
 	staticInstances, err := p.findStaticInstancesInPhase(
 		ctx,
 		machineScope,
-		infrav1.StaticInstanceStatusCurrentStatusPhasePending,
+		deckhousev1.StaticInstanceStatusCurrentStatusPhasePending,
 	)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed to find static instances in pending phase")
@@ -46,7 +46,7 @@ func (p *StaticInstancePool) PickStaticInstance(
 
 	staticInstance := staticInstances[rand.Intn(len(staticInstances))]
 
-	credentials := &infrav1.SSHCredentials{}
+	credentials := &deckhousev1.SSHCredentials{}
 	credentialsKey := client.ObjectKey{
 		Namespace: staticInstance.Namespace,
 		Name:      staticInstance.Spec.CredentialsRef.Name,
@@ -76,9 +76,9 @@ func (p *StaticInstancePool) PickStaticInstance(
 func (p *StaticInstancePool) findStaticInstancesInPhase(
 	ctx context.Context,
 	machineScope *scope.MachineScope,
-	phase infrav1.StaticInstanceStatusCurrentStatusPhase,
-) ([]infrav1.StaticInstance, error) {
-	staticInstances := &infrav1.StaticInstanceList{}
+	phase deckhousev1.StaticInstanceStatusCurrentStatusPhase,
+) ([]deckhousev1.StaticInstance, error) {
+	staticInstances := &deckhousev1.StaticInstanceList{}
 
 	labelSelector, err := metav1.LabelSelectorAsSelector(&machineScope.StaticMachine.Spec.LabelSelector)
 	if err != nil {

@@ -5,6 +5,7 @@
 domain: cluster.x-k8s.io
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: cloud-provider-static
 repo: cloud-provider-static
 resources:

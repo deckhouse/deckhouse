@@ -20,6 +20,9 @@ import (
 	"flag"
 	"os"
 
+	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
+	infrastructurecontroller "cloud-provider-static/internal/controller/infrastructure"
+
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -33,8 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	infrav1 "cloud-provider-static/api/v1alpha1"
-	"cloud-provider-static/internal/controller"
+	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
+	deckhouseiocontroller "cloud-provider-static/internal/controller/deckhouse.io"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -47,6 +50,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrav1.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
+	utilruntime.Must(deckhousev1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -91,7 +95,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.StaticClusterReconciler{
+	if err = (&infrastructurecontroller.StaticClusterReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Config: mgr.GetConfig(),
@@ -99,7 +103,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticCluster")
 		os.Exit(1)
 	}
-	if err = (&controller.StaticMachineReconciler{
+	if err = (&infrastructurecontroller.StaticMachineReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Config: mgr.GetConfig(),
@@ -107,11 +111,11 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticMachine")
 		os.Exit(1)
 	}
-	if err = (&infrav1.StaticInstance{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&deckhousev1.StaticInstance{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticInstance")
 		os.Exit(1)
 	}
-	if err = (&controller.StaticInstanceReconciler{
+	if err = (&deckhouseiocontroller.StaticInstanceReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Config: mgr.GetConfig(),
@@ -123,7 +127,7 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticMachine")
 		os.Exit(1)
 	}
-	if err = (&infrav1.SSHCredentials{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&deckhousev1.SSHCredentials{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "SSHCredentials")
 		os.Exit(1)
 	}
@@ -131,7 +135,7 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticMachineTemplate")
 		os.Exit(1)
 	}
-	if err = (&controller.StaticControlPlaneReconciler{
+	if err = (&infrastructurecontroller.StaticControlPlaneReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Config: mgr.GetConfig(),

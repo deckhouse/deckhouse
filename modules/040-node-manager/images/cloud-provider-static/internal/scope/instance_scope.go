@@ -1,7 +1,8 @@
 package scope
 
 import (
-	infrav1 "cloud-provider-static/api/v1alpha1"
+	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
+	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
 	"context"
 	"time"
 
@@ -18,14 +19,14 @@ type InstanceScope struct {
 	*Scope
 	MachineScope *MachineScope
 
-	Instance    *infrav1.StaticInstance
-	Credentials *infrav1.SSHCredentials
+	Instance    *deckhousev1.StaticInstance
+	Credentials *deckhousev1.SSHCredentials
 }
 
 // NewInstanceScope creates a new instance scope.
 func NewInstanceScope(
 	scope *Scope,
-	staticInstance *infrav1.StaticInstance,
+	staticInstance *deckhousev1.StaticInstance,
 ) (*InstanceScope, error) {
 	if scope == nil {
 		return nil, errors.New("Scope is required when creating an InstanceScope")
@@ -48,7 +49,7 @@ func NewInstanceScope(
 }
 
 // GetPhase returns the current phase of the static instance.
-func (i *InstanceScope) GetPhase() infrav1.StaticInstanceStatusCurrentStatusPhase {
+func (i *InstanceScope) GetPhase() deckhousev1.StaticInstanceStatusCurrentStatusPhase {
 	if i.Instance.Status.CurrentStatus == nil {
 		return ""
 	}
@@ -57,9 +58,9 @@ func (i *InstanceScope) GetPhase() infrav1.StaticInstanceStatusCurrentStatusPhas
 }
 
 // SetPhase sets the current phase of the static instance.
-func (i *InstanceScope) SetPhase(phase infrav1.StaticInstanceStatusCurrentStatusPhase) {
+func (i *InstanceScope) SetPhase(phase deckhousev1.StaticInstanceStatusCurrentStatusPhase) {
 	if i.Instance.Status.CurrentStatus == nil {
-		i.Instance.Status.CurrentStatus = &infrav1.StaticInstanceStatusCurrentStatus{}
+		i.Instance.Status.CurrentStatus = &deckhousev1.StaticInstanceStatusCurrentStatus{}
 	}
 
 	i.Instance.Status.CurrentStatus.Phase = phase

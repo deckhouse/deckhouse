@@ -1,7 +1,7 @@
 package scope
 
 import (
-	infrav1 "cloud-provider-static/api/v1alpha1"
+	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
 	"context"
 	"github.com/pkg/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"

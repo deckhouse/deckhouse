@@ -17,7 +17,7 @@ limitations under the License.
 package controller
 
 import (
-	infrav1 "cloud-provider-static/api/v1alpha1"
+	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
 	"cloud-provider-static/internal/scope"
 	"context"
 	"github.com/pkg/errors"

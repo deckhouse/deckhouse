@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
 	"context"
 
 	"github.com/pkg/errors"
@@ -30,8 +31,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	infrav1 "cloud-provider-static/api/v1alpha1"
 )
 
 // StaticControlPlaneReconciler reconciles a StaticControlPlane object

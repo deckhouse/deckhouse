@@ -1,7 +1,8 @@
 package cleanup
 
 import (
-	infrav1 "cloud-provider-static/api/v1alpha1"
+	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
+	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
 	"cloud-provider-static/internal/scope"
 	"cloud-provider-static/internal/ssh"
 	"context"
@@ -15,11 +16,11 @@ import (
 
 // Cleanup runs the cleanup script on the static instance.
 func Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	if instanceScope.GetPhase() != infrav1.StaticInstanceStatusCurrentStatusPhaseRunning {
+	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning {
 		return errors.New("StaticInstance is not running")
 	}
 
-	instanceScope.SetPhase(infrav1.StaticInstanceStatusCurrentStatusPhaseCleaning)
+	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning)
 
 	err := instanceScope.Patch(ctx)
 	if err != nil {
@@ -57,7 +58,7 @@ func FinishCleaning(ctx context.Context, instanceScope *scope.InstanceScope) err
 	conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForMachineRefReason, clusterv1.ConditionSeverityInfo, "")
 	conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForNodeRefReason, clusterv1.ConditionSeverityInfo, "")
 
-	instanceScope.SetPhase(infrav1.StaticInstanceStatusCurrentStatusPhasePending)
+	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
 	err = instanceScope.Patch(ctx)
 	if err != nil {
