@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — OpenStack: Preparing environment"
+description: "Configuring OpenStack for Deckhouse cloud provider operation."
 ---
 
 To manage resources in an OpenStack cloud, Deckhouse connects to the OpenStack API. The user credentials required to connect to the OpenStack API are located in the openrc file (OpenStack RC file).

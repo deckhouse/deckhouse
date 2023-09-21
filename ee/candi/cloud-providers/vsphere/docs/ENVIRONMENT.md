@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — VMware vSphere: Preparing environment"
+description: "Configuring VMware vSphere for Deckhouse cloud provider operation."
 ---
 
 <!-- AUTHOR! Don't forget to update getting started if necessary -->

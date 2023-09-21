@@ -26,7 +26,7 @@ spec:
                   description: |
                     Идентификатор образа, который будет установлен в заказанные инстансы.
 
-                    По умолчанию: образ из `masterInstanceClass` из `providerClusterConfiguration`.
+                    По умолчанию используется образ из `masterInstanceClass` из `providerClusterConfiguration`.
                 platformID:
                   description: |
                     ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
@@ -46,7 +46,7 @@ spec:
                   description: |
                     Переопределение имени основного subnet, к которому будет подключен инстанс.
 
-                    По умолчанию: subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
+                    По умолчанию используется subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
                 additionalSubnets:
                   description: |
                     Список subnet, которые будут подключены к инстансу.
@@ -82,7 +82,7 @@ spec:
                   description: |
                     Идентификатор образа, который будет установлен в заказанные инстансы.
 
-                    По умолчанию: образ из `masterInstanceClass` из `providerClusterConfiguration`.
+                    По умолчанию используется образ из `masterInstanceClass` из `providerClusterConfiguration`.
                 platformID:
                   description: |
                     ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
@@ -102,7 +102,7 @@ spec:
                   description: |
                     Переопределение имени основного subnet, к которому будет подключен инстанс.
 
-                    По умолчанию: subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
+                    По умолчанию используется subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
                 additionalSubnets:
                   description: |
                     Список subnet, которые будут подключены к инстансу.

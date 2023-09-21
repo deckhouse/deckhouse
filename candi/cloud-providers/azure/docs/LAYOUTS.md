@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — Azure: Layouts"
+description: "Schemes of placement and interaction of resources in Azure when working with the Deckhouse cloud provider."
 ---
 
 > **Caution!** Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.

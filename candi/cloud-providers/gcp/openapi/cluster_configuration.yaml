@@ -66,7 +66,7 @@ apiVersions:
         items:
           type: string
         description: |
-          A list of CIDR's allowed to connect to nodes via ssh.
+          A list of CIDR's allowed to connect to nodes via SSH.
 
           By default, from any.
       labels:
@@ -100,7 +100,10 @@ apiVersions:
           replicas:
             type: integer
             minimum: 1
-            description: The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+            description: |
+              The number of master nodes to create.
+
+              It is important to have an odd number of masters to ensure a quorum.
           additionalNetworkTags:
             description: |
               The list of additional tags.
@@ -142,9 +145,9 @@ apiVersions:
                 description: |
                   Image to use while provisioning GCP servers.
 
-                  You can find a list of images in the [documentation](https://cloud.google.com/compute/docs/images#ubuntu).
+                  You can find a list of available images in the [provider documentation](https://cloud.google.com/compute/docs/images#ubuntu).
 
-                  > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
+                  The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
               diskSizeGb: &instanceClassDiskSizeGb
                 description: Instance disk size in gibibytes.
                 example: 20

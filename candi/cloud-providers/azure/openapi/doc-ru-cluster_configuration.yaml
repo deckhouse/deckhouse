@@ -4,7 +4,7 @@ apiVersions:
     description: |
       Описывает конфигурацию облачного кластера в Azure.
 
-      Используется cloud-провайдером если control plane кластера размещен в облаке.
+      Используется cloud-провайдером, если control plane кластера размещен в облаке.
 
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
@@ -33,9 +33,9 @@ apiVersions:
           Публичный ключ для доступа на узлы под пользователем `azureuser`.
       sshAllowList:
         description: |
-          Список CIDR, разрешенных для подключения к узлам по ssh.
+          Список CIDR, разрешенных для подключения к узлам по SSH.
 
-          По умолчанию, `*`.
+          По умолчанию `*`.
       vNetCIDR:
         description: |
           Адресное пространство виртуальной сети в формате [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing).
@@ -46,7 +46,7 @@ apiVersions:
         description: |
           Массив VNet, с которыми будет объединена сеть кластера.
 
-          Service account должен иметь доступ ко всем перечисленным VNet. Если доступа нет, то пиринговое соединение необходимо [настраивать вручную](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview).
+          Service account должен иметь доступ ко всем перечисленным VNet. Если доступа нет, пиринговое соединение необходимо [настраивать вручную](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview).
         items:
           properties:
             resourceGroupName:
@@ -68,7 +68,9 @@ apiVersions:
         properties:
           replicas:
             description: |
-              Количество создаваемых master-узлов. Важно иметь нечётное количество мастеров для обеспечения кворума.
+              Количество создаваемых master-узлов.
+
+              Для обеспечения кворума важно, чтобы оно было нечетным.
           zones:
             description: |
               Список зон, в которых допустимо создавать master-узлы.
@@ -102,9 +104,9 @@ apiVersions:
                   az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
                   ```
 
-                  **По умолчанию:** образ из `AzureCloudDiscoveryData` (образ из которого был создан master при развертывании кластера).
+                  По умолчанию используется образ из `AzureCloudDiscoveryData` (образ, из которого был создан мастер-узел при развертывании кластера).
 
-                  > **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
               enableExternalIP:
                 description: |
                   Разрешение назначения внешнего IP-адреса для инстанса.
@@ -162,7 +164,7 @@ apiVersions:
 
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
 
-                    Если поменять лейблы в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
+                    Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
                 annotations:
                   description: |
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
@@ -180,7 +182,7 @@ apiVersions:
         description: |
           Словарь тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
 
-          Если поменять теги в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
+          Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
           [Параметры подключения](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/environment.html) к API Azure.
@@ -206,4 +208,4 @@ apiVersions:
               Идентификатор tenant'а.
       zones:
         description: |
-          Глобальное ограничение набора зон, с которыми работает данный cloud-provider.
+          Глобальное ограничение набора зон, с которыми работает данный cloud provider.

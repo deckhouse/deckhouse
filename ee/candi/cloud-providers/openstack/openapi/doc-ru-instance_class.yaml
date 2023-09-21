@@ -41,9 +41,9 @@ spec:
 
                     Получить список всех доступных образов можно с помощью команды: `openstack image list`.
 
-                    > **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
+                    Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
 
-                    **По умолчанию:** значение либо из `OpenStackCloudDiscoveryData`, либо из настроек `instances.imageName`.
+                    По умолчанию используется значение либо из `OpenStackCloudDiscoveryData`, либо из настроек `instances.imageName`.
                 rootDiskSize:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.
@@ -53,12 +53,12 @@ spec:
                   description: |
                     Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
 
-                    **По умолчанию:** значение из `OpenStackCloudDiscoveryData`.
+                    По умолчанию используется значение из `OpenStackCloudDiscoveryData`.
                 additionalNetworks:
                   description: |
                     Список сетей, которые будут подключены к инстансу.
 
-                    **По умолчанию:** значение из `OpenStackCloudDiscoveryData`.
+                    По умолчанию используется значение из `OpenStackCloudDiscoveryData`.
                 additionalSecurityGroups:
                   description: |
                     Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud-провайдера.

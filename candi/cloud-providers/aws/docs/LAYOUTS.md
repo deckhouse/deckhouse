@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — AWS: Layouts"
+description: "Schemes of placement and interaction of resources in AWS when working with the Deckhouse cloud provider."
 ---
 
 Three layouts are supported. Below is more information about each of them.
@@ -29,14 +30,14 @@ provider:
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    # type of the instance
+    # Type of the instance.
     instanceType: m5.xlarge
     # Amazon Machine Image ID
     # AMI Catalog in the AWS console: EC2 -> AMI Catalog
     ami: ami-0caef02b518350c8b
-    # master node VM disk size
+    # Master node VM disk size.
     diskSizeGb: 30
-    # master node VM disk type to use
+    # Master node VM disk type to use.
     diskType: gp3
 nodeGroups:
   - name: mydb
@@ -86,14 +87,14 @@ masterNodeGroup:
   # If there is more than one master node, the etcd cluster will be set up automatically.
   replicas: 1
   instanceClass:
-    # type of the instance
+    # Type of the instance.
     instanceType: m5.xlarge
-    # Amazon Machine Image ID
+    # Amazon Machine Image ID.
     # AMI Catalog in the AWS console: EC2 -> AMI Catalog
     ami: ami-0caef02b518350c8b
-    # master node VM disk size
+    # Master node VM disk size.
     diskSizeGb: 30
-    # master node VM disk type to use
+    # Master node VM disk type to use.
     diskType: gp3
 nodeGroups:
   - name: mydb

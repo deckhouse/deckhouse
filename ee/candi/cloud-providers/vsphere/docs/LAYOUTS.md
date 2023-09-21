@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider - VMware vSphere: Layouts"
+description: "Schemes of placement and interaction of resources in VMware vSphere when working with the Deckhouse cloud provider."
 ---
 
 ## Standard

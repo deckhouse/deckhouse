@@ -1,16 +1,17 @@
 ---
 title: "Cloud provider — GCP: схемы размещения"
+description: "Описание схем размещения и взаимодействия ресурсов в GCP при работе облачного провайдера Deckhouse."
 ---
 
 Поддерживаются две схемы размещения. Ниже подробнее о каждой их них.
 
 ## Standard
 
-* Для кластера создаётся отдельная VPC с [Cloud NAT](https://cloud.google.com/nat/docs/overview).
+* Для кластера создается отдельная VPC с [Cloud NAT](https://cloud.google.com/nat/docs/overview).
 * Узлы в кластере не имеют публичных IP-адресов.
-* Публичные IP-адреса можно назначить на master и статические узлы:
+* Публичные IP-адреса можно назначить на статические и master-узлы:
   * При этом будет использоваться One-to-One NAT для отображения публичного IP-адреса в IP-адрес узла (следует помнить, что CloudNAT в этом случае использоваться не будет).
-* Если master не имеет публичного IP-адреса, то для установки и доступа в кластер необходим дополнительный инстанс с публичным IP-адресом (например, bastion-хост).
+* Если master не имеет публичного IP-адреса, для установки и доступа в кластер необходим дополнительный инстанс с публичным IP-адресом (например, bastion-хост).
 * Между VPC кластера и другими VPC можно настроить пиринговое соединение.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vR1oHqbXPJPYxUXwpkRGM6VPpZaNc8WoGH-N0Zqb9GexSc-NQDvsGiXe_Hc-Z1fMQWBRawuoy8FGENt/pub?w=989&amp;h=721)
@@ -81,7 +82,7 @@ provider:
 
 ## WithoutNAT
 
-* Для кластера создаётся отдельная VPC, все узлы кластера имеют публичные IP-адреса.
+* Для кластера создается отдельная VPC, все узлы кластера имеют публичные IP-адреса.
 * Между VPC кластера и другими VPC можно настроить пиринговое соединение.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vTq2Jlx4k8OXt4acHeW6NvqABsZIPSDoOldDiGERYHWHmmKykSjXZ_ADvKecCC1L8Jjq4143uv5GWDR/pub?w=989&amp;h=721)
@@ -120,7 +121,7 @@ nodeGroups:
   instanceClass:
     machineType: n1-standard-4      # Обязательный параметр.
     image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Обязательный параметр.
-    diskSizeGb: 20                  # Необязательный параметр, Если не указан — используется локальный диск.
+    diskSizeGb: 20                  # Необязательный параметр. Если не указан — используется локальный диск.
     additionalNetworkTags:          # Необязательный параметр.
     - tag1
     additionalLabels:               # Необязательный параметр.
