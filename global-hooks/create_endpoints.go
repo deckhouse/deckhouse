@@ -181,7 +181,7 @@ func cleanupOldEndpoints(input *go_hook.HookInput, dc dependency.Container) erro
 	}
 
 	for _, es := range list.Items {
-		input.PatchCollector.Delete(es.APIVersion, es.Kind, es.Namespace, es.Name)
+		input.PatchCollector.Delete("discovery.k8s.io/v1", "EndpointSlice", d8Namespace, es.Name)
 	}
 
 	return nil
