@@ -152,10 +152,19 @@ spec:
                               - staging
                             ```
                           items:
+                            oneOf:
+                              - properties:
+                                  operator:
+                                    enum: [Exists, DoesNotExist]
+                                required: [key, operator]
+                                not:
+                                  required: [values]
+                              - properties:
+                                  operator:
+                                    enum: [In, NotIn]
+                                required: [key, operator, values]
                             type: object
-                            required:
-                              - key
-                              - operator
+                            required: ["operator"]
                             properties:
                               key:
                                 type: string

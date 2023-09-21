@@ -655,6 +655,7 @@ spec:
                         - type
                         - whenFull
                   description: Buffer parameters.
+                  required: ["type"]
                   properties:
                     type:
                       type: string
