@@ -14,6 +14,7 @@ Bashible consists of small bash scripts, that are called `steps`.
   * Use the same code for different purposes: installation, daily routine, vm image creation
 
 * Step files, and the bashible entrypoint are located in the `/var/lib/bashible` directory.
+  * Also, there is a bashible entrypoint for EE version in the `./ee/candi/bashible` directory. 
 
 * Bashible is periodically executing on a Node by systemd unit timer.  
 
