@@ -13,14 +13,10 @@
 # limitations under the License.
 
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
-    return 0
+    exit 0
 fi
 
-if bb-flag? disruption; then
-  return 0
-fi
-
-disruptionsApprovalMode={{ .nodeGroup.disruptions.approvalMode | default "Manual" | quote }}
+disruptionsApprovalMode={{ .nodeGroup.disruptions.approvalMode | default "" | quote }}
 bb-log-info "Disruptions ApprovalMode: ${disruptionsApprovalMode}"
 
 if [ "$disruptionsApprovalMode" == "RollingUpdate" ]; then
@@ -30,4 +26,5 @@ if [ "$disruptionsApprovalMode" == "RollingUpdate" ]; then
     --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
     annotate node "$(hostname -s)" update.node.deckhouse.io/rolling-update= || { bb-log-info "Retry setting update.node.deckhouse.io/rolling-update= annotation on Node in 10 sec..."; sleep 10; }
   exit 0
+  bb-log-info "DEBUG_invisible"
 fi
