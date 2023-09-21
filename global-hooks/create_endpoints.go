@@ -164,7 +164,7 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 	input.PatchCollector.Create(ep, object_patch.UpdateIfExists())
 	input.PatchCollector.Create(es, object_patch.UpdateIfExists())
 
-	// TODO: remove this part after Deckhouse release 1.55
+	// TODO: remove this part after Deckhouse release 1.56
 	// we have to remove old endpointslices here also, to prevent block on cm/deckhouse check
 	return cleanupOldEndpoints(input, dc)
 }
