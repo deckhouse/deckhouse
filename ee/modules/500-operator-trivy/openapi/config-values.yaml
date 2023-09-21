@@ -1,5 +1,13 @@
 type: object
 properties:
+  linkCVEtoBDU:
+    type: boolean
+    default: false
+    description: |
+      Convert vulnerability reports. Convert CVE database vulnerabilities to BDU database records.
+
+    x-doc-default: false
+    x-examples: [true, false]
   tolerations:
     type: array
     description: |

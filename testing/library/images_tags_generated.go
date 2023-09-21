@@ -315,6 +315,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	"operatorTrivy": map[string]interface{}{
 		"nodeCollector": "imageHash-operatorTrivy-nodeCollector",
 		"operator":      "imageHash-operatorTrivy-operator",
+		"reportUpdater": "imageHash-operatorTrivy-reportUpdater",
 		"trivy":         "imageHash-operatorTrivy-trivy",
 	},
 	"podReloader": map[string]interface{}{

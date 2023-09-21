@@ -109,6 +109,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"pricing",
 	"prometheus",
 	"relay",
+	"report-updater",
 	"runtime-audit-engine",
 	"smoke-mini",
 	"snapshot-controller",

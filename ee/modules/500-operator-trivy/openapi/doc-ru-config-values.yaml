@@ -1,5 +1,9 @@
 type: object
 properties:
+  linkCVEtoBDU:
+    description: |
+      Включенить конвертацию отчетов уязвимостей. Заменяет уязвимости из базы CVE на данные из базы BDU и выводит их в отчете.
+
   tolerations:
     description: |
       Опциональные tolerations для компонентов trivy operator и заданий сканирования (Jobs).

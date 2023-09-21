@@ -42,7 +42,10 @@ func StringToSeverity(name string) (Severity, error) {
 	}
 }
 
-const ScannerNameTrivy = "Trivy"
+const (
+	ScannerNameTrivy = "Trivy"
+	Namespace        = "d8-operator-trivy"
+)
 
 // Scanner is the spec for a scanner generating a security assessment report.
 type Scanner struct {

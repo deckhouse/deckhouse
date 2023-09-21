@@ -47,6 +47,10 @@ tolerations:
 nodeSelector:
   test-label: test-value
 `
+
+	reportUpdaterValues = `
+linkCVEtoBDU: true
+ `
 )
 
 var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificate", func() {
@@ -171,6 +175,23 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 
 		It("Operator trivy configmap has set several namespaces in target namespaces", func() {
 			checkTrivyOperatorEnvs(f, "OPERATOR_TARGET_NAMESPACES", "test,test-1,test-2")
+		})
+	})
+
+	Context("Operator trivy with linkCVEtoBDU", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("operatorTrivy", reportUpdaterValues)
+			f.ValuesSet("operatorTrivy.internal.reportUpdater.webhookCertificate.ca", "test")
+			f.ValuesSet("operatorTrivy.internal.reportUpdater.webhookCertificate.crt", "test")
+			f.ValuesSet("operatorTrivy.internal.reportUpdater.webhookCertificate.key", "test")
+			f.ValuesSet("operatorTrivy.internal.enabledNamespaces", []string{"foo", "bar"})
+			f.HelmRender()
+		})
+
+		It("Everything must render properly for cluster", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			rwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "operator-trivy-report-updater")
+			Expect(rwh.Exists()).To(BeTrue())
 		})
 	})
 })
