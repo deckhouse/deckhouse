@@ -65,6 +65,7 @@
  - **[flant-integration]** Fix rendering config in the case of the absence `clusterConfiguration`. [#5898](https://github.com/deckhouse/deckhouse/pull/5898)
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
+ - **[global-hooks]** Fix orphaned endpointslice deletion. [#5912](https://github.com/deckhouse/deckhouse/pull/5912)
  - **[linstor]** Revert the commit that updated the versions of Linstor and DRBD (revert https://github.com/deckhouse/deckhouse/pull/5469 ). [#5755](https://github.com/deckhouse/deckhouse/pull/5755)
  - **[loki]** Fixed permissions for existing files after changing GID and UID. [#5904](https://github.com/deckhouse/deckhouse/pull/5904)
  - **[monitoring-kubernetes]** Revert `node-exporter` `kube-rbac-proxy` liveness probe. [#5642](https://github.com/deckhouse/deckhouse/pull/5642)
