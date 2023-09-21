@@ -2358,7 +2358,7 @@
         "type": "datasource"
       },
       {
-        "allValue": ".*",
+        "allValue": "",
         "current": {
           "selected": true,
           "text": [
@@ -2393,7 +2393,7 @@
         "useTags": false
       },
       {
-        "allValue": ".*",
+        "allValue": "",
         "current": {
           "selected": true,
           "text": [
