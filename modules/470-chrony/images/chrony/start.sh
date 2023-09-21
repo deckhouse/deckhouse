@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [ -z "${NTP_SERVERS}" ]; then
-  echo "NTP_SERVERS env must be set"
-  exit 1
-fi
-
 if ss -nlup | grep -q "127.0.0.1:123"; then
   echo "NTP port on node is used"
   exit 1
@@ -28,15 +23,28 @@ touch /var/run/chrony/chrony.drift
 chown chrony:chrony -R /var/run/chrony
 chmod 700 /var/run/chrony
 
-cat << EOF > /var/run/chrony/chrony.conf
+cat << "EOF" > /var/run/chrony/chrony.conf
 user chrony
-cmdallow 127/8
-allow 127/8
-bindaddress 127.0.0.1
+cmdport 0
 driftfile /var/run/chrony/chrony.drift
 makestep 1.0 -1
 rtcsync
+bindaddress 0.0.0.0
 EOF
+
+case ${NTP_ROLE} in
+  "source")
+    echo "allow ${POD_SUBNET}" >> /var/run/chrony/chrony.conf
+    echo "deny 127/8" >> /var/run/chrony/chrony.conf
+    echo "local stratum 5" >> /var/run/chrony/chrony.conf
+  ;;
+  "sink")
+    echo "pool ${CHRONY_MASTERS_SERVICE} iburst" >> /var/run/chrony/chrony.conf
+    echo "port 0" >> /var/run/chrony/chrony.conf
+    echo "local stratum 10" >> /var/run/chrony/chrony.conf
+  ;;
+esac
+
 for NTP_SERVER in ${NTP_SERVERS}; do
   echo "pool ${NTP_SERVER} iburst" >> /var/run/chrony/chrony.conf
 done
