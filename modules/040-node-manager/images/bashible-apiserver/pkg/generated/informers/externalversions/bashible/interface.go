@@ -19,8 +19,8 @@ limitations under the License.
 package bashible
 
 import (
-	v1alpha1 "d8.io/bashible/generated/informers/externalversions/bashible/v1alpha1"
-	internalinterfaces "d8.io/bashible/generated/informers/externalversions/internalinterfaces"
+	v1alpha1 "d8.io/bashible/pkg/generated/informers/externalversions/bashible/v1alpha1"
+	internalinterfaces "d8.io/bashible/pkg/generated/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

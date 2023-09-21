@@ -21,7 +21,7 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "d8.io/bashible/apis/bashible/v1alpha1"
+	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
 
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"

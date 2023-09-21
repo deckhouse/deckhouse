@@ -16,9 +16,9 @@ limitations under the License.
 
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package
-// +k8s:conversion-gen=d8.io/bashible/apis/bashible
+// +k8s:conversion-gen=d8.io/bashible/pkg/apis/bashible
 // +k8s:defaulter-gen=TypeMeta
 // +groupName=bashible.deckhouse.io
 
 // Package v1alpha1 is the v1alpha1 version of the API.
-package v1alpha1 // import "d8.io/bashible/apis/bashible/v1alpha1"
+package v1alpha1 // import "d8.io/bashible/pkg/apis/bashible/v1alpha1"

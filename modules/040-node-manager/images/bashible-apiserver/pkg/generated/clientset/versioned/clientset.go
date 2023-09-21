@@ -19,7 +19,7 @@ limitations under the License.
 package versioned
 
 import (
-	bashiblev1alpha1 "d8.io/bashible/generated/clientset/versioned/typed/bashible/v1alpha1"
+	bashiblev1alpha1 "d8.io/bashible/pkg/generated/clientset/versioned/typed/bashible/v1alpha1"
 	"fmt"
 	"net/http"
 
