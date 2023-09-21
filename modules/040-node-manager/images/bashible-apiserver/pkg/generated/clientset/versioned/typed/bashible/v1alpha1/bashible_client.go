@@ -19,8 +19,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "d8.io/bashible/apis/bashible/v1alpha1"
-	"d8.io/bashible/generated/clientset/versioned/scheme"
+	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	"d8.io/bashible/pkg/generated/clientset/versioned/scheme"
 	"net/http"
 
 	rest "k8s.io/client-go/rest"

@@ -19,8 +19,8 @@ limitations under the License.
 package applyconfiguration
 
 import (
-	v1alpha1 "d8.io/bashible/apis/bashible/v1alpha1"
-	bashiblev1alpha1 "d8.io/bashible/generated/applyconfiguration/bashible/v1alpha1"
+	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	bashiblev1alpha1 "d8.io/bashible/pkg/generated/applyconfiguration/bashible/v1alpha1"
 
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )

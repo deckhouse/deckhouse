@@ -39,20 +39,20 @@ source "${CODEGEN_PKG}/kube_codegen.sh"
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 
 kube::codegen::gen_helpers \
-    --input-pkg-root d8.io/bashible/apis \
+    --input-pkg-root d8.io/bashible/pkg/apis \
       --output-base "${SCRIPT_ROOT}/.." \
   --boilerplate "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
 kube::codegen::gen_openapi \
-    --input-pkg-root d8.io/bashible/apis \
-    --output-pkg-root d8.io/bashible/generated \
+    --input-pkg-root d8.io/bashible/pkg/apis \
+    --output-pkg-root d8.io/bashible/pkg/generated \
     --output-base "${SCRIPT_ROOT}/.." \
     --report-filename "${SCRIPT_ROOT}/hack/openapi_violation_exceptions.list" \
     --boilerplate "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
 kube::codegen::gen_client \
     --with-applyconfig \
-    --input-pkg-root d8.io/bashible/apis \
-    --output-pkg-root d8.io/bashible/generated \
+    --input-pkg-root d8.io/bashible/pkg/apis \
+    --output-pkg-root d8.io/bashible/pkg/generated \
   --output-base "${SCRIPT_ROOT}/.." \
   --boilerplate "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
