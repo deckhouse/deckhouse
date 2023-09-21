@@ -133,15 +133,15 @@ global-hooks:
       pull_request: https://github.com/deckhouse/deckhouse/pull/5631
 linstor:
   features:
-    - summary: Update linstor controller version to `1.24.1`. Update DRBD version to `9.2.5`.
+    - summary: >-
+        **(PR was reverted in https://github.com/deckhouse/deckhouse/pull/5755)** Update linstor
+        controller version to `1.24.1`. Update DRBD version to `9.2.5`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5469
       impact: Linstor controller and piraeus operator will restart.
   fixes:
-    - summary: Fix rare issues with building the DRBD module when changing the kernels.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/5758
     - summary: >-
-        Revert the commit that updated the versions of Linstor and DRBD (revert
-        https://github.com/deckhouse/deckhouse/pull/5469 ).
+        Revert the commit that updated the versions of Linstor and DRBD (reverts
+        https://github.com/deckhouse/deckhouse/pull/5469).
       pull_request: https://github.com/deckhouse/deckhouse/pull/5755
 log-shipper:
   features:
