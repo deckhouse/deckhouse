@@ -24,8 +24,7 @@ function p3_script() {
 import os
 import requests
 import json
-headers = {'Authorization': 'Bearer ' + os.getenv('token', '')}
-response = requests.get(os.getenv('url', ''), headers=headers, verify='/var/lib/bashible/ca.crt')
+response = requests.get(os.getenv('url', ''), headers={'Authorization': 'Bearer ' + os.getenv('token', '')}, verify='/var/lib/bashible/ca.crt')
 data = json.loads(response.content)
 print(data["bootstrap"])
 EOF
@@ -72,5 +71,18 @@ function get_bootstrap() {
     sleep 10
   done
 }
+
+if [[ -f /var/lib/bashible/cloud-provider-bootstrap-networks.sh ]] ; then
+  until /var/lib/bashible/cloud-provider-bootstrap-networks.sh; do
+    >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
+    sleep 10
+  done
+elif [[ -f /var/lib/bashible/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
+  until /var/lib/bashible/cloud-provider-bootstrap-networks-${BUNDLE}.sh; do
+    >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
+    sleep 10
+  done
+fi
+
 get_bootstrap | bash
 {{- end }}
