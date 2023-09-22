@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+
+# {{ .cloudProviderType }}
 function get_bundle() {
   resource="$1"
   name="$2"

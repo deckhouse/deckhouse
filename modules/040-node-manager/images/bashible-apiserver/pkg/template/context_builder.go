@@ -151,9 +151,10 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
 		},
-		Registry: cb.registryData,
-		Images:   cb.imagesDigests,
-		Proxy:    cb.clusterInputData.Proxy,
+		Registry:          cb.registryData,
+		Images:            cb.imagesDigests,
+		Proxy:             cb.clusterInputData.Proxy,
+		CloudProviderType: cb.getCloudProvider(),
 	}
 
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
@@ -484,7 +485,8 @@ type tplContextCommon struct {
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry registry                     `json:"registry" yaml:"registry"`
 
-	Proxy map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	Proxy             map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	CloudProviderType string                 `json:"cloudProviderType" yaml:"cloudProviderType"`
 }
 
 type bundleNGContext struct {
