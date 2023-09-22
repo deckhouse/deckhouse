@@ -3,7 +3,6 @@ package agent
 import (
 	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
 	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
-	"cloud-provider-static/internal/providerid"
 	"cloud-provider-static/internal/scope"
 	"cloud-provider-static/internal/ssh"
 	"context"
@@ -75,7 +74,7 @@ func (a *Agent) cleanup(instanceScope *scope.InstanceScope) error {
 		return errors.Wrap(err, "failed to read cleanup script")
 	}
 
-	a.lock(providerid.ProviderID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() {
+	a.lock(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() {
 		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("export PROVIDER_ID='%s' && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, base64.StdEncoding.EncodeToString(cleanupScript)), nil)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to cleanup StaticInstance: failed to exec ssh command")

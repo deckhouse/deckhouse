@@ -63,10 +63,10 @@ func (a *Agent) bootstrap(ctx context.Context, instanceScope *scope.InstanceScop
 		return errors.Wrap(err, "failed to get bootstrap script")
 	}
 
-	a.lock(providerid.ProviderID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() {
+	a.lock(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() {
 		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, base64.StdEncoding.EncodeToString(bootstrapScript)), nil)
 		if err != nil {
-			// If the node reboots, the ssh connection will close, and we will get an error.
+			// If Node reboots, the ssh connection will close, and we will get an error.
 			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to exec ssh command")
 		}
 	})

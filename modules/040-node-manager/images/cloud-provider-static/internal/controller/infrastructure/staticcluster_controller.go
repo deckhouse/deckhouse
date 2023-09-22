@@ -24,10 +24,13 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"net/url"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"strconv"
 )
 
 // StaticClusterReconciler reconciles a StaticCluster object
@@ -99,9 +102,24 @@ func (r *StaticClusterReconciler) reconcile(
 	ctx context.Context,
 	clusterScope *scope.ClusterScope,
 ) (ctrl.Result, error) {
+	controlPlaneEndpointURL, err := url.Parse(r.Config.Host)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server host")
+	}
+
+	port, err := strconv.Atoi(controlPlaneEndpointURL.Port())
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server port")
+	}
+
+	clusterScope.StaticCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+		Host: controlPlaneEndpointURL.Hostname(),
+		Port: int32(port),
+	}
+
 	clusterScope.StaticCluster.Status.Ready = true
 
-	err := clusterScope.Patch(ctx)
+	err = clusterScope.Patch(ctx)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticCluster")
 	}
