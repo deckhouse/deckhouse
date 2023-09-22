@@ -57,7 +57,7 @@ function check_python() {
 }
 
 function get_bootstrap() {
-  local bootstrap_bundle_name="$(detect_bundle).{{ .nodeGroupName }}"
+  local bootstrap_bundle_name="$bundle.{{ .nodeGroupName }}"
   export token="$(</var/lib/bashible/bootstrap-token)"
   while true; do
     for server in {{ .apiserverEndpoints | join " " }}; do
@@ -72,13 +72,15 @@ function get_bootstrap() {
   done
 }
 
+bundle="$(detect_bundle)"
+
 if [[ -f /var/lib/bashible/cloud-provider-bootstrap-networks.sh ]] ; then
   until /var/lib/bashible/cloud-provider-bootstrap-networks.sh; do
     >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
     sleep 10
   done
-elif [[ -f /var/lib/bashible/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
-  until /var/lib/bashible/cloud-provider-bootstrap-networks-${BUNDLE}.sh; do
+elif [[ -f /var/lib/bashible/cloud-provider-bootstrap-networks-${bundle}.sh ]] ; then
+  until /var/lib/bashible/cloud-provider-bootstrap-networks-${bundle}.sh; do
     >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
     sleep 10
   done
