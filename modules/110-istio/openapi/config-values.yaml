@@ -3,7 +3,7 @@ type: object
 properties:
   globalVersion:
     type: string
-    description: Specific version of Istio control-plane which handles unspecific versions of data-plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`). Must be in supported versions list (`kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.supportedVersions'`). By default — the latest version in supported versions list.
+    description: Specific version of Istio control-plane which handles unspecific versions of data-plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`). Must be in supported versions list (`kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.supportedVersions'`). By default — the latest version in supported versions list...
     examples: ["1.12"]
     default: "1.16"
   additionalVersions:
