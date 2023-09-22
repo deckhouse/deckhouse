@@ -16,6 +16,10 @@ if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
     exit 0
 fi
 
+if bb-flag? rollingUpdate; then
+  return 0
+fi
+
 disruptionsApprovalMode={{ .nodeGroup.disruptions.approvalMode | default "" | quote }}
 bb-log-info "Disruptions ApprovalMode: ${disruptionsApprovalMode}"
 
@@ -25,6 +29,8 @@ if [ "$disruptionsApprovalMode" == "RollingUpdate" ]; then
     --kubeconfig=/etc/kubernetes/kubelet.conf \
     --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
     annotate node "$(hostname -s)" update.node.deckhouse.io/rolling-update= || { bb-log-info "Retry setting update.node.deckhouse.io/rolling-update= annotation on Node in 10 sec..."; sleep 10; }
+  bb-log-info "RollingUpdate approved!"
+  bb-flag-set rollingUpdate
   exit 0
   bb-log-info "DEBUG_invisible"
 fi
