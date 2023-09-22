@@ -151,10 +151,9 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
 		},
-		Registry:          cb.registryData,
-		Images:            cb.imagesDigests,
-		Proxy:             cb.clusterInputData.Proxy,
-		CloudProviderType: cb.getCloudProvider(),
+		Registry: cb.registryData,
+		Images:   cb.imagesDigests,
+		Proxy:    cb.clusterInputData.Proxy,
 	}
 
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
@@ -212,9 +211,10 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		NodeGroup:         ng,
 		RunType:           "Normal",
 
-		Images:   cb.imagesDigests,
-		Registry: &cb.registryData,
-		Proxy:    cb.clusterInputData.Proxy,
+		Images:            cb.imagesDigests,
+		Registry:          &cb.registryData,
+		Proxy:             cb.clusterInputData.Proxy,
+		CloudProviderType: cb.getCloudProvider(),
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -438,9 +438,10 @@ type bashibleContext struct {
 	RunType               string      `json:"runType" yaml:"runType"` // Normal
 
 	// Enrich with images and registry
-	Images   map[string]map[string]string `json:"images" yaml:"images"`
-	Registry *registry                    `json:"registry" yaml:"registry"`
-	Proxy    map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	Images            map[string]map[string]string `json:"images" yaml:"images"`
+	Registry          *registry                    `json:"registry" yaml:"registry"`
+	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
@@ -485,8 +486,7 @@ type tplContextCommon struct {
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry registry                     `json:"registry" yaml:"registry"`
 
-	Proxy             map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	CloudProviderType string                 `json:"cloudProviderType" yaml:"cloudProviderType"`
+	Proxy map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 }
 
 type bundleNGContext struct {
