@@ -136,8 +136,8 @@ spec:
   endpoints:
     - port: self
       relabelings:
-        - sourceLabels: [ __meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready ]
-          regex: ".*true.*"
+        - sourceLabels: [ __meta_kubernetes_endpointslice_endpoint_conditions_ready ]
+          regex: "true"
           action: keep
         - sourceLabels: [ __meta_kubernetes_endpoints_labelpresent_foobar, __meta_kubernetes_endpointslice_labelpresent_foobar ]
           regex: ".*true.*"

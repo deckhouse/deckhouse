@@ -1,6 +1,22 @@
-Foobar
+# Patches
 
 
+### 001-endpointslices
+EndpointSlices support for ServiceMonitor in the prometheus-operator is disabled by default. 
+We enable it by checking EndpointSlice API in a Kubernetes cluster. It's enabled from version 1.21 so it should work always.
+Also add Alertmanager support via EndpointSlice.
+Upstream has 2 issues, why it's not enabled by default:
+- https://github.com/prometheus-operator/prometheus-operator/pull/5291
+- https://github.com/prometheus-operator/prometheus-operator/issues/3862#issuecomment-1068260430
+
+
+### 002-endpointslices_fallback
+Client ServiceMonitors could have labels based on `__meta_kubernetes_endpoints_` metric.
+So, we add labels mapping from `__meta_kubernetes_endpointslice_XXX` to `__meta_kubernetes_endpoints_XXX` and fire an alert
+for those ServiceMonitors
+
+mappings:
+```
 __meta_kubernetes_endpoints_name   - __meta_kubernetes_endpointslice_name
 __meta_kubernetes_endpoints_label_XXXX  - __meta_kubernetes_endpointslice_label_XXXX
 __meta_kubernetes_endpoints_annotation_XXX - __meta_kubernetes_endpointslice_annotation_XXX
@@ -11,65 +27,4 @@ __meta_kubernetes_endpoint_port_name - __meta_kubernetes_endpointslice_port_name
 __meta_kubernetes_endpoint_port_protocol - __meta_kubernetes_endpointslice_port_protocol
 __meta_kubernetes_endpoint_address_target_kind - __meta_kubernetes_endpointslice_address_target_kind
 __meta_kubernetes_endpoint_address_target_name - __meta_kubernetes_endpointslice_address_target_name
-
-
-
-
-
-
-__address__: "192.168.199.39:9650"
-__meta_kubernetes_endpointslice_address_target_kind: "Pod"
-__meta_kubernetes_endpointslice_address_target_name: "deckhouse-5c6f8c9d56-bblj9"
-__meta_kubernetes_endpointslice_address_type: "IPv4"
-__meta_kubernetes_endpointslice_endpoint_conditions_ready: "true"
-__meta_kubernetes_endpointslice_name: "deckhouse-7l527"
-__meta_kubernetes_endpointslice_port: "9650"
-__meta_kubernetes_endpointslice_port_name: "self"
-__meta_kubernetes_endpointslice_port_protocol: "TCP"
-__meta_kubernetes_namespace: "d8-system"
-__meta_kubernetes_pod_annotation_checksum_registry: "c875e435693702af481307fe94e40b4326ae575001eb3633d405438fadd479a7"
-__meta_kubernetes_pod_annotation_kubectl_kubernetes_io_restartedAt: "2023-09-21T10:12:31Z"
-__meta_kubernetes_pod_annotation_node_deckhouse_io_initial_host_ip: "192.168.199.39"
-__meta_kubernetes_pod_annotation_vpaObservedContainers: "deckhouse, kube-rbac-proxy"
-__meta_kubernetes_pod_annotation_vpaUpdates: "Pod resources updated by deckhouse: container 0: cpu request, memory request; container 1: cpu request, memory request"
-__meta_kubernetes_pod_annotationpresent_checksum_registry: "true"
-__meta_kubernetes_pod_annotationpresent_kubectl_kubernetes_io_restartedAt: "true"
-__meta_kubernetes_pod_annotationpresent_node_deckhouse_io_initial_host_ip: "true"
-__meta_kubernetes_pod_annotationpresent_vpaObservedContainers: "true"
-__meta_kubernetes_pod_annotationpresent_vpaUpdates: "true"
-__meta_kubernetes_pod_container_image: "dev-registry.deckhouse.io/sys/deckhouse-oss:pr5856"
-__meta_kubernetes_pod_container_name: "deckhouse"
-__meta_kubernetes_pod_container_port_name: "self"
-__meta_kubernetes_pod_container_port_number: "9650"
-__meta_kubernetes_pod_container_port_protocol: "TCP"
-__meta_kubernetes_pod_controller_kind: "ReplicaSet"
-__meta_kubernetes_pod_controller_name: "deckhouse-5c6f8c9d56"
-__meta_kubernetes_pod_host_ip: "192.168.199.39"
-__meta_kubernetes_pod_ip: "192.168.199.39"
-__meta_kubernetes_pod_label_app: "deckhouse"
-__meta_kubernetes_pod_label_pod_template_hash: "5c6f8c9d56"
-__meta_kubernetes_pod_labelpresent_app: "true"
-__meta_kubernetes_pod_labelpresent_pod_template_hash: "true"
-__meta_kubernetes_pod_name: "deckhouse-5c6f8c9d56-bblj9"
-__meta_kubernetes_pod_node_name: "ndev-master-0"
-__meta_kubernetes_pod_phase: "Running"
-__meta_kubernetes_pod_ready: "true"
-__meta_kubernetes_pod_uid: "29f706f8-2b14-40ed-a6be-d7477c7d096e"
-__meta_kubernetes_service_annotation_meta_helm_sh_release_name: "deckhouse"
-__meta_kubernetes_service_annotation_meta_helm_sh_release_namespace: "d8-system"
-__meta_kubernetes_service_annotationpresent_meta_helm_sh_release_name: "true"
-__meta_kubernetes_service_annotationpresent_meta_helm_sh_release_namespace: "true"
-__meta_kubernetes_service_label_app: "deckhouse"
-__meta_kubernetes_service_label_app_kubernetes_io_managed_by: "Helm"
-__meta_kubernetes_service_label_heritage: "deckhouse"
-__meta_kubernetes_service_label_module: "deckhouse"
-__meta_kubernetes_service_labelpresent_app: "true"
-__meta_kubernetes_service_labelpresent_app_kubernetes_io_managed_by: "true"
-__meta_kubernetes_service_labelpresent_heritage: "true"
-__meta_kubernetes_service_labelpresent_module: "true"
-__meta_kubernetes_service_name: "deckhouse"
-__metrics_path__: "/metrics"
-__scheme__: "https"
-__scrape_interval__: "30s"
-__scrape_timeout__: "10s"
-job: "serviceMonitor/d8-monitoring/testapp/0"
+```

@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +25,12 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+// This hook scans ServiceMonitors in a cluster and find deprecated relabelings based on the `__meta_kubernetes_endpoints_` labels
+// We fire the alert and ask user to migrate to a new labels
+// TODO: This hook can be deleted in Deckhouse release 1.60
+//  with `PrometheusServiceMonitorDeprecated` from modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
+//  and prometheus-operator patch modules/200-operator-prometheus/images/prometheus-operator/patches/002_endpointslices_fallback.patch
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/prometheus/servicemonitors",
@@ -58,11 +63,9 @@ func serviceMonitorHandler(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_servicemonitors")
 
 	snap := input.Snapshots["servicemonitors"]
-	fmt.Println("CHECKING LEN", len(snap))
 
 	for _, sn := range snap {
 		serviceMon := sn.(serviceMonitor)
-		fmt.Println("CHECKING", serviceMon.Metadata.Namespace, serviceMon.Metadata.Name)
 
 	serviceMonitorLoop:
 		for _, endpoint := range serviceMon.Spec.Endpoints {
@@ -81,7 +84,6 @@ func serviceMonitorHandler(input *go_hook.HookInput) error {
 						_, ok1 := tmpMap[k]
 						_, ok2 := tmpMap[v]
 						if ok1 && !ok2 {
-							fmt.Println("CHECKING FOUND DEPRECATED")
 							input.MetricsCollector.Set("d8_prometheus_deprecated_servicemonitor", 1, map[string]string{"name": serviceMon.Metadata.Name, "namespace": serviceMon.Metadata.Namespace}, metrics.WithGroup("d8_servicemonitors"))
 							break serviceMonitorLoop
 						}

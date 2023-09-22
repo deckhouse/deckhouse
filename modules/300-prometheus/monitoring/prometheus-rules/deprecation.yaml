@@ -15,7 +15,7 @@
         description: |
           Kubernetes cluster uses a more advanced network mechanism - EndpointSlice
           You service monitor `{{ $labels.namespace }}/{{ $labels.name }}` has relabeling with old Endpoint mechanism, starts with `__meta_kubernetes_endpoints_`.
-          This relabeling rule support, based on the `_endpoint_` label will be remove in the future.
+          This relabeling rule support, based on the `_endpoint_` label, will be remove in the future (Deckhouse release 1.60).
           Please, migrate to EndpointSlice relabeling rules. To do this, you have modify ServiceMonitor with changing the following labels:
           ```shell
           __meta_kubernetes_endpoints_name -> __meta_kubernetes_endpointslice_name

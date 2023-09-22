@@ -30,8 +30,8 @@ spec:
       targetLabel: node
     - targetLabel: tier
       replacement: cluster
-    - sourceLabels: [__meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready]
-      regex: ".*true.*"
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
       action: keep
   - scheme: https
     port: https-metrics
@@ -48,8 +48,8 @@ spec:
       replacement: kube-scheduler
     - targetLabel: tier
       replacement: cluster
-    - sourceLabels: [__meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready]
-      regex: ".*true.*"
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
       action: keep
   - scheme: https
     port: https-metrics
@@ -66,6 +66,6 @@ spec:
       replacement: kube-controller-manager
     - targetLabel: tier
       replacement: cluster
-    - sourceLabels: [__meta_kubernetes_endpoint_ready, __meta_kubernetes_endpointslice_endpoint_conditions_ready]
-      regex: ".*true.*"
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
       action: keep
