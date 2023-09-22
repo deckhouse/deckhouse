@@ -16,6 +16,7 @@ package preflight
 
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -23,14 +24,16 @@ import (
 
 type PreflightCheck struct {
 	sshClient               *ssh.Client
+	metaConfig              *config.MetaConfig
 	installConfig           *deckhouse.Config
 	imageDescriptorProvider imageDescriptorProvider
 	buildDigestProvider     buildDigestProvider
 }
 
-func NewPreflightCheck(sshClient *ssh.Client, config *deckhouse.Config) PreflightCheck {
+func NewPreflightCheck(sshClient *ssh.Client, config *deckhouse.Config, metaConfig *config.MetaConfig) PreflightCheck {
 	return PreflightCheck{
 		sshClient:               sshClient,
+		metaConfig:              metaConfig,
 		installConfig:           config,
 		imageDescriptorProvider: remoteDescriptorProvider{},
 		buildDigestProvider:     &dhctlBuildDigestProvider{DigestFilePath: app.DeckhouseImageDigestFile},
@@ -47,6 +50,7 @@ func (pc *PreflightCheck) StaticCheck() error {
 		type preflightCheckFunc func() error
 		checks := []preflightCheckFunc{
 			pc.CheckDhctlVersionObsolescence,
+			pc.CheckRegistryAccessThroughProxy,
 			pc.CheckSSHTunel,
 			pc.CheckAvailabilityPorts,
 			pc.CheckLocalhostDomain,
