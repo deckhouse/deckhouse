@@ -23,7 +23,7 @@ import (
 	"log"
 	"os"
 
-	alertimagechecks "tools/helm_generate/runners/alert-image-checks"
+	alerttemplates "tools/helm_generate/runners/alert_templates"
 	authzgeneraterulesforroles "tools/helm_generate/runners/authz_generate_rules_for_roles"
 )
 
@@ -39,7 +39,7 @@ func run(args []string) error {
 	}
 
 	cmds := []Runner{
-		alertimagechecks.NewImageChecks(),
+		alerttemplates.NewImageChecks(),
 		authzgeneraterulesforroles.NewAuthzGenerate(),
 	}
 

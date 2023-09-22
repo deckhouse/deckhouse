@@ -14,28 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package alertimagechecks
+package alerttemplates
 
 import (
 	"flag"
 )
 
-const defaultTemplate = "modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl"
-
 type ImageChecks struct {
 	fs *flag.FlagSet
-
-	template string
-	helpers  string
 }
 
 func NewImageChecks() *ImageChecks {
 	ic := &ImageChecks{
-		fs: flag.NewFlagSet("alert-image-checks", flag.ContinueOnError),
+		fs: flag.NewFlagSet("alert-templates", flag.ContinueOnError),
 	}
-
-	ic.fs.StringVar(&ic.template, "template", defaultTemplate, "path to the template, that should be rendered starting from the deckhouse root")
-	ic.fs.StringVar(&ic.helpers, "helpers", "", "path to the helpers directory if needed")
 
 	return ic
 }
@@ -49,5 +41,5 @@ func (ic *ImageChecks) Init(args []string) error {
 }
 
 func (ic *ImageChecks) Run() error {
-	return run(ic.template, ic.helpers)
+	return run()
 }
