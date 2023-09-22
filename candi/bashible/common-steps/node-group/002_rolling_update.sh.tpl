@@ -18,6 +18,11 @@ if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
   exit 0
 fi
 
+# If reboot flag is not set, nothing to do
+if ! bb-flag? reboot; then
+  exit 0
+fi
+
 if bb-flag? rollingUpdate; then
   exit 0
 fi
