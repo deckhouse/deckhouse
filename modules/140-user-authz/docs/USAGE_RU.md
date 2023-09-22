@@ -28,7 +28,7 @@ spec:
       matchExpressions:
       - key: stage
         operator: In
-        vaules:
+        values:
         - test
         - review
       matchLabels:
