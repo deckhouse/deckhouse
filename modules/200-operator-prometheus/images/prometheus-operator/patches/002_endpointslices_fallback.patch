@@ -1,4 +1,3 @@
-Subject: [PATCH] tmp2
 ---
 Index: pkg/prometheus/promcfg.go
 IDEA additional info:
@@ -7,17 +6,17 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
 --- a/pkg/prometheus/promcfg.go	(revision 8eae904d83dc054310a99e5671da0a70cd7d10c2)
-+++ b/pkg/prometheus/promcfg.go	(date 1695329254533)
-@@ -1351,6 +1351,9 @@
- 	relabelings = append(relabelings, generateRelabelConfig(labeler.GetRelabelingConfigs(m.TypeMeta, m.ObjectMeta, ep.RelabelConfigs))...)
++++ b/pkg/prometheus/promcfg.go	(date 1695385336387)
+@@ -1177,6 +1177,9 @@
+ 	cfg = cg.addSafeAuthorizationToYaml(cfg, fmt.Sprintf("serviceMonitor/auth/%s/%s/%d", m.Namespace, m.Name, i), store, ep.Authorization)
 
- 	relabelings = generateAddressShardingRelabelingRules(relabelings, shards)
+ 	relabelings := initRelabelings()
 +	if cg.EndpointSliceSupported() {
 +		relabelings = generateFallbackEndpointSliceRelabeling(relabelings)
 +	}
- 	cfg = append(cfg, yaml.MapItem{Key: "relabel_configs", Value: relabelings})
 
- 	cfg = cg.AddLimitsToYAML(cfg, sampleLimitKey, m.Spec.SampleLimit, cpf.EnforcedSampleLimit)
+ 	// Filter targets by services selected by the monitor.
+
 @@ -2665,3 +2668,36 @@
  		Value: cfg,
  	}, nil
