@@ -51,11 +51,11 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.43.0
+  version: v2.44.0
   enableRemoteWriteReceiver: true
   enableFeatures:
   - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
-  - extra-scrape-metrics # https://prometheus.io/docs/prometheus/2.43/feature_flags/#extra-scrape-metrics usage scrape_sample_limit
+  - extra-scrape-metrics # https://prometheus.io/docs/prometheus/2.44/feature_flags/#extra-scrape-metrics usage scrape_sample_limit
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
