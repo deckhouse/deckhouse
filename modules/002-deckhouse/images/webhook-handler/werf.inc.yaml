@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ "ghcr.io/flant/shell-operator-dev:pr527@sha256:cb0c7023841cea77d64536c9d9cefe972d437acb637afe9e5afbcdc5c6f63ac1" }}
+from: {{ "ghcr.io/flant/shell-operator:v1.3.2@sha256:e837ce77f2943eb7b456d1f3059fa83625ef2b8602e597ed30218a91f3bb4842" }}
 ansible:
   beforeInstall:
     - name: "Install yq"
