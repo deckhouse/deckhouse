@@ -37,25 +37,10 @@ write_files:
   {{- end }}
 {{- end }}
 
-{{- $proxy := dict }}
-{{- if hasKey $context.Values.global.clusterConfiguration "proxy" }}
-  {{- if hasKey $context.Values.global.clusterConfiguration.proxy "httpProxy" }}
-    {{- $_ := set $proxy "httpProxy" $context.Values.global.clusterConfiguration.proxy.httpProxy }}
-  {{- end }}
-  {{- if hasKey $context.Values.global.clusterConfiguration.proxy "httpsProxy" }}
-    {{- $_ := set $proxy "httpsProxy" $context.Values.global.clusterConfiguration.proxy.httpsProxy }}
-  {{- end }}
-  {{- $noProxy := list "127.0.0.1" "169.254.169.254" $context.Values.global.clusterConfiguration.clusterDomain $context.Values.global.clusterConfiguration.podSubnetCIDR $context.Values.global.clusterConfiguration.serviceSubnetCIDR }}
-  {{- if hasKey $context.Values.global.clusterConfiguration.proxy "noProxy" }}
-    {{- $noProxy = concat $noProxy $context.Values.global.clusterConfiguration.proxy.noProxy }}
-  {{- end }}
-  {{- $_ := set $proxy "noProxy" $noProxy }}
-{{- end }}
-
 - path: '/var/lib/bashible/bootstrap.sh'
   permissions: '0700'
   content: |
-    {{- include "bootstrap_script" (dict "proxy" $proxy "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) | indent 4 }}
+    {{- include "bootstrap_script" (dict "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) | indent 4 }}
 
 - path: '/var/lib/bashible/ca.crt'
   permissions: '0644'
