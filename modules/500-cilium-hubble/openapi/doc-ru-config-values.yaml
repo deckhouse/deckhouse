@@ -4,7 +4,7 @@ properties:
     description: Включает отладочный уровень логирования для компонентов Hubble.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` в Kubernetes Pod.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
@@ -29,14 +29,14 @@ properties:
               Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
           authSignInURL:
             description: |
-              URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+              URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
       allowedUserGroups:
         description: |
           Список групп, пользователям которых разрешен доступ к веб-интерфейсу Hubble.
 
           Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
       whitelistSourceRanges:
-        description: Список адресов (CIDR) которым разрешен доступ к веб-интерфейсу Hubble.
+        description: Список адресов (CIDR), которым разрешен доступ к веб-интерфейсу Hubble.
   https:
     description: |
       Тип используемого сертификата.
@@ -45,10 +45,10 @@ properties:
     properties:
       mode:
         description: |
-          Режим работы HTTPS:
-          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`;
-          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`;
-          - `Disabled` — доступ только по HTTP;
+          Режимы работы HTTPS:
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
+          - `Disabled` — доступ только по HTTP.
           - `OnlyInURI` — доступ по HTTP, подразумевая, что перед веб-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
       certManager:
         description: "Настройки для certmanager."
@@ -61,6 +61,6 @@ properties:
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для веб-интерфейса Hubble.
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса Hubble.
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
