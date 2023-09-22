@@ -1512,7 +1512,7 @@ spec:
                     Parameter for provisioning static VMs to the cluster.
                   type: object
                   required:
-                    - labelSelector
+                    - count
                   properties:
                     labelSelector:
                       description: A label selector is a label query over a set
@@ -1568,6 +1568,7 @@ spec:
                           The number of instances to create.
                       type: integer
                       minimum: 0
+                      default: 0
                 cloudInstances:
                   description: |
                     Parameter for provisioning the cloud-based VMs.

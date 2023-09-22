@@ -45,10 +45,6 @@ var _ webhook.Defaulter = &SSHCredentials{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *SSHCredentials) Default() {
 	sshcredentialslog.Info("default", "name", r.Name)
-
-	if r.Spec.SSHPort == 0 {
-		r.Spec.SSHPort = 22
-	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

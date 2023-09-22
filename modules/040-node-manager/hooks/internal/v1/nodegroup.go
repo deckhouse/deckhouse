@@ -71,7 +71,7 @@ type NodeGroupSpec struct {
 	CRI CRI `json:"cri,omitempty"`
 
 	// staticInstances. Optional.
-	StaticInstances StaticInstances `json:"staticInstances,omitempty"`
+	StaticInstances *StaticInstances `json:"staticInstances,omitempty"`
 
 	// cloudInstances. Optional.
 	CloudInstances CloudInstances `json:"cloudInstances,omitempty"`
@@ -133,17 +133,11 @@ type NotManaged struct {
 
 // StaticInstances is an extra parameters for NodeGroup with type Static.
 type StaticInstances struct {
-	// Reference to the `StaticInstance` objects. Required
-	LabelSelector metav1.LabelSelector `json:"labelSelector"`
+	// Label selector for StaticInstance resources. Optional.
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 
 	// Minimal amount of instances for the group. Required.
-	Count *int32 `json:"count,omitempty"`
-}
-
-func (s StaticInstances) IsEmpty() bool {
-	return len(s.LabelSelector.MatchLabels) == 0 &&
-		len(s.LabelSelector.MatchExpressions) == 0 &&
-		s.Count == nil
+	Count int32 `json:"count"`
 }
 
 type InfrastructureTemplateReference struct {
