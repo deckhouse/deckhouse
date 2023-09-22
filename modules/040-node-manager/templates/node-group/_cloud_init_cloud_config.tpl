@@ -11,7 +11,6 @@ package_update: True
 manage_etc_hosts: localhost
 write_files:
 
-{{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
 - path: '/var/lib/bashible/bootstrap.sh'
   permissions: '0700'
   content: |
