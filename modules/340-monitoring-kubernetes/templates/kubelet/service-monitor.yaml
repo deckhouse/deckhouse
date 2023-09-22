@@ -18,8 +18,7 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
-    - sourceLabels: [__meta_kubernetes_endpoint_address_target_name, __meta_kubernetes_endpointslice_address_target_name]
-      regex: ";?([a-zA-Z0-9\\-\\.]+);?"
+    - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
       replacement: $1
       action: replace
       targetLabel: node
@@ -38,8 +37,7 @@ spec:
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
-    - sourceLabels: [__meta_kubernetes_endpoint_address_target_name, __meta_kubernetes_endpointslice_address_target_name]
-      regex: ";?([a-zA-Z0-9\\-\\.]+);?"
+    - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
       replacement: $1
       action: replace
       targetLabel: node
@@ -96,8 +94,7 @@ spec:
     relabelings:
       - regex: endpoint|namespace|pod|service
         action: labeldrop
-      - sourceLabels: [__meta_kubernetes_endpoint_address_target_name, __meta_kubernetes_endpointslice_address_target_name]
-        regex: ";?([a-zA-Z0-9\\-\\.]+);?"
+      - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
         replacement: $1
         action: replace
         targetLabel: node
