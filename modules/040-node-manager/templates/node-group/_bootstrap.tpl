@@ -7,7 +7,7 @@ function detect_bundle() {
 }
 
 function p2_script() {
-  cat- <<EOF
+  cat - <<EOF
 import os
 import json
 import urllib2
@@ -20,7 +20,7 @@ EOF
 }
 
 function p3_script() {
-  cat- <<EOF
+  cat - <<EOF
 import os
 import requests
 import json
@@ -56,13 +56,15 @@ function check_python() {
   return 1
 }
 
-function get_bootstrap() {
+function get_phase2() {
+  check_python
   local bootstrap_bundle_name="$bundle.{{ .nodeGroupName }}"
   export token="$(</var/lib/bashible/bootstrap-token)"
   while true; do
     for server in {{ .apiserverEndpoints | join " " }}; do
       export url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
-      if $("$python_binary" <<< "$script"); then
+      if phase2=$("$python_binary" <<< "$script"); then
+        cat - <<< $phase2
         return 0
       else
         >&2 echo "failed to get bootstrap $bootstrap_bundle_name from $url"
@@ -73,18 +75,5 @@ function get_bootstrap() {
 }
 
 bundle="$(detect_bundle)"
-
-if [[ -f /var/lib/bashible/cloud-provider-bootstrap-networks.sh ]] ; then
-  until /var/lib/bashible/cloud-provider-bootstrap-networks.sh; do
-    >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-    sleep 10
-  done
-elif [[ -f /var/lib/bashible/cloud-provider-bootstrap-networks-${bundle}.sh ]] ; then
-  until /var/lib/bashible/cloud-provider-bootstrap-networks-${bundle}.sh; do
-    >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-    sleep 10
-  done
-fi
-
-get_bootstrap | bash
+get_phase2 | bash
 {{- end }}
