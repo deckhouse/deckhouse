@@ -13,11 +13,11 @@
 # limitations under the License.
 
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
-    exit 0
+  exit 0
 fi
 
 if bb-flag? rollingUpdate; then
-  return 0
+  exit 0
 fi
 
 disruptionsApprovalMode={{ .nodeGroup.disruptions.approvalMode | default "" | quote }}
