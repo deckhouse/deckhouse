@@ -33,4 +33,5 @@ if [ "$disruptionsApprovalMode" == "RollingUpdate" ]; then
     annotate node "$(hostname -s)" update.node.deckhouse.io/rolling-update= || { bb-log-info "Retry setting update.node.deckhouse.io/rolling-update= annotation on Node in 10 sec..."; sleep 10; }
   bb-log-info "RollingUpdate approved!"
   bb-flag-set rollingUpdate
+  exit 0
 fi
