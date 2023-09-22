@@ -37,7 +37,7 @@ spec:
                   properties:
                     kind:
                       description: |
-                        Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля cloud provider.
+                        Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
                     name:
                       description: |
                         Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
@@ -51,7 +51,7 @@ spec:
                     name:
                       description: Имя объекта.
                     namespace:
-                      description: Пространство имен в котором находится объект.
+                      description: Пространство имен, в котором находится объект.
                 currentStatus:
                   description: Текущий статус объекта.
                   properties:
@@ -77,7 +77,7 @@ spec:
                   properties:
                     logsEndpoint:
                       type: string
-                      description: IP адрес для получения логов начальной настройки узла.
+                      description: IP-адрес для получения логов начальной настройки узла.
                     description:
                       type: string
                       description: Описание процесса получения логов начальной настройки узла.
