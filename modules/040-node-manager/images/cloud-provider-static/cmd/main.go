@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"cloud-provider-static/internal/agent"
 	"flag"
 	"os"
 
@@ -107,6 +108,7 @@ func main() {
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Config: mgr.GetConfig(),
+		Agent:  agent.NewAgent(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticMachine")
 		os.Exit(1)

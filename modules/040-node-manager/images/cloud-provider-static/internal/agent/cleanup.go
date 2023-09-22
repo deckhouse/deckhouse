@@ -1,8 +1,9 @@
-package cleanup
+package agent
 
 import (
 	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
 	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
+	"cloud-provider-static/internal/providerid"
 	"cloud-provider-static/internal/scope"
 	"cloud-provider-static/internal/ssh"
 	"context"
@@ -15,7 +16,7 @@ import (
 )
 
 // Cleanup runs the cleanup script on the static instance.
-func Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
+func (a *Agent) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning {
 		return errors.New("StaticInstance is not running")
 	}
@@ -27,7 +28,7 @@ func Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
 		return errors.Wrap(err, "failed to patch StaticInstance phase")
 	}
 
-	err = cleanup(instanceScope)
+	err = a.cleanup(instanceScope)
 	if err != nil {
 		return err
 	}
@@ -36,8 +37,8 @@ func Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
 }
 
 // FinishCleaning finishes the cleanup process by checking if the cleanup script was successful and patching the static instance.
-func FinishCleaning(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	err := cleanup(instanceScope)
+func (a *Agent) FinishCleaning(ctx context.Context, instanceScope *scope.InstanceScope) error {
+	err := a.cleanup(instanceScope)
 	if err != nil {
 		return err
 	}
@@ -68,18 +69,18 @@ func FinishCleaning(ctx context.Context, instanceScope *scope.InstanceScope) err
 	return nil
 }
 
-func cleanup(instanceScope *scope.InstanceScope) error {
+func (a *Agent) cleanup(instanceScope *scope.InstanceScope) error {
 	cleanupScript, err := os.ReadFile("cleanup_static_node.sh")
 	if err != nil {
 		return errors.Wrap(err, "failed to read cleanup script")
 	}
 
-	go func() {
+	a.lock(providerid.ProviderID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() {
 		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("export PROVIDER_ID='%s' && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, base64.StdEncoding.EncodeToString(cleanupScript)), nil)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to cleanup StaticInstance: failed to exec ssh command")
 		}
-	}()
+	})
 
 	return nil
 }

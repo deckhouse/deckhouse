@@ -19,8 +19,7 @@ package controller
 import (
 	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
 	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
-	"cloud-provider-static/internal/bootstrap"
-	"cloud-provider-static/internal/cleanup"
+	"cloud-provider-static/internal/agent"
 	"cloud-provider-static/internal/pool"
 	"cloud-provider-static/internal/scope"
 	"context"
@@ -55,6 +54,7 @@ type StaticMachineReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	Config *rest.Config
+	Agent  *agent.Agent
 }
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=get;list;watch;create;update;patch;delete
@@ -200,7 +200,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 			return ctrl.Result{}, nil
 		}
 
-		err = bootstrap.Bootstrap(ctx, instanceScope)
+		err = r.Agent.Bootstrap(ctx, instanceScope)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to bootstrap StaticInstance")
 		}
@@ -271,7 +271,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, errors.New("timed out waiting to bootstrap StaticInstance")
 		}
 
-		err := bootstrap.FinishBootstrapping(ctx, instanceScope)
+		err := r.Agent.FinishBootstrapping(ctx, instanceScope)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to finish bootstrapping")
 		}
@@ -281,7 +281,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		instanceScope.Logger.Info("StaticInstance is running")
 
 		if !instanceScope.MachineScope.StaticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-			err := cleanup.Cleanup(ctx, instanceScope)
+			err := r.Agent.Cleanup(ctx, instanceScope)
 			if err != nil {
 				return ctrl.Result{}, errors.Wrap(err, "failed to clean up StaticInstance")
 			}
@@ -304,7 +304,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, errors.New("timed out waiting to clean up StaticInstance")
 		}
 
-		err := cleanup.FinishCleaning(ctx, instanceScope)
+		err := r.Agent.FinishCleaning(ctx, instanceScope)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to finish cleaning")
 		}

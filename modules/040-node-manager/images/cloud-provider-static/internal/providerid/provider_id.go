@@ -12,14 +12,16 @@ const (
 	Prefix = "static://"
 )
 
+type ProviderID string
+
 // GenerateProviderID generates a provider ID for a static node.
-func GenerateProviderID() string {
-	return fmt.Sprintf("%s/%s", Prefix, util.RandomString(16))
+func GenerateProviderID() ProviderID {
+	return ProviderID(fmt.Sprintf("%s/%s", Prefix, util.RandomString(16)))
 }
 
 // ValidateProviderID validates a provider ID for a static node.
-func ValidateProviderID(providerID string) error {
-	match, err := regexp.MatchString(fmt.Sprintf("%s/.+", Prefix), providerID)
+func ValidateProviderID(providerID ProviderID) error {
+	match, err := regexp.MatchString(fmt.Sprintf("%s/.+", Prefix), string(providerID))
 	if err != nil {
 		return err
 	}

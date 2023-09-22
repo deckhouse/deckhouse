@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"cloud-provider-static/internal/providerid"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -38,7 +39,7 @@ type StaticMachineSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// +optional
-	ProviderID string `json:"providerID,omitempty"`
+	ProviderID providerid.ProviderID `json:"providerID,omitempty"`
 
 	LabelSelector metav1.LabelSelector `json:"labelSelector"`
 

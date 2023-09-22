@@ -1,4 +1,4 @@
-package bootstrap
+package agent
 
 import (
 	deckhousev1 "cloud-provider-static/api/deckhouse.io/v1alpha1"
@@ -20,7 +20,7 @@ import (
 )
 
 // Bootstrap runs the bootstrap script on StaticInstance.
-func Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
+func (a *Agent) Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
 		return errors.New("StaticInstance is not pending")
 	}
@@ -49,7 +49,7 @@ func Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
 		return errors.Wrap(err, "failed to patch StaticInstance MachineRef and Phase")
 	}
 
-	err = bootstrap(ctx, instanceScope)
+	err = a.bootstrap(ctx, instanceScope)
 	if err != nil {
 		return err
 	}
@@ -57,28 +57,26 @@ func Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	return nil
 }
 
-func bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	providerID := instanceScope.MachineScope.StaticMachine.Spec.ProviderID
-
-	bootstrapScript, err := GetBootstrapScript(ctx, instanceScope)
+func (a *Agent) bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
+	bootstrapScript, err := getBootstrapScript(ctx, instanceScope)
 	if err != nil {
 		return errors.Wrap(err, "failed to get bootstrap script")
 	}
 
-	go func() {
-		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' | base64 -d | bash", providerID, base64.StdEncoding.EncodeToString(bootstrapScript)), nil)
+	a.lock(providerid.ProviderID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() {
+		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, base64.StdEncoding.EncodeToString(bootstrapScript)), nil)
 		if err != nil {
 			// If the node reboots, the ssh connection will close, and we will get an error.
 			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to exec ssh command")
 		}
-	}()
+	})
 
 	return nil
 }
 
 // FinishBootstrapping finishes the bootstrap process by waiting for bootstrapping Node to appear and patching StaticMachine and StaticInstance.
-func FinishBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	err := bootstrap(ctx, instanceScope)
+func (a *Agent) FinishBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope) error {
+	err := a.bootstrap(ctx, instanceScope)
 	if err != nil {
 		return err
 	}
@@ -88,24 +86,24 @@ func FinishBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope
 		return errors.Wrap(err, "failed to read /var/lib/bashible/node-spec-provider-id")
 	}
 
-	err = providerid.ValidateProviderID(providerID)
+	err = providerid.ValidateProviderID(providerid.ProviderID(providerID))
 	if err != nil {
 		return errors.Wrapf(err, "failed to validate provider id '%s'", providerID)
 	}
 
-	node, err := WaitForNode(ctx, instanceScope, providerID)
+	node, err := waitForNode(ctx, instanceScope, providerID)
 	if err != nil {
 		return errors.Wrap(err, "failed to wait for Node to appear")
 	}
 
 	instanceScope.Logger.Info("Node successfully bootstrapped", "node", node.Name)
 
-	err = PatchNode(ctx, instanceScope.MachineScope, node)
+	err = patchNode(ctx, instanceScope.MachineScope, node)
 	if err != nil {
 		return errors.Wrap(err, "failed to patch Node with StaticMachine labels, annotations and taints")
 	}
 
-	instanceScope.MachineScope.StaticMachine.Spec.ProviderID = node.Spec.ProviderID
+	instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerid.ProviderID(node.Spec.ProviderID)
 	instanceScope.MachineScope.StaticMachine.Status.Addresses = mapAddresses(node.Status.Addresses)
 	instanceScope.MachineScope.StaticMachine.Status.Ready = true
 
@@ -135,8 +133,8 @@ func FinishBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope
 	return nil
 }
 
-// WaitForNode waits for the node to appear and checks that it has 'node.deckhouse.io/configuration-checksum' annotation.
-func WaitForNode(ctx context.Context, instanceScope *scope.InstanceScope, providerID string) (*corev1.Node, error) {
+// waitForNode waits for the node to appear and checks that it has 'node.deckhouse.io/configuration-checksum' annotation.
+func waitForNode(ctx context.Context, instanceScope *scope.InstanceScope, providerID string) (*corev1.Node, error) {
 	nodes := &corev1.NodeList{}
 	nodeSelector := fields.OneTermEqualSelector("spec.providerID", providerID)
 
@@ -166,8 +164,8 @@ func WaitForNode(ctx context.Context, instanceScope *scope.InstanceScope, provid
 	return node, nil
 }
 
-// PatchNode patches Node with StaticMachine labels, annotations and taints.
-func PatchNode(ctx context.Context, machineScope *scope.MachineScope, node *corev1.Node) error {
+// patchNode patches Node with StaticMachine labels, annotations and taints.
+func patchNode(ctx context.Context, machineScope *scope.MachineScope, node *corev1.Node) error {
 	patchHelper, err := patch.NewHelper(node, machineScope.Client)
 	if err != nil {
 		return errors.Wrap(err, "failed to init Node patch helper")
@@ -199,8 +197,8 @@ func PatchNode(ctx context.Context, machineScope *scope.MachineScope, node *core
 	return nil
 }
 
-// GetBootstrapScript returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
-func GetBootstrapScript(ctx context.Context, instanceScope *scope.InstanceScope) ([]byte, error) {
+// getBootstrapScript returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
+func getBootstrapScript(ctx context.Context, instanceScope *scope.InstanceScope) ([]byte, error) {
 	if instanceScope.MachineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		return nil, errors.New("error retrieving bootstrap data: linked Machine's bootstrap.dataSecretName is nil")
 	}
