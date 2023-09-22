@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This step must be after 001_waiting_approval_annotations.sh.tpl
+
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
   exit 0
 fi
