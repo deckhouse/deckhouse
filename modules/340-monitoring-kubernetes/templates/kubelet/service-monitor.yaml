@@ -19,8 +19,6 @@ spec:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
-      replacement: $1
-      action: replace
       targetLabel: node
     - targetLabel: scrape_endpoint
       replacement: kubelet
@@ -38,8 +36,6 @@ spec:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
-      replacement: $1
-      action: replace
       targetLabel: node
     - targetLabel: scrape_endpoint
       replacement: cadvisor
@@ -95,8 +91,6 @@ spec:
       - regex: endpoint|namespace|pod|service
         action: labeldrop
       - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
-        replacement: $1
-        action: replace
         targetLabel: node
       - targetLabel: scrape_endpoint
         replacement: probes
