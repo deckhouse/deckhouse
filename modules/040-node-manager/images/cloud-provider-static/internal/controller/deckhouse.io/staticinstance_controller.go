@@ -21,25 +21,21 @@ import (
 	infrav1 "cloud-provider-static/api/infrastructure/v1alpha1"
 	"cloud-provider-static/internal/controller/infrastructure"
 	"cloud-provider-static/internal/scope"
-	"cloud-provider-static/internal/util"
 	"context"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"time"
-
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 )
 
 // StaticInstanceReconciler reconciles a StaticInstance object
@@ -64,18 +60,13 @@ type StaticInstanceReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
-func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
-	defer func() {
-		result.Requeue = true
-		result.RequeueAfter = 60 * time.Second
-	}()
-
+func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	logger.Info("Reconciling StaticInstance")
 
 	staticInstance := &deckhousev1.StaticInstance{}
-	err = r.Get(ctx, req.NamespacedName, staticInstance)
+	err := r.Get(ctx, req.NamespacedName, staticInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -99,32 +90,6 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			logger.Error(err, "failed to close instance scope")
 		}
 	}()
-
-	if staticInstance.Labels == nil ||
-		staticInstance.Labels["node-group"] == "" {
-		conditions.MarkFalse(staticInstance, infrav1.StaticInstanceAddedToNodeGroupCondition, infrav1.StaticInstanceWaitingForNodeGroupReason, clusterv1.ConditionSeverityInfo, "")
-
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	nodeGroupRef := &corev1.ObjectReference{
-		APIVersion: "deckhouse.io/v1",
-		Kind:       "NodeGroup",
-		Name:       staticInstance.Labels["node-group"],
-	}
-
-	nodeGroup, err := util.Get(ctx, r.Client, nodeGroupRef, "")
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to get node group")
-	}
-
-	_, found, err := unstructured.NestedMap(nodeGroup.Object, "spec", "staticInstances")
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to find node type")
-	}
-	if !found {
-		return ctrl.Result{}, errors.New("NodeGroup does not have staticInstances field")
-	}
 
 	credentials := &deckhousev1.SSHCredentials{}
 	credentialsKey := client.ObjectKey{
@@ -189,9 +154,9 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 	}
 
 	if instanceScope.Instance.Status.CurrentStatus == nil || instanceScope.Instance.Status.CurrentStatus.Phase == "" {
-		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
-
 		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
+
+		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
 		err := instanceScope.Patch(ctx)
 		if err != nil {
@@ -204,7 +169,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 	if instanceScope.MachineScope != nil {
 		instances := &deckhousev1.StaticInstanceList{}
 
-		labelSelector, err := metav1.LabelSelectorAsSelector(&instanceScope.MachineScope.StaticMachine.Spec.LabelSelector)
+		labelSelector, err := metav1.LabelSelectorAsSelector(instanceScope.MachineScope.StaticMachine.Spec.LabelSelector)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "unable to convert StaticMachine label selector")
 		}
@@ -244,7 +209,7 @@ func (r *StaticInstanceReconciler) reconcileDelete(
 	case "":
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
 		if instanceScope.MachineScope != nil {
 			err := r.Client.Delete(ctx, instanceScope.MachineScope.Machine)
@@ -252,10 +217,10 @@ func (r *StaticInstanceReconciler) reconcileDelete(
 				return ctrl.Result{}, errors.Wrap(err, "failed to delete Machine")
 			}
 
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	if controllerutil.RemoveFinalizer(instanceScope.Instance, deckhousev1.InstanceFinalizer) {

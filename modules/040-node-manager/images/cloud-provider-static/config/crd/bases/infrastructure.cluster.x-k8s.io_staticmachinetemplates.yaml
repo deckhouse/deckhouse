@@ -37,12 +37,50 @@ spec:
             properties:
               template:
                 properties:
-                  spec:
+                  metadata:
+                    description: "ObjectMeta is metadata that all persisted resources
+                      must have, which includes all objects users must create. This
+                      is a copy of customizable fields from metav1.ObjectMeta. \n
+                      ObjectMeta is embedded in `Machine.Spec`, `MachineDeployment.Template`
+                      and `MachineSet.Template`, which are not top-level Kubernetes
+                      objects. Given that metav1.ObjectMeta has lots of special cases
+                      and read-only fields which end up in the generated CRD validation,
+                      having it as a subset simplifies the API and some issues that
+                      can impact user experience. \n During the [upgrade to controller-tools@v2](https://github.com/kubernetes-sigs/cluster-api/pull/1054)
+                      for v1alpha2, we noticed a failure would occur running Cluster
+                      API test suite against the new CRDs, specifically `spec.metadata.creationTimestamp
+                      in body must be of type string: \"null\"`. The investigation
+                      showed that `controller-tools@v2` behaves differently than its
+                      previous version when handling types from [metav1](k8s.io/apimachinery/pkg/apis/meta/v1)
+                      package. \n In more details, we found that embedded (non-top
+                      level) types that embedded `metav1.ObjectMeta` had validation
+                      properties, including for `creationTimestamp` (metav1.Time).
+                      The `metav1.Time` type specifies a custom json marshaller that,
+                      when IsZero() is true, returns `null` which breaks validation
+                      because the field isn't marked as nullable. \n In future versions,
+                      controller-tools@v2 might allow overriding the type and validation
+                      for embedded types. When that happens, this hack should be revisited."
                     properties:
                       annotations:
                         additionalProperties:
                           type: string
+                        description: 'Annotations is an unstructured key value map
+                          stored with a resource that may be set by external tools
+                          to store and retrieve arbitrary metadata. They are not queryable
+                          and should be preserved when modifying objects. More info:
+                          http://kubernetes.io/docs/user-guide/annotations'
                         type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: 'Map of string keys and values that can be used
+                          to organize and categorize (scope and select) objects. May
+                          match selectors of replication controllers and services.
+                          More info: http://kubernetes.io/docs/user-guide/labels'
+                        type: object
+                    type: object
+                  spec:
+                    properties:
                       labelSelector:
                         description: A label selector is a label query over a set
                           of resources. The result of matchLabels and matchExpressions
@@ -92,41 +130,6 @@ spec:
                             type: object
                         type: object
                         x-kubernetes-map-type: atomic
-                      labels:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      taints:
-                        items:
-                          description: The node this Taint is attached to has the
-                            "effect" on any pod that does not tolerate the Taint.
-                          properties:
-                            effect:
-                              description: Required. The effect of the taint on pods
-                                that do not tolerate the taint. Valid effects are
-                                NoSchedule, PreferNoSchedule and NoExecute.
-                              type: string
-                            key:
-                              description: Required. The taint key to be applied to
-                                a node.
-                              type: string
-                            timeAdded:
-                              description: TimeAdded represents the time at which
-                                the taint was added. It is only written for NoExecute
-                                taints.
-                              format: date-time
-                              type: string
-                            value:
-                              description: The taint value corresponding to the taint
-                                key.
-                              type: string
-                          required:
-                          - effect
-                          - key
-                          type: object
-                        type: array
-                    required:
-                    - labelSelector
                     type: object
                 required:
                 - spec

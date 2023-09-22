@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"cloud-provider-static/internal/providerid"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -41,16 +40,8 @@ type StaticMachineSpec struct {
 	// +optional
 	ProviderID providerid.ProviderID `json:"providerID,omitempty"`
 
-	LabelSelector metav1.LabelSelector `json:"labelSelector"`
-
 	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
-
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-
-	// +optional
-	Taints []corev1.Taint `json:"taints,omitempty"`
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
 
 // StaticMachineStatus defines the observed state of StaticMachine

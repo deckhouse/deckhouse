@@ -5,36 +5,62 @@ import (
 	"sync"
 )
 
+// Agent is a task agent. It spawns tasks and stores their results. It is
+// thread-safe. It is used to avoid spawning the same task multiple times.
 type Agent struct {
-	locksMutex sync.Mutex
-	locks      map[providerid.ProviderID]struct{}
+	tasksMutex sync.Mutex
+	tasks      map[providerid.ProviderID]*taskResult
 }
 
+type taskResult struct {
+	value interface{}
+}
+
+// NewAgent creates a new task agent.
 func NewAgent() *Agent {
 	return &Agent{
-		locks: make(map[providerid.ProviderID]struct{}),
+		tasks: make(map[providerid.ProviderID]*taskResult),
 	}
 }
 
-func (a *Agent) lock(providerID providerid.ProviderID, fn func()) {
-	a.locksMutex.Lock()
-	defer a.locksMutex.Unlock()
+// spawn spawns a new task if it doesn't exist yet.
+func (a *Agent) spawn(providerID providerid.ProviderID, fn func() interface{}) {
+	a.tasksMutex.Lock()
+	defer a.tasksMutex.Unlock()
 
-	_, ok := a.locks[providerID]
+	_, ok := a.tasks[providerID]
 	if ok {
 		return
 	}
 
-	a.locks[providerID] = struct{}{}
+	a.tasks[providerID] = &taskResult{}
 
 	go func() {
-		defer func() {
-			a.locksMutex.Lock()
-			defer a.locksMutex.Unlock()
+		var result interface{}
 
-			delete(a.locks, providerID)
+		defer func() {
+			a.tasksMutex.Lock()
+			defer a.tasksMutex.Unlock()
+
+			a.tasks[providerID].value = result
 		}()
 
-		fn()
+		result = fn()
 	}()
+}
+
+// getTaskResult returns the result of a task.
+func (a *Agent) getTaskResult(providerID providerid.ProviderID) interface{} {
+	a.tasksMutex.Lock()
+	defer a.tasksMutex.Unlock()
+
+	return a.tasks[providerID].value
+}
+
+// deleteTaskResult deletes the result of a task.
+func (a *Agent) deleteTaskResult(providerID providerid.ProviderID) {
+	a.tasksMutex.Lock()
+	defer a.tasksMutex.Unlock()
+
+	delete(a.tasks, providerID)
 }

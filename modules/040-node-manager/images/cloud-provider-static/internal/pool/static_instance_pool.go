@@ -80,7 +80,7 @@ func (p *StaticInstancePool) findStaticInstancesInPhase(
 ) ([]deckhousev1.StaticInstance, error) {
 	staticInstances := &deckhousev1.StaticInstanceList{}
 
-	labelSelector, err := metav1.LabelSelectorAsSelector(&machineScope.StaticMachine.Spec.LabelSelector)
+	labelSelector, err := metav1.LabelSelectorAsSelector(machineScope.StaticMachine.Spec.LabelSelector)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to convert StaticMachine label selector")
 	}

@@ -54,26 +54,19 @@ var _ webhook.Validator = &StaticInstance{}
 func (r *StaticInstance) ValidateCreate() (admission.Warnings, error) {
 	staticinstancelog.Info("validate create", "name", r.Name)
 
-	var errs field.ErrorList
-
-	if r.Spec.CredentialsRef != nil && r.Spec.CredentialsRef.Kind != "SSHCredentials" {
-		errs = append(errs, field.Forbidden(field.NewPath("spec", "credentialsRef", "kind"), "must be a SSHCredentials"))
-	}
-
-	return aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, errs)
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticInstance) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	staticinstancelog.Info("validate update", "name", r.Name)
 
-	var errs field.ErrorList
-
-	if r.Spec.CredentialsRef != nil && r.Spec.CredentialsRef.Kind != "SSHCredentials" {
-		errs = append(errs, field.Forbidden(field.NewPath("spec", "credentialsRef", "kind"), "must be a SSHCredentials"))
+	oldStaticInstance := old.(*StaticInstance)
+	if oldStaticInstance.Spec.Address != r.Spec.Address {
+		return nil, field.Forbidden(field.NewPath("spec", "address"), "StaticInstance address is immutable")
 	}
 
-	return aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, errs)
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type

@@ -1,3 +1,4 @@
+{{- if .Values.nodeManager.internal.clusterAPIControllerManagerEnabled }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
@@ -501,3 +502,4 @@ webhooks:
         resources:
           - ipaddressclaims
     sideEffects: None
+{{- end }}

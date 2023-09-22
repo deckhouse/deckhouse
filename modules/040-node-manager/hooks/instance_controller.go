@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/clusterapi"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -64,6 +66,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: instanceMachineFilter,
 		},
+		{
+			Name:       "cluster_api_machines",
+			ApiVersion: "cluster.x-k8s.io/v1beta1",
+			Kind:       "Machine",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			FilterFunc: instanceClusterAPIMachineFilter,
+		},
 	},
 }, instanceController)
 
@@ -81,6 +94,38 @@ func instanceMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		Name:              machine.GetName(),
 		CurrentStatus:     machine.Status.CurrentStatus,
 		LastOperation:     machine.Status.LastOperation,
+		DeletionTimestamp: machine.GetDeletionTimestamp(),
+	}, nil
+}
+
+func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var machine clusterapi.Machine
+
+	err := sdk.FromUnstructured(obj, &machine)
+	if err != nil {
+		return nil, err
+	}
+
+	var nodeName string
+
+	if machine.Status.NodeRef != nil {
+		nodeName = machine.Status.NodeRef.Name
+	}
+
+	var lastUpdated metav1.Time
+
+	if machine.Status.LastUpdated != nil {
+		lastUpdated = *machine.Status.LastUpdated
+	}
+
+	return &machineForInstance{
+		NodeGroup: machine.GetLabels()["node-group"],
+		NodeName:  nodeName,
+		Name:      machine.GetName(),
+		CurrentStatus: mcmv1alpha1.CurrentStatus{
+			Phase:          mcmv1alpha1.MachinePhase(machine.Status.Phase),
+			LastUpdateTime: lastUpdated,
+		},
 		DeletionTimestamp: machine.GetDeletionTimestamp(),
 	}, nil
 }
@@ -122,6 +167,7 @@ func instanceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 func instanceController(input *go_hook.HookInput) error {
 	instances := make(map[string]*d8v1alpha1.Instance, len(input.Snapshots["instances"]))
 	machines := make(map[string]*machineForInstance, len(input.Snapshots["machines"]))
+	clusterAPIMachines := make(map[string]*machineForInstance, len(input.Snapshots["cluster_api_machines"]))
 	nodeGroups := make(map[string]*nodeGroupForInstance, len(input.Snapshots["ngs"]))
 
 	for _, i := range input.Snapshots["instances"] {
@@ -132,6 +178,11 @@ func instanceController(input *go_hook.HookInput) error {
 	for _, m := range input.Snapshots["machines"] {
 		mc := m.(*machineForInstance)
 		machines[mc.Name] = mc
+	}
+
+	for _, m := range input.Snapshots["cluster_api_machines"] {
+		mc := m.(*machineForInstance)
+		clusterAPIMachines[mc.Name] = mc
 	}
 
 	for _, m := range input.Snapshots["ngs"] {
@@ -166,6 +217,33 @@ func instanceController(input *go_hook.HookInput) error {
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
 					input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", machine.Name, object_patch.InBackground())
+				}
+			}
+		} else {
+			newIc := newInstance(machine, ng)
+			input.PatchCollector.Create(newIc, object_patch.IgnoreIfExists())
+		}
+	}
+
+	for name, machine := range clusterAPIMachines {
+		ng, ok := nodeGroups[machine.NodeGroup]
+		if !ok {
+			return fmt.Errorf("NodeGroup %s not found", machine.NodeGroup)
+		}
+
+		if ic, ok := instances[name]; ok {
+			statusPatch := getInstanceStatusPatch(ic, machine, ng)
+			if len(statusPatch) > 0 {
+				patch := map[string]interface{}{
+					"status": statusPatch,
+				}
+				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
+			}
+
+			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
+				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
+					// delete in background, because machine has finalizer
+					input.PatchCollector.Delete("cluster.x-k8s.io/v1beta1", "Machine", "d8-cloud-instance-manager", machine.Name, object_patch.InBackground())
 				}
 			}
 		} else {

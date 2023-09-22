@@ -4,7 +4,10 @@
 
 set -e
 
-test -d /var/lib/bashible
+exec 200>/var/lock/bashible
+flock -n 200 || { >&2 echo "Can't acquire lockfile /var/lock/bashible."; exit 1; }
+
+test -d /var/lib/bashible || exit 0
 
 if [[ $(cat /var/lib/bashible/node-spec-provider-id) != "$PROVIDER_ID" ]]; then
   echo "Provider ID mismatch. Expected: $PROVIDER_ID, got: $(cat /var/lib/bashible/node-spec-provider-id)"

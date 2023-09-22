@@ -10,7 +10,13 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 2 }}
 spec:
   template:
+    metadata:
+      {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 6 }}
+    {{- if hasKey $ng.staticInstances "labelSelector" }}
     spec:
       labelSelector:
         {{ $ng.staticInstances.labelSelector | toYaml | nindent 8 }}
+    {{- else }}
+    spec: {}
+    {{- end }}
 {{- end }}

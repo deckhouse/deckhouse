@@ -6,20 +6,33 @@ import (
 	"cloud-provider-static/internal/scope"
 	"cloud-provider-static/internal/ssh"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"github.com/pkg/errors"
-	"os"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
 // Cleanup runs the cleanup script on the static instance.
 func (a *Agent) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning {
-		return errors.New("StaticInstance is not running")
+	switch instanceScope.GetPhase() {
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
+		err := a.cleanupFromRunningPhase(ctx, instanceScope)
+		if err != nil {
+			return errors.Wrap(err, "failed to cleanup StaticInstance from running phase")
+		}
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
+		err := a.cleanupFromCleaningPhase(ctx, instanceScope)
+		if err != nil {
+			return errors.Wrap(err, "failed to cleanup StaticInstance from cleaning phase")
+		}
+	default:
+		return errors.New("StaticInstance is not running or cleaning")
 	}
 
+	return nil
+}
+
+func (a *Agent) cleanupFromRunningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning)
 
 	err := instanceScope.Patch(ctx)
@@ -35,20 +48,20 @@ func (a *Agent) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope)
 	return nil
 }
 
-// FinishCleaning finishes the cleanup process by checking if the cleanup script was successful and patching the static instance.
-func (a *Agent) FinishCleaning(ctx context.Context, instanceScope *scope.InstanceScope) error {
+// cleanupFromCleaningPhase finishes the cleanup process by checking if the cleanup script was successful and patching the static instance.
+func (a *Agent) cleanupFromCleaningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	err := a.cleanup(instanceScope)
 	if err != nil {
 		return err
 	}
 
-	bashibleDirExists, err := ssh.ExecSSHCommandToString(instanceScope, "test ! -d /var/lib/bashible && echo 'true'")
-	if err != nil {
-		return errors.Wrap(err, "failed to check Bashible directory")
-	}
+	taskResult := a.getTaskResult(instanceScope.MachineScope.StaticMachine.Spec.ProviderID)
 
-	if bashibleDirExists != "true" {
-		return errors.New("Bashible directory exist")
+	result, _ := taskResult.(bool)
+	if result {
+		a.deleteTaskResult(instanceScope.MachineScope.StaticMachine.Spec.ProviderID)
+	} else {
+		return nil
 	}
 
 	instanceScope.Instance.Status.MachineRef = nil
@@ -69,16 +82,15 @@ func (a *Agent) FinishCleaning(ctx context.Context, instanceScope *scope.Instanc
 }
 
 func (a *Agent) cleanup(instanceScope *scope.InstanceScope) error {
-	cleanupScript, err := os.ReadFile("cleanup_static_node.sh")
-	if err != nil {
-		return errors.Wrap(err, "failed to read cleanup script")
-	}
-
-	a.lock(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() {
-		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("export PROVIDER_ID='%s' && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, base64.StdEncoding.EncodeToString(cleanupScript)), nil)
+	a.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() interface{} {
+		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("export PROVIDER_ID='%s' && /var/lib/bashible/cleanup-static-node.sh", instanceScope.MachineScope.StaticMachine.Spec.ProviderID), nil)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to cleanup StaticInstance: failed to exec ssh command")
+
+			return false
 		}
+
+		return true
 	})
 
 	return nil

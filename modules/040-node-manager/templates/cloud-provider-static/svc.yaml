@@ -1,3 +1,4 @@
+{{- if .Values.nodeManager.internal.cloudProviderStaticEnabled }}
 ---
 apiVersion: v1
 kind: Service
@@ -11,3 +12,4 @@ spec:
       targetPort: webhook-server
   selector:
     cluster.x-k8s.io/provider: infrastructure-static
+{{- end }}

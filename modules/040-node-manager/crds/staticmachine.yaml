@@ -52,10 +52,6 @@ spec:
             spec:
               description: StaticMachineSpec defines the desired state of StaticMachine
               properties:
-                annotations:
-                  additionalProperties:
-                    type: string
-                  type: object
                 labelSelector:
                   description: A label selector is a label query over a set of resources.
                     The result of matchLabels and matchExpressions are ANDed. An empty
@@ -104,40 +100,8 @@ spec:
                       type: object
                   type: object
                   x-kubernetes-map-type: atomic
-                labels:
-                  additionalProperties:
-                    type: string
-                  type: object
                 providerID:
                   type: string
-                taints:
-                  items:
-                    description: The node this Taint is attached to has the "effect"
-                      on any pod that does not tolerate the Taint.
-                    properties:
-                      effect:
-                        description: Required. The effect of the taint on pods that
-                          do not tolerate the taint. Valid effects are NoSchedule, PreferNoSchedule
-                          and NoExecute.
-                        type: string
-                      key:
-                        description: Required. The taint key to be applied to a node.
-                        type: string
-                      timeAdded:
-                        description: TimeAdded represents the time at which the taint
-                          was added. It is only written for NoExecute taints.
-                        format: date-time
-                        type: string
-                      value:
-                        description: The taint value corresponding to the taint key.
-                        type: string
-                    required:
-                      - effect
-                      - key
-                    type: object
-                  type: array
-              required:
-                - labelSelector
               type: object
             status:
               description: StaticMachineStatus defines the observed state of StaticMachine

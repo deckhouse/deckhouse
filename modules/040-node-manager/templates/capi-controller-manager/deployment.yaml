@@ -1,3 +1,4 @@
+{{- if .Values.nodeManager.internal.clusterAPIControllerManagerEnabled }}
 {{- define "capi_controller_resources" }}
 cpu: 10m
 memory: 50Mi
@@ -181,3 +182,4 @@ spec:
       - name: cert
         secret:
           secretName: capi-webhook-tls
+{{- end }}

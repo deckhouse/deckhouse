@@ -17,8 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -33,20 +33,15 @@ type StaticMachineTemplateSpec struct {
 }
 
 type StaticMachineTemplateSpecTemplate struct {
+	// +optional
+	ObjectMeta clusterv1.ObjectMeta `json:"metadata,omitempty"`
+
 	Spec StaticMachineTemplateSpecTemplateSpec `json:"spec"`
 }
 
 type StaticMachineTemplateSpecTemplateSpec struct {
-	LabelSelector metav1.LabelSelector `json:"labelSelector"`
-
 	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
-
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-
-	// +optional
-	Taints []corev1.Taint `json:"taints,omitempty"`
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
 
 //+kubebuilder:object:root=true

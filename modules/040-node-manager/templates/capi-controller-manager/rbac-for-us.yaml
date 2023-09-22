@@ -1,3 +1,4 @@
+{{- if .Values.nodeManager.internal.clusterAPIControllerManagerEnabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -435,3 +436,4 @@ subjects:
   - kind: ServiceAccount
     name: capi-controller-manager
     namespace: d8-cloud-instance-manager
+{{- end }}

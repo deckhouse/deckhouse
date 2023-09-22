@@ -1,3 +1,4 @@
+{{- if .Values.nodeManager.internal.cloudProviderStaticEnabled }}
 {{- define "static_controller_manager_resources" }}
 cpu: 25m
 memory: 50Mi
@@ -110,3 +111,4 @@ spec:
           secret:
             defaultMode: 420
             secretName: cloud-provider-static-webhook-tls
+{{- end }}

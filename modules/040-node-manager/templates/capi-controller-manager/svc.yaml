@@ -1,3 +1,4 @@
+{{- if .Values.nodeManager.internal.clusterAPIControllerManagerEnabled }}
 ---
 apiVersion: v1
 kind: Service
@@ -11,3 +12,4 @@ spec:
       targetPort: webhook-server
   selector:
     cluster.x-k8s.io/provider: cluster-api
+{{- end }}

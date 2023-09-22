@@ -1,3 +1,4 @@
+{{- if .Values.nodeManager.internal.cloudProviderStaticEnabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -30,6 +31,8 @@ rules:
     - delete
     - get
     - list
+    - patch
+    - update
     - watch
 - apiGroups:
     - cluster.x-k8s.io
@@ -253,3 +256,4 @@ subjects:
 - kind: ServiceAccount
   name: cloud-provider-static
   namespace: d8-cloud-instance-manager
+{{- end }}

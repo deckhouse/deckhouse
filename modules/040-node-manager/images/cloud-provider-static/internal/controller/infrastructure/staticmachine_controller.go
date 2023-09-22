@@ -60,7 +60,7 @@ type StaticMachineReconciler struct {
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines/finalizers,verbs=update
-//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;list;watch;delete
+//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines/status,verbs=get;list;watch
 
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=create;get;list;watch
@@ -78,10 +78,6 @@ type StaticMachineReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
-	defer func() {
-		result.RequeueAfter = 60 * time.Second
-	}()
-
 	logger := ctrl.LoggerFrom(ctx)
 
 	logger.Info("Reconciling StaticMachine")
@@ -235,7 +231,7 @@ func (r *StaticMachineReconciler) reconcileDelete(
 			return result, errors.Wrap(err, "failed to reconcile StaticInstance")
 		}
 
-		if result.Requeue {
+		if !result.IsZero() {
 			return result, nil
 		}
 	}
@@ -271,7 +267,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, errors.New("timed out waiting to bootstrap StaticInstance")
 		}
 
-		err := r.Agent.FinishBootstrapping(ctx, instanceScope)
+		err := r.Agent.Bootstrap(ctx, instanceScope)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to finish bootstrapping")
 		}
@@ -286,7 +282,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 				return ctrl.Result{}, errors.Wrap(err, "failed to clean up StaticInstance")
 			}
 
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
 		instanceScope.Logger.Info("StaticInstance is cleaning")
@@ -304,7 +300,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, errors.New("timed out waiting to clean up StaticInstance")
 		}
 
-		err := r.Agent.FinishCleaning(ctx, instanceScope)
+		err := r.Agent.Cleanup(ctx, instanceScope)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to finish cleaning")
 		}
@@ -325,7 +321,6 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 	err := r.List(
 		ctx,
 		instances,
-		//client.InNamespace(machineScope.Namespace()),
 		client.MatchingFieldsSelector{Selector: uidSelector},
 	)
 	if err != nil {
