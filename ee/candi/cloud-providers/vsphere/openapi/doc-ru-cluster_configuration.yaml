@@ -5,7 +5,7 @@ apiVersions:
       description: |
         Описывает конфигурацию облачного кластера в vSphere.
 
-        Используется cloud-провайдером если control plane кластера размещен в облаке.
+        Используется cloud-провайдером, если control plane кластера размещен в облаке.
 
         Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
@@ -23,7 +23,7 @@ apiVersions:
           properties:
             replicas:
               description: |
-                Количество создаваемых master-узлов. Важно иметь нечётное количество мастеров для обеспечения кворума.
+                Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
             zones:
               description: Список зон, в которых допустимо создавать узлы.
             instanceClass:
@@ -32,13 +32,13 @@ apiVersions:
               properties: &instanceClassProperties
                 numCPUs:
                   description: |
-                    Количество виртуальных процессорных ядер, выделяемых VirtualMachine.
+                    Количество виртуальных процессорных ядер, выделяемых виртуальной машине.
                 memory:
                   description: |
-                    Количество памяти (в мегабайтах), выделенных VirtualMachine.
+                    Количество памяти (в мегабайтах), выделенной виртуальной машине.
                 template:
                   description: |
-                    Путь до VirtualMachine Template, который будет склонирован для создания новой VirtualMachine.
+                    Путь до VirtualMachine Template, который будет склонирован для создания новой виртуальной машины.
                 mainNetwork:
                   description: |
                     Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
@@ -56,12 +56,12 @@ apiVersions:
                     Указывается относительно vSphere datacenter.
                 rootDiskSize:
                   description: |
-                    Размер (в гигабайтах) корневого диска в VirtualMachine.
+                    Размер (в гигабайтах) корневого диска в виртуальной машине.
 
-                    Если в template указан диск меньшего размера, то автоматически произойдёт его расширение.
+                    Если в template указан диск меньшего размера, автоматически произойдет его расширение.
                 resourcePool:
                   description: |
-                    Путь до Resource Pool, в котором будут созданные склонированные виртуальные машины.
+                    Путь до Resource Pool, в котором будут созданы склонированные виртуальные машины.
 
                     Указывается относительно зоны (vSphere Cluster).
                 mainNetworkIPAddresses:
@@ -117,7 +117,7 @@ apiVersions:
             properties:
               name:
                 description: |
-                  Имя NodeGroup, будет использоваться для генерации имен узлов.
+                  Имя NodeGroup, которое будет использоваться для генерации имен узлов.
               replicas:
                 description: |
                   Количество узлов.
@@ -162,10 +162,10 @@ apiVersions:
             > **Внимание!** Отключение этого параметра не отключает NTP-демоны в гостевой ОС, а лишь отключает корректировки времени со стороны ESXi.
         externalNetworkNames:
           description: |
-            Имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines и используемые vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
+            Имена сетей (не полный путь, а просто имя), подключенных к виртуальным машинам и используемых `vsphere-cloud-controller-manager` для проставления ExternalIP в `.status.addresses` в Node API объект.
         internalNetworkNames:
           description: |
-            Имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
+            Имена сетей (не полный путь, а просто имя), подключенных к виртуальным машинам и используемых `vsphere-cloud-controller-manager` для проставления InternalIP в `.status.addresses` в Node API объект.
         internalNetworkCIDR:
           description: |
             Подсеть для master-узлов во внутренней сети.
@@ -178,13 +178,13 @@ apiVersions:
             Путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
         region:
           description: |
-            Тег, прикреплённый к vSphere Datacenter, в котором будут происходить все операции: заказ VirtualMachines, размещение их дисков на datastore, подключение к network.
+            Тег, прикрепленный к vSphere Datacenter, в котором будут происходить все операции: заказ виртуальных машин, размещение их дисков на datastore, подключение к network.
         zones:
           description: |
             Глобальное ограничение набора зон, с которыми работает данный cloud-провайдер.
         baseResourcePool:
           description: |
-            Относительный (от vSphere Cluster) путь до существующего родительского `resourcePool` для всех создаваемых (в каждой зоне) `resourcePool`'ов.
+            Относительный (от vSphere Cluster) путь до существующего родительского `resourcePool` для всех создаваемых (в каждой зоне) `resourcePool'ов`.
         useNestedResourcePool:
           description: |
             Создание вложенного пула (`true`) или использование основного пула (`false`).
@@ -206,20 +206,20 @@ apiVersions:
               description:  Установите `true`, если vCenter использует самоподписанный сертификат.
         nsxt:
           description: |
-            Поддержка cloud controller manager'ом Load Balancer'ов в Vsphere через NSX-T.
+            Поддержка cloud controller manager'ом балансировщиков (LoadBalancer) в Vsphere через NSX-T.
           properties:
             defaultIpPoolName:
               description: |
                 Имя пула IP-адресов по умолчанию, который используется, если в SVC не установлена аннотация `loadbalancer.vmware.io/class`.
             defaultTcpAppProfileName:
               description: |
-                Имя профиля по умолчанию, используемого для TCP соединений в NSX-T.
+                Имя профиля по умолчанию, используемого для TCP-соединений в NSX-T.
             defaultUdpAppProfileName:
               description: |
-                Имя профиля по умолчанию, используемого для UDP соединений в NSX-T.
+                Имя профиля по умолчанию, используемого для UDP-соединений в NSX-T.
             size:
               description: |
-                Размер сервиса LoadBalancer.
+                Размер сервиса балансировщика (LoadBalancer).
             tier1GatewayPath:
               description: |
                 Путь к политике NSX-T tier1 gateway.
@@ -234,21 +234,21 @@ apiVersions:
                 Адрес NSX-T.
             insecureFlag:
               description: |
-                Должен быть установлен в `true` если NSX-T использует самоподписанный сертификат.
+                Должен быть установлен в `true`, если NSX-T использует самоподписанный сертификат.
             loadBalancerClass:
               description: |
-                Дополнительная секция, определяющая Load Balancer Classes (чтобы использовать Class, установите аннотацию `loadbalancer.vmware.io/class: <class name>` на SVC).
+                Дополнительная секция, определяющая классы балансировщика (LoadBalancer Class) (чтобы использовать класс, установите аннотацию `loadbalancer.vmware.io/class: <ИМЯ КЛАССА>` на SVC).
               items:
                 properties:
                   name:
                     description: |
-                      Имя Load Balancer Class для установки аннотации `loadbalancer.vmware.io/class: <class name>` в SVC.
+                      Имя класса балансировщика (LoadBalancer Class) для установки аннотации `loadbalancer.vmware.io/class: <ИМЯ КЛАССА>` в SVC.
                   ipPoolName:
                     description: |
                       Имя пула IP-адресов.
                   tcpAppProfileName:
                     description: |
-                      Имя профиля по умолчанию, используемого для TCP соединений.
+                      Имя профиля по умолчанию, используемого для TCP-соединений.
                   udpAppProfileName:
                     description: |
-                      Имя профиля по умолчанию, используемого для UDP соединений.
+                      Имя профиля по умолчанию, используемого для UDP-соединений.
