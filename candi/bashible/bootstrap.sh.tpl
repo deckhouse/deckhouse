@@ -18,6 +18,14 @@
 {{- end }}
 
 {{- if .cloudProviderType }}
+
+  {{- $currentScope := .}}
+  {{- range $path, $_ := .Files.Glob (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType) }}
+    {{- with $currentScope}}
+      {{- tpl (.Files.Get $path) . | nindent 2 }}
+    {{- end }}
+  {{- end }}
+
   {{- if $content := (.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType) | default false) }}
 function cloud_provider_bootstrap_networks {
     {{- tpl $content . | nindent 2 }}
