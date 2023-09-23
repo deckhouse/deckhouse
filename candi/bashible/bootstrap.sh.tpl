@@ -6,13 +6,11 @@ function cloud_provider_bootstrap_networks {
     {{- tpl ($.Files.Get $path) $ | nindent 2 }}
   {{- end }}
 }
-  {{- else }}
-    {{- range $path, $_ := $.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $.cloudProviderType) }}
-      {{- $bundle := (dir $path | base) }}
+  {{- range $path, $_ := $.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $.cloudProviderType) }}
+    {{- $bundle := (dir $path | base) }}
 function cloud_provider_bootstrap_networks_{{ $bundle }} {
-      {{- tpl ($.Files.Get $path) $ | nindent 2 }}
+    {{- tpl ($.Files.Get $path) $ | nindent 2 }}
 }
-    {{- end }}
   {{- end }}
 {{- end }}
 
