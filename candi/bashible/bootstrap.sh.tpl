@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 
-{{- if $.cloudProviderType }}
-  {{- range $path, $_ := $.Files.Glob (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $.cloudProviderType) }}
-function cloud_provider_bootstrap_networks {
-    {{- tpl ($.Files.Get $path) $ | nindent 2 }}
+{{- if .proxy }}
+  {{- if .proxy.httpProxy }}
+  export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+  export http_proxy=${HTTP_PROXY}
   {{- end }}
-}
-  {{- range $path, $_ := $.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $.cloudProviderType) }}
-    {{- $bundle := (dir $path | base) }}
-function cloud_provider_bootstrap_networks_{{ $bundle }} {
-    {{- tpl ($.Files.Get $path) $ | nindent 2 }}
-}
+  {{- if .proxy.httpsProxy }}
+  export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+  export https_proxy=${HTTPS_PROXY}
   {{- end }}
+  {{- if .proxy.noProxy }}
+  export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
+  export no_proxy=${NO_PROXY}
+  {{- end }}
+{{- else }}
+  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
+
+# {{.cloudProviderType }}
 
 function get_bundle() {
   resource="$1"
