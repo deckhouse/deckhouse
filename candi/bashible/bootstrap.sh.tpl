@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 
 {{- if $.cloudProviderType }}
-  {{- if $bootstrap_script_common := $.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $.cloudProviderType)  }}
+  {{- range $path, $_ := $.Files.Glob (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $.cloudProviderType) }}
 function cloud_provider_bootstrap_networks {
-    {{- tpl $bootstrap_script_common $ | nindent 2 }}
+    {{- tpl ($.Files.Get $path) $ | nindent 2 }}
+  {{- end }}
 }
   {{- else }}
     {{- range $path, $_ := $.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $.cloudProviderType) }}
       {{- $bundle := (dir $path | base) }}
 function cloud_provider_bootstrap_networks_{{ $bundle }} {
-        {{- tpl ($.Files.Get $path) $ | nindent 2 }}
+      {{- tpl ($.Files.Get $path) $ | nindent 2 }}
 }
     {{- end }}
   {{- end }}
