@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 {{- if $.cloudProviderType }}
-  {{- if $bootstrap_script_common := $.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $.Values.nodeManager.internal.cloudProvider.type)  }}
+  {{- if $bootstrap_script_common := $.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $.cloudProviderType)  }}
 function cloud_provider_bootstrap_networks {
     {{- tpl $bootstrap_script_common $ | nindent 2 }}
 }
