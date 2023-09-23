@@ -19,11 +19,11 @@
 
 {{- if .cloudProviderType }}
 function cloud_provider_bootstrap_networks {
-  {{- tpl (.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType) . | nindent 2 }}
+  {{- tpl (.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType)) . | nindent 2 }}
 }
 
 function cloud_provider_bootstrap_networks_{{ .bundle }} {
-  {{- tpl (.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bundles/%s/bootstrap-networks.sh.tpl" .cloudProviderType .bundle) . | nindent 2 }}
+  {{- tpl (.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bundles/%s/bootstrap-networks.sh.tpl" .cloudProviderType .bundle)) . | nindent 2 }}
 }
 {{- end }}
 
