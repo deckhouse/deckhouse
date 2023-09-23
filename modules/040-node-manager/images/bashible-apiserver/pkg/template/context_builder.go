@@ -211,10 +211,9 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		NodeGroup:         ng,
 		RunType:           "Normal",
 
-		Images:            cb.imagesDigests,
-		Registry:          &cb.registryData,
-		Proxy:             cb.clusterInputData.Proxy,
-		CloudProviderType: cb.getCloudProvider(),
+		Images:   cb.imagesDigests,
+		Registry: &cb.registryData,
+		Proxy:    cb.clusterInputData.Proxy,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -438,10 +437,9 @@ type bashibleContext struct {
 	RunType               string      `json:"runType" yaml:"runType"` // Normal
 
 	// Enrich with images and registry
-	Images            map[string]map[string]string `json:"images" yaml:"images"`
-	Registry          *registry                    `json:"registry" yaml:"registry"`
-	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
-	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
+	Images   map[string]map[string]string `json:"images" yaml:"images"`
+	Registry *registry                    `json:"registry" yaml:"registry"`
+	Proxy    map[string]interface{}       `json:"proxy" yaml:"proxy"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {

@@ -124,6 +124,7 @@ func (e Engine) renderWithTemplate(tmpl string, t *template.Template) (out *byte
 type Files struct {
 }
 
+// Implements .Files.Get
 func (_ Files) Get(path string) (string, error) {
 	contents, err := os.ReadFile(path)
 	if err != nil {
