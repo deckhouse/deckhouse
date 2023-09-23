@@ -98,7 +98,7 @@ func main() {
 	lc, err := lclient.NewClient()
 
 	// --------------------------------------------
-	if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval, OperatorNamespace); err != nil {
+	if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval); err != nil {
 		log.Error(err, "failed create controller NewLinstorNode", err)
 		os.Exit(1)
 	}

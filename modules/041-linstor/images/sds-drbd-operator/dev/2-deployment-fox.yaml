@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: d8-sds-drbd-operator
+  name: sds-drbd-operator
   namespace: d8-linstor
 spec:
   selector:
     matchLabels:
-      app: d8-sds-drbd-operator
+      app: sds-drbd-operator
   template:
     metadata:
       labels:
-        app: d8-sds-drbd-operator
+        app: sds-drbd-operator
     spec:
       imagePullSecrets:
         - name: fox-registry
-      serviceAccountName: d8-sds-drbd-operator
+      serviceAccountName: sds-drbd-operator
       containers:
-        - name: d8-sds-drbd-operator
-          image: registry.flant.com/deckhouse/storage-configurator:latest
+        - name: sds-drbd-operator
+          image: registry.flant.com/deckhouse/storage/sds-drbd-operator:latest
           imagePullPolicy: Always
           securityContext:
             privileged: true
