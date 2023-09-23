@@ -1,17 +1,24 @@
-ARG BASE_ALPINE
-ARG BASE_GOLANG_19_ALPINE
+ARG BASE_DISTROLESS
+ARG BASE_GOLANG_20_ALPINE
 
-FROM $BASE_GOLANG_19_ALPINE AS build
+FROM $BASE_GOLANG_20_ALPINE AS build
+ARG GOPROXY
+ARG SOURCE_REPO
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
 WORKDIR /src
-RUN apk add --update --no-cache patch
-RUN wget https://github.com/aquasecurity/k8s-node-collector/archive/refs/tags/v0.0.6.tar.gz -O - | tar -xz --strip-components=1
+RUN apk add --update --no-cache patch git
+RUN git clone --depth 1 --branch v0.0.6 ${SOURCE_REPO}/aquasecurity/k8s-node-collector.git .
 
 COPY patches/001-change-node-collector-config.patch /src
 RUN patch -p1 < 001-change-node-collector-config.patch
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o node-collector ./cmd/node-collector/main.go
+RUN go build -ldflags '-s -w -extldflags "-static"' -o node-collector ./cmd/node-collector/main.go
 
-FROM $BASE_ALPINE
+FROM $BASE_DISTROLESS
 COPY --from=build /src/node-collector /usr/local/bin/
 ENTRYPOINT [ "/usr/local/bin/node-collector" ]
-ENV LANG=C.UTF-8

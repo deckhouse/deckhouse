@@ -17,7 +17,7 @@
 export MY_IP="$(</var/lib/bashible/discovered-node-ip)"
 
 function subst_config() {
-    tmpfile=$(mktemp /tmp/kubeadm-config.XXXXXX)
+    tmpfile=$(mktemp /opt/deckhouse/tmp/kubeadm-config.XXXXXX)
     envsubst < "$1" > "$tmpfile"
     mv "$tmpfile" "$1"
 }

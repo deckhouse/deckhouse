@@ -60,7 +60,7 @@ RUN mkdir -p /etc/vector \
 
 # libssl.1
 COPY lib/libssl1.1_1.1.1f-1ubuntu2.17_amd64.deb .
-RUN dpkg -i libssl1.1_1.1.1f-1ubuntu2.17_amd64.deb
+RUN dpkg -i libssl1.1_1.1.1f-1ubuntu2.17_amd64.deb && rm libssl1.1_1.1.1f-1ubuntu2.17_amd64.deb
 
 # libcurl.4
 RUN apt-get install -yq libcurl4

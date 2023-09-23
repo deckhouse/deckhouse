@@ -74,7 +74,9 @@ apiVersions:
             type: integer
             minimum: 1
             description: |
-              The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+              The number of master nodes to create.
+
+              It is important to have an odd number of masters to ensure a quorum.
           instanceClass:
             type: object
             required: [instanceType, ami]
@@ -362,17 +364,14 @@ apiVersions:
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         description: |
-          A subnet to use for cluster nodes.
-
+          A subnet to use for cluster nodes:
           * The IP range must overlap or match the VPC address range.
           * The IP range will be evenly split into subnets, one per Availability Zone in your region.
           * An optional but recommended parameter. By default, it corresponds to the whole range of VPC addresses.
 
-          > If a new VPC is created along with a new cluster and no `vpcNetworkCIDR` is provided, then the range from  `nodeNetworkCIDR` is used for the VPC.
-          > Thus, the entire VPC is allocated for the cluster networks, and you will not be able to add other resources to this VPC.
-          >
-          > The `nodeNetworkCIDR` range is distributed between subnets depending on the number of availability zones in the selected region. For example:
-          > if `nodeNetworkCIDR: "10.241.1.0/20"` and there are three availability zones in the region, subnets will be created with the `/22` mask.
+          If a new VPC is created along with a new cluster and no `vpcNetworkCIDR` is provided, then the range from  `nodeNetworkCIDR` is used for the VPC. Thus, the entire VPC is allocated for the cluster networks, and you will not be able to add other resources to this VPC.
+
+          The `nodeNetworkCIDR` range is distributed between subnets depending on the number of availability zones in the selected region. For example, if `nodeNetworkCIDR: "10.241.1.0/20"` and there are three availability zones in the region, subnets will be created with the `/22` mask.
       existingVPCID:
         type: string
         description: |
@@ -389,7 +388,7 @@ apiVersions:
         items:
           type: string
         description: |
-          A list of CIDR's allowed to connect to nodes via ssh.
+          A list of CIDR's allowed to connect to nodes via SSH.
 
           By default, `0.0.0.0/0`.
       tags:
@@ -438,11 +437,9 @@ apiVersions:
           * Additional policies would be attached to default IAM role policies.
           * Parameter is optional. If ommitted, only default IAM role policies are used.
 
-          Default IAM role policies are:
-          ```
-          - "ec2:DescribeTags"
-          - "ec2:DescribeInstances"
-          ```
+          Default IAM role policies contain the following roles:
+          - `ec2:DescribeTags`
+          - `ec2:DescribeInstances`
     allOf:
     - oneOf:
       - required: [layout]

@@ -150,6 +150,7 @@ function main() {
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
   export FIRST_BASHIBLE_RUN="no"
   export NODE_GROUP="{{ .nodeGroup.name }}"
+  export TMPDIR="/opt/deckhouse/tmp"
 {{- if .registry }}
   export REGISTRY_ADDRESS="{{ .registry.address }}"
   export SCHEME="{{ .registry.scheme }}"

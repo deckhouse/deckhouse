@@ -158,7 +158,7 @@ This is only needed if you have to move a static node from one cluster to anothe
    systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
    systemctl stop bashible.service bashible.timer
    systemctl stop kubelet.service
-   systemctl stop containerd
+   systemctl stop containerd-deckhouse
    systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
    kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
    ```
@@ -209,7 +209,7 @@ This is only needed if you have to move a static node from one cluster to anothe
 1. Start CRI:
 
    ```shell
-   systemctl start containerd
+   systemctl start containerd-deckhouse
    systemctl list-units --full --all | grep -q docker.service && systemctl start docker
    ```
 

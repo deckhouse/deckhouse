@@ -43,7 +43,9 @@ properties:
                 - Premium_ZRS
                 - StandardSSD_ZRS
               description: |
-                Azure disk storage account type. Check out [Azure docs](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-overview#types-of-storage-accounts) for more information.
+                Azure disk storage account type.
+
+                Check out [Azure documentation](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-overview#types-of-storage-accounts) for more information.
             cachingMode:
               type: string
               enum:
@@ -52,7 +54,8 @@ properties:
                 - ReadWrite
               description: |
                 String value that corresponds to destired caching mode. If expected disk size is more than 4 TiB, you have to set `cachineMode: None`.
-                Check out [Azure docs](https://docs.microsoft.com/en-us/azure/virtual-machines/premium-storage-performance#disk-caching) for more information.
+
+                Check out [Azure documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/premium-storage-performance#disk-caching) for more information.
             diskIOPSReadWrite:
               type: number
               description: |

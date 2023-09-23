@@ -158,7 +158,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
    systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
    systemctl stop bashible.service bashible.timer
    systemctl stop kubelet.service
-   systemctl stop containerd
+   systemctl stop containerd-deckhouse
    systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
    kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
    ```
@@ -209,7 +209,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 1. Запустите обратно CRI:
 
    ```shell
-   systemctl start containerd
+   systemctl start containerd-deckhouse
    systemctl list-units --full --all | grep -q docker.service && systemctl start docker
    ```
 

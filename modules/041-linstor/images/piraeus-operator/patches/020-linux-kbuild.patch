@@ -1,27 +1,27 @@
 diff --git a/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go b/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
-index 2c93547..f9f163a 100644
+index 8fa5257..c430ff8 100644
 --- a/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
 +++ b/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
-@@ -1260,12 +1260,18 @@ func daemonSetWithDRBDKernelModuleInjection(ds *apps.DaemonSet, satelliteSet *pi
+@@ -1261,12 +1261,17 @@ func daemonSetWithDRBDKernelModuleInjection(ds *apps.DaemonSet, satelliteSet *pi
  		MountPath: kubeSpec.ModulesDir,
  	},
  	)
+-
 +	volumeMounts = append(volumeMounts, corev1.VolumeMount{
 +		Name:      kubeSpec.UsrLibDirName,
 +		MountPath: kubeSpec.UsrLibDirMountPath,
 +	},
 +	)
- 
  	ds.Spec.Template.Spec.InitContainers = []corev1.Container{
  		{
  			Name:            "kernel-module-injector",
  			Image:           satelliteSet.Spec.KernelModuleInjectionImage,
  			ImagePullPolicy: satelliteSet.Spec.ImagePullPolicy,
 +			Command:         []string{"/bin/bash", "-c", "find /host/usr/lib -maxdepth 1 -mindepth 1 -exec ln -vs {} /usr/lib \\; 2>/dev/null; exec /entry.sh"},
- 			SecurityContext: &corev1.SecurityContext{Privileged: &kubeSpec.Privileged},
- 			Env:             env,
- 			VolumeMounts:    volumeMounts,
-@@ -1294,6 +1300,15 @@ func daemonSetWithDRBDKernelModuleInjection(ds *apps.DaemonSet, satelliteSet *pi
+ 			SecurityContext: &corev1.SecurityContext{Privileged: &kubeSpec.Privileged,
+ 				SELinuxOptions: &corev1.SELinuxOptions{Level: kubeSpec.Level, Type: kubeSpec.Type}},
+ 			Env:          env,
+@@ -1296,6 +1301,15 @@ func daemonSetWithDRBDKernelModuleInjection(ds *apps.DaemonSet, satelliteSet *pi
  				},
  			},
  		})
@@ -35,10 +35,10 @@ index 2c93547..f9f163a 100644
 +			},
 +		})
  	}
- 
+
  	return ds
 diff --git a/pkg/k8s/spec/const.go b/pkg/k8s/spec/const.go
-index fe89064..a9d186e 100644
+index 1fb8051..9ad09fb 100644
 --- a/pkg/k8s/spec/const.go
 +++ b/pkg/k8s/spec/const.go
 @@ -40,6 +40,9 @@ const (

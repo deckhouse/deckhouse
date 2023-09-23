@@ -11,6 +11,6 @@ bb-yum-install python3-dnf-plugin-versionlock
 
 bb-yum-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 
-bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl801 }}"
+bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}"
 
 bb-yum-remove yum-cron

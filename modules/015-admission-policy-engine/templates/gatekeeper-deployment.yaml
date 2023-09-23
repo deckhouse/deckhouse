@@ -70,7 +70,7 @@ spec:
         - --exempt-namespace=d8-{{ .Chart.Name }}
         - --operation=webhook
         - --operation=mutation-webhook
-        - --enable-external-data=false
+        - --enable-external-data=true
         - --log-mutations=false
         - --mutation-annotations=false
         - --disable-cert-rotation=true

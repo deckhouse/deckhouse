@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — GCP: Layouts"
+description: "Schemes of placement and interaction of resources in GCP when working with the Deckhouse cloud provider."
 ---
 
 Two layouts are supported. Below is more information about each of them.

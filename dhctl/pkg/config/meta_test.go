@@ -239,6 +239,58 @@ func TestPrepareRegistry(t *testing.T) {
 			require.Equal(t, cfg.Registry, expectedData)
 		})
 	})
+
+	t.Run("Validate registryDockerCfg", func(t *testing.T) {
+		t.Run("Expect successful validation", func(t *testing.T) {
+			creds := []string{
+				`{"auths": { "registry.deckhouse.io": {}}}`,
+				`{"auths": { "regi-stry.deckhouse.io": {}}}`,
+				`{"auths": { "registry.io": {}}}`,
+				`{"auths": { "1.io": {}}}`,
+				`{"auths": { "1.s.io": {}}}`,
+				`{"auths": { "regi.stry:5000": {}}}`,
+				`{"auths": { "1.2.3": {}}}`,
+				`{"auths": { "1.2:5000": {}}}`,
+				`{"auths": { "reg.dec.io1": {}}}`,
+				`{"auths": { "one.two.three.four.five.six.whatever": {}}}`,
+				`{"auths": { "1.2.3.4.5.6.0": {}}}`,
+				``,
+			}
+
+			for _, cred := range creds {
+				dockerCfg := base64.StdEncoding.EncodeToString([]byte(cred))
+
+				err := validateRegistryDockerCfg(dockerCfg)
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run("Expect failed validation", func(t *testing.T) {
+			hosts := []string{
+				"some-bad-host:1434/deckhouse",
+				"some-bad/deckhouse",
+				".some-bad/deckhouse",
+				"-some.bad",
+				"somebad.",
+				"some--ba",
+				"some..ba",
+				"14214.ba1::1554",
+				"some.bad:host",
+				"some-bad:host1",
+			}
+
+			for _, host := range hosts {
+				creds := fmt.Sprintf("{\"auths\": { \"%s\": {}}}", host)
+				dockerCfg := base64.StdEncoding.EncodeToString([]byte(creds))
+
+				err := validateRegistryDockerCfg(dockerCfg)
+				require.EqualErrorf(t,
+					err,
+					fmt.Sprintf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", host),
+					err.Error())
+			}
+		})
+	})
 }
 
 func TestParseRegistryData(t *testing.T) {

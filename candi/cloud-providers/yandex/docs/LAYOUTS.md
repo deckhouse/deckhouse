@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — Yandex Cloud: Layouts"
+description: "Schemes of placement and interaction of resources in Yandex Cloud when working with the Deckhouse cloud provider."
 ---
 
 Three layouts are supported. Below is more information about each of them.

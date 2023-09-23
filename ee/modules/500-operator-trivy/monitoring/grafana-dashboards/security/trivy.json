@@ -26,7 +26,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 16742,
   "graphTooltip": 0,
-  "iteration": 1686294997072,
+  "iteration": 1693577505286,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -242,6 +242,13 @@
             "filterable": true,
             "inspect": false
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "More details",
+              "url": "${__data.fields.vuln_id_url}"
+            }
+          ],
           "mappings": [
             {
               "options": {
@@ -298,9 +305,38 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "vuln_id"
+              "options": "vuln_id_url"
             },
             "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "pattern": "BDU-(.+)",
+                      "result": {
+                        "index": 0,
+                        "text": "https://bdu.fstec.ru/vul/$1"
+                      }
+                    },
+                    "type": "regex"
+                  },
+                  {
+                    "options": {
+                      "pattern": "(CVE.+)",
+                      "result": {
+                        "index": 1,
+                        "text": "https://nvd.nist.gov/vuln/detail/$1"
+                      }
+                    },
+                    "type": "regex"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 1
+              }
             ]
           }
         ]
@@ -341,6 +377,7 @@
           "exemplar": false,
           "expr": "sum(trivy_vulnerability_id{namespace=~\"$namespace\",severity=~\"$severity\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\"}) by (image_repository,image_tag,severity, vuln_id, namespace, resource_kind, resource_name,vuln_title)",
           "format": "table",
+          "hide": false,
           "instant": true,
           "range": false,
           "refId": "A"
@@ -349,13 +386,39 @@
       "title": "Vulnerability by Vulnerability Id",
       "transformations": [
         {
+          "id": "calculateField",
+          "options": {
+            "alias": "vuln_id_url",
+            "mode": "reduceRow",
+            "reduce": {
+              "include": [
+                "vuln_id"
+              ],
+              "reducer": "last"
+            },
+            "replaceFields": false
+          }
+        },
+        {
           "id": "organize",
           "options": {
             "excludeByName": {
               "Time": true,
-              "Value": true
+              "Value": true,
+              "vuln_id_hidden": false
             },
-            "indexByName": {},
+            "indexByName": {
+              "Time": 0,
+              "Value": 8,
+              "image_repository": 1,
+              "namespace": 2,
+              "resource_kind": 3,
+              "resource_name": 4,
+              "severity": 5,
+              "vuln_id": 6,
+              "vuln_title": 7
+            },
+	    "indexByName": {},
             "renameByName": {
               "image_repository": ""
             }

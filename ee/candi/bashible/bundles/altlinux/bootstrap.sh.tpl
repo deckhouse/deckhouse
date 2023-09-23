@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
+mkdir -p /opt/deckhouse/tmp
+export TMPDIR=/opt/deckhouse/tmp
 export LANG=C
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}

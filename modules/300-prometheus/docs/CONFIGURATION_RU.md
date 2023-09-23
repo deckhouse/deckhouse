@@ -20,7 +20,7 @@ search: prometheus
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values prometheus -o json | jq '.prometheus.internal.auth.password'
 ```
 
-Чтобы сгенерировать новый пароль, нужно удалить секрет:
+Чтобы сгенерировать новый пароль, нужно удалить Secret:
 
 ```shell
 kubectl -n d8-monitoring delete secret/basic-auth

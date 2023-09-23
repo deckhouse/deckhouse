@@ -4,11 +4,11 @@
   {{- if $value.csi.livenessprobe }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /
-    to: /
+    add: /livenessprobe
+    to: /livenessprobe
     includePaths:
       - livenessprobe
     before: setup
@@ -16,6 +16,18 @@ docker:
   ENTRYPOINT: ["/livenessprobe"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: registry.k8s.io/sig-storage/livenessprobe:{{ $value.csi.livenessprobe }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+shell:
+  beforeInstall:
+    - apk add --no-cache make bash git patch rsync gcc musl-dev
+    - git clone --depth 1 --branch {{ $value.csi.livenessprobe }} {{ $.SOURCE_REPO }}/kubernetes-csi/livenessprobe.git /src
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd /src
+    - make build
+    - cp bin/livenessprobe /livenessprobe
+    - chown 64535:64535 /livenessprobe
+    - chmod 0755 /livenessprobe
   {{- end }}
 {{- end }}

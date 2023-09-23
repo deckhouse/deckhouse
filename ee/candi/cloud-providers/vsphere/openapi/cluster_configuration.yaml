@@ -147,7 +147,7 @@ apiVersions:
               mainNetworkIPAddresses:
                 type: array
                 description: |
-                  A list of static IP addresses (with a CIDR prefix) sequentially allocated to master nodes in the `mainNetwork`.
+                  A list of static IP addresses (with a CIDR prefix) sequentially allocated to nodes in the `mainNetwork`.
 
                   By default, the DHCP client is enabled.
                 x-examples:
@@ -471,14 +471,14 @@ apiVersions:
           loadBalancerClass:
             type: array
             description: |
-              Additional section to define Load Balancer Classes (to use class, set annotation `loadbalancer.vmware.io/class: <class name>` to SVC).
+              Additional section to define Load Balancer Classes (set annotation `loadbalancer.vmware.io/class: <CLASS NAME>` to SVC to use the class).
             items:
               required: [name, ipPoolName]
               properties:
                 name:
                   type: string
                   description: |
-                    Load Balancer Class name to use in SVC annotation `loadbalancer.vmware.io/class: <class name>`.
+                    Load Balancer Class name to use in SVC annotation `loadbalancer.vmware.io/class: <CLASS NAME>`.
                 ipPoolName:
                   type: string
                   description: |

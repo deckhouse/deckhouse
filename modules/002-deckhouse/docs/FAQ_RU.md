@@ -4,13 +4,13 @@ title: "Модуль deckhouse: FAQ"
 
 ## Как запустить kube-bench в кластере?
 
-Вначале необходимо зайти внутрь Pod'а Deckhouse:
+Вначале необходимо зайти внутрь пода Deckhouse:
 
 ```shell
 kubectl -n d8-system exec -ti deploy/deckhouse -- bash
 ```
 
-Далее, необходимо выбрать, на каком узле запустить kube-bench.
+Далее необходимо выбрать, на каком узле запустить kube-bench.
 
 * Запуск на случайном узле:
 
@@ -45,28 +45,28 @@ kubectl logs job.batch/kube-bench
 2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
 
 Данные, которые будут собраны:
-* состояние очереди Deckhouse
-* Deckhouse values (без каких-либо конфиденциальных данных)
-* список включенных модулей
-* `events` из всех пространств имен
-* манифесты controller'ов и pod'ов manifests из всех пространств имен Deckhouse
-* все объекты `nodegroups`
-* все объекты `nodes`
-* все объекты `machines`
-* Данные о текущей версии пода deckhouse
-* все объекты `deckhousereleases`
-* логи Deckhouse
-* логи machine controller manager
-* логи cloud controller manager
-* логи cluster autoscaler
-* логи Vertical Pod Autoscaler admission controller
-* логи Vertical Pod Autoscaler recommender
-* логи Vertical Pod Autoscaler updater
-* логи Prometheus
-* метрики terraform-state-exporter
-* все горящие уведомления в Prometheus
+* состояние очереди Deckhouse;
+* Deckhouse values (без каких-либо конфиденциальных данных);
+* список включенных модулей;
+* `events` из всех пространств имен;
+* манифесты controller'ов и подов из всех пространств имен Deckhouse;
+* все объекты `nodegroups`;
+* все объекты `nodes`;
+* все объекты `machines`;
+* данные о текущей версии пода deckhouse;
+* все объекты `deckhousereleases`;
+* логи Deckhouse;
+* логи machine controller manager;
+* логи cloud controller manager;
+* логи cluster autoscaler;
+* логи Vertical Pod Autoscaler admission controller;
+* логи Vertical Pod Autoscaler recommender;
+* логи Vertical Pod Autoscaler updater;
+* логи Prometheus;
+* метрики terraform-state-exporter;
+* все горящие уведомления в Prometheus.
 
-## Как отлаживать проблемы в Pod'ах при помощи ephemeral containers?
+## Как отлаживать проблемы в подах с помощью ephemeral containers?
 
 Выполните следующую команду:
 
@@ -76,7 +76,7 @@ kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 
 Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
 
-## Как отлаживать проблемы на узлах при помощи ephemeral containers?
+## Как отлаживать проблемы на узлах с помощью ephemeral containers?
 
 Выполните следующую команду:
 

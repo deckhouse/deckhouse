@@ -163,6 +163,8 @@ bb-rp-install() {
 
   shopt -s failglob
 }
+mkdir -p /opt/deckhouse/tmp
+export TMPDIR=/opt/deckhouse/tmp
 export PATH="/opt/deckhouse/bin:$PATH"
 export LANG=C
 {{- if .proxy }}

@@ -17,7 +17,7 @@ spec:
     - http01:
         ingress:
           {{- if hasKey .Values.global.modules "ingressClass" }}
-          class: {{ .Values.global.modules.ingressClass }}
+          ingressClassName: {{ .Values.global.modules.ingressClass }}
           {{- end }}
           podTemplate:
             spec:

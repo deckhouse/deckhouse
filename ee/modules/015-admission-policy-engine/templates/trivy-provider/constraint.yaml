@@ -1,0 +1,24 @@
+{{- if include "trivy.provider.enabled" $ }}
+  {{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8VulnerableImages
+metadata:
+  name: vulnerable-image
+  {{- include "helm_lib_module_labels" (list . (dict "app" "trivy-provider" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  enforcementAction: deny
+  match:
+    scope: Namespaced
+    namespaceSelector:
+      matchLabels:
+        security.deckhouse.io/trivy-provider: ""
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "DaemonSet", "StatefulSet"]
+      - apiGroups: ["apps.kruise.io"]
+        kinds: ["DaemonSet"]
+      - apiGroups: [""]
+        kinds: ["Pod"]
+  {{- end }}
+{{- end }}
