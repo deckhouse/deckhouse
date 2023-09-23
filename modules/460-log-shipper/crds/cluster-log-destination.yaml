@@ -645,6 +645,8 @@ spec:
                         - disk
                         - type
                         - whenFull
+                      not:
+                        required: [memory]
                     - properties:
                         memory: {}
                         type:
@@ -654,6 +656,8 @@ spec:
                         - memory
                         - type
                         - whenFull
+                      not:
+                        required: [disk]
                   description: Buffer parameters.
                   required: ["type"]
                   properties:
