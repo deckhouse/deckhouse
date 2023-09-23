@@ -17,7 +17,15 @@
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
 
-# {{.cloudProviderType }}
+{{- if .cloudProviderType }}
+function cloud_provider_bootstrap_networks {
+  {{- tpl (.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType) . | nindent 2 }}
+}
+
+function cloud_provider_bootstrap_networks_{{ .bundle }} {
+  {{- tpl (.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bundles/%s/bootstrap-networks.sh.tpl" .cloudProviderType .bundle) . | nindent 2 }}
+}
+{{- end }}
 
 function get_bundle() {
   resource="$1"
