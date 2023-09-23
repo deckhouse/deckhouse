@@ -635,7 +635,7 @@ spec:
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
                 buffer:
                   type: object
-                  oneOF:
+                  oneOf:
                     - properties:
                         disk: {}
                         type:
