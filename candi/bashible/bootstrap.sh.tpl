@@ -56,14 +56,16 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- if .cloudProviderType }}
 # generate cloud bootstrap network scripts
   {{- if $bootstrap_script_common := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType) }}
-cat - >> $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh <<"EOF"
+cat > $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh <<"EOF"
     {{ tpl $bootstrap_script_common . | nindent 0}}
 EOF
+chmod +x $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh
   {{- else }}
     {{- if $bootstrap_script_bundle := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bundles/%s/bootstrap-networks.sh.tpl" .cloudProviderType .bundle) }}
-cat - >> $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-{{ .bundle }}.sh <<"EOF"
+cat > $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-{{ .bundle }}.sh <<"EOF"
       {{ tpl $bootstrap_script_bundle . | nindent 0}}
 EOF
+chmod +x $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-{{ .bundle }}.sh
     {{- end }}
   {{- end }}
 {{- end }}
