@@ -85,6 +85,7 @@ func reconcileLinstorNodes(ctx context.Context, cl client.Client, lc *lclient.Cl
 		log.Error(err, "Failed get secret:"+secretName+"/"+secretNamespace)
 		return err
 	}
+
 	configNodeSelector, err := GetNodeSelectorFromConfig(*configSecret)
 	if err != nil {
 		log.Error(err, "Failed get node selector from secret:"+secretName+"/"+secretNamespace)
@@ -102,29 +103,71 @@ func reconcileLinstorNodes(ctx context.Context, cl client.Client, lc *lclient.Cl
 		log.Error(err, "Failed get LINSTOR nodes")
 		return err
 	}
-	log.Info("reconcileLinstorNodes: Start addDRBDNodes")
-	err = addDRBDNodes(ctx, cl, lc, log, selectedKubernetesNodes, linstorNodes, drbdNodeSelector)
 
-	// selectedDRBDNodes, err := GetKubernetesNodesBySelector(ctx, cl, map[string]string{DRBDNodeSelectorKey: ""})
-	// if err != nil {
-	// 	log.Error(err, "Failed get nodes from Kubernetes by selector:"+fmt.Sprint(map[string]string{DRBDNodeSelectorKey: ""}))
-	// 	return err
-	// }
+	if len(selectedKubernetesNodes.Items) != 0 {
+		log.Info("reconcileLinstorNodes: Start addDRBDNodes")
+		err = addDRBDNodes(ctx, cl, lc, log, selectedKubernetesNodes, linstorNodes, drbdNodeSelector)
+		if err != nil {
+			log.Error(err, "Failed add DRBD nodes:")
+			return err
+		}
+	} else {
+		log.Info("reconcileLinstorNodes: There are not any Kubernetes nodes for LINSTOR that can be selected by selector:" + fmt.Sprint(configNodeSelector))
+	}
 
-	// allKubernetesNodes, err := GetAllKubernetesNodes(ctx, cl)
-	// if err != nil {
-	// 	log.Error(err, "Failed get all nodes from Kubernetes")
-	// 	return err
-	// }
+	allKubernetesNodes, err := GetAllKubernetesNodes(ctx, cl)
+	if err != nil {
+		log.Error(err, "Failed get all nodes from Kubernetes")
+		return err
+	}
+	drbdNodesToRemove := DiffNodeLists(allKubernetesNodes, selectedKubernetesNodes)
 
-	// drbdNodesToRemove := DiffNodeLists(selectedKubernetesNodes, allKubernetesNodes)
+	log.Info("reconcileLinstorNodes: Start removeDRBDNodes")
+	err = removeDRBDNodes(ctx, cl, lc, log, drbdNodesToRemove, linstorNodes, drbdNodeSelector)
 
-	// err = removeDRBDNodes(drbdNodesToRemove, linstorNodes)
-	// drbdNodesToRemove := DiffNodeLists(selectedDRBDNodes, selectedKubernetesNodes)
-	// for _, drbdNodeToAdd := range drbdNodesToAdd.Items {
-	// 	fmt.Printf("New DRBD Node: %s\n", drbdNodeToAdd.Name)
-	// }
+	return nil
+}
 
+func removeDRBDNodes(ctx context.Context, cl client.Client, lc *lclient.Client, log logr.Logger, drbdNodesToRemove v1.NodeList, linstorNodes []lclient.Node, drbdNodeSelector map[string]string) error {
+	log.Info("removeDRBDNodes: Start")
+	for _, drbdNodeToRemove := range drbdNodesToRemove.Items {
+		log.Info("removeDRBDNodes: Process Kubernetes node: " + drbdNodeToRemove.Name)
+
+		findMatch := false
+		for _, linstorNode := range linstorNodes {
+			if drbdNodeToRemove.Name == linstorNode.Name {
+				findMatch = true
+				break
+			}
+		}
+
+		if findMatch {
+			log.Info("Remove LINSTOR node: " + drbdNodeToRemove.Name)
+			log.Error(nil, "Warning! Delete logic not yet implemented. Removal of LINSTOR nodes is prohibited.")
+
+			// err := lc.Nodes.Delete(ctx, drbdNodeToRemove.Name)
+			// if err != nil {
+			// 	log.Error(err, "unable to remove LINSTOR node: "+drbdNodeToRemove.Name)
+			// }
+		}
+
+		if labels.Set(drbdNodeSelector).AsSelector().Matches(labels.Set(drbdNodeToRemove.Labels)) {
+			log.Info("Kubernetes node: " + drbdNodeToRemove.Name + "  have drbd label. Unset it")
+			log.Error(nil, "Warning! Delete logic not yet implemented. Removal of LINSTOR nodes is prohibited.")
+
+			// originalNode := drbdNodeToRemove.DeepCopy()
+			// newNode := drbdNodeToRemove.DeepCopy()
+			// for labelKey, _ := range drbdNodeSelector {
+			// 	delete(newNode.Labels, labelKey)
+			// }
+			//
+			// err := cl.Patch(ctx, newNode, client.MergeFrom(originalNode))
+			// if err != nil {
+			// 	log.Error(err, "Unable unset drbd labels from node %s. "+drbdNodeToRemove.Name)
+			// }
+		}
+
+	}
 	return nil
 }
 
@@ -157,31 +200,29 @@ func addDRBDNodes(ctx context.Context, cl client.Client, lc *lclient.Client, log
 			}
 		}
 
-		if findMatch {
-			continue
-		}
-
-		fmt.Printf("Create LINSTOR node: %s\n", selectedKubernetesNode.Name)
-		newLinstorNode := lclient.Node{
-			Name: selectedKubernetesNode.Name,
-			Type: LinstorSatelliteType,
-			NetInterfaces: []lclient.NetInterface{
-				{
-					Name:                    "default",
-					Address:                 net.ParseIP(selectedKubernetesNode.Status.Addresses[0].Address),
-					IsActive:                true,
-					SatellitePort:           LinstorNodePort,
-					SatelliteEncryptionType: LinstorEncryptionType,
+		if !findMatch {
+			log.Info("Create LINSTOR node: " + selectedKubernetesNode.Name)
+			newLinstorNode := lclient.Node{
+				Name: selectedKubernetesNode.Name,
+				Type: LinstorSatelliteType,
+				NetInterfaces: []lclient.NetInterface{
+					{
+						Name:                    "default",
+						Address:                 net.ParseIP(selectedKubernetesNode.Status.Addresses[0].Address),
+						IsActive:                true,
+						SatellitePort:           LinstorNodePort,
+						SatelliteEncryptionType: LinstorEncryptionType,
+					},
 				},
-			},
-			Props: map[string]string{
-				"Aux/registered-by": LinstorNodeControllerName,
-			},
-		}
+				Props: map[string]string{
+					"Aux/registered-by": LinstorNodeControllerName,
+				},
+			}
 
-		err := lc.Nodes.Create(ctx, newLinstorNode)
-		if err != nil {
-			return fmt.Errorf("unable to create node %s: %w", newLinstorNode.Name, err)
+			err := lc.Nodes.Create(ctx, newLinstorNode)
+			if err != nil {
+				return fmt.Errorf("unable to create LINSTOR node %s: %w", newLinstorNode.Name, err)
+			}
 		}
 
 	}
@@ -195,77 +236,6 @@ func GetKubernetesSecretByName(ctx context.Context, cl client.Client, secretName
 		Namespace: secretNamespace,
 	}, secret)
 	return secret, err
-}
-
-func ReconcileLinstorNodes(ctx context.Context, lc *lclient.Client, selectedK8sNodes v1.NodeList) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, reachableTimeout)
-	defer cancel()
-	linstorNodes, err := lc.Nodes.GetAll(timeoutCtx, &lclient.ListOpts{})
-	if err != nil {
-		return err
-	}
-
-	// Create new Linstor node if it doesn't exist
-
-	for _, selectedK8sNode := range selectedK8sNodes.Items {
-		findMatch := false
-		for _, linstorNode := range linstorNodes {
-			if selectedK8sNode.Name == linstorNode.Name {
-				findMatch = true
-				break
-			}
-		}
-
-		if findMatch {
-			continue
-		}
-
-		fmt.Printf("Create LINSTOR node: %s\n", selectedK8sNode.Name)
-		newLinstorNode := lclient.Node{
-			Name: selectedK8sNode.Name,
-			Type: LinstorSatelliteType,
-			NetInterfaces: []lclient.NetInterface{
-				{
-					Name:                    "default",
-					Address:                 net.ParseIP(selectedK8sNode.Status.Addresses[0].Address),
-					IsActive:                true,
-					SatellitePort:           LinstorNodePort,
-					SatelliteEncryptionType: LinstorEncryptionType,
-				},
-			},
-			Props: map[string]string{
-				"Aux/registered-by": LinstorNodeControllerName,
-			},
-		}
-
-		err := lc.Nodes.Create(ctx, newLinstorNode)
-		if err != nil {
-			return fmt.Errorf("unable to create node %s: %w", newLinstorNode.Name, err)
-		}
-
-	}
-
-	// Drain and delete Linstor node if it doesn't present in selectedK8sNodes
-	for _, linstorNode := range linstorNodes {
-		findMatch := false
-		fmt.Printf("Find LINSTOR node: %s\n", linstorNode.Name)
-
-		for _, selectedK8sNode := range selectedK8sNodes.Items {
-			if linstorNode.Name == selectedK8sNode.Name {
-				findMatch = true
-				break
-			}
-		}
-		if findMatch {
-			continue
-		}
-
-		// drain and delete node
-		fmt.Printf("Drain and delete node: %s\n", linstorNode.Name) // TODO: implement drain logic
-
-	}
-
-	return err
 }
 
 func GetKubernetesNodesBySelector(ctx context.Context, cl client.Client, nodeSelector map[string]string) (v1.NodeList, error) {
