@@ -17,6 +17,20 @@
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
 
+{{- if .cloudProviderType }}
+  {{- if $bootstrap_script_common := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType) }}
+function cloud_provider_bootstrap_networks {
+    {{- tpl $bootstrap_script_common $ | nindent 2 }}
+}
+  {{- else }}
+    {{- if $bootstrap_script_bundle := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bundles/%s/bootstrap-networks.sh.tpl" .cloudProviderType .bundle) }}
+function cloud_provider_bootstrap_networks_{{ .bundle }} {
+      {{- tpl $bootstrap_script_bundle $ | nindent 2 }}
+}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 function get_bundle() {
   resource="$1"
   name="$2"
