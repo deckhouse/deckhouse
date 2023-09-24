@@ -120,20 +120,6 @@ func (e Engine) renderWithTemplate(tmpl string, t *template.Template) (out *byte
 	return &buf, nil
 }
 
-// Mocking Helm's .Files.Get
-type Files struct {
-}
-
-// Implements .Files.Get
-func (_ Files) Get(path string) (string, error) {
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-
-	return string(contents), nil
-}
-
 func cleanupParseError(filename string, err error) error {
 	tokens := strings.Split(err.Error(), ": ")
 	if len(tokens) == 1 {
@@ -180,4 +166,22 @@ var warnRegex = regexp.MustCompile(warnStartDelim + `(.*)` + warnEndDelim)
 
 func warnWrap(warn string) string {
 	return warnStartDelim + warn + warnEndDelim
+}
+
+// mocking Helm's .Files.Get
+type Files struct {
+}
+
+// implements .Files.Get
+// helm version of .Files.Get returns empty string if file does not exists
+// https://github.com/helm/helm/blob/main/pkg/engine/files.go#L42-L54
+func (_ Files) Get(path string) (string, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return string(contents), nil
 }
