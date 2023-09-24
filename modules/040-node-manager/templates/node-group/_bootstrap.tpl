@@ -8,11 +8,11 @@ function detect_bundle() {
 
 function p2_script() {
   cat - <<EOF
-import os
+import sys
 import json
 import urllib2
 import ssl
-request = urllib2.Request(os.getenv('url', ''), headers={'Authorization': 'Bearer ' + os.getenv('token', '')})
+request = urllib2.Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
 response = urllib2.urlopen(request, context=ssl._create_unverified_context())
 data = json.loads(response.read())
 print(data["bootstrap"])
@@ -21,10 +21,10 @@ EOF
 
 function p3_script() {
   cat - <<EOF
-import os
+import sys
 import requests
 import json
-response = requests.get(os.getenv('url', ''), headers={'Authorization': 'Bearer ' + os.getenv('token', '')}, verify='/var/lib/bashible/ca.crt')
+response = requests.get(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]}, verify='/var/lib/bashible/ca.crt')
 data = json.loads(response.content)
 print(data["bootstrap"])
 EOF
@@ -57,23 +57,22 @@ function check_python() {
 }
 
 function get_phase2() {
+  bundle="$(detect_bundle)"
   check_python
-  local bootstrap_bundle_name="$bundle.{{ .nodeGroupName }}"
-  export token="$(</var/lib/bashible/bootstrap-token)"
+  bootstrap_bundle_name="$bundle.{{ .nodeGroupName }}"
+  token="$(</var/lib/bashible/bootstrap-token)"
   while true; do
     for server in {{ .apiserverEndpoints | join " " }}; do
-      export url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
-      if phase2=$("$python_binary" <<< "$script"); then
+      url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
+      if phase2=$("$python_binary" - "$url" "$token" <<< "$script"); then
         cat - <<< $phase2
         return 0
-      else
-        >&2 echo "failed to get bootstrap $bootstrap_bundle_name from $url"
       fi
+      >&2 echo "failed to get bootstrap $bootstrap_bundle_name from $url"
     done
     sleep 10
   done
 }
 
-bundle="$(detect_bundle)"
 get_phase2 | bash
 {{- end }}
