@@ -64,7 +64,7 @@ function get_phase2() {
   while true; do
     for server in {{ .apiserverEndpoints | join " " }}; do
       url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
-      if $("$python_binary" - "$url" "$token" <<< "$script"); then
+      if eval "$python_binary" - "$url" "$token" <<< "$script"; then
         return 0
       fi
       >&2 echo "failed to get bootstrap $bootstrap_bundle_name from $url"
