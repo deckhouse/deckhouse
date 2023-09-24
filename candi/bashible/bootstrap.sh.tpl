@@ -1,36 +1,5 @@
 #!/usr/bin/env bash
 
-{{- if .proxy }}
-  {{- if .proxy.httpProxy }}
-  export HTTP_PROXY={{ .proxy.httpProxy | quote }}
-  export http_proxy=${HTTP_PROXY}
-  {{- end }}
-  {{- if .proxy.httpsProxy }}
-  export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
-  export https_proxy=${HTTPS_PROXY}
-  {{- end }}
-  {{- if .proxy.noProxy }}
-  export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
-  export no_proxy=${NO_PROXY}
-  {{- end }}
-{{- else }}
-  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
-{{- end }}
-
-{{- if .cloudProviderType }}
-  {{- if $bootstrap_script_common := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType) }}
-cat - >>cloud-provider-bootstrap-networks.sh <<"EOF"
-    {{- tpl $bootstrap_script_common . }}
-EOF
-  {{- else }}
-    {{- if $bootstrap_script_bundle := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bundles/%s/bootstrap-networks.sh.tpl" .cloudProviderType .bundle) }}
-cat - >>cloud-provider-bootstrap-networks-{{ .bundle }}.sh <<"EOF"
-      {{- tpl $bootstrap_script_bundle . }}
-EOF
-    {{- end }}
-  {{- end }}
-{{- end }}
-
 function get_bundle() {
   resource="$1"
   name="$2"
@@ -69,6 +38,39 @@ mkdir -p "$TMPDIR"
 
 # Detect bundle
 BUNDLE="{{ .bundle }}"
+
+# set proxy env variables
+{{- if .proxy }}
+  {{- if .proxy.httpProxy }}
+export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+export http_proxy=${HTTP_PROXY}
+  {{- end }}
+  {{- if .proxy.httpsProxy }}
+export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+export https_proxy=${HTTPS_PROXY}
+  {{- end }}
+  {{- if .proxy.noProxy }}
+export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
+export no_proxy=${NO_PROXY}
+  {{- end }}
+{{- else }}
+unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+{{- end }}
+
+{{- if .cloudProviderType }}
+# generate cloud bootstrap network scripts
+  {{- if $bootstrap_script_common := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType) }}
+cat - >>$BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh <<"EOF"
+    {{ tpl $bootstrap_script_common . }}
+EOF
+  {{- else }}
+    {{- if $bootstrap_script_bundle := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bundles/%s/bootstrap-networks.sh.tpl" .cloudProviderType .bundle) }}
+cat - >>BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-{{ .bundle }}.sh <<"EOF"
+      {{ tpl $bootstrap_script_bundle . }}
+EOF
+    {{- end }}
+  {{- end }}
+{{- end }}
 
 # Install necessary packages. Not in cloud config because cloud init do not retry installation and silently fails.
 basic_bootstrap_${BUNDLE}
