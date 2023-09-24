@@ -25,7 +25,7 @@ function get_phase2() {
     for server in {{ .apiserverEndpoints | join " " }}; do
       url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
       # Try curl
-      if curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"; then
+      if curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "/var/lib/bashible/ca.crt"; then
         return 0
       fi
       # fallback to python3
