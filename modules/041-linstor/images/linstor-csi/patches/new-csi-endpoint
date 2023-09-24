@@ -11,3 +11,16 @@ index 20b09f5..8dac370 100644
  		node                  = flag.String("node", "", "Node ID to pass to node service")
  		logLevel              = flag.String("log-level", "info", "Enable debug log output. Choose from: panic, fatal, error, warn, info, debug")
  		rps                   = flag.Float64("linstor-api-requests-per-second", 0, "Maximum allowed number of LINSTOR API requests per second. Default: Unlimited")
+diff --git a/pkg/linstor/const.go b/pkg/linstor/const.go
+index 8b732ec..d18e968 100644
+--- a/pkg/linstor/const.go
++++ b/pkg/linstor/const.go
+@@ -24,7 +24,7 @@ import (
+ 
+ const (
+ 	// DriverName is the name used in CSI calls for this driver.
+-	DriverName = "linstor.csi.linbit.com"
++	DriverName = "linstor.csi.storage.deckhouse.io"
+ 
+ 	// LegacyParameterPassKey is the Aux props key in linstor where serialized CSI parameters
+ 	// are stored.
