@@ -1,6 +1,7 @@
 # Based on https://github.com/kubernetes/dashboard/blob/v2.7.0/aio/Dockerfile
 ARG BASE_ALPINE
 ARG BASE_GOLANG_19_ALPINE
+FROM kubernetesui/dashboard:v2.7.0@sha256:2e500d29e9d5f4a086b908eb8dfe7ecac57d2ab09d65b24f588b1d449841ef93 as artifact
 
 # to fix dashboard can display cronjobs v1
 FROM $BASE_GOLANG_19_ALPINE as patchbuilder
