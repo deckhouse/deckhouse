@@ -15,7 +15,7 @@ RUN git clone ${LINSTOR_CSI_GITREPO} /usr/local/go/linstor-csi/ \
  && git reset --hard v${LINSTOR_CSI_VERSION} \
  && git apply /patches/*.patch \
  && cd cmd/linstor-csi \
- && go build -ldflags="-X github.com/piraeusdatastore/linstor-csi/pkg/driver.Version=v${LINSTOR_CSI_VERSION}" \
+ && go build  \
  && mv ./linstor-csi /
 
 RUN git clone ${LINSTOR_WAIT_UNTIL_GITREPO} /usr/local/go/linstor-wait-until \
