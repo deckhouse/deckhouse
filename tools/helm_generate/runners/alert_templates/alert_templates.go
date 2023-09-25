@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"tools/helm_generate/helper"
 
 	"github.com/deckhouse/deckhouse/testing/library"
@@ -64,7 +65,7 @@ func run() error {
 
 		if len(yamlTemplates) > 0 {
 			for templateName, templateContent := range yamlTemplates {
-				templateContent, err = injectToYaml(templateContent, module.Name, string(module.Edition), filepath.Join(module.Path, templateName))
+				templateContent, err = injectToYaml(templateContent, module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
 				if err != nil {
 					return err
 				}
@@ -80,7 +81,7 @@ func run() error {
 			}
 			for templatePath, templateContent := range renderContent {
 				_, templateName := filepath.Split(templatePath)
-				templateContent, err := injectToYaml([]byte(templateContent), module.Name, string(module.Edition), filepath.Join(module.Path, templateName))
+				templateContent, err := injectToYaml([]byte(templateContent), module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
 				if err != nil {
 					return err
 				}
@@ -99,6 +100,11 @@ func injectToYaml(templateContent []byte, name, edition, sourceFile string) ([]b
 	if err != nil {
 		return nil, fmt.Errorf("error processing file %s - %w", sourceFile, err)
 	}
+
+	if substr := strings.SplitN(name, "-", 2); len(substr) > 1 {
+		name = substr[1]
+	}
+
 	values[0]["module"] = name
 	values[0]["edition"] = edition
 	values[0]["sourceFile"] = sourceFile
@@ -219,5 +225,11 @@ func renderHelmTemplate(module module, templateNames []string) (map[string]strin
 	}
 
 	r := helm.Renderer{}
-	return r.RenderChartFromDir(renderDir.Path(), string(rawInitValues))
+	result, err := r.RenderChartFromDir(renderDir.Path(), string(rawInitValues))
+	if err != nil {
+		templatePath := strings.ReplaceAll(err.Error(), "renderdir/templates", filepath.Join(module.Path, prometheusRules))
+		return result, fmt.Errorf("error processing template: %v", templatePath)
+	}
+
+	return result, nil
 }
