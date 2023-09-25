@@ -18,6 +18,7 @@ package alerttemplates
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -96,7 +97,7 @@ func injectToYaml(templateContent []byte, name, edition, sourceFile string) ([]b
 	var values []map[string]interface{}
 	err := yaml.Unmarshal(templateContent, &values)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error processing file %s - %w", sourceFile, err)
 	}
 	values[0]["module"] = name
 	values[0]["edition"] = edition
