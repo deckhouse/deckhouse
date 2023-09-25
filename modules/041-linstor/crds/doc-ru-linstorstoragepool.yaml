@@ -1,0 +1,33 @@
+spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: "linstor storage pool"
+          properties:
+            spec:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [ 'LVM','LVMThin' ]
+                lvmvolumegroups:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      thinpoolname:
+                        type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum: [ 'Updating','Failed', 'Completed' ]
+                reason:
+                  type: string

@@ -1,0 +1,35 @@
+spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: "lvm volume group"
+          properties:
+            spec:
+              type: object
+              properties:
+                type:
+                  type: string
+                actualvgonthenode:
+                  type: string
+                thinpool:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    size:
+                      type: string
+            status:
+              type: object
+              properties:
+                nodes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+

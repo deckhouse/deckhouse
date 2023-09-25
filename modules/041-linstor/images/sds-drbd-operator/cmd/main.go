@@ -1,3 +1,19 @@
+/*
+Copyright 2023 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -38,10 +54,6 @@ var (
 
 func main() {
 	log := zap.New(zap.Level(zapcore.Level(-1)), zap.UseDevMode(true))
-	// logf.SetLogger(zap.New(zap.Level(zapcore.Level(-1)), zap.UseDevMode(true)))
-	// log := logf.Log.WithName("cmd")
-	// log.WithName("cmd")
-
 	ctx, _ := context.WithCancel(context.Background())
 
 	log.Info(fmt.Sprintf("Go Version:%s ", goruntime.Version()))
@@ -70,21 +82,11 @@ func main() {
 	}
 	log.Info("read scheme CR")
 
-	// ---- server webhook ----------
-	// myWebhookServer := webhook.NewServer(webhook.Options{
-	//
-	// })
-
 	managerOpts := manager.Options{
-		// LeaderElection:             true,
-		// LeaderElectionNamespace:    "d8-storage-configurator",
-		// LeaderElectionID:           "r", // uniq in cluster
-		// LeaderElectionResourceLock: "leases",
 		Scheme:             scheme,
 		MetricsBindAddress: cfgParams.MetricsPort,
 		Logger:             log,
-		Namespace:          OperatorNamespace, // TODO: заменить на cache options
-		// WebhookServer: myWebhookServer,
+		Namespace:          OperatorNamespace, // TODO: change to cache options
 	}
 
 	mgr, err := manager.New(kConfig, managerOpts)
@@ -97,7 +99,6 @@ func main() {
 
 	lc, err := lclient.NewClient()
 
-	// --------------------------------------------
 	if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval); err != nil {
 		log.Error(err, "failed create controller NewLinstorNode", err)
 		os.Exit(1)

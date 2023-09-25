@@ -12,6 +12,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "sds-drbd-operator")) | nindent 2 }}
 spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
@@ -28,6 +29,18 @@ spec:
         memory: 100Mi
 {{- end }}
 ---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sds-drbd-operator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "sds-drbd-operator" )) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: sds-drbd-operator
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,6 +48,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "sds-drbd-operator")) | nindent 2 }}
 spec:
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: sds-drbd-operator
@@ -53,7 +67,13 @@ spec:
       containers:
         - name: sds-drbd-operator
           image: {{ include "helm_lib_module_image" (list . "sdsDrbdOperator") }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "sds_drbd_operator_resources" . | nindent 14 }}
+{{- end }}
           securityContext:
             privileged: true
             seLinuxOptions:
