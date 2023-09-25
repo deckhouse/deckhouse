@@ -17,6 +17,7 @@ limitations under the License.
 package deckhouse_config
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
@@ -120,9 +121,11 @@ func (srv *ConfigService) ValidateModule(module *module_manager.Module) error {
 // DeleteModule removes modules from addon-operator's module manager
 func (srv *ConfigService) DeleteModule(moduleName string) error {
 	module := srv.moduleManager.GetModule(moduleName)
+	fmt.Println("RUN1 MODULE", module)
 	if module == nil {
 		return nil
 	}
+	fmt.Println("RUN1 DELETE")
 
 	return srv.moduleManager.DeleteModule(moduleName, map[string]string{"source": "migrate-hook", "heritage": "deckhouse"})
 }
