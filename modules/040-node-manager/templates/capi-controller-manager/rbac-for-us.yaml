@@ -1,4 +1,4 @@
-{{- if .Values.nodeManager.internal.clusterAPIControllerManagerEnabled }}
+{{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount

@@ -24,7 +24,7 @@ properties:
             type: string
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
 
-      cloudProviderStaticWebhookCert:
+      capsControllerManagerWebhookCert:
         type: object
         default: { }
         x-required-for-helm:
@@ -269,7 +269,7 @@ properties:
             staticInstances:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
-              additionalProperties: true  
+              additionalProperties: true
             cloudInstances:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object

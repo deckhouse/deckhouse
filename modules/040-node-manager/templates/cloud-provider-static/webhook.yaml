@@ -1,4 +1,4 @@
-{{- if .Values.nodeManager.internal.cloudProviderStaticEnabled }}
+{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
@@ -12,7 +12,7 @@ webhooks:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
       path: /mutate-deckhouse-io-v1alpha1-staticinstance
-    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+    caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
@@ -35,7 +35,7 @@ webhooks:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
       path: /mutate-deckhouse-io-v1alpha1-sshcredentials
-    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+    caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
@@ -58,7 +58,7 @@ webhooks:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
       path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine
-    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+    caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
@@ -81,7 +81,7 @@ webhooks:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
       path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate
-    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+    caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
@@ -111,7 +111,7 @@ webhooks:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
       path: /validate-deckhouse-io-v1alpha1-staticinstance
-    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+    caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
@@ -134,7 +134,7 @@ webhooks:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
       path: /validate-deckhouse-io-v1alpha1-sshcredentials
-    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+    caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
@@ -157,7 +157,7 @@ webhooks:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine
-    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+    caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE
@@ -180,7 +180,7 @@ webhooks:
       namespace: d8-cloud-instance-manager
       name: cloud-provider-static-webhook-service
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate
-    caBundle: {{ .Values.nodeManager.internal.cloudProviderStaticWebhookCert.ca | b64enc }}
+    caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
     - operations:
         - CREATE

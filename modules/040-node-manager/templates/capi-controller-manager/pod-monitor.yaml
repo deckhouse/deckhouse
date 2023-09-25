@@ -1,4 +1,4 @@
-{{- if .Values.nodeManager.internal.clusterAPIControllerManagerEnabled }}
+{{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
 {{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
 ---
 apiVersion: monitoring.coreos.com/v1

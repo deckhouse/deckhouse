@@ -1,9 +1,0 @@
-## Append samples of your project ##
-resources:
-- infrastructure_v1alpha1_staticcluster.yaml
-- infrastructure_v1alpha1_staticmachine.yaml
-- infrastructure_v1alpha1_staticmachinetemplate.yaml
-- infrastructure_v1alpha1_staticinstance.yaml
-- infrastructure_v1alpha1_sshcredentials.yaml
-- infrastructure_v1alpha1_staticcontrolplane.yaml
-#+kubebuilder:scaffold:manifestskustomizesamples

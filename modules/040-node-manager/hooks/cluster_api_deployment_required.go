@@ -59,15 +59,15 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	}
 
 	if hasStaticInstancesField {
-		input.Values.Set("nodeManager.internal.cloudProviderStaticEnabled", true)
+		input.Values.Set("nodeManager.internal.capsControllerManagerEnabled", true)
 	} else {
-		input.Values.Remove("nodeManager.internal.cloudProviderStaticEnabled")
+		input.Values.Remove("nodeManager.internal.capsControllerManagerEnabled")
 	}
 
-	if input.Values.Get("nodeManager.internal.cloudProviderStaticEnabled").Bool() {
-		input.Values.Set("nodeManager.internal.clusterAPIControllerManagerEnabled", true)
+	if input.Values.Get("nodeManager.internal.capsControllerManagerEnabled").Bool() {
+		input.Values.Set("nodeManager.internal.capiControllerManagerEnabled", true)
 	} else {
-		input.Values.Remove("nodeManager.internal.clusterAPIControllerManagerEnabled")
+		input.Values.Remove("nodeManager.internal.capiControllerManagerEnabled")
 	}
 
 	return nil

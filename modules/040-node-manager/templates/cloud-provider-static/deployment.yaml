@@ -1,4 +1,4 @@
-{{- if .Values.nodeManager.internal.cloudProviderStaticEnabled }}
+{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 {{- define "static_controller_manager_resources" }}
 cpu: 25m
 memory: 50Mi
@@ -76,7 +76,7 @@ spec:
       containers:
       - name: cloud-provider-static
 {{/*        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}*/}}
-        image: {{ include "helm_lib_module_image" (list . "cloudProviderStatic") }}
+        image: {{ include "helm_lib_module_image" (list . "capsControllerManager") }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9443

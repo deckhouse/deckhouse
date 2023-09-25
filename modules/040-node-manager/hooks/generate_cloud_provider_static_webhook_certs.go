@@ -32,5 +32,5 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 
 	Namespace:            "d8-cloud-instance-manager",
 	TLSSecretName:        "cloud-provider-static-webhook-tls",
-	FullValuesPathPrefix: "nodeManager.internal.cloudProviderStaticWebhookCert",
+	FullValuesPathPrefix: "nodeManager.internal.capsControllerManagerWebhookCert",
 })

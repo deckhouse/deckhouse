@@ -86,7 +86,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -98,7 +98,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -163,7 +163,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -246,7 +246,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -301,7 +301,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -355,7 +355,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -440,7 +440,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -526,7 +526,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -592,7 +592,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -617,7 +617,7 @@ internal:
     ca: string
     key: string
     crt: string
-  cloudProviderStaticWebhookCert:
+  capsControllerManagerWebhookCert:
     ca: string
     key: string
     crt: string

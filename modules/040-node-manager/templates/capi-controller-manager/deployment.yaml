@@ -1,4 +1,4 @@
-{{- if .Values.nodeManager.internal.clusterAPIControllerManagerEnabled }}
+{{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
 {{- define "capi_controller_resources" }}
 cpu: 10m
 memory: 50Mi
