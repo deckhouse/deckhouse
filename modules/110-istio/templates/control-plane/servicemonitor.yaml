@@ -31,7 +31,7 @@ spec:
       sourceLabels:
       - __meta_kubernetes_pod_label_app
       targetLabel: app
-    - sourceLabels: [__meta_kubernetes_endpoint_ready]
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
   {{- end }}

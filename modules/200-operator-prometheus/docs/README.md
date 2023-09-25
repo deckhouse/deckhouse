@@ -75,7 +75,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
        regex: .+                           # any NON-empty label would suffice
        action: keep
      # Filtering by the port name
-     - source_labels: [__meta_kubernetes_endpoint_port_name]
+     - source_labels: [__meta_kubernetes_endpointslice_port_name]
        regex: http-metrics                 # only works if the port is called http-metrics
        action: keep
      # Adding the job label, using the value of the prometheus_custom_target label in the service while adding the " custom-" prefix

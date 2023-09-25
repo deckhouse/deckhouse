@@ -1,0 +1,65 @@
+---
+Index: pkg/prometheus/promcfg.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
+--- a/pkg/prometheus/promcfg.go	(revision 52526e3b0cfb5f3deaa967998ff88a5133f1ec0f)
++++ b/pkg/prometheus/promcfg.go	(date 1695118803783)
+@@ -1567,7 +1567,12 @@
+ 		// config as well, make sure to path the right namespace here.
+ 		cfg = addTLStoYaml(cfg, "", am.TLSConfig)
+
+-		cfg = append(cfg, cg.generateK8SSDConfig(monitoringv1.NamespaceSelector{}, am.Namespace, apiserverConfig, store, kubernetesSDRoleEndpoint, nil))
++		role := kubernetesSDRoleEndpoint
++		if cg.EndpointSliceSupported() {
++			role = kubernetesSDRoleEndpointSlice
++		}
++
++		cfg = append(cfg, cg.generateK8SSDConfig(monitoringv1.NamespaceSelector{}, am.Namespace, apiserverConfig, store, role, nil))
+
+ 		if am.BearerTokenFile != "" {
+ 			cfg = append(cfg, yaml.MapItem{Key: "bearer_token_file", Value: am.BearerTokenFile})
+@@ -1590,11 +1595,19 @@
+ 		})
+
+ 		if am.Port.StrVal != "" {
+-			relabelings = append(relabelings, yaml.MapSlice{
+-				{Key: "action", Value: "keep"},
+-				{Key: "source_labels", Value: []string{"__meta_kubernetes_endpoint_port_name"}},
+-				{Key: "regex", Value: am.Port.String()},
+-			})
++			if cg.EndpointSliceSupported() {
++				relabelings = append(relabelings, yaml.MapSlice{
++					{Key: "action", Value: "keep"},
++					{Key: "source_labels", Value: []string{"__meta_kubernetes_endpointslice_port_name"}},
++					{Key: "regex", Value: am.Port.String()},
++				})
++			} else {
++				relabelings = append(relabelings, yaml.MapSlice{
++					{Key: "action", Value: "keep"},
++					{Key: "source_labels", Value: []string{"__meta_kubernetes_endpoint_port_name"}},
++					{Key: "regex", Value: am.Port.String()},
++				})
++			}
+ 		} else if am.Port.IntVal != 0 {
+ 			relabelings = append(relabelings, yaml.MapSlice{
+ 				{Key: "action", Value: "keep"},
+Index: pkg/prometheus/server/operator.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/prometheus/server/operator.go b/pkg/prometheus/server/operator.go
+--- a/pkg/prometheus/server/operator.go	(revision 52526e3b0cfb5f3deaa967998ff88a5133f1ec0f)
++++ b/pkg/prometheus/server/operator.go	(date 1695058674835)
+@@ -357,7 +357,7 @@
+ 	// The operator doesn't yet support the endpointslices API.
+ 	// See https://github.com/prometheus-operator/prometheus-operator/issues/3862
+ 	// for details.
+-	c.endpointSliceSupported = false
++	c.endpointSliceSupported = endpointSliceSupported
+
+ 	c.statusReporter = prompkg.StatusReporter{
+ 		Kclient:         c.kclient,

@@ -3,7 +3,7 @@
 
   {{ $label := "__meta_kubernetes_pod_ready" }}
   {{- if eq $scrapeType "service" }}
-    {{ $label = "__meta_kubernetes_endpoint_ready" }}
+    {{ $label = "__meta_kubernetes_endpointslice_endpoint_conditions_ready" }}
   {{- end }}
 
 # Check whether pod is ready or the annotation on it allows scarping unready pods
@@ -54,7 +54,7 @@
 
 {{- define "endpoint_by_service_port_name" }}
   {{- $schema := . }}
-- sourceLabels: [__meta_kubernetes_endpoint_port_name]
+- sourceLabels: [__meta_kubernetes_endpointslice_port_name]
   regex: {{ $schema }}-metrics
   replacement: $1
   targetLabel: endpoint
@@ -84,7 +84,7 @@ tlsConfig:
 
   {{ $label := "__meta_kubernetes_pod_container_port_name" }}
   {{- if eq $scrapeType "service" }}
-    {{ $label = "__meta_kubernetes_endpoint_port_name" }}
+    {{ $label = "__meta_kubernetes_endpointslice_port_name" }}
   {{- end }}
 
   {{ if eq $schema "http" }}

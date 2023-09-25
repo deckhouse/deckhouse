@@ -2,44 +2,6 @@ global:
   scrape_interval: 5m
   scrape_timeout: 3m
   evaluation_interval: 5m
-{{- if (hasKey .Values.prometheus.internal.alertmanagers "byService") }}
-alerting:
-  alert_relabel_configs:
-  - separator: ;
-    regex: prometheus_replica
-    replacement: $1
-    action: labeldrop
-  alertmanagers:
-  {{- range .Values.prometheus.internal.alertmanagers.byService }}
-  - kubernetes_sd_configs:
-    - role: endpoints
-      namespaces:
-        names:
-        - {{ .namespace }}
-    scheme: http
-    path_prefix: {{ .pathPrefix }}
-    timeout: 10s
-    relabel_configs:
-    - source_labels: [__meta_kubernetes_service_name]
-      separator: ;
-      regex: {{ .name }}
-      replacement: $1
-      action: keep
-    {{- if kindIs "string" .port }}
-    - source_labels: [__meta_kubernetes_endpoint_port_name]
-      separator: ;
-      regex: {{ .port | quote }}
-      replacement: $1
-      action: keep
-    {{- else }}
-    - source_labels: [__meta_kubernetes_pod_container_port_number]
-      separator: ;
-      regex: {{ .port | quote }}
-      replacement: $1
-      action: keep
-    {{- end }}
-  {{- end }}
-{{- end }}
 scrape_configs:
 - job_name: 'federate'
   honor_labels: true
