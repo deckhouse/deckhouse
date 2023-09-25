@@ -337,7 +337,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
 	},
 	"registrypackages": map[string]interface{}{
-		"containerd1620":   "imageHash-registrypackages-containerd1620",
+		"containerd1624":   "imageHash-registrypackages-containerd1624",
 		"crictl123":        "imageHash-registrypackages-crictl123",
 		"crictl124":        "imageHash-registrypackages-crictl124",
 		"crictl125":        "imageHash-registrypackages-crictl125",
