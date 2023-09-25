@@ -26,7 +26,6 @@ import (
 type ModuleManager interface {
 	IsModuleEnabled(modName string) bool
 	GetModule(modName string) *module_manager.Module
-	DeleteModule(moduleName string, logLabels map[string]string) error
 	GetModuleNames() []string
 	GetValuesValidator() *validation.ValuesValidator
 	SetModuleSource(moduleName, source string)
