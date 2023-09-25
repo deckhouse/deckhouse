@@ -21,3 +21,5 @@
 
         Consider checking state of the d8-runtime-audit-engine/runtime-audit-engine DaemonSet.
         `kubectl -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine`
+        Get a list of nodes that have sub in an not Ready state.
+        `kubectl -n d8-runtime-audit-engine get pod -ojson | jq -r '.items[] | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'`
