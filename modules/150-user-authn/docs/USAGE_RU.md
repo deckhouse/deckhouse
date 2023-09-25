@@ -261,7 +261,7 @@ spec:
 {% raw %}
 
 ```yaml
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: Group
 metadata:
   name: admins
