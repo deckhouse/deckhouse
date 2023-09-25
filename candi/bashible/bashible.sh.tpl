@@ -187,7 +187,7 @@ function main() {
     FIRST_BASHIBLE_RUN="yes"
   fi
 
-  mkdir -p "$BUNDLE_STEPS_DIR"
+  mkdir -p "$BUNDLE_STEPS_DIR" "$TMPDIR"
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then

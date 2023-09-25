@@ -27,7 +27,8 @@ set -Eeuo pipefail
 shopt -s failglob
 
 BOOTSTRAP_DIR="/var/lib/bashible"
-mkdir -p $BOOTSTRAP_DIR
+TMPDIR="/opt/deckhouse/tmp"
+mkdir -p "$BOOTSTRAP_DIR" "$TMPDIR"
 
 # Directory contains sensitive information
 chmod 0700 $BOOTSTRAP_DIR
