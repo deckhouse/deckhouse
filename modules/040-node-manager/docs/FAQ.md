@@ -152,75 +152,15 @@ This is only needed if you have to move a static node from one cluster to anothe
    kubectl delete node <node>
    ```
 
-1. Stop all the services and running containers:
-
+1. Run cleanup script on the node:
+  
    ```shell
-   systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl stop bashible.service bashible.timer
-   systemctl stop kubelet.service
-   systemctl stop containerd-deckhouse
-   systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
-   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
    ```
 
-1. Unmount all mounted partitions:
-
-   ```shell
-   for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
-   ```
-
-1. Delete all directories and files:
-
-   ```shell
-   rm -rf /var/lib/bashible
-   rm -rf /var/cache/registrypackages
-   rm -rf /etc/kubernetes
-   rm -rf /var/lib/kubelet
-   rm -rf /var/lib/docker
-   rm -rf /var/lib/containerd
-   rm -rf /etc/cni
-   rm -rf /var/lib/cni
-   rm -rf /var/lib/etcd
-   rm -rf /etc/systemd/system/kubernetes-api-proxy*
-   rm -rf /etc/systemd/system/bashible*
-   rm -rf /etc/systemd/system/sysctl-tuner*
-   rm -rf /etc/systemd/system/kubelet*
-   ```
-
-1. Delete all interfaces:
-
-   ```shell
-   ifconfig cni0 down
-   ifconfig flannel.1 down
-   ifconfig docker0 down
-   ip link delete cni0
-   ip link delete flannel.1
-   ```
-
-1. Cleanup systemd:
-
-   ```shell
-   systemctl daemon-reload
-   systemctl reset-failed
-   ```
-
-1. Reboot the node.
-
-1. Start CRI:
-
-   ```shell
-   systemctl start containerd-deckhouse
-   systemctl list-units --full --all | grep -q docker.service && systemctl start docker
-   ```
+After reboot of the node:
 
 1. [Run](#how-do-i-add-a-static-node-to-a-cluster) the `bootstrap.sh` script.
-1. Turn on all the services:
-
-   ```shell
-   systemctl start kubelet.service
-   systemctl start kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl start bashible.service bashible.timer
-   ```
 
 ## How do I know if something went wrong?
 

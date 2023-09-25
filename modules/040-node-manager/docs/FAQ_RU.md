@@ -152,75 +152,15 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
    kubectl delete node <node>
    ```
 
-1. Остановите все сервисы и запущенные контейнеры:
+1. Запустите на узле скрипт очистки:
 
    ```shell
-   systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl stop bashible.service bashible.timer
-   systemctl stop kubelet.service
-   systemctl stop containerd-deckhouse
-   systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
-   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
    ```
 
-1. Удалите точки монтирования:
-
-   ```shell
-   for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
-   ```
-
-1. Удалите директории и файлы:
-
-   ```shell
-   rm -rf /var/lib/bashible
-   rm -rf /var/cache/registrypackages
-   rm -rf /etc/kubernetes
-   rm -rf /var/lib/kubelet
-   rm -rf /var/lib/docker
-   rm -rf /var/lib/containerd
-   rm -rf /etc/cni
-   rm -rf /var/lib/cni
-   rm -rf /var/lib/etcd
-   rm -rf /etc/systemd/system/kubernetes-api-proxy*
-   rm -rf /etc/systemd/system/bashible*
-   rm -rf /etc/systemd/system/sysctl-tuner*
-   rm -rf /etc/systemd/system/kubelet*
-   ```
-
-1. Удалите интерфейсы:
-
-   ```shell
-   ifconfig cni0 down
-   ifconfig flannel.1 down
-   ifconfig docker0 down
-   ip link delete cni0
-   ip link delete flannel.1
-   ```
-
-1. Очистите systemd:
-
-   ```shell
-   systemctl daemon-reload
-   systemctl reset-failed
-   ```
-
-1. Перезагрузите узел.
-
-1. Запустите обратно CRI:
-
-   ```shell
-   systemctl start containerd-deckhouse
-   systemctl list-units --full --all | grep -q docker.service && systemctl start docker
-   ```
+После ребута узла:
 
 1. [Запустите](#как-добавить-статичный-узел-в-кластер) скрипт `bootstrap.sh`.
-1. Включите все сервисы обратно:
-
-   ```shell
-   systemctl start kubelet.service
-   systemctl start kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl start bashible.service bashible.timer
-   ```
 
 ## Как понять, что что-то пошло не так?
 
