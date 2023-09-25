@@ -116,3 +116,13 @@ func (srv *ConfigService) ModuleToSourcesNames() map[string]string {
 func (srv *ConfigService) ValidateModule(module *module_manager.Module) error {
 	return srv.moduleManager.ValidateModule(module)
 }
+
+// DeleteModule removes modules from addon-operator's module manager
+func (srv *ConfigService) DeleteModule(moduleName string) error {
+	module := srv.moduleManager.GetModule(moduleName)
+	if module == nil {
+		return nil
+	}
+
+	return srv.moduleManager.DeleteModule(moduleName, map[string]string{"source": "migrate-hook", "heritage": "deckhouse"})
+}
