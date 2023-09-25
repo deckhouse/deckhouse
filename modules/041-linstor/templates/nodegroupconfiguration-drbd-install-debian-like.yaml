@@ -27,7 +27,7 @@ spec:
     kernel_version_in_use="$(uname -r)"
 
     {{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
-    is_linstor_data_node=$(bb-kubectl --kubeconfig $kubeconfig  get node "$(hostname -s)" -o json | jq -c '.metadata.labels | contains({{ .Values.linstor.dataNodes.nodeSelector | toJson }})')
+    is_linstor_data_node=$(bb-kubectl --kubeconfig $kubeconfig  get node "$(hostname -s)" -o json | jq -c '.metadata.labels | contains({"storage.deckhouse.io/sds-drbd-node":""})')
     {{- else }}
     is_linstor_data_node="true"
     {{- end }}
