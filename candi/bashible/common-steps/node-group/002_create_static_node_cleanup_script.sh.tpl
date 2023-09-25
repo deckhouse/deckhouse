@@ -14,7 +14,7 @@
 {{- if or (eq .nodeGroup.nodeType "Static") (eq .runType "ClusterBootstrap") }}
 bb-sync-file /var/lib/bashible/cleanup_static_node.sh - << "EOF"
 #!/bin/bash
-if [ "$1" -ne "--yes-i-am-sane-and-i-understand-what-i-am-doing" ]; then
+if [ -z $1 ] || [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ];  then
   >&2 echo "Needed flag isn't passed, exit without any action"
   exit 1
 fi
