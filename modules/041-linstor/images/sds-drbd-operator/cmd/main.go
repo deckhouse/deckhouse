@@ -13,13 +13,13 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"os"
 	goruntime "runtime"
+	"sds-drbd-operator/api/v1alpha1"
+	"sds-drbd-operator/config"
+	"sds-drbd-operator/pkg/controller"
+	kubutils "sds-drbd-operator/pkg/kubeutils"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"st2/api/v1alpha1"
-	"st2/config"
-	"st2/pkg/controller"
-	kubutils "st2/pkg/kubeutils"
 )
 
 const (

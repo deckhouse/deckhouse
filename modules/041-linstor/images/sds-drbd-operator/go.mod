@@ -1,4 +1,4 @@
-module st2
+module sds-drbd-operator
 
 go 1.20
 

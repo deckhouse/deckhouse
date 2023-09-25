@@ -7,6 +7,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
+	"sds-drbd-operator/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -14,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"st2/api/v1alpha1"
 	"strconv"
 	"strings"
 )
@@ -97,7 +97,7 @@ func NewLinstorStorageClass(
 				// ------------------------ get StorageClass -----------------------------------------
 
 				// ------------------------- Check Provisioner ---------------------------------------
-				//todo LinstorStorageClass will created without Errors kubectl  ?
+				// todo LinstorStorageClass will created without Errors kubectl  ?
 				if sc.Provisioner != Provisioner {
 					lsc.Status.Phase = Failed
 					lsc.Status.Reason = "error Provisioner "
@@ -113,7 +113,7 @@ func NewLinstorStorageClass(
 				// ------------------------- Check Provisioner --------------------------------------- )
 
 				// ------------------------- compare StorageClass vs  Request LinstorStorageClass ----
-				//todo. this field must be filled in the StorageClass
+				// todo. this field must be filled in the StorageClass
 				if sc.Parameters != nil {
 					if strconv.Itoa(lsc.Spec.PlacementCount) != sc.Parameters[LinstorPlacementCount] {
 						sc.Parameters[LinstorPlacementCount] = strconv.Itoa(lsc.Spec.PlacementCount)
