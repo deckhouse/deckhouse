@@ -50,7 +50,6 @@ spec:
         volumeMounts:
         - mountPath: /loki
           name: storage
-          subPath: loki
         resources:
           requests:
             {{ include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
