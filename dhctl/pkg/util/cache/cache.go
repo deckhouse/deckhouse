@@ -51,6 +51,34 @@ func NewStateCache(dir string) (*StateCache, error) {
 	return nil, fmt.Errorf("cache %s marked as exhausted", dir)
 }
 
+// NewStateCacheWithInitialState creates new cache instance in specified directory with initial state
+func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (*StateCache, error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, fmt.Errorf("can't create cache directory: %w", err)
+	}
+
+	// prepare dir to be fresh for given initial state
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("error reading directory %s: %w", dir, err)
+	}
+	for _, entry := range entries {
+		p := filepath.Join(dir, entry.Name())
+		if err := os.RemoveAll(p); err != nil {
+			return nil, fmt.Errorf("unable to remove %s: %w", p, err)
+		}
+	}
+
+	for filename, content := range initialState {
+		p := filepath.Join(dir, filename)
+		if err := os.WriteFile(p, content, 0o644); err != nil {
+			return nil, fmt.Errorf("error writing %s: %w", p, err)
+		}
+	}
+
+	return &StateCache{dir: dir}, nil
+}
+
 // SaveStruct saves bytes to a file
 func (s *StateCache) Save(name string, content []byte) error {
 	if err := os.WriteFile(s.GetPath(name), content, 0o600); err != nil {
