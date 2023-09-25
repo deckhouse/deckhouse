@@ -18,7 +18,6 @@ package alerttemplates
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/helm"
+	"gopkg.in/yaml.v3"
 )
 
 // ../deckhause/tools/helm_generate/runners/alert_templates/template_values/[module-name].yaml
@@ -63,7 +63,12 @@ func run() error {
 
 		if len(yamlTemplates) > 0 {
 			for templateName, templateContent := range yamlTemplates {
-				io.WriteString(os.Stdout, fmt.Sprintf("---\n#module: %v\n#template: %v\n\n%v\n", module.Name, templateName, string(templateContent)))
+				templateContent, err = injectToYaml(templateContent, module.Name, string(module.Edition), filepath.Join(module.Path, templateName))
+				if err != nil {
+					return err
+				}
+
+				io.WriteString(os.Stdout, string(templateContent))
 			}
 		}
 
@@ -74,12 +79,30 @@ func run() error {
 			}
 			for templatePath, templateContent := range renderContent {
 				_, templateName := filepath.Split(templatePath)
-				io.WriteString(os.Stdout, fmt.Sprintf("---\n#module: %v\n#template: %v\n\n%v\n", module.Name, templateName, string(templateContent)))
+				templateContent, err := injectToYaml([]byte(templateContent), module.Name, string(module.Edition), filepath.Join(module.Path, templateName))
+				if err != nil {
+					return err
+				}
+
+				io.WriteString(os.Stdout, string(templateContent))
 			}
 		}
 	}
 
 	return nil
+}
+
+func injectToYaml(templateContent []byte, name, edition, sourceFile string) ([]byte, error) {
+	var values []map[string]interface{}
+	err := yaml.Unmarshal(templateContent, &values)
+	if err != nil {
+		return nil, err
+	}
+	values[0]["module"] = name
+	values[0]["edition"] = edition
+	values[0]["sourceFile"] = sourceFile
+
+	return yaml.Marshal(values)
 }
 
 func modules(deckhouseRoot string) (modules []module) {
