@@ -28,6 +28,7 @@ systemctl stop kubelet.service
 systemctl daemon-reload
 
 killall /opt/deckhouse/bin/containerd-shim-runc-v2
+for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
 
 rm -rf /etc/systemd/system/bashible.*
 rm -rf /etc/systemd/system/sysctl-tuner.*
@@ -45,7 +46,7 @@ rm -rf /etc/cni
 rm -rf /var/lib/cni
 rm -rf /var/lib/etcd
 rm -rf /opt/cni
-rm -rf /opt/deckhouse/bin
+rm -rf /opt/deckhouse
 reboot
 EOF
 {{- end }}
