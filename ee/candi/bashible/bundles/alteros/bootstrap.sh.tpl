@@ -3,8 +3,6 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE.
 */}}
 #!/bin/bash
-mkdir -p /opt/deckhouse/tmp
-export TMPDIR=/opt/deckhouse/tmp
 export LANG=C
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
