@@ -34,7 +34,7 @@ rm -rf /etc/systemd/system/sysctl-tuner.*
 rm -rf /etc/systemd/system/old-csi-mount-cleaner.*
 rm -rf /etc/systemd/system/d8-containerd-cgroup-migration.*
 rm -rf /etc/systemd/system/containerd-deckhouse.service /etc/systemd/system/containerd-deckhouse.service.d
-rm -rf /etc/systemd/system/kubeler.service /etc/systemd/system/kubelet.service.d
+rm -rf /etc/systemd/system/kubelet.service /etc/systemd/system/kubelet.service.d
 
 rm -rf /var/lib/bashible
 rm -rf /var/cache/registrypackages
