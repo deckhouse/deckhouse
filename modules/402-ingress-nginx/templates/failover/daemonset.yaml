@@ -120,6 +120,10 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
             memory: 20Mi
             cpu: 10m
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 64535
+          runAsGroup: 64535
       - name: kube-rbac-proxy
         image: {{ include "helm_lib_module_common_image" (list $context "kubeRbacProxy") }}
         args:
