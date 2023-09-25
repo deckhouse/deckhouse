@@ -70,7 +70,7 @@ EOF
         jqFilter: |
           {
             "name": .metadata.name,
-            "address": ((.status.addresses[] | select(.type == "ExternalIP") | .address) // {"address": "5.182.4.59"} | .address)),
+            "address": ((.status.addresses[] | select(.type == "ExternalIP") | .address) // (.status.addresses[] | select(.type == "InternalIP") | .address)),
             "isActive": (
               all((.spec.taints // [])[] ; .key != "node.kubernetes.io/unschedulable")
               and
