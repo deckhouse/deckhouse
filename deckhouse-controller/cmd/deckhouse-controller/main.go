@@ -103,6 +103,7 @@ func main() {
 
 			operator := addon_operator.NewAddonOperator(context.Background())
 			operator.InitialKubeConfig = initialKubeConfig
+			operator.ExplicitlyPurgeModules = []string{"deckhouse-config"}
 			module.SetupAdmissionRoutes(operator.AdmissionServer)
 
 			err = operator.Start()
