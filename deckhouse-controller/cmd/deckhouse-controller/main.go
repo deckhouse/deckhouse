@@ -103,6 +103,8 @@ func main() {
 
 			operator := addon_operator.NewAddonOperator(context.Background())
 			operator.InitialKubeConfig = initialKubeConfig
+			// TODO: remove deckhouse-config purge after release 1.56
+			operator.ExplicitlyPurgeModules = []string{"deckhouse-config"}
 			module.SetupAdmissionRoutes(operator.AdmissionServer)
 
 			err = operator.Start()
