@@ -20,7 +20,7 @@ if [ -z $1 ] || [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ]; 
 fi
 
 systemctl stop bashible.service bashible.timer
-systemctl stop sysctl.service sysctl.timer
+systemctl stop sysctl-tuner.service sysctl-tuner.timer
 systemctl stop old-csi-mount-cleaner.service old-csi-mount-cleaner.timer
 systemctl stop d8-containerd-cgroup-migration.service
 systemctl stop containerd-deckhouse.service
