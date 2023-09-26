@@ -4,18 +4,21 @@
 
 На данном этапе вы создали кластер, который состоит из **единственного** master-узла.
 
-Для полноценной работы кластера <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавьте узлы</a> в кластер и ознакомьтесь с <a href="/documentation/v1/modules/040-node-manager/">управлением узлами</a> (рекомендуется для production-окружений и тестовых сред).
+<strong>Обратите внимание</strong>, что на текущий момент на нем работают только системные компоненты!
 
-<blockquote>
-<p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на master-узле. Для этого, снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
-{% snippetcut %}
-```bash
-sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
-```
-{% endsnippetcut %}
-</blockquote>
+Для полноценной работы кластера необходимо:
+<ul>
+  <li><p>либо <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавить в кластер узлы</a> и ознакомьться с <a href="/documentation/v1/modules/040-node-manager/">управлением узлами</a> (рекомендуется для production-окружений и тестовых сред);</p></li>
+  <li><p>либо, если вы развернули кластер <strong>для ознакомительных целей</strong>, и одного узла вам достаточно, разрешить остальным компонентам Deckhouse работать на master-узле. Для этого снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
+  {% snippetcut %}
+  ```bash
+  sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+  ```
+  {% endsnippetcut %}
+  </li>
+</ul>
 
-Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время. 
+Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.
 
 Прежде чем продолжить:
 <ul><li><p>Если вы добавляли дополнительные узлы в кластер, убедитесь что они находятся в статусе <code>Ready</code>.</p>
