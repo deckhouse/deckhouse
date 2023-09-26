@@ -45,7 +45,7 @@ if [[ "$count_default" != "1" ]]; then
   configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
   for mac in $configured_macs; do
     ifname="$(echo "$ip_route_show_default_output" | jq -re --arg mac "$mac" '.[] | select(.address == $mac) | .ifname')|"
-    if [[ "$ifname" =! "" ]]; then
+    if [[ "$ifname" != "" ]]; then
       configured_ifnames_pattern+="$ifname"
     fi
   done
