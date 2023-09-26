@@ -64,6 +64,7 @@
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
  - **[global-hooks]** Fix orphaned endpointslice deletion. [#5912](https://github.com/deckhouse/deckhouse/pull/5912)
+ - **[loki]** Fixed a volume mount init container. [#5941](https://github.com/deckhouse/deckhouse/pull/5941)
  - **[loki]** Fixed permissions for existing files after changing GID and UID. [#5904](https://github.com/deckhouse/deckhouse/pull/5904)
  - **[monitoring-kubernetes]** Revert `node-exporter` `kube-rbac-proxy` liveness probe. [#5642](https://github.com/deckhouse/deckhouse/pull/5642)
  - **[operator-trivy]** Fix constant creation and deletion of node-collector pods. [#5688](https://github.com/deckhouse/deckhouse/pull/5688)
@@ -80,6 +81,7 @@
 
  - **[candi]** Bump patch versions of Kubernetes images: `v1.24.17`, `v1.25.13`, `v1.26.8`, `v1.27.5`. [#5666](https://github.com/deckhouse/deckhouse/pull/5666)
     Kubernetes control plane components will restart, kubelet will restart.
+ - **[deckhouse-controller]** Purge `deckhouse-config` module resources. [#5940](https://github.com/deckhouse/deckhouse/pull/5940)
  - **[ingress-nginx]** Fix `ingress-nginx` healthz handler replying with 200 unconditionally. [#5613](https://github.com/deckhouse/deckhouse/pull/5613)
     All Ingress nginx controllers' pods will be recreated consecutively. Ingress nginx pods will stop to reply on :8080/healthz in favour of :80/healthz. Some LB's health checks might need readjusting.
  - **[prometheus]** Move grafana to distroless. [#5834](https://github.com/deckhouse/deckhouse/pull/5834)
