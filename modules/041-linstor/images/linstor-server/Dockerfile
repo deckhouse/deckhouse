@@ -18,6 +18,8 @@ RUN mkdir /opt/gradle && cd /opt/gradle \
  && unzip gradle-6.9.3-bin.zip \
  && ln -s /opt/gradle/gradle-6.9.3/bin/gradle /usr/local/bin/gradle
 
+
+COPY ./patches /patches
 RUN git clone ${LINSTOR_GITREPO} /linstor-server
 WORKDIR /linstor-server
 RUN git reset --hard v${LINSTOR_VERSION} \
