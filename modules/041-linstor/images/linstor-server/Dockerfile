@@ -21,7 +21,7 @@ RUN mkdir /opt/gradle && cd /opt/gradle \
 RUN git clone ${LINSTOR_GITREPO} /linstor-server
 WORKDIR /linstor-server
 RUN git reset --hard v${LINSTOR_VERSION} \
- && git apply /patches/*.patch \
+ && git apply /patches/*.patch
 
 RUN git config --global url."https://github.com/".insteadOf git://github.com/ \
  && make debrelease \
