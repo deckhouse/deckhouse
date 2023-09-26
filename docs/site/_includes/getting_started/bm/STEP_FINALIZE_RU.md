@@ -12,7 +12,7 @@
   <li><p>либо, если вы развернули кластер <strong>для ознакомительных целей</strong>, и одного узла вам достаточно, разрешить остальным компонентам Deckhouse работать на master-узле. Для этого снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
   {% snippetcut %}
   ```bash
-  sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
   ```
   {% endsnippetcut %}
   </li>

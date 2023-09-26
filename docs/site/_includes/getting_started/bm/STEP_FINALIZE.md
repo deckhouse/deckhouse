@@ -4,16 +4,19 @@
 
 At this point, you have created a basic **single-master** cluster.
 
-For real-world conditions (production and test environments), <a href="/documentation/v1/modules/040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster">add nodes</a> to the cluster and familiarize yourself with how to <a href="/documentation/v1/modules/040-node-manager/">manage nodes</a>.
+<strong>Please note</strong> that at the moment only system components work on it!
 
-<blockquote>
-<p>If you install Deckhouse for <strong>evaluation purposes</strong> and one node in  the cluster is enough for you, allow Deckhouse components to work on the master node. To do this, remove the taint from the master node by running the following command:</p>
-{% snippetcut %}
-```bash
+For the cluster to work properly, it is necessary:
+<ul>
+  <li><p>or <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">add nodes to the cluster</a> and familiarize yourself with <a href="/documentation/v1/modules/040-node-manager/">node management</a> (recommended for production environments and test environments);</p></li>
+  <li><p>or, if you have deployed a cluster <strong>for informational purposes</strong>, and one node is enough for you, allow the rest of the Deckhouse components to work on the master node. To do this, remove taint from the master node by running the following command on the master node:</p>
+  {% snippetcut %}
+  ```bash
 sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
-```
-{% endsnippetcut %}
-</blockquote>
+  ```
+  {% endsnippetcut %}
+  </li>
+</ul>
 
 It may take some time to start Deckhouse components.
 
