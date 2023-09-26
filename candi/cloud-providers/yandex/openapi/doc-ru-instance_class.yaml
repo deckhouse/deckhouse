@@ -119,4 +119,4 @@ spec:
                     Дополнительные лейблы, которые будут присвоены созданным виртуальным машинам.
                 networkType:
                   description: |
-                    Тип сети: обычная или [програмнмно-ускоренная](https://cloud.yandex.ru/docs/vpc/concepts/software-accelerated-network).
+                    Тип сети: обычная или [программно-ускоренная](https://cloud.yandex.ru/docs/vpc/concepts/software-accelerated-network).
