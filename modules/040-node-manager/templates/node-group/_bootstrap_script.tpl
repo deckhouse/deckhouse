@@ -101,8 +101,8 @@ function detect_bundle() {
   {{- tpl ($context.Files.Get "candi/bashible/detect_bundle.sh") $context | nindent 2 }}
 }
 
-mkdir -p /opt/deckhouse/tmp
 export TMPDIR=/opt/deckhouse/tmp
+mkdir -p "$TMPDIR"
 
   {{- range $bundle := $context.allowedBundles }}
 function basic_bootstrap_{{ $bundle }} {
