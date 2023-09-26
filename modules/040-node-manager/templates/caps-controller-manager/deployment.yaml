@@ -1,27 +1,27 @@
-{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 {{- define "static_controller_manager_resources" }}
 cpu: 25m
 memory: 50Mi
 {{- end }}
 
+{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: cloud-provider-static
+  name: caps-controller-manager
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: cloud-provider-static
+    name: caps-controller-manager
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: "cloud-provider-static"
+    - containerName: "caps-controller-manager"
       minAllowed:
         {{- include "static_controller_manager_resources" . | nindent 8 }}
       maxAllowed:
@@ -33,34 +33,34 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: cloud-provider-static
+  name: caps-controller-manager
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: cloud-provider-static
+      app: caps-controller-manager
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cloud-provider-static
+  name: caps-controller-manager
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: cloud-provider-static
+      app: caps-controller-manager
       cluster.x-k8s.io/provider: infrastructure-static
       control-plane: controller-manager
   template:
     metadata:
       labels:
-        app: cloud-provider-static
+        app: caps-controller-manager
         cluster.x-k8s.io/provider: infrastructure-static
         control-plane: controller-manager
     spec:
@@ -68,13 +68,13 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-provider-static")) | nindent 6 }}
-      serviceAccountName: cloud-provider-static
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "caps-controller-manager")) | nindent 6 }}
+      serviceAccountName: caps-controller-manager
       imagePullSecrets:
         - name: deckhouse-registry
       terminationGracePeriodSeconds: 10
       containers:
-      - name: cloud-provider-static
+      - name: caps-controller-manager
 {{/*        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}*/}}
         image: {{ include "helm_lib_module_image" (list . "capsControllerManager") }}
         imagePullPolicy: IfNotPresent
@@ -110,5 +110,5 @@ spec:
         - name: cert
           secret:
             defaultMode: 420
-            secretName: cloud-provider-static-webhook-tls
+            secretName: caps-controller-manager-webhook-tls
 {{- end }}

@@ -60,13 +60,9 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 
 	if hasStaticInstancesField {
 		input.Values.Set("nodeManager.internal.capsControllerManagerEnabled", true)
-	} else {
-		input.Values.Remove("nodeManager.internal.capsControllerManagerEnabled")
-	}
-
-	if input.Values.Get("nodeManager.internal.capsControllerManagerEnabled").Bool() {
 		input.Values.Set("nodeManager.internal.capiControllerManagerEnabled", true)
 	} else {
+		input.Values.Remove("nodeManager.internal.capsControllerManagerEnabled")
 		input.Values.Remove("nodeManager.internal.capiControllerManagerEnabled")
 	}
 

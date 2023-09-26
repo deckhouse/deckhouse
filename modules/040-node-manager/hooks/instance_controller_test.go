@@ -31,6 +31,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: instance_controller ::", f
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Instance", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Machine", true)
 
 	const ng = `
 ---

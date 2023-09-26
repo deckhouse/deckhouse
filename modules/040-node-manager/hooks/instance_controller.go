@@ -259,7 +259,10 @@ func instanceController(input *go_hook.HookInput) error {
 	//  	a. we should delete finalizers only if metadata.deletionTimestamp is non-zero
 	//		b. we should delete finalizers and delete instance if metadata.deletionTimestamp is zero
 	for _, ic := range instances {
-		if _, ok := machines[ic.GetName()]; !ok {
+		_, machineExists := machines[ic.GetName()]
+		_, clusterAPIMachineExists := clusterAPIMachines[ic.GetName()]
+
+		if !machineExists && !clusterAPIMachineExists {
 			input.PatchCollector.MergePatch(deleteFinalizersPatch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name)
 
 			ds := ic.GetDeletionTimestamp()

@@ -3,14 +3,14 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
-  name: cloud-provider-static-mutating-webhook-configuration
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+  name: caps-controller-manager-mutating-webhook-configuration
 webhooks:
 - name: mstaticinstance.kb.io
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
-      name: cloud-provider-static-webhook-service
+      name: caps-controller-manager-webhook-service
       path: /mutate-deckhouse-io-v1alpha1-staticinstance
     caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
@@ -33,7 +33,7 @@ webhooks:
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
-      name: cloud-provider-static-webhook-service
+      name: caps-controller-manager-webhook-service
       path: /mutate-deckhouse-io-v1alpha1-sshcredentials
     caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
@@ -56,7 +56,7 @@ webhooks:
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
-      name: cloud-provider-static-webhook-service
+      name: caps-controller-manager-webhook-service
       path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine
     caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
@@ -79,7 +79,7 @@ webhooks:
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
-      name: cloud-provider-static-webhook-service
+      name: caps-controller-manager-webhook-service
       path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate
     caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
@@ -102,14 +102,14 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-provider-static")) | nindent 2 }}
-  name: cloud-provider-static-validating-webhook-configuration
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+  name: caps-controller-manager-validating-webhook-configuration
 webhooks:
 - name: vstaticinstance.kb.io
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
-      name: cloud-provider-static-webhook-service
+      name: caps-controller-manager-webhook-service
       path: /validate-deckhouse-io-v1alpha1-staticinstance
     caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
@@ -132,7 +132,7 @@ webhooks:
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
-      name: cloud-provider-static-webhook-service
+      name: caps-controller-manager-webhook-service
       path: /validate-deckhouse-io-v1alpha1-sshcredentials
     caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
@@ -155,7 +155,7 @@ webhooks:
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
-      name: cloud-provider-static-webhook-service
+      name: caps-controller-manager-webhook-service
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine
     caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:
@@ -178,7 +178,7 @@ webhooks:
   clientConfig:
     service:
       namespace: d8-cloud-instance-manager
-      name: cloud-provider-static-webhook-service
+      name: caps-controller-manager-webhook-service
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate
     caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
   rules:

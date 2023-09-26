@@ -18,6 +18,9 @@ package hooks
 
 import (
 	"context"
+	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	v1 "k8s.io/api/core/v1"
 	"os"
 
 	"github.com/pkg/errors"
@@ -41,14 +44,6 @@ const (
 	clusterAPINamespace          = "d8-cloud-instance-manager"
 	clusterAPIServiceAccountName = "capi-controller-manager"
 )
-
-//var (
-//	clusterAPIClusterGVR = schema.GroupVersionResource{
-//		Group:    "cluster.x-k8s.io",
-//		Version:  "v1beta1",
-//		Resource: "clusters",
-//	}
-//)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -87,46 +82,9 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 		return errors.Wrap(err, "failed to get k8s client")
 	}
 
-	//tokenAudience := fmt.Sprintf("https://kubernetes.default.svc.%s", input.Values.Get("global.clusterConfiguration.clusterDomain").String())
-	//
-	//tokenExpirationSeconds := int64((10 * time.Minute).Seconds())
-	//
-	//tokenReq := &authenticationv1.TokenRequest{
-	//	Spec: authenticationv1.TokenRequestSpec{
-	//		Audiences:         []string{tokenAudience},
-	//		ExpirationSeconds: &tokenExpirationSeconds,
-	//	},
-	//}
-	//
-	//tokenReq, err = k8sClient.CoreV1().ServiceAccounts(clusterAPINamespace).CreateToken(context.TODO(), clusterAPIServiceAccountName, tokenReq, metav1.CreateOptions{})
-	//if err != nil {
-	//	return errors.Wrapf(err, "failed to create an audience scoped token for '%s' ServiceAccount", clusterAPIServiceAccountName)
-	//}
-
-	//cluster, err := k8sClient.Dynamic().Resource(clusterAPIClusterGVR).Namespace(clusterAPINamespace).Get(context.TODO(), clusterAPIStaticClusterName, metav1.GetOptions{})
-	//if err != nil {
-	//	return errors.Wrap(err, "failed to get cluster")
-	//}
-
-	secretForServiceAccountToken := kubeconfig.GenerateSecretForServiceAccountToken(cluster, clusterAPIServiceAccountName)
-
-	secretForServiceAccountToken, err = k8sClient.CoreV1().Secrets(secretForServiceAccountToken.Namespace).Get(context.TODO(), secretForServiceAccountToken.Name, metav1.GetOptions{})
+	secretForServiceAccountToken, err := getSecretForServiceAccountToken(k8sClient, cluster)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			_, err = k8sClient.CoreV1().Secrets(secretForServiceAccountToken.Namespace).Create(context.TODO(), secretForServiceAccountToken, metav1.CreateOptions{})
-			if err != nil {
-				if !apierrors.IsAlreadyExists(err) {
-					return errors.Wrap(err, "failed to create secret")
-				}
-			}
-
-			secretForServiceAccountToken, err = k8sClient.CoreV1().Secrets(secretForServiceAccountToken.Namespace).Get(context.TODO(), secretForServiceAccountToken.Name, metav1.GetOptions{})
-			if err != nil {
-				return errors.Wrap(err, "failed to get secret after creation")
-			}
-		}
-
-		return errors.Wrap(err, "failed to get secret")
+		return errors.Wrap(err, "failed to get secret for service account token")
 	}
 
 	serviceAccountToken, ok := secretForServiceAccountToken.Data["token"]
@@ -159,4 +117,31 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 	input.PatchCollector.Create(secretUnstructured, object_patch.UpdateIfExists())
 
 	return nil
+}
+
+func getSecretForServiceAccountToken(k8sClient k8s.Client, cluster *unstructured.Unstructured) (*v1.Secret, error) {
+	secret, err := k8sClient.CoreV1().Secrets(cluster.GetNamespace()).Get(context.TODO(), fmt.Sprintf("%s-kubeconfig-token", cluster.GetName()), metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			secret = kubeconfig.GenerateSecretForServiceAccountToken(cluster, clusterAPIServiceAccountName)
+
+			_, err = k8sClient.CoreV1().Secrets(secret.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+			if err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					return nil, errors.Wrap(err, "failed to create secret")
+				}
+			}
+
+			secret, err = k8sClient.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get secret after creation")
+			}
+
+			return secret, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to get secret")
+	}
+
+	return secret, nil
 }

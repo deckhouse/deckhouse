@@ -1,9 +1,9 @@
-{{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
 {{- define "capi_controller_resources" }}
 cpu: 10m
 memory: 50Mi
 {{- end }}
 
+{{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1

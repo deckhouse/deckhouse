@@ -1,5 +1,5 @@
 /*
-Copyright 2023.
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package controller
 import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
-	"caps-controller-manager/internal/agent"
+	"caps-controller-manager/internal/client"
 	"caps-controller-manager/internal/pool"
 	"caps-controller-manager/internal/scope"
 	"context"
@@ -41,7 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -51,10 +51,10 @@ const (
 
 // StaticMachineReconciler reconciles a StaticMachine object
 type StaticMachineReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
-	Config *rest.Config
-	Agent  *agent.Agent
+	k8sClient.Client
+	Scheme     *runtime.Scheme
+	Config     *rest.Config
+	HostClient *client.Client
 }
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=get;list;watch;create;update;patch;delete
@@ -196,7 +196,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 			return ctrl.Result{}, nil
 		}
 
-		err = r.Agent.Bootstrap(ctx, instanceScope)
+		err = r.HostClient.Bootstrap(ctx, instanceScope)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to bootstrap StaticInstance")
 		}
@@ -257,7 +257,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		estimated := DefaultStaticInstanceBootstrapTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 		if estimated < (10 * time.Second) {
-			instanceScope.MachineScope.Fail(capierrors.CreateMachineError, errors.New("timed out waiting for static instance to bootstrap"))
+			instanceScope.MachineScope.Fail(capierrors.CreateMachineError, errors.New("timed out waiting for StaticInstance to bootstrap"))
 
 			err := instanceScope.MachineScope.Patch(ctx)
 			if err != nil {
@@ -267,9 +267,9 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, errors.New("timed out waiting to bootstrap StaticInstance")
 		}
 
-		err := r.Agent.Bootstrap(ctx, instanceScope)
+		err := r.HostClient.Bootstrap(ctx, instanceScope)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to finish bootstrapping")
+			return ctrl.Result{}, errors.Wrap(err, "failed to bootstrap StaticInstance")
 		}
 
 		return ctrl.Result{}, nil
@@ -277,7 +277,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		instanceScope.Logger.Info("StaticInstance is running")
 
 		if !instanceScope.MachineScope.StaticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-			err := r.Agent.Cleanup(ctx, instanceScope)
+			err := r.HostClient.Cleanup(ctx, instanceScope)
 			if err != nil {
 				return ctrl.Result{}, errors.Wrap(err, "failed to clean up StaticInstance")
 			}
@@ -290,7 +290,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		estimated := DefaultStaticInstanceCleanupTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 		if estimated < (10 * time.Second) {
-			instanceScope.MachineScope.Fail(capierrors.DeleteMachineError, errors.New("timed out waiting for static instance to bootstrap"))
+			instanceScope.MachineScope.Fail(capierrors.DeleteMachineError, errors.New("timed out waiting for StaticInstance to clean up"))
 
 			err := instanceScope.MachineScope.Patch(ctx)
 			if err != nil {
@@ -300,9 +300,9 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, errors.New("timed out waiting to clean up StaticInstance")
 		}
 
-		err := r.Agent.Cleanup(ctx, instanceScope)
+		err := r.HostClient.Cleanup(ctx, instanceScope)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to finish cleaning")
+			return ctrl.Result{}, errors.Wrap(err, "failed to clean up StaticInstance")
 		}
 
 		return ctrl.Result{}, nil
@@ -321,7 +321,7 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 	err := r.List(
 		ctx,
 		instances,
-		client.MatchingFieldsSelector{Selector: uidSelector},
+		k8sClient.MatchingFieldsSelector{Selector: uidSelector},
 	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to find StaticInstance by static machine uid '%s'", machineScope.StaticMachine.UID)
@@ -346,7 +346,7 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 	instanceScope.MachineScope = machineScope
 
 	credentials := &deckhousev1.SSHCredentials{}
-	credentialsKey := client.ObjectKey{
+	credentialsKey := k8sClient.ObjectKey{
 		Namespace: staticInstance.Namespace,
 		Name:      staticInstance.Spec.CredentialsRef.Name,
 	}
@@ -367,7 +367,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		context.Background(),
 		&deckhousev1.StaticInstance{},
 		"status.machineRef.uid",
-		func(rawObj client.Object) []string {
+		func(rawObj k8sClient.Object) []string {
 			staticInstance := rawObj.(*deckhousev1.StaticInstance)
 
 			if staticInstance.Status.MachineRef == nil {
@@ -384,7 +384,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		context.Background(),
 		&deckhousev1.StaticInstance{},
 		"status.currentStatus.phase",
-		func(rawObj client.Object) []string {
+		func(rawObj k8sClient.Object) []string {
 			staticInstance := rawObj.(*deckhousev1.StaticInstance)
 
 			if staticInstance.Status.CurrentStatus == nil {
@@ -401,7 +401,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		context.Background(),
 		&corev1.Node{},
 		"spec.providerID",
-		func(rawObj client.Object) []string {
+		func(rawObj k8sClient.Object) []string {
 			node := rawObj.(*corev1.Node)
 
 			return []string{node.Spec.ProviderID}
@@ -422,7 +422,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // StaticInstanceToStaticMachineMapFunc returns a handler.ToRequestsFunc that watches for
 // Machine events and returns reconciliation requests for an infrastructure provider object
 func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
-	return func(ctx context.Context, object client.Object) []reconcile.Request {
+	return func(ctx context.Context, object k8sClient.Object) []reconcile.Request {
 		staticInstance, ok := object.(*deckhousev1.StaticInstance)
 		if !ok {
 			return nil
@@ -439,7 +439,7 @@ func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schem
 
 		return []reconcile.Request{
 			{
-				NamespacedName: client.ObjectKey{
+				NamespacedName: k8sClient.ObjectKey{
 					Namespace: staticInstance.Status.MachineRef.Namespace,
 					Name:      staticInstance.Status.MachineRef.Name,
 				},

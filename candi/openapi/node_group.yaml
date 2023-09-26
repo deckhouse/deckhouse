@@ -1509,10 +1509,8 @@ spec:
                           enum: [NotManaged]
                 staticInstances:
                   description: |
-                    Parameter for provisioning static VMs to the cluster.
+                    Parameter for provisioning static machines to the cluster.
                   type: object
-                  required:
-                    - count
                   properties:
                     labelSelector:
                       description: A label selector is a label query over a set

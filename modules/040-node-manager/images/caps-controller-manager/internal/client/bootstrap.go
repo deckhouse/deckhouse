@@ -1,4 +1,20 @@
-package agent
+/*
+Copyright 2023 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package client
 
 import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
@@ -19,15 +35,15 @@ import (
 )
 
 // Bootstrap runs the bootstrap script on StaticInstance.
-func (a *Agent) Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
+func (c *Client) Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	switch instanceScope.GetPhase() {
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
-		err := a.bootstrapFromPendingPhase(ctx, instanceScope)
+		err := c.bootstrapFromPendingPhase(ctx, instanceScope)
 		if err != nil {
 			return errors.Wrap(err, "failed to bootstrap StaticInstance from pending phase")
 		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
-		err := a.bootstrapFromBootstrappingPhase(ctx, instanceScope)
+		err := c.bootstrapFromBootstrappingPhase(ctx, instanceScope)
 		if err != nil {
 			return errors.Wrap(err, "failed to bootstrap StaticInstance from bootstrapping phase")
 		}
@@ -38,7 +54,7 @@ func (a *Agent) Bootstrap(ctx context.Context, instanceScope *scope.InstanceScop
 	return nil
 }
 
-func (a *Agent) bootstrapFromPendingPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
+func (c *Client) bootstrapFromPendingPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	providerID := providerid.GenerateProviderID()
 
 	instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
@@ -63,19 +79,19 @@ func (a *Agent) bootstrapFromPendingPhase(ctx context.Context, instanceScope *sc
 		return errors.Wrap(err, "failed to patch StaticInstance MachineRef and Phase")
 	}
 
-	err = a.bootstrap(ctx, instanceScope)
+	err = c.bootstrap(ctx, instanceScope)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to bootstrap")
 	}
 
 	return nil
 }
 
 // bootstrapFromBootstrappingPhase finishes the bootstrap process by waiting for bootstrapping Node to appear and patching StaticMachine and StaticInstance.
-func (a *Agent) bootstrapFromBootstrappingPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	err := a.bootstrap(ctx, instanceScope)
+func (c *Client) bootstrapFromBootstrappingPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
+	err := c.bootstrap(ctx, instanceScope)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to bootstrap")
 	}
 
 	node, err := waitForNode(ctx, instanceScope)
@@ -114,21 +130,26 @@ func (a *Agent) bootstrapFromBootstrappingPhase(ctx context.Context, instanceSco
 	return nil
 }
 
-func (a *Agent) bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
+func (c *Client) bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	bootstrapScript, err := getBootstrapScript(ctx, instanceScope)
 	if err != nil {
 		return errors.Wrap(err, "failed to get bootstrap script")
 	}
 
-	a.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() interface{} {
-		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, base64.StdEncoding.EncodeToString(bootstrapScript)), nil)
+	done := c.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
+		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir /var/lib/bashible || exit 0 && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, base64.StdEncoding.EncodeToString(bootstrapScript)), nil)
 		if err != nil {
 			// If Node reboots, the ssh connection will close, and we will get an error.
 			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to exec ssh command")
+
+			return false
 		}
 
-		return nil
+		return true
 	})
+	if !done {
+		return errors.New("bootstrapping is not finished yet, waiting...")
+	}
 
 	return nil
 }

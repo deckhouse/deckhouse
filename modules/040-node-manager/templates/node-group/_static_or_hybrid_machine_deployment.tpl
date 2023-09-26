@@ -10,7 +10,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 2 }}
 spec:
   clusterName: static
-  replicas: {{ $ng.staticInstances.count }}
+  replicas: {{ $ng.staticInstances.count | default "0" }}
   template:
     spec:
       clusterName: static

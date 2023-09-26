@@ -1,4 +1,20 @@
-package agent
+/*
+Copyright 2023 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package client
 
 import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
@@ -6,22 +22,21 @@ import (
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
-// Cleanup runs the cleanup script on the static instance.
-func (a *Agent) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
+// Cleanup runs the cleanup script on StaticInstance.
+func (c *Client) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	switch instanceScope.GetPhase() {
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
-		err := a.cleanupFromRunningPhase(ctx, instanceScope)
+		err := c.cleanupFromRunningPhase(ctx, instanceScope)
 		if err != nil {
 			return errors.Wrap(err, "failed to cleanup StaticInstance from running phase")
 		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
-		err := a.cleanupFromCleaningPhase(ctx, instanceScope)
+		err := c.cleanupFromCleaningPhase(ctx, instanceScope)
 		if err != nil {
 			return errors.Wrap(err, "failed to cleanup StaticInstance from cleaning phase")
 		}
@@ -32,7 +47,7 @@ func (a *Agent) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope)
 	return nil
 }
 
-func (a *Agent) cleanupFromRunningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
+func (c *Client) cleanupFromRunningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning)
 
 	err := instanceScope.Patch(ctx)
@@ -40,35 +55,25 @@ func (a *Agent) cleanupFromRunningPhase(ctx context.Context, instanceScope *scop
 		return errors.Wrap(err, "failed to patch StaticInstance phase")
 	}
 
-	err = a.cleanup(instanceScope)
+	err = c.cleanup(instanceScope)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to cleanup")
 	}
 
 	return nil
 }
 
-// cleanupFromCleaningPhase finishes the cleanup process by checking if the cleanup script was successful and patching the static instance.
-func (a *Agent) cleanupFromCleaningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	err := a.cleanup(instanceScope)
+// cleanupFromCleaningPhase finishes the cleanup process by checking if the cleanup script was successfully executed and patching StaticInstance.
+func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
+	err := c.cleanup(instanceScope)
 	if err != nil {
-		return err
-	}
-
-	taskResult := a.getTaskResult(instanceScope.MachineScope.StaticMachine.Spec.ProviderID)
-
-	result, _ := taskResult.(bool)
-	if result {
-		a.deleteTaskResult(instanceScope.MachineScope.StaticMachine.Spec.ProviderID)
-	} else {
-		return nil
+		return errors.Wrap(err, "failed to cleanup")
 	}
 
 	instanceScope.Instance.Status.MachineRef = nil
 	instanceScope.Instance.Status.NodeRef = nil
 	instanceScope.Instance.Status.CurrentStatus = nil
 
-	conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForMachineRefReason, clusterv1.ConditionSeverityInfo, "")
 	conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForNodeRefReason, clusterv1.ConditionSeverityInfo, "")
 
 	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
@@ -81,9 +86,9 @@ func (a *Agent) cleanupFromCleaningPhase(ctx context.Context, instanceScope *sco
 	return nil
 }
 
-func (a *Agent) cleanup(instanceScope *scope.InstanceScope) error {
-	a.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() interface{} {
-		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("export PROVIDER_ID='%s' && /var/lib/bashible/cleanup-static-node.sh", instanceScope.MachineScope.StaticMachine.Spec.ProviderID), nil)
+func (c *Client) cleanup(instanceScope *scope.InstanceScope) error {
+	done := c.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
+		err := ssh.ExecSSHCommand(instanceScope, "test -d /opt/deckhouse || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing", nil)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to cleanup StaticInstance: failed to exec ssh command")
 
@@ -92,6 +97,9 @@ func (a *Agent) cleanup(instanceScope *scope.InstanceScope) error {
 
 		return true
 	})
+	if !done {
+		return errors.New("cleaning is not finished yet, waiting...")
+	}
 
 	return nil
 }

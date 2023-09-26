@@ -22,15 +22,15 @@ import (
 
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	SANs: tls_certificate.DefaultSANs([]string{
-		"cloud-provider-static-webhook-service.d8-cloud-instance-manager",
-		"cloud-provider-static-webhook-service.d8-cloud-instance-manager.svc",
-		tls_certificate.ClusterDomainSAN("cloud-provider-static-webhook-service.d8-cloud-instance-manager"),
-		tls_certificate.ClusterDomainSAN("cloud-provider-static-webhook-service.d8-cloud-instance-manager.svc"),
+		"caps-controller-manager-webhook-service.d8-cloud-instance-manager",
+		"caps-controller-manager-webhook-service.d8-cloud-instance-manager.svc",
+		tls_certificate.ClusterDomainSAN("caps-controller-manager-webhook-service.d8-cloud-instance-manager"),
+		tls_certificate.ClusterDomainSAN("caps-controller-manager-webhook-service.d8-cloud-instance-manager.svc"),
 	}),
 
-	CN: "cloud-provider-static-webhook",
+	CN: "caps-controller-manager-webhook",
 
 	Namespace:            "d8-cloud-instance-manager",
-	TLSSecretName:        "cloud-provider-static-webhook-tls",
+	TLSSecretName:        "caps-controller-manager-webhook-tls",
 	FullValuesPathPrefix: "nodeManager.internal.capsControllerManagerWebhookCert",
 })

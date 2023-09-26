@@ -650,6 +650,11 @@ metadata:
     node-group: worker
 spec:
   template:
+    metadata:
+      labels:
+        heritage: deckhouse
+        module: node-manager
+        node-group: worker
     spec:
       labelSelector:
         matchLabels:

@@ -1,5 +1,5 @@
 /*
-Copyright 2023.
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"caps-controller-manager/internal/agent"
+	"caps-controller-manager/internal/client"
 	"flag"
 	"os"
 
@@ -105,10 +105,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&infrastructurecontroller.StaticMachineReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Config: mgr.GetConfig(),
-		Agent:  agent.NewAgent(),
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Config:     mgr.GetConfig(),
+		HostClient: client.NewClient(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticMachine")
 		os.Exit(1)
