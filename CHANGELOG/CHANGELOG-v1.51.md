@@ -30,6 +30,8 @@
     The most awaited module that can be enabled now is the `deckhouse-admin` module — a convenient web-interface to administer deckhouse clusters.
  - **[external-module-manager]** Rename custom resources ExternalModule* -> Module* [#5599](https://github.com/deckhouse/deckhouse/pull/5599)
  - **[external-module-manager]** Support custom CA for `ExternalModuleSource`. [#5498](https://github.com/deckhouse/deckhouse/pull/5498)
+ - **[linstor]** **(PR was reverted in https://github.com/deckhouse/deckhouse/pull/5755)** Update linstor controller version to `1.24.1`. Update DRBD version to `9.2.5`. [#5469](https://github.com/deckhouse/deckhouse/pull/5469)
+    Linstor controller and piraeus operator will restart.
  - **[log-shipper]** Images are based on a distroless image. [#5523](https://github.com/deckhouse/deckhouse/pull/5523)
  - **[loki]** Images are based on a distroless image. [#5391](https://github.com/deckhouse/deckhouse/pull/5391)
  - **[monitoring-kubernetes]** Images are based on a distroless image. [#5378](https://github.com/deckhouse/deckhouse/pull/5378)
@@ -64,6 +66,8 @@
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
  - **[global-hooks]** Fix orphaned endpointslice deletion. [#5912](https://github.com/deckhouse/deckhouse/pull/5912)
+ - **[linstor]** Revert the commit that updated the versions of Linstor and DRBD (reverts https://github.com/deckhouse/deckhouse/pull/5469). [#5755](https://github.com/deckhouse/deckhouse/pull/5755)
+ - **[loki]** Fixed a volume mount init container. [#5941](https://github.com/deckhouse/deckhouse/pull/5941)
  - **[loki]** Fixed permissions for existing files after changing GID and UID. [#5904](https://github.com/deckhouse/deckhouse/pull/5904)
  - **[monitoring-kubernetes]** Revert `node-exporter` `kube-rbac-proxy` liveness probe. [#5642](https://github.com/deckhouse/deckhouse/pull/5642)
  - **[operator-trivy]** Fix constant creation and deletion of node-collector pods. [#5688](https://github.com/deckhouse/deckhouse/pull/5688)
@@ -80,6 +84,7 @@
 
  - **[candi]** Bump patch versions of Kubernetes images: `v1.24.17`, `v1.25.13`, `v1.26.8`, `v1.27.5`. [#5666](https://github.com/deckhouse/deckhouse/pull/5666)
     Kubernetes control plane components will restart, kubelet will restart.
+ - **[deckhouse-controller]** Purge `deckhouse-config` module resources. [#5940](https://github.com/deckhouse/deckhouse/pull/5940)
  - **[ingress-nginx]** Fix `ingress-nginx` healthz handler replying with 200 unconditionally. [#5613](https://github.com/deckhouse/deckhouse/pull/5613)
     All Ingress nginx controllers' pods will be recreated consecutively. Ingress nginx pods will stop to reply on :8080/healthz in favour of :80/healthz. Some LB's health checks might need readjusting.
  - **[prometheus]** Move grafana to distroless. [#5834](https://github.com/deckhouse/deckhouse/pull/5834)
