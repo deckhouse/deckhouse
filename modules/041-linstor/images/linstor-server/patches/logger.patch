@@ -1,0 +1,12 @@
+diff --git a/satellite/src/main/java/com/linbit/linstor/core/Satellite.java b/satellite/src/main/java/com/linbit/linstor/core/Satellite.java
+index 00b7b1fce..3c026bd8a 100644
+--- a/satellite/src/main/java/com/linbit/linstor/core/Satellite.java
++++ b/satellite/src/main/java/com/linbit/linstor/core/Satellite.java
+@@ -377,6 +377,7 @@ public final class Satellite
+     {
+         System.out.printf("%s, Module %s\n", LinStor.PROGRAM, LinStor.SATELLITE_MODULE);
+         LinStor.printStartupInfo();
++        System.out.println("TEST FIX-LOGS");
+ 
+         StltConfig cfg = new StltConfig(args);
+ 
