@@ -25,8 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"d8.io/bashible/pkg/apis/bashible"
-	"d8.io/bashible/pkg/template"
+	"bashible-apiserver/pkg/apis/bashible"
+	"bashible-apiserver/pkg/template"
 )
 
 const templateName = "bashible.sh.tpl"

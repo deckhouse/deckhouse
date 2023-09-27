@@ -28,11 +28,11 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
-	"d8.io/bashible/pkg/apiserver"
-	"d8.io/bashible/pkg/apiserver/readyz"
-	bashibleopenapi "d8.io/bashible/pkg/generated/openapi"
+	"bashible-apiserver/pkg/apiserver"
+	"bashible-apiserver/pkg/apiserver/readyz"
+	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
 
-	"d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	"bashible-apiserver/pkg/apis/bashible/v1alpha1"
 )
 
 // BashibleServerOptions contains state for master/api server

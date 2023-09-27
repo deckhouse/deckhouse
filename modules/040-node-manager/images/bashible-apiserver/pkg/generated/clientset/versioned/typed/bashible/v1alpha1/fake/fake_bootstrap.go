@@ -19,14 +19,15 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
-	bashiblev1alpha1 "d8.io/bashible/pkg/generated/applyconfiguration/bashible/v1alpha1"
+	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
+	bashiblev1alpha1 "bashible-apiserver/pkg/generated/applyconfiguration/bashible/v1alpha1"
 	"context"
 	json "encoding/json"
 	"fmt"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
+	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -37,9 +38,9 @@ type FakeBootstraps struct {
 	Fake *FakeBashibleV1alpha1
 }
 
-var bootstrapsResource = v1alpha1.SchemeGroupVersion.WithResource("bootstraps")
+var bootstrapsResource = schema.GroupVersionResource{Group: "bashible.deckhouse.io", Version: "v1alpha1", Resource: "bootstraps"}
 
-var bootstrapsKind = v1alpha1.SchemeGroupVersion.WithKind("Bootstrap")
+var bootstrapsKind = schema.GroupVersionKind{Group: "bashible.deckhouse.io", Version: "v1alpha1", Kind: "Bootstrap"}
 
 // Get takes name of the bootstrap, and returns the corresponding bootstrap object, and an error if there is any.
 func (c *FakeBootstraps) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Bootstrap, err error) {
