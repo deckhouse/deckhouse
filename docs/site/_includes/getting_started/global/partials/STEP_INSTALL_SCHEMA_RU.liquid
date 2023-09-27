@@ -74,6 +74,7 @@
    - `kubectl`, настроенный для доступа к существующему кластеру.
 {%- elsif page.platform_type == "baremetal"  %}
    - SSH-доступ по ключу до узла, который будет **master-узлом** будущего кластера.
+   - SSH-доступ по ключу до узла, который будет **worker-узлом** будущего кластера (если кластер будет состоять не из одного master-узла).
 {%- endif %}
    {% endofftopic %}
   </li>
@@ -108,4 +109,23 @@
    {% endofftopic %}
 {%- endif %}
 </li>
+{% if page.platform_type == "baremetal" or page.platform_type == "bm-private" %}
+<li>
+   <p><strong>Физический сервер или виртуальная машина для worker-узла.</strong></p>
+   {% offtopic title="Требования..." %}
+   - не менее 4 ядер CPU
+   - не менее 8 ГБ RAM
+   - не менее 40 ГБ дискового пространства
+   - [поддерживаемая ОС](/documentation/v1/supported_versions.html)
+   {% if page.platform_code == "bm-private" %}
+   - доступ до проксирующего registry или до частного хранилища образов контейнеров с образами контейнеров Deckhouse
+   - доступ до прокси-сервера для скачивания deb/rpm-пакетов ОС (при необходимости)
+   {%- else %}
+   - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.io`
+   {%- endif %}
+   - SSH-доступ от **персонального компьютера** (см. п.1) по ключу
+   - на узле не должно быть установлено пакетов container runtime, например containerd или docker
+   {% endofftopic %}
+</li>
+{%- endif %}
 </ol>

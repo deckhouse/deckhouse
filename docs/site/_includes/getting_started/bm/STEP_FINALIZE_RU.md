@@ -6,19 +6,54 @@
 
 <strong>Обратите внимание</strong>, что на текущий момент на нем работают только системные компоненты!
 
-Для полноценной работы кластера необходимо:
+Для полноценной работы кластера необходимо <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавить в кластер</a> хотя бы один worker-узел.
+
+<blockquote>
+Если вы развернули кластер <strong>для ознакомительных целей</strong>, то и одного узла может быть достаточно. Для того, чтобы разрешить остальным компонентам Deckhouse работать на master-узле, необходимо снять с master-узла taint, выполнив на нем следующую команду:
+{% snippetcut %}
+```bash
+sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+```
+{% endsnippetcut %}
+Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.
+</blockquote>
+
 <ul>
-  <li><p>либо <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавить в кластер узлы</a> и ознакомьться с <a href="/documentation/v1/modules/040-node-manager/">управлением узлами</a> (рекомендуется для production-окружений и тестовых сред);</p></li>
-  <li><p>либо, если вы развернули кластер <strong>для ознакомительных целей</strong>, и одного узла вам достаточно, разрешить остальным компонентам Deckhouse работать на master-узле. Для этого снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
+  <li>
+    Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
+  </li>
+  <li>
+    Создайте <a href="http://ru.localhost/documentation/v1/modules/040-node-manager/">NodeGroup</a> <code>worker</code>. Для этого выполните на master-узле:
+    {% snippetcut %}
+  ```bash
+kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+EOF
+  ```
+    {% endsnippetcut %}
+  </li>
+  <li>
+    Deckhouse подготовит скрипт, необходимый для настройки будущего узла и включения его в кластер. Выведите его содержимое в формате Base64 (оно понадобится на следующем шаге):
+    {% snippetcut %}
+  ```bash
+kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+  ```
+  {% endsnippetcut %}
+  </li>
+  <li>
+    На подготовленной виртуальной машине выполните следующую команду, вставив код скрипта, полученный на предыдущем шаге:
   {% snippetcut %}
   ```bash
-sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
   ```
   {% endsnippetcut %}
   </li>
 </ul>
-
-Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.
 
 Прежде чем продолжить:
 <ul><li><p>Если вы добавляли дополнительные узлы в кластер, убедитесь что они находятся в статусе <code>Ready</code>.</p>
@@ -56,7 +91,7 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 {%- endofftopic %}
 </li></ul>
 
-Далее, остается создать Ingress-контроллер, создать пользователя для доступа в веб-интерфейсы, и настроить DNS.
+Далее нужно создать Ingress-контроллер, Storage Class для хранения данных, пользователя для доступа в веб-интерфейсы и настроить DNS.
 
 <ul><li><p><strong>Установка Ingress-контроллера</strong></p>
 <p>Создайте на <strong>master-узле</strong> файл <code>ingress-nginx-controller.yml</code> содержащий конфигурацию Ingress-контроллера:</p>
@@ -87,6 +122,59 @@ NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {%- endofftopic %}
+</li>
+<li><p><strong>Создание StorageClass</strong></p>
+<p>Создайте на <strong>master-узле</strong> файл <code>storage-class.yml</code> содержащий конфигурацию модуля <a href="https://deckhouse.ru/documentation/v1/modules/031-local-path-provisioner/">local-path-provisioner</a>:</p>
+{% snippetcut %}
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-system
+spec:
+  nodeGroups:
+  - worker
+  path: "/opt/local-path-provisioner"
+```
+{% endsnippetcut %}
+{% alert %}Не забудьте указать верное имя <strong>nodeGroups</strong>! Для отдельного узла оно будет <strong>worker</strong>, а для одного master-узла – <strong>master</strong>.{% endalert %}
+<p><code>path</code> – путь на узле, где будут лежать данные.</p>
+<p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f storage-class.yml
+```
+{% endsnippetcut %}
+Дождитесь перехода подов Ingress-контролллера в статус <code>Ready</code>.
+
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl $ kubectl get ng
+NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE
+worker   Static   1       1       1                                                               31d
+```
+{%- endofftopic %}
+
+<p><strong>Настройте Prometheus</strong> на использование локального хранилища</p>
+
+Откройке конфигурацию модуля <code>prometheus</code>:
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl edit moduleconfig prometheus
+```
+{% endsnippetcut %}
+
+Добавьте в нее следующие параметры:
+{% snippetcut %}
+```yaml
+longtermStorageClass: localpath-system
+storageClass: localpath-system
+```
+{% endsnippetcut %}
+
+<p>Сохраните изменения и дождитесь обновления подов модуля.</p>
+
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
 <p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
