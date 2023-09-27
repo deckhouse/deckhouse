@@ -116,7 +116,7 @@ func NewVulnerabilityCache(logger *log.Logger) (*VulnerabilityCache, error) {
 	auth := string(decoded)
 
 	if len(strings.Split(auth, ":")) < 2 {
-		return nil, fmt.Errorf("bdu registry auth config seems to be malformed, should have the following format: 'user:password'", err)
+		return nil, fmt.Errorf("bdu registry auth config seems to be malformed, should have the following format: 'user:password'")
 	}
 
 	d := &VulnerabilityCache{
