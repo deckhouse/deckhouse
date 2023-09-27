@@ -135,7 +135,7 @@ func (r *Runner) converge() error {
 
 	if !r.isSkip(PhaseBaseInfra) {
 		if r.PhasedExecutionContext != nil {
-			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true); err != nil {
+			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true, r.stateCache); err != nil {
 				return err
 			} else if shouldStop {
 				return nil
@@ -161,7 +161,7 @@ func (r *Runner) converge() error {
 	}
 
 	if r.PhasedExecutionContext != nil {
-		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true); err != nil {
+		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true, r.stateCache); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
