@@ -11,7 +11,7 @@ index 00b7b1fce..3c026bd8a 100644
          StltConfig cfg = new StltConfig(args);
  
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
-index a63c78cba..6c6af04e6 100644
+index a63c78cba..2c88ea9de 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 @@ -12,10 +12,7 @@ import com.linbit.linstor.storage.StorageException;
@@ -26,29 +26,28 @@ index a63c78cba..6c6af04e6 100644
  
  public class Commands
  {
-@@ -77,6 +74,17 @@ public class Commands
+@@ -77,6 +74,16 @@ public class Commands
          try
          {
              outData = extCmd.exec(command);
 +            System.out.println("------- command------------------------");
 +            System.out.println(Arrays.toString(command));
 +            System.out.println("---------------------------------------");
++            System.out.println("------- extCmd.exec outData-------------------------");
++            System.out.println("outData.exitCode: " + outData.exitCode);
++            System.out.println("outData.stderrData: " + Arrays.toString(outData.stderrData));
++            System.out.println("outData.stdoutData: " + Arrays.toString(outData.stdoutData));
++            System.out.println("outData.executedCommand: " + Arrays.toString(outData.executedCommand));
++            System.out.println("----------------------------------------------------");
 +
-+            System.out.println("------- extCmd.exec outData------------");
-+            System.out.println(outData);
-+            System.out.println("---------------------------------------");
-+
-+            System.out.println("------- failMsgExc------------------------");
-+            System.out.println(failMsgExc);
-+            System.out.println("---------------------------------------");
  
              boolean skipExitCodeCheck = false;
              while (!(outData.exitCode == ExtCmdUtils.DEFAULT_RET_CODE_OK || allowExitCodes.contains(outData.exitCode)))
-@@ -121,7 +129,6 @@ public class Commands
+@@ -121,7 +128,6 @@ public class Commands
                  exc
              );
          }
 -
          return outData;
      }
- 
+
