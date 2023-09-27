@@ -15,6 +15,6 @@ properties:
     description: |
       Опциональный селектор для компонентов trivy operator и заданий сканирования (Jobs).
 
-      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

@@ -4,12 +4,12 @@ properties:
     description: Включает отладочный уровень логирования для компонентов Hubble.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` в Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   auth:

@@ -106,7 +106,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    --endpoints https://127.0.0.1:2379/ member list -w table"
    ```
 
-1. Drain the nodes being deleted:
+1. `drain` the nodes being deleted:
 
    ```bash
    kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
@@ -120,7 +120,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
    ```
 
-1. In the cluster, delete the Nore objects associated with the nodes being deleted:
+1. In the cluster, delete the Node objects associated with the nodes being deleted:
 
    ```bash
    kubectl delete node <MASTER-NODE-N-NAME>
@@ -237,7 +237,7 @@ Repeat the steps below for **each master node one by one**, starting with the no
 
     You should read carefully what converge is going to do when it asks for approval.
 
-    If converge requests approval for another master node, it should be skipped by saying "no".
+    If converge requests approval for another master node, it should be skipped by saying `no`.
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
@@ -338,7 +338,7 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
          auditPolicyEnabled: true
    ```
 
-2. Create the `kube-system/audit-policy` Secret containing a `base64`-encoded `yaml` file:
+2. Create the `kube-system/audit-policy` Secret containing a Base64 encoded YAML file:
 
    ```yaml
    apiVersion: v1

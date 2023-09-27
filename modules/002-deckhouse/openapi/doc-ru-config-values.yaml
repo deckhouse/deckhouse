@@ -123,14 +123,14 @@ properties:
                     Токен будет в заголовке `Authorization` в формате `Bearer <token>`.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если ничего не указано или указано `false`, `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
       **Внимание!** Deckhouse перестанет работать, если в `nodeSelector` указать несуществующий лейбл. Для восстановления работоспособности необходимо изменить значения на правильные в `ModuleConfig/deckhouse` и `deployment/deckhouse`.
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если ничего не указано или указано `false`, `tolerations` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 

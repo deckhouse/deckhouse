@@ -403,8 +403,6 @@ mcmEmergencyBrake: true
 
 ## Как восстановить master-узел, если kubelet не может загрузить компоненты control plane?
 
-> **Внимание!** Возможен переход только с containerd на NotManaged и обратно.
-
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы
 компонентов control plane (например, удалена директория `/var/lib/containerd`). В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
 
@@ -433,9 +431,9 @@ done
 
 ## Как изменить CRI для NodeGroup?
 
-> **Внимание!** Возможен переход только с containerd на NotManaged и обратно.
+> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type)).
 
-Установить параметр `cri.type` в `containerd` или в `NotManaged`.
+Установить параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type) в `Containerd` или в `NotManaged`.
 
 Пример YAML-манифеста NodeGroup:
 
@@ -452,13 +450,13 @@ spec:
 
 Также эту операцию можно выполнить с помощью патча:
 
-* Для containerd:
+* Для `Containerd`:
 
   ```shell
   kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
-* Для NotManaged:
+* Для `NotManaged`:
 
   ```shell
   kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
@@ -472,19 +470,19 @@ spec:
 
 ## Как изменить CRI для всего кластера?
 
-> **Внимание!** Возможен переход только с containerd на NotManaged и обратно.
+> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type)).
 
 Необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфиге `cluster-configuration`.
 
 Также возможно выполнить эту операцию с помощью `kubectl patch`. Пример:
-* Для containerd:
+* Для `Containerd`:
 
   ```shell
   data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
-* Для NotManaged:
+* Для `NotManaged`:
 
   ```shell
   data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"

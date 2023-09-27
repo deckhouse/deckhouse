@@ -11,7 +11,7 @@ webIfaces:
 
 Если используется storage class с поддержкой автоматического расширения (`allowVolumeExpansion: true`), то при нехватке места на диске для данных Prometheus его ёмкость будет увеличена.
 
-Ресурсы CPU и memory автоматически выставляются при пересоздании Pod'а на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/). Также, благодаря кешированию запросов к Prometheus с помощью [Trickster](https://github.com/trickstercache/trickster), потребление памяти Prometheus сильно сокращается.
+Ресурсы CPU и memory автоматически выставляются при пересоздании Pod'а на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/). Также, благодаря кэшированию запросов к Prometheus с помощью [Trickster](https://github.com/trickstercache/trickster), потребление памяти Prometheus сильно сокращается.
 
 Поддерживается как pull, так и push-модель получения метрик.
 

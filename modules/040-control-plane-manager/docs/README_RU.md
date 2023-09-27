@@ -20,7 +20,7 @@ description: Deckhouse управляет компонентами control plane
   - корневой CA etcd (`etcd/ca.crt` и `etcd/ca.key`);
   - RSA-сертификат и ключ для подписи Service Account'ов (`sa.pub` и `sa.key`);
   - корневой CA для extension API-серверов (`front-proxy-ca.key` и `front-proxy-ca.crt`).
-- Клиентскими сертификатами для подключения компонентов `control-plane` друг к другу. Выписывает, продлевает и перевыписывает, если что-то изменилось (например, список SAN). Эти сертификаты хранятся только на узлах:
+- Клиентскими сертификатами для подключения компонентов `control-plane` друг к другу. Выписывает, продлевает и перевыписывает, если что-то изменилось (например, список SAN). Следующие сертификаты хранятся только на узлах:
   - серверный сертификат API-сервера (`apiserver.crt` и `apiserver.key`);
   - клиентский сертификат для подключения `kube-apiserver` к `kubelet` (`apiserver-kubelet-client.crt` и `apiserver-kubelet-client.key`);
   - клиентский сертификат для подключения `kube-apiserver` к `etcd` (`apiserver-etcd-client.crt` и `apiserver-etcd-client.key`);
