@@ -51,7 +51,7 @@ import (
 //
 //	               dhctl/pkg/template/funcs.go
 //	               helm-mod/pkg/engine/funcs.go
-//	(you are here) modules/040-node-manager/images/d8.io/bashible/pkg/template/funcs.go
+//	(you are here) modules/040-node-manager/images/bashible-apiserver/pkg/template/funcs.go
 func FuncMap() template.FuncMap {
 	f := sprig.TxtFuncMap()
 	delete(f, "env")

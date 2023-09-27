@@ -9,9 +9,9 @@ issues:
 
 linters-settings:
   gci:
-    local-prefixes: d8.io/bashible
+    local-prefixes: bashible-apiserver
   goimports:
-    local-prefixes: d8.io/bashible
+    local-prefixes: bashible-apiserver
   golint:
     min-confidence: 0
   errcheck:
