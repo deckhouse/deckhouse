@@ -10,3 +10,45 @@ index 00b7b1fce..3c026bd8a 100644
  
          StltConfig cfg = new StltConfig(args);
  
+diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
+index a63c78cba..6c6af04e6 100644
+--- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
++++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
+@@ -12,10 +12,7 @@ import com.linbit.linstor.storage.StorageException;
+ import com.linbit.utils.StringUtils;
+ 
+ import java.io.IOException;
+-import java.util.ArrayList;
+-import java.util.Collection;
+-import java.util.Collections;
+-import java.util.List;
++import java.util.*;
+ 
+ public class Commands
+ {
+@@ -77,6 +74,17 @@ public class Commands
+         try
+         {
+             outData = extCmd.exec(command);
++            System.out.println("------- command------------------------");
++            System.out.println(Arrays.toString(command));
++            System.out.println("---------------------------------------");
++
++            System.out.println("------- extCmd.exec outData------------");
++            System.out.println(outData);
++            System.out.println("---------------------------------------");
++
++            System.out.println("------- failMsgExc------------------------");
++            System.out.println(failMsgExc);
++            System.out.println("---------------------------------------");
+ 
+             boolean skipExitCodeCheck = false;
+             while (!(outData.exitCode == ExtCmdUtils.DEFAULT_RET_CODE_OK || allowExitCodes.contains(outData.exitCode)))
+@@ -121,7 +129,6 @@ public class Commands
+                 exc
+             );
+         }
+-
+         return outData;
+     }
+ 
