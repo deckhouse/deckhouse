@@ -3,6 +3,8 @@ cpu: 50m
 memory: 50Mi
 {{- end }}
 
+{{ $dictRepository := printf "%s/security/trivy-bdu:1" .Values.global.modulesImages.registry.base | quote }}
+
 {{- if .Values.operatorTrivy.linkCVEtoBDU }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -61,10 +63,16 @@ spec:
       - name: report-updater
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "reportUpdater") }}
+        envs:
+        - name: DICTIONARY_OCI_IMAGE
+          value: {{ $dictRepository }}
         volumeMounts:
         - mountPath: /etc/ssl/report-updater
           name: report-updater-webhook-ssl
-        - mountPath: /tmp/vulndb-cache
+        - mountPath: /root/.docker
+          name: docker-config
+          readOnly: true
+        - mountPath: /tmp/.dictionary
           name: cache-dir
         ports:
           - name: https
@@ -88,6 +96,15 @@ spec:
       - name: report-updater-webhook-ssl
         secret:
           secretName: report-updater-webhook-ssl
-      - emptyDir: {}
-        name: cache-dir
+      - name: docker-config
+        secret:
+          defaultMode: 420
+          items:
+          - key: .dockerconfigjson
+            path: config.json
+          secretName: deckhouse-registry
+      - name: cache-dir
+        emptyDir: 
+          medium: Memory
+          sizeLimit: 5Mi
 {{- end }}
