@@ -116,7 +116,7 @@ k8s:
       registrar: v2.8.0@sha256:f6717ce72a2615c7fbc746b4068f788e78579c54c43b8716e5ce650d97af2df1
       snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
       livenessprobe: v2.10.0@sha256:4dc0b87ccd69f9865b89234d8555d3a614ab0a16ed94a3016ffd27f8106132ce
-  '1.27':
+  '1.28':
     status: preview
     patch: 2
     bashible: *bashible
