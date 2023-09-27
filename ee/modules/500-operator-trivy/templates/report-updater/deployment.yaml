@@ -63,7 +63,7 @@ spec:
       - name: report-updater
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "reportUpdater") }}
-        envs:
+        env:
         - name: DICTIONARY_OCI_IMAGE
           value: {{ $dictRepository }}
         volumeMounts:
