@@ -351,7 +351,8 @@ func (c *NodeGroupController) populateNodeToHost() error {
 	}
 
 	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, func(msg string) bool {
-		return input.NewConfirmation().WithMessage(msg).Ask()
+		return true // FIXME(dhctl-for-commander): must find another way to auto-approve
+		//return input.NewConfirmation().WithMessage(msg).Ask()
 	})
 
 	if err != nil {
