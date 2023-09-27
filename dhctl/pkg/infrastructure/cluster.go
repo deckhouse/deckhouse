@@ -70,7 +70,7 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 	}
 
 	if r.PhasedExecutionContext != nil {
-		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true); err != nil {
+		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true, r.cache); err != nil {
 			return err
 		} else if shouldStop {
 			return nil

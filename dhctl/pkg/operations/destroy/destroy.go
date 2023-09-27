@@ -75,7 +75,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	defer d.PhasedExecutionContext.Finalize(d.stateCache)
 
 	if !d.skipResources {
-		if shouldStop, err := d.PhasedExecutionContext.StartPhase(phases.DeleteResourcesPhase, false); err != nil {
+		if shouldStop, err := d.PhasedExecutionContext.StartPhase(phases.DeleteResourcesPhase, false, d.stateCache); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
@@ -118,5 +118,5 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	}
 
 	d.state.Clean()
-	return d.PhasedExecutionContext.Complete()
+	return d.PhasedExecutionContext.Complete(d.stateCache)
 }

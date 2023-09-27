@@ -244,7 +244,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 	metaConfig.UUID = clusterUUID
 
-	if shouldStop, err := b.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true, stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
