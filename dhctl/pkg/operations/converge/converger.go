@@ -65,7 +65,7 @@ func (c *Converger) applyParams() error {
 }
 
 // FIXME(dhctl-for-commander): optionally initialize config-path from parameter, use specified config instead of in-cluster
-func (c *Converger) Converge() error {
+func (c *Converger) Converge(autoApprove bool) error {
 	if err := c.applyParams(); err != nil {
 		return err
 	}
@@ -111,6 +111,7 @@ func (c *Converger) Converge() error {
 	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache, converge.RunnerOptions{PhasedExecutionContext: c.PhasedExecutionContext})
 	runner.WithChangeSettings(&terraform.ChangeActionSettings{
 		AutoDismissDestructive: false,
+		AutoApprove:            autoApprove,
 	})
 
 	err = runner.RunConverge()

@@ -37,7 +37,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		converger := converge.NewConverger(&converge.Params{
 			SSHClient: sshClient,
 		})
-		return converger.Converge()
+		return converger.Converge(false)
 	})
 	return cmd
 }
