@@ -24,17 +24,17 @@ spec:
 
     kubeconfig="/etc/kubernetes/kubelet.conf"
 
-    version_in_use="$(uname -r)"
+    kernel_version_in_use="$(uname -r)"
 
     {{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
-    need_drbd=$(bb-kubectl --kubeconfig $kubeconfig  get node "$(hostname -s)" -o json | jq -c '.metadata.labels | contains({{ .Values.linstor.dataNodes.nodeSelector | toJson }})')
+    is_linstor_data_node=$(bb-kubectl --kubeconfig $kubeconfig  get node "$(hostname -s)" -o json | jq -c '.metadata.labels | contains({{ .Values.linstor.dataNodes.nodeSelector | toJson }})')
     {{- else }}
-    need_drbd="true"
+    is_linstor_data_node="true"
     {{- end }}
 
-    bb-log-info "we need drbd on node: "$need_drbd
+    bb-log-info "we need drbd on node: "$is_linstor_data_node
 
-    if [ $need_drbd == "false" ]; then
+    if [ $is_linstor_data_node == "false" ]; then
       if [ -e "/proc/drbd" ]; then
         sed -i 's/^drbd$//' /etc/modules
         rmmod drbd_transport_rdma || true
@@ -46,12 +46,12 @@ spec:
 
     # DRBD requires the kernel sources to be installed.
     # Install actual kernel headers
-    bb-apt-install "linux-headers-${version_in_use}"
+    bb-apt-install "linux-headers-${kernel_version_in_use}"
 
     # Remove unused kernel-headers
-    version_in_use_pattern="$(echo "$version_in_use" | sed -r 's/([0-9\.-]+)-([^0-9]+)$/^linux-headers-(\1|\1-\2)$/')"
+    kernel_version_pattern="$(echo "$kernel_version_in_use" | sed -r 's/([0-9\.-]+)-([^0-9]+)$/^linux-headers-(\1|\1-\2)$/')"
     packages_to_remove="$(
-      dpkg-query -S '/lib/modules/*/build' | awk -F: '{print $1}' | grep -Ev "$version_in_use_pattern" || true
+      dpkg-query -S '/lib/modules/*/build' | awk -F: '{print $1}' | grep -Ev "$kernel_version_pattern" || true
     )"
     if [ -n "$packages_to_remove" ]; then
       bb-apt-remove $packages_to_remove
@@ -82,7 +82,7 @@ spec:
       fi
     fi
 
-    bb-rp-install "drbd924:{{ .Values.global.modulesImages.digests.registrypackages.drbd924 }}"
+    bb-rp-install "drbd:{{ .Values.global.modulesImages.digests.registrypackages.drbd }}"
     bb-apt-install make gcc bind9-host patch
 
     attempt=0
@@ -122,7 +122,7 @@ spec:
     make
     make install
     cd drbd
-    cp *.ko /lib/modules/$version_in_use/kernel/drivers/
+    cp *.ko /lib/modules/$kernel_version_in_use/kernel/drivers/
     echo 'drbd' | tee -a /etc/modules
     depmod
     modprobe drbd

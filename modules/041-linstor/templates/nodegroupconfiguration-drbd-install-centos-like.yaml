@@ -24,17 +24,17 @@ spec:
 
     kubeconfig="/etc/kubernetes/kubelet.conf"
 
-    version_in_use="$(uname -r)"
+    kernel_version_in_use="$(uname -r)"
 
     {{- if dig "dataNodes" "nodeSelector" false .Values.linstor }}
-    need_drbd=$(bb-kubectl --kubeconfig $kubeconfig  get node "$(hostname -s)" -o json | jq -c '.metadata.labels | contains({{ .Values.linstor.dataNodes.nodeSelector | toJson }})')
+    is_linstor_data_node=$(bb-kubectl --kubeconfig $kubeconfig  get node "$(hostname -s)" -o json | jq -c '.metadata.labels | contains({{ .Values.linstor.dataNodes.nodeSelector | toJson }})')
     {{- else }}
-    need_drbd="true"
+    is_linstor_data_node="true"
     {{- end }}
 
-    bb-log-info "we need drbd on node: "$need_drbd
+    bb-log-info "we need drbd on node: "$is_linstor_data_node
 
-    if [ $need_drbd == "false" ]; then
+    if [ $is_linstor_data_node == "false" ]; then
       if [ -e "/proc/drbd" ]; then
         sed -i 's/^drbd$//' /etc/modules
         rmmod drbd_transport_rdma || true
@@ -51,11 +51,11 @@ spec:
     #   kernel-modules-core   --> kernel-devel
     #   kernel-lt             --> kernel-lt-devel
     #   kernel-lt-core        --> kernel-lt-devel
-    package_name="$(rpm -qf --qf "%{NAME}" "/lib/modules/${version_in_use}" | sed 's/\(-modules-core\)\?$//g; s/\(-core\)\?$/-devel/g')"
-    bb-yum-install "${package_name}-${version_in_use}"
+    package_name="$(rpm -qf --qf "%{NAME}" "/lib/modules/${kernel_version_in_use}" | sed 's/\(-modules-core\)\?$//g; s/\(-core\)\?$/-devel/g')"
+    bb-yum-install "${package_name}-${kernel_version_in_use}"
 
     # Remove unused kernel-headers
-    packages_to_remove="$(rpm -q "$package_name" | grep -Ev "^${package_name}-${version_in_use}$" || true)"
+    packages_to_remove="$(rpm -q "$package_name" | grep -Ev "^${package_name}-${kernel_version_in_use}$" || true)"
     if [ -n "$packages_to_remove" ]; then
       bb-yum-remove $packages_to_remove
     fi
@@ -85,7 +85,7 @@ spec:
       fi
     fi
 
-    bb-rp-install "drbd924:{{ .Values.global.modulesImages.digests.registrypackages.drbd924 }}"
+    bb-rp-install "drbd:{{ .Values.global.modulesImages.digests.registrypackages.drbd }}"
     bb-yum-install make gcc bind-utils patch
 
     attempt=0
@@ -125,7 +125,7 @@ spec:
     make
     make install
     cd drbd
-    cp *.ko /lib/modules/$version_in_use/kernel/drivers/
+    cp *.ko /lib/modules/${kernel_version_in_use}/kernel/drivers/
     echo 'drbd' | tee -a /etc/modules
     depmod
     modprobe drbd

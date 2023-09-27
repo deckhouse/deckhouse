@@ -61,6 +61,6 @@ echo "Applying changes:"
 (set -x; sed -e "$sed_regex" -i $targets)
 if [ -n "$drbd_version" ]; then
   (set -x; sed -e "/^      drbdVersion:/,/default:/{/^\([[:space:]]*default: \).*/s//\1\"${drbd_version}\"/}" -i openapi/values.yaml)
-  (set -x; sed 's/$version[[:space:]]+:=[[:space:]]+"[0-9]\+\.[0-9]\+\.[0-9]\+"/$version := "'$drbd_version'"/' -i modules/007-registrypackages/images/drbd/werf.inc.yaml)
-  (set -x; sed 's/drbd[0-9]\+/drbd'$drbd_version_undotted'/' -i modules/041-linstor/templates/nodegroupconfiguration-drbd-install-*-like.yaml)
+  (set -x; sed 's/$version[[:space:]]*:=[[:space:]]*"[0-9]\+\.[0-9]\+\.[0-9]\+"/$version := "'$drbd_version'"/' -i ../../modules/007-registrypackages/images/drbd/werf.inc.yaml)
+  (set -x; sed 's/drbd[0-9]\+/drbd'$drbd_version_undotted'/' -i ../../modules/041-linstor/templates/nodegroupconfiguration-drbd-install-*-like.yaml)
 fi

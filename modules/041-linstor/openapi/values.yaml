@@ -14,7 +14,7 @@ properties:
     properties:
       drbdVersion:
         type: string
-        default: "9.2.4"
+        default: "9.2.5"
       masterPassphrase:
         type: string
       httpsClientCert:
