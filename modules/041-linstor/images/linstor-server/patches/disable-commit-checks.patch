@@ -1,0 +1,13 @@
+diff --git a/Makefile b/Makefile
+index 0646cedd7..f3b338dd9 100644
+--- a/Makefile
++++ b/Makefile
+@@ -131,7 +131,7 @@ ifneq ("$(wildcard libs/jclcrypto-st.jar)","")
+ endif
+ 
+ 
+-tarball: check-all-committed check-submods versioninfo gen-java server/jar.deps controller/jar.deps satellite/jar.deps jclcrypto/jar.deps .filelist
++tarball: check-submods versioninfo gen-java server/jar.deps controller/jar.deps satellite/jar.deps jclcrypto/jar.deps .filelist
+ 	$(MAKE) tgz
+ 
+ versioninfo:

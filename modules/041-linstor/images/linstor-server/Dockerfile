@@ -23,10 +23,10 @@ COPY ./patches /patches
 RUN git clone ${LINSTOR_GITREPO} /linstor-server
 WORKDIR /linstor-server
 RUN git reset --hard v${LINSTOR_VERSION} \
+ && git config --global url."https://github.com/".insteadOf git://github.com/ \
  && git apply /patches/*.patch
 
-RUN git config --global url."https://github.com/".insteadOf git://github.com/ \
- && make debrelease \
+RUN make debrelease \
  && rm -rf /root/.gradle/caches/ \
  && mv linstor-server-${LINSTOR_VERSION}.tar.gz /linstor-server_$(echo ${LINSTOR_VERSION} | tr '-' '~').orig.tar.gz \
  && tar -C / -xvf /linstor-server_$(echo ${LINSTOR_VERSION} | tr '-' '~').orig.tar.gz
