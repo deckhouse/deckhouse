@@ -62,10 +62,19 @@ spec:
                           - staging
                         ```
                       items:
+                        oneOf:
+                          - properties:
+                              operator:
+                                enum: [Exists, DoesNotExist]
+                            required: [key, operator]
+                            not:
+                              required: [values]
+                          - properties:
+                              operator:
+                                enum: [In, NotIn]
+                            required: [key, operator, values]
                         type: object
-                        required:
-                          - key
-                          - operator
+                        required: ["operator"]
                         properties:
                           key:
                             type: string
@@ -266,8 +275,8 @@ spec:
                       type: object
                       description: Multiline parser custom regex rules.
                       oneOf:
-                        - required: [regex]
-                        - required: [notRegex]
+                        - required: [startsWhen]
+                        - required: [endsWhen]
                       properties:
                         startsWhen:
                           type: object
