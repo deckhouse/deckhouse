@@ -29,8 +29,7 @@ You can use several external authentication providers simultaneously.
 
 ### Authenticating to the Kubernetes API using a login and password
 
-Currently, login and password-based authentication to the Kubernetes API is **only** available for the *Crowd* provider.
-Support for this feature for static users and LDAP-enabled providers is expected in the near future.
+Currently, login and password-based authentication to the Kubernetes API is available for the LDAP-enabled providers, *Crowd* provider and for static users.
 
 ### Integration with applications
 
