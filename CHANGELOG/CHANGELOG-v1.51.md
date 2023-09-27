@@ -7,6 +7,7 @@
  - Deploy the `deckhouse` modules source. It will make it possible to enable modules developed by the Deckhouse team but distributed separately.
     
     The most awaited module that can be enabled now is the `deckhouse-admin` module — a convenient web-interface to administer deckhouse clusters.
+ - Grafana will restart.
  - The [instruction](https://github.com/deckhouse/deckhouse/blob/f0ccf1b0d472455ca05ff0748e5ba6c634967a7f/modules/002-deckhouse/docs/internal/IMAGE_COPIER.md) for copying images no longer work. Use `d8-pull/d8-push` or `dhctl mirror` with `deckhouse-controller helper change-registry`.
 
 ## Features
@@ -69,6 +70,8 @@
  - **[monitoring-kubernetes]** Revert `node-exporter` `kube-rbac-proxy` liveness probe. [#5642](https://github.com/deckhouse/deckhouse/pull/5642)
  - **[operator-trivy]** Fix constant creation and deletion of node-collector pods. [#5688](https://github.com/deckhouse/deckhouse/pull/5688)
  - **[operator-trivy]** Fix handling empty list in operator trivy deployment in `OPERATOR_TARGET_NAMESPACES` env (set `default` value). [#5662](https://github.com/deckhouse/deckhouse/pull/5662)
+ - **[prometheus]** Switch Grafana to using the Ubuntu container. [#5962](https://github.com/deckhouse/deckhouse/pull/5962)
+    Grafana will restart.
  - **[prometheus]** Fixed permissions for existing files after changing GID and UID. [#5847](https://github.com/deckhouse/deckhouse/pull/5847)
  - **[prometheus]** The etcd version in the home dashboard is fixed. [#5842](https://github.com/deckhouse/deckhouse/pull/5842)
  - **[prometheus]** Fixed issue with adding custom Grafana plugins. [#5834](https://github.com/deckhouse/deckhouse/pull/5834)
