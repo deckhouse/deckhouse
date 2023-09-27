@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -x
 # Copyright 2017 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,12 +45,21 @@ export OPENAPI_EXTRA_PACKAGES=${OPENAPI_EXTRA_PACKAGES:-(())}
 #  --output-base "${SCRIPT_ROOT}" \
 #  --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
+#chmod +x "${CODEGEN_PKG}"/generate-groups.sh
+#"${CODEGEN_PKG}"/generate-internal-groups.sh openapi \
+#  ${SCRIPT_ROOT}/pkg/generated \
+#  d8.io/bashible/pkg/apis/bashible \
+#  "v1alpha1" \
+#  --report-filename "${SCRIPT_ROOT}/hack/openapi_violation_exceptions.list" \
+#  --output-base "${SCRIPT_ROOT}" \
+#  --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
+
+
 chmod +x "${CODEGEN_PKG}"/generate-groups.sh
-"${CODEGEN_PKG}"/generate-internal-groups.sh client,lister,informer,openapi \
-  ${SCRIPT_ROOT}/pkg/generated \
-  ${SCRIPT_ROOT}/pkg/apis/bashible \
+"${CODEGEN_PKG}"/generate-internal-groups.sh informer \
+  d8.io/bashible/pkg/generated \
+  d8.io/bashible/pkg/apis \
   "v1alpha1" \
-  --report-filename "${SCRIPT_ROOT}/hack/openapi_violation_exceptions.list" \
   --output-base "${SCRIPT_ROOT}" \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
