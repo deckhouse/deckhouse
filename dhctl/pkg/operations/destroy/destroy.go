@@ -16,51 +16,42 @@ package destroy
 
 import (
 	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
 type Params struct {
-	SSHClient   *ssh.Client
-	StateCache  dhctlstate.Cache
-	OnPhaseFunc phases.OnPhaseFunc
+	SSHClient  *ssh.Client
+	StateCache dhctlstate.Cache
 
 	SkipResources bool
 }
 
 type ClusterDestroyer struct {
 	state           *State
-	stateCache      dhctlstate.Cache
 	terrStateLoader infra.StateLoader
 
 	d8Destroyer  *DeckhouseDestroyer
 	clusterInfra *infra.ClusterInfra
 
 	skipResources bool
-
-	*phases.PhasedExecutionContext
 }
 
 func NewClusterDestroyer(params *Params) *ClusterDestroyer {
 	state := NewDestroyState(params.StateCache)
-	pec := phases.NewPhasedExecutionContext(params.OnPhaseFunc)
 	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state)
 	terraStateLoader := terraform.NewLazyTerraStateLoader(terraform.NewCachedTerraStateLoader(d8Destroyer, state.cache))
-	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
+	clusterInfra := infra.NewClusterInfra(terraStateLoader, state.cache)
 
 	return &ClusterDestroyer{
 		state:           state,
-		stateCache:      params.StateCache,
 		terrStateLoader: terraStateLoader,
 
 		d8Destroyer:  d8Destroyer,
 		clusterInfra: clusterInfra,
 
 		skipResources: params.SkipResources,
-
-		PhasedExecutionContext: pec,
 	}
 }
 
@@ -69,21 +60,8 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 
 	defer d.d8Destroyer.UnlockConverge(true)
 
-	if err := d.PhasedExecutionContext.Init(d.stateCache); err != nil {
-		return err
-	}
-	defer d.PhasedExecutionContext.Finalize(d.stateCache)
-
 	if !d.skipResources {
-		if shouldStop, err := d.PhasedExecutionContext.StartPhase(phases.DeleteResourcesPhase, false); err != nil {
-			return err
-		} else if shouldStop {
-			return nil
-		}
 		if err := d.d8Destroyer.DeleteResources(); err != nil {
-			return err
-		}
-		if err := d.PhasedExecutionContext.CommitState(d.stateCache); err != nil {
 			return err
 		}
 	}
@@ -118,5 +96,5 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	}
 
 	d.state.Clean()
-	return d.PhasedExecutionContext.Complete()
+	return nil
 }
