@@ -34,12 +34,14 @@ function check_python() {
 
 function p2_script() {
   cat - <<EOF
+import os
 import sys
 import json
 import urllib2
 import ssl
+os.environ["SSL_CERT_FILE"] = "/var/lib/bashible/ca.crt"
 request = urllib2.Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
-response = urllib2.urlopen(request, context=ssl._create_unverified_context())
+response = urllib2.urlopen(request)
 data = json.loads(response.read())
 sys.stdout.write(data["bootstrap"])
 EOF
