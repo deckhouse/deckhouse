@@ -1,5 +1,6 @@
 // This is a generated file. Do not edit directly.
 
+// Don't rename module, kubernetes generators are strictly dependent on the module name
 module bashible-apiserver
 
 go 1.20
