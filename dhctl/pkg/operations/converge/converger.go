@@ -118,7 +118,7 @@ func (c *Converger) Converge() error {
 		return fmt.Errorf("converge problem: %v", err)
 	}
 
-	return c.PhasedExecutionContext.Complete()
+	return c.PhasedExecutionContext.Complete(stateCache)
 }
 
 func (c *Converger) AutoConverge() error {
