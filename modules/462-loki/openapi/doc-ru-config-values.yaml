@@ -32,12 +32,12 @@ properties:
       Для работы необходим включенный модуль [log-shipper](../460-log-shipper).
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   resourcesRequests:

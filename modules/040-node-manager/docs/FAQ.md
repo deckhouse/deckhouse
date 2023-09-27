@@ -407,7 +407,7 @@ Such a situation may occur if images of the control plane components on the mast
 
 Below is an instruction on how you can restore the master node.
 
-### Containerd
+### containerd
 
 Execute the following command to restore the master node in any cluster running under Deckhouse:
 
@@ -430,7 +430,7 @@ You need to restart `kubelet` after pulling the images.
 
 ## How to change CRI for NodeGroup?
 
-> **Note!** CRI can only be switched from Containerd to NotManaged and back.
+> **Note!** CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
 
 Set NodeGroup `cri.type` to `Containerd` or `NotManaged`.
 
@@ -449,13 +449,13 @@ spec:
 
 Also, this operation can be done with patch:
 
-* For Containerd:
+* For `Containerd`:
 
   ```shell
   kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
-* For NotManaged:
+* For `NotManaged`:
 
   ```shell
   kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
@@ -469,19 +469,19 @@ node updates or requires manual confirmation.
 
 ## How to change CRI for the whole cluster?
 
-> **Note!** CRI can only be switched from Containerd to NotManaged and back.
+> **Note!** CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
 
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
 Also, this operation can be done with the following patch:
-* For Containerd
+* For `Containerd`:
 
   ```shell
   data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
-* For NotManaged
+* For `NotManaged`:
 
   ```shell
   data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"

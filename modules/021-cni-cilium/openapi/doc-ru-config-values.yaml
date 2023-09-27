@@ -4,19 +4,19 @@ properties:
     description: Включает отладочный уровень логирования для компонентов Cilium.
   labelsRegex:
     description: |
-      Regex-ы лейблов для уменьшения [количества создаваемых identity](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels).
+      Regex'ы лейблов для уменьшения [количества создаваемых identity](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels).
 
       Каждый лейбл должен задаваться в формате YAML quoted string с экранированием спецсимволов.
   createNodeRoutes:
     description: |
-      Включает создание маршрутов к Pod'ам на других узлах.
+      Включает создание маршрутов к подам на других узлах.
 
       Все узлы должны находиться в одной сети L2.
   tunnelMode:
     description: |
       Режим работы туннеля.
 
-      > Внимание! После изменения параметра необходимо перезагрузить все узлы, иначе могут быть проблемы с доступностью Pod'ов.
+      > Внимание! После изменения параметра необходимо перезагрузить все узлы, иначе могут быть проблемы с доступностью подов.
   svcSourceRangeCheck:
     description: |
       Включает проверку source IP и его соответствие loadBalancerSourceRanges Service'а.
@@ -24,18 +24,18 @@ properties:
       Не включайте, если перед сервисами есть балансировщик или какие-либо виды SNAT.
   policyAuditMode:
     description: |
-      Отключает влияние сетевых политик на трафик. Запрещённые соединения логгируются.
+      Отключает влияние сетевых политик на трафик. Запрещенные соединения логгируются.
   bpfLBMode:
     description: |
       Режим работы балансировщика eBPF.
   resourcesManagement:
     description: |
-      Настройки управления ресурсами cilium agent.
+      Настройки управления ресурсами cilium-agent.
     properties:
       mode:
         description: |
-          Режим управления.
-          - `Static` — классический, через requests/limit.
+          Режимы управления:
+          - `Static` — классический, через реквесты/лимит.
           - `VPA` — через VPA.
       vpa:
         description: |
@@ -50,51 +50,51 @@ properties:
             properties:
               min:
                 description: |
-                  Минимально допустимый requests для CPU.
+                  Минимально допустимые реквесты к CPU.
               max:
                 description: |
-                  Максимально допустимый requests для CPU.
+                  Максимально допустимые реквесты к CPU.
               limitRatio:
                 description: |
-                  Коэффициент для вычисления limits процессора.
+                  Коэффициент для вычисления лимитов для CPU.
 
-                  Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+                  Опционально используется для подсчета первичных лимитов для CPU у пода. VPA при своей работе сохраняет пропорцию лимиты/реквесты и при вычислении подходящих актуальных реквестов настраивает лимиты в том же соотношении.
           memory:
             description: |
-              Параметры для памяти (memory).
+              Параметры для памяти.
             properties:
               min:
                 description: |
-                  Минимально допустимый requests для memory.
+                  Минимально допустимые реквесты к памяти.
               max:
                 description: |
-                  Максимально допустимый requests для memory.
+                  Максимально допустимые реквесты к памяти.
               limitRatio:
                 description: |
-                  Коэффициент для вычисления limits процессора.
+                  Коэффициент для вычисления лимитов для CPU.
 
-                  Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+                  Опционально используется для подсчtта первичных лимитов для CPU у пода. VPA при своей работе сохраняет пропорцию лимиты/реквесты и при вычислении подходящих актуальных реквестов настраивает лимиты в том же соотношении.
       static:
         description: |
           Настройки управления ресурсами в статическом режиме.
         properties:
           requests:
             description: |
-              Настройки реквестов (requests).
+              Настройки реквестов.
             properties:
               cpu:
                 description: |
-                  Реквесты CPU.
+                  Реквесты к CPU.
               memory:
                 description: |
-                  Реквесты памяти.
+                  Реквесты к памяти.
           limits:
             description: |
-              Настройки лимитов (limits).
+              Настройки лимитов.
             properties:
               cpu:
                 description: |
-                  Лимиты CPU.
+                  Лимиты для CPU.
               memory:
                 description: |
                   Лимиты памяти.
