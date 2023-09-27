@@ -3,7 +3,6 @@ ARG BASE_NODE_16_ALPINE
 ARG BASE_GOLANG_17_BUSTER
 ARG BASE_GOLANG_20_ALPINE
 ARG BASE_UBUNTU
-ARG BASE_DISTROLESS
 ARG GRAFANA_VERSION="8.5.13"
 ARG STATUSMAP_VERSION="0.5.1"
 ARG BUNDLED_PLUGINS="petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel"
@@ -179,7 +178,13 @@ RUN chown -R 64535:64535 /usr/share/grafana && \
 RUN chmod 0700 ./bin/grafana-server && \
     chmod 0700 ./bin/grafana-cli
 
-FROM $BASE_DISTROLESS
+FROM $BASE_UBUNTU
+
+RUN apt-get update && \
+    apt-get -y --no-install-recommends install libfontconfig curl ca-certificates openssl unzip git && \
+    apt-get clean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=entrypoint /app/entrypoint /usr/local/bin/
 COPY --from=grafana-distr /usr/share/grafana/ /usr/share/grafana/
