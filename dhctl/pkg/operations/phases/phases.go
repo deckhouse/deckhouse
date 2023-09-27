@@ -62,16 +62,28 @@ func (pec *PhasedExecutionContext) setLastState(stateCache dstate.Cache) error {
 	return nil
 }
 
-func (pec *PhasedExecutionContext) callOnPhase(completedPhase OperationPhase, completedPhaseState DhctlState, nextPhase OperationPhase, nextPhaseIsCritical bool) (bool, error) {
+func (pec *PhasedExecutionContext) callOnPhase(completedPhase OperationPhase, completedPhaseState DhctlState, nextPhase OperationPhase, nextPhaseIsCritical bool, stateCache dstate.Cache) (bool, error) {
 	if pec.onPhaseFunc == nil {
 		return false, nil
 	}
-	err := pec.onPhaseFunc(completedPhase, completedPhaseState, nextPhase, nextPhaseIsCritical)
-	if errors.Is(err, StopOperationCondition) {
-		return true, nil
-	} else {
-		return false, err
+
+	onPhaseErr := pec.onPhaseFunc(completedPhase, completedPhaseState, nextPhase, nextPhaseIsCritical)
+
+	if onPhaseErr != nil {
+		if err := pec.CommitState(stateCache); err != nil {
+			return false, err
+		}
+
+		pec.stopOperationCondition = true
+
+		if errors.Is(onPhaseErr, StopOperationCondition) {
+			return true, nil
+		} else {
+			return false, onPhaseErr
+		}
 	}
+
+	return false, nil
 }
 
 func (pec *PhasedExecutionContext) Init(stateCache dstate.Cache) error {
@@ -82,13 +94,13 @@ func (pec *PhasedExecutionContext) Finalize(stateCache dstate.Cache) error {
 	return pec.CommitState(stateCache)
 }
 
-func (pec *PhasedExecutionContext) StartPhase(phase OperationPhase, isCritical bool) (bool, error) {
+func (pec *PhasedExecutionContext) StartPhase(phase OperationPhase, isCritical bool, stateCache dstate.Cache) (bool, error) {
 	if pec.stopOperationCondition {
-		return false, nil
+		return true, nil
 	}
 
 	pec.currentPhase = phase
-	return pec.callOnPhase(pec.completedPhase, pec.lastState, phase, isCritical)
+	return pec.callOnPhase(pec.completedPhase, pec.lastState, phase, isCritical, stateCache)
 }
 
 func (pec *PhasedExecutionContext) CommitState(stateCache dstate.Cache) error {
@@ -98,7 +110,7 @@ func (pec *PhasedExecutionContext) CommitState(stateCache dstate.Cache) error {
 	return pec.setLastState(stateCache)
 }
 
-func (pec *PhasedExecutionContext) Complete() error {
+func (pec *PhasedExecutionContext) Complete(stateCache dstate.Cache) error {
 	if pec.stopOperationCondition {
 		return nil
 	}
@@ -106,7 +118,7 @@ func (pec *PhasedExecutionContext) Complete() error {
 	if pec.completedPhase == "" {
 		return nil
 	}
-	_, err := pec.callOnPhase(pec.completedPhase, pec.lastState, "", false)
+	_, err := pec.callOnPhase(pec.completedPhase, pec.lastState, "", false, stateCache)
 	return err
 }
 
@@ -115,7 +127,7 @@ func (pec *PhasedExecutionContext) SwitchPhase(phase OperationPhase, isCritical 
 	if err := pec.CommitState(stateCache); err != nil {
 		return false, err
 	}
-	return pec.StartPhase(phase, isCritical)
+	return pec.StartPhase(phase, isCritical, stateCache)
 }
 
 // StopAndFinalize — is a shortcut to call stop-current-phase & finalize execution
@@ -123,7 +135,7 @@ func (pec *PhasedExecutionContext) CommitAndComplete(stateCache dstate.Cache) er
 	if err := pec.CommitState(stateCache); err != nil {
 		return err
 	}
-	return pec.Complete()
+	return pec.Complete(stateCache)
 }
 
 func (pec *PhasedExecutionContext) GetLastState() DhctlState {

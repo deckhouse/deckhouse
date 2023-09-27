@@ -73,8 +73,10 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
 	InitialState               phases.DhctlState
+	ResetInitialState          bool
 	DisableBootstrapClearCache bool
 	OnPhaseFunc                phases.OnPhaseFunc
+	CommanderMode              bool
 
 	ConfigPath              string
 	ResourcesPath           string
@@ -93,7 +95,7 @@ type Params struct {
 type ClusterBootstrapper struct {
 	*Params
 	*phases.PhasedExecutionContext
-	reinitializeSSHPrivateKeys bool
+	initializeNewAgent bool
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
@@ -144,7 +146,7 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.SSHPrivateKeys, privKeys))
 
 		// NOTICE: disable "ssh-agent is singleton" logic
-		b.reinitializeSSHPrivateKeys = true
+		b.initializeNewAgent = true
 	}
 	if b.PostBootstrapScriptPath != "" {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.PostBootstrapScriptPath, b.PostBootstrapScriptPath))
@@ -199,7 +201,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	// next init cache
 	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState}); err != nil {
+	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}
@@ -211,16 +213,19 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		stateCache.Delete(state.TombstoneKey)
 	}
 
-	if err := b.PhasedExecutionContext.Init(stateCache); err != nil {
+	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
 	sshClient := ssh.NewClientFromFlags()
-	sshClient.ReinitializeAgentPrivateKeys = b.reinitializeSSHPrivateKeys
+	sshClient.InitializeNewAgent = b.initializeNewAgent
 	// after verifying configs and cache ask password
 	if _, err := sshClient.Start(); err != nil {
 		return fmt.Errorf("unable to start ssh client: %w", err)
+	}
+	if b.initializeNewAgent {
+		defer sshClient.Stop()
 	}
 
 	err = terminal.AskBecomePassword()
@@ -252,7 +257,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	bootstrapState := NewBootstrapState(stateCache)
 
-	if shouldStop, err := b.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true, stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -462,7 +467,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		})
 	}
 
-	return b.PhasedExecutionContext.CommitAndComplete(stateCache)
+	return b.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache)
 }
 
 func printBanner() {
