@@ -18,7 +18,6 @@
 package bootstrap
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -297,8 +296,8 @@ func RebootMaster(sshClient *ssh.Client) error {
 		rebootCmd := sshClient.Command("reboot").Sudo().
 			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")
 		if err := rebootCmd.Run(); err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			ee, ok := err.(*exec.ExitError)
+			if ok {
 				if ee.ExitCode() == rebootExitCode {
 					return nil
 				}
