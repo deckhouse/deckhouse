@@ -7,6 +7,7 @@
  - Deploy the `deckhouse` modules source. It will make it possible to enable modules developed by the Deckhouse team but distributed separately.
     
     The most awaited module that can be enabled now is the `deckhouse-admin` module — a convenient web-interface to administer deckhouse clusters.
+ - Grafana will restart.
  - The [instruction](https://github.com/deckhouse/deckhouse/blob/f0ccf1b0d472455ca05ff0748e5ba6c634967a7f/modules/002-deckhouse/docs/internal/IMAGE_COPIER.md) for copying images no longer work. Use `d8-pull/d8-push` or `dhctl mirror` with `deckhouse-controller helper change-registry`.
 
 ## Features
@@ -30,6 +31,8 @@
     The most awaited module that can be enabled now is the `deckhouse-admin` module — a convenient web-interface to administer deckhouse clusters.
  - **[external-module-manager]** Rename custom resources ExternalModule* -> Module* [#5599](https://github.com/deckhouse/deckhouse/pull/5599)
  - **[external-module-manager]** Support custom CA for `ExternalModuleSource`. [#5498](https://github.com/deckhouse/deckhouse/pull/5498)
+ - **[linstor]** **(PR was reverted in https://github.com/deckhouse/deckhouse/pull/5755)** Update linstor controller version to `1.24.1`. Update DRBD version to `9.2.5`. [#5469](https://github.com/deckhouse/deckhouse/pull/5469)
+    Linstor controller and piraeus operator will restart.
  - **[log-shipper]** Images are based on a distroless image. [#5523](https://github.com/deckhouse/deckhouse/pull/5523)
  - **[loki]** Images are based on a distroless image. [#5391](https://github.com/deckhouse/deckhouse/pull/5391)
  - **[monitoring-kubernetes]** Images are based on a distroless image. [#5378](https://github.com/deckhouse/deckhouse/pull/5378)
@@ -64,11 +67,14 @@
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
  - **[global-hooks]** Fix orphaned endpointslice deletion. [#5912](https://github.com/deckhouse/deckhouse/pull/5912)
+ - **[linstor]** Revert the commit that updated the versions of Linstor and DRBD (reverts https://github.com/deckhouse/deckhouse/pull/5469). [#5755](https://github.com/deckhouse/deckhouse/pull/5755)
  - **[loki]** Fixed a volume mount init container. [#5941](https://github.com/deckhouse/deckhouse/pull/5941)
  - **[loki]** Fixed permissions for existing files after changing GID and UID. [#5904](https://github.com/deckhouse/deckhouse/pull/5904)
  - **[monitoring-kubernetes]** Revert `node-exporter` `kube-rbac-proxy` liveness probe. [#5642](https://github.com/deckhouse/deckhouse/pull/5642)
  - **[operator-trivy]** Fix constant creation and deletion of node-collector pods. [#5688](https://github.com/deckhouse/deckhouse/pull/5688)
  - **[operator-trivy]** Fix handling empty list in operator trivy deployment in `OPERATOR_TARGET_NAMESPACES` env (set `default` value). [#5662](https://github.com/deckhouse/deckhouse/pull/5662)
+ - **[prometheus]** Switch Grafana to using the Ubuntu container. [#5962](https://github.com/deckhouse/deckhouse/pull/5962)
+    Grafana will restart.
  - **[prometheus]** Fixed permissions for existing files after changing GID and UID. [#5847](https://github.com/deckhouse/deckhouse/pull/5847)
  - **[prometheus]** The etcd version in the home dashboard is fixed. [#5842](https://github.com/deckhouse/deckhouse/pull/5842)
  - **[prometheus]** Fixed issue with adding custom Grafana plugins. [#5834](https://github.com/deckhouse/deckhouse/pull/5834)
