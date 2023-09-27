@@ -39,7 +39,7 @@ import sys
 import json
 import urllib2
 import ssl
-ssl.match_hostname = lambda cert, hostname: hostname == cert['subjectAltName'][0][1]
+ssl.match_hostname = lambda cert, hostname: True
 request = urllib2.Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
 response = urllib2.urlopen(request, cafile='/var/lib/bashible/ca.crt')
 data = json.loads(response.read())
