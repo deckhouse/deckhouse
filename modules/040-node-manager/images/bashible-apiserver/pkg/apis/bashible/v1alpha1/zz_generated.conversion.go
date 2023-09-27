@@ -22,9 +22,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	bashible "d8.io/bashible/pkg/apis/bashible"
 	unsafe "unsafe"
 
+	bashible "d8.io/bashible/pkg/apis/bashible"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
