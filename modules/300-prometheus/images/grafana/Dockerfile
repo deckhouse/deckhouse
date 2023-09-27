@@ -178,7 +178,14 @@ RUN chown -R 64535:64535 /usr/share/grafana && \
 RUN chmod 0700 ./bin/grafana-server && \
     chmod 0700 ./bin/grafana-cli
 
+# The some custom  plugins has dependencies on libraries that are not in the distroless container
 FROM $BASE_UBUNTU
+
+RUN apt-get update && \
+    apt-get -y --no-install-recommends install ca-certificates && \
+    apt-get clean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=entrypoint /app/entrypoint /usr/local/bin/
 COPY --from=grafana-distr /usr/share/grafana/ /usr/share/grafana/
