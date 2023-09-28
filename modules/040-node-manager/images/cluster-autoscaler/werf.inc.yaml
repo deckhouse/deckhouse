@@ -23,7 +23,7 @@ git:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-{{- if semverCompare "==1.28" $version }}
+{{- if semverCompare ">=1.28" $version }}
 {{ $version = "1.27" }}
 {{- end }}
 shell:
