@@ -152,7 +152,7 @@ index efa919929..fdbb15a8b 100644
              {
                  throw new ExtCmdFailedException(command, outputData);
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
-index e06e93901..244262367 100644
+index e06e93901..53b80fd78 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
 @@ -452,6 +452,7 @@ public class LvmProvider extends AbsStorageProvider<LvsInfo, LvmData<Resource>,
@@ -163,6 +163,42 @@ index e06e93901..244262367 100644
      }
  
      @Override
+@@ -567,6 +568,7 @@ public class LvmProvider extends AbsStorageProvider<LvsInfo, LvmData<Resource>,
+         if (hasSharedVolumeGroups(vlmDataList, snapVlms))
+         {
+             LvmCommands.vgscan(extCmdFactory.create(), true);
++            LvmCommands.vgscanmknodes(extCmdFactory.create());
+         }
+ 
+         return LvmUtils.getLvsInfo(
+diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/utils/LvmCommands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/utils/LvmCommands.java
+index 95ad756ff..88e1992e0 100644
+--- a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/utils/LvmCommands.java
++++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/utils/LvmCommands.java
+@@ -694,6 +694,23 @@ public class LvmCommands
+         );
+     }
+ 
++    public static OutputData vgscanmknodes(ExtCmd extCmd) throws StorageException
++    {
++        String[] cmd;
++            cmd = new String[]
++                    {
++                            "vgscan", "--mknodes"
++                    };
++
++
++        return genericExecutor(
++                extCmd.setSaveWithoutSharedLocks(true),
++                cmd,
++                "'vgscanmknodes' failed",
++                "'vgscanmknodes' failed"
++        );
++    }
++
+     public enum LvmVolumeType
+     {
+         VOLUME("volume"), SNAPSHOT("snapshot"), THIN_POOL("thin pool");
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 index a63c78cba..7549f6f28 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
