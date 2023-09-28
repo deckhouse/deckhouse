@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -28,21 +29,13 @@ var (
 	agentInstance          *frontend.Agent
 )
 
-func initAgentInstance(privateKeys []string, reinitializeAgentPrivateKeys bool) (*frontend.Agent, error) {
+func initAgentInstance() (*frontend.Agent, error) {
 	var err error
-
-	if reinitializeAgentPrivateKeys {
-		if agentInstance != nil {
-			agentInstance.Stop()
-			agentInstance = nil
-		}
-		agentInstanceSingleton = sync.Once{}
-	}
 
 	agentInstanceSingleton.Do(func() {
 		if agentInstance == nil {
 			inst := frontend.NewAgent(&session.AgentSettings{
-				PrivateKeys: privateKeys,
+				PrivateKeys: app.SSHPrivateKeys,
 			})
 
 			err = inst.Start()
@@ -50,39 +43,19 @@ func initAgentInstance(privateKeys []string, reinitializeAgentPrivateKeys bool) 
 				return
 			}
 			tomb.RegisterOnShutdown("Stop ssh-agent", func() {
-				if agentInstance != nil {
-					agentInstance.Stop()
-				}
+				agentInstance.Stop()
 			})
 
 			agentInstance = inst
 		}
 	})
 
-	if err != nil {
-		// NOTICE: agentInstance will remain nil forever in the case of err, so give it another try in the next init-retry
-		agentInstanceSingleton = sync.Once{}
-	}
-
 	return agentInstance, err
-}
-
-func NewClient(session *session.Session, privKeys []string) *Client {
-	return &Client{
-		Settings:    session,
-		PrivateKeys: privKeys,
-
-		// We use arbitrary privKeys param, so always reinitialize keys
-		ReinitializeAgentPrivateKeys: true,
-	}
 }
 
 type Client struct {
 	Settings *session.Session
 	Agent    *frontend.Agent
-
-	PrivateKeys                  []string
-	ReinitializeAgentPrivateKeys bool
 }
 
 func (s *Client) Start() (*Client, error) {
@@ -90,7 +63,7 @@ func (s *Client) Start() (*Client, error) {
 		return nil, fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
 
-	a, err := initAgentInstance(s.PrivateKeys, s.ReinitializeAgentPrivateKeys)
+	a, err := initAgentInstance()
 	if err != nil {
 		return nil, err
 	}
