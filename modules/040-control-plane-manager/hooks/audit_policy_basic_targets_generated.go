@@ -110,6 +110,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"prometheus",
 	"relay",
 	"runtime-audit-engine",
+	"sds-drbd-operator",
 	"smoke-mini",
 	"snapshot-controller",
 	"speaker",
