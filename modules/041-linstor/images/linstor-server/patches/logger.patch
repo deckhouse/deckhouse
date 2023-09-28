@@ -10,6 +10,32 @@ index 00b7b1fce..3c026bd8a 100644
  
          StltConfig cfg = new StltConfig(args);
  
+diff --git a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
+index efa919929..ba82abd76 100644
+--- a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
++++ b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
+@@ -23,6 +23,8 @@ import javax.inject.Singleton;
+ import java.io.File;
+ import java.io.IOException;
+ import java.nio.file.Path;
++import java.time.LocalDateTime;
++import java.time.format.DateTimeFormatter;
+ import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.List;
+@@ -591,6 +593,12 @@ public class DrbdAdm
+     private void execute(List<String> commandList) throws ExtCmdFailedException
+     {
+         String[] command = commandList.toArray(new String[commandList.size()]);
++
++        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd/HH:mm:ss:SSS");
++        LocalDateTime now = LocalDateTime.now();
++        System.out.println(dtf.format(now) +  "  <<<<< --- DRBD Command --- >>>>>");
++        System.out.println(Arrays.toString(command));
++        System.out.println("<<<<< --------------- ------------ ---------------- >>>>>");
+         try
+         {
+             File nullDevice = new File(Platform.nullDevice());
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 index a63c78cba..72d115992 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
