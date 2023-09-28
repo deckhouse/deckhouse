@@ -151,6 +151,18 @@ index efa919929..fdbb15a8b 100644
              if (outputData.exitCode != 0)
              {
                  throw new ExtCmdFailedException(command, outputData);
+diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
+index e06e93901..244262367 100644
+--- a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
++++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
+@@ -452,6 +452,7 @@ public class LvmProvider extends AbsStorageProvider<LvsInfo, LvmData<Resource>,
+                 config
+             )
+         );
++        System.out.println("LvmCommands.vgscan(extCmdFactory.create(), true);");
+     }
+ 
+     @Override
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 index a63c78cba..7549f6f28 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
