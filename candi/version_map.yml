@@ -97,7 +97,7 @@ k8s:
       snapshotter: v6.2.1
       livenessprobe: v2.9.0
   '1.27':
-    status: preview
+    status: available
     patch: 6
     bashible: *bashible
     clusterAutoscalerPatch: '0'
@@ -110,9 +110,29 @@ k8s:
       gcp: ccm/v27.1.0
     csi:
       openstack: v1.27.1
-      provisioner: v3.5.0
-      attacher: v4.3.0
-      resizer: v1.8.0
-      registrar: v2.8.0
-      snapshotter: v6.2.1
-      livenessprobe: v2.10.0
+      provisioner: v3.5.0@sha256:d078dc174323407e8cc6f0f9abd4efaac5db27838f1564d0253d5e3233e3f17f
+      attacher: v4.3.0@sha256:4eb73137b66381b7b5dfd4d21d460f4b4095347ab6ed4626e0199c29d8d021af
+      resizer: v1.8.0@sha256:2e2b44393539d744a55b9370b346e8ebd95a77573064f3f9a8caf18c22f4d0d0
+      registrar: v2.8.0@sha256:f6717ce72a2615c7fbc746b4068f788e78579c54c43b8716e5ce650d97af2df1
+      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
+      livenessprobe: v2.10.0@sha256:4dc0b87ccd69f9865b89234d8555d3a614ab0a16ed94a3016ffd27f8106132ce
+  '1.27':
+    status: preview
+    patch: 2
+    bashible: *bashible
+    clusterAutoscalerPatch: '0'
+    ccm:
+      openstack: v1.28.0
+      yandex: v0.27.0
+      aws: v1.28.1
+      vsphere: v1.28.0
+      azure: v1.28.0
+      gcp: ccm/v27.1.6
+    csi:
+      openstack: v1.28.0
+      provisioner: v3.6.0@sha256:6de50bacfd72627ffe4209e3db8ad7391d04ea6fb741bf51feab6c5dcfd80002
+      attacher: v4.4.0@sha256:dbded4ebe299973e31d0ef55815eb07a990fc67872b14900a8e69232acae4f2d
+      resizer: v1.9.0@sha256:f1f352df97874442624fcef23eab04aa038f66cb0e361212f6ec09e92998184d
+      registrar: v2.9.0@sha256:cd21e19cd8bbd5bc56f1b4f1398a436e7897da2995d6d036c9729be3f4e456e6
+      snapshotter: v6.3.0@sha256:93fbf54dd67f586428ea339743160e1a5110c058afde3c2e824f11fbc6efae53
+      livenessprobe: v2.11.0@sha256:82adbebdf5d5a1f40f246aef8ddbee7f89dea190652aefe83336008e69f9a89f
