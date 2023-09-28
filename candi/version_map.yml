@@ -116,7 +116,7 @@ k8s:
       registrar: v2.8.0
       snapshotter: v6.2.1
       livenessprobe: v2.10.0
-  '1.27':
+  '1.28':
     status: preview
     patch: 2
     bashible: *bashible
