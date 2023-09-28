@@ -3,11 +3,12 @@
   {{- if $value.ccm.aws }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+from: common/distroless
+# from: {{ $.Images.BASE_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /usr/share/ca-certificates/mozilla
-  to: /usr/share/ca-certificates/mozilla
+  add: /usr/share/ca-certificates/mozilla/*
+  to: /etc/ssl/certs/*
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/aws-cloud-controller-manager
