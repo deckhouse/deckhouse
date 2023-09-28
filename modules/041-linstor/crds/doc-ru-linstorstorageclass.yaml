@@ -1,0 +1,34 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: "пустой linstor storage class "
+          properties:
+            spec:
+              type: object
+              properties:
+                linstorstoragepool:
+                  type: string
+                placementcount:
+                  type: integer
+                reclaimpolicy:
+                  type: string
+                volumebindingmode:
+                  type: string
+                allowvolumeexpand:
+                  type: boolean
+                drbdoptions:
+                  type: object
+                  properties:
+                    autoquorum:
+                      type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum: [ 'Failed', 'Completed' ]
+                reason:
+                  type: string
