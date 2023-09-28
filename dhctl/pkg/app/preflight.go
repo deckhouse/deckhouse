@@ -17,11 +17,10 @@ package app
 import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
-	PreflightSkipAll                   = false
-	PreflightSkipSSHForword            = false
-	PreflightSkipAvailabilityPorts     = false
-	PreflightSkipResolvingLocalhost    = false
-	PreflightSkipDeckhouseVersionCheck = false
+	PreflightSkipAll                = false
+	PreflightSkipSSHForword         = false
+	PreflightSkipAvailabilityPorts  = false
+	PreflightSkipResolvingLocalhost = false
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -37,7 +36,4 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag("preflight-skip-resolving-localhost-check", "Skip resolving the localhost domain").
 		Envar(configEnvName("PREFLIGHT_SKIP_RESOLVING_LOCALHOST_CHECK")).
 		BoolVar(&PreflightSkipResolvingLocalhost)
-	cmd.Flag("preflight-skip-deckhouse-version-check", "Skip verifying deckhouse version").
-		Envar(configEnvName("PREFLIGHT_SKIP_INCOMPATIBLE_VERSION_CHECK")).
-		BoolVar(&PreflightSkipDeckhouseVersionCheck)
 }
