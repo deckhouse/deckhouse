@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/aquasecurity/trivy-operator v0.15.1
+	github.com/opencontainers/image-spec v1.1.0-rc4
 	k8s.io/api v0.28.1
 	oras.land/oras-go/v2 v2.3.0
 )
@@ -29,7 +30,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/samber/lo v1.38.1 // indirect
 	github.com/spdx/tools-golang v0.5.0 // indirect

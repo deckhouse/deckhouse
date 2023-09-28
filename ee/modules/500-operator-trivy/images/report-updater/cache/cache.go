@@ -20,17 +20,19 @@ import (
 	"time"
 
 	oras "oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/content"
+	"oras.land/oras-go/v2/content/memory"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
+	oc "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const (
-	dockerConfigPath      = "/root/.docker/config.json"
+	dockerConfigPath      = "/home/mscherba/.docker/config.json"
 	bduTmpDir             = "/tmp/.dictionary"
-	bduTarGzFilename      = "export.tar.gz"
 	bduDictionaryFilename = "export.json"
+	ociDescriptormMediaType = "application/deckhouse.io.bdu.layer.v1.tar+gzip"
 )
 
 type Cache interface {
@@ -149,21 +151,38 @@ func (c *VulnerabilityCache) Check() error {
 	return nil
 }
 
+func (c *VulnerabilityCache) processDescriptors(descriptors []oc.Descriptor) error {
+	//iterate over descriptors to get the ones with relevant MediaType
+	for _, descriptor := range descriptors {
+		switch descriptor.MediaType {
+			case ociDescriptormMediaType:
+				readerCloser, err := store.Fetch(ctx, descriptor)
+				if err != nil {
+					fmt.Errorf("applying BDU failed: couldn't fetch blob: %w", err)
+				}
+				defer readerCloser.Close()
+				processTarGzMedia(readerCloser)
+			case default:
+		}
+	}
+	return nil
+}
+
 func (c *VulnerabilityCache) DownloadAndApplyBduDictionary() error {
+	var bduTarGz io.ReadCloser
 	//download
 	c.logger.Println("downloading BDU dictionary")
-	fs, err := file.New(bduTmpDir)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
+	//create oras in-memory storage
+	store := memory.New()
 	ctx := context.Background()
+
+	//set target repository
 	repo, err := remote.NewRepository(c.sourceConfig.repository)
 	if err != nil {
 		return err
 	}
 
+	//set repository auth
 	repo.Client = &auth.Client{
 		Client: retry.DefaultClient,
 		Cache:  auth.DefaultCache,
@@ -173,24 +192,25 @@ func (c *VulnerabilityCache) DownloadAndApplyBduDictionary() error {
 		}),
 	}
 
-	_, err = oras.Copy(ctx, repo, c.sourceConfig.tag, fs, c.sourceConfig.tag, oras.DefaultCopyOptions)
+	//copy requested image from remote repository to oras in-memory storage and save its descriptor
+	descriptor, err := oras.Copy(ctx, repo, c.sourceConfig.tag, store, c.sourceConfig.tag, oras.DefaultCopyOptions)
 	if err != nil {
-		return err
+		return fmt.Errorf("applying BDU failed: couldn't copy BDU image: %w", err)
+	}
+
+	//get successor descriptors of the descriptor
+	successors, err := content.Successors(ctx, store, descriptor)
+	if err != nil {
+		return fmt.Errorf("applying BDU failed: couldn't get descriptors from BDU image: %w", err)
+	}
+
+	err := c.processDescriptors(successors)
+	if err != nil {
+		return fmt.Errorf("applying BDU failed: couldn't process descriptors: %w", err)
 	}
 
 	//apply
-	tempDict := &VulnerabilityDictionary{
-		Data: make(map[string][]string),
-	}
-
 	c.logger.Println("applying BDU dictionary")
-
-	bduTarGz, err := os.Open(fmt.Sprintf("%s/%s", bduTmpDir, bduTarGzFilename))
-	if err != nil {
-		return fmt.Errorf("applying BDU failed: couldn't open tar %w", err)
-	}
-	defer bduTarGz.Close()
-	defer os.RemoveAll(fmt.Sprintf("%s/%s", bduTmpDir, bduTarGzFilename))
 
 	uncompressedStream, err := gzip.NewReader(bduTarGz)
 	if err != nil {
@@ -198,6 +218,7 @@ func (c *VulnerabilityCache) DownloadAndApplyBduDictionary() error {
 	}
 
 	tarReader := tar.NewReader(uncompressedStream)
+
 
 	for true {
 		header, err := tarReader.Next()
@@ -216,28 +237,32 @@ func (c *VulnerabilityCache) DownloadAndApplyBduDictionary() error {
 				return fmt.Errorf("applying BDU failed: couldn't read from tar: %w", err)
 			}
 
+			tempDict := &VulnerabilityDictionary{
+				Data: make(map[string][]string),
+			}
+
 			err = json.Unmarshal(b, &tempDict)
 			if err != nil {
 				return fmt.Errorf("applying BDU failed: couldn't unmarshal bdu dictionary: %w", err)
 			}
 
+			if len(tempDict.Data) == 0 {
+				return fmt.Errorf("applying BDU failed: dictionary is empty")
+			}
+
+			if tempDict.TS != c.Dictionary.TS {
+				c.mu.Lock()
+				defer c.mu.Unlock()
+
+				c.Dictionary.Data = tempDict.Data
+				c.Dictionary.TS = tempDict.TS
+				c.logger.Printf("BDU dictionary dated %v has been applied", c.Dictionary.TS)
+			} else {
+				c.logger.Printf("BDU dictionary is up to date (ts: %s)", c.Dictionary.TS)
+			}
+
 			break
 		}
-	}
-
-	if len(tempDict.Data) == 0 {
-		return fmt.Errorf("applying BDU failed: dictionary is empty")
-	}
-
-	if tempDict.TS != c.Dictionary.TS {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		c.Dictionary.Data = tempDict.Data
-		c.Dictionary.TS = tempDict.TS
-		c.logger.Printf("BDU dictionary dated %v has been applied", c.Dictionary.TS)
-	} else {
-		c.logger.Printf("BDU dictionary is up to date (ts: %s)", c.Dictionary.TS)
 	}
 
 	return nil
