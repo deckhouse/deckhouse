@@ -19,7 +19,7 @@ search: Developing Prometheus rules, prometheus alerting rules
   * Check that your changes are present in the ConfigMap in Kubernetes:
     * `kubectl -n d8-monitoring get prometheusrule/prometheus-rules-<DIRECTORY NAME> -o yaml`
     * If no changes are shown, you need to check that deckhouse is deployed successfully:
-      * `helm --tiller-namespace=d8-monitoring list` — prometheus must have the DEPLOYED status
+      * `helm -n d8-system ls` — prometheus must have the DEPLOYED status
       * `kubectl -n d8s-system logs deploy/deckhouse -f` — the log should not contain errors
   * Check that prometheus-config-reloader has noticed your changes:
     * The output of the `kubectl -n d8-monitoring logs prometheus-main-0 prometheus-config-reloader -f` command must contain an appropriate message:
