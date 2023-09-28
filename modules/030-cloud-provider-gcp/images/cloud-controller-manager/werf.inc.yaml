@@ -32,7 +32,11 @@ shell:
     - apk add --no-cache make bash git mercurial patch rsync
   install:
     - mkdir /src
+    {{- if semverCompare "<1.28" $version }}
+    - wget https://github.com/kubernetes/cloud-provider-gcp/archive/master.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+    {{- else }}
     - wget https://github.com/kubernetes/cloud-provider-gcp/archive/{{ $value.ccm.gcp }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+    {{- end }}
     - cd /src
       {{- if semverCompare "<=1.22" $version }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/main.go
