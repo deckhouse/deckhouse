@@ -1,6 +1,6 @@
 diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
---- a/rootfs/etc/nginx/template/nginx.tmpl	(revision b64e885b6265136a860a05f78df06fbc61b31772)
-+++ b/rootfs/etc/nginx/template/nginx.tmpl	(date 1695892177652)
+--- a/etc/nginx/template/nginx.tmpl
++++ b/etc/nginx/template/nginx.tmpl
 @@ -1316,11 +1316,7 @@
              {{ else }}
              auth_request        {{ $authPath }};
