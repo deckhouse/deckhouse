@@ -152,18 +152,19 @@ index efa919929..fdbb15a8b 100644
              {
                  throw new ExtCmdFailedException(command, outputData);
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
-index e06e93901..53b80fd78 100644
+index e06e93901..53a3e150f 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
-@@ -452,6 +452,7 @@ public class LvmProvider extends AbsStorageProvider<LvsInfo, LvmData<Resource>,
+@@ -452,6 +452,8 @@ public class LvmProvider extends AbsStorageProvider<LvsInfo, LvmData<Resource>,
                  config
              )
          );
 +        System.out.println("LvmCommands.vgscan(extCmdFactory.create(), true);");
++        LvmCommands.vgscanmknodes(extCmdFactory.create());
      }
  
      @Override
-@@ -567,6 +568,7 @@ public class LvmProvider extends AbsStorageProvider<LvsInfo, LvmData<Resource>,
+@@ -567,6 +569,7 @@ public class LvmProvider extends AbsStorageProvider<LvsInfo, LvmData<Resource>,
          if (hasSharedVolumeGroups(vlmDataList, snapVlms))
          {
              LvmCommands.vgscan(extCmdFactory.create(), true);
