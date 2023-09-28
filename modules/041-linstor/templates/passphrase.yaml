@@ -1,4 +1,5 @@
 {{- if .Values.linstor.internal.masterPassphrase }}
+---
 apiVersion: v1
 kind: Secret
 metadata:
