@@ -23,6 +23,9 @@ git:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+{{- if semverCompare "==1.28" $version }}
+{{ $version = "1.27" }}
+{{- end }}
 shell:
   beforeInstall:
   - apk add --no-cache linux-headers build-base git mercurial patch
