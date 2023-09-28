@@ -138,9 +138,19 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			return err
 		}
 
-		// abort hook execution if less than 2 seconds has passed since kruise lifecycle timestamp has been set
-		if (kruiseLifecycleTs.Add(2 * time.Second)).After(time.Now()) {
-			return fmt.Errorf("Hook execution aborted for %s controller to prevent race between main and failover daemon sets' updates", podForDelete.ControllerName)
+		// skip pod update if less than 2 seconds has passed since kruise lifecycle timestamp has been set
+		if (kruiseLifecycleTs.Add(2 * time.Second)).After(time.Now()) && !podForDelete.UpdateWasPostponed {
+			input.LogEntry.Warnf("Update for %s/%s pod was postponed because of possible race condition", podForDelete.ControllerName, podForDelete.Name)
+			metadata := map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"labels": map[string]interface{}{
+						"ingress.deckhouse.io/update-postponed": time.Now().Format(time.RFC3339),
+						"lifecycle.apps.kruise.io/state":        nil,
+					},
+				},
+			}
+			input.PatchCollector.MergePatch(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
+			continue
 		}
 
 		// proxy and failover pods are ready
@@ -158,9 +168,10 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 }
 
 type ingressControllerPod struct {
-	Name              string
-	ControllerName    string
-	KruiseLifecycleTs string
+	Name               string
+	ControllerName     string
+	KruiseLifecycleTs  string
+	UpdateWasPostponed bool
 }
 
 type daemonSet struct {
@@ -196,9 +207,12 @@ func applyIngressPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
+	_, updateWasPostponed := pod.Labels["ingress.deckhouse.io/update-postponed"]
+
 	return ingressControllerPod{
-		Name:              pod.Name,
-		ControllerName:    pod.Labels["name"],
-		KruiseLifecycleTs: pod.Annotations["lifecycle.apps.kruise.io/timestamp"],
+		Name:               pod.Name,
+		ControllerName:     pod.Labels["name"],
+		KruiseLifecycleTs:  pod.Annotations["lifecycle.apps.kruise.io/timestamp"],
+		UpdateWasPostponed: updateWasPostponed,
 	}, nil
 }
