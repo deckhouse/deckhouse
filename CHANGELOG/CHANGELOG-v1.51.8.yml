@@ -1,0 +1,8 @@
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Fix bug with absent auth cookie, which leads to logout users sometimes from web pages with
+        authorization.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5978
+      impact: Ingress controller 1.6 will restart.
+
