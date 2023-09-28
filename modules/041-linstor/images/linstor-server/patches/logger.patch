@@ -11,7 +11,7 @@ index 00b7b1fce..3c026bd8a 100644
          StltConfig cfg = new StltConfig(args);
  
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
-index efa919929..6c6ae822e 100644
+index efa919929..7e1298ef1 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 @@ -23,6 +23,8 @@ import javax.inject.Singleton;
@@ -32,7 +32,7 @@ index efa919929..6c6ae822e 100644
 +            LocalDateTime now = LocalDateTime.now();
 +            System.out.println(dtf.format(now) + "  <<<<< DRBD >>>>>");
 +
-+            String cmd = String.join(" ", Arrays.toString(outputData.executedCommand));
++            String cmd = String.join(" ", outputData.executedCommand);
 +            System.out.println("executedCommand: " + cmd);
 +
 +
@@ -50,7 +50,7 @@ index efa919929..6c6ae822e 100644
              {
                  throw new ExtCmdFailedException(command, outputData);
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
-index a63c78cba..043838892 100644
+index a63c78cba..7549f6f28 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 @@ -12,10 +12,10 @@ import com.linbit.linstor.storage.StorageException;
@@ -74,9 +74,9 @@ index a63c78cba..043838892 100644
              outData = extCmd.exec(command);
 +            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd/HH:mm:ss:SSS");
 +            LocalDateTime now = LocalDateTime.now();
-+            System.out.println( dtf.format(now) +  "  ------- LVM -------------------------");
++            System.out.println( dtf.format(now) +  "  ------- LVM ------------------------------------");
 +
-+            String cmd = String.join(" ", Arrays.toString(outData.executedCommand));
++            String cmd = String.join(" ", outData.executedCommand);
 +            System.out.println("executedCommand: " + cmd);
 +
 +            System.out.println("exitCode: " + outData.exitCode);
