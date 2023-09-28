@@ -14,12 +14,16 @@
 {{- if or (eq .nodeGroup.nodeType "Static") (eq .runType "ClusterBootstrap") }}
 bb-sync-file /var/lib/bashible/cleanup_static_node.sh - << "EOF"
 #!/bin/bash
+
 if [ -z $1 ] || [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ];  then
   >&2 echo "Needed flag isn't passed, exit without any action"
   exit 1
 fi
 
 systemctl stop bashible.service bashible.timer
+for pid in $(ps ax | grep "bash /var/lib/bashible/bashible" | grep -v grep | awk '{print $1}'); do
+  kill $pid
+done
 systemctl stop sysctl-tuner.service sysctl-tuner.timer
 systemctl stop old-csi-mount-cleaner.service old-csi-mount-cleaner.timer
 systemctl stop d8-containerd-cgroup-migration.service
