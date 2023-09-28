@@ -11,7 +11,7 @@ index 00b7b1fce..3c026bd8a 100644
          StltConfig cfg = new StltConfig(args);
  
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
-index efa919929..69418625b 100644
+index efa919929..82fb3d29c 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 @@ -23,6 +23,8 @@ import javax.inject.Singleton;
@@ -23,27 +23,21 @@ index efa919929..69418625b 100644
  import java.util.ArrayList;
  import java.util.Arrays;
  import java.util.List;
-@@ -591,6 +593,12 @@ public class DrbdAdm
-     private void execute(List<String> commandList) throws ExtCmdFailedException
-     {
-         String[] command = commandList.toArray(new String[commandList.size()]);
-+
-+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd/HH:mm:ss:SSS");
-+        LocalDateTime now = LocalDateTime.now();
-+        System.out.println(dtf.format(now) +  "  <<<<< --- DRBD Command --- >>>>>");
-+        System.out.println(Arrays.toString(command));
-+        System.out.println("<<<<< --------------- ------------ ---------------- >>>>>");
-         try
-         {
-             File nullDevice = new File(Platform.nullDevice());
-@@ -600,6 +608,11 @@ public class DrbdAdm
+@@ -600,6 +602,18 @@ public class DrbdAdm
                  extCmd.setTimeout(TimeoutType.WAIT, 5*60*1000);
              }
              OutputData outputData = extCmd.pipeExec(ProcessBuilder.Redirect.from(nullDevice), command);
 +
-+            System.out.println("<<<<< try outputData exec DRBD command >>>>>");
-+            System.out.println(outputData);
-+            System.out.println("<<<<< -------------------------------- >>>>>");
++            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd/HH:mm:ss:SSS");
++            LocalDateTime now = LocalDateTime.now();
++            System.out.println(dtf.format(now) + "  <<<<< DRBD command >>>>>");
++            System.out.println("executedCommand: " + Arrays.toString(outputData.executedCommand));
++            System.out.println("outputData.exitCode: " +  outputData.exitCode);
++            String stdoutStr = new String(outputData.stdoutData);
++            System.out.println("outputData.stdoutData: " +  stdoutStr);
++            String stdouterrStr = new String(outputData.stderrData);
++            System.out.println("outputData.stderrData: " +  stdouterrStr);
++            System.out.println("<<<<<  >>>>>");
 +
              if (outputData.exitCode != 0)
              {
