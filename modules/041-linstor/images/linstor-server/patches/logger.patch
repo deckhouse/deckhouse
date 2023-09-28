@@ -11,7 +11,7 @@ index 00b7b1fce..3c026bd8a 100644
          StltConfig cfg = new StltConfig(args);
  
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
-index efa919929..ba82abd76 100644
+index efa919929..69418625b 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 @@ -23,6 +23,8 @@ import javax.inject.Singleton;
@@ -36,6 +36,18 @@ index efa919929..ba82abd76 100644
          try
          {
              File nullDevice = new File(Platform.nullDevice());
+@@ -600,6 +608,11 @@ public class DrbdAdm
+                 extCmd.setTimeout(TimeoutType.WAIT, 5*60*1000);
+             }
+             OutputData outputData = extCmd.pipeExec(ProcessBuilder.Redirect.from(nullDevice), command);
++
++            System.out.println("<<<<< try outputData exec DRBD command >>>>>");
++            System.out.println(outputData);
++            System.out.println("<<<<< -------------------------------- >>>>>");
++
+             if (outputData.exitCode != 0)
+             {
+                 throw new ExtCmdFailedException(command, outputData);
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 index a63c78cba..72d115992 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
