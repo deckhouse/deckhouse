@@ -2,6 +2,10 @@
 title: "The virtualization module: FAQ"
 ---
 
+{% alert level="danger" %}
+The current module version is no longer under development and will be replaced by a new one. The new module version is not guaranteed to be compatible with the current one. We do not recommend using the current module version for new projects.
+{% endalert %}
+
 ## How to apply changes to the virtual machine spec?
 
 Currently, changes to the VM specification are not applied to running instances automatically.
