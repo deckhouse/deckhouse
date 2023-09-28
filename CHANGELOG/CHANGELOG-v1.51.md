@@ -8,6 +8,7 @@
     
     The most awaited module that can be enabled now is the `deckhouse-admin` module — a convenient web-interface to administer deckhouse clusters.
  - Grafana will restart.
+ - Ingress controller 1.6 will restart.
  - The [instruction](https://github.com/deckhouse/deckhouse/blob/f0ccf1b0d472455ca05ff0748e5ba6c634967a7f/modules/002-deckhouse/docs/internal/IMAGE_COPIER.md) for copying images no longer work. Use `d8-pull/d8-push` or `dhctl mirror` with `deckhouse-controller helper change-registry`.
 
 ## Features
@@ -65,6 +66,8 @@
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
  - **[global-hooks]** Fix orphaned endpointslice deletion. [#5912](https://github.com/deckhouse/deckhouse/pull/5912)
+ - **[ingress-nginx]** Fix bug with absent auth cookie, which leads to logout users sometimes from web pages with authorization. [#5978](https://github.com/deckhouse/deckhouse/pull/5978)
+    Ingress controller 1.6 will restart.
  - **[loki]** Fixed a volume mount init container. [#5941](https://github.com/deckhouse/deckhouse/pull/5941)
  - **[loki]** Fixed permissions for existing files after changing GID and UID. [#5904](https://github.com/deckhouse/deckhouse/pull/5904)
  - **[monitoring-kubernetes]** Revert `node-exporter` `kube-rbac-proxy` liveness probe. [#5642](https://github.com/deckhouse/deckhouse/pull/5642)
