@@ -65,7 +65,10 @@ func isImageNameUnacceptable(imageName string) (bool, string) {
 	return false, ""
 }
 
-func checkImageNamesInDockerAndWerfFiles(lintRuleErrorsList *errors.LintRuleErrorsList, name, path string) {
+func checkImageNamesInDockerAndWerfFiles(
+	lintRuleErrorsList *errors.LintRuleErrorsList,
+	name, path string,
+) {
 	var filePaths []string
 	imagesPath := filepath.Join(path, imagesDir)
 
@@ -79,13 +82,11 @@ func checkImageNamesInDockerAndWerfFiles(lintRuleErrorsList *errors.LintRuleErro
 		}
 
 		switch filepath.Base(fullPath) {
-		case "werf.inc.yaml",
-			"Dockerfile":
+		case "werf.inc.yaml", "Dockerfile":
 			filePaths = append(filePaths, fullPath)
 		}
 		return nil
 	})
-
 	if err != nil {
 		lintRuleErrorsList.Add(errors.NewLintRuleError(
 			"MODULE001",
@@ -176,7 +177,7 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 	}
 
 	for i, fromInstruction := range dockerfileFromInstructions {
-		lastInstruction := i == len(fromInstruction)-1
+		lastInstruction := i == len(dockerfileFromInstructions)-1
 		result, message := isDockerfileInstructionUnacceptable(fromInstruction, lastInstruction)
 		if result {
 			return errors.NewLintRuleError(
@@ -192,7 +193,8 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 }
 
 func isWerfInstructionUnacceptable(from string) (bool, string) {
-	if !strings.HasPrefix(from, `{{ .Images.BASE_`) && !strings.HasPrefix(from, `{{ $.Images.BASE_`) {
+	if !strings.HasPrefix(from, `{{ .Images.BASE_DISTROLESS`) &&
+		!strings.HasPrefix(from, `{{ $.Images.BASE_DISTROLESS`) {
 		return true, "`from:` parameter for `image:` should be one of our BASE_ images"
 	}
 	return false, ""
@@ -204,8 +206,8 @@ func isDockerfileInstructionUnacceptable(from string, final bool) (bool, string)
 	}
 
 	if final {
-		if !strings.HasPrefix(from, "$BASE_") {
-			return true, "Last `FROM` instruction should use one of our $BASE_ images"
+		if !strings.HasPrefix(from, "$BASE_DISTROLESS") {
+			return true, "Last `FROM` instruction should use one of our $BASE_DISTROLESS images"
 		}
 	} else {
 		matched, _ := regexp.MatchString("@sha256:[A-Fa-f0-9]{64}", from)
