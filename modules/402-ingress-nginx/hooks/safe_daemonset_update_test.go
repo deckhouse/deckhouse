@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -33,6 +36,8 @@ var _ = Describe("ingress-nginx :: hooks :: safe_daemonset_update ::", func() {
 apiVersion: v1
 kind: Pod
 metadata:
+  annotations:
+    lifecycle.apps.kruise.io/timestamp: "2023-09-28T14:44:21Z"
   labels:
     app: controller
     ingress.deckhouse.io/block-deleting: "true"
@@ -102,6 +107,8 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
+  annotations:
+    lifecycle.apps.kruise.io/timestamp: "2023-09-28T14:44:21Z"
   labels:
     app: controller
     ingress.deckhouse.io/block-deleting: "true"
@@ -171,6 +178,8 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
+  annotations:
+    lifecycle.apps.kruise.io/timestamp: "2023-09-28T14:44:21Z"
   labels:
     app: controller
     ingress.deckhouse.io/block-deleting: "true"
@@ -240,6 +249,8 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
+  annotations:
+    lifecycle.apps.kruise.io/timestamp: "2023-09-28T14:44:21Z"
   labels:
     app: controller
     ingress.deckhouse.io/block-deleting: "true"
@@ -298,6 +309,77 @@ status:
 
 		It("Should keep blocking label", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			pod := f.KubernetesResource("Pod", "d8-ingress-nginx", "controller-test-bw8sc")
+			Expect(pod.Field("metadata.labels.ingress\\.deckhouse\\.io/block-deleting").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Hook executed too fast", func() {
+		BeforeEach(func() {
+			st := f.KubeStateSet(`
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    lifecycle.apps.kruise.io/timestamp: ` + fmt.Sprintf("%s", time.Now().Format(time.RFC3339)) + `
+  labels:
+    app: controller
+    ingress.deckhouse.io/block-deleting: "true"
+    lifecycle.apps.kruise.io/state: "PreparingDelete"
+    name: test
+  name: controller-test-bw8sc
+  namespace: d8-ingress-nginx
+spec:
+  containers:
+  - name: controller
+  nodeName: ndev-worker-5e11c78a-5f688-kw6c5
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2023-03-24T15:02:56Z"
+    status: "True"
+    type: Ready
+---
+apiVersion: apps.kruise.io/v1alpha1
+kind: DaemonSet
+metadata:
+  annotations:
+    ingress-nginx-controller.deckhouse.io/checksum: a6fca03cfb274eaa9d1def32dde2bd730ac204baa941ddd88685b47e9b487787
+  labels:
+    app: controller
+    ingress-nginx-failover: ""
+    name: test-failover
+  name: controller-test-failover
+  namespace: d8-ingress-nginx
+spec: {}
+status:
+  desiredNumberScheduled: 3
+  numberAvailable: 3
+  updatedNumberScheduled: 3
+---
+apiVersion: apps.kruise.io/v1alpha1
+kind: DaemonSet
+metadata:
+  annotations:
+    ingress-nginx-controller.deckhouse.io/checksum: a6fca03cfb274eaa9d1def32dde2bd730ac204baa941ddd88685b47e9b487787
+  labels:
+    app: proxy-failover
+    name: test
+  name: proxy-test-failover
+  namespace: d8-ingress-nginx
+spec: {}
+status:
+  desiredNumberScheduled: 3
+  numberAvailable: 3
+  updatedNumberScheduled: 3
+`)
+
+			f.BindingContexts.Set(st)
+			f.RunHook()
+		})
+
+		It("Should keep blocking label", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
 			pod := f.KubernetesResource("Pod", "d8-ingress-nginx", "controller-test-bw8sc")
 			Expect(pod.Field("metadata.labels.ingress\\.deckhouse\\.io/block-deleting").Exists()).To(BeTrue())
 		})

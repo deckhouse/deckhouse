@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -83,12 +84,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, safeControllerUpdate)
 
 func safeControllerUpdate(input *go_hook.HookInput) (err error) {
-	proxys := input.Snapshots["proxy_ads"]
-	failovers := input.Snapshots["failover_ads"]
 	controllerPods := input.Snapshots["for_delete"]
 	if len(controllerPods) == 0 {
 		return nil
 	}
+
+	proxys := input.Snapshots["proxy_ads"]
+	failovers := input.Snapshots["failover_ads"]
 
 	controllers := set.New()
 
@@ -130,6 +132,17 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
+		kruiseLifecycleTs, err := time.Parse(time.RFC3339, podForDelete.KruiseLifecycleTs)
+		if err != nil {
+			input.LogEntry.Warnf("Couldn't parse kruise lifecycly timestamp annotation for %q controller", podForDelete.ControllerName)
+			return err
+		}
+
+		// abort hook execution if less than 2 seconds has passed since kruise lifecycle timestamp has been set
+		if (kruiseLifecycleTs.Add(2 * time.Second)).After(time.Now()) {
+			return fmt.Errorf("Hook execution aborted for %s controller to prevent race between main and failover daemon sets' updates", podForDelete.ControllerName)
+		}
+
 		// proxy and failover pods are ready
 		metadata := map[string]interface{}{
 			"metadata": map[string]interface{}{
@@ -145,9 +158,9 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 }
 
 type ingressControllerPod struct {
-	Name           string
-	Node           string
-	ControllerName string
+	Name              string
+	ControllerName    string
+	KruiseLifecycleTs string
 }
 
 type daemonSet struct {
@@ -184,8 +197,8 @@ func applyIngressPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}
 
 	return ingressControllerPod{
-		Name:           pod.Name,
-		Node:           pod.Spec.NodeName,
-		ControllerName: pod.Labels["name"],
+		Name:              pod.Name,
+		ControllerName:    pod.Labels["name"],
+		KruiseLifecycleTs: pod.Annotations["lifecycle.apps.kruise.io/timestamp"],
 	}, nil
 }
