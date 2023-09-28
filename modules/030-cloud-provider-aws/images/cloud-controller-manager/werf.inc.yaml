@@ -6,25 +6,29 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /usr/share/ca-certificates/mozilla
+  to: /usr/share/ca-certificates/mozilla
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/aws-cloud-controller-manager
   to: /usr/local/bin/aws-cloud-controller-manager
   before: setup
-shell:
-  beforeInstall:
-  - apk add --no-cache ca-certificates
+# shell:
+#   beforeInstall:
+#   - apk add --no-cache ca-certificates
 docker:
   ENV:
     container: docker
   ENTRYPOINT: ["/usr/local/bin/aws-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-     {{- if semverCompare ">=1.27" $version }}
+    {{- if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
     {{- else if semverCompare ">=1.25" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
     {{- else if semverCompare ">=1.24" $version }}
 from: {{ $.Images.BASE_GOLANG_18_ALPINE }}
-  {{- else if semverCompare ">=1.23" $version }}
+    {{- else if semverCompare ">=1.23" $version }}
 from: {{ $.Images.BASE_GOLANG_17_ALPINE }}
     {{- else if semverCompare ">=1.21" $version }}
 from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
@@ -41,6 +45,7 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync
+  - apk add --no-cache ca-certificates
   install:
   - mkdir /src
   - wget https://github.com/kubernetes/cloud-provider-aws/archive/refs/tags/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
@@ -48,5 +53,7 @@ shell:
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - export VERSION={{ $value.ccm.aws }}
   - make aws-cloud-controller-manager
+  # - chown 64535:64535 /src/aws-cloud-controller-manager
+  # - chmod 0755 /src/aws-cloud-controller-manager
   {{- end }}
 {{- end }}
