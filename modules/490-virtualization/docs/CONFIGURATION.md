@@ -2,6 +2,10 @@
 title: "The virtualization module: configuration"
 ---
 
+{% alert level="danger" %}
+The current module version is no longer under development and will be replaced by a new one. The new module version is not guaranteed to be compatible with the current one. We do not recommend using the current module version for new projects.
+{% endalert %}
+
 {% include module-bundle.liquid %}
 
 > **Note!** Module depends on the [cni-cilium](../021-cni-cilium/) module. Make sure your cluster is deployed with Cilium as the main CNI plugin.
