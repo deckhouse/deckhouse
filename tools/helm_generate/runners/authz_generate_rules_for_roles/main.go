@@ -14,6 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package authzgeneraterulesforroles
 
-//go:generate go run ./helm_generate/ authz-generate-roles
+import (
+	"flag"
+)
+
+type AuthzGenerate struct {
+	fs *flag.FlagSet
+}
+
+func NewAuthzGenerate() *AuthzGenerate {
+	ag := &AuthzGenerate{
+		fs: flag.NewFlagSet("authz-generate-roles", flag.ContinueOnError),
+	}
+
+	return ag
+}
+
+func (ag *AuthzGenerate) Name() string {
+	return ag.fs.Name()
+}
+
+func (ag *AuthzGenerate) Init(args []string) error {
+	return ag.fs.Parse(args)
+}
+
+func (ag *AuthzGenerate) Run() error {
+	run()
+
+	return nil
+}

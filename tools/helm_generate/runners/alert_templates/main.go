@@ -14,6 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package alerttemplates
 
-//go:generate go run ./helm_generate/ authz-generate-roles
+import (
+	"flag"
+)
+
+type ImageChecks struct {
+	fs *flag.FlagSet
+}
+
+func NewImageChecks() *ImageChecks {
+	ic := &ImageChecks{
+		fs: flag.NewFlagSet("alert-templates", flag.ContinueOnError),
+	}
+
+	return ic
+}
+
+func (ic *ImageChecks) Name() string {
+	return ic.fs.Name()
+}
+
+func (ic *ImageChecks) Init(args []string) error {
+	return ic.fs.Parse(args)
+}
+
+func (ic *ImageChecks) Run() error {
+	return run()
+}
