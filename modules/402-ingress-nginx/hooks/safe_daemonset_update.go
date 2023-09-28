@@ -144,8 +144,10 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"labels": map[string]interface{}{
+						"lifecycle.apps.kruise.io/state": nil,
+					},
+					"annotations": map[string]interface{}{
 						"ingress.deckhouse.io/update-postponed": time.Now().Format(time.RFC3339),
-						"lifecycle.apps.kruise.io/state":        nil,
 					},
 				},
 			}
@@ -207,7 +209,7 @@ func applyIngressPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
-	_, updateWasPostponed := pod.Labels["ingress.deckhouse.io/update-postponed"]
+	_, updateWasPostponed := pod.Annotations["ingress.deckhouse.io/update-postponed"]
 
 	return ingressControllerPod{
 		Name:               pod.Name,

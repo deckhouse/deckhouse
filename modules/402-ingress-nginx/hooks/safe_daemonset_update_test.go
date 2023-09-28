@@ -381,7 +381,7 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			pod := f.KubernetesResource("Pod", "d8-ingress-nginx", "controller-test-bw8sc")
 			Expect(pod.Field("metadata.labels.ingress\\.deckhouse\\.io/block-deleting").Exists()).To(BeTrue())
-			Expect(pod.Field("metadata.labels.ingress\\.deckhouse\\.io/update-postponed").Exists()).To(BeTrue())
+			Expect(pod.Field("metadata.annotations.ingress\\.deckhouse\\.io/update-postponed").Exists()).To(BeTrue())
 		})
 	})
 
@@ -393,10 +393,10 @@ kind: Pod
 metadata:
   annotations:
     lifecycle.apps.kruise.io/timestamp: ` + time.Now().Format(time.RFC3339) + `
+    ingress.deckhouse.io/update-postponed: "2023-09-28T14:44:21Z"
   labels:
     app: controller
     ingress.deckhouse.io/block-deleting: "true"
-    ingress.deckhouse.io/update-postponed: "2023-09-28T14:44:21Z"
     lifecycle.apps.kruise.io/state: "PreparingDelete"
     name: test
   name: controller-test-bw8sc
