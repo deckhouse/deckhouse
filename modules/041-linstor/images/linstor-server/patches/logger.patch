@@ -11,7 +11,7 @@ index 00b7b1fce..3c026bd8a 100644
          StltConfig cfg = new StltConfig(args);
  
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
-index efa919929..82fb3d29c 100644
+index efa919929..6c6ae822e 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 @@ -23,6 +23,8 @@ import javax.inject.Singleton;
@@ -23,27 +23,34 @@ index efa919929..82fb3d29c 100644
  import java.util.ArrayList;
  import java.util.Arrays;
  import java.util.List;
-@@ -600,6 +602,18 @@ public class DrbdAdm
+@@ -600,6 +602,25 @@ public class DrbdAdm
                  extCmd.setTimeout(TimeoutType.WAIT, 5*60*1000);
              }
              OutputData outputData = extCmd.pipeExec(ProcessBuilder.Redirect.from(nullDevice), command);
 +
 +            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd/HH:mm:ss:SSS");
 +            LocalDateTime now = LocalDateTime.now();
-+            System.out.println(dtf.format(now) + "  <<<<< DRBD command >>>>>");
-+            System.out.println("executedCommand: " + Arrays.toString(outputData.executedCommand));
++            System.out.println(dtf.format(now) + "  <<<<< DRBD >>>>>");
++
++            String cmd = String.join(" ", Arrays.toString(outputData.executedCommand));
++            System.out.println("executedCommand: " + cmd);
++
++
 +            System.out.println("outputData.exitCode: " +  outputData.exitCode);
++
 +            String stdoutStr = new String(outputData.stdoutData);
 +            System.out.println("outputData.stdoutData: " +  stdoutStr);
++
 +            String stdouterrStr = new String(outputData.stderrData);
 +            System.out.println("outputData.stderrData: " +  stdouterrStr);
++
 +            System.out.println("<<<<<  >>>>>");
 +
              if (outputData.exitCode != 0)
              {
                  throw new ExtCmdFailedException(command, outputData);
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
-index a63c78cba..72d115992 100644
+index a63c78cba..043838892 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 @@ -12,10 +12,10 @@ import com.linbit.linstor.storage.StorageException;
@@ -61,25 +68,31 @@ index a63c78cba..72d115992 100644
  
  public class Commands
  {
-@@ -77,6 +77,17 @@ public class Commands
+@@ -77,6 +77,23 @@ public class Commands
          try
          {
              outData = extCmd.exec(command);
 +            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd/HH:mm:ss:SSS");
 +            LocalDateTime now = LocalDateTime.now();
-+            System.out.println( dtf.format(now) +  "  ------- extCmd.exec outData-------------------------");
-+            System.out.println("executedCommand: " + Arrays.toString(outData.executedCommand));
++            System.out.println( dtf.format(now) +  "  ------- LVM -------------------------");
++
++            String cmd = String.join(" ", Arrays.toString(outData.executedCommand));
++            System.out.println("executedCommand: " + cmd);
++
 +            System.out.println("exitCode: " + outData.exitCode);
++
 +            String stdoutStr = new String(outData.stdoutData);
 +            System.out.println("stdoutData: " + stdoutStr);
++
 +            String stderrStr = new String(outData.stderrData);
 +            System.out.println("stderrData: " + stderrStr);
++
 +            System.out.println("-------------------------------------------------------------------------");
 +
  
              boolean skipExitCodeCheck = false;
              while (!(outData.exitCode == ExtCmdUtils.DEFAULT_RET_CODE_OK || allowExitCodes.contains(outData.exitCode)))
-@@ -121,7 +132,6 @@ public class Commands
+@@ -121,7 +138,6 @@ public class Commands
                  exc
              );
          }
