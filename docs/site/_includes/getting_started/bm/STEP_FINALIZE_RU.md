@@ -26,7 +26,7 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
     Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на master-узле:
     {% snippetcut %}
   ```bash
-kubectl create -f - << EOF
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
