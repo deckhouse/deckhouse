@@ -1,0 +1,42 @@
+type: object
+properties: 
+  logLevel:
+    type: string
+    enum: ["debug", "info", "error"]
+    x-examples: ["info"]
+    description: Webhook logging level.
+    default: "info"
+  tlsSkipVerify:
+    type: boolean
+    default: false
+    description: Allow image references to be fetched without TLS.
+  cacheEviction:
+    type: integer
+    format: int64
+    default: 60
+    description: Cache eviction duration in seconds.
+  defaultRegistry:
+    type: string
+    x-examples: ["index.docker.io"]
+    description: Default registry.
+    default: ""
+  tolerations:
+    type: array
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string

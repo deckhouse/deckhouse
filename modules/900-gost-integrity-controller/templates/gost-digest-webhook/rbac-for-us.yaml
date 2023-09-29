@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gost-digest-webhook
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gost-digest-webhook")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:gost-integrity-controller:gost-digest-webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gost-digest-webhook")) | nindent 2 }}
+rules:
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["validatingwebhookconfigurations"]
+  verbs: ["create", "list", "update"]
+- apiGroups: [""]
+  resources: ["pod"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["secrets","endpoints","configmaps","namespaces"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:gost-integrity-controller:gost-digest-webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gost-digest-webhook")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name:  d8:gost-integrity-controller:gost-digest-webhook
+subjects:
+  - kind: ServiceAccount
+    name: gost-digest-webhook
+    namespace: d8-system
+
