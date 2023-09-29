@@ -23,7 +23,7 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
     Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
   </li>
   <li>
-    Создайте <a href="http://ru.localhost/documentation/v1/modules/040-node-manager/">NodeGroup</a> <code>worker</code>. Для этого выполните на master-узле:
+    Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на master-узле:
     {% snippetcut %}
   ```bash
 kubectl create -f - << EOF
