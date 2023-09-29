@@ -235,14 +235,28 @@ func findExistingModuleSymlink(rootPath, moduleName string) (string, error) {
 func isModuleExistsOnFS(symlinksDir, symlinkPath, modulePath string) bool {
 	targetPath, err := filepath.EvalSymlinks(symlinkPath)
 	if err != nil {
+		fmt.Println("REL1", err)
 		return false
+	}
+
+	fmt.Println("REL12", targetPath)
+
+	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+		fmt.Println("REL112", err)
 	}
 
 	if filepath.IsAbs(targetPath) {
 		targetPath, err = filepath.Rel(symlinksDir, targetPath)
 		if err != nil {
+			fmt.Println("REL2", err)
 			return false
 		}
+	}
+
+	fmt.Println("REL333333", targetPath)
+
+	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+		fmt.Println("REL21", err)
 	}
 
 	return targetPath == modulePath
