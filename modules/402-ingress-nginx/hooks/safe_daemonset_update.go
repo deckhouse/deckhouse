@@ -138,7 +138,7 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 
 		// postpone main controller's pod update for the first time so that failover controller could catch up with the hook
 		if !podForDelete.PostponedUpdate {
-			input.LogEntry.Warnf("Update for %s/%s pod was postponed because of possible race condition", podForDelete.ControllerName, podForDelete.Name)
+			input.LogEntry.Infof("Assuring that %s/%s has met update conditions", podForDelete.ControllerName, podForDelete.Name)
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"annotations": map[string]interface{}{
