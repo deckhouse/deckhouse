@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -218,11 +219,14 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 }
 
 func suspendModuleVersionForRelease(input *go_hook.HookInput, release enqueueRelease, err error, ts time.Time) {
+	if os.IsNotExist(err) {
+		err = errors.New("not found")
+	}
 	status := map[string]v1alpha1.ModuleReleaseStatus{
 		"status": {
 			Phase:          v1alpha1.PhaseSuspended,
 			TransitionTime: ts,
-			Message:        fmt.Sprintf("Desired version of module met problems: %s", err),
+			Message:        fmt.Sprintf("Desired version of the module met problems: %s", err),
 		},
 	}
 	input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
@@ -281,7 +285,6 @@ func enableModule(externalModulesDir, oldSymlinkPath, newSymlinkPath, modulePath
 
 	// make absolute path for versioned module
 	moduleAbsPath := filepath.Join(externalModulesDir, strings.TrimPrefix(modulePath, "../"))
-
 	// check that module exists on a disk
 	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
 		return err
