@@ -3,14 +3,14 @@
   {{- if $value.ccm.aws }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_SCRATCH }}
-# from: common/distroless
+# from: {{ $.Images.BASE_SCRATCH }}
+from: cloud-provider-aws/distroless
 # from: {{ $.Images.BASE_ALPINE }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /usr/share/ca-certificates/mozilla/*
-  to: /etc/ssl/certs/*
-  before: install
+# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+#   add: /usr/share/ca-certificates/mozilla/*
+#   to: /etc/ssl/certs/*
+#   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/aws-cloud-controller-manager
   to: /usr/local/bin/aws-cloud-controller-manager
@@ -47,7 +47,7 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync
-  - apk add --no-cache ca-certificates
+  # - apk add --no-cache ca-certificates
   install:
   - mkdir /src
   - wget https://github.com/kubernetes/cloud-provider-aws/archive/refs/tags/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
@@ -55,7 +55,7 @@ shell:
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - export VERSION={{ $value.ccm.aws }}
   - make aws-cloud-controller-manager
-  # - chown 64535:64535 /src/aws-cloud-controller-manager
-  # - chmod 0755 /src/aws-cloud-controller-manager
+  - chown 64535:64535 /src/aws-cloud-controller-manager
+  - chmod 0755 /src/aws-cloud-controller-manager
   {{- end }}
 {{- end }}
