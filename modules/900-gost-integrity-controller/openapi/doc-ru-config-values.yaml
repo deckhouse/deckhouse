@@ -1,0 +1,14 @@
+properties:
+    logLevel:
+      description: Уровень логирования в вебхуке.
+  tlsSkipVerify:
+    description: Разрешить получение образов без проверки TLS.
+  cacheEviction:
+    description: Прериод очистки кэша в секундах.
+  defaultRegistry:
+    description: Репозиторий образов по умолчанию.
+  tolerations:
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
