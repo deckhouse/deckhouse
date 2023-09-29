@@ -2,36 +2,32 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-На данном этапе вы создали кластер, который состоит из **единственного** master-узла.
+На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. Так как на master-узле по умолчанию работает только ограниченный набор системных компонентов, для полноценной работы кластера необходимо <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавить в кластер</a> хотя бы один worker-узел.
 
-<strong>Обратите внимание</strong>, что на текущий момент на нем работают только системные компоненты!
+{% offtopic title="Если вам достаточно одного master-узла..." %}
+<div>
+<p>Если вы развернули кластер <strong>для ознакомительных целей</strong>, то кластера из одного узла может быть достаточно. Для того чтобы разрешить остальным компонентам Deckhouse работать на master-узле, необходимо снять с master-узла taint, выполнив на нем следующую команду:</p>
 
-Для полноценной работы кластера необходимо <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавить в кластер</a> хотя бы один worker-узел.
-
-{% offtopic title="Если вам достаточно одного master-узла" %}
-
-<p>Если вы развернули кластер <strong>для ознакомительных целей</strong>, то и одного узла может быть достаточно. Для того, чтобы разрешить остальным компонентам Deckhouse работать на master-узле, необходимо снять с master-узла taint, выполнив на нем следующую команду:</p>
-
+<div markdown="0">
 {% snippetcut %}
 ```bash
 sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
-
-<p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
+</div>
 
 <p><strong>Выполнять дальнейшие шаги по добавлению нового узла в кластер не нужно!</strong></p>
-
+</div>
 {%- endofftopic %}
 
-<strong>Добавление нового узла в кластер</strong>
+Добавьте узел в кластер:
 
 <ul>
   <li>
     Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
   </li>
   <li>
-    Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong>:
+    Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:
     {% snippetcut %}
   ```bash
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -54,7 +50,7 @@ kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o j
   {% endsnippetcut %}
   </li>
   <li>
-    На подготовленной виртуальной машине выполните следующую команду, вставив код скрипта, полученный на предыдущем шаге:
+    <strong> На подготовленной виртуальной машине</strong> выполните следующую команду, вставив код скрипта, полученный на предыдущем шаге:
   {% snippetcut %}
   ```bash
 echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
@@ -62,6 +58,8 @@ echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
   {% endsnippetcut %}
   </li>
 </ul>
+
+<p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
 
 Прежде чем продолжить:
 <ul><li><p>Если вы добавляли дополнительные узлы в кластер, убедитесь что они находятся в статусе <code>Ready</code>.</p>
@@ -121,7 +119,7 @@ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
-Дождитесь перехода подов Ingress-контролллера в статус <code>Ready</code>.
+Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.
 
 {% offtopic title="Пример вывода..." %}
 ```
@@ -132,7 +130,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 {%- endofftopic %}
 </li>
 <li><p><strong>Создание StorageClass</strong></p>
-<p>Настройте на <strong>master-узле</strong> конфигурацию модуля <a href="https://deckhouse.ru/documentation/v1/modules/031-local-path-provisioner/">local-path-provisioner</a>:</p>
+<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -147,22 +145,10 @@ spec:
 EOF
 ```
 {% endsnippetcut %}
-<p><code>nodeGroups</code> – имя созданной NodeGroup.</p>
-<p><code>path</code> – путь на узле, где будут лежать данные.</p>
-
-Дождитесь перехода созданного StorageClass в статус <code>Ready</code>.
-
-{% offtopic title="Пример вывода..." %}
-```
-$ sudo /opt/deckhouse/bin/kubectl $ kubectl get ng
-NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE
-worker   Static   1       1       1                                                               31d
-```
-{%- endofftopic %}
 
 <li><p><strong>Настройка Prometheus</strong></p>
 
-Настройте на <strong>master-узле</strong> ModuleConfig <code>prometheus</code>:
+Настройте Prometheus на использование созданного StorageClass'а (это позволит не терять данные при перезапуске Prometheus). Выполните на <strong>master-узле</strong> следующую команду:
 
 {% snippetcut %}
 ```shell
