@@ -22,15 +22,13 @@ import (
 	"strings"
 	"testing"
 
-	module_manager "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager"
-
-	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	module_manager "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -199,7 +197,7 @@ status:
 		Context("Target module does not exist on fs", func() {
 			BeforeEach(func() {
 				mm, _ := module_manager.InitBasic("", "")
-				mm.RegisterModules()
+				_ = mm.RegisterModules()
 				deckhouse_config.InitService(mm)
 				st := f.KubeStateSet(`
 ---
@@ -231,11 +229,12 @@ status:
 	})
 })
 
+// nolint: unparam
 func testCreateModuleOnFS(tmpDir, moduleName, moduleVersion string) {
 	modulePath := path.Join(tmpDir, moduleName, moduleVersion)
 	_ = os.MkdirAll(modulePath, 0666)
-	os.Create(path.Join(modulePath, "Chart.yaml"))
-	os.Create(path.Join(modulePath, "values.yaml"))
+	_, _ = os.Create(path.Join(modulePath, "Chart.yaml"))
+	_, _ = os.Create(path.Join(modulePath, "values.yaml"))
 }
 
 func TestSymlinkFinder(t *testing.T) {
