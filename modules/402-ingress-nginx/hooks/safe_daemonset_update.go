@@ -34,6 +34,10 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Settings: &go_hook.HookConfigSettings{
+		ExecutionMinInterval: 5 * time.Second,
+		ExecutionBurst:       1,
+	},
 	Queue:       "/modules/ingress-nginx/safe_daemonset_update",
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -132,22 +136,13 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
-		kruiseLifecycleTs, err := time.Parse(time.RFC3339, podForDelete.KruiseLifecycleTs)
-		if err != nil {
-			input.LogEntry.Warnf("Couldn't parse kruise lifecycly timestamp annotation for %q controller", podForDelete.ControllerName)
-			return err
-		}
-
-		// skip pod update if less than 2 seconds has passed since kruise lifecycle timestamp has been set
-		if (kruiseLifecycleTs.Add(2 * time.Second)).After(time.Now()) && !podForDelete.UpdateWasPostponed {
+		// postpone main controller's pod update for the first time so that failover controller could catch up with the hook
+		if !podForDelete.PostponedUpdate {
 			input.LogEntry.Warnf("Update for %s/%s pod was postponed because of possible race condition", podForDelete.ControllerName, podForDelete.Name)
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
-					"labels": map[string]interface{}{
-						"lifecycle.apps.kruise.io/state": nil,
-					},
 					"annotations": map[string]interface{}{
-						"ingress.deckhouse.io/update-postponed": time.Now().Format(time.RFC3339),
+						"ingress.deckhouse.io/update-postponed-at": time.Now().Format(time.RFC3339),
 					},
 				},
 			}
@@ -170,10 +165,9 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 }
 
 type ingressControllerPod struct {
-	Name               string
-	ControllerName     string
-	KruiseLifecycleTs  string
-	UpdateWasPostponed bool
+	Name            string
+	ControllerName  string
+	PostponedUpdate bool
 }
 
 type daemonSet struct {
@@ -209,12 +203,11 @@ func applyIngressPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
-	_, updateWasPostponed := pod.Annotations["ingress.deckhouse.io/update-postponed"]
+	_, postponedUpdate := pod.Annotations["ingress.deckhouse.io/update-postponed-at"]
 
 	return ingressControllerPod{
-		Name:               pod.Name,
-		ControllerName:     pod.Labels["name"],
-		KruiseLifecycleTs:  pod.Annotations["lifecycle.apps.kruise.io/timestamp"],
-		UpdateWasPostponed: updateWasPostponed,
+		Name:            pod.Name,
+		ControllerName:  pod.Labels["name"],
+		PostponedUpdate: postponedUpdate,
 	}, nil
 }
