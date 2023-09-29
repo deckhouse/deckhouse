@@ -37,7 +37,7 @@ kill -KILL $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
 exit 0
 {{- end }}
 
-bb-deckhouse-get-disruptive-update-approval
+bb-deckhouse-get-disruptive-update-approval {{ .nodeGroup.disruptions.approvalMode | default "Manual" | quote }}
 bb-log-info "Rebooting machine after bootstrap process completed"
 bb-flag-unset reboot
 
