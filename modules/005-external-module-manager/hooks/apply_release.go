@@ -73,6 +73,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	}
 	// directory for symlinks will actual versions to all external-modules
 	symlinksDir := filepath.Join(externalModulesDir, "modules")
+	ts := time.Now().UTC()
 
 	// run only once on startup
 	if !fsSynchronized {
@@ -95,7 +96,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			status := map[string]v1alpha1.ModuleReleaseStatus{
 				"status": {
 					Phase:          v1alpha1.PhasePending,
-					TransitionTime: time.Now().UTC(),
+					TransitionTime: ts,
 					Message:        "",
 				},
 			}
@@ -134,6 +135,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 				err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
+					suspendModuleVersionForRelease(input, deployedRelease, err, ts)
 					continue
 				}
 				modulesChangedReason = "one of modules is not enabled"
@@ -176,6 +178,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
 				input.LogEntry.Errorf("Module deploy failed: %v", err)
+				suspendModuleVersionForRelease(input, release, err, ts)
 				continue
 			}
 			modulesChangedReason = "a new module release found"
@@ -212,6 +215,17 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func suspendModuleVersionForRelease(input *go_hook.HookInput, release enqueueRelease, err error, ts time.Time) {
+	status := map[string]v1alpha1.ModuleReleaseStatus{
+		"status": {
+			Phase:          v1alpha1.PhaseSuspended,
+			TransitionTime: ts,
+			Message:        fmt.Sprintf("Desired version of module met problems: %s", err),
+		},
+	}
+	input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 }
 
 func findExistingModuleSymlink(rootPath, moduleName string) (string, error) {
