@@ -34,8 +34,7 @@ func NewClientFromFlags() *Client {
 	})
 
 	return &Client{
-		Settings:    settings,
-		PrivateKeys: app.SSHPrivateKeys,
+		Settings: settings,
 	}
 }
 

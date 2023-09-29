@@ -73,7 +73,7 @@ spec:
   nodeType: Static
 ```
 
-## Пример установки плагина cert-manager для kubectl на мастер узлах
+## Пример установки плагина cert-manager для kubectl на master-узлах
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

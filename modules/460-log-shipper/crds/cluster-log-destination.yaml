@@ -635,7 +635,7 @@ spec:
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
                 buffer:
                   type: object
-                  oneOF:
+                  oneOf:
                     - properties:
                         disk: {}
                         type:
@@ -645,6 +645,8 @@ spec:
                         - disk
                         - type
                         - whenFull
+                      not:
+                        required: [memory]
                     - properties:
                         memory: {}
                         type:
@@ -654,7 +656,10 @@ spec:
                         - memory
                         - type
                         - whenFull
+                      not:
+                        required: [disk]
                   description: Buffer parameters.
+                  required: ["type"]
                   properties:
                     type:
                       type: string

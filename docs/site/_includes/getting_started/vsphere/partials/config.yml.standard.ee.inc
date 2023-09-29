@@ -80,11 +80,11 @@ useNestedResourcePool: *!CHANGE_INSECURE*
 # [<ru>] Сам Folder будет создан Deckhouse Installer'ом.
 vmFolderPath: *!CHANGE_FOLDER*
 # [<en>] Region and zone tag category names.
-# [<ru>] Имена категорий тэгов регионов и зон.
+# [<ru>] Имена категорий тегов регионов и зон.
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
 # [<en>] Region and zone tag names in which cluster will operate.
-# [<ru>] Имена тэгов зон и регионов, в которых будет работать кластер.
+# [<ru>] Имена тегов зон и регионов, в которых будет работать кластер.
 region: *!CHANGE_REGION_TAG_NAME*
 zones:
 - *!CHANGE_ZONE_TAG_NAME*

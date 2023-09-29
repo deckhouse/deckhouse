@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO structure these functions into classes
+// TODO structure these functions into classes and move to the operations/bootstrap module
 // TODO move states saving to operations/bootstrap/state.go
 
-package bootstrap
+package operations
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -35,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -266,7 +266,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 
 func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config) error {
 	return log.Process("bootstrap", "Install Deckhouse", func() error {
-		err := CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
+		err := bootstrap.CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
 		if err != nil {
 			return err
 		}
@@ -290,6 +290,44 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config)
 	})
 }
 
+func ConnectToKubernetesAPI(sshClient *ssh.Client) (*client.KubernetesClient, error) {
+	var kubeCl *client.KubernetesClient
+	err := log.Process("common", "Connect to Kubernetes API", func() error {
+		if sshClient != nil {
+			if err := sshClient.Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
+				return fmt.Errorf("await master available: %v", err)
+			}
+		}
+
+		err := retry.NewLoop("Get Kubernetes API client", 45, 5*time.Second).Run(func() error {
+			kubeCl = client.NewKubernetesClient()
+			if sshClient != nil {
+				kubeCl = kubeCl.WithSSHClient(sshClient)
+			}
+			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+				return fmt.Errorf("open kubernetes connection: %v", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		time.Sleep(50 * time.Millisecond) // tick to prevent first probable fail
+		err = deckhouse.WaitForKubernetesAPI(kubeCl)
+		if err != nil {
+			return fmt.Errorf("wait kubernetes api: %v", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("start kubernetes proxy: %v", err)
+	}
+
+	return kubeCl, nil
+}
+
 const rebootExitCode = 255
 
 func RebootMaster(sshClient *ssh.Client) error {
@@ -297,8 +335,8 @@ func RebootMaster(sshClient *ssh.Client) error {
 		rebootCmd := sshClient.Command("reboot").Sudo().
 			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")
 		if err := rebootCmd.Run(); err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			ee, ok := err.(*exec.ExitError)
+			if ok {
 				if ee.ExitCode() == rebootExitCode {
 					return nil
 				}

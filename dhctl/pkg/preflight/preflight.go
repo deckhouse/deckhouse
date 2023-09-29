@@ -16,24 +16,17 @@ package preflight
 
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
 type PreflightCheck struct {
-	sshClient               *ssh.Client
-	installConfig           *deckhouse.Config
-	imageDescriptorProvider imageDescriptorProvider
-	buildDigestProvider     buildDigestProvider
+	sshClient *ssh.Client
 }
 
-func NewPreflightCheck(sshClient *ssh.Client, config *deckhouse.Config) PreflightCheck {
+func NewPreflightCheck(sshClient *ssh.Client) PreflightCheck {
 	return PreflightCheck{
-		sshClient:               sshClient,
-		installConfig:           config,
-		imageDescriptorProvider: remoteDescriptorProvider{},
-		buildDigestProvider:     &dhctlBuildDigestProvider{DigestFilePath: app.DeckhouseImageDigestFile},
+		sshClient: sshClient,
 	}
 }
 
@@ -43,20 +36,21 @@ func (pc *PreflightCheck) StaticCheck() error {
 			log.InfoLn("Preflight checks were skipped")
 			return nil
 		}
-
-		type preflightCheckFunc func() error
-		checks := []preflightCheckFunc{
-			pc.CheckDhctlVersionObsolescence,
-			pc.CheckSSHTunel,
-			pc.CheckAvailabilityPorts,
-			pc.CheckLocalhostDomain,
+		err := pc.CheckSSHTunel()
+		if err != nil {
+			return err
 		}
 
-		for _, checkFunc := range checks {
-			if err := checkFunc(); err != nil {
-				return err
-			}
+		err = pc.CheckAvailabilityPorts()
+		if err != nil {
+			return err
 		}
+
+		err = pc.CheckLocalhostDomain()
+		if err != nil {
+			return err
+		}
+
 
 		return nil
 	})

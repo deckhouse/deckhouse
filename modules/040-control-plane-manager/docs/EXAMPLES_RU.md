@@ -2,7 +2,7 @@
 title: "Управление control plane: примеры"
 ---
 
-Ниже представен простой пример конфигурации control plane:
+Ниже представлен простой пример конфигурации control plane:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

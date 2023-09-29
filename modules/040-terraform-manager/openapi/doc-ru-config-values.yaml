@@ -8,14 +8,14 @@ properties:
     description: |
       Промежуток времени, через который проверяется состояние Terraform'а.
 
-      Задаётся в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
+      Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная`spec.tolerations` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

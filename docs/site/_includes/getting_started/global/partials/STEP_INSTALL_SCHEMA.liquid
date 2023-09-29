@@ -44,6 +44,9 @@ Installation in a private environment is generally similar to installation on [b
 
 Scheme of Deckhouse installation in a private environment:<br />
 <img src="/images/gs/private-env-schema.svg" alt="Scheme of Deckhouse installation in a private environment">
+
+{% alert %}An internal repository of OS packages is necessary to install curl on future cluster nodes (if there is no access to the official repositories via a proxy server).
+{% endalert %}
 {% endif %}
 
 ## Installation requirements
@@ -99,7 +102,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - [supported OS](/documentation/v1/supported_versions.html)
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images
-   - access to a proxy server for downloading deb/rpm OS packages (if necessary)
+   - access to a proxy server or to an internal repository for downloading deb/rpm OS packages (if necessary)
    {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry
    {%- endif %}

@@ -59,12 +59,12 @@ properties:
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если ничего не указано или указано `false`, `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     type: array
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если ничего не указано или указано `false`, `tolerations` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

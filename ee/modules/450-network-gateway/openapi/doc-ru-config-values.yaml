@@ -3,7 +3,7 @@ properties:
     description: |
       Cелектор, который идентифицирует узлы, на которых будут настроены правила iptables и на которых будет работать DHCP-сервер.
 
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod. Pod'ы инстанса унаследуют это поле как есть.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes. Pod'ы инстанса унаследуют это поле как есть.
   tolerations:
     description: |
       Toleration'ы для Pod'ов c DHCP и с настройщиками iptables.
