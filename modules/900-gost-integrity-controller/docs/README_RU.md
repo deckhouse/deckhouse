@@ -10,7 +10,7 @@ description:
 
 Пример:
 
-```
+```yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -29,7 +29,7 @@ metadata:
 
 Пример расчета контрольной суммы образа nginx:1.25.2:
 
-```
+```text
 Контрольные суммы слоев отсортированные в порядке возрастания
 [
     "sha256:27e923fb52d31d7e3bdade76ab9a8056f94dd4bc89179d1c242c0e58592b4d5c",
@@ -50,7 +50,7 @@ metadata:
 
 Контрольную сумму в образ можно добавить используя утилиту crane
 
-```
+```bash
 crane mutate --annotation gost-digest=1aa84f6d91cc080fe198da7a6de03ca245aea0a8066a6b4fb5a93e40ebec2937 <образ>
 ```
 

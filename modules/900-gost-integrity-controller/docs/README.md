@@ -10,7 +10,7 @@ In order for the installed images to be checked, it is necessary to add the labe
 
 Example:
 
-```
+```yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -29,7 +29,7 @@ To calculate the checksum, a list of checksums of the image layers is taken.  T
 
 Example of calculating the checksum of an nginx image:1.25.2:
 
-```
+```text
 Checksums of layers sorted in ascending order
 [
     "sha256:27e923fb52d31d7e3bdade76ab9a8056f94dd4bc89179d1c242c0e58592b4d5c",
@@ -50,7 +50,7 @@ Image Checksum
 
 The checksum can be added to the image using the crane utility
 
-```
+```bash
 crane mutate --annotation gost-digest=1aa84f6d91cc080fe198da7a6de03ca245aea0a8066a6b4fb5a93e40ebec2937 <image>
 ```
 
