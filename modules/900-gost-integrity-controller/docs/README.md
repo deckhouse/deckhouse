@@ -9,6 +9,7 @@ To check the integrity of the image, a checksum calculated using the Stribog alg
 In order for the installed images to be checked, it is necessary to add the label ```gost-digest:check``` to the namespace of the cluster where it is necessary to monitor the integrity of the image.
 
 Example:
+
 ```
 apiVersion: v1
 kind: Namespace
@@ -17,6 +18,7 @@ metadata:
     gost-digest: check
   name: default
 ```
+
 If the checksum of the image is incorrect during the verification, the installation of the image will be refused, and you will receive a message about it.
 
 If the image is located in a closed repository, for authorization, you must specify the parameter ```imagePullSecrets``` in the container specification. And create a secret with authorization data. You can read more in [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pul-image-private-registry/).
@@ -26,6 +28,7 @@ If the image is located in a closed repository, for authorization, you must spec
 To calculate the checksum, a list of checksums of the image layers is taken.  The list is sorted in ascending order and glued into one line. Then the checksum from this line is calculated using the Stribog algorithm (GOST R 34.11-2012).
 
 Example of calculating the checksum of an nginx image:1.25.2:
+
 ```
 Checksums of layers sorted in ascending order
 [
@@ -46,7 +49,9 @@ Image Checksum
 ```
 
 The checksum can be added to the image using the crane utility
+
 ```
 crane mutate --annotation gost-digest=1aa84f6d91cc080fe198da7a6de03ca245aea0a8066a6b4fb5a93e40ebec2937 <image>
 ```
+
 To calculate, add and verify the checksum of an image, you can use the utility:
