@@ -27,6 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	module_manager "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -46,13 +48,10 @@ external-module-manager:
 
 	Context("Cluster has pending ModuleRelease", func() {
 		BeforeEach(func() {
-			var err error
-			tmpDir, err = os.MkdirTemp(os.TempDir(), "exrelease-*")
-			if err != nil {
-				Fail(err.Error())
-			}
+			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
 			_ = os.Mkdir(tmpDir+"/modules", 0777)
 			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+			testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
 
 			f.KubeStateSet(`
 ---
@@ -107,13 +106,10 @@ status:
 
 	Context("Cluster has ModuleRelease with custom weight", func() {
 		BeforeEach(func() {
-			var err error
-			tmpDir, err = os.MkdirTemp(os.TempDir(), "exrelease-*")
-			if err != nil {
-				Fail(err.Error())
-			}
+			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
 			_ = os.Mkdir(tmpDir+"/modules", 0777)
 			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+			testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
 
 			f.KubeStateSet(`
 ---
@@ -150,6 +146,8 @@ status:
 
 		Context("ModuleRelease was changed with another weight", func() {
 			BeforeEach(func() {
+				testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
+				testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.2")
 				f.KubeStateSet(``) // Empty cluster
 				st := f.KubeStateSet(`
 ---
@@ -179,6 +177,9 @@ status:
 				fsSynchronized = false
 				f.RunHook()
 			})
+			AfterEach(func() {
+				_ = os.RemoveAll(tmpDir)
+			})
 
 			It("should change module symlink", func() {
 				Expect(f).To(ExecuteSuccessfully())
@@ -192,8 +193,49 @@ status:
 				Expect(moduleLinks[0].Name()).To(Equal("913-echoserver"))
 			})
 		})
+
+		Context("Target module does not exist on fs", func() {
+			BeforeEach(func() {
+				mm, _ := module_manager.InitBasic("", "")
+				_ = mm.RegisterModules()
+				deckhouse_config.InitService(mm)
+				st := f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: absent-v0.0.1
+spec:
+  moduleName: absent
+  version: 0.0.1
+  weight: 987
+status:
+  phase: Deployed
+`)
+				f.BindingContexts.Set(st)
+				fsSynchronized = true
+				f.RunHook()
+			})
+			AfterEach(func() {
+				_ = os.RemoveAll(tmpDir)
+			})
+
+			It("Should suspend the release", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesGlobalResource("ModuleRelease", "absent-v0.0.1").Field("status.phase").String()).To(Equal("Suspended"))
+				Expect(f.KubernetesGlobalResource("ModuleRelease", "absent-v0.0.1").Field("status.message").String()).To(Equal("Desired version of the module met problems: not found"))
+			})
+		})
 	})
 })
+
+// nolint: unparam
+func testCreateModuleOnFS(tmpDir, moduleName, moduleVersion string) {
+	modulePath := path.Join(tmpDir, moduleName, moduleVersion)
+	_ = os.MkdirAll(modulePath, 0666)
+	_, _ = os.Create(path.Join(modulePath, "Chart.yaml"))
+	_, _ = os.Create(path.Join(modulePath, "values.yaml"))
+}
 
 func TestSymlinkFinder(t *testing.T) {
 	mt, err := os.MkdirTemp("", "target-*")
