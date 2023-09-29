@@ -11,7 +11,7 @@ index 00b7b1fce..3c026bd8a 100644
          StltConfig cfg = new StltConfig(args);
  
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
-index efa919929..fdbb15a8b 100644
+index efa919929..eb547e8de 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/drbd/utils/DrbdAdm.java
 @@ -23,6 +23,8 @@ import javax.inject.Singleton;
@@ -47,7 +47,7 @@ index efa919929..fdbb15a8b 100644
          execute(commands);
      }
  
-@@ -289,6 +294,7 @@ public class DrbdAdm
+@@ -289,10 +294,24 @@ public class DrbdAdm
  
          String[] params = getGetGiCommand(minorNr, blockDevPath, mdTypeParam);
          ExtCmd utilsCmd = extCmdFactory.create();
@@ -55,7 +55,24 @@ index efa919929..fdbb15a8b 100644
          File nullDevice = new File(Platform.nullDevice());
          try
          {
-@@ -314,6 +320,7 @@ public class DrbdAdm
+             OutputData outputData = utilsCmd.pipeExec(ProcessBuilder.Redirect.from(nullDevice), params);
++
++            String cmd = String.join(" ", outputData.executedCommand);
++            System.out.println("executedCommand: " + cmd);
++
++            System.out.println("exitCode: " + outputData.exitCode);
++            String stdoutStr = new String(outputData.stdoutData);
++
++            System.out.println("stdoutData: " + stdoutStr);
++            String stderrStr = new String(outputData.stderrData);
++
++            System.out.println("stderrData: " + stderrStr);
++            System.out.println(" >>> <<<");
++
+             if (outputData.exitCode == DRBDMETA_NO_VALID_MD_RC || outputData.exitCode == DRBDMETA_STRANGE_BM_OFFSET)
+             {
+                 mdFlag = false;
+@@ -314,10 +333,25 @@ public class DrbdAdm
          String ret;
  
          String[] params = getGetGiCommand(minorNr, blockDevPath, mdTypeParam);
@@ -63,7 +80,25 @@ index efa919929..fdbb15a8b 100644
          ExtCmd utilsCmd = extCmdFactory.create();
          try
          {
-@@ -411,6 +418,7 @@ public class DrbdAdm
+             OutputData outputData = utilsCmd.exec(params);
++
++            String cmd = String.join(" ", outputData.executedCommand);
++            System.out.println("executedCommand: " + cmd);
++
++            System.out.println("exitCode: " + outputData.exitCode);
++            String stdoutStr = new String(outputData.stdoutData);
++
++            System.out.println("stdoutData: " + stdoutStr);
++            String stderrStr = new String(outputData.stderrData);
++
++            System.out.println("stderrData: " + stderrStr);
++            System.out.println(" >>> <<<");
++
++
+             ret = new String(outputData.stdoutData);
+         }
+         catch (ChildProcessTimeoutException timeoutExc)
+@@ -411,6 +445,7 @@ public class DrbdAdm
      public void resumeIo(DrbdRscData<Resource> drbdRscData)
          throws ExtCmdFailedException
      {
@@ -71,7 +106,7 @@ index efa919929..fdbb15a8b 100644
          if (drbdRscData.resFileExists())
          {
              execute(DRBDADM_UTIL, "resume-io", drbdRscData.getSuffixedResourceName());
-@@ -458,6 +466,8 @@ public class DrbdAdm
+@@ -458,6 +493,8 @@ public class DrbdAdm
              "sh-nop"
          );
  
@@ -80,7 +115,7 @@ index efa919929..fdbb15a8b 100644
          // Using -c disables /etc/drbd.d/global_common.conf
          // execute(DRBDADM_UTIL, "-c", tmpResPathStr, "-d", "up", resourceName.value);
          // execute(DRBDADM_UTIL, "-d", "up", resourceName.value);
-@@ -477,6 +487,8 @@ public class DrbdAdm
+@@ -477,6 +514,8 @@ public class DrbdAdm
              suffixedRscName,
              Integer.toString(nodeId)
          );
@@ -89,7 +124,7 @@ index efa919929..fdbb15a8b 100644
      }
  
      public void forgetPeer(DrbdRscData<Resource> rscData) throws ExtCmdFailedException
-@@ -492,6 +504,8 @@ public class DrbdAdm
+@@ -492,6 +531,8 @@ public class DrbdAdm
              suffixedRscName,
              Integer.toString(nodeId)
          );
@@ -98,7 +133,7 @@ index efa919929..fdbb15a8b 100644
      }
  
      private void simpleSetupCommand(
-@@ -513,6 +527,8 @@ public class DrbdAdm
+@@ -513,6 +554,8 @@ public class DrbdAdm
          command.add(drbdObj);
  
          execute(command);
@@ -107,7 +142,7 @@ index efa919929..fdbb15a8b 100644
      }
  
      private void simpleAdmCommand(DrbdRscData<Resource> drbdRscData, String subcommand) throws ExtCmdFailedException
-@@ -544,6 +560,7 @@ public class DrbdAdm
+@@ -544,6 +587,7 @@ public class DrbdAdm
          }
          command.add(resName);
  
@@ -115,7 +150,7 @@ index efa919929..fdbb15a8b 100644
          execute(command);
      }
  
-@@ -560,7 +577,9 @@ public class DrbdAdm
+@@ -560,7 +604,9 @@ public class DrbdAdm
              "--wait-after-sb=yes",
              "--wfc-timeout=" + timeout,
              drbdRscData.getSuffixedResourceName()
@@ -125,7 +160,7 @@ index efa919929..fdbb15a8b 100644
      }
  
      // Using -c disables /etc/drbd.d/global_common.conf
-@@ -600,6 +619,25 @@ public class DrbdAdm
+@@ -600,6 +646,25 @@ public class DrbdAdm
                  extCmd.setTimeout(TimeoutType.WAIT, 5*60*1000);
              }
              OutputData outputData = extCmd.pipeExec(ProcessBuilder.Redirect.from(nullDevice), command);
