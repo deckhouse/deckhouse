@@ -75,9 +75,7 @@ spec:
         args:
         - '--web.listen-address=127.0.0.1:9101'
         - '--path.rootfs=/host/root'
-        - '--collector.ntp'
         - '--no-collector.wifi'
-        - '--collector.ntp.server-is-local'
         - '--collector.processes'
         - '--collector.filesystem.mount-points-exclude'
         - '(^/(dev|proc|sys|run)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)|(/kubelet/)'
