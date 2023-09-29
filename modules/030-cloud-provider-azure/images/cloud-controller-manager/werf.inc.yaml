@@ -51,7 +51,7 @@ shell:
     - hack/pkg-config.sh > .pkg_config
     - export VERSION={{ $value.ccm.azure }}
     - make bin/azure-cloud-controller-manager
-    - chown 64535:64535 /src/azure-cloud-controller-manager
-    - chmod 0755 /src/azure-cloud-controller-manager
+    - chown 64535:64535 /src/bin/azure-cloud-controller-manager
+    - chmod 0755 /src/bin/azure-cloud-controller-manager
   {{- end }}
 {{- end }}
