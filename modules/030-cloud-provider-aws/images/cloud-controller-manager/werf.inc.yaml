@@ -4,7 +4,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_SCRATCH }}
-from: common/distroless
+# from: common/distroless
 # from: {{ $.Images.BASE_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
