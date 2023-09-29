@@ -149,6 +149,7 @@ status:
 		Context("ModuleRelease was changed with another weight", func() {
 			BeforeEach(func() {
 				testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
+				testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.2")
 				f.KubeStateSet(``) // Empty cluster
 				st := f.KubeStateSet(`
 ---
