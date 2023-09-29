@@ -233,41 +233,24 @@ func findExistingModuleSymlink(rootPath, moduleName string) (string, error) {
 }
 
 func isModuleExistsOnFS(symlinksDir, symlinkPath, modulePath string) bool {
-	fmt.Println("REL--------------------")
 	targetPath, err := filepath.EvalSymlinks(symlinkPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-
-			fmt.Println("REL11111", symlinkPath, err)
-		}
-		fmt.Println("REL1", err)
 		return false
-	}
-
-	fmt.Println("REL12", targetPath)
-
-	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
-		fmt.Println("REL112", err)
 	}
 
 	if filepath.IsAbs(targetPath) {
 		targetPath, err = filepath.Rel(symlinksDir, targetPath)
 		if err != nil {
-			fmt.Println("REL2", err)
 			return false
 		}
-	}
-
-	fmt.Println("REL333333", targetPath)
-
-	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
-		fmt.Println("REL21", err)
 	}
 
 	return targetPath == modulePath
 }
 
 func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
+	fmt.Println("REL--------------------")
+
 	if oldSymlinkPath != "" {
 		if _, err := os.Lstat(oldSymlinkPath); err == nil {
 			err = os.Remove(oldSymlinkPath)
@@ -277,12 +260,18 @@ func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
 		}
 	}
 
+	fmt.Println("REL", newSymlinkPath)
+
 	if _, err := os.Lstat(newSymlinkPath); err == nil {
 		err = os.Remove(newSymlinkPath)
 		if err != nil {
 			return err
 		}
+	} else {
+		fmt.Println("REL1", newSymlinkPath)
 	}
+
+	fmt.Println("REL2", modulePath, newSymlinkPath)
 
 	return os.Symlink(modulePath, newSymlinkPath)
 }
