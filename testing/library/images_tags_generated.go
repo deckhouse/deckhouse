@@ -87,6 +87,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager126": "imageHash-cloudProviderYandex-cloudControllerManager126",
 		"cloudControllerManager127": "imageHash-cloudProviderYandex-cloudControllerManager127",
 		"cloudMetricsExporter":      "imageHash-cloudProviderYandex-cloudMetricsExporter",
+		"distroless":                "imageHash-cloudProviderYandex-distroless",
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
 	"cniCilium": map[string]interface{}{
