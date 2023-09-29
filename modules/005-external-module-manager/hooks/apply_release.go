@@ -268,7 +268,12 @@ func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
 			return err
 		}
 	} else {
-		fmt.Println("REL1", newSymlinkPath)
+		fmt.Println("REL1", newSymlinkPath, err)
+	}
+
+	if _, err := os.Stat(modulePath); os.IsNotExist(err) {
+		// path/to/whatever does not exist
+		fmt.Println("REL3", err)
 	}
 
 	fmt.Println("REL2", modulePath, newSymlinkPath)
