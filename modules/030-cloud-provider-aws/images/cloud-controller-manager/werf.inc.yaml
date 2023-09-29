@@ -3,24 +3,15 @@
   {{- if $value.ccm.aws }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-# from: {{ $.Images.BASE_SCRATCH }}
 fromImage: cloud-provider-aws/distroless
-# from: {{ $.Images.BASE_ALPINE }}
 import:
-# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-#   add: /usr/share/ca-certificates/mozilla/*
-#   to: /etc/ssl/certs/*
-#   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/aws-cloud-controller-manager
   to: /usr/local/bin/aws-cloud-controller-manager
   before: setup
-# shell:
-#   beforeInstall:
-#   - apk add --no-cache ca-certificates
 docker:
-  ENV:
-    container: docker
+  # ENV:
+  #   container: docker
   ENTRYPOINT: ["/usr/local/bin/aws-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
