@@ -166,6 +166,11 @@ defaults:
     values:
       featureStatus: experimental
   - scope:
+      path: "*/490-virtualization"
+      type: "pages"
+    values:
+      featureStatus: experimental
+  - scope:
       path: "*/160-multitenancy-manager"
       type: "pages"
     values:
