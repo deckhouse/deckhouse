@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -73,6 +74,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	}
 	// directory for symlinks will actual versions to all external-modules
 	symlinksDir := filepath.Join(externalModulesDir, "modules")
+	ts := time.Now().UTC()
 
 	// run only once on startup
 	if !fsSynchronized {
@@ -95,7 +97,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			status := map[string]v1alpha1.ModuleReleaseStatus{
 				"status": {
 					Phase:          v1alpha1.PhasePending,
-					TransitionTime: time.Now().UTC(),
+					TransitionTime: ts,
 					Message:        "",
 				},
 			}
@@ -131,9 +133,10 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			if !isModuleExistsOnFS(symlinksDir, currentModuleSymlink, modulePath) {
 				newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", deployedRelease.Weight, module))
 				input.LogEntry.Debugf("Module %q is not exists on the filesystem. Restoring", module)
-				err := enableModule(currentModuleSymlink, newModuleSymlink, modulePath)
+				err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
+					suspendModuleVersionForRelease(input, deployedRelease, err, ts)
 					continue
 				}
 				modulesChangedReason = "one of modules is not enabled"
@@ -173,9 +176,10 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			modulePath := generateModulePath(module, release.Version.String())
 			newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", release.Weight, module))
 
-			err := enableModule(currentModuleSymlink, newModuleSymlink, modulePath)
+			err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
 				input.LogEntry.Errorf("Module deploy failed: %v", err)
+				suspendModuleVersionForRelease(input, release, err, ts)
 				continue
 			}
 			modulesChangedReason = "a new module release found"
@@ -214,6 +218,20 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	return nil
 }
 
+func suspendModuleVersionForRelease(input *go_hook.HookInput, release enqueueRelease, err error, ts time.Time) {
+	if os.IsNotExist(err) {
+		err = errors.New("not found")
+	}
+	status := map[string]v1alpha1.ModuleReleaseStatus{
+		"status": {
+			Phase:          v1alpha1.PhaseSuspended,
+			TransitionTime: ts,
+			Message:        fmt.Sprintf("Desired version of the module met problems: %s", err),
+		},
+	}
+	input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+}
+
 func findExistingModuleSymlink(rootPath, moduleName string) (string, error) {
 	var symlinkPath string
 
@@ -248,7 +266,7 @@ func isModuleExistsOnFS(symlinksDir, symlinkPath, modulePath string) bool {
 	return targetPath == modulePath
 }
 
-func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
+func enableModule(externalModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
 	if oldSymlinkPath != "" {
 		if _, err := os.Lstat(oldSymlinkPath); err == nil {
 			err = os.Remove(oldSymlinkPath)
@@ -263,6 +281,13 @@ func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	// make absolute path for versioned module
+	moduleAbsPath := filepath.Join(externalModulesDir, strings.TrimPrefix(modulePath, "../"))
+	// check that module exists on a disk
+	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
+		return err
 	}
 
 	return os.Symlink(modulePath, newSymlinkPath)
