@@ -44,7 +44,7 @@ bb-deckhouse-get-disruptive-update-approval() {
         fi
         if bb-flag? rolling-update; then
           bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/rolling-update='."
-          b-log-info "The node will be deleted and a new one will be created."
+          bb-log-info "The node will be deleted and a new one will be created."
           bb-kubectl \
             --kubeconfig=/etc/kubernetes/kubelet.conf \
             --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
