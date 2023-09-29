@@ -20,10 +20,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
-const (
-	webhookServiceHost = "gost-digest-webhook.d8-system.svc"
-)
-
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	SANs: tls_certificate.DefaultSANs([]string{
 		"gost-digest-webhook.d8-system.svc",
