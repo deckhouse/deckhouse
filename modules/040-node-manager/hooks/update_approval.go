@@ -596,6 +596,9 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 	case node.ConfigurationChecksum == desiredChecksum:
 		return "UpToDate"
 
+	case node.IsRollingUpdate:
+		return "RollingUpdate"
+
 	default:
 		return "Unknown"
 	}
