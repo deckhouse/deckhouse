@@ -25,9 +25,6 @@ bb-deckhouse-get-disruptive-update-approval() {
       return 0
     fi
 
-    disruptionsApprovalMode="$1"
-    bb-log-info "Disruptions ApprovalMode: ${disruptionsApprovalMode}"
-
     attempt=0
     until
         node_data="$(
@@ -45,7 +42,7 @@ bb-deckhouse-get-disruptive-update-approval() {
             bb-log-error "ERROR: Failed to annotate Node with annotation 'update.node.deckhouse.io/disruption-required='."
             exit 1
         fi
-        if [ "$disruptionsApprovalMode" == "RollingUpdate" ]; then
+        if bb-flag? rolling-update; then
           bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/rolling-update='."
           b-log-info "The node will be deleted and a new one will be created."
           bb-kubectl \
