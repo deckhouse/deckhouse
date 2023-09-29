@@ -131,7 +131,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			if !isModuleExistsOnFS(symlinksDir, currentModuleSymlink, modulePath) {
 				newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", deployedRelease.Weight, module))
 				input.LogEntry.Debugf("Module %q is not exists on the filesystem. Restoring", module)
-				err := enableModule(currentModuleSymlink, newModuleSymlink, modulePath)
+				err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
 					continue
@@ -173,7 +173,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			modulePath := generateModulePath(module, release.Version.String())
 			newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", release.Weight, module))
 
-			err := enableModule(currentModuleSymlink, newModuleSymlink, modulePath)
+			err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
 				input.LogEntry.Errorf("Module deploy failed: %v", err)
 				continue
@@ -248,9 +248,7 @@ func isModuleExistsOnFS(symlinksDir, symlinkPath, modulePath string) bool {
 	return targetPath == modulePath
 }
 
-func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
-	fmt.Println("REL--------------------")
-
+func enableModule(externalModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
 	if oldSymlinkPath != "" {
 		if _, err := os.Lstat(oldSymlinkPath); err == nil {
 			err = os.Remove(oldSymlinkPath)
@@ -260,23 +258,20 @@ func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
 		}
 	}
 
-	fmt.Println("REL", newSymlinkPath)
-
 	if _, err := os.Lstat(newSymlinkPath); err == nil {
 		err = os.Remove(newSymlinkPath)
 		if err != nil {
 			return err
 		}
-	} else {
-		fmt.Println("REL1", newSymlinkPath, err)
 	}
 
-	if _, err := os.Stat(modulePath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
-		fmt.Println("REL3", err)
-	}
+	// make absolute path for versioned module
+	moduleAbsPath := filepath.Join(externalModulesDir, strings.TrimPrefix(modulePath, "../"))
 
-	fmt.Println("REL2", modulePath, newSymlinkPath)
+	// check that module exists on a disk
+	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
+		return err
+	}
 
 	return os.Symlink(modulePath, newSymlinkPath)
 }
