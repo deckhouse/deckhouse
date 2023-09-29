@@ -23,7 +23,7 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
     Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
   </li>
   <li>
-    Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на master-узле:
+    Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong>:
     {% snippetcut %}
   ```bash
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -124,28 +124,25 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 {%- endofftopic %}
 </li>
 <li><p><strong>Создание StorageClass</strong></p>
-<p>Создайте на <strong>master-узле</strong> файл <code>storage-class.yml</code> содержащий конфигурацию модуля <a href="https://deckhouse.ru/documentation/v1/modules/031-local-path-provisioner/">local-path-provisioner</a>:</p>
+<p>Настройте на <strong>master-узле</strong> конфигурацию модуля <a href="https://deckhouse.ru/documentation/v1/modules/031-local-path-provisioner/">local-path-provisioner</a>:</p>
 {% snippetcut %}
-```yaml
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-system
+  name: localpath-monitoring
 spec:
   nodeGroups:
   - worker
   path: "/opt/local-path-provisioner"
+EOF
 ```
 {% endsnippetcut %}
-{% alert %}Не забудьте указать верное имя <strong>nodeGroups</strong>! Для отдельного узла оно будет <strong>worker</strong>, а для одного master-узла – <strong>master</strong>.{% endalert %}
+<p><code>nodeGroups</code> – имя созданной NodeGroup.</p>
 <p><code>path</code> – путь на узле, где будут лежать данные.</p>
-<p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
-```shell
-sudo /opt/deckhouse/bin/kubectl create -f storage-class.yml
-```
-{% endsnippetcut %}
-Дождитесь перехода подов Ingress-контролллера в статус <code>Ready</code>.
+
+Дождитесь перехода созданного StorageClass в статус <code>Ready</code>.
 
 {% offtopic title="Пример вывода..." %}
 ```
@@ -155,25 +152,26 @@ worker   Static   1       1       1                                             
 ```
 {%- endofftopic %}
 
-<p><strong>Настройте Prometheus</strong> на использование локального хранилища</p>
+<li><p><strong>Настройка Prometheus</strong></p>
 
-Откройке конфигурацию модуля <code>prometheus</code>:
+Настройте на <strong>master-узле</strong> ModuleConfig <code>prometheus</code>:
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl edit moduleconfig prometheus
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  enabled: true
+  settings:
+    longtermStorageClass: localpath-system
+    storageClass: localpath-monitoring
+  version: 2
+EOF
 ```
 {% endsnippetcut %}
-
-Добавьте в нее следующие параметры:
-{% snippetcut %}
-```yaml
-longtermStorageClass: localpath-system
-storageClass: localpath-system
-```
-{% endsnippetcut %}
-
-<p>Сохраните изменения и дождитесь обновления подов модуля.</p>
+</li>
 
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
