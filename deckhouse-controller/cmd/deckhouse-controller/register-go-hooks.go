@@ -105,4 +105,5 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/600-secret-copier/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-documentation/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-documentation/hooks/https"
+	_ "github.com/deckhouse/deckhouse/modules/900-gost-integrity-controller/hooks"
 )

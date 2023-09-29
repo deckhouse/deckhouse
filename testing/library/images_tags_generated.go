@@ -203,6 +203,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"grafanaAgent": "imageHash-flantIntegration-grafanaAgent",
 		"madisonProxy": "imageHash-flantIntegration-madisonProxy",
 	},
+	"gostIntegrityController": map[string]interface{}{
+		"gostDigestWebhook": "imageHash-gostIntegrityController-gostDigestWebhook",
+	},
 	"ingressNginx": map[string]interface{}{
 		"controller11":          "imageHash-ingressNginx-controller11",
 		"controller16":          "imageHash-ingressNginx-controller16",

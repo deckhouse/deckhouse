@@ -76,6 +76,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"ebpf-exporter",
 	"events-exporter",
 	"extended-monitoring-exporter",
+	"gost-digest-webhook",
 	"grafana",
 	"image-availability-exporter",
 	"ingress-gateway-controller",
