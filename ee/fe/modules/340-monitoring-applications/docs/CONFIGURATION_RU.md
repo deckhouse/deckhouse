@@ -22,6 +22,7 @@ title: "Модуль monitoring-applications: настройки"
     | mongodb         | <span class="doc-checkmark"></span> |                                     |
     | nats            | <span class="doc-checkmark"></span> | <span class="doc-checkmark"></span> |
     | nginx           |                                     |                                     |
+    | pgbouncer       | <span class="doc-checkmark"></span> |                                     |
     | php-fpm         | <span class="doc-checkmark"></span> | <span class="doc-checkmark"></span> |
     | prometheus      | <span class="doc-checkmark"></span> |                                     |
     | rabbitmq        | <span class="doc-checkmark"></span> | <span class="doc-checkmark"></span> |
