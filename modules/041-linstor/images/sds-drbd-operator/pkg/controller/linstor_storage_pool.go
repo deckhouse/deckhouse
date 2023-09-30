@@ -237,28 +237,29 @@ func NewLinstorStoragePool(
 
 				log.Info("-------------------- LVM Group ---------------------------")
 				for _, og := range oldLSP.Spec.LvmVolumeGroups {
-					log.Info("LvmVolumeGroupsNames old groups LVM " + og.Name)
-					log.Info("LvmVolumeGroupsNames old groups Thin LVM" + og.ThinPoolName)
+					switch oldLSP.Spec.Type {
+					case TypeLVM:
+						log.Info("LvmVolumeGroupsNames: new groups LVM " + og.Name)
+					case TypeLVMThin:
+						log.Info("LvmVolumeGroupsNames: new groups Thin LVM" + og.ThinPoolName)
+					}
+
 				}
 
 				for _, ng := range newLSP.Spec.LvmVolumeGroups {
-					log.Info("LvmVolumeGroupsNames new groups LVM " + ng.Name)
-					log.Info("LvmVolumeGroupsNames new groups Thin LVM" + ng.ThinPoolName)
-
 					switch newLSP.Spec.Type {
 					case TypeLVM:
-						name = ng.Name
+						log.Info("LvmVolumeGroupsNames: new groups LVM " + ng.Name)
 					case TypeLVMThin:
-						name = ng.ThinPoolName
+						log.Info("LvmVolumeGroupsNames: new groups Thin LVM" + ng.Name + " with thin pool: " + ng.ThinPoolName)
 					}
 				}
 				log.Info("-------------------- LVM Group ---------------------------")
 
 				if len(newLSP.Spec.LvmVolumeGroups) > len(oldLSP.Spec.LvmVolumeGroups) {
 
-					for _, gn := range newLSP.Spec.LvmVolumeGroups {
-						fmt.Println("gn ", gn)
-						group, err := getLvmVolumeGroup(ctx, cl, newLSP.GetNamespace(), name)
+					for _, ng := range newLSP.Spec.LvmVolumeGroups {
+						group, err := getLvmVolumeGroup(ctx, cl, newLSP.GetNamespace(), ng.Name)
 						if err != nil {
 							log.Error(err, "error getLvmVolumeGroup")
 							return
