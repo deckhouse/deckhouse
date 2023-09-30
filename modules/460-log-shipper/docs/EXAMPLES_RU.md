@@ -1,5 +1,6 @@
 ---
 title: "Модуль log-shipper: примеры"
+description: Примеры использования модуля log-shipper Deckhouse. Примеры настройки модуля, фильтрации и сбора событий и логов в кластере Kubernetes.  
 ---
 
 {% raw %}
@@ -261,7 +262,11 @@ spec:
       verifyHostname: false
 ```
 
-> **Note!** destination не поддерживает метки Pod'а для индексирования. Рассмотрите возможность добавления нужных меток при помощи опции `extraLabels`.
+{% endraw %}
+{% alert -%}
+`destination` не поддерживает метки Pod'а для индексирования. Рассмотрите возможность добавления нужных меток при помощи опции `extraLabels`.
+{%- endalert %}
+{% raw %}
 
 ```yaml
 extraLabels:
@@ -360,6 +365,24 @@ spec:
   - loki-storage
 ```
 
+### Сборка логов без строки содержащей `GET /status" 200`
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: all-logs
+spec:
+  type: KubernetesPods
+  destinationRefs:
+  - loki-storage
+  labelFilter:
+  - field: message
+    operator: NotRegex
+    values:
+    - .*GET /status" 200$
+```
+
 ### Аудит событий kubelet'а
 
 ```yaml
@@ -404,7 +427,11 @@ spec:
   - loki-storage
 ```
 
-> **Note!** Если вам нужны только логи одного или малой группы Pod'ов, постарайтесь использовать настройки kubernetesPods, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.
+{% endraw %}
+{% alert -%}
+Если вам нужны только логи одного Pod'а или малой группы Pod'ов, постарайтесь использовать настройки `kubernetesPods`, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.
+{%- endalert %}
+{% raw %}
 
 ## Настройка сборки логов с продуктовых namespace'ов используя опцию namespace label selector
 

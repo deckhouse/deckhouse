@@ -25,7 +25,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 fromCacheVersion: 20230426
 from: {{ $.Images.BASE_SCRATCH }}
 git:
-- add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
   stageDependencies:
     setup:

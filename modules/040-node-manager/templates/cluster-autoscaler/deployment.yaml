@@ -3,6 +3,10 @@ cpu: 25m
 memory: 150Mi
 {{- end }}
 
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $autoscalerImageName := join "" (list "clusterAutoscaler" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $autoscalerImage := include "helm_lib_module_image_no_fail" (list . $autoscalerImageName) }}
+
 {{- define "cluster_autoscaler_nodes" }}
   {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
     {{- if eq $ng.nodeType "CloudEphemeral" }}
@@ -77,7 +81,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: cluster-autoscaler
       terminationGracePeriodSeconds: 5
       imagePullSecrets:
@@ -85,7 +89,7 @@ spec:
       containers:
       - name: cluster-autoscaler
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "clusterAutoscaler") }}
+        image: {{ $autoscalerImage }}
         args:
         - --namespace=d8-cloud-instance-manager
         - --cloud-provider=mcm
@@ -111,11 +115,10 @@ spec:
         - name: CONTROL_NAMESPACE
           value: d8-cloud-instance-manager
         livenessProbe:
-          exec:
-            command:
-            - sh
-            - -c
-            - wget -T 3 -q -O /dev/null http://127.0.0.1:8085/health-check
+          httpGet:
+            path: /health-check
+            port: 8443
+            scheme: HTTPS
           failureThreshold: 6
           periodSeconds: 5
           successThreshold: 1
@@ -137,12 +140,16 @@ spec:
         - "--livez-path=/livez"
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
+            excludePaths:
+            - /health-check
             upstreams:
-            - upstream: http://127.0.0.1:8085/metrics
-              path: /metrics
+            - upstream: http://127.0.0.1:8085/
+              path: /
               authorization:
                 resourceAttributes:
                   namespace: d8-cloud-instance-manager

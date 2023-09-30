@@ -1,6 +1,7 @@
 ---
 title: "Managing nodes: FAQ"
 search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
+description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in a cluster. Changing the CRI of the node.
 ---
 {% raw %}
 
@@ -151,81 +152,21 @@ This is only needed if you have to move a static node from one cluster to anothe
    kubectl delete node <node>
    ```
 
-1. Stop all the services and running containers:
-
+1. Run cleanup script on the node:
+  
    ```shell
-   systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl stop bashible.service bashible.timer
-   systemctl stop kubelet.service
-   systemctl stop containerd
-   systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
-   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
    ```
 
-1. Unmount all mounted partitions:
-
-   ```shell
-   for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
-   ```
-
-1. Delete all directories and files:
-
-   ```shell
-   rm -rf /var/lib/bashible
-   rm -rf /var/cache/registrypackages
-   rm -rf /etc/kubernetes
-   rm -rf /var/lib/kubelet
-   rm -rf /var/lib/docker
-   rm -rf /var/lib/containerd
-   rm -rf /etc/cni
-   rm -rf /var/lib/cni
-   rm -rf /var/lib/etcd
-   rm -rf /etc/systemd/system/kubernetes-api-proxy*
-   rm -rf /etc/systemd/system/bashible*
-   rm -rf /etc/systemd/system/sysctl-tuner*
-   rm -rf /etc/systemd/system/kubelet*
-   ```
-
-1. Delete all interfaces:
-
-   ```shell
-   ifconfig cni0 down
-   ifconfig flannel.1 down
-   ifconfig docker0 down
-   ip link delete cni0
-   ip link delete flannel.1
-   ```
-
-1. Cleanup systemd:
-
-   ```shell
-   systemctl daemon-reload
-   systemctl reset-failed
-   ```
-
-1. Reboot the node.
-
-1. Start CRI:
-
-   ```shell
-   systemctl start containerd
-   systemctl list-units --full --all | grep -q docker.service && systemctl start docker
-   ```
+After reboot of the node:
 
 1. [Run](#how-do-i-add-a-static-node-to-a-cluster) the `bootstrap.sh` script.
-1. Turn on all the services:
-
-   ```shell
-   systemctl start kubelet.service
-   systemctl start kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl start bashible.service bashible.timer
-   ```
 
 ## How do I know if something went wrong?
 
 If a node in a nodeGroup is not updated (the value of `UPTODATE` when executing the `kubectl get nodegroup` command is less than the value of `NODES`) or you assume some other problems that may be related to the `node-manager` module, then you need to look at the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
 
-You can browse its logs using the following command:
+To view the logs of the `bashible` service on a specific node, run the following command:
 
 ```shell
 journalctl -fu bashible
@@ -364,7 +305,6 @@ spec:
 | cloudInstances.classReference         | -                          | +                 | -               |
 | cloudInstances.maxSurgePerZone        | -                          | -                 | -               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
-| cri.docker.maxConcurrentDownloads     | +                          | -                 | +               |
 | cri.type                              | - (NotManaged) / + (other) | -                 | -               |
 | disruptions                           | -                          | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
@@ -463,33 +403,11 @@ mcmEmergencyBrake: true
 
 ## How do I restore the master node if kubelet cannot load the control plane components?
 
-Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/docker` (`/var/lib/containerd`) was deleted if Docker (container) is used). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
+Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/containerd` was deleted). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
 
 Below is an instruction on how you can restore the master node.
 
-### Docker
-
-Execute the following command to restore the master node in any cluster running under Deckhouse:
-
-```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
-jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r 'del(.auths."registry.deckhouse.io".username, .auths."registry.deckhouse.io".password)'
-```
-
-Copy the output of the command and add it to the `/root/.docker/config.json` file on the corrupted master.
-Next, you need to pull images of control plane components to the corrupted master:
-
-```shell
-for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-  docker pull $image
-done
-```
-
-You need to restart kubelet after pulling the images.
-Please, pay attention that you must **delete the changes made to the `/root/.docker/config.json` file after restoring the master node!**
-
-### Containerd
+### containerd
 
 Execute the following command to restore the master node in any cluster running under Deckhouse:
 
@@ -512,7 +430,9 @@ You need to restart `kubelet` after pulling the images.
 
 ## How to change CRI for NodeGroup?
 
-Set NodeGroup `cri.type` to `Docker` or `Containerd`.
+> **Note!** CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
+
+Set NodeGroup `cri.type` to `Containerd` or `NotManaged`.
 
 NodeGroup YAML example:
 
@@ -529,16 +449,16 @@ spec:
 
 Also, this operation can be done with patch:
 
-* For Containerd:
+* For `Containerd`:
 
   ```shell
   kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
-* For Docker:
+* For `NotManaged`:
 
   ```shell
-  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
+  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
 > **Note!** While changing `cri.type` for NodeGroups, created using `dhctl`, you must change it in `dhctl config edit provider-cluster-configuration` and in `NodeGroup` object.
@@ -549,22 +469,22 @@ node updates or requires manual confirmation.
 
 ## How to change CRI for the whole cluster?
 
-> **Note!** Docker is deprecated. CRI can only be switched from Docker to Containerd.
+> **Note!** CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
 
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
 Also, this operation can be done with the following patch:
-* For Containerd
+* For `Containerd`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
-* For Docker
+* For `NotManaged`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
@@ -723,7 +643,7 @@ spec:
 
     distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
     curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    yam install -y nvidia-container-toolkit nvidia-driver
+    yum install -y nvidia-container-toolkit nvidia-driver
   nodeGroups:
   - gpu
   weight: 30
@@ -860,6 +780,7 @@ spec:
           [plugins."io.containerd.grpc.v1.cri".registry.configs]
             [plugins."io.containerd.grpc.v1.cri".registry.configs."artifactory.proxy".auth]
               auth = "AAAABBBCCCDDD=="
+    EOF
   nodeGroups:
     - "*"
   weight: 49
@@ -1005,7 +926,7 @@ status:
 
 ## How do I make werf ignore the Ready conditions in a node group?
 
-[werf](werf.io) checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```.
+[werf](https://werf.io) checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```.
 
 Creating (updating) a [nodeGroup](cr.html#nodegroup) resource in a cluster can take a significant amount of time to create the required number of nodes. When deploying such a resource in a cluster using werf (e.g., as part of a CI/CD process), deployment may terminate when resource readiness timeout is exceeded. To make werf ignore the nodeGroup status, the following `nodeGroup` annotations must be added:
 

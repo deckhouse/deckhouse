@@ -22,29 +22,32 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ExternalModuleSource struct {
+type ModuleSource struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of an ExternalModuleSource.
-	Spec ExternalModuleSourceSpec `json:"spec"`
+	// Spec defines the behavior of an ModuleSource.
+	Spec ModuleSourceSpec `json:"spec"`
 
-	// Status of an ExternalModuleSource.
-	Status ExternalModuleSourceStatus `json:"status,omitempty"`
+	// Status of an ModuleSource.
+	Status ModuleSourceStatus `json:"status,omitempty"`
 }
 
-type ExternalModuleSourceSpec struct {
-	Registry struct {
-		Repo      string `json:"repo"`
-		DockerCFG string `json:"dockerCfg"`
-	} `json:"registry"`
-	ReleaseChannel string `json:"releaseChannel"`
+type ModuleSourceSpec struct {
+	Registry       ModuleSourceSpecRegistry `json:"registry"`
+	ReleaseChannel string                   `json:"releaseChannel"`
 }
 
-type ExternalModuleSourceStatus struct {
+type ModuleSourceSpecRegistry struct {
+	Repo      string `json:"repo"`
+	DockerCFG string `json:"dockerCfg"`
+	CA        string `json:"ca"`
+}
+
+type ModuleSourceStatus struct {
 	SyncTime         time.Time     `json:"syncTime"`
 	ModulesCount     int           `json:"modulesCount"`
 	AvailableModules []string      `json:"availableModules"`

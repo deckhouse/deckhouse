@@ -1,0 +1,13 @@
+flant-integration:
+  fixes:
+    - summary: Fix rendering config in the case of the absence `clusterConfiguration`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5898
+global-hooks:
+  fixes:
+    - summary: Clean old deckhouse endpointslices on startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5903
+loki:
+  fixes:
+    - summary: Fixed permissions for existing files after changing GID and UID.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5904
+

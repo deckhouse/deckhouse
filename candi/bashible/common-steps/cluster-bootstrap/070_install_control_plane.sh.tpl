@@ -47,7 +47,7 @@ if [ ! -f /root/.kube/config ]; then
   mkdir -p /root/.kube
   ln -s /etc/kubernetes/admin.conf /root/.kube/config
 fi
-
+# TODO remove after removing support of kubernetes 1.23
 {{- if semverCompare "<1.24" .kubernetesVersion }}
 # add node-role.kubernetes.io/control-plane taint
 # kubeadm < 1.24 taint node only with add node-role.kubernetes.io/master taint

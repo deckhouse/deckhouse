@@ -1,5 +1,6 @@
 ---
 title: "The linstor module: advanced configuration"
+description: Steps for manually creating storage pools and StorageClasses when enabling the linstor Deckhouse module. Configuring backup snapshots of linstor volumes to S3.
 ---
 
 [The simplified guide](configuration.html#linstor-storage-configuration) contains steps that automatically create storage pools and StorageClasses when an LVM volume group or LVMThin pool with the tag `linstor-<name_pool>` appears on the node. Next, we consider the steps for manually creating storage pools and StorageClasses.
@@ -12,8 +13,10 @@ To proceed further, the `linstor` CLI utility is required. Use one of the follow
   alias linstor='kubectl exec -n d8-linstor deploy/linstor-controller -- linstor'
   ```
 
-> Most of the items on this page are taken from the [official LINSTOR documentation](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/).
-> Despite the fact that here we have tried to collect the most common questions, feel free to refer to the original source.
+{% alert %}
+Most of the items on this page are taken from the [official LINSTOR documentation](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/).
+Despite the fact that here we have tried to collect the most common questions, feel free to refer to the original source.
+{% endalert %}
 
 ## Manual configuration
 
@@ -142,9 +145,15 @@ volumeBindingMode: WaitForFirstConsumer
 
 ## Backup on S3 Storage
 
-> This feature requires a configured master passphrase (see instructions on the top of the [module configuration](configuration.html) page).
->
-> Snapshots are supported only for LVMThin pools.
+{% alert level="warning" %}
+This feature requires a configured master passphrase (see instructions on the top of the [module configuration](configuration.html) page).
+
+Snapshots are supported only for LVMThin pools.
+{% endalert %}
+
+{% alert level="warning" %}
+The functionality is in experimental mode and may not work correctly.
+{% endalert %}
 
 Data backup is implemented using [volume snapshots](https://kubernetes.io/docs/concepts/storage/volume-snapshots/). Snapshots are supported by the [snapshot-controller](../045-snapshot-controller/) module, which is enabled automatically for supported CSI drivers in Kubernetes clusters versions 1.20 and higher.
 
@@ -392,12 +401,12 @@ Use the created `PersistentVolumeClaim` to access a copy of the recovered data.
 LINSTOR supports automatic scheduled backups.
 However, this feature is currently only available through the LINSTOR CLI.
 
-To do this, you need to first create an S3 remote:
+To create scheduled backups follow the steps:
+- Create an S3 remote:
 
-```bash
-linstor remote create s3 myRemote s3.us-west-2.amazonaws.com \
-  my-bucket us-west-2 admin password [--use-path-style]
-```
+  ```bash
+  linstor remote create s3 myRemote s3.us-west-2.amazonaws.com \
+    my-bucket us-west-2 admin password [--use-path-style]
+  ```
 
-After that, create a schedule and enable it for your remote.  
-To do this, please refer to the [official LINSTOR documentation](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/#s-linstor-scheduled-backup-shipping)
+- Create a schedule and enable it for your remote according to the [official LINSTOR documentation](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/#s-linstor-scheduled-backup-shipping)

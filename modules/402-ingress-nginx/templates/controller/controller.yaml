@@ -12,12 +12,14 @@
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
+{{- $gracePeriod := 0 }}
 {{- $defaultGracePeriod := 60 }}
 {{- if $loadBalancer }}
   {{- $defaultGracePeriod = 120 }}
 {{- else if eq $crd.spec.inlet "HostWithFailover" }}
   {{- $defaultGracePeriod = 0 }}
 {{- end }}
+{{- $gracePeriod = (kindIs "invalid" $crd.spec.waitLoadBalancerOnTerminating) | ternary $defaultGracePeriod $crd.spec.waitLoadBalancerOnTerminating }}
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
 
@@ -186,7 +188,7 @@ spec:
         - --publish-service=d8-ingress-nginx/{{ $crd.name }}-load-balancer
         {{- end }}
         # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
-        - --shutdown-grace-period={{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod }}
+        - --shutdown-grace-period={{ $gracePeriod }}
         {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
         # we don't disable it if validation is disabled because it will lead to deployment rollout
         - --validating-webhook=:8443
@@ -212,19 +214,10 @@ spec:
         - --healthz-host=127.0.0.1
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
         lifecycle:
-  {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
-          postStart:
-            exec:
-              command: [ "/bin/bash", "-c", "echo -n ok > /tmp/healthz" ]
-          preStop:
-            exec:
-              command: [ "/bin/bash", "-c", "rm -f /tmp/healthz && /wait-shutdown" ]
-  {{- else }}
           preStop:
             exec:
               command:
                 - /wait-shutdown
-  {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
@@ -293,7 +286,7 @@ spec:
           - mountPath: /var/files
             name: telemetry-config-file
       - name: kube-rbac-proxy
-        image: {{ include "helm_lib_module_common_image" (list $context "kubeRbacProxy") }}
+        image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10354"
         - "--v=2"
@@ -329,6 +322,13 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-protobuf-metrics
                   name: ingress-nginx
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /controller-probe
+              - -server
+              - 127.0.0.1:10254
         ports:
         - containerPort: 10354
           name: https-metrics

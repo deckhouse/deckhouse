@@ -2,7 +2,7 @@
 002-deckhouse/              @yalosev
 010-operator-prometheus-crd/ @nabokihms
 010-prometheus-crd/         @nabokihms
-021-cni-cilium/             @zuzzas @RomanenkoDenys @kvaps
+021-cni-cilium/             @zuzzas @RomanenkoDenys @apolovov
 030-cloud-provider-openstack/ @konstantin-axenov
 030-cloud-provider-vsphere/ @RomanenkoDenys
 041-linstor/                @AleksZimin
@@ -21,22 +21,22 @@
 301-prometheus-*/           @nabokihms
 303-prometheus-*/           @nabokihms
 350-node-local-dns/         @zuzzas
-380-metallb/                @RomanenkoDenys @kvaps
+380-metallb/                @RomanenkoDenys @apolovov
 402-ingress-nginx/          @nabokihms @yalosev
 460-log-shipper/            @nabokihms
 470-chrony/                 @RomanenkoDenys
-490-virtualization          @kvaps
-491-containerized-data-importer @kvaps
+490-virtualization          @fl64
+491-containerized-data-importer @fl64
 500-openvpn/                @vitaliy-sn
 500-upmeter/                @shvgn
 502-delivery/               @shvgn
-600-flant-integration/      @shvgn
+600-flant-integration/      @nabokihms
 650-runtime-audit-engine/   @nabokihms
 810-documentation/          @z9r5 @nabokihms @konstantin-axenov
 bashible-apiserver/         @yalosev
 candi/                      @RomanenkoDenys
 cloud-controller-manager/   @zuzzas
-csi/                        @zuzzas @kvaps
+csi/                        @zuzzas
 deckhouse-controller/       @yalosev
 dhctl/                      @name212
 docs/                       @z9r5 @nabokihms @konstantin-axenov

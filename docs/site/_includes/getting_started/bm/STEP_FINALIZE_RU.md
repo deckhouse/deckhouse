@@ -4,7 +4,7 @@
 
 На данном этапе вы создали кластер, который состоит из **единственного** master-узла.
 
-Для полноценной работы кластера добавьте узлы, согласно <a href="/documentation/latest/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">документации</a> (рекомендуется для production-окружений и тестовых сред).
+Для полноценной работы кластера <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавьте узлы</a> в кластер и ознакомьтесь с <a href="/documentation/v1/modules/040-node-manager/">управлением узлами</a> (рекомендуется для production-окружений и тестовых сред).
 
 <blockquote>
 <p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на master-узле. Для этого, снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
@@ -15,26 +15,46 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
 {% endsnippetcut %}
 </blockquote>
 
-Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился:
+Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время. 
 
+Прежде чем продолжить:
+<ul><li><p>Если вы добавляли дополнительные узлы в кластер, убедитесь что они находятся в статусе <code>Ready</code>.</p>
+<p>Выполните на <strong>master-узле</strong> следующую команду, чтобы получить список узлов кластера:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+sudo /opt/deckhouse/bin/kubectl get no
 ```
 {% endsnippetcut %}
 
-Дождитесь перехода Pod'ов в статус `Ready`.
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl get no
+NAME               STATUS   ROLES                  AGE    VERSION
+d8cluster          Ready    control-plane,master   30m   v1.23.17
+d8cluster-worker   Ready    worker                 10m   v1.23.17
+```
+{%- endofftopic %}
+</li>
+<li><p>Убедитесь, что под Kruise controller manager модуля <a href="/documentation/v1/modules/402-ingress-nginx/">ingress-nginx</a> запустился и находится в статусе <code>Ready</code>.</p>
+<p>Выполните на <strong>master-узле</strong> следующую команду:</p>
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+```
+{% endsnippetcut %}
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
-NAME                                       READY   STATUS    RESTARTS   AGE
-controller-nginx-r6hxc                     3/3     Running   0          16h
-kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+NAME                                         READY   STATUS    RESTARTS    AGE
+kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
 {%- endofftopic %}
+</li></ul>
 
-Далее, остается выполнить следующие три действия.
+Далее, остается создать Ingress-контроллер, создать пользователя для доступа в веб-интерфейсы, и настроить DNS.
+
 <ul><li><p><strong>Установка Ingress-контроллера</strong></p>
 <p>Создайте на <strong>master-узле</strong> файл <code>ingress-nginx-controller.yml</code> содержащий конфигурацию Ingress-контроллера:</p>
 {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
@@ -46,6 +66,24 @@ kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
 sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
+
+Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился (выполните на <code>master-узле</code>):
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+```
+{% endsnippetcut %}
+
+Дождитесь перехода подов Ingress-контролллера в статус <code>Ready</code>.
+
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+NAME                                       READY   STATUS    RESTARTS   AGE
+controller-nginx-r6hxc                     3/3     Running   0          5m
+```
+{%- endofftopic %}
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
 <p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>

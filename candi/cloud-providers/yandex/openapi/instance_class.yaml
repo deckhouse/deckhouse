@@ -18,7 +18,7 @@ spec:
           description: |
             Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
 
-            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+            The `NodeGroup` resource of the `node-manager` module [refers](../040-node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
           required:
             - spec
           properties:
@@ -55,7 +55,7 @@ spec:
                   description: |
                     Image ID to use while provisioning Yandex Compute Instances.
 
-                    `masterInstanceClass` image from `providerClusterConfiguration` will be used by default.
+                    The [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter will be used by default.
                   example: fd8nb7ecsbvj76dfaa8b
                   type: string
                 platformID:
@@ -64,12 +64,17 @@ spec:
                   x-doc-default: standard-v2
                   type: string
                 preemptible:
-                  description: Should a provisioned Yandex Compute Instance be preemptible.
+                  description: |
+                    Should a provisioned Yandex Compute Instance be preemptible.
+
+                    For more information about preemptible virtual machines, read the [provider's documentation](https://cloud.yandex.com/en/docs/compute/concepts/preemptible-vm).
                   type: boolean
                   x-doc-default: false
                 diskType:
                   description: |
-                    Instance [disk type](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
+                    Instance disk type.
+
+                    For more information about possible disk types, read the [provider's documentation](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
                   example: "network-hdd"
                   x-doc-default: "network-hdd"
                   type: string
@@ -80,8 +85,8 @@ spec:
                 diskSizeGB:
                   description: |
                     Yandex Compute Instance disk size in gibibytes.
-                  example: 20
-                  x-doc-default: 50
+                  example: 50
+                  x-doc-default: 20
                   type: integer
                 assignPublicIPAddress:
                   description: |
@@ -92,7 +97,8 @@ spec:
                 mainSubnet:
                   description: |
                     Subnet ID that VirtualMachines' primary NIC will connect to.
-                  x-doc-default: subnet from `zoneToSubnetIdMap` Deckhouse config.
+
+                    If the parameter is not specified, the main network is determined automatically according to the following logic: if a list of networks is set in the [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter, then the network is selected from the specified list; otherwise, the created Deckhouse network is used.
                   example: e9bnc7g9mu9mper9clk4
                   type: string
                 additionalSubnets:
@@ -133,7 +139,7 @@ spec:
           description: |
             Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
 
-            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+            The `NodeGroup` resource of the `node-manager` module [refers](../040-node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
           required:
             - spec
           properties:
@@ -170,7 +176,7 @@ spec:
                   description: |
                     Image ID to use while provisioning Yandex Compute Instances.
 
-                    `masterInstanceClass` image from `providerClusterConfiguration` will be used by default.
+                    The [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter will be used by default.
                   example: fd8nb7ecsbvj76dfaa8b
                   type: string
                 platformID:
@@ -181,6 +187,8 @@ spec:
                 preemptible:
                   description: |
                     Should a provisioned Yandex Compute Instance be preemptible.
+
+                    For more information about preemptible virtual machines, read the [provider's documentation](https://cloud.yandex.com/en/docs/compute/concepts/preemptible-vm).
                   type: boolean
                   x-doc-default: false
                 diskType:
@@ -208,7 +216,8 @@ spec:
                 mainSubnet:
                   description: |
                     Subnet ID that VirtualMachines' primary NIC will connect to.
-                  x-doc-default: subnet from `zoneToSubnetIdMap` Deckhouse config.
+
+                    If the parameter is not specified, the main network is determined automatically according to the following logic: if a list of networks is set in the [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter, then the network is selected from the specified list; otherwise, the created Deckhouse network is used.
                   example: e9bnc7g9mu9mper9clk4
                   type: string
                 additionalSubnets:
@@ -239,7 +248,7 @@ spec:
                     - SoftwareAccelerated
                   default: Standard
                   description: |
-                    Network type: Standard or SoftwareAccelerated
+                    Network type: `Standard` or [`SoftwareAccelerated`](https://cloud.yandex.com/en/docs/vpc/concepts/software-accelerated-network).
             status:
               type: object
               properties:

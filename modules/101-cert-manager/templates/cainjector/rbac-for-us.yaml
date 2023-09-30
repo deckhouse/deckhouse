@@ -1,3 +1,4 @@
+{{- if .Values.certManager.enableCAInjector }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -52,3 +53,4 @@ subjects:
   - name: cainjector
     namespace: d8-cert-manager
     kind: ServiceAccount
+{{- end }}

@@ -1,7 +1,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
-- add: /ee/candi/cloud-providers/openstack
+- add: /{{ .ModulePath }}candi/cloud-providers/openstack
   to: /deckhouse/candi/cloud-providers/openstack
 import:
 - artifact: terraform-provider-openstack

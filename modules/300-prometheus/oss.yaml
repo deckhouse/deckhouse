@@ -1,7 +1,7 @@
 - name: Prometheus
   link: https://github.com/prometheus/prometheus
   description: A systems and service monitoring system.
-  logo: https://cncf-branding.netlify.app/img/projects/prometheus/icon/color/prometheus-icon-color.svg
+  logo: /images/logos/prometheus-icon-color.svg
   licence: Apache License 2.0
 
 - name: Grafana

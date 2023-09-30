@@ -75,23 +75,23 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "global-values.json",
-			Cmd:  "deckhouse-controller",
-			Args: []string{"global", "values", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", `deckhouse-controller global values -o json | jq .`},
 		},
 		{
 			File: "deckhouse-enabled-modules.json",
-			Cmd:  "deckhouse-controller",
-			Args: []string{"module", "list", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", "kubectl get modules -o json | jq '.items[]'"},
 		},
 		{
 			File: "events.json",
 			Cmd:  "kubectl",
-			Args: []string{"get", "events", "-A", "-o", "json"},
+			Args: []string{"get", "events", "--sort-by=.metadata.creationTimestamp", "-A", "-o", "json"},
 		},
 		{
-			File: "all.json",
+			File: "d8-all.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `for ns in $(kubectl get ns -o go-template='{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}{{"kube-system"}}' -l heritage=deckhouse); do kubectl -n $ns get all -o json; done | jq -sc '[.[].items[]]'`},
+			Args: []string{"-c", `for ns in $(kubectl get ns -o go-template='{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}{{"kube-system"}}' -l heritage=deckhouse); do kubectl -n $ns get all -o json; done | jq -s '[.[].items[]]'`},
 		},
 		{
 			File: "node-groups.json",
@@ -107,6 +107,11 @@ func createTarball() *bytes.Buffer {
 			File: "machines.json",
 			Cmd:  "kubectl",
 			Args: []string{"get", "machines", "-A", "-o", "json"},
+		},
+		{
+			File: "deckhouse-version.json",
+			Cmd:  "bash",
+			Args: []string{"-c", "jq -s add <(kubectl -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {\"core.deckhouse.io/edition\",\"core.deckhouse.io/version\"}') <(kubectl -n d8-system get deployment deckhouse -o json | jq -r '.spec.template.spec.containers[] | {image}')"},
 		},
 		{
 			File: "deckhouse-releases.json",
@@ -149,6 +154,11 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-updater", "--tail", "3000", "-c", "updater"},
 		},
 		{
+			File: "prometheus-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "d8-monitoring", "logs", "-l", "prometheus=main", "--tail", "3000", "-c", "prometheus"},
+		},
+		{
 			File: "terraform-check.json",
 			Cmd:  "kubectl",
 			Args: []string{"exec", "deploy/terraform-state-exporter", "--", "dhctl", "terraform", "check", "--logger-type", "json", "-o", "json"},
@@ -156,7 +166,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "alerts.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `curl -kf -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://prometheus.d8-monitoring:9090/api/v1/rules?type=alert" | jq -rc '.data.groups[].rules[] | select(.state == "firing")'`},
+			Args: []string{"-c", `kubectl get clusteralerts.deckhouse.io -o json | jq '.items[]'`},
 		},
 	}
 

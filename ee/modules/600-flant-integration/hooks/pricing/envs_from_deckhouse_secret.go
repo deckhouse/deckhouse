@@ -37,7 +37,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:        "v1",
 			Kind:              "Secret",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}}},
-			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-deckhouse-flant-integration"}},
+			NameSelector:      &types.NameSelector{MatchNames: []string{"deckhouse-discovery"}},
 			FilterFunc:        ApplyPricingDeckhouseSecretFilter,
 		},
 	},

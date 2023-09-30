@@ -4,7 +4,8 @@
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: common/distroless
+fromCacheVersion: 1
 import:
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin
@@ -21,9 +22,10 @@ docker:
 {{- end }}
 ---
 artifact: {{ $.ModuleName }}/controller-artifact
-from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+fromCacheVersion: 1
 git:
-  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
+  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
     to: /
     stageDependencies:
       install:
@@ -33,5 +35,4 @@ mount:
     to: /go/pkg
 shell:
   install:
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go
-    - chmod +x /controller
+    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go

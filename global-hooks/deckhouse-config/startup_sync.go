@@ -31,9 +31,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 /**
@@ -42,9 +42,9 @@ resources and a managed ConfigMap/deckhouse-generated-config-do-not-edit object
 instead of one untyped and unmanaged ConfigMap/deckhouse object.
 */
 
-// Use order:1 to run before all global hooks.
+// Use order:2 to run before all global hooks but after EndpointSlice creation.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 1},
+	OnStartup: &go_hook.OrderedConfig{Order: 2},
 }, dependency.WithExternalDependencies(migrateOrSyncModuleConfigs))
 
 // migrateOrSyncModuleConfigs runs on deckhouse-controller startup
@@ -141,7 +141,7 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 		input.LogEntry.Infof(msg)
 	}
 
-	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+	properCfgs := make([]*d8v1alpha1.ModuleConfig, 0)
 
 	for _, cfg := range configs {
 		res := d8config.Service().ConfigValidator().ConvertToLatest(cfg)
@@ -206,8 +206,8 @@ func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_pat
 }
 
 // syncModuleConfigs updates generated ConfigMap using ModuleConfig resources.
-func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8cfg_v1alpha1.ModuleConfig) error {
-	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8v1alpha1.ModuleConfig) error {
+	properCfgs := make([]*d8v1alpha1.ModuleConfig, 0)
 
 	for _, cfg := range allConfigs {
 		res := d8config.Service().ConfigValidator().Validate(cfg)

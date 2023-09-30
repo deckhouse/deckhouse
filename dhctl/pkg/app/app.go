@@ -27,6 +27,14 @@ import (
 const (
 	AppName     = "dhctl"
 	VersionFile = "/deckhouse/version"
+
+	// NodeDeckhouseDirectoryPath deckhouse operating directory path.
+	NodeDeckhouseDirectoryPath = "/opt/deckhouse"
+
+	// DeckhouseNodeTmpPath deckhouse directory for temporary files.
+	DeckhouseNodeTmpPath = NodeDeckhouseDirectoryPath + "/tmp"
+	// DeckhouseNodeBinPath deckhouse directory for binary files.
+	DeckhouseNodeBinPath = NodeDeckhouseDirectoryPath + "/bin"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")

@@ -51,11 +51,11 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.43.0
+  version: v2.44.0
   enableRemoteWriteReceiver: true
   enableFeatures:
   - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
-  - extra-scrape-metrics # https://prometheus.io/docs/prometheus/2.43/feature_flags/#extra-scrape-metrics usage scrape_sample_limit
+  - extra-scrape-metrics # https://prometheus.io/docs/prometheus/2.44/feature_flags/#extra-scrape-metrics usage scrape_sample_limit
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
@@ -65,6 +65,21 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
+  initContainers:
+  - command:
+    - sh
+    - -c
+    - chown -vfR 64535:64535 /prometheus-db/
+    image: {{ include "helm_lib_module_image" (list . "prometheus") }}
+    imagePullPolicy: IfNotPresent
+    name: fix-permissions
+    securityContext:
+      runAsNonRoot: false
+      runAsUser: 0
+    volumeMounts:
+    - mountPath: /prometheus-db
+      name: prometheus-main-db
+      subPath: prometheus-db
   containers:
   - name: prometheus
     startupProbe:
@@ -256,8 +271,8 @@ spec:
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
 {{- end }}
-  {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 2 }}
-    fsGroup: 2000
+  {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 2 }}
+    fsGroup: 64535
   {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2 }}
   {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
   {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}

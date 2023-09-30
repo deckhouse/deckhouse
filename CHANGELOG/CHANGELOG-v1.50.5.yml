@@ -1,0 +1,9 @@
+linstor:
+  fixes:
+    - summary: Using an internal SPAAS service instead of the external one when building DRBD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5690
+node-manager:
+  fixes:
+    - summary: Minor documentation fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5693
+

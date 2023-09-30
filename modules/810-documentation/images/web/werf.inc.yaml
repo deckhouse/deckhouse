@@ -7,7 +7,7 @@ ansible:
   - name: "Copy nginx.conf"
     copy:
       content: |
-        {{- .Files.Get "modules/810-documentation/images/web/nginx.conf" | nindent 8 }}
+        {{- .Files.Get (printf "%smodules/810-documentation/images/web/nginx.conf" .ModulePath) | nindent 8 }}
       dest: /etc/nginx/nginx.conf
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/static
@@ -139,15 +139,15 @@ ansible:
         chdir: /srv/jekyll-data/documentation/
     - copy:
         content: |
-          {{- .Files.Get "modules/810-documentation/images/web/_config.yml" | nindent 10 }}
+          {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config.yml" .ModulePath) | nindent 10 }}
         dest: /tmp/_config_additional.yml
     - copy:
         content: |
-          {{- .Files.Get "modules/810-documentation/images/web/site/_data/topnav.yml" | nindent 10 }}
+          {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 10 }}
         dest: /srv/jekyll-data/documentation/_data/topnav.yml
     - copy:
         content: |
-          {{- .Files.Get "modules/810-documentation/images/web/site/_includes/footer.html" | nindent 10 }}
+          {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_includes/footer.html" .ModulePath) | nindent 10 }}
         dest: /srv/jekyll-data/site/_includes/footer.html
     - name: "Creating additional config..."
       shell: |
@@ -178,7 +178,7 @@ ansible:
         cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
 git:
-- add: /docs
+- add: /{{ .ModulePath }}docs
   to: /srv/jekyll-data
   owner: jekyll
   group: jekyll
@@ -198,7 +198,7 @@ git:
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
-- add: /
+- add: /{{ .ModulePath }}
   to: /comparison
   owner: jekyll
   group: jekyll
@@ -207,7 +207,7 @@ git:
   includePaths:
   - modules/**/docs/README.md
   - ee/modules/**/docs/README.md
-- add: /ee/fe
+- add: /{{ .ModulePath }}ee/fe
   to: /comparison/fe
   owner: jekyll
   group: jekyll
@@ -215,4 +215,4 @@ git:
     setup: ['**/*']
   includePaths:
   - modules/**/docs/README.md
-{{ tpl (.Files.Get "docs/documentation/werf-git-section.inc.yaml") . }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}

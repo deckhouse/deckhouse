@@ -40,7 +40,7 @@ const globalValues = `
       provider: OpenStack
     clusterDomain: cluster.local
     clusterType: Cloud
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
     kubernetesVersion: "%s"
     podSubnetCIDR: 10.111.0.0/16
@@ -233,34 +233,9 @@ subnet-id = "my-subnet-id"
 floating-network-id = "my-floating-network-id"
 enable-ingress-hostname = true
 [BlockStorage]
-rescan-on-resize = true`
-		if k8sVer == "1.23" {
-			ccmExpectedConfig = `
-[Global]
-auth-url = "http://my.cloud.lalla/123/"
-domain-name = "mydomain"
-tenant-name = "mytenantname"
-username = "myuser"
-password = "myPaSs"
-region = "myreg"
-ca-file = /etc/config/ca.crt
-[Networking]
-public-network-name = "myextnetname"
-public-network-name = "myextnetname2"
-internal-network-name = "myintnetname"
-internal-network-name = "myintnetname2"
-ipv6-support-disabled = true
-[LoadBalancer]
-create-monitor = "true"
-monitor-delay = "2s"
-monitor-timeout = "1s"
-subnet-id = "my-subnet-id"
-floating-network-id = "my-floating-network-id"
-enable-ingress-hostname = true
-[BlockStorage]
 ignore-volume-microversion = false
 rescan-on-resize = true`
-		}
+
 		ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(string(ccmConfig)).To(Equal(ccmExpectedConfig))
@@ -379,49 +354,11 @@ storageclass.kubernetes.io/is-default-class: "true"
 			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "cloud-controller-manager")
 			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			if s == "" {
-				Expect(ccmConfig).ToNot(ContainSubstring("ignore-volume-microversion = "))
-				return
-			}
 			sExp := fmt.Sprintf("ignore-volume-microversion = %s", s)
 			Expect(ccmConfig).To(ContainSubstring(sExp))
 		}
 
-		Context("with 1.23 or 1.24 kube version", func() {
-			Context("ignoreVolumeMicroversion disabled", func() {
-				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.24", "1.24"))
-					f.ValuesSet("global.modulesImages", GetModulesImages())
-					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
-					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "false")
-					f.HelmRender()
-				})
-
-				It("Should render 'ignore-volume-microversion = false' in ccm config", func() {
-					Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-					assertConfigSecretIgnoreMicroVer(f, "false")
-				})
-			})
-
-			Context("ignoreVolumeMicroversion enabled", func() {
-				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.23", "1.23"))
-					f.ValuesSet("global.modulesImages", GetModulesImages())
-					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
-					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "true")
-					f.HelmRender()
-				})
-
-				It("Should render 'ignore-volume-microversion = true' in ccm config", func() {
-					Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-					assertConfigSecretIgnoreMicroVer(f, "true")
-				})
-			})
-		})
-
-		Context("another kube version", func() {
+		Context("all kube versions", func() {
 			Context("ignoreVolumeMicroversion disabled", func() {
 				BeforeEach(func() {
 					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.25", "1.25"))
@@ -434,7 +371,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 				It("Should not render 'ignore-volume-microversion' in ccm config", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-					assertConfigSecretIgnoreMicroVer(f, "")
+					assertConfigSecretIgnoreMicroVer(f, "false")
 				})
 			})
 
@@ -450,7 +387,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 				It("Should render 'ignore-volume-microversion = true' in ccm config", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-					assertConfigSecretIgnoreMicroVer(f, "")
+					assertConfigSecretIgnoreMicroVer(f, "true")
 				})
 			})
 		})

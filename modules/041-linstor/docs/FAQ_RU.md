@@ -1,5 +1,6 @@
 ---
 title: "Модуль linstor: FAQ"
+description: Диагностика проблем LINSTOR. Когда следует использовать LVM, а когда LVMThin? Производительность и надёжность LINSTOR, сравнение с Ceph. Как добавить существующий LVM или LVMThin-пул в LINSTOR. Как настроить Prometheus на использование хранилища LINSTOR.
 ---
 
 ## Когда следует использовать LVM, а когда LVMThin?
@@ -11,7 +12,9 @@ title: "Модуль linstor: FAQ"
 
 ## Производительность и надёжность LINSTOR, сравнение с Ceph
 
-> Возможно вам будет интересна наша статья ["Исследование производительности свободных хранилищ LINSTOR, Ceph, Mayastor и Vitastor в Kubernetes"](https://habr.com/ru/company/flant/blog/664150/).
+{% alert %}
+Возможно вам будет интересна наша статья ["Исследование производительности свободных хранилищ LINSTOR, Ceph, Mayastor и Vitastor в Kubernetes"](https://habr.com/ru/company/flant/blog/664150/).
+{% endalert %}
 
 Мы придерживаемся практического взгляда на вопрос. Разница в несколько десятков процентов на практике никогда не имеет значения. Имеет значение разница в несколько раз и более.
 
@@ -90,8 +93,10 @@ kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-defa
 
 ## Как добавить существующий LVM или LVMThin-пул?
 
-> Основной метод описан на странице [конфигурация хранилища LINSTOR](configuration.html#конфигурация-хранилища-linstor).
-> В отличие от команд перечисленных ниже, он также автоматически настроит StorageClasses.
+{% alert %}
+Основной метод описан на странице [конфигурация хранилища LINSTOR](configuration.html#конфигурация-хранилища-linstor).
+В отличие от команд перечисленных ниже, он также автоматически настроит StorageClasses.
+{% endalert %}
 
 Пример добавления LVM-пула:
 

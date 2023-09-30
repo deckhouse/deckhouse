@@ -1,6 +1,6 @@
 ---
 title: "The cni-cilium module"
-description: Deckhouse cni-cilium module provides a network between multiple nodes in a Kubernetes cluster using cilium.
+description: Deckhouse cni-cilium module provides a network between multiple nodes in a Kubernetes cluster using Cilium.
 ---
 
 This module is responsible for providing a network between multiple nodes in a cluster using the [cilium](https://cilium.io/) module.
@@ -10,7 +10,10 @@ This module is responsible for providing a network between multiple nodes in a c
 1. This module currently supports only direct-routing mode.
 2. Service types `NodePort` and `LoadBalancer` do not work with hostNetwork endpoints in the `DSR` LB mode. Switch to `SNAT` if it is required.
 3. `HostPort` Pods will bind only to [one interface IP](https://github.com/deckhouse/deckhouse/issues/3035). If there are multiple interfaces/IPs present, Cilium will select only one of them, preferring private IP space.
-4. OS versions support. `cni-cilium` module will properly work only on Linux kernel >= `5.3`.
+4. Kernel requirements.
+   * The `cni-cilium` module requires a Linux kernel version >= `4.9.17`.
+   * For the `cni-cilium` module to work together with the [istio](../110-istio/), [openvpn](../500-openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/documentation/v1/modules/{% else %}..{% endif %}/350-node-local-dns/) module, a Linux kernel version >= `5.7` is required.
+5. OS versions support.
    * Ubuntu
      * 18.04
      * 20.04

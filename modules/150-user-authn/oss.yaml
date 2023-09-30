@@ -1,7 +1,7 @@
 - name: Dex
   link: https://github.com/dexidp/dex
   description: A Federated OpenID Connect Provider with pluggable connectors.
-  logo: https://cncf-branding.netlify.app/img/projects/dex/icon/color/dex-icon-color.svg
+  logo: /images/logos/dex-icon-color.svg
   licence: Apache License 2.0
 
 - name: OAuth2 Proxy

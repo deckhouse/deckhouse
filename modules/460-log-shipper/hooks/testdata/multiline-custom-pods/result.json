@@ -15,14 +15,15 @@
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
       },
-      "glob_minimum_cooldown_ms": 1000
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
     }
   },
   "transforms": {
     "transform/destination/test-es-dest-pods/00_elastic_dedot": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/tests-whispers-pods_whispers-logs-pods/02_multiline"
+        "transform/source/tests-whispers-pods_whispers-logs-pods/03_multiline"
       ],
       "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
       "type": "remap"
@@ -59,14 +60,22 @@
       "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
       "type": "remap"
     },
-    "transform/source/tests-whispers-pods_whispers-logs-pods/02_multiline": {
+    "transform/source/tests-whispers-pods_whispers-logs-pods/02_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/tests-whispers-pods_whispers-logs-pods/01_clean_up"
+      ],
+      "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
+      "type": "remap"
+    },
+    "transform/source/tests-whispers-pods_whispers-logs-pods/03_multiline": {
       "ends_when": "matched, err = match(.message, r'^endsWhen');\nif err != null {\n    true;\n} else {\n    !matched;\n}",
       "group_by": [
         "file",
         "stream"
       ],
       "inputs": [
-        "transform/source/tests-whispers-pods_whispers-logs-pods/01_clean_up"
+        "transform/source/tests-whispers-pods_whispers-logs-pods/02_local_timezone"
       ],
       "merge_strategies": {
         "message": "concat"

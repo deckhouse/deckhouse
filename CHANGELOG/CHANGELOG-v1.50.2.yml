@@ -1,0 +1,12 @@
+candi:
+  fixes:
+    - summary: Fix kubelet configuration step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5561
+    - summary: Fix old CSI mount cleaner.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5548
+metallb:
+  fixes:
+    - summary: Fix error in speaker leader-election.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5565
+      impact: metallb pods should restart.
+

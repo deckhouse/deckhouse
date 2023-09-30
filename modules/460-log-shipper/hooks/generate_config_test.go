@@ -137,6 +137,7 @@ spec:
 		Entry("File to Vector", "file-to-vector"),
 		Entry("File to Kafka", "file-to-kafka"),
 		Entry("File to Kafka with client certificate authentication", "file-to-kafka-tls"),
+		Entry("File to Loki", "file-to-loki"),
 		Entry("File to Splunk", "file-to-splunk"),
 		Entry("Two sources to single destination", "many-to-one"),
 		Entry("Throttle Transform with filter", "throttle-with-filter"),

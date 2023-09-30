@@ -5,7 +5,7 @@
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $builderImage }}
 git:
-  - add: /modules/491-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  - add: /{{ $.ModulePath }}modules/491-{{ $.ModuleName }}/images/{{ $.ImageName }}
     to: /
     stageDependencies:
       setup:

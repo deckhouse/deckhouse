@@ -12,6 +12,8 @@ spec:
     plural: nodegroupconfigurations
     singular: nodegroupconfiguration
     kind: NodeGroupConfiguration
+    shortNames:
+      - ngc
   preserveUnknownFields: false
   versions:
     - name: v1alpha1

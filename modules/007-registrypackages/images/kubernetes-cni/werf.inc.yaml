@@ -38,16 +38,24 @@ docker:
     flannel: {{ $flannel_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 git:
-- add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
   stageDependencies:
     setup:
     - '**/*'
 shell:
   beforeInstall:
-  - apk add --no-cache curl
+  - apk add --no-cache git bash make
   setup:
-  - curl -sfL https://github.com/containernetworking/plugins/releases/download/v{{ $cni_version }}/cni-plugins-linux-amd64-v{{ $cni_version }}.tgz | tar -xz
-  - curl -sfL https://github.com/flannel-io/cni-plugin/releases/download/v{{ $flannel_version }}/cni-plugin-flannel-linux-amd64-v{{ $flannel_version }}.tgz | tar -xz ./flannel-amd64 && mv flannel-amd64 flannel
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git
+    - cd /plugins
+    - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'
+    - cp -f bin/* /
+    - cd /
+    - git clone --depth 1 --branch v{{ $flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git
+    - cd /cni-plugin
+    - make build_linux
+    - cp -f  /go/src/github.com/flannel-io/cni-plugin/dist/flannel-amd64 /flannel

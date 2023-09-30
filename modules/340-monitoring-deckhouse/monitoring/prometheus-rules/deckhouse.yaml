@@ -354,6 +354,26 @@
       plk_markup_format: "markdown"
       summary: Deckhouse is being updated.
 
+  - alert: DeckhouseUpdatingFailed
+    expr: max (d8_updating_is_failed) == 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      description: |
+        Failed to update Deckhouse.
+
+        Next version minor/path Deckhouse image is not available in the registry or the image is corrupted.
+        Actual version: {{ $labels.version }}.
+
+        Make sure that the next version Deckhouse image is available in the registry.
+
+      summary: Deckhouse updating is failed.
+
   - alert: D8DeckhouseWatchErrorOccurred
     expr: increase(deckhouse_kubernetes_client_watch_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
     for: 1m
@@ -380,3 +400,18 @@
 
       summary: |
         Possible apiserver connection error in the client-go informer, check logs and snapshots.
+
+  - alert: D8DeckhouseDeprecatedConfigmapManagedByArgoCD
+    expr: |
+      d8_deprecated_configmap_managed_by_argocd > 0
+    labels:
+      tier: cluster
+      severity_level: "4"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      for: "10m"
+      summary: Deprecated deckhouse configmap managed by Argo CD
+      description: |
+        The deckhouse configmap is no longer used.
+        You need to remove configmap "d8-system/deckhouse" from ArgoCD

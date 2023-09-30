@@ -52,7 +52,7 @@ spec:
   retention: {{ .Values.prometheus.longtermRetentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusLongterm.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.43.0
+  version: v2.44.0
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
@@ -61,6 +61,21 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
+  initContainers:
+  - command:
+    - sh
+    - -c
+    - chown -vfR 64535:64535 /prometheus-db/
+    image: {{ include "helm_lib_module_image" (list . "prometheus") }}
+    imagePullPolicy: IfNotPresent
+    name: fix-permissions
+    securityContext:
+      runAsNonRoot: false
+      runAsUser: 0
+    volumeMounts:
+    - mountPath: /prometheus-db
+      name: prometheus-longterm-db
+      subPath: prometheus-db
   containers:
   - name: prometheus
     startupProbe:
@@ -126,8 +141,8 @@ spec:
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/longterm/
 {{- end }}
-  {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 2 }}
-    fsGroup: 2000
+  {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 2 }}
+    fsGroup: 64535
   serviceAccountName: prometheus
   podMetadata:
     labels:

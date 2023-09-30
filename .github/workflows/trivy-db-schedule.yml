@@ -31,7 +31,7 @@ concurrency:
 jobs:
   download-and-repush-images:
     name: Download and repush images
-    runs-on: [self-hosted, regular]
+    runs-on: [self-hosted]
     steps:
 
       # <template: login_rw_registry_step>
@@ -81,9 +81,9 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
-      - name: Download crane and copy image
+      - name: Download custom trivy-db binary and copy image
         run: |
-          curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.13.0/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - && chmod +x crane
-          ./crane copy ghcr.io/aquasecurity/trivy-db:2 ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-db:2
-          ./crane copy ghcr.io/aquasecurity/trivy-db:2 ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db:2
-          ./crane copy ghcr.io/aquasecurity/trivy-db:2 ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/deckhouse/security/trivy-db:2
+          rm -rf ./trivy-db && git clone --depth 1 --branch flant-latest ${{secrets.SOURCE_REPO}}/aquasecurity/trivy-db.git && cd trivy-db 
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-db:2 >/dev/null 2>&1
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db:2 >/dev/null 2>&1
+          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2 >/dev/null 2>&1

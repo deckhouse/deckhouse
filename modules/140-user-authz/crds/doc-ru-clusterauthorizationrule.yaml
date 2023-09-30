@@ -1,7 +1,7 @@
 spec:
   versions:
     - name: v1alpha1
-      schema: &schema
+      schema:
         openAPIV3Schema:
           description: |
             Cluster-wide-ресурс для управления настройками RBAC и авторизацией
@@ -40,6 +40,8 @@ spec:
                     * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
 
                     **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) (версия `v1` custom resource'а).
                 subjects:
                   description: |
                     Пользователи и/или группы, которым необходимо предоставить права.
@@ -74,4 +76,103 @@ spec:
     - name: v1
       served: true
       storage: false
-      schema: *schema
+      schema:
+        openAPIV3Schema:
+          description: |
+            Управляет настройками RBAC и авторизацией по namespace.
+          properties:
+            spec:
+              properties:
+                accessLevel:
+                  description: |
+                    Уровень доступа:
+                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам Pod'ов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
+                    * `PrivilegedUser` — то же самое, что и User, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять Pod'ы (что обеспечивает возможность перезагрузки);
+                    * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
+                    * `Admin` — то же самое, что и Editor, но позволяет удалять служебные объекты (производные ресурсы, например, `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
+                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т.д). Роль для работы оператора кластера.
+                    * `ClusterAdmin` — то же самое, что и ClusterEditor + Admin, но позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., а так же `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
+
+                      **Важно!** т.к. `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
+                    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` (см. ниже) продолжат работать.
+                portForwarding:
+                  description: |
+                    Разрешить/запретить выполнять `port-forward`.
+                allowScale:
+                  description: |
+                    Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
+                allowAccessToSystemNamespaces:
+                  description: |
+                    Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
+
+                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                namespaceSelector:
+                  description: |
+                    Определяет доступные пространства имен на основе значений, указанных в параметре `namespaceSelector.labelSelector`.
+
+                    Если параметр `namespaceSelector` указан, то значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны все пространства имен с метками, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия, включая системные пространства имен.
+
+                    Если параметр `namespaceSelector` не указан, то набор доступных пространств имен определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, то будут доступны все пространства имен, за исключением системных (`kube-*`, `d8-*`, `loghouse`, `default`).
+
+                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                  properties:
+                    labelSelector:
+                      description: |
+                        Настройка фильтра меток (label) пространств имен.
+
+                        Если указаны одновременно `matchExpressions` и `matchLabels`, то учитываются оба фильтра (AND).
+                      properties:
+                        matchExpressions:
+                          description: Список фильтров на основе выражений.
+                          items:
+                            properties:
+                              key:
+                                description: Имя метки.
+                              operator:
+                                description: Оператор сравнения.
+                              values:
+                                description: Значение метки.
+                        matchLabels:
+                          description: Фильтр на основе совпадения/не совпадения меток.
+                limitNamespaces:
+                  description: |
+                    Список разрешённых namespace в формате регулярных выражений.
+
+                    Политика:
+                    * Если список указан, то разрешаем доступ только по нему.
+                    * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+
+                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) (версия `v1` custom resource'а).
+                subjects:
+                  description: |
+                    Пользователи и/или группы, которым необходимо предоставить права.
+
+                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
+
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/), обратите внимание на следующие нюансы:
+                    - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`;
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, т.е. указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
+                  items:
+                    properties:
+                      kind:
+                        description: 'Тип ресурса.'
+                      name:
+                        description: 'Имя ресурса.'
+                        example: 'some-group-name'
+                      namespace:
+                        description: 'Namespace для ServiceAccount.'
+                additionalRoles:
+                  description: |
+                    Дополнительные роли, которые необходимо выдать для заданных `subjects`.
+
+                    Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
+                  items:
+                    properties:
+                      apiGroup:
+                        description: "apiGroup для пользователей."
+                      kind:
+                        description: 'Kind роли.'
+                      name:
+                        description: 'Название роли.'

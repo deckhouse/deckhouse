@@ -23,6 +23,17 @@ gitWorktree:
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
 ---
+# Source repo  settings
+{{- $_ := set . "SOURCE_REPO" (env "SOURCE_REPO" | default "https://github.com") }}
+---
+---
+# goproxy  settings
+{{- $_ := set . "GOPROXY" (env "GOPROXY") }}
+
+# rust proxy settings
+{{- $_ := set . "CRATESPROXY" (env "CRATESPROXY") }}
+
+---
 {{- define "base components" }}
   - name: "Install jo"
     apk:
@@ -489,7 +500,6 @@ ansible:
         --disable-docs
       make LDFLAGS=-all-static
       make prefix=/usr install
-
 ---
 image: dev/install
 from: {{ .Images.BASE_ALPINE }}
@@ -652,7 +662,10 @@ args:
   BASE_UBUNTU: {{ .Images.BASE_UBUNTU }}
   BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
-  {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless" "common/iptables-wrapper")) }}
+  SOURCE_REPO: {{ .SOURCE_REPO }}
+  GOPROXY: {{ .GOPROXY }}
+  CRATESPROXY: {{ .CRATESPROXY }}
+  {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
 dependencies:
 - image: common/distroless
   imports:
@@ -701,6 +714,9 @@ dependencies:
   {{- $_ := set $ctx "Images" $Root.Images }}
   {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
   {{- $_ := set $ctx "TF" $Root.TF }}
+  {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
+  {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
+  {{- $_ := set $ctx "CRATESPROXY" $Root.CRATESPROXY }}
 
 ---
 {{ include "module_image_template" $ctx }}

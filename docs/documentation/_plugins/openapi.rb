@@ -20,12 +20,29 @@ module Jekyll
         item['linkAnchor'] = linkAnchor
         item['resourceType'] = resourceType
         item['title'] = %Q(#{if resourceType == 'crd' and  resourceName then resourceName + ":&nbsp;" end}#{parameterName})
+        if resourceType == 'moduleConfig' then
+          puts %Q(moduleName - #{moduleName},
+          resourceName - #{resourceName},
+          parameterName - #{parameterName})
+        end
         if get_hash_value(@context.registers[:site].data['modules'], 'modules', moduleName, %Q(parameters-#{revision})) == nil then
           @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})] = Hash.new
         end
-        if get_hash_value(@context.registers[:site].data['modules'], 'modules', moduleName, %Q(parameters-#{revision}), %Q(#{if resourceName then resourceName + "." end}#{parameterName})) == nil then
-          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{if resourceName then resourceName + "." end}#{parameterName})] = Hash.new
-          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{if resourceName then resourceName + "." end}#{parameterName})] = item
+        if get_hash_value(@context.registers[:site].data['modules'], 'modules', moduleName, %Q(parameters-#{revision}),
+           %Q(#{if resourceType != 'moduleConfig' then
+                   if resourceName then resourceName + "." end
+                end
+               }#{parameterName})) == nil then
+          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{
+            if resourceType != 'moduleConfig' then
+                   if resourceName then resourceName + "." end
+            end
+            }#{parameterName})] = Hash.new
+          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{
+            if resourceType != 'moduleConfig' then
+                   if resourceName then resourceName + "." end
+            end
+            }#{parameterName})] = item
         else
           # Duplicate parameter. It may be because of the different api version on the same resource. Just skip it
         end

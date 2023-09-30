@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -15,6 +16,10 @@ import (
 	"sync"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"user-authz-webhook/cache"
 )
 
@@ -22,7 +27,7 @@ const (
 	configPath = "/etc/user-authz-webhook/config.json"
 
 	noNamespaceAccessReason      = "user has no access to the namespace"
-	namespaceLimitedAccessReason = "making cluster scoped requests for namespaced resources are not allowed"
+	namespaceLimitedAccessReason = "making cluster-scoped requests for namespaced resources is not allowed"
 	internalErrorReason          = "webhook: kubernetes api request error"
 )
 
@@ -36,16 +41,29 @@ type Handler struct {
 
 	cache cache.Cache
 
+	kubeclient kubernetes.Interface
+
 	//        [user type] [user name]
 	mu        sync.RWMutex
 	directory map[string]map[string]DirectoryEntry
 }
 
-func NewHandler(logger *log.Logger, discoveryCache cache.Cache) *Handler {
-	return &Handler{
-		logger: logger,
-		cache:  discoveryCache,
+func NewHandler(logger *log.Logger, discoveryCache cache.Cache) (*Handler, error) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
 	}
+
+	clientSet, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Handler{
+		logger:     logger,
+		cache:      discoveryCache,
+		kubeclient: clientSet,
+	}, nil
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -75,45 +93,48 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *DirectoryEntry) *WebhookRequest {
-	if !hasLimitedNamespaces(entry) {
-		// User has no namespaces restriction.
+	if !hasAnyFilters(entry) {
+		// User has no namespaced restriction.
 		return request
 	}
 
-	// If the limit namespaces option missed at least for one directory, requests for all namespaces are allowed
-	// except the system namespaces.
-	if entry.LimitNamespacesAbsent {
-		request.Status.Denied = false
-
-		if !entry.AllowAccessToSystemNamespaces {
-			for _, pattern := range systemNamespacesRegex {
-				// Deny if matching one of system namespaces regexps
-				if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
-					request.Status.Denied = true
-					request.Status.Reason = noNamespaceAccessReason
-					break
-				}
+	// there are limitNamespaces/namespaceSelectors
+	if !entry.NamespaceFiltersAbsent {
+		// deny all namespaces
+		request.Status.Denied = true
+		request.Status.Reason = noNamespaceAccessReason
+		// check if the target namespace is in limitNamespaces list
+		for _, pattern := range entry.LimitNamespaces {
+			if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
+				request.Status.Denied = false
+				request.Status.Reason = ""
+				break
 			}
 		}
-
-		return request
+	} else {
+	// there is no filters - assume a positive outcome
+		request.Status.Denied = false
 	}
 
-	// If the limit namespaces option is enabled, we must check that user requests only affect these namespaces.
-	// If the system namespaces access option is enabled, we should also count system namespaces as the allowed ones.
-	if entry.AllowAccessToSystemNamespaces {
-		entry.LimitNamespaces = append(entry.LimitNamespaces, systemNamespacesRegex...)
+	if !request.Status.Denied && !entry.AllowAccessToSystemNamespaces {
+		// check if the target namespace is a system one and restricted
+		for _, pattern := range systemNamespacesRegex {
+			if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
+				request.Status.Denied = true
+				request.Status.Reason = noNamespaceAccessReason
+				break
+			}
+		}
 	}
 
-	// All namespaces are denied except namespaces from the limit namespaces list.
-	request.Status.Denied = true
-	request.Status.Reason = noNamespaceAccessReason
-
-	for _, pattern := range entry.LimitNamespaces {
-		if pattern.MatchString(request.Spec.ResourceAttributes.Namespace) {
+	// if request is still denied - check available namespace selectors if any of them matches the request namespace, doesn't matter a system one or not
+	if request.Status.Denied && len(entry.NamespaceSelectors) > 0 {
+		match, err := h.namespaceLabelsMatchSelector(request.Spec.ResourceAttributes.Namespace, entry.NamespaceSelectors)
+		if err != nil {
+			request.Status.Reason = err.Error()
+		} else if match {
 			request.Status.Denied = false
 			request.Status.Reason = ""
-			break
 		}
 	}
 
@@ -159,7 +180,7 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 		// could not check whether resource is namespaced or not (from cache) - deny access
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
 
-	} else if namespaced && hasLimitedNamespaces(entry) {
+	} else if namespaced && hasAnyFilters(entry) {
 		// we should not allow cluster scoped requests for namespaced objects if namespaces access is limited
 		h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
 	}
@@ -181,8 +202,14 @@ func (h *Handler) authorizeRequest(request *WebhookRequest) *WebhookRequest {
 			combinedDir.AllowAccessToSystemNamespaces = dirEntry.AllowAccessToSystemNamespaces
 		}
 
-		combinedDir.LimitNamespaces = append(combinedDir.LimitNamespaces, dirEntry.LimitNamespaces...)
-		combinedDir.LimitNamespacesAbsent = combinedDir.LimitNamespacesAbsent || dirEntry.LimitNamespacesAbsent
+		// Aggregate namespace selectors and limitNamespaces into a single set of rules
+		if len(dirEntry.NamespaceSelectors) > 0 {
+			combinedDir.NamespaceSelectors = append(combinedDir.NamespaceSelectors, dirEntry.NamespaceSelectors...)
+		}
+		if len(dirEntry.LimitNamespaces) > 0 {
+			combinedDir.LimitNamespaces = append(combinedDir.LimitNamespaces, dirEntry.LimitNamespaces...)
+		}
+		combinedDir.NamespaceFiltersAbsent = combinedDir.NamespaceFiltersAbsent || dirEntry.NamespaceFiltersAbsent
 	}
 
 	if request.Spec.ResourceAttributes.Namespace != "" {
@@ -196,7 +223,7 @@ func (h *Handler) authorizeRequest(request *WebhookRequest) *WebhookRequest {
 	return request
 }
 
-// renewDirectories reads a configuration file (actually it is a json file with all CRs from the cluster) and composes
+// renewDirectories reads the configuration file (actually it is a json file with all CRs from the cluster) and composes
 // rules for users, groups, and service accounts.
 func (h *Handler) renewDirectories() {
 	fileStat, err := os.Stat(configPath)
@@ -246,18 +273,24 @@ func (h *Handler) renewDirectories() {
 				dirEntry = DirectoryEntry{}
 			}
 
-			// If there is no LimitNamespaces option, it means all namespaces are allowed except system namespaces.
-			// We need to know whether we have at least one such CR for the user in a cluster.
-			dirEntry.LimitNamespacesAbsent = dirEntry.LimitNamespacesAbsent || len(crd.Spec.LimitNamespaces) == 0
+			// If there are neither LimitNamespaces nor NamespaceSelector options, it means all non-system namespaces are allowed.
+			// We need to know whether we have at least one such a CR for the user in a cluster.
+			dirEntry.NamespaceFiltersAbsent = dirEntry.NamespaceFiltersAbsent || (len(crd.Spec.LimitNamespaces) == 0 && crd.Spec.NamespaceSelector == nil)
 
-			// This is an important thing! All regular expressions is wrapped in the ^...$
-			for _, ln := range crd.Spec.LimitNamespaces {
-				r, _ := regexp.Compile(wrapRegex(ln))
-				dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, r)
-			}
+			// if the NamespaceSelector field is empty - take the limitNamespaces entries and check the allowAccessToSystemNamespaces flag
+			if crd.Spec.NamespaceSelector == nil {
+				// This is an important thing! All regular expressions is wrapped in the ^...$
+				for _, ln := range crd.Spec.LimitNamespaces {
+					r, _ := regexp.Compile(wrapRegex(ln))
+					dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, r)
+				}
 
-			if !dirEntry.AllowAccessToSystemNamespaces {
-				dirEntry.AllowAccessToSystemNamespaces = crd.Spec.AllowAccessToSystemNamespaces
+				if !dirEntry.AllowAccessToSystemNamespaces {
+					dirEntry.AllowAccessToSystemNamespaces = crd.Spec.AllowAccessToSystemNamespaces
+				}
+				// if the NamespaceSelector field isn't empty - ignore limitNamespaces and allowAccessToSystemNamespaces in this entry
+			} else {
+				dirEntry.NamespaceSelectors = append(dirEntry.NamespaceSelectors, crd.Spec.NamespaceSelector)
 			}
 
 			directory[kind][name] = dirEntry
@@ -313,19 +346,46 @@ func (h *Handler) affectedDirs(r *WebhookRequest) []DirectoryEntry {
 	return dirEntriesAffected
 }
 
-func hasLimitedNamespaces(entry *DirectoryEntry) bool {
-	if len(entry.LimitNamespaces) == 0 || entry.LimitNamespacesAbsent {
+// checks if labels of a namespace match provided labelselector
+func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSelectors []*NamespaceSelector) (bool, error) {
+	var labelsSet labels.Set
+	namespace, err := h.kubeclient.CoreV1().Namespaces().Get(context.TODO(), namespaceName, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	labelsSet = namespace.ObjectMeta.GetLabels()
+
+	for _, namespaceSelector := range namespaceSelectors {
+		selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
+		if err != nil {
+			return false, err
+		}
+		if selector.Matches(labelsSet) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// checks if an entry has any namespace-related filters
+func hasAnyFilters(entry *DirectoryEntry) bool {
+	if entry.NamespaceFiltersAbsent {
 		// The limitNamespaces option has a priority over the allowAccessToSystemNamespaces option.
 		// If limited namespaces are not specified, check whether access to system namespaces is limited.
 		// If it is not - user has no limited namespaces.
 		return !entry.AllowAccessToSystemNamespaces
 	}
 
+	// if entry has a NamespaceSelector list, it's limited.
+	if len(entry.NamespaceSelectors) > 0 {
+		return true
+	}
+
 	for _, regex := range entry.LimitNamespaces {
 		switch regex.String() {
 		// Special regexp cases that allow every namespace. Do not need to forbid cluster scoped requests.
 		case "^.*$", "^.+$":
-			return false
+			return !entry.AllowAccessToSystemNamespaces
 		}
 	}
 

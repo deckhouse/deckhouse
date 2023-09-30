@@ -109,6 +109,9 @@ type CommonTLSSpec struct {
 }
 
 type LokiSpec struct {
+	// TenantID is used only for GrafanaCloud. When running Loki locally, a tenant ID is not required.
+	TenantID string `json:"tenantID,omitempty"`
+
 	Endpoint string `json:"endpoint,omitempty"`
 
 	Auth LokiAuthSpec `json:"auth,omitempty"`
@@ -177,12 +180,12 @@ type Buffer struct {
 type BufferType = string
 
 const (
-	// Events are buffered on disk.
+	// BufferTypeDisk specifies that events are buffered on disk.
 	// This is less performant, but more durable. Data that has been synchronized to disk will not be lost if Vector is restarted forcefully or crashes.
 	// Data is synchronized to disk every 500ms.
 	BufferTypeDisk BufferType = "Disk"
 
-	// Events are buffered in memory.
+	// BufferTypeMemory specifies that events are buffered in memory.
 	// This is more performant, but less durable. Data will be lost if Vector is restarted forcefully or crashes.
 	BufferTypeMemory BufferType = "Memory"
 )
@@ -190,12 +193,12 @@ const (
 type BufferWhenFull = string
 
 const (
-	// 	Drops the event instead of waiting for free space in buffer.
+	// BufferWhenFullDropNewest makes vector dropping the event instead of waiting for free space in buffer.
 	// The event will be intentionally dropped. This mode is typically used when performance is the highest priority,
 	// and it is preferable to temporarily lose events rather than cause a slowdown in the acceptance/consumption of events.
 	BufferWhenFullDropNewest BufferWhenFull = "DropNewest"
 
-	// Wait for free space in the buffer.
+	// BufferWhenFullBlock makes vector waiting for free space in the buffer.
 	// This applies backpressure up the topology, signalling that sources should slow down the acceptance/consumption of events. This means that while no data is lost, data will pile up at the edge.
 	BufferWhenFullBlock BufferWhenFull = "Block"
 )

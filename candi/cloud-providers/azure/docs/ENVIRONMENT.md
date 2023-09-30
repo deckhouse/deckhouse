@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — Azure: Preparing environment"
+description: "Configuring Azure for Deckhouse cloud provider operation."
 ---
 
 > **Caution!** Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.

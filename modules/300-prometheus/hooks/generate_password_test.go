@@ -29,7 +29,7 @@ import (
 
 var _ = Describe("Modules :: prometheus :: hooks :: generate_password ", func() {
 	var (
-		hook = generate_password.NewBasicAuthPlainHook(moduleValuesKey, authSecretNS, authSecretName)
+		hook = generate_password.NewBasicAuthPlainHook(generatePasswordSettings)
 
 		testPassword    = generate_password.GeneratePassword()
 		testPasswordB64 = base64.StdEncoding.EncodeToString([]byte(
@@ -65,13 +65,12 @@ data:
 
 	Context("giving external auth configuration", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
+			f.KubeStateSet(authSecretManifest)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSetFromYaml(hook.ExternalAuthKey(), []byte(`{"authURL": "test"}`))
-			f.ValuesSet(hook.PasswordInternalKey(), []byte(`password`))
 			f.RunHook()
 		})
-		It("should clean password from values", func() {
+		It("should delete password from values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse(), "should delete internal value")
 		})
@@ -100,18 +99,5 @@ data:
 				Expect(pass).ShouldNot(BeEmpty())
 			})
 		})
-
-		Context("giving external auth configuration", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-				f.ValuesSetFromYaml(hook.ExternalAuthKey(), []byte(`{"authURL": "test"}`))
-				f.RunHook()
-			})
-			It("should clean password from values", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse(), "should delete internal value")
-			})
-		})
-
 	})
 })

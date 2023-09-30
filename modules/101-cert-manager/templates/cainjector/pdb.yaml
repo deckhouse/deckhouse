@@ -1,3 +1,4 @@
+{{- if .Values.certManager.enableCAInjector }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -10,3 +11,4 @@ spec:
   selector:
     matchLabels:
       app: cainjector
+{{- end }}

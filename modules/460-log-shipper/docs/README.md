@@ -1,5 +1,6 @@
 ---
 title: "The log-shipper module"
+description: Collecting logs in the Kubernetes cluster using the log-shipper Deckhouse module. Log sending topologies, log filtering, and log metadata enrichment.
 ---
 
 The module deploys log collector agents on nodes in the cluster. 
@@ -50,7 +51,7 @@ The main goal of this architecture is to send messages to the queue system as qu
 <!-- Source: https://docs.google.com/drawings/d/1R7vbJPl93DZPdrkSWNGfUOh0sWEAKnCfGkXOvRvK3mQ/edit -->
 
 * The same pros and cons as for centralized architecture, yet one more middle layer storage is added.
-* Increased durability, suites for all infrastructures where logs delivery is crucial.
+* Increased durability. Suites for all infrastructures where logs delivery is crucial.
 
 ## Metadata
 
@@ -71,7 +72,9 @@ The following metadata fields will be exposed:
 | `node`       | spec.nodeName           |
 | `pod_owner`  | metadata.ownerRef[0]    |
 
-> **NOTE**: Splunk destination does not use `pod_labels`, because it is a nested object with keys and values.
+{% alert -%}
+Splunk destination does not use `pod_labels`, because it is a nested object with keys and values.
+{%- endalert %}
 
 ### File
 
@@ -79,7 +82,7 @@ The only exposed label is `host`, which is equal to a node hostname.
 
 ## Log filters
 
-There is a couple of filters to reduce the number of lines sent to the destination — `log filter` and `label filter`.
+There are a couple of filters to reduce the number of lines sent to the destination — `log filter` and `label filter`.
 
 ![log-shipper pipeline](../../images/460-log-shipper/log_shipper_pipeline.svg)
 <!-- Source: https://docs.google.com/drawings/d/1SnC29zf4Tse4vlW_wfzhggAeTDY2o9wx9nWAZa_A6RM/edit -->
@@ -99,4 +102,6 @@ Both filters have the same structured configuration:
 
 You can find examples in the [Examples](examples.html) section of the documentation.
 
-> **Note!** Extra labels are added on the `Destination` stage of the pipeline, so it is impossible to run queries against them.
+{% alert -%}
+Extra labels are added on the `Destination` stage of the pipeline, so it is impossible to run queries against them.
+{%- endalert %}

@@ -69,17 +69,18 @@ registries:
     url: https://quay.io/
     additionalInfo:
       ru: |
-        <em>Требуется добавить поддержку <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">дополнительных типов артифактов OCI.</a></em>
+        <em>Требуется добавить поддержку <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">дополнительных типов артефактов OCI.</a></em>
         <pre>
+        FEATURE_GENERAL_OCI_SUPPORT: true
         ALLOWED_OCI_ARTIFACT_TYPES:
           "application/vnd.aquasec.trivy.config.v1+json":
-            - "db.tar.gz:application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
+            - "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
         </pre>
       en: |
         <em>It is required to add support for <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">additional types of OCI artifacts.</a></em>
         <pre>
+        FEATURE_GENERAL_OCI_SUPPORT: true
         ALLOWED_OCI_ARTIFACT_TYPES:
-          ...
           "application/vnd.aquasec.trivy.config.v1+json":
-            - "db.tar.gz:application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
+            - "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
         </pre>

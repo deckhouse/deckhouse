@@ -1,5 +1,5 @@
 ARG BASE_ALPINE
-FROM registry.deckhouse.io/yandex-csi-driver/yandex-csi-driver:v0.9.12@sha256:5aba630c3e7c8b7acfbfb1f8ded22f5dabd803dcdef34a21ecc04144fcec0630 as artifact
+FROM registry.deckhouse.io/yandex-csi-driver/yandex-csi-driver:v0.10.0@sha256:5bbefd73169b25bb17723515569fea8ed4423c9e4ba87f8d348afa4f323567fc as artifact
 
 FROM $BASE_ALPINE
 

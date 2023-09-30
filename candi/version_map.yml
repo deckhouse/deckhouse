@@ -1,92 +1,26 @@
 bashible: &bashible
-  ubuntu: &ubuntu
+  ubuntu:
     '18.04':
-      docker:
-        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-bionic"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
     '20.04':
-      docker:
-        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-focal"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
     '22.04':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.14~3-0~ubuntu-jammy"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.5.11-1"
-          allowedPattern: "containerd.io=1.[56]"
   debian:
-    '9': &debian9
-      docker:
-        desiredVersion: "docker-ce=5:19.03.15~3-0~debian-stretch"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.3-1"
-          allowedPattern: "containerd.io=1.[234]"
+    '9':
     '10':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
     '11':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-bullseye"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
   centos:
     '7':
-      docker:
-        desiredVersion: "docker-ce-19.03.15-3.el7.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
     '8':
-      docker:
-        desiredVersion: "docker-ce-19.03.15-3.el8.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
     '9':
-      docker:
-        desiredVersion: "docker-ce-20.10.17-3.el9.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.6.7-3.1.el9.x86_64"
-          allowedPattern: "containerd.io-1.6"
   altlinux:
     'p10':
-      docker:
-        desiredVersion: "docker-engine=23.0.1-alt1.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd-1.6.19"
-          allowedPattern: ""
     '10.1':
-      docker:
-        desiredVersion: "docker-engine=23.0.1-alt1.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd-1.6.19"
-          allowedPattern: ""
 k8s:
   '1.23':
     status: available
     patch: 17
     cniVersion: 1.2.0
-    bashible: &bashible_k8s_ge_1_23
-      !!merge <<: *bashible
+    bashible: *bashible
+    clusterAutoscalerPatch: 4
     ccm:
       openstack: v1.23.1
       yandex: v0.23.0
@@ -96,16 +30,17 @@ k8s:
       gcp: 66064c62c6c23110c7a93faca5fba668018df732
     csi:
       openstack: v1.23.1
-      provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
-      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
-      resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
-      registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
-      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
-      livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
+      provisioner: v3.4.1
+      attacher: v4.2.0
+      resizer: v1.7.0
+      registrar: v2.7.0
+      snapshotter: v6.2.1
+      livenessprobe: v2.9.0
   '1.24':
     status: available
-    patch: 15
-    bashible: *bashible_k8s_ge_1_23
+    patch: 17
+    bashible: *bashible
+    clusterAutoscalerPatch: 3
     ccm:
       openstack: v1.24.2
       yandex: v0.24.0
@@ -115,16 +50,17 @@ k8s:
       gcp: eda9a5a3dd73ef923df7b16cf067af1b0ccbb929
     csi:
       openstack: v1.24.2
-      provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
-      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
-      resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
-      registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
-      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
-      livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
+      provisioner: v3.4.1
+      attacher: v4.2.0
+      resizer: v1.7.0
+      registrar: v2.7.0
+      snapshotter: v6.2.1
+      livenessprobe: v2.9.0
   '1.25':
     status: available
-    patch: 11
-    bashible: *bashible_k8s_ge_1_23
+    patch: 14
+    bashible: *bashible
+    clusterAutoscalerPatch: 3
     ccm:
       openstack: v1.25.3
       yandex: v0.25.2
@@ -134,16 +70,17 @@ k8s:
       gcp: ccm/v25.3.0
     csi:
       openstack: v1.25.3
-      provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
-      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
-      resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
-      registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
-      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
-      livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
+      provisioner: v3.4.1
+      attacher: v4.2.0
+      resizer: v1.7.0
+      registrar: v2.7.0
+      snapshotter: v6.2.1
+      livenessprobe: v2.9.0
   '1.26':
     status: available
-    patch: 6
-    bashible: *bashible_k8s_ge_1_23
+    patch: 9
+    bashible: *bashible
+    clusterAutoscalerPatch: 2
     ccm:
       openstack: v1.26.1
       yandex: v0.26.1
@@ -153,16 +90,17 @@ k8s:
       gcp: ccm/v26.0.4
     csi:
       openstack: v1.26.1
-      provisioner: v3.4.1@sha256:893e37a388e7a7463d6c3523311b28cfbc5ae536dbef35430eed272cdc6850dc
-      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
-      resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
-      registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
-      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
-      livenessprobe: v2.9.0@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0
+      provisioner: v3.4.1
+      attacher: v4.2.0
+      resizer: v1.7.0
+      registrar: v2.7.0
+      snapshotter: v6.2.1
+      livenessprobe: v2.9.0
   '1.27':
     status: preview
-    patch: 3
-    bashible: *bashible_k8s_ge_1_23
+    patch: 6
+    bashible: *bashible
+    clusterAutoscalerPatch: '0'
     ccm:
       openstack: v1.27.1
       yandex: v0.27.0
@@ -172,9 +110,9 @@ k8s:
       gcp: ccm/v27.1.0
     csi:
       openstack: v1.27.1
-      provisioner: v3.5.0@sha256:d078dc174323407e8cc6f0f9abd4efaac5db27838f1564d0253d5e3233e3f17f
-      attacher: v4.3.0@sha256:4eb73137b66381b7b5dfd4d21d460f4b4095347ab6ed4626e0199c29d8d021af
-      resizer: v1.8.0@sha256:2e2b44393539d744a55b9370b346e8ebd95a77573064f3f9a8caf18c22f4d0d0
-      registrar: v2.8.0@sha256:f6717ce72a2615c7fbc746b4068f788e78579c54c43b8716e5ce650d97af2df1
-      snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
-      livenessprobe: v2.10.0@sha256:4dc0b87ccd69f9865b89234d8555d3a614ab0a16ed94a3016ffd27f8106132ce
+      provisioner: v3.5.0
+      attacher: v4.3.0
+      resizer: v1.8.0
+      registrar: v2.8.0
+      snapshotter: v6.2.1
+      livenessprobe: v2.10.0

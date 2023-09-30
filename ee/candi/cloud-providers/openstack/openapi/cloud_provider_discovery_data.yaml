@@ -27,7 +27,6 @@ apiVersions:
           - OpenStackCloudProviderDiscoveryData
       mainNetwork:
         type: string
-        minLength: 1
         description: |
           The path to the network that will serve as the primary network (the default gateway) for connecting to the virtual machine.
       additionalNetworks:
@@ -52,7 +51,6 @@ apiVersions:
         uniqueItems: true
       defaultImageName:
         type: string
-        minLength: 1
         description: Virtual machine image name used by default.
       images:
         type: array

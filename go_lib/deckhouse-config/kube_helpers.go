@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 const GeneratedConfigMapName = "deckhouse-generated-config-do-not-edit"
@@ -82,18 +82,18 @@ func GetConfigMap(klient k8s.Client, ns string, name string) (*v1.ConfigMap, err
 }
 
 // GetAllConfigs returns all ModuleConfig objects.
-func GetAllConfigs(kubeClient k8s.Client) ([]*d8cfg_v1alpha1.ModuleConfig, error) {
-	gvr := d8cfg_v1alpha1.GroupVersionResource()
+func GetAllConfigs(kubeClient k8s.Client) ([]*d8v1alpha1.ModuleConfig, error) {
+	gvr := d8v1alpha1.GroupVersionResource()
 	unstructuredObjs, err := kubeClient.Dynamic().Resource(gvr).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	objs := make([]*d8cfg_v1alpha1.ModuleConfig, 0, len(unstructuredObjs.Items))
-	for _, unstructured := range unstructuredObjs.Items {
-		var obj d8cfg_v1alpha1.ModuleConfig
+	objs := make([]*d8v1alpha1.ModuleConfig, 0, len(unstructuredObjs.Items))
+	for _, unst := range unstructuredObjs.Items {
+		var obj d8v1alpha1.ModuleConfig
 
-		err := sdk.FromUnstructured(&unstructured, &obj)
+		err := sdk.FromUnstructured(&unst, &obj)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +111,7 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 		return fmt.Errorf("kubernetes client is not initialized")
 	}
 
-	gvr := d8cfg_v1alpha1.GroupVersionResource()
+	gvr := d8v1alpha1.GroupVersionResource()
 	unstructuredObj, err := kubeClient.Dynamic().Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil && !k8errors.IsNotFound(err) {
 		return fmt.Errorf("get ModuleConfig/%s: %w", name, err)
@@ -130,15 +130,15 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 	}
 
 	// Create new ModuleConfig if absent.
-	newCfg := &d8cfg_v1alpha1.ModuleConfig{
+	newCfg := &d8v1alpha1.ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       d8cfg_v1alpha1.ModuleConfigKind,
-			APIVersion: d8cfg_v1alpha1.ModuleConfigAPIVersion,
+			Kind:       d8v1alpha1.ModuleConfigKind,
+			APIVersion: d8v1alpha1.ModuleConfigAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: d8cfg_v1alpha1.ModuleConfigSpec{
+		Spec: d8v1alpha1.ModuleConfigSpec{
 			Enabled: pointer.Bool(enabled),
 		},
 	}

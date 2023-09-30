@@ -1,0 +1,18 @@
+{{- if include "trivy.provider.enabled" $ }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trivy-provider
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "trivy-provider" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  ports:
+  - port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: trivy-provider
+    app.kubernetes.io/part-of: gatekeeper
+  sessionAffinity: None
+{{- end }}

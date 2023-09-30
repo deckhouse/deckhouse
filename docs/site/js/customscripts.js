@@ -179,6 +179,17 @@ const openDiagram = function () {
   })
 }
 
+function changeHandler(e) {
+  e.style.color = "#02003E";
+  if (e.value === "telegram") {
+    $('.nickname.hidden').removeClass('hidden');
+    $('.nickname input').attr('required', 'required');
+  } else {
+    $('.nickname').addClass('hidden');
+    $('.nickname.hidden input').removeAttr('required');
+  }
+}
+
 window.addEventListener("load", function() {
   openDiagram()
 });

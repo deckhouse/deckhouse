@@ -19,6 +19,7 @@ package v1
 import (
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -283,10 +284,33 @@ type Kubelet struct {
 	// How many rotated log files to store before deleting them.
 	// Default: '4'
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
+
+	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
 }
 
+type KubeletResourceReservation struct {
+	Mode KubeletResourceReservationMode `json:"mode"`
+
+	Static *KubeletStaticResourceReservation `json:"static,omitempty"`
+}
+
+type KubeletStaticResourceReservation struct {
+	CPU              resource.Quantity `json:"cpu"`
+	Memory           resource.Quantity `json:"memory"`
+	EphemeralStorage resource.Quantity `json:"ephemeralStorage"`
+}
+
+type KubeletResourceReservationMode string
+
+const (
+	KubeletResourceReservationModeOff    KubeletResourceReservationMode = "Off"
+	KubeletResourceReservationModeAuto   KubeletResourceReservationMode = "Auto"
+	KubeletResourceReservationModeStatic KubeletResourceReservationMode = "Static"
+)
+
 func (k Kubelet) IsEmpty() bool {
-	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0
+	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 &&
+		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil
 }
 
 type NodeGroupConditionType string

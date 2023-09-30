@@ -15,7 +15,11 @@ import (
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	if err := web.NewServer(logger).Run(); err != nil {
+	newServer, err := web.NewServer(logger)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	if err := newServer.Run(); err != nil {
 		logger.Fatal(err)
 	}
 }

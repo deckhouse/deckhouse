@@ -1,11 +1,13 @@
 ---
 title: "Модуль runtime-audit-engine"
+description: Описание модуля runtime-audit-engine Deckhouse, предназначенного для поиска угроз безопасности в кластере Kubernetes.
 ---
 
 ## Описание
 
 Модуль предназначен для поиска угроз безопасности.
-Он собирает события ядра Linux и итоги аудита API Kubernetes, обогащает их метаданными о Pod'ах Kubernetes и генерирует события аудита безопасности по установленным правилам.
+
+Модуль собирает события ядра Linux и итоги аудита API Kubernetes (с помощью плагина `k8saudit`), обогащает их метаданными о Pod'ах Kubernetes и генерирует события аудита безопасности по установленным правилам.
 
 Модуль runtime-audit-engine:
 * Находит угрозы в окружениях, анализируя приложения и контейнеры.
@@ -23,8 +25,9 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 ![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.svg)
 <!--- Source: https://docs.google.com/drawings/d/1NZ91z8NXNiuS50ybcMoMsZI3SbQASZXJGLANdaNNm_U --->
 
-> Для максимальной безопасности разработчики Falco рекомендуют запускать Falco как systemd-сервис, однако в кластерах Kubernetes с поддержкой автомасштабирования это может быть затруднительно.
-> Дополнительные средства безопасности Deckhouse (реализованные другими модулями), такие как multitenancy или политики контроля создаваемых ресурсов, предоставляют достаточный уровень безопасности для предотвращения атак на DaemonSet Falco.
+{% alert %}
+Для максимальной безопасности разработчики Falco рекомендуют запускать Falco как systemd-сервис, однако в кластерах Kubernetes с поддержкой автомасштабирования это может быть затруднительно. Дополнительные средства безопасности Deckhouse (реализованные другими модулями), такие как multitenancy или политики контроля создаваемых ресурсов, предоставляют достаточный уровень безопасности для предотвращения атак на DaemonSet Falco.
+{% endalert %}
 
 Один Pod Falco состоит из четырех контейнеров:
 ![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.svg)
@@ -32,7 +35,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 1. `falco` — собирает события, обогащает их метаданными и отправляет их в stdout.
 2. `rules-loader` — собирает custom resourcе'ы ([FalcoAuditRules](cr.html#falcoauditrules)) из Kubernetes и сохраняет их в общую папку.
-3. `falcosidekick` — экспортирует события как метрики, по которым потом можно настроить алерты.
+3. `falcosidekick` — принимает события от `Falco` и перенаправляет их разными способами. По умолчанию экспортирует события как метрики, по которым потом можно настроить алерты. [Исходный код Falcosidekick](https://github.com/falcosecurity/falcosidekick).
 4. `kube-rbac-proxy` — защищает endpoint метрик `falcosidekick` (запрещает неавторизованный доступ).
 
 ## Правила аудита
@@ -47,14 +50,13 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 Существует два встроенных набора правил, которые нельзя отключить.
 Они помогают выявить проблемы с безопасностью Deckhouse и с самим модулем `runtime-audit-engine`:
 
-- `/etc/falco/falco_rules.yaml` — правила для системных вызовов;
 - `/etc/falco/k8s_audit_rules.yaml` — правила для аудита Kubernetes.
 
 ### Пользовательские правила
 
 Добавить пользовательские правила можно с помощью custom resource [FalcoAuditRules](cr.html#falcoauditrules).
 У каждого агента Falco есть sidecar-контейнер с экземпляром [shell-operator](https://github.com/flant/shell-operator).
-Этот экземпляр считывает правила из custom resource'ов Kubernetes и сохраняет их в директорию `/etc/falco/rules.d/` Pod'а.
+Этот экземпляр считывает правила из custom resource'ов Kubernetes, конвертирует их в правила Falco и сохраняет правила Falco в директорию `/etc/falco/rules.d/` Pod'а.
 При добавлении нового правила Falco автоматически обновляет конфигурацию.
 
 ![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.svg)
@@ -68,7 +70,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 Модуль использует драйвер eBPF для Falco при сборке событий ядра операционной системы. Этот драйвер особенно полезен в окружениях, в которых невозможна сборка модуля ядра (например, GKE, EKS и другие решения Managed Kubernetes).
 Однако у драйвера eBPF есть и ограничения:
-* На некоторых системах probe'ы eBPF могут не работать;
+* На некоторых системах пробы (probe) eBPF могут не работать;
 * Минимальная необходимая версия ядра Linux — 5.8.
 
 ### Процессор / Память
@@ -106,5 +108,11 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 2. Добавьте к `kube-apiserver` флаг `--audit-webhook-config-file`, который будет указывать на файл, созданный на предыдущем шаге.
 
-> **Внимание!** Не забудьте настроить audit policy, поскольку Deckhouse по умолчанию собирает только события аудита Kubernetes для системных пространств имен.
-> Пример конфигурации можно найти в документации модуля [control-plane-manager](../040-control-plane-manager/).
+{% alert level="warning" %}
+Не забудьте настроить audit policy, поскольку Deckhouse по умолчанию собирает только события аудита Kubernetes для системных пространств имен.
+Пример конфигурации можно найти в документации модуля [control-plane-manager](../040-control-plane-manager/).
+{% endalert %}
+
+## Алерты
+
+Если несколько подов `runtime-audit-engine` не назначены на узлы планировщиком, то будет сгенерирован алерт `D8RuntimeAuditEngineNotScheduledInCluster`.

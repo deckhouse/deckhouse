@@ -1,5 +1,6 @@
 ---
 title: "The terraform-manager module"
+description: Description of the Deckhouse terraform-manager module. Ensures that the objects in the cluster correspond to the Terraform state.
 ---
 
 The module provide tools for working with Terraform in the Kubernetes cluster.

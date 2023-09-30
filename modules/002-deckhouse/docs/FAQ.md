@@ -17,7 +17,7 @@ Then you have to select which node you want to run kube-bench.
   ```shell
   curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | kubectl create -f -
   ```
-  
+
 * Run on specific node, e.g. control-plane node:
 
   ```shell
@@ -37,7 +37,7 @@ We always appreciate helping users with debugging complex issues. Please follow 
 1. Collect all the necessary information by running the following command:
 
    ```sh
-   kubectl -n d8-system exec deploy/deckhouse \
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse \
      -- deckhouse-controller collect-debug-info \
      > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
@@ -48,12 +48,13 @@ Data that will be collected:
 * Deckhouse queue state
 * global Deckhouse values (without any sensitive data)
 * enabled modules list
-* controllers and pods manifests from namespaces owned by Deckhouse
-* `nodes` state
-* `nodegroups` state
-* `machines` state
-* all `deckhousereleases` objects
 * `events` from all namespaces
+* controllers and pods manifests from namespaces owned by Deckhouse
+* `nodegroups` state
+* `nodes` state
+* `machines` state
+* deckhouse pods version
+* all `deckhousereleases` objects
 * Deckhouse logs
 * machine controller manager logs
 * cloud controller manager logs
@@ -61,8 +62,9 @@ Data that will be collected:
 * Vertical Pod Autoscaler admission controller logs
 * Vertical Pod Autoscaler recommender logs
 * Vertical Pod Autoscaler updater logs
-* all firing alerts from Prometheus
+* Prometheus logs
 * terraform-state-exporter metrics
+* all firing alerts from Prometheus
 
 ## How to debug pod problems with ephemeral containers?
 

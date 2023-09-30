@@ -129,6 +129,12 @@ spec:
                                       - password
                             - required:
                                 - token
+                    tenantID:
+                      type: string
+                      description: |
+                        ID of a tenant.
+
+                        This option is used only for GrafanaCloud. When running Loki locally, a tenant ID is not required.
                     endpoint:
                       type: string
                       description: |
@@ -629,7 +635,7 @@ spec:
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
                 buffer:
                   type: object
-                  oneOF:
+                  oneOf:
                     - properties:
                         disk: {}
                         type:
@@ -639,6 +645,8 @@ spec:
                         - disk
                         - type
                         - whenFull
+                      not:
+                        required: [memory]
                     - properties:
                         memory: {}
                         type:
@@ -648,7 +656,10 @@ spec:
                         - memory
                         - type
                         - whenFull
+                      not:
+                        required: [disk]
                   description: Buffer parameters.
+                  required: ["type"]
                   properties:
                     type:
                       type: string

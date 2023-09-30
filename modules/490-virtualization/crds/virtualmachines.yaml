@@ -639,6 +639,9 @@ spec:
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                   type: object
+                priorityClassName:
+                  description: Indicates the pod's priority of virtual machine.
+                  type: string
                 resources:
                   additionalProperties:
                     anyOf:

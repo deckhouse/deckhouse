@@ -1,8 +1,7 @@
 - name: d8.prometheus.longterm_federation_target_down
   rules:
   - alert: D8PrometheusLongtermFederationTargetDown
-    expr: longterm_federate_scrape_successful == 0
-    for: 10m
+    expr: max_over_time(longterm_federate_scrape_successful[10m]) == 0
     labels:
       severity_level: "5"
       tier: cluster

@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 // configMapSection is a holder for one module section from the ConfigMap.
@@ -92,14 +92,14 @@ func (s *configMapSection) convertValues() (int, map[string]interface{}, error) 
 
 // getModuleConfig constructs ModuleConfig object from ConfigMap's section.
 // It converts section values to the latest version of module settings.
-func (s *configMapSection) getModuleConfig() (*d8cfg_v1alpha1.ModuleConfig, string, error) {
+func (s *configMapSection) getModuleConfig() (*d8v1alpha1.ModuleConfig, string, error) {
 	// Convert values to the latest schema if conversion chain is present.
 	version, values, err := s.convertValues()
 	if err != nil {
 		return nil, "", err
 	}
 
-	cfg := &d8cfg_v1alpha1.ModuleConfig{
+	cfg := &d8v1alpha1.ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ModuleConfig",
 			APIVersion: "deckhouse.io/v1alpha1",
@@ -107,7 +107,7 @@ func (s *configMapSection) getModuleConfig() (*d8cfg_v1alpha1.ModuleConfig, stri
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.name,
 		},
-		Spec: d8cfg_v1alpha1.ModuleConfigSpec{},
+		Spec: d8v1alpha1.ModuleConfigSpec{},
 	}
 
 	msgs := make([]string, 0)

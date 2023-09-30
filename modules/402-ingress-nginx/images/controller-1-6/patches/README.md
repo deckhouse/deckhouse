@@ -5,6 +5,7 @@
 After catching SIGTERM, ingress stops responding to the readiness probe.
 The combination of this patch and the `EndpointSliceTerminatingCondition` feature gate for kube-proxy helps us avoid
 traffic loss on rollout updates.
+Update: for external load balancers it's advisable to get 5xx if a SIGTERM was sent to the controller, we control this logic by applying/checking `D8s-External-Check` http header.
 
 Backport of the behavior of the later versions of ingress nginx controller.
 The `sleep` is needed to gracefully shut down ingress controllers behind a cloud load balancer.
@@ -26,3 +27,16 @@ https://github.com/kubernetes/ingress-nginx/pull/4367
 ### Makefile
 
 Run the build locally, not inside the container.
+
+### metrics SetSSLExpireTime
+
+Fixes namespace which is given by metric nginx_ingress_controller_ssl_expire_time_seconds.
+
+https://github.com/kubernetes/ingress-nginx/pull/10274
+
+### Always set auth cookie
+
+Without always option toggled, ingress-nginx does not set the cookie in case if backend returns >=400 code, which may lead to dex refresh token invalidation.
+Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. Anyway, we can't use it, because we need this behavior for all ingresses.
+
+https://github.com/kubernetes/ingress-nginx/pull/8213

@@ -474,9 +474,13 @@ spec:
                   minimum: 1
                 defaultSSLCertificate:
                   description: |
-                    This certificate will be used when accessing the catch-all server and for Ingress resources without a `secretName` option in `tls:` section.
+                    This certificate is used:
+                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx [server directive](http://nginx.org/en/docs/http/ngx_http_core_module.html#server)). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
+                    - for Ingress resources that do not have a `secretName` specified in the `tls` section.
 
-                    By default a self-signed certificate will be used.
+                    By default, a self-signed certificate is used.
+
+                    **Caution!** This parameter does not affect certificates used in the Ingress resources of the Deckhouse modules. You can specify the certificate to be used in the Ingress resources of the Deckhouse modules with the [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate) global parameter.
                   type: object
                   properties:
                     secretRef:

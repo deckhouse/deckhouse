@@ -153,6 +153,14 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       secretRef:
         name: custom-secret
         namespace: default
+- name: wait-lb-non-default
+  spec:
+    inlet: "HostPort"
+    waitLoadBalancerOnTerminating: 333
+- name: wait-lb-zero
+  spec:
+    inlet: "HostPort"
+    waitLoadBalancerOnTerminating: 0
 `)
 			hec.HelmRender()
 		})
@@ -292,6 +300,14 @@ memory: 500Mi`))
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-solid-auth-tls").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "controller-solid-failover").Exists()).To(BeTrue())
+
+			waitLbNonDefaultDs := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-wait-lb-non-default")
+			Expect(waitLbNonDefaultDs.Exists()).To(BeTrue())
+			Expect(waitLbNonDefaultDs.Field("spec.template.spec.containers.0.args").Array()).To(ContainElement(ContainSubstring(`--shutdown-grace-period=333`)))
+
+			waitLbZeroDs := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-wait-lb-zero")
+			Expect(waitLbZeroDs.Exists()).To(BeTrue())
+			Expect(waitLbZeroDs.Field("spec.template.spec.containers.0.args").Array()).To(ContainElement(ContainSubstring(`--shutdown-grace-period=0`)))
 		})
 
 		Context("Vertical pod autoscaler CRD is disabled", func() {

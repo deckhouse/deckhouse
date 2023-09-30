@@ -55,14 +55,14 @@ spec:
                   description: |
                     Как в `spec.nodeSelector` у Pod'ов.
 
-                    Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Pod'ы инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                     Как в `spec.tolerations` у Pod'ов.
 
-                    Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
                 loadBalancer:
@@ -287,9 +287,13 @@ spec:
                     Максимально количество реплик `LoadBalancer` и `LoadBalancerWithProxyProtocol` для HPA.
                 defaultSSLCertificate:
                   description: |
-                    Этот сертификат используется, в случаях обращений на `catch-all` сервер (запросы, для которых на найден подходящщий Ingress) и для Ingress–ресурсов, в которых не задан `secretName` в секции `tls:`.
+                    Сертификат, который используется:
+                    - при запросах на `catch-all`-сервер (подразумевается [директива server](http://nginx.org/en/docs/http/ngx_http_core_module.html#server) nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса.
+                    - для Ingress–ресурсов, в которых не задан `secretName` в секции `tls`.
 
-                    По–умолчанию будет использоваться самоподписанный сертификат.
+                    По умолчанию используется самоподписанный сертификат.
+
+                    **Внимание!** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Для указания сертификата, который будет использоваться в Ingress-ресурсах модулей Deckhouse, используйте глобальный параметр [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate).
                   properties:
                     secretRef:
                       description: |

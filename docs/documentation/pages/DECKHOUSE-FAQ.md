@@ -5,18 +5,24 @@ permalink: en/deckhouse-faq.html
 
 ## How do I find out all Deckhouse parameters?
 
-All the Deskhouse settings (including module parameters) are stored in cluster scoped ModuleConfig resources and custom resources. The `global` ModuleConfig contains global Deckhouse settings. Read more in [the documentation](./).
-
-To get list of all ModuleConfigs:
-
-```shell
-kubectl get mc
-```
+Deckhouse is configured using global settings, module settings, and various custom resources. Read more in [the documentation](./).
 
 To view global Deckhouse settings:
 
 ```shell
 kubectl get mc global -o yaml
+```
+
+To list the status of all modules (available for Deckhouse version 1.47+):
+
+```shell
+kubectl get modules
+```
+
+To get the `user-authn` module configuration:
+
+```shell
+kubectl get moduleconfigs user-authn -o yaml
 ```
 
 ## How do I find the documentation for the version installed?
@@ -160,7 +166,17 @@ Possible options for action if something went wrong:
 
 As soon as a new version of Deckhouse appears on the release channel installed in the cluster:
 - The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
-- There is a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases.
+- There is a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
+  - Manual update mode is set (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
+  - The automatic update mode is set, and the [update windows](modules/002-deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come.
+  - The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
+  - The [update.notification.minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
+
+### How do I get information about the upcoming update in advance?
+
+You can get information in advance about updating minor versions of Deckhouse on the release channel in the following ways:
+- Configure manual [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode). In this case, when a new version appears on the release channel, the alert `DeckhouseReleaseIsWaitingManualApproval` will fire and a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) will appear in the cluster.
+- Configure automatic [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode) and specify the minimum time in the [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter for which the update will be postponed. In this case, when a new version appears on the release channel, a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) will appear in the cluster. And if you specify a URL in the [update.notification.webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook) parameter, then the webhook will be called additionally.
 
 ### How do I find out which version of Deckhouse is on which release channel?
 
@@ -184,7 +200,7 @@ kubectl get deckhousereleases
 Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignore update windows settings and apply as soon as they are available.
 {% endalert %}
 
-### What happens when the update channel changes?
+### What happens when the release channel changes?
 
 * When switching to a **more stable** release channel (e.g., from `Alpha` to `EarlyAccess`), Deckhouse downloads release data from the release channel (the `EarlyAccess` release channel in the example) and compares it with the existing `DeckhouseReleases`:
   * Deckhouse deletes *later* releases (by semver) that have not yet been applied (with the `Pending` status).
@@ -195,6 +211,53 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
 
 {% offtopic title="The scheme of using the releaseChannel parameter during Deckhouse installation and operation" %}
 ![The scheme of using the releaseChannel parameter during Deckhouse installation and operation](images/common/deckhouse-update-process.png)
+{% endofftopic %}
+
+### What do I do if Deckhouse fails to retrieve updates from the release channel?
+
+* Make sure that the desired release channel is [configured](#how-do-i-set-the-desired-release-channel).
+* Make sure that the DNS name of the Deckhouse container registry is resolved correctly.
+
+  Retrieve and compare the IP addresses of the Deckhouse container registry (`registry.deckhouse.io`) on one of the nodes and in the Deckhouse pod. They should match.
+  
+  Here is how you can retrieve the IP address of the Deckhouse container registry on a node:
+
+  ```shell
+  $ getent ahosts registry.deckhouse.io
+  46.4.145.194    STREAM registry.deckhouse.io
+  46.4.145.194    DGRAM
+  46.4.145.194    RAW
+  ```
+
+  Here is how you can retrieve the IP address of the Deckhouse container registry in a pod:
+  
+  ```shell
+  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
+  46.4.145.194    STREAM registry.deckhouse.io
+  46.4.145.194    DGRAM  registry.deckhouse.io
+  ```
+  
+  If the retrieved IP addresses do not match, inspect the DNS settings on the host. Specifically, check the list of domains in the `search` parameter of the `/etc/resolv.conf` file (it affects name resolution in the Deckhouse pod). If the `search` parameter of the `/etc/resolv.conf` file includes a domain where wildcard record resolution is configured, it may result in incorrect resolution of the IP address of the Deckhouse container registry (see example).
+  
+{% offtopic title="Example of DNS settings that may cause errors in resolving the IP address of the Deckhouse container registry..." %}
+
+In the example below, DNS settings produce different results when resolving names on the host and in the Kubernetes pod:
+- The `/etc/resolv.conf` file on the node:
+
+  ```text
+  nameserver 10.0.0.10
+  search company.my
+  ```
+
+  > Note that the `ndot` parameter defaults to 1 (`options ndots:1`) on the node. But in Kubernetes pods, the `ndot` parameter is set to **5**.
+Therefore, the logic for resolving DNS names with 5 dots or less in the name is different on the host and in the pod.
+
+- The `company.my` DNS zone is configured to resolve wildcard records `*.company.my` to `10.0.0.100`. That is, any DNS name in the `company.my` zone for which there is no specific DNS entry is resolved to `10.0.0.100`.
+
+In this case, subject to the `search` parameter specified in the `/etc/resolv.conf` file, when accessing the `registry.deckhouse.io` address **on the node**, the system will try to obtain the IP address for the `registry.deckhouse.io` name (it treats it as a fully qualified name given the default setting of `options ndots:1`).
+
+On the other hand, when accessing `registry.deckhouse.io` **from a Kubernetes pod**, given the `options ndots:5` parameter (the default one in Kubernetes) and the `search` parameter, the system will initially try to resolve the IP address for the `registry.deckhouse.io.company.my` name. The `registry.deckhouse.io.company.my` name will be resolved to `10.0.0.100` because the `company.my` DNS zone is configured to resolve wildcard records `*.company.my` to `10.0.0.100`. As a result, the `registry.deckhouse.io` host and information about the available Deckhouse updates will be unreachable.
+
 {% endofftopic %}
 
 ## Air-gapped environment; working via proxy and third-party registry
@@ -248,6 +311,8 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 * `registryCA` - root CA certificate to validate the third-party registry's HTTPS certificate (if self-signed certificates are used);
 * `registryScheme` - registry scheme (`HTTP` or `HTTPS`). The default value is `HTTPS`.
 
+<div markdown="0" style="height: 0;" id="tips-for-configuring-the-third-party-registry"></div>
+
 ### Tips for configuring Nexus
 
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
@@ -271,7 +336,7 @@ Configuration:
 * Fill in the fields on the Create page  as follows:
   * `Name` must contain the name of the repository you created earlier, e.g., `d8-proxy`.
   * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` must contain a dedicated port for the created repository, e.g., `8123` or other.
-  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to [work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms). Note, however, that anonymous access [won't work](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories) unless it is explicitly enabled in Settings -> Security -> Anonymous Access and the `anonymous` user has been granted access rights to the created repository.
+  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to [work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms). Note, however, that anonymous access [won't work](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories) unless it is explicitly enabled in *Settings* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
   * `Remote storage` must be set to `https://registry.deckhouse.io/`.
   * You can disable `Auto blocking enabled` and `Not found cache enabled` for debugging purposes, otherwise they must be enabled.
   * `Maximum Metadata Age` must be set to 0.
@@ -325,7 +390,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    chmod 700 d8-pull.sh
    ```
 
-   > Note! Use the following commands if you want to upload images of Deckhouse v1.44 or older:
+   > Note! Use the following commands if you want to upload images of Deckhouse prior to v1.45.0:
    >
    > ```shell
    > curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-pull.sh
@@ -351,7 +416,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    chmod 700 d8-push.sh
    ```
 
-   > Note! Use the following commands if you want to upload images of Deckhouse v1.44 or older:
+   > Note! Use the following commands if you want to upload images of Deckhouse prior to v1.45.0:
    >
    > ```shell
    > curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/v1.44.4/tools/release/d8-push.sh
@@ -374,14 +439,14 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
-* Run `deckhouse-controller helper change-registry` inside the `deckhouse` Pod with the new registry settings.
+* Run `deckhouse-controller helper change-registry` inside the Deckhouse Pod with the new registry settings.
   * Example:
 
     ```shell
     kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user my-user --password my-password registry.example.com/deckhouse
     ```
 
-  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` in the `deckhouse` Pod and add the `--ca-file ca.crt` option to the script or put the content of CA into a variable.
+  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` in the Deckhouse Pod and add the `--ca-file ca.crt` option to the script or put the content of CA into a variable.
 
     ```shell
     $ CA_CONTENT=$(cat <<EOF
@@ -473,7 +538,7 @@ cloud:
   prefix: main
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.23"
+kubernetesVersion: "Automatic"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 proxy:
@@ -499,7 +564,7 @@ After saving the changes, Deckhouse will bring the cluster configuration to the 
 
 Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'local' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
 
-Regardless of the cloud provider used, its settings can be changed using the command:
+Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
 kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
@@ -589,7 +654,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
-   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE editions. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
+   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
 
    ```shell
    grep -ri 'deckhouse.io/deckhouse/ee' /etc/kubernetes | grep -v backup
@@ -668,7 +733,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
      | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
    ```
 
-   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE editions. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
+   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
 
    ```shell
    grep -ri 'deckhouse.io/deckhouse/ce' /etc/kubernetes | grep -v backup

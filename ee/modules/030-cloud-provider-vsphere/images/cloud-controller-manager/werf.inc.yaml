@@ -30,7 +30,7 @@ from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
 from: {{ $.Images.BASE_GOLANG_ALPINE }}
     {{- end }}
 git:
-- add: /ee/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:

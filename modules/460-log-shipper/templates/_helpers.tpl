@@ -28,4 +28,7 @@
   mountPath: /etc/vector/default/defaults.json
   readOnly: true
   subPath: defaults.json
+- name: localtime
+  mountPath: /etc/localtime
+  readOnly: true
 {{- end }}

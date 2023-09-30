@@ -204,6 +204,8 @@ spec:
                         Container runtime type.
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+
+                        > **Note!** the `Docker` is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -591,6 +593,8 @@ spec:
                     Docker settings for nodes.
 
                     If used, `cri.type` must be set to `Docker`.
+
+                    > **Note!** the `Docker` is deprecated.
                   type: object
                   properties:
                     maxConcurrentDownloads:
@@ -810,6 +814,8 @@ spec:
                         Container runtime type.
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+
+                        > **Note!** the `Docker` is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -830,6 +836,8 @@ spec:
                       type: object
                       description: |
                         Docker settings for nodes.
+
+                        > **Note!** the `Docker` is deprecated.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
@@ -1444,6 +1452,8 @@ spec:
                         Container runtime type.
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+
+                        > **Note!** The `Docker` is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -1462,6 +1472,7 @@ spec:
                           x-doc-default: 3
                     docker:
                       type: object
+                      x-doc-deprecated: true
                       description: |
                         Docker settings for nodes.
                       properties:
@@ -1894,8 +1905,6 @@ spec:
                       pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
                       description: |
                         Maximum log file size before it is rotated.
-
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
                     containerLogMaxFiles:
                       type: integer
                       minimum: 1
@@ -1903,8 +1912,60 @@ spec:
                       default: 4
                       description: |
                         How many rotated log files to store before deleting them.
+                    resourceReservation:
+                      type: object
+                      oneOf:
+                      - properties:
+                          mode:
+                            enum: ["Static"]
+                        required:
+                          - static
+                      - properties:
+                          mode:
+                            enum: ["Off", "Auto"]
+                      description: |
+                        Management of resource reservation for system daemons on a node.
 
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                        More info in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved).
+                      properties:
+                        mode:
+                          type: string
+                          default: "Auto"
+                          description: |
+                            Specify whether to:
+
+                            * `Off` — Disable resource reservation.
+                            * `Auto` — Reserve resources based on the Node capacity.
+                            * `Static` — Provide your own resource reservation values via the `static` parameter.
+
+                            Note that currently we do not use a dedicated cgroup for resource reservation (`-system-reserved-cgroup` is not used).
+                        static:
+                          type: object
+                          oneOf:
+                          - required: ["cpu"]
+                          - required: ["memory"]
+                          - required: ["ephemeralStorage"]
+                          description: |
+                            Resource reservation parameters for the 'Static' mode.
+                          properties:
+                            cpu:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: '\d+[m]'
+                            memory:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                            ephemeralStorage:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
                 update:
                   type: object
                   properties:

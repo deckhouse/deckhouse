@@ -103,6 +103,8 @@ To do this, go to `Applications` -> `Add application`.
 
 Paste the generated `Application Name` and `Password` into the [DexProvider](cr.html#dexprovider) custom resource.
 
+CROWD groups are specified in the lowercase format for the custom resource `DexProvider`.
+
 ### Bitbucket Cloud
 
 ```yaml
@@ -262,7 +264,7 @@ spec:
 {% raw %}
 
 ```yaml
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: Group
 metadata:
   name: admins

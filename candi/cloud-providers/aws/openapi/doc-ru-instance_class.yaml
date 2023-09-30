@@ -21,9 +21,9 @@ spec:
 
                     Емкость инстанса для *нестандартных* типов инстансов (параметр `instanceType`).
 
-                    Используется cluster-autoscaler'ом при планировании только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, то cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла, и не использует данные параметра `capacity`.
+                    Используется cluster-autoscaler'ом при планировании, только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла и не использует данные параметра `capacity`.
 
-                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`t2.micro`, `m6a.12xlarge` и т.п.) заложены в Deckhouse.
+                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`t2.micro`, `m6a.12xlarge` и т. п.) заложены в Deckhouse.
                   properties:
                     cpu:
                       description: Количество vCPU узла.
@@ -33,7 +33,7 @@ spec:
                   description: |
                     Образ Amazon Machine Image (AMI ID), который будет использоваться в заказанных инстансах.
 
-                    Если не указан, то используется AMI, определенный в параметре [masterNodeGroup.instanceClass.ami](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-ami) ресурса `AWSClusterConfiguration`.
+                    Если он не указан, используется AMI, определенный в параметре [masterNodeGroup.instanceClass.ami](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-ami) ресурса `AWSClusterConfiguration`.
 
                     Как найти нужный AMI (в каждом регионе AMI разные):
                     ```shell

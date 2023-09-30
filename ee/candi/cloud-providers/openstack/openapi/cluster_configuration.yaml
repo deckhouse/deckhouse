@@ -78,7 +78,7 @@ apiVersions:
         items:
           type: string
         description: |
-          A list of CIDR's allowed to connect to nodes via ssh.
+          A list of CIDR's allowed to connect to nodes via SSH.
 
           By default, `0.0.0.0/0`.
       tags:
@@ -137,7 +137,7 @@ apiVersions:
 
                   Use this command to get a list of available images: `openstack image list`.
 
-                  > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
+                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
                 type: string
                 x-doc-required: true
               rootDiskSize: &instanceClassRootDiskSize
@@ -290,6 +290,7 @@ apiVersions:
                   type: string
                   description: |
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+                    Get a list of all available networks: `openstack network list`.
                   x-doc-required: true
                 additionalNetworks:
                   type: array
@@ -297,6 +298,7 @@ apiVersions:
                     type: string
                   description: |
                     Paths to networks that VirtualMachines' secondary NICs will connect to.
+                    Get a list of all available networks: `openstack network list`.
                   example:
                     - "BGP-network-VLAN-3894"
                     - "External-VLAN-3699"
@@ -398,7 +400,7 @@ apiVersions:
 
                       Use this command to get a list of available images: `openstack image list`.
 
-                      > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
+                      The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
                     type: string
                     x-doc-required: true
                   rootDiskSize:
@@ -436,6 +438,7 @@ apiVersions:
           externalNetworkName: &externalNetworkName
             description: |
               The name of the network for external connections.
+              Get a list of all available networks: `openstack network list`.
             type: string
       standardWithNoRouter:
         description: |

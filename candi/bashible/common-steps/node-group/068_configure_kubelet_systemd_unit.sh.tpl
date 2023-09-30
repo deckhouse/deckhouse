@@ -25,15 +25,13 @@ cri_config=""
 {{- if eq .cri "Containerd" }}
 cri_config="--container-runtime=remote --container-runtime-endpoint=unix:/var/run/containerd/containerd.sock"
 {{- else if eq .cri "NotManaged" }}
-  {{- if .nodeGroup.cri.notManaged.criSocketPath }}
+  {{- if (and .nodeGroup.cri.notManaged .nodeGroup.cri.notManaged.criSocketPath) }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
-for socket_path in /var/run/docker.sock /run/containerd/containerd.sock; do
-  if [[ -S "${socket_path}" ]]; then
-    cri_socket_path="${socket_path}"
+  if [[ -S "/run/containerd/containerd.sock" ]]; then
+    cri_socket_path="/run/containerd/containerd.sock"
     break
   fi
-done
   {{- end }}
 
 if [[ -z "${cri_socket_path}" ]]; then
@@ -41,11 +39,7 @@ if [[ -z "${cri_socket_path}" ]]; then
   exit 1
 fi
 
-if grep -q "docker" <<< "${cri_socket_path}"; then
-  cri_config="--container-runtime=docker --docker-endpoint=unix://${cri_socket_path}"
-else
-  cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_socket_path}"
-fi
+cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_socket_path}"
 {{- end }}
 
 bb-event-on 'bb-sync-file-changed' '_enable_kubelet_service'

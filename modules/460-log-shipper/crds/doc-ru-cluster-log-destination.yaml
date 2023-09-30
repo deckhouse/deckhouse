@@ -24,6 +24,12 @@ spec:
                           description: Токен для Bearer-аутентификации.
                         user:
                           description: Имя пользователя, используемое при Basic-аутентификации.
+                    tenantID:
+                      type: string
+                      description: |
+                        ID тенанта.
+
+                        Эта опция используется только для GrafanaCloud. Для локально запущенного Loki опция ни на что не влияет.
                     endpoint:
                       description: |
                         URL для подключения к Loki.

@@ -378,6 +378,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name:  "DECKHOUSE_BUNDLE",
 			Value: params.Bundle,
 		},
+		{
+			Name:  "DEBUG_HTTP_SERVER_ADDR",
+			Value: "127.0.0.1:9652",
+		},
 	}
 
 	// Deployment composition

@@ -5,6 +5,12 @@ apiVersions:
     type: object
     description: |
       Parameters of a static (bare metal) cluster.
+
+      To change the `StaticClusterConfiguration` resource in a running cluster, run the following command:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+      ```
     additionalProperties: false
     required: [apiVersion, kind]
     x-examples:

@@ -124,6 +124,7 @@ var _ = Describe("Global :: migrate_terraform_state ::", func() {
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found dependency"))
 		})
 	})
+
 	Context("Single master with root size: Migration has been done already", func() {
 		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 		nodeName := "master-0"
@@ -193,6 +194,83 @@ var _ = Describe("Global :: migrate_terraform_state ::", func() {
 
 		It("Hook should generate proper log messages", func() {
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("No old resources found. Migration is not needed for Secret/%s/%s", TerraformStateNamespace, "d8-node-terraform-state-"+nodeName))
+		})
+	})
+
+	Context("Single master with long node name", func() {
+		nodeName := "s-aa-bbbbbbbbbbb-ddddd-ee-master-0"
+
+		Context("Single master with root size: Secret with terraform state exists in "+TerraformStateNamespace+" namespace, field "+TerraformNodeStateDataKey+" contains old data", func() {
+
+			f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+
+			BeforeEach(func() {
+				f.KubeStateSet("")
+				err := createTerraformStateSecret("d8-node-terraform-state-"+nodeName, TerraformNodeStateDataKey, oldTerraformStateWithRootDiskSize, "master", "node.deckhouse.io/terraform-state")
+				Expect(err).To(BeNil())
+				f.BindingContexts.Set(f.GenerateOnStartupContext())
+				f.RunHook()
+			})
+
+			It("Hook should not fail", func() {
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("Hook should make backup with short name", func() {
+				secret, err := dependency.TestDC.K8sClient.CoreV1().
+					Secrets(TerraformStateNamespace).
+					Get(context.TODO(), "d8-node-state-"+nodeName+"-backup", metav1.GetOptions{})
+				Expect(err).To(BeNil())
+				Expect(secret.Data).NotTo(BeNil())
+				Expect(secret.Data[TerraformNodeStateDataKey]).To(MatchJSON(oldTerraformStateWithRootDiskSize))
+				Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
+			})
+
+			It("Hook should migrate Terraform state", func() {
+				secret, err := dependency.TestDC.K8sClient.CoreV1().
+					Secrets(TerraformStateNamespace).
+					Get(context.TODO(), "d8-node-terraform-state-"+nodeName, metav1.GetOptions{})
+				Expect(err).To(BeNil())
+				Expect(secret.Data).NotTo(BeNil())
+				Expect(secret.Data[TerraformNodeStateDataKey]).To(MatchJSON(newTerraformStateWithRootDiskSize))
+				Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
+
+				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name kubernetes_data.", OpenstackV2ResourceType))
+				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name master.", OpenstackV2ResourceType))
+				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found dependency"))
+			})
+		})
+
+		Context("Single master with root size: Migration has been done already", func() {
+			f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+
+			BeforeEach(func() {
+				f.KubeStateSet("")
+				err := createTerraformStateSecret("d8-node-terraform-state-"+nodeName, TerraformNodeStateDataKey, newTerraformStateWithRootDiskSize, "master", "node.deckhouse.io/terraform-state")
+				Expect(err).To(BeNil())
+				err = createTerraformStateSecret("d8-node-state-"+nodeName+"-backup", TerraformNodeStateDataKey, oldTerraformStateWithRootDiskSize, "master", "node.deckhouse.io/terraform-state-backup")
+				Expect(err).To(BeNil())
+				f.BindingContexts.Set(f.GenerateOnStartupContext())
+				f.RunHook()
+			})
+
+			It("Hook should not fail", func() {
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("Hook should not change existing state", func() {
+				secret, err := dependency.TestDC.K8sClient.CoreV1().
+					Secrets(TerraformStateNamespace).
+					Get(context.TODO(), "d8-node-terraform-state-"+nodeName, metav1.GetOptions{})
+				Expect(err).To(BeNil())
+				Expect(secret.Data).NotTo(BeNil())
+				Expect(secret.Data[TerraformNodeStateDataKey]).To(MatchJSON(newTerraformStateWithRootDiskSize))
+				Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
+			})
+
+			It("Hook should generate proper log messages", func() {
+				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Secret backup with name %s/%s already exists! Migration is not needed for Secret/%s/%s", TerraformStateNamespace, "d8-node-state-"+nodeName+"-backup", TerraformStateNamespace, "d8-node-terraform-state-"+nodeName))
+			})
 		})
 	})
 
@@ -271,9 +349,142 @@ var _ = Describe("Global :: migrate_terraform_state ::", func() {
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name kubernetes_data.", OpenstackV2ResourceType))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name master.", OpenstackV2ResourceType))
 		})
-
 	})
 
+	Context("Multi-master master with long node name", func() {
+		Context("Multi master and other CloudPermanent nodes with root size with long size: Secret with terraform state exists in "+TerraformStateNamespace+" namespace, field "+TerraformNodeStateDataKey+" contains old data", func() {
+			f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+			nodeNames := []string{"s-aa-bbbbbbbbbbb-ddddd-ee-master-0", "s-aa-bbbbbbbbbbb-ddddd-ee-master-1", "s-aa-bbbbbbbbbbb-ddddd-ee-master-2", "s-aa-bbbbbbbbbbb-ddddd-ee-testes-0"}
+			terraformStateBackupLabels := map[string]string{
+				"node.deckhouse.io/terraform-state-backup": "",
+			}
+
+			BeforeEach(func() {
+				f.KubeStateSet("")
+				for _, nodeName := range nodeNames {
+					err := createTerraformStateSecret("d8-node-terraform-state-"+nodeName, TerraformNodeStateDataKey, oldTerraformStateWithRootDiskSize, strings.Split(nodeName, "-")[0], "node.deckhouse.io/terraform-state")
+					Expect(err).To(BeNil())
+				}
+
+				err := createTerraformStateSecret("d8-cluster-terraform-state", TerraformClusterStateDataKey, oldTerraformStateWithRootDiskSize, "d8-cluster-terraform-state", "test")
+				Expect(err).To(BeNil())
+
+				f.BindingContexts.Set(f.GenerateOnStartupContext())
+				f.RunHook()
+			})
+
+			It("Hook should not fail", func() {
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("Hook should make backup", func() {
+				for _, nodeName := range nodeNames {
+					secret, err := dependency.TestDC.K8sClient.CoreV1().
+						Secrets(TerraformStateNamespace).
+						Get(context.TODO(), "d8-node-state-"+nodeName+"-backup", metav1.GetOptions{})
+					Expect(err).To(BeNil())
+					Expect(secret.Data).NotTo(BeNil())
+					Expect(secret.Data[TerraformNodeStateDataKey]).To(MatchJSON(oldTerraformStateWithRootDiskSize))
+					Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
+					Expect(secret.ObjectMeta.Labels["node.deckhouse.io/node-group"]).To(BeEquivalentTo(strings.Split(nodeName, "-")[0]))
+				}
+
+				secret, err := dependency.TestDC.K8sClient.CoreV1().
+					Secrets(TerraformStateNamespace).
+					Get(context.TODO(), "d8-cluster-terraform-state-backup", metav1.GetOptions{})
+				Expect(err).To(BeNil())
+				Expect(secret.Data).NotTo(BeNil())
+				Expect(secret.Data[TerraformClusterStateDataKey]).To(MatchJSON(oldTerraformStateWithRootDiskSize))
+				Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
+
+				terraformStateBackupSecrets, err := dependency.TestDC.K8sClient.CoreV1().
+					Secrets(TerraformStateNamespace).
+					List(context.TODO(), metav1.ListOptions{LabelSelector: metav1.FormatLabelSelector(metav1.SetAsLabelSelector(terraformStateBackupLabels))})
+				Expect(err).To(BeNil())
+				Expect(len(terraformStateBackupSecrets.Items)).To(BeEquivalentTo(5))
+			})
+
+			It("Hook should not change existing state", func() {
+				for _, nodeName := range nodeNames {
+					secret, err := dependency.TestDC.K8sClient.CoreV1().
+						Secrets(TerraformStateNamespace).
+						Get(context.TODO(), "d8-node-terraform-state-"+nodeName, metav1.GetOptions{})
+					Expect(err).To(BeNil())
+					Expect(secret.Data).NotTo(BeNil())
+					Expect(secret.Data[TerraformNodeStateDataKey]).To(MatchJSON(newTerraformStateWithRootDiskSize))
+					Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
+					Expect(secret.ObjectMeta.Labels["node.deckhouse.io/node-group"]).To(BeEquivalentTo(strings.Split(nodeName, "-")[0]))
+				}
+
+				secret, err := dependency.TestDC.K8sClient.CoreV1().
+					Secrets(TerraformStateNamespace).
+					Get(context.TODO(), "d8-cluster-terraform-state", metav1.GetOptions{})
+				Expect(err).To(BeNil())
+				Expect(secret.Data).NotTo(BeNil())
+				Expect(secret.Data[TerraformClusterStateDataKey]).To(MatchJSON(newTerraformStateWithRootDiskSize))
+				Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
+
+				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name kubernetes_data.", OpenstackV2ResourceType))
+				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Found resourceType = %s with name master.", OpenstackV2ResourceType))
+			})
+		})
+
+		Context("Multi master and other CloudPermanent nodes with root size with long size: Secret with terraform state exists in "+TerraformStateNamespace+" namespace, field "+TerraformNodeStateDataKey+" contains old data and backups is exists", func() {
+			f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+			nodeNames := []string{"s-aa-bbbbbbbbbbb-ddddd-ee-master-0", "s-aa-bbbbbbbbbbb-ddddd-ee-master-1", "s-aa-bbbbbbbbbbb-ddddd-ee-master-2", "s-aa-bbbbbbbbbbb-ddddd-ee-testes-0"}
+
+			BeforeEach(func() {
+				f.KubeStateSet("")
+				for _, nodeName := range nodeNames {
+					err := createTerraformStateSecret("d8-node-terraform-state-"+nodeName, TerraformNodeStateDataKey, newTerraformStateWithRootDiskSize, strings.Split(nodeName, "-")[0], "node.deckhouse.io/terraform-state")
+					Expect(err).To(BeNil())
+					err = createTerraformStateSecret("d8-node-state-"+nodeName+"-backup", TerraformNodeStateDataKey, oldTerraformStateWithRootDiskSize, strings.Split(nodeName, "-")[0], "node.deckhouse.io/terraform-state-backup")
+					Expect(err).To(BeNil())
+				}
+
+				err := createTerraformStateSecret("d8-cluster-terraform-state", TerraformClusterStateDataKey, newTerraformStateWithRootDiskSize, "d8-cluster-terraform-state", "test")
+				Expect(err).To(BeNil())
+
+				err = createTerraformStateSecret("d8-cluster-terraform-state-backup", TerraformClusterStateDataKey, oldTerraformStateWithRootDiskSize, "d8-cluster-terraform-state", "test")
+				Expect(err).To(BeNil())
+
+				f.BindingContexts.Set(f.GenerateOnStartupContext())
+				f.RunHook()
+			})
+
+			It("Hook should not fail", func() {
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("Hook should not change existing state", func() {
+				for _, nodeName := range nodeNames {
+					secret, err := dependency.TestDC.K8sClient.CoreV1().
+						Secrets(TerraformStateNamespace).
+						Get(context.TODO(), "d8-node-terraform-state-"+nodeName, metav1.GetOptions{})
+					Expect(err).To(BeNil())
+					Expect(secret.Data).NotTo(BeNil())
+					Expect(secret.Data[TerraformNodeStateDataKey]).To(MatchJSON(newTerraformStateWithRootDiskSize))
+					Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
+				}
+
+				secret, err := dependency.TestDC.K8sClient.CoreV1().
+					Secrets(TerraformStateNamespace).
+					Get(context.TODO(), "d8-cluster-terraform-state", metav1.GetOptions{})
+				Expect(err).To(BeNil())
+				Expect(secret.Data).NotTo(BeNil())
+				Expect(secret.Data[TerraformClusterStateDataKey]).To(MatchJSON(newTerraformStateWithRootDiskSize))
+				Expect(secret.Data[TestKey]).To(BeEquivalentTo(TestData))
+			})
+
+			It("Hook should generate proper log messages", func() {
+				for _, nodeName := range nodeNames {
+					Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Secret backup with name %s/%s already exists! Migration is not needed for Secret/%s/%s", TerraformStateNamespace, "d8-node-state-"+nodeName+"-backup", TerraformStateNamespace, "d8-node-terraform-state-"+nodeName))
+				}
+
+				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Secret backup with name %s/%s already exists! Migration is not needed for Secret/%s/%s", TerraformStateNamespace, "d8-cluster-terraform-state-backup", TerraformStateNamespace, "d8-cluster-terraform-state"))
+			})
+		})
+	})
 })
 
 const (

@@ -297,6 +297,16 @@ status:
 
 	Context("Release has cooldown", func() {
 		BeforeEach(func() {
+			dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+				"v1.31.0",
+				"v1.31.1",
+				"v1.32.0",
+				"v1.32.1",
+				"v1.32.2",
+				"v1.32.3",
+				"v1.33.0",
+				"v1.33.1",
+			}, nil)
 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 				LayersStub: func() ([]v1.Layer, error) {
 					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.0"}`}}}, nil
@@ -504,6 +514,96 @@ global:
 		})
 	})
 
+	Context("StepByStepUpdateFailded", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+				"v1.31.0",
+				"v1.31.1",
+				"v1.33.0",
+				"v1.33.1",
+				"v1.34.0",
+			}, nil)
+			dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.34.0"}`}}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+				},
+			}, nil)
+			dependency.TestDC.CRClient.ImageMock.When("v1.32.3").Then(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.32.3"}`}}}, nil
+				},
+			}, nil)
+			f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.31.0
+spec:
+  version: "v1.31.0"
+status:
+  phase: Deployed
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Step by step update should not be successfully and alert fired", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.31.0").Exists()).To(BeTrue())
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
+			Expect(f.MetricsCollector.CollectedMetrics()[1].Group).To(Equal("d8_updating_failed"))
+			Expect(*f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(float64(1)))
+		})
+	})
+
+	Context("StepByStepUpdateSuccessfully", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+				"v1.31.0",
+				"v1.31.1",
+				"v1.32.0",
+				"v1.32.1",
+				"v1.32.2",
+				"v1.32.3",
+				"v1.33.0",
+				"v1.33.1",
+			}, nil)
+			dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1"}`}}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+				},
+			}, nil)
+			dependency.TestDC.CRClient.ImageMock.When("v1.32.3").Then(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.32.3"}`}}}, nil
+				},
+			}, nil)
+			f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.31.0
+spec:
+  version: "v1.31.0"
+status:
+  phase: Deployed
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Step by step update should be successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.32.3").Exists()).To(BeTrue())
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
+			Expect(f.MetricsCollector.CollectedMetrics()[0].Group).To(Equal("d8_updating_failed"))
+			Expect(f.MetricsCollector.CollectedMetrics()[0].Action).To(Equal("expire"))
+		})
+	})
 })
 
 type fakeLayer struct {

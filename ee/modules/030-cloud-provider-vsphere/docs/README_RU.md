@@ -6,7 +6,7 @@ title: "Cloud provider — VMware vSphere"
 
 Функционал модуля `cloud-provider-vsphere`:
 - Управляет ресурсами vSphere с помощью модуля `cloud-controller-vsphere`:
-  * Создаёт сетевые маршруты для сети `PodNetwork` на стороне vSphere.
+  * Создает сетевые маршруты для сети `PodNetwork` на стороне vSphere.
   * Актуализирует метаданные vSphere VirtualMachines и Kubernetes Nodes. Удаляет из Kubernetes узлы, которых уже нет в vSphere.
 - Заказывает диски в vSphere на datastore через механизм First-Class Disk с помощью компонента `CSI storage`.
 - Регистрируется в модуле [node-manager](../../modules/040-node-manager/), чтобы [VsphereInstanceClass'ы](cr.html#vsphereinstanceclass) можно было использовать при описании [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).

@@ -23,9 +23,16 @@ spec:
   # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
   allowAccessToSystemNamespaces: false
   # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
-  limitNamespaces:
-  - review-.*
-  - stage
+  namespaceSelector:
+    labelSelector:
+      matchExpressions:
+      - key: stage
+        operator: In
+        values:
+        - test
+        - review
+      matchLabels:
+        team: frontend
 ```
 
 ## Создание пользователя

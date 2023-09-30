@@ -6091,7 +6091,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(process_virtual_memory_bytes{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "process_virtual_memory_bytes{node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Processes virtual memory size in bytes",
@@ -6107,7 +6107,7 @@
               "step": 240
             },
             {
-              "expr": "rate(process_virtual_memory_bytes{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "process_virtual_memory_bytes{node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Processes virtual memory size in bytes",
@@ -6115,7 +6115,7 @@
               "step": 240
             },
             {
-              "expr": "rate(process_virtual_memory_max_bytes{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "process_virtual_memory_max_bytes{node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Maximum amount of virtual memory available in bytes",
@@ -11667,7 +11667,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Ip_Forwarding{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "node_netstat_Ip_Forwarding{node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Forwarding - IP forwarding",
@@ -11697,7 +11697,7 @@
             {
               "$$hashKey": "object:1957",
               "format": "short",
-              "label": "datagrams",
+              "label": "counter",
               "logBase": 1,
               "max": null,
               "min": "0",

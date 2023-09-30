@@ -39,7 +39,7 @@ spec:
                     - Disabled
                 source:
                   type: string
-                  description: 'Source repository address for an external module, or `Embedded` — for internal.'
+                  description: 'ModuleSource name of the module if provided by one (otherwise empty).'
       additionalPrinterColumns:
         - name: weight
           jsonPath: .properties.weight
@@ -52,4 +52,4 @@ spec:
         - name: source
           jsonPath: .properties.source
           type: string
-          description: 'Source repository address for an external module, or Embedded — for internal.'
+          description: 'ModuleSource name of the module if provided by one (otherwise empty).'

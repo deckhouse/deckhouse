@@ -17,6 +17,10 @@ RUN mkdir /filtered-apk && rsync -av --include-from=file-filter --include='*/' -
 
 RUN update-ca-certificates && mkdir -p /filtered-apk/etc/ssl/certs && cp -r /etc/ssl/cert.pem /etc/ssl/certs /filtered-apk/etc/ssl/
 
+RUN echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /filtered-apk/etc/passwd
+RUN echo "deckhouse:x:64535:" >> /filtered-apk/etc/group
+RUN echo "deckhouse:!::0:::::" >> /filtered-apk/etc/shadow
+
 FROM $BASE_SCRATCH
 
 COPY --from=apk_extractor /filtered-apk/ /

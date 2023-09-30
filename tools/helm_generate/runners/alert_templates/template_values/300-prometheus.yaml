@@ -1,0 +1,2 @@
+prometheus:
+  longtermRetentionDays: 5

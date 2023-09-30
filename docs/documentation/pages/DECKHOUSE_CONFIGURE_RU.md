@@ -71,15 +71,15 @@ kubectl -n d8-system edit moduleconfig/upmeter
 
 ## Настройка модуля
 
-> При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). Будем признательны, если поставите проекту *звезду*.
+> При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять, как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). Будем признательны, если поставите проекту *звезду*.
 
 Модуль настраивается с помощью custom resource `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case). Custom resource `ModuleConfig` имеет следующие поля:
 
-- `metadata.name` — название модуля Deckhouse в kebab-case (например `prometheus`, `node-manager`).
-- `spec.version` — версия схемы настроек модуля (целое число, больше нуля). Обязательное поле, если `spec.settings` не пустое. Номер актуальной версии можно увидеть в документации модуля в разделе *"Настройки"*.
-  - Deckhouse поддерживает обратную совместимость версий схемы настроек модуля. Если используется схема настроек устаревшей версии, при редактировании или просмотре custom resource'а будет выведено предупреждение о необходимости обновить схему настроек модуля.
-- `spec.settings` — настройки модуля. Необязательное поле, если используется поле `spec.enabled`. Описание возможных настроек можно найти в документации модуля в разделе *"Настройки"*.
-- `spec.enabled` — необязательное поле для явного [включения или отключения модуля](#включение-и-отключение-модуля). Если не задано, модуль может быть включён по умолчанию в одном из [наборов модулей](#наборы-модулей).
+- `metadata.name` — название модуля Deckhouse в kebab-case (например, `prometheus`, `node-manager`);
+- `spec.version` — версия схемы настроек модуля (целое число, больше нуля). Обязательное поле, если `spec.settings` не пустое. Номер актуальной версии можно увидеть в документации модуля в разделе *Настройки*:
+  - Deckhouse поддерживает обратную совместимость версий схемы настроек модуля. Если используется схема настроек устаревшей версии, при редактировании или просмотре custom resource'а будет выведено предупреждение о необходимости обновить схему настроек модуля;
+- `spec.settings` — настройки модуля. Необязательное поле, если используется поле `spec.enabled`. Описание возможных настроек можно найти в документации модуля в разделе *Настройки*;
+- `spec.enabled` — необязательное поле для явного [включения или отключения модуля](#включение-и-отключение-модуля). Если не задано, модуль может быть включен по умолчанию в одном из [наборов модулей](#наборы-модулей).
 
 > Deckhouse не изменяет custom resource'ы `ModuleConfig`. Это позволяет применять подход Infrastructure as Code (IaC) при хранении конфигурации. Другими словами, можно воспользоваться всеми преимуществами системы контроля версий для хранения настроек Deckhouse, использовать Helm, kubectl и другие привычные инструменты.
 
@@ -103,7 +103,7 @@ spec:
     - 10.2.200.55
 ```
 
-Некоторые модули настраиваются с помощью дополнительных custom resource'ов. Воспользуйтесь поиском (наверху страницы) или выберите модуль в меню слева, чтобы просмотреть документацию по его настройкам и используемым custom resource'ам.
+Некоторые модули настраиваются с помощью дополнительных custom resource'ов. Воспользуйтесь поиском (вверху страницы) или выберите модуль в меню слева, чтобы просмотреть документацию по его настройкам и используемым custom resource'ам.
 
 ### Включение и отключение модуля
 
@@ -178,31 +178,25 @@ user-authn          Disabled   1                    12h
 {% raw %}
 * Модули *monitoring* (`operator-prometheus`, `prometheus` и `vertical-pod-autoscaler`):
   * Порядок поиска узлов (для определения [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector)):
-    * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
-    * Наличие узла с лейблом `node-role.deckhouse.io/monitoring`.
-    * Наличие узла с лейблом `node-role.deckhouse.io/system`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/monitoring`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/system`.
   * Добавляемые toleration'ы (добавляются одновременно все):
-    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
-
-      Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`;
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` (например, `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`);
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}`;
-    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`;
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
 * Модули *frontend* (исключительно модуль `ingress-nginx`):
   * Порядок поиска узлов (для определения `nodeSelector`):
-    * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
-    * Наличие узла с лейблом `node-role.deckhouse.io/frontend`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/frontend`.
   * Добавляемые toleration'ы (добавляются одновременно все):
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
-    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}`;
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}`.
 * Все остальные модули:
   * Порядок поиска узлов (для определения `nodeSelector`):
-    * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
-
-      Например: `node-role.deckhouse.io/cert-manager`.
-    * Наличие узла с лейблом `node-role.deckhouse.io/system`.
+    1. Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME` (например, `node-role.deckhouse.io/cert-manager`).
+    1. Наличие узла с лейблом `node-role.deckhouse.io/system`.
   * Добавляемые toleration'ы (добавляются одновременно все):
-    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
-
-      Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`;
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` (например, `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`);
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
 {% endraw %}

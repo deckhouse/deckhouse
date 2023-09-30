@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/tidwall/gjson"
 
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 )
@@ -62,7 +63,7 @@ func (a *Auth) Fill(req *http.Request) {
 func ParseNotificationConfigFromValues(input *go_hook.HookInput) (*NotificationConfig, error) {
 	webhook, ok := input.Values.GetOk("deckhouse.update.notification.webhook")
 	if !ok {
-		return nil, nil // no notification
+		webhook = gjson.Result{}
 	}
 
 	var minimalTime v1alpha1.Duration

@@ -56,7 +56,7 @@ const globalValues = `
       provider: GCP
     clusterDomain: cluster.local
     clusterType: "Cloud"
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
     kubernetesVersion: "1.23"
     podSubnetCIDR: 10.111.0.0/16

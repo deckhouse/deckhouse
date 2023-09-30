@@ -2,6 +2,7 @@ positive:
   configValues:
   - autoConvergerPeriod: "1h"
   - autoConvergerPeriod: "6m"
+  - autoConvergerPeriod: "2h30m"
 negative:
   configValues:
   - autoConvergerEnabled: "123"

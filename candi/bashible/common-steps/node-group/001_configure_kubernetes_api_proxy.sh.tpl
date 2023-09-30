@@ -17,10 +17,14 @@ mkdir -p /etc/kubernetes/kubernetes-api-proxy
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf - << EOF
-user nginx;
+include /etc/nginx/modules/*.conf;
+include /etc/nginx/conf.d/*.conf;
+
+user deckhouse;
+
+error_log stderr notice;
 
 pid /tmp/kubernetes-api-proxy.pid;
-error_log stderr notice;
 
 worker_processes 2;
 worker_rlimit_nofile 130048;
@@ -57,40 +61,3 @@ EOF
 if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ]]; then
   cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
 fi
-
-mkdir -p /etc/kubernetes/manifests
-
-bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    component: kubernetes-api-proxy
-    tier: control-plane
-  name: kubernetes-api-proxy
-  namespace: kube-system
-spec:
-  dnsPolicy: ClusterFirstWithHostNet
-  hostNetwork: true
-  shareProcessNamespace: true
-  containers:
-  - name: kubernetes-api-proxy
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-    imagePullPolicy: IfNotPresent
-    volumeMounts:
-    - mountPath: /etc/nginx
-      name: kubernetes-api-proxy-conf
-  - name: kubernetes-api-proxy-reloader
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-    imagePullPolicy: IfNotPresent
-    command: ["/kubernetes-api-proxy-reloader"]
-    volumeMounts:
-    - mountPath: /etc/nginx
-      name: kubernetes-api-proxy-conf
-  priorityClassName: system-node-critical
-  volumes:
-  - hostPath:
-      path: /etc/kubernetes/kubernetes-api-proxy
-      type: DirectoryOrCreate
-    name: kubernetes-api-proxy-conf
-EOF

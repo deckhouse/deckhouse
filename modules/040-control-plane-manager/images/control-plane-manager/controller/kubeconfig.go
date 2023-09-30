@@ -143,7 +143,13 @@ func loadKubeconfig(path string) (*configv1.Config, error) {
 }
 
 func updateRootKubeconfig() error {
-	path := "/root/.kube/config"
+	var path string
+	if homeDir, hasHomeDir := os.LookupEnv("HOME"); hasHomeDir && homeDir != "/" {
+		path = filepath.Join(homeDir, ".kube", "config")
+	} else {
+		path = "/root/.kube/config"
+	}
+
 	originalPath := filepath.Join(kubernetesConfigPath, "admin.conf")
 	log.Infof("update root user kubeconfig (%s)", path)
 	if _, err := os.Stat(path); err == nil {

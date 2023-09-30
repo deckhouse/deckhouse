@@ -13,36 +13,36 @@
 - regex: endpoint
   action: labeldrop
 
-- sourceLabels: [__meta_kubernetes_endpoint_ready, __meta_kubernetes_service_annotation_prometheus_deckhouse_io_allows_unready_pods]
+- sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready, __meta_kubernetes_service_annotation_prometheus_deckhouse_io_allows_unready_pods]
   regex: ^(.*)true(.*)$
   action: keep
 
-- sourceLabels: [__meta_kubernetes_endpoint_port_name]
+- sourceLabels: [__meta_kubernetes_endpointslice_port_name]
   regex: {{ $schema }}-metrics
   replacement: $1
   targetLabel: endpoint
 
   # HTTP Scheme
   {{ if eq $schema "http" }}
-- sourceLabels: [__meta_kubernetes_endpoint_port_name]
+- sourceLabels: [__meta_kubernetes_endpointslice_port_name]
   regex: "https-metrics"
   action: drop
 - sourceLabels:
   - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_port
   - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls
-  - __meta_kubernetes_endpoint_port_name
+  - __meta_kubernetes_endpointslice_port_name
   regex: "^true;;(.*)|;;http-metrics$"
   action: keep
 
   # HTTPS Scheme
   {{ else }}
-- sourceLabels: [__meta_kubernetes_endpoint_port_name]
+- sourceLabels: [__meta_kubernetes_endpointslice_port_name]
   regex: "http-metrics"
   action: drop
 - sourceLabels:
   - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_port
   - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls
-  - __meta_kubernetes_endpoint_port_name
+  - __meta_kubernetes_endpointslice_port_name
   regex: "^true;true;(.*)|;;https-metrics$"
   action: keep
   {{ end }}

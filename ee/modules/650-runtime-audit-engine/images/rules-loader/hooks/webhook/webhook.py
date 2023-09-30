@@ -4,6 +4,7 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 import subprocess
+import typing
 from os import remove
 
 from deckhouse import hook
@@ -24,16 +25,15 @@ def main(ctx: hook.Context):
         ctx.output.validations.error(str(e))
 
 
-def validate(request: dict) -> str | None:
+def validate(request: dict) -> typing.Union[str,  None]:
     uid = request.get("uid", "uid")
     spec = request.get("object", {}).get("spec", {})
-    match request["operation"]:
-        case "CREATE":
-            return validate_falco_rules(uid, spec)
-        case "UPDATE":
-            return validate_falco_rules(uid, spec)
-        case _:
-            raise Exception(f"Unknown operation {request.operation}")
+    if request["operation"] == "CREATE":
+        return validate_falco_rules(uid, spec)
+    elif request["operation"] == "UPDATE":
+        return validate_falco_rules(uid, spec)
+    else:
+        raise Exception(f"Unknown operation {request.operation}")
 
 
 def validate_falco_rules(uid: str, spec: dict):

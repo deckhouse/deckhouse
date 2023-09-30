@@ -15,5 +15,3 @@ spec:
       port: 9651
       targetPort: 9651
       protocol: TCP
-  selector:
-    app: deckhouse

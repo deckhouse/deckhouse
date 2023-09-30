@@ -130,6 +130,27 @@
 
         Most likely, there is a problem with the `update_approval` hook of the `node-manager` module.
 
+
+  - alert: D8ProblematicNodeGroupConfiguration
+    expr: |
+      max by (status, node_group, node) (node_group_node_status{status="UpdateFailedNoConfigChecksum"}) == 1
+    for: 5m
+    labels:
+      tier: cluster
+      severity_level: "8"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The {{ $labels.node }} Node cannot begin the update.
+      description: |
+        There is a new update for Nodes of the {{ $labels.node_group }} group; Nodes have learned about the update. However, {{ $labels.node }} Node cannot be updated.
+
+        Node {{ $labels.node }} has no `node.deckhouse.io/configuration-checksum` annotation.
+        Perhaps the bootstrap process of the Node did not complete correctly. Check the `cloud-init` logs (/var/log/cloud-init-output.log) of the Node.
+        There is probably a problematic NodeGroupConfiguration resource for {{ $labels.node_group }} NodeGroup.
+
   - alert: NodeRequiresDisruptionApprovalForUpdate
     expr: |
       max by (node,node_group) (

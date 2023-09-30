@@ -39,22 +39,14 @@ exit 0
 
 {{- else }}
 
-if ! mount | grep -q '/var/lib/kubelet/plugins/kubernetes.io/csi/pv/'; then
+# not in pipeline to avoid capturing mount's non-zero exit code in the if expression
+mount_output="$(mount)"
+
+if ! grep -q '/var/lib/kubelet/plugins/kubernetes.io/csi/pv/' <<< "$mount_output"; then
   echo 'No mounts of form "/var/lib/kubelet/plugins/kubernetes.io/csi/pv/" present. No-op...'
   disable_systemd_units
   exit 0
 fi
-
-bb-event-on 'old-csi-mount-cleaner' '_on_old_csi_mount_cleaner_changed'
-_on_old_csi_mount_cleaner_changed() {
-  {{- if ne .runType "ImageBuilding" }}
-  systemctl daemon-reload
-  systemctl restart old-csi-mount-cleaner.timer
-  systemctl restart old-csi-mount-cleaner
-  {{- end }}
-  systemctl enable old-csi-mount-cleaner.timer
-  systemctl enable old-csi-mount-cleaner
-}
 
 bb-sync-file /var/lib/bashible/old-csi-mount-cleaner.sh - << "EOF"
 #!/bin/bash
@@ -108,5 +100,13 @@ ExecStart=/var/lib/bashible/old-csi-mount-cleaner.sh
 [Install]
 WantedBy=multi-user.target
 EOF
+
+  {{- if ne .runType "ImageBuilding" }}
+systemctl daemon-reload
+systemctl restart old-csi-mount-cleaner.timer
+systemctl restart old-csi-mount-cleaner
+  {{- end }}
+systemctl enable old-csi-mount-cleaner.timer
+systemctl enable old-csi-mount-cleaner
 
 {{- end }}

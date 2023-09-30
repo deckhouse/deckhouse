@@ -23,11 +23,13 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"regexp"
 	"sort"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -43,6 +45,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
+)
+
+const (
+	metricUpdatingFailedGroup = "d8_updating_failed"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -124,6 +130,7 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	sort.Sort(sort.Reverse(updater.ByVersion(releases)))
+	input.MetricsCollector.Expire(metricUpdatingFailedGroup)
 
 releaseLoop:
 	for _, release := range releases {
@@ -168,6 +175,16 @@ releaseLoop:
 					notificationShiftTime = release.ApplyAfter
 				}
 			}
+			if err := releaseChecker.StepByStepUpdate(release.Version, newSemver); err != nil {
+				releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
+				labels := map[string]string{
+					"version": release.Version.Original(),
+				}
+				input.MetricsCollector.Set("d8_updating_is_failed", 1, labels, metrics.WithGroup(metricUpdatingFailedGroup))
+
+				return err
+			}
+
 			break releaseLoop
 		}
 	}
@@ -482,6 +499,76 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts time.Time, clusterU
 	}
 
 	return nil
+}
+
+func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Version) error {
+	nextVersion, err := dcr.nextVersion(actual, target)
+	if err != nil {
+		return err
+	}
+	if nextVersion == target {
+		return nil
+	}
+
+	image, err := dcr.registryClient.Image(nextVersion.Original())
+	if err != nil {
+		return err
+	}
+
+	releaseMeta, err := dcr.fetchReleaseMetadata(image)
+	if err != nil {
+		return err
+	}
+	if releaseMeta.Version == "" {
+		return fmt.Errorf("version not found. Probably image is broken or layer does not exist")
+	}
+
+	dcr.releaseMetadata = releaseMeta
+
+	return nil
+}
+
+func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) (*semver.Version, error) {
+	if actual.Major() != target.Major() {
+		return nil, fmt.Errorf("major version updated") // TODO step by step update for major version
+	}
+
+	if actual.Minor() == target.Minor() || actual.IncMinor().Minor() == target.Minor() {
+		return target, nil
+	}
+
+	listTags, err := dcr.registryClient.ListTags()
+	if err != nil {
+		return nil, err
+	}
+
+	// Here we get the following minor with the maximum patch version.
+	// <major.minor+1.max>
+	expr := fmt.Sprintf("^v1.%d.([0-9]+)$", actual.IncMinor().Minor())
+	r, err := regexp.Compile(expr)
+	if err != nil {
+		return nil, err
+	}
+
+	collection := make([]*semver.Version, 0)
+	for _, ver := range listTags {
+		if r.MatchString(ver) {
+			newSemver, err := semver.NewVersion(ver)
+			if err != nil {
+				dcr.logger.Errorf("unable to parse semver from the registry Version: %v. This version will be skipped.", ver)
+				continue
+			}
+			collection = append(collection, newSemver)
+		}
+	}
+
+	if len(collection) == 0 {
+		return nil, fmt.Errorf("next minor version is missed")
+	}
+
+	sort.Sort(sort.Reverse(semver.Collection(collection)))
+
+	return collection[0], nil
 }
 
 func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Container, releaseChannel string) (*DeckhouseReleaseChecker, error) {

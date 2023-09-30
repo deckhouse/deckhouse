@@ -25,7 +25,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
@@ -39,7 +38,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                         "releases",
 			ApiVersion:                   "deckhouse.io/v1alpha1",
-			Kind:                         "ExternalModuleRelease",
+			Kind:                         "ModuleRelease",
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   filterDeprecatedRelease,
@@ -50,10 +49,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:                         "Module",
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"type": "external"},
-			},
-			FilterFunc: filterExternalModule,
+			FilterFunc:                   filterModule,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -75,7 +71,10 @@ func cleanupReleases(input *go_hook.HookInput) error {
 
 	moduleReleases := make(map[string][]deprecatedRelease, 0)
 	outdatedModuleReleases := make(map[string][]deprecatedRelease, 0)
-	enabledModules := set.NewFromSnapshot(input.Snapshots["modules"])
+
+	// TODO(nabokihms): Instead of subscribing to Kubernetes objects,
+	//   make it available through global values like `enabledModules`
+	availableModules := set.NewFromSnapshot(input.Snapshots["modules"])
 
 	for _, sn := range snap {
 		if sn == nil {
@@ -88,14 +87,14 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		}
 	}
 
-	// for absent modules - delete all ExternalModuleRelease resources
+	// for absent modules - delete all ModuleRelease resources
 	for moduleName, releases := range moduleReleases {
-		if enabledModules.Has(moduleName) {
+		if availableModules.Has(moduleName) {
 			continue
 		}
 
 		for _, release := range releases {
-			deleteExternalModuleRelease(input, externalModulesDir, release)
+			deleteModuleRelease(input, externalModulesDir, release)
 		}
 	}
 
@@ -105,7 +104,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 
 		if len(releases) > keepReleaseCount {
 			for i := keepReleaseCount; i < len(releases); i++ {
-				deleteExternalModuleRelease(input, externalModulesDir, releases[i])
+				deleteModuleRelease(input, externalModulesDir, releases[i])
 			}
 		}
 	}
@@ -113,7 +112,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	return nil
 }
 
-func deleteExternalModuleRelease(input *go_hook.HookInput, externalModulesDir string, release deprecatedRelease) {
+func deleteModuleRelease(input *go_hook.HookInput, externalModulesDir string, release deprecatedRelease) {
 	modulePath := path.Join(externalModulesDir, release.Module, "v"+release.Version.String())
 
 	err := os.RemoveAll(modulePath)
@@ -122,11 +121,11 @@ func deleteExternalModuleRelease(input *go_hook.HookInput, externalModulesDir st
 		return
 	}
 
-	input.PatchCollector.Delete("deckhouse.io/v1alpha1", "ExternalModuleRelease", "", release.Name, object_patch.InBackground())
+	input.PatchCollector.Delete("deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.InBackground())
 }
 
 func filterDeprecatedRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var release v1alpha1.ExternalModuleRelease
+	var release v1alpha1.ModuleRelease
 
 	err := sdk.FromUnstructured(obj, &release)
 	if err != nil {
@@ -142,7 +141,7 @@ func filterDeprecatedRelease(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 // returns only Disabled modules
-func filterExternalModule(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func filterModule(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetName(), nil
 }
 

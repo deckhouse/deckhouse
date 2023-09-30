@@ -47,13 +47,13 @@ prometheus:
         action: labeldrop
     remote_write:
     - url: {{ .Values.flantIntegration.metrics.url }}
-  {{- if .Values.global.modules.proxy }}
+  {{- if dig "clusterConfiguration" "proxy" false .Values.global }}
     {{- $proxy := "" }}
-    {{- if .Values.global.modules.proxy.httpProxy }}
-      {{- $proxy = .Values.global.modules.proxy.httpProxy }}
+    {{- if .Values.global.clusterConfiguration.proxy.httpProxy }}
+      {{- $proxy = .Values.global.clusterConfiguration.proxy.httpProxy }}
     {{- end }}
-    {{- if .Values.global.modules.proxy.httpsProxy }}
-      {{- $proxy = .Values.global.modules.proxy.httpsProxy }}
+    {{- if .Values.global.clusterConfiguration.proxy.httpsProxy }}
+      {{- $proxy = .Values.global.clusterConfiguration.proxy.httpsProxy }}
     {{- end }}
     {{- if $proxy }}
       proxy_url: {{ $proxy }}

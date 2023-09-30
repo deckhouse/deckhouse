@@ -25,6 +25,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer"
   labels:
   - "type/dependencies"
@@ -35,6 +44,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/ee/modules/140-user-authz/images/webhook"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/500-operator-trivy/images/report-updater"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -80,15 +98,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/000-common/images/check-kernel-version/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/003-deckhouse-config/images/deckhouse-config-webhook"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -187,6 +196,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/040-control-plane-manager/images/kubernetes-api-proxy/reloader"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/bashible-apiserver"
   labels:
   - "type/dependencies"
@@ -268,7 +286,43 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/150-user-authn/images/dex-authenticator/url-exec-prober"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/150-user-authn/images/self-signed-generator/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/300-prometheus/images/alerts-receiver/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/300-prometheus/images/grafana/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/300-prometheus/images/trickster/entrypoint"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -287,6 +341,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/exporter"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/kube-rbac-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

@@ -73,7 +73,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: METALLB_ML_LABELS
-              value: app=metallb,component=speaker
+              value: app=speaker
             - name: METALLB_ML_SECRET_KEY
               valueFrom:
                 secretKeyRef:

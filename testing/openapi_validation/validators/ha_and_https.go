@@ -37,7 +37,7 @@ func NewHAValidator() HAValidator {
 func (en HAValidator) Run(file, absoluteKey string, value interface{}) error {
 	values, ok := value.(map[interface{}]interface{})
 	if !ok {
-		fmt.Println("Possible Bug? Have to be a map", reflect.TypeOf(value))
+		fmt.Printf("Possible Bug? Have to be a map. Type: %s, Value: %s, File: %s, Key: %s\n", reflect.TypeOf(value), value, file, absoluteKey)
 		return nil
 	}
 

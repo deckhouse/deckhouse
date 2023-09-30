@@ -145,7 +145,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "((sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes{node=~\"$node\"} != 0)-sum by (storage_pool)(linstor_storage_pool_capacity_free_bytes{node=~\"$node\"}))*100/sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes{node=~\"$node\"}))",
+          "expr": "((sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes != 0)-sum by (storage_pool)(linstor_storage_pool_capacity_free_bytes))*100/sum by (storage_pool)(linstor_storage_pool_capacity_total_bytes))",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -201,7 +201,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_total_bytes{node=~\"$node\"} != 0)",
+          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_total_bytes != 0)",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -258,7 +258,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_free_bytes{node=~\"$node\"} != 0)",
+          "expr": "sum by (storage_pool) (linstor_storage_pool_capacity_free_bytes != 0)",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -314,7 +314,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (storage_pool) ((linstor_storage_pool_capacity_total_bytes{node=~\"$node\"} != 0) - (linstor_storage_pool_capacity_free_bytes{node=~\"$node\"} != 0))",
+          "expr": "sum by (storage_pool) ((linstor_storage_pool_capacity_total_bytes != 0) - (linstor_storage_pool_capacity_free_bytes != 0))",
           "hide": false,
           "legendFormat": "{{ storage_pool }}",
           "refId": "A"
@@ -535,7 +535,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(linstor_resource_state{node=~\"$node\"}) OR on() vector(0)",
+          "expr": "count(linstor_resource_state) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -613,7 +613,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "avg_over_time(linstor_scrape_duration_seconds{node=~\"$node\"}[$__interval_sx3])",
+          "expr": "avg_over_time(linstor_scrape_duration_seconds[$__interval_sx3])",
           "legendFormat": "allocated",
           "refId": "A"
         }
@@ -859,7 +859,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count((linstor_volume_state{node=~\"$node\"} != 1) != 4) OR on() vector(0)",
+          "expr": "count((linstor_volume_state != 1) != 4) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -930,7 +930,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(drbd_device_written_bytes_total{node=~\"$node\"}[$__interval_sx3]) and topk(5, avg_over_time(drbd_device_written_bytes_total{node=~\"$node\"}[$__interval_sx3]) > 0)",
+          "expr": "rate(drbd_device_written_bytes_total[$__interval_sx3]) and topk(5, avg_over_time(drbd_device_written_bytes_total[$__interval_sx3]) > 0)",
           "instant": false,
           "legendFormat": "{{name}} on {{node}}",
           "refId": "A"
@@ -1028,7 +1028,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(drbd_device_read_bytes_total{node=~\"$node\"}[$__interval_sx3]) and topk(5, avg_over_time(drbd_device_read_bytes_total{node=~\"$node\"}[$__interval_sx3]) > 0)",
+          "expr": "rate(drbd_device_read_bytes_total[$__interval_sx3]) and topk(5, avg_over_time(drbd_device_read_bytes_total[$__interval_sx3]) > 0)",
           "instant": false,
           "legendFormat": "{{name}} on {{node}}",
           "refId": "A"
@@ -1064,202 +1064,6 @@
         },
         {
           "$$hashKey": "object:255",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "${ds_prometheus}",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "binBps"
-        },
-        "overrides": []
-      },
-      "fill": 5,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 26
-      },
-      "hiddenSeries": false,
-      "id": 47,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": false
-      },
-      "percentage": false,
-      "pluginVersion": "8.2.6",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": true,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum by (node) (rate(drbd_device_written_bytes_total{node=~\"$node\"}[$__interval_sx3]))",
-          "instant": false,
-          "legendFormat": "{{ node }}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Write Rate by Node",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:410",
-          "format": "binBps",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:411",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "${ds_prometheus}",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "binBps"
-        },
-        "overrides": []
-      },
-      "fill": 5,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 26
-      },
-      "hiddenSeries": false,
-      "id": 48,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": false
-      },
-      "percentage": false,
-      "pluginVersion": "8.2.6",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": true,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum by (node) (rate(drbd_device_read_bytes_total{node=~\"$node\"}[$__interval_sx3]))",
-          "instant": false,
-          "legendFormat": "{{ node }}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Read Rate by Node",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:332",
-          "format": "binBps",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:333",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1340,8 +1144,8 @@
           "displayType": "Regular",
           "displayValueWithAlias": "Never",
           "exemplar": true,
-          "expr": "drbd_resource_resources{node=~\"$node\"}",
-          "legendFormat": "{{node}}",
+          "expr": "drbd_resource_resources",
+          "legendFormat": "{{instance}}",
           "refId": "A",
           "units": "none",
           "valueHandler": "Number Threshold"
@@ -1399,8 +1203,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "avg_over_time(scrape_duration_seconds{job=\"linstor-node\", node=~\"$node\"}[$__interval_sx3])",
-          "legendFormat": "{{node}}",
+          "expr": "avg_over_time(scrape_duration_seconds{job=\"linstor-node\"}[$__interval_sx3])",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
@@ -1499,7 +1303,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(max by(name, volume) (drbd_peerdevice_outofsync_bytes{node=~\"$node\"} > 0)) OR on() vector(0)",
+          "expr": "sum(max by(name, volume) (drbd_peerdevice_outofsync_bytes > 0)) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1630,7 +1434,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(count by (name) (drbd_device_quorum{node=~\"$node\"} == 0)) OR on() vector(0)",
+          "expr": "count(count by (name) (drbd_device_quorum == 0)) OR on() vector(0)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1701,7 +1505,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(drbd_device_unintentionaldiskless{node=~\"$node\"} == 1) OR on() vector(0)",
+          "expr": "count(drbd_device_unintentionaldiskless == 1) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1763,7 +1567,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(count by (name) (drbd_peerdevice_outofsync_bytes{node=~\"$node\"} > 0)) OR on() vector(0)",
+          "expr": "count(count by (name) (drbd_peerdevice_outofsync_bytes > 0)) OR on() vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1969,7 +1773,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(drbd_peerdevice_outofsync_bytes{node=~\"$node\"}) by(name, node) > 0",
+          "expr": "sum(drbd_peerdevice_outofsync_bytes) by(name, node) > 0",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -2069,7 +1873,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(drbd_device_quorum{node=~\"$node\"} == 0) by(node, name)",
+          "expr": "count(drbd_device_quorum == 0) by(node, name)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -2158,7 +1962,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count(drbd_device_unintentionaldiskless{node=~\"$node\"} == 1) by(node, name, minor)",
+          "expr": "count(drbd_device_unintentionaldiskless == 1) by(node, name, minor)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -2233,7 +2037,7 @@
         "allValue": null,
         "current": {},
         "datasource": "${ds_prometheus}",
-        "definition": "label_values(drbdreactor_up, node)",
+        "definition": "label_values(linstor_node_state{nodetype=\"SATELLITE\"}, node)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -2243,7 +2047,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(drbdreactor_up, node)",
+          "query": "label_values(linstor_node_state{nodetype=\"SATELLITE\"}, node)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

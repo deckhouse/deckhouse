@@ -31,6 +31,7 @@ resource "azurerm_subnet" "kube" {
   resource_group_name  = azurerm_resource_group.kube.name
   virtual_network_name = azurerm_virtual_network.kube.name
   address_prefixes     = [local.subnet_cidr]
+  service_endpoints    = local.service_endpoints
 }
 
 resource "azurerm_route_table" "kube" {

@@ -26,4 +26,12 @@ const (
 	authSecretName  = "hubble-basic-auth"
 )
 
-var _ = generate_password.RegisterHook(moduleValuesKey, authSecretNS, authSecretName)
+var (
+	generatePasswordSettings = generate_password.HookSettings{
+		ModuleName: moduleValuesKey,
+		Namespace:  authSecretNS,
+		SecretName: authSecretName,
+	}
+)
+
+var _ = generate_password.RegisterHook(generatePasswordSettings)

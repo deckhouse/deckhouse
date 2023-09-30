@@ -18,7 +18,7 @@ podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство для service’ов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.23"
+kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
 # [<en>] Section for bootstrapping the Deckhouse cluster.
@@ -69,17 +69,22 @@ provider:
   # [<en>] Set to true if vCenter has a self-signed certificate,
   # [<en>] otherwise set false (or delete the string below with the insecure parameter).
   insecure: *!CHANGE_INSECURE*
+# [<ru>] Укажите false, если vSphere DRS выключен,
+# [<ru>] иначе укажите true (или удалите строку с параметром useNestedResourcePool).
+# [<en>] Set to false if vSphere DRS is turned off,
+# [<en>] otherwise set true (or delete the string below with the useNestedResourcePool parameter).
+useNestedResourcePool: *!CHANGE_INSECURE*
 # [<en>] Path to a Folder in which VirtualMachines will be created.
 # [<en>] The folder itself will be created by the Deckhouse Installer.
 # [<ru>] Путь до Folder, в котором будут создаваться виртуальные машины.
 # [<ru>] Сам Folder будет создан Deckhouse Installer'ом.
 vmFolderPath: *!CHANGE_FOLDER*
 # [<en>] Region and zone tag category names.
-# [<ru>] Имена категорий тэгов регионов и зон.
+# [<ru>] Имена категорий тегов регионов и зон.
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
 # [<en>] Region and zone tag names in which cluster will operate.
-# [<ru>] Имена тэгов зон и регионов, в которых будет работать кластер.
+# [<ru>] Имена тегов зон и регионов, в которых будет работать кластер.
 region: *!CHANGE_REGION_TAG_NAME*
 zones:
 - *!CHANGE_ZONE_TAG_NAME*
@@ -91,7 +96,7 @@ sshPublicKey: *!CHANGE_SSH_KEY*
 # [<en>] Name of the External Network which has access to the Internet.
 # [<en>] IP addresses from the External Network sets as ExternalIP of Node object.
 # [<en>] Optional parameter.
-# [<ru>] Имя External Network, у которой есть доступ в Интернет.
+# [<ru>] Имя External Network, у которой есть доступ в интернет.
 # [<ru>] IP-адреса из External Network проставляются как ExternalIP объекта Node.
 # [<ru>] Опциональный параметр.
 externalNetworkNames:
@@ -114,9 +119,9 @@ masterNodeGroup:
     memory: 8192
     rootDiskSize: 50
     # [<en>] The name of the image, taking into account the vCenter folder path.
-    # [<en>] Example: "folder/my-ubuntu-packer-image".
+    # [<en>] Example: "folder/ubuntu-jammy-22.04".
     # [<ru>] Имя образа, созданного с учетом папки размещения образа в vCenter.
-    # [<ru>] Пример: "folder/my-ubuntu-packer-image".
+    # [<ru>] Пример: "folder/ubuntu-jammy-22.04".
     template: *!CHANGE_TEMPLATE_NAME*
     datastore: *!CHANGE_DATASTORE_NAME*
     # [<en>] Main network connected to node.

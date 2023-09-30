@@ -45,7 +45,7 @@ properties:
     description: "System field, overwritten by Deckhouse. Don't use"
 `
 
-	sourceModule := v1alpha1.ExternalModuleSource{}
+	sourceModule := v1alpha1.ModuleSource{}
 	sourceModule.Spec.Registry.Repo = "test.deckhouse.io/foo/bar"
 	sourceModule.Spec.Registry.DockerCFG = "dGVzdG1lCg=="
 

@@ -50,14 +50,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		shared.ConfigurationChecksumHookConfig(),
 		{
 			Name:                   "ngs",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "deckhouse.io/v1",
 			Kind:                   "NodeGroup",
 			FilterFunc:             updateApprovalNodeGroupFilter,
 		},
 		{
 			Name:                   "nodes",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -489,7 +489,7 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 		if ng.Spec.Disruptions.Automatic.DrainBeforeApproval != nil {
 			ung.Disruptions.Automatic.DrainBeforeApproval = ng.Spec.Disruptions.Automatic.DrainBeforeApproval
 		} else {
-			ung.Disruptions.Automatic.DrainBeforeApproval = pointer.BoolPtr(true)
+			ung.Disruptions.Automatic.DrainBeforeApproval = pointer.Bool(true)
 		}
 	}
 
@@ -582,6 +582,9 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 	case node.IsApproved:
 		return "Approved"
 
+	case node.ConfigurationChecksum == "":
+		return "UpdateFailedNoConfigChecksum"
+
 	case node.ConfigurationChecksum != desiredChecksum:
 		return "ToBeUpdated"
 
@@ -595,7 +598,7 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 
 var metricStatuses = []string{
 	"WaitingForApproval", "Approved", "DrainingForDisruption", "WaitingForDisruptionApproval",
-	"WaitingForManualDisruptionApproval", "DisruptionApproved", "ToBeUpdated", "UpToDate",
+	"WaitingForManualDisruptionApproval", "DisruptionApproved", "ToBeUpdated", "UpToDate", "UpdateFailedNoConfigChecksum",
 }
 
 func setNodeStatusesMetrics(input *go_hook.HookInput, nodeName, nodeGroup, nodeStatus string) {

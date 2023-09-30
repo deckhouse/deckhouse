@@ -30,8 +30,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 const (
@@ -140,7 +140,7 @@ func (l *InitialConfigLoader) initKubeClient() error {
 
 // ModuleConfigListToInitialConfig runs conversion for ModuleConfig resources to transforms settings and enabled flag to
 // the ConfigMap content. Then parse resulting ConfigMap to the KubeConfig.
-func (l *InitialConfigLoader) ModuleConfigListToInitialConfig(allConfigs []*d8cfg_v1alpha1.ModuleConfig, possibleNames set.Set) (*kcm.KubeConfig, error) {
+func (l *InitialConfigLoader) ModuleConfigListToInitialConfig(allConfigs []*d8v1alpha1.ModuleConfig, possibleNames set.Set) (*kcm.KubeConfig, error) {
 	data := make(map[string]string)
 
 	for _, cfg := range allConfigs {

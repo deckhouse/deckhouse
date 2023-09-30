@@ -1,6 +1,6 @@
-{{- $containerd_version := "1.6.20" }}
+{{- $containerd_version := "1.6.24" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
-{{- $runc_version := "1.1.6" }}
+{{- $runc_version := "1.1.9" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -29,7 +29,7 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
 git:
-- add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
   stageDependencies:
     install:
@@ -42,18 +42,17 @@ shell:
   - apt-get update
   - apt-get install -y patch libbtrfs-dev libseccomp-dev
   install:
+  - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
   - cd /src
-  - git clone https://github.com/containerd/containerd.git
+  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git
   - cd containerd
-  - git checkout tags/v{{ $containerd_version }}
   - git config --global user.email "builder@deckhouse.io"
   - make STATIC=1 all
   - mv bin/* /
   - cd /src
-  - git clone https://github.com/opencontainers/runc
+  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc
   - cd runc
-  - git checkout tags/v{{ $runc_version }}
   - git config --global user.email "builder@deckhouse.io"
   - make static
   - mv runc /runc

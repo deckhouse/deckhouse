@@ -16,6 +16,9 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 >
 > It is important to have an odd number of masters to ensure a quorum.
 
+1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
+1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the creation of new master nodes.
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -24,6 +27,14 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
+
+1. **In the installer container**, run the following command to check the state before working:
+
+   ```bash
+   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   The response should tell you that Terraform does not want to change anything.
 
 1. **In the installer container**, run the following command and specify the required number of replicas using the `masterNodeGroup.replicas` parameter:
 
@@ -48,6 +59,9 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 
 ## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
+1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
+1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -56,6 +70,14 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
+
+1. **In the installer container**, run the following command to check the state before working:
+
+   ```bash
+   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   The response should tell you that Terraform does not want to change anything.
 
 1. Run the following command **in the installer container** and set `masterNodeGroup.replicas` to `1`:
 
@@ -84,7 +106,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    --endpoints https://127.0.0.1:2379/ member list -w table"
    ```
 
-1. Drain the nodes being deleted:
+1. `drain` the nodes being deleted:
 
    ```bash
    kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
@@ -98,7 +120,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
    ```
 
-1. In the cluster, delete the Nore objects associated with the nodes being deleted:
+1. In the cluster, delete the Node objects associated with the nodes being deleted:
 
    ```bash
    kubectl delete node <MASTER-NODE-N-NAME>
@@ -112,6 +134,9 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 
 ## How do I dismiss the master role while keeping the node?
 
+1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
+1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/control-plane: ""` labels.
 1. Make sure that the master node to be deleted is no longer listed as a member of the etcd cluster:
 
@@ -136,6 +161,9 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 
 ## How do I switch to a different OS image in a multi-master cluster?
 
+1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
+1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -209,7 +237,7 @@ Repeat the steps below for **each master node one by one**, starting with the no
 
     You should read carefully what converge is going to do when it asks for approval.
 
-    If converge requests approval for another master node, it should be skipped by saying "no".
+    If converge requests approval for another master node, it should be skipped by saying `no`.
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
@@ -310,7 +338,7 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
          auditPolicyEnabled: true
    ```
 
-2. Create the `kube-system/audit-policy` Secret containing a `base64`-encoded `yaml` file:
+2. Create the `kube-system/audit-policy` Secret containing a Base64 encoded YAML file:
 
    ```yaml
    apiVersion: v1
@@ -459,6 +487,9 @@ for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane
     break
   fi
 done
+cp -r /etc/kubernetes/ ./
+tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
+rm -r ./kubernetes
 ```
 
 In the current directory etcd snapshot file `etcd-backup.snapshot` will be created from one of an etcd cluster members.

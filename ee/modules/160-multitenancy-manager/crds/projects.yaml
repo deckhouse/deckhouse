@@ -33,7 +33,7 @@ spec:
                   type: string
                 projectTypeName:
                   description: |
-                    The name of the CR [ProjectType](cr.html#project type) to be used
+                    The name of the CR [ProjectType](cr.html#projecttype) to be used
                     as a template for creating resources for the environment.
                   type: string
                 template:

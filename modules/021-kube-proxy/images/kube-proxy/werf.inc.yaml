@@ -1,7 +1,7 @@
 artifact: {{ .ModuleName }}/distroless-kube-proxy-artifact
 from: {{ .Images.BASE_ALPINE }}
 git:
-- add: /modules/021-kube-proxy/images/kube-proxy
+- add: /{{ .ModulePath }}modules/021-kube-proxy/images/kube-proxy
   to: /workdir/
   includePaths:
   - '**/file-filter'

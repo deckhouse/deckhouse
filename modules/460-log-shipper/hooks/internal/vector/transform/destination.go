@@ -36,6 +36,10 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		}
 	}
 
+	if dest.Spec.Type == v1alpha1.DestSplunk {
+		transforms = append(transforms, DateTime())
+	}
+
 	if dest.Spec.Type == v1alpha1.DestElasticsearch && dest.Spec.Elasticsearch.DataStreamEnabled {
 		transforms = append(transforms, DataStreamTransform())
 	}

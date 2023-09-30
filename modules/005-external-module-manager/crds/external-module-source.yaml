@@ -1,3 +1,4 @@
+### DEPRECATED, DO NOT EDIT
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -42,11 +43,14 @@ spec:
                     repo:
                       type: string
                       description: URL of the container registry.
-                      x-examples:
-                        - registry.deckhouse.io/deckhouse/external-modules
+                      example: 'registry.deckhouse.io/deckhouse/external-modules'
                     dockerCfg:
                       type: string
                       description: Container registry access token in Base64.
+                    ca:
+                      type: string
+                      description: |
+                        Root CA certificate (PEM format) to validate the registry’s HTTPS certificate (if self-signed certificates are used).
             status:
               type: object
               properties:

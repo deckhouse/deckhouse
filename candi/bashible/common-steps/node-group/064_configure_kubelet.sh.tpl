@@ -151,6 +151,45 @@ if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
   fi
 fi
 
+# https://github.com/openshift/machine-config-operator/blob/bd24f17943eb95309fe78327f8f3eabd104ab577/templates/common/_base/files/kubelet-auto-sizing.yaml / 3
+function dynamic_memory_sizing {
+    total_memory=$(free -g|awk '/^Mem:/{print $2}')
+    recommended_systemreserved_memory=0
+    if (($total_memory <= 4)); then # 8% of the first 4GB of memory
+        recommended_systemreserved_memory=$(echo $total_memory 0.08 | awk '{print $1 * $2}')
+        total_memory=0
+    else
+        recommended_systemreserved_memory=0.333
+        total_memory=$((total_memory-4))
+    fi
+    if (($total_memory <= 4)); then # 6% of the next 4GB of memory (up to 8GB)
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.06 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+        total_memory=0
+    else
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory 0.252 | awk '{print $1 + $2}')
+        total_memory=$((total_memory-4))
+    fi
+    if (($total_memory <= 8)); then # 3% of the next 8GB of memory (up to 16GB)
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.03 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+        total_memory=0
+    else
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory 0.246 | awk '{print $1 + $2}')
+        total_memory=$((total_memory-8))
+    fi
+    if (($total_memory <= 112)); then # 2% of the next 112GB of memory (up to 128GB)
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.02 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+        total_memory=0
+    else
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory 2.24 | awk '{print $1 + $2}')
+        total_memory=$((total_memory-112))
+    fi
+    if (($total_memory >= 0)); then # 1% of any memory above 128GB
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.01 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+    fi
+    recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory | awk '{printf("%.2f\n",$1)}')
+    echo -n "${recommended_systemreserved_memory}Gi"
+}
+
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
@@ -253,6 +292,18 @@ rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
+{{- $resourceReservationMode := dig "kubelet" "resourceReservation" "mode" "" .nodeGroup }}
+{{- if eq $resourceReservationMode "Auto" }}
+systemReserved:
+  cpu: 70m
+  memory: "$(dynamic_memory_sizing)"
+  ephemeral-storage: 1Gi
+{{- else if eq $resourceReservationMode "Static" }}
+systemReserved:
+  cpu: {{ dig "kubelet" "resourceReservation" "static" "cpu" 0 .nodeGroup }}
+  memory: {{ dig "kubelet" "resourceReservation" "static" "memory" 0 .nodeGroup }}
+  ephemeral-storage: {{ dig "kubelet" "resourceReservation" "static" "ephemeralStorage" 0 .nodeGroup }}
+{{- end }}
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248

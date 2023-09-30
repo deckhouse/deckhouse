@@ -31,7 +31,7 @@ title: "Cloud provider — AWS: FAQ"
 
 2. Поднять пиринговое соединение по инструкции [выше](#как-поднять-пиринговое-соединение--между-vpc).
 
-3. Продолжить установку кластера. На вопрос про кеш Terraform ответить `y`:
+3. Продолжить установку кластера. На вопрос про кэш Terraform ответить `y`:
 
    ```shell
    dhctl bootstrap --config config --ssh-...
@@ -47,7 +47,7 @@ title: "Cloud provider — AWS: FAQ"
 
 2. Запустить вручную bastion-хост в subnet <prefix>-public-0.
 
-3. Продолжить установку кластера. На вопрос про кеш Terraform ответить `y`:
+3. Продолжить установку кластера. На вопрос про кэш Terraform ответить `y`:
 
    ```shell
    dhctl bootstrap --config config --ssh-...
@@ -59,13 +59,13 @@ title: "Cloud provider — AWS: FAQ"
 * bastion-хост уже создан во внешней VPC:
   1. Создайте базовую инфраструктуру кластера — `dhctl bootstrap-phase base-infra`.
   1. Настройте пиринговое соединение между внешней и свежесозданной VPC.
-  1. Продолжите установку с указанием bastion-хоста — `dhctl bootstrap --ssh-bastion...`
+  1. Продолжите установку с указанием bastion-хоста — `dhctl bootstrap --ssh-bastion...`.
 * bastion-хост требуется поставить в свежесозданной VPC:
   1. Создайте базовую инфраструктуру кластера — `dhctl bootstrap-phase base-infra`.
   1. Запустите вручную bastion-хост в subnet <prefix>-public-0.
-  1. Продолжите установку с указанием bastion-хоста — `dhctl bootstrap --ssh-bastion...`
+  1. Продолжите установку с указанием bastion-хоста — `dhctl bootstrap --ssh-bastion...`.
 
-## Добавление CloudStatic узлов в кластер
+## Добавление CloudStatic-узлов в кластер
 
 Для добавления виртуальной машины в качестве узла в кластер выполните следующие шаги:
 1. Прикрепите группу безопасности `<prefix>-node`.
@@ -91,9 +91,9 @@ title: "Cloud provider — AWS: FAQ"
 
 ## Как увеличить размер volume в кластере?
 
-Задайте новый размер в соответствующем ресурсе PersistentVolumeClaim, в параметре `spec.resources.requests.storage`.
+Задайте новый размер в соответствующем ресурсе PersistentVolumeClaim в параметре `spec.resources.requests.storage`.
 
-Операция проходит полностью автоматически, и занимает до одной минуты. Никаких дополнительных действий не требуется.
+Операция проходит полностью автоматически и занимает до одной минуты. Никаких дополнительных действий не требуется.
 
 За ходом процесса можно наблюдать в events через команду `kubectl describe pvc`.
 

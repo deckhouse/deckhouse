@@ -6,12 +6,14 @@ WORKDIR /src/
 COPY patches/lua-info.patch /
 COPY patches/makefile.patch /
 COPY patches/healthcheck.patch /
+COPY patches/metrics-SetSSLExpireTime.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch controller-v1.6.4 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
+    patch -p1 < /metrics-SetSSLExpireTime.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
 # luarocks assets for luajit artifact
@@ -52,6 +54,7 @@ COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
 COPY patches/balancer-lua.patch /
 COPY patches/nginx-tmpl.patch /
+COPY patches/auth-cookie-always.patch /
 COPY rootfs /
 
 RUN apk update \
@@ -108,6 +111,7 @@ RUN apk update \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
+  && patch -p1 < /auth-cookie-always.patch \
   && rm -rf /*.patch
 WORKDIR /
 USER www-data

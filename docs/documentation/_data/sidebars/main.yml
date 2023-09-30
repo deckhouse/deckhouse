@@ -43,6 +43,10 @@ entries:
             en: Revision comparison
             ru: Сравнение редакций
           url: /revision-comparison.html
+        - title:
+            en: Security software settings
+            ru: Настройка ПО безопасности
+          url: /security_software_setup.html
         - title: FAQ
           url: /deckhouse-faq.html
         - title:
@@ -599,54 +603,58 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/340-monitoring-custom/configuration.html
-        - title: Targets
+        - title:
+            en: Network monitoring
+            ru: Мониторинг сети
           folders:
-            - title: monitoring-ping
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/340-monitoring-ping/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/340-monitoring-ping/configuration.html
-                - title:
-                    en: Usage
-                    ru: Примеры
-                  url: /modules/340-monitoring-ping/usage.html
-            - title: monitoring-kubernetes
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/340-monitoring-kubernetes/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/340-monitoring-kubernetes/configuration.html
             - title:
-                en: Control plane monitoring
-                ru: Мониторинг control plane
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/340-monitoring-kubernetes-control-plane/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/340-monitoring-kubernetes-control-plane/configuration.html
-            - title: extended-monitoring
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/340-extended-monitoring/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/340-extended-monitoring/configuration.html
+                en: Description
+                ru: Описание
+              url: /modules/340-monitoring-ping/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/340-monitoring-ping/configuration.html
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/340-monitoring-ping/usage.html
+        - title:
+            ru: Мониторинг кластера
+            en: Cluster monitoring
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/340-monitoring-kubernetes/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/340-monitoring-kubernetes/configuration.html
+        - title:
+            en: Control plane monitoring
+            ru: Мониторинг control plane
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/340-monitoring-kubernetes-control-plane/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/340-monitoring-kubernetes-control-plane/configuration.html
+        - title:
+            ru: Расширенный мониторинг
+            en: Extended monitoring
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/340-extended-monitoring/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/340-extended-monitoring/configuration.html
         - title:
             en: Logs
             ru: Логи
@@ -980,12 +988,16 @@ entries:
                   url: /modules/650-runtime-audit-engine/configuration.html
                 - title: Custom Resources
                   url: /modules/650-runtime-audit-engine/cr.html
-            - title: FAQ
-              url: /modules/650-runtime-audit-engine/faq.html
+            - title:
+                en: Advanced Usage
+                ru: Расширенная конфигурация
+              url: /modules/650-runtime-audit-engine/advanced_usage.html
             - title:
                 en: Examples
                 ru: Примеры
               url: /modules/650-runtime-audit-engine/examples.html
+            - title: FAQ
+              url: /modules/650-runtime-audit-engine/faq.html
         - title:
             en: Other modules
             ru: Другие модули
@@ -1186,6 +1198,8 @@ entries:
                   url: /modules/450-keepalived/configuration.html
                 - title: Custom Resources
                   url: /modules/450-keepalived/cr.html
+            - title: FAQ
+              url: /modules/450-keepalived/faq.html
         - title: metallb
           d8Revision: ee
           folders:

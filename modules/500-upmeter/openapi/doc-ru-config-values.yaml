@@ -8,11 +8,11 @@ properties:
       * Если указать `false` — будет форсироваться использование emptyDir'а.
   auth:
     description: |
-      Доступ к web-интерфейсу
+      Доступ к веб-интерфейсу
     properties:
       status:
         description: |
-          Настройки доступа к web-интерфейсу.
+          Настройки доступа к веб-интерфейсу.
         properties:
           externalAuthentication:
             description: |
@@ -37,7 +37,7 @@ properties:
               Список CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
       webui:
         description: |
-          Настройки доступа к web-интерфейсу.
+          Настройки доступа к веб-интерфейсу.
         properties:
           externalAuthentication:
             description: |
@@ -64,7 +64,7 @@ properties:
     properties:
       auth:
         description: |
-          Настройки доступа к web-интерфейсу.
+          Настройки доступа к веб-интерфейсу.
         properties:
           externalAuthentication:
             description: |
@@ -130,7 +130,7 @@ properties:
                   Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   disabledProbes:
     description: |
-      Массив строк из названий групп или определенных проб из группы. Названия можно подсмотреть в web-интерфейсе.
+      Массив строк из названий групп или определенных проб из группы. Названия можно подсмотреть в веб-интерфейсе.
 
       Пример:
 
@@ -175,11 +175,11 @@ properties:
               Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

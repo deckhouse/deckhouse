@@ -15,3 +15,6 @@
 bb-sync-file /etc/profile.d/02-deckhouse-path.sh - << "EOF"
 export PATH="/opt/deckhouse/bin:$PATH"
 EOF
+
+# On AltLinux /etc/profile.d/02-deckhouse-path.sh should be executable.
+chmod a+x /etc/profile.d/02-deckhouse-path.sh

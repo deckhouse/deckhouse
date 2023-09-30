@@ -75,7 +75,7 @@ title: "Модуль operator-prometheus"
       regex: .+                           # подходит любой НЕ пустой лейбл
       action: keep
     # Фильтр по имени порта
-    - source_labels: [__meta_kubernetes_endpoint_port_name]
+    - source_labels: [__meta_kubernetes_endpointslice_port_name]
       regex: http-metrics                 # подходит, только если порт называется http-metrics
       action: keep
     # Добавляем label job, используем значение label'а prometheus_custom_target у service'а, к которому добавляем префикс "custom-"

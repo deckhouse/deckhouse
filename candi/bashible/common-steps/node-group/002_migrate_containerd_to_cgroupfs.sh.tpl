@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,22 @@
 {{- if eq .cri "Containerd" }}
 # Migration already done
 if [ -f /var/lib/bashible/cgroup_config ]; then
+  # If there is a file /var/lib/bashible/cgroup_config, then we use the cgroup driver value from the file.
   exit 0
+else
+  # We must restore the file /var/lib/bashible/cgroup_config because when we removed Docker CRI support,
+  # we removed containerd migration to cgroupfs too.
+  if [[ -f /var/lib/kubelet/config.yaml ]]; then
+    if cat /var/lib/kubelet/config.yaml | grep -q "cgroupDriver: cgroupfs"; then
+      # If there is no file /var/lib/bashible/cgroup_config, but we understand that cgroupfs is used,
+      # then we create a file.
+      echo "cgroupfs" > /var/lib/bashible/cgroup_config
+    else
+      # If there is no file /var/lib/bashible/cgroup_config, but we understand that systemd is used,
+      # then we skip the migration and do nothing.
+      exit 0
+    fi
+  fi
 fi
 # Bashible run on node bootstrap
 if [ "${FIRST_BASHIBLE_RUN}" == "yes" ]; then

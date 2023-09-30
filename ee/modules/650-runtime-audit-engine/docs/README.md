@@ -1,11 +1,13 @@
 ---
 title: "The runtime-audit-engine module"
+description: Overview of the runtime-audit-engine Deckhouse module, which implements a runtime threats detection engine in the Kubernetes cluster.
 ---
 
 ## Overview
 
-The module implements a runtime threats detection engine. 
-It can collect Linux kernel system calls and Kubernetes API audit events, enrich them with metadata from Kubernetes Pods and generate security audit events according to conditional rules.
+The module implements a runtime threats detection engine.
+
+The module collects Linux kernel system calls and Kubernetes API audit events (by `k8saudit` plugin enabled by default), enrich them with metadata from Kubernetes Pods and generate security audit events according to conditional rules.
 
 This module:
 * Detects threats at runtime by observing the behavior of your applications and containers.
@@ -23,9 +25,11 @@ Deckhouse deploys Falco agents (which run as a DaemonSet) on every node. The age
 ![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.svg)
 <!--- Source: https://docs.google.com/drawings/d/1NZ91z8NXNiuS50ybcMoMsZI3SbQASZXJGLANdaNNm_U --->
 
-> Falco developers recommend deploying Falco as a systemd unit for maximum security.
-> However, a Kubernetes cluster with the autoscaling feature enabled makes it hard to operate. 
-> Additional security mechanisms of Deckhouse (implemented by other modules), such as multitenancy and admission policy control, provide the required level of security to mitigate attacks on the Falco DaemonSet.
+{% alert %}
+Falco developers recommend deploying Falco as a systemd unit for maximum security.
+However, a Kubernetes cluster with the autoscaling feature enabled makes it hard to operate. 
+Additional security mechanisms of Deckhouse (implemented by other modules), such as multitenancy and admission policy control, provide the required level of security to mitigate attacks on the Falco DaemonSet.
+{% endalert %}
 
 There are four different containers in a single agent Pod:
 ![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.svg)
@@ -33,7 +37,7 @@ There are four different containers in a single agent Pod:
 
 1. `falco` — collects events, enriches them with metadata and sends them to stdout.
 2. `rules-loader` — collects ([FalcoAuditRules](cr.html#falcoauditrules)) CRs from Kubernetes and saves them in a shared directory (empty dir).
-3. `falcosidekick` — exports events as metrics on which alerts can be generated. 
+3. `falcosidekick` — it takes a `Falco` events and forward them to different outputs in a fan-out way. By default, it exports events as metrics on which alerts can be generated. [Falcosidekick source code](https://github.com/falcosecurity/falcosidekick).
 4. `kube-rbac-proxy` — protects the `falcosidekick` metric's endpoint.
 
 ## Audit Rules
@@ -45,10 +49,8 @@ The main part of a rule is a conditional expression (which uses the [conditions 
 
 ### Embedded rules
 
-There are several built-in rules that cannot be disabled.  
-These rules are aimed at detecting Deckhouse security problems as well as security problems affecting the `runtime-audit-engine` module.
+There is a built-in set of rules that cannot be disabled. It helps to identify problems with Deckhouse security as well as security problems affecting the `runtime-audit-engine` module.
 
-- `/etc/falco/falco_rules.yaml` — syscall rules;
 - `/etc/falco/k8s_audit_rules.yaml` — Kubernetes audit rules.
 
 
@@ -56,7 +58,7 @@ These rules are aimed at detecting Deckhouse security problems as well as securi
 
 Users can use a `FalcoAuditRules` CRD to add custom security audit rules. 
 Each Falco agent Pod has a sidecar container running [shell-operator](https://github.com/flant/shell-operator).
-This sidecar reads rules from the custom resources and saves them in the Pod's `/etc/falco/rules.d/` directory.
+This sidecar reads rules from the custom resources, converts them to Falco rules and saves Falco rules in the Pod's `/etc/falco/rules.d/` directory.
 Falco automatically reloads the configuration when a new rule becomes available.
 
 ![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.svg)
@@ -105,5 +107,11 @@ You can manually configure the webhook for Kubernetes clusters with a control pl
    ```
 2. Add the `--audit-webhook-config-file` flag to the `kube-apiserver` manifest. The flag must point to the previously created file.
 
-> **Note!** Remember to configure the audit policy, because Deckhouse only collects Kubernetes audit events from the system namespaces by default.
-> An example of configuration can be found in the [control-plane-manager](../040-control-plane-manager/) module documentation.
+{% alert level="warning" %}
+Remember to configure the audit policy, because Deckhouse only collects Kubernetes audit events from the system namespaces by default. 
+An example of configuration can be found in the [control-plane-manager](../040-control-plane-manager/) module documentation.
+{% endalert %}
+
+## Alerting
+
+If a number of `runtime-audit-engine` pods are not scheduled, then the `D8RuntimeAuditEngineNotScheduledInCluster` alert will be generated.

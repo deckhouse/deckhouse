@@ -1,9 +1,0 @@
----
-layout: none
-permalink: en/robots.txt
-searchable: false
-sitemap_include: false
-lang: en
----
-
-{% include robots.txt.liquid %}

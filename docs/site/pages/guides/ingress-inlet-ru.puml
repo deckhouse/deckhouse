@@ -9,8 +9,8 @@ skinparam PartitionFontColor grey
 skinparam backgroundColor transparent
 
 
-if (\nПоддерживается\nзаказ\nбалансировщиков?\n) then (да             )
-partition OpenStack-облако, Yandex, VK, Selectel, AWS, GCP, Azure, ... {
+if (\nПоддерживается\nзаказ\nбалансировщиков?\n) then (Да)
+partition OpenStack-облако, Yandex, VK, Selectel, AWS, GCP, Azure... {
   split
     :inlet **LoadBalancer**;
      kill
@@ -19,21 +19,21 @@ partition OpenStack-облако, Yandex, VK, Selectel, AWS, GCP, Azure, ... {
     kill
   end split
   }
-else (             нет)
-partition Bare metal, облако на vSphere, ...{
+else (Нет)
+partition Bare metal, облако на vSphere...{
   split
     ->Вариант 1;
     :Добавьте несколько\nА-записей в DNS;
   split again
     ->Вариант 2;
     :Используйте внешний балансировщик
-    (Cloudflare, Qrator, metallb (для bare metal) ...);
+    (Cloudflare, Qrator, metallb (для bare metal)...);
   end split
   split
-     :inlet **LoadBalancer**;
+     :inlet **HostPort**;
      kill
   split again
-    :inlet **LoadBalancerWithProxyProtocol**;
+    :inlet **HostPortWithProxyProtocol**;
     kill
   end split
   }

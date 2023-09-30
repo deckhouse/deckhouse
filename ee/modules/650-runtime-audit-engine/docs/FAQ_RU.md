@@ -1,5 +1,5 @@
 ---
-title: "Модуль runtime-audit-engine: примеры конфигурации"
+title: "Модуль runtime-audit-engine: FAQ"
 ---
 
 {% raw %}
@@ -23,7 +23,7 @@ spec:
     namespaceSelector:
       matchNames:
       - d8-runtime-audit-engine
-  labelsFilter:
+  labelFilter:
   - operator: Regex
     values: ["\\{.*"] # to collect only JSON logs
     field: "message"
@@ -57,8 +57,11 @@ spec:
         sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
 ```
 
-> Алерты лучше всего работают в комбинации с хранилищами событий, такими как Elasticsearch или Loki. Их задача — оповестить пользователя о подозрительном поведении на узле.
-> После получения алерта рекомендуется "пойти" в хранилище и посмотреть на события, которые его вызвали.
+{% endraw %}
+{% alert %}
+Алерты лучше всего работают в комбинации с хранилищами событий, такими как Elasticsearch или Loki. Их задача — оповестить пользователя о подозрительном поведении на узле.
+После получения алерта рекомендуется "пойти" в хранилище и посмотреть на события, которые его вызвали.
+{% endalert %}
 
 ## Как применить правила для Falco, найденные в интернете?
 
@@ -106,5 +109,3 @@ spec:
         - process
         - mitre_privilege_escalation
 ```
-
-{% endraw %}

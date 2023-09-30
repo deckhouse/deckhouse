@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -48,9 +49,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                         "releases",
 			ApiVersion:                   "deckhouse.io/v1alpha1",
-			Kind:                         "ExternalModuleRelease",
+			Kind:                         "ModuleRelease",
 			ExecuteHookOnEvents:          pointer.Bool(true),
-			ExecuteHookOnSynchronization: pointer.Bool(true),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   filterRelease,
 		},
 	},
@@ -61,7 +62,7 @@ var (
 )
 
 func applyModuleRelease(input *go_hook.HookInput) error {
-	var modulesChanged bool
+	var modulesChangedReason string
 	var fsModulesLinks map[string]string
 
 	snap := input.Snapshots["releases"]
@@ -73,6 +74,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	}
 	// directory for symlinks will actual versions to all external-modules
 	symlinksDir := filepath.Join(externalModulesDir, "modules")
+	ts := time.Now().UTC()
 
 	// run only once on startup
 	if !fsSynchronized {
@@ -92,14 +94,14 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		rel := sn.(enqueueRelease)
 		if rel.Status == "" {
 			rel.Status = v1alpha1.PhasePending
-			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
+			status := map[string]v1alpha1.ModuleReleaseStatus{
 				"status": {
 					Phase:          v1alpha1.PhasePending,
-					TransitionTime: time.Now().UTC(),
+					TransitionTime: ts,
 					Message:        "",
 				},
 			}
-			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", rel.Name, object_patch.WithSubresource("/status"))
+			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", rel.Name, object_patch.WithSubresource("/status"))
 		}
 
 		moduleReleases[rel.ModuleName] = append(moduleReleases[rel.ModuleName], rel)
@@ -109,7 +111,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		sort.Sort(byVersion[enqueueRelease](releases))
 		delete(fsModulesLinks, module)
 
-		pred := NewReleasePredictor(releases)
+		pred := newReleasePredictor(releases)
 
 		pred.calculateRelease()
 
@@ -124,19 +126,20 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		if pred.currentReleaseIndex == len(pred.releases)-1 {
 			// latest release deployed
 			deployedRelease := pred.releases[pred.currentReleaseIndex]
-			deckhouse_config.Service().AddExternalModuleName(deployedRelease.ModuleName, deployedRelease.ModuleSource)
+			deckhouse_config.Service().AddModuleNameToSource(deployedRelease.ModuleName, deployedRelease.ModuleSource)
 
 			// check symlink exists on FS, relative symlink
 			modulePath := generateModulePath(module, deployedRelease.Version.String())
 			if !isModuleExistsOnFS(symlinksDir, currentModuleSymlink, modulePath) {
 				newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", deployedRelease.Weight, module))
 				input.LogEntry.Debugf("Module %q is not exists on the filesystem. Restoring", module)
-				err := enableModule(currentModuleSymlink, newModuleSymlink, modulePath)
+				err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
+					suspendModuleVersionForRelease(input, deployedRelease, err, ts)
 					continue
 				}
-				modulesChanged = true
+				modulesChangedReason = "one of modules is not enabled"
 			}
 			continue
 		}
@@ -144,27 +147,27 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		if len(pred.skippedPatchesIndexes) > 0 {
 			for _, index := range pred.skippedPatchesIndexes {
 				release := pred.releases[index]
-				status := map[string]v1alpha1.ExternalModuleReleaseStatus{
+				status := map[string]v1alpha1.ModuleReleaseStatus{
 					"status": {
 						Phase:          v1alpha1.PhaseSuperseded,
 						TransitionTime: pred.ts,
 						Message:        "",
 					},
 				}
-				input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+				input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 			}
 		}
 
 		if pred.currentReleaseIndex >= 0 {
 			release := pred.releases[pred.currentReleaseIndex]
-			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
+			status := map[string]v1alpha1.ModuleReleaseStatus{
 				"status": {
 					Phase:          v1alpha1.PhaseSuperseded,
 					TransitionTime: pred.ts,
 					Message:        "",
 				},
 			}
-			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 		}
 
 		if pred.desiredReleaseIndex >= 0 {
@@ -173,21 +176,22 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			modulePath := generateModulePath(module, release.Version.String())
 			newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", release.Weight, module))
 
-			err := enableModule(currentModuleSymlink, newModuleSymlink, modulePath)
+			err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
 				input.LogEntry.Errorf("Module deploy failed: %v", err)
+				suspendModuleVersionForRelease(input, release, err, ts)
 				continue
 			}
-			modulesChanged = true
+			modulesChangedReason = "a new module release found"
 
-			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
+			status := map[string]v1alpha1.ModuleReleaseStatus{
 				"status": {
 					Phase:          v1alpha1.PhaseDeployed,
 					TransitionTime: pred.ts,
 					Message:        "",
 				},
 			}
-			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 		}
 	}
 	if !fsSynchronized {
@@ -196,12 +200,14 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 				input.LogEntry.Warnf("Module %q has no releases. Purging from FS", module)
 				_ = os.RemoveAll(moduleLinkPath)
 			}
-			modulesChanged = true
+			modulesChangedReason = "the modules filesystem is not synchronized"
 		}
 		fsSynchronized = true
 	}
 
-	if modulesChanged {
+	if modulesChangedReason != "" {
+		input.LogEntry.Infof("Restarting Deckhouse because %s", modulesChangedReason)
+
 		err := syscall.Kill(1, syscall.SIGUSR2)
 		if err != nil {
 			input.LogEntry.Errorf("Send SIGUSR2 signal failed: %s", err)
@@ -210,6 +216,20 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func suspendModuleVersionForRelease(input *go_hook.HookInput, release enqueueRelease, err error, ts time.Time) {
+	if os.IsNotExist(err) {
+		err = errors.New("not found")
+	}
+	status := map[string]v1alpha1.ModuleReleaseStatus{
+		"status": {
+			Phase:          v1alpha1.PhaseSuspended,
+			TransitionTime: ts,
+			Message:        fmt.Sprintf("Desired version of the module met problems: %s", err),
+		},
+	}
+	input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 }
 
 func findExistingModuleSymlink(rootPath, moduleName string) (string, error) {
@@ -246,7 +266,7 @@ func isModuleExistsOnFS(symlinksDir, symlinkPath, modulePath string) bool {
 	return targetPath == modulePath
 }
 
-func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
+func enableModule(externalModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
 	if oldSymlinkPath != "" {
 		if _, err := os.Lstat(oldSymlinkPath); err == nil {
 			err = os.Remove(oldSymlinkPath)
@@ -263,6 +283,13 @@ func enableModule(oldSymlinkPath, newSymlinkPath, modulePath string) error {
 		}
 	}
 
+	// make absolute path for versioned module
+	moduleAbsPath := filepath.Join(externalModulesDir, strings.TrimPrefix(modulePath, "../"))
+	// check that module exists on a disk
+	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
+		return err
+	}
+
 	return os.Symlink(modulePath, newSymlinkPath)
 }
 
@@ -271,7 +298,7 @@ func generateModulePath(moduleName, version string) string {
 }
 
 func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var release v1alpha1.ExternalModuleRelease
+	var release v1alpha1.ModuleRelease
 
 	err := sdk.FromUnstructured(obj, &release)
 	if err != nil {
@@ -285,7 +312,7 @@ func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		}
 	}
 	if release.Spec.Weight == 0 {
-		release.Spec.Weight = defaultExternalModuleWeight
+		release.Spec.Weight = defaultModuleWeight
 	}
 
 	return enqueueRelease{
@@ -343,8 +370,7 @@ type releasePredictor struct {
 	skippedPatchesIndexes []int
 }
 
-// nolint: revive
-func NewReleasePredictor(releases []enqueueRelease) *releasePredictor {
+func newReleasePredictor(releases []enqueueRelease) *releasePredictor {
 	return &releasePredictor{
 		ts:       time.Now().UTC(),
 		releases: releases,

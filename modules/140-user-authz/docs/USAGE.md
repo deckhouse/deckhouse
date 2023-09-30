@@ -23,9 +23,16 @@ spec:
   # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
   allowAccessToSystemNamespaces: false
   # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
-  limitNamespaces:
-  - review-.*
-  - stage
+  namespaceSelector:
+    labelSelector:
+      matchExpressions:
+      - key: stage
+        operator: In
+        values:
+        - test
+        - review
+      matchLabels:
+        team: frontend
 ```
 
 ## Creating a user

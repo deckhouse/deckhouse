@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
@@ -142,7 +143,7 @@ func (k *KubeProxy) tryToRestartFully(startID int) {
 }
 
 func (k *KubeProxy) proxyCMD(startID int) *Command {
-	command := fmt.Sprintf("PATH=$PATH:/opt/deckhouse/bin/; kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", k.port)
+	command := fmt.Sprintf("PATH=$PATH:%s/; kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", app.DeckhouseNodeBinPath, k.port)
 
 	log.DebugF("[%d] Proxy command for start: %s\n", startID, command)
 

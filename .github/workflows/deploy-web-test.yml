@@ -196,6 +196,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const name = 'Deploy web to test';
 
@@ -262,6 +263,7 @@ jobs:
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.test.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-test"
           WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLnRlc3QuZmxhbnQuY29tIiwgInJ1IiA6ICJkZWNraG91c2UucnUudGVzdC5mbGFudC5jb20ifQ=="
+          WERF_SET_DCNAME: "web.dc_name=dev"
       # </template: deploy_site_template>
 
       # <template: doc_version_template>
@@ -287,6 +289,7 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.test.flant.com"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.test.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-test"
+          WERF_SET_DCNAME: "web.dc_name=dev"
       # </template: deploy_doc_template>
 
       # <template: update_comment_on_finish>
@@ -300,6 +303,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,final';
             const name = 'Deploy web to test';

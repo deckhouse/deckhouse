@@ -70,7 +70,7 @@ apiVersions:
         items:
           type: string
         description: |
-          A list of CIDR's allowed to connect to nodes via ssh.
+          A list of CIDR's allowed to connect to nodes via SSH.
 
           By default, `*`.
       vNetCIDR:
@@ -103,6 +103,15 @@ apiVersions:
               description: |
                 The name of the VNet.
               type: string
+      serviceEndpoints:
+        description: |
+          The list of Service endpoints to associate with the subnet.
+
+          Virtual Network (VNet) service endpoint provides secure and direct connectivity to Azure services over an optimized route over the Azure backbone network. Endpoints allow you to secure your critical Azure service resources to only your virtual networks. Service Endpoints enables private IP addresses in the VNet to reach the endpoint of an Azure service without needing a public IP address on the VNet. More information about Service Endpoints can be found in the [official documentation](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview).
+        type: array
+        items:
+          type: string
+          enum: [Microsoft.AzureActiveDirectory, Microsoft.AzureCosmosDB, Microsoft.ContainerRegistry, Microsoft.EventHub, Microsoft.KeyVault, Microsoft.ServiceBus, Microsoft.Sql, Microsoft.Storage, Microsoft.Storage.Global, Microsoft.Web]
       masterNodeGroup:
         description: |
           The definition of the master's NodeGroup.
@@ -112,7 +121,9 @@ apiVersions:
         properties:
           replicas:
             description: |
-              The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+              The number of master nodes to create.
+
+              It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
           zones:
@@ -135,7 +146,7 @@ apiVersions:
               Partial contents of the [AzureInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass) fields.
             type: object
             required: [machineSize, urn]
-            properties: 
+            properties:
               machineSize: &instanceClassMachineSize
                 description: |
                   The type of instances to provision.
@@ -159,9 +170,9 @@ apiVersions:
                   az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
                   ```
 
-                  **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
+                  By default, the image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                  > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
+                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
                 type: string
               enableExternalIP: &instanceClassEnableExternalIP
                 description: |

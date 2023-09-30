@@ -1,0 +1,17 @@
+{{- $falcoVersion := "0.35.1" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+    - apt-get update
+    - apt-get install tar gzip curl -y
+    - curl -sfL https://download.falco.org/packages/bin/x86_64/falco-{{ $falcoVersion }}-x86_64.tar.gz --output /tmp/falco.tar.gz
+    - tar -zxvf /tmp/falco.tar.gz --strip-components 1 --directory /
+    - rm -f /tmp/falco.tar.gz
+  install:
+    - "sed -i 's/time_format_iso_8601: false/time_format_iso_8601: true/' /etc/falco/falco.yaml"
+    - rm -df /lib/modules
+    - ln -s $HOST_ROOT/lib/modules /lib/modules
+docker:
+  CMD: ["/usr/bin/falco"]

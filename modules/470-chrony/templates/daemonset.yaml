@@ -3,6 +3,15 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{ $ntpServers := list }}
+{{- range $value := .Values.chrony.ntpServers }}
+  {{- if regexMatch "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$" $value }}
+    {{ $ntpServers = append $ntpServers $value }}
+  {{ else }}
+    {{ $ntpServers = append $ntpServers (printf "%s." ($value | trimSuffix ".")) }}
+  {{- end }}
+{{ end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -46,11 +55,10 @@ spec:
         tier: node
         app: chrony
     spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: ClusterFirst
       imagePullSecrets:
       - name: deckhouse-registry
-      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       containers:
@@ -58,16 +66,12 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_TIME" "CHOWN" "DAC_OVERRIDE" "FOWNER" "FSETID" "KILL" "SETGID" "SETUID" "SETPCAP" "NET_BIND_SERVICE" "NET_RAW" "SYS_CHROOT" "MKNOD" "AUDIT_WRITE" "SETFCAP")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "chrony") }}
         env:
-{{ $ntpServers := list }}
-{{- range $value := .Values.chrony.ntpServers }}
-  {{- if regexMatch "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$" $value }}
-    {{ $ntpServers = append $ntpServers $value }}
-  {{ else }}
-    {{ $ntpServers = append $ntpServers (printf "%s." ($value | trimSuffix ".")) }}
-  {{- end }}
-{{ end }}
-        - name: NTP_SERVERS
-          value: {{ join " " $ntpServers | quote }}
+          - name: NTP_ROLE
+            value: sink
+          - name: NTP_SERVERS
+            value: {{ join " " $ntpServers | quote }}
+          - name: CHRONY_MASTERS_SERVICE
+            value: {{ printf "chrony-masters.d8-%s.svc.%s" .Chart.Name .Values.global.clusterConfiguration.clusterDomain | quote }}
         ports:
         - name: ntp
           containerPort: 123

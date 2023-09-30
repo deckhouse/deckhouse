@@ -82,7 +82,7 @@ func TestRestoreGeneratedPassword(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := NewBasicAuthPlainHook("testMod", "default", "auth")
+			h := NewBasicAuthPlainHook(HookSettings{ModuleName: "testMod", Namespace: "default", SecretName: "auth"})
 			pass, err := h.restoreGeneratedPasswordFromSnapshot(tt.snapshot)
 			if tt.expectErr == expectError {
 				require.NotNil(t, err, "input '%s' should not success", tt.snapshot)

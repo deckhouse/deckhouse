@@ -108,7 +108,7 @@ func (du *DeckhouseUpdater) checkPatchReleaseConditions(predictedRelease *Deckho
 }
 
 func (du *DeckhouseUpdater) checkReleaseNotification(predictedRelease *DeckhouseRelease, updateWindows update.Windows) bool {
-	if du.inManualMode || du.releaseData.Notified {
+	if du.releaseData.Notified {
 		return true
 	}
 
@@ -127,18 +127,20 @@ func (du *DeckhouseUpdater) checkReleaseNotification(predictedRelease *Deckhouse
 
 	version := fmt.Sprintf("%d.%d", predictedRelease.Version.Major(), predictedRelease.Version.Minor())
 	msg := fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", version, releaseApplyTime.Format(time.RFC850))
-	data := webhookData{
-		Version:       fmt.Sprintf("%d.%d", predictedRelease.Version.Major(), predictedRelease.Version.Minor()),
-		Requirements:  predictedRelease.Requirements,
-		ChangelogLink: predictedRelease.ChangelogLink,
-		ApplyTime:     releaseApplyTime.Format(time.RFC3339),
-		Message:       msg,
-	}
+	if du.notificationConfig.WebhookURL != "" {
+		data := webhookData{
+			Version:       fmt.Sprintf("%d.%d", predictedRelease.Version.Major(), predictedRelease.Version.Minor()),
+			Requirements:  predictedRelease.Requirements,
+			ChangelogLink: predictedRelease.ChangelogLink,
+			ApplyTime:     releaseApplyTime.Format(time.RFC3339),
+			Message:       msg,
+		}
 
-	err := sendWebhookNotification(du.notificationConfig, data)
-	if err != nil {
-		du.input.LogEntry.Errorf("Send deckhouse release notification failed: %s", err)
-		return false
+		err := sendWebhookNotification(du.notificationConfig, data)
+		if err != nil {
+			du.input.LogEntry.Errorf("Send deckhouse release notification failed: %s", err)
+			return false
+		}
 	}
 
 	du.changeNotifiedFlag(true)

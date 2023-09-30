@@ -49,7 +49,8 @@ import (
 )
 
 const (
-	defaultExternalModuleWeight = 900
+	defaultReleaseChannel = "stable"
+	defaultModuleWeight   = 900
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -58,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                "sources",
 			ApiVersion:          "deckhouse.io/v1alpha1",
-			Kind:                "ExternalModuleSource",
+			Kind:                "ModuleSource",
 			ExecuteHookOnEvents: pointer.Bool(true),
 			FilterFunc:          filterSource,
 		},
@@ -75,30 +76,30 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleSource))
 
 func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ex v1alpha1.ExternalModuleSource
+	var ms v1alpha1.ModuleSource
 
-	err := sdk.FromUnstructured(obj, &ex)
+	err := sdk.FromUnstructured(obj, &ms)
 	if err != nil {
 		return nil, err
 	}
 
 	// remove unused fields
-	newex := v1alpha1.ExternalModuleSource{
-		TypeMeta: ex.TypeMeta,
+	newms := v1alpha1.ModuleSource{
+		TypeMeta: ms.TypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ex.Name,
+			Name: ms.Name,
 		},
-		Spec: ex.Spec,
-		Status: v1alpha1.ExternalModuleSourceStatus{
-			ModuleErrors: ex.Status.ModuleErrors,
+		Spec: ms.Spec,
+		Status: v1alpha1.ModuleSourceStatus{
+			ModuleErrors: ms.Status.ModuleErrors,
 		},
 	}
 
-	if newex.Spec.ReleaseChannel == "" {
-		newex.Spec.ReleaseChannel = "stable"
+	if newms.Spec.ReleaseChannel == "" {
+		newms.Spec.ReleaseChannel = defaultReleaseChannel
 	}
 
-	return newex, nil
+	return newms, nil
 }
 
 func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
@@ -117,8 +118,8 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for _, sn := range snap {
-		ex := sn.(v1alpha1.ExternalModuleSource)
-		sc := v1alpha1.ExternalModuleSourceStatus{
+		ex := sn.(v1alpha1.ModuleSource)
+		sc := v1alpha1.ModuleSourceStatus{
 			SyncTime: ts,
 		}
 
@@ -127,6 +128,10 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 			opts = append(opts, cr.WithAuth(ex.Spec.Registry.DockerCFG))
 		} else {
 			opts = append(opts, cr.WithDisabledAuth())
+		}
+
+		if ex.Spec.Registry.CA != "" {
+			opts = append(opts, cr.WithCA(ex.Spec.Registry.CA))
 		}
 
 		regCli, err := dc.GetRegistryClient(ex.Spec.Registry.Repo, opts...)
@@ -276,7 +281,7 @@ func saveSourceChecksums(checksumFilePath string, checksums sourceChecksum) erro
 	return os.WriteFile(checksumFilePath, data, 0666)
 }
 
-func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSource v1alpha1.ExternalModuleSource, moduleName string, modulesChecksum map[string]string, registryOptions []cr.Option) ( /* moduleVersion */ string, error) {
+func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSource v1alpha1.ModuleSource, moduleName string, modulesChecksum map[string]string, registryOptions []cr.Option) ( /* moduleVersion */ string, error) {
 	regCli, err := dc.GetRegistryClient(path.Join(moduleSource.Spec.Registry.Repo, moduleName, "release"), registryOptions...)
 	if err != nil {
 		return "", fmt.Errorf("fetch release image error: %v", err)
@@ -313,26 +318,26 @@ func fetchModuleWeight(moduleVersionPath string) int {
 	moduleDefFile := path.Join(moduleVersionPath, module_manager.ModuleDefinitionFileName)
 
 	if _, err := os.Stat(moduleDefFile); err != nil {
-		return defaultExternalModuleWeight
+		return defaultModuleWeight
 	}
 
 	var def module_manager.ModuleDefinition
 
 	f, err := os.Open(moduleDefFile)
 	if err != nil {
-		return defaultExternalModuleWeight
+		return defaultModuleWeight
 	}
 	defer f.Close()
 
 	err = yaml.NewDecoder(f).Decode(&def)
 	if err != nil {
-		return defaultExternalModuleWeight
+		return defaultModuleWeight
 	}
 
 	return def.Weight
 }
 
-func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
+func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath string, moduleSource v1alpha1.ModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
 	regCli, err := dc.GetRegistryClient(path.Join(moduleSource.Spec.Registry.Repo, moduleName), registryOptions...)
 	if err != nil {
 		return fmt.Errorf("fetch module error: %v", err)
@@ -359,7 +364,7 @@ func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath stri
 	return nil
 }
 
-func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource) error {
+func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha1.ModuleSource) error {
 	valuesFile := path.Join(moduleVersionPath, "openapi", "values.yaml")
 
 	valuesData, err := os.ReadFile(valuesFile)
@@ -375,7 +380,7 @@ func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha
 	return os.WriteFile(valuesFile, valuesData, 0666)
 }
 
-func mutateOpenapiSchema(sourceValuesData []byte, moduleSource v1alpha1.ExternalModuleSource) ([]byte, error) {
+func mutateOpenapiSchema(sourceValuesData []byte, moduleSource v1alpha1.ModuleSource) ([]byte, error) {
 	reg := new(registrySchemaForValues)
 	reg.SetBase(moduleSource.Spec.Registry.Repo)
 	reg.SetDockercfg(moduleSource.Spec.Registry.DockerCFG)
@@ -533,9 +538,9 @@ func fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
 }
 
 func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string, moduleWeight int) {
-	rl := &v1alpha1.ExternalModuleRelease{
+	rl := &v1alpha1.ModuleRelease{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "ExternalModuleRelease",
+			Kind:       "ModuleRelease",
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -543,7 +548,7 @@ func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersi
 			Annotations: make(map[string]string),
 			Labels:      map[string]string{"module": moduleName, "source": sourceName},
 		},
-		Spec: v1alpha1.ExternalModuleReleaseSpec{
+		Spec: v1alpha1.ModuleReleaseSpec{
 			ModuleName: moduleName,
 			Version:    semver.MustParse(moduleVersion),
 			Weight:     moduleWeight,
@@ -553,12 +558,12 @@ func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersi
 	input.PatchCollector.Create(rl, object_patch.UpdateIfExists())
 }
 
-func updateSourceStatus(input *go_hook.HookInput, name string, sc v1alpha1.ExternalModuleSourceStatus) {
-	st := map[string]v1alpha1.ExternalModuleSourceStatus{
+func updateSourceStatus(input *go_hook.HookInput, name string, sc v1alpha1.ModuleSourceStatus) {
+	st := map[string]v1alpha1.ModuleSourceStatus{
 		"status": sc,
 	}
 
-	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "ExternalModuleSource", "", name, object_patch.WithSubresource("/status"))
+	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "ModuleSource", "", name, object_patch.WithSubresource("/status"))
 }
 
 type moduleReleaseMetadata struct {

@@ -84,7 +84,7 @@ spec:
       - name: falco
         # TODO(nabokihms): Fix 'Error response from daemon: invalid CapAdd: unknown capability: "CAP_BPF"'
         # Migrate to capabilities: "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE"
-        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
@@ -155,6 +155,10 @@ spec:
         env:
         - name: LISTENADDRESS
           value: "127.0.0.1"
+        {{- if .Values.runtimeAuditEngine.debugLogging }}
+        - name: DEBUG
+          value: "true"
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /sidekick/ping

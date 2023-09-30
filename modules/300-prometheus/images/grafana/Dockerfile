@@ -1,10 +1,11 @@
 ARG BASE_ALPINE
 ARG BASE_NODE_16_ALPINE
 ARG BASE_GOLANG_17_BUSTER
+ARG BASE_GOLANG_20_ALPINE
 ARG BASE_UBUNTU
 ARG GRAFANA_VERSION="8.5.13"
 ARG STATUSMAP_VERSION="0.5.1"
-ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel"
+ARG BUNDLED_PLUGINS="petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel"
 
 # This Dockerfile is based on Dockerfile from https://github.com/grafana/grafana/blob/v8.5.2/Dockerfile
 # Changes:
@@ -17,9 +18,14 @@ ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vona
 # It will fail fast on problems with future versions.
 FROM $BASE_ALPINE as src-files
 WORKDIR /usr/src/app
-RUN apk add --no-cache patch
+RUN apk add --no-cache patch git
+
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
 ARG GRAFANA_VERSION
-RUN wget https://github.com/grafana/grafana/archive/v${GRAFANA_VERSION}.tar.gz -O - | tar -xz  --strip-components=1
+
+RUN git clone --depth 1 --branch v${GRAFANA_VERSION} ${SOURCE_REPO}/grafana/grafana.git .
 # Extra '__interval_*' vars for prometheus datasource.
 COPY ./patches/feat_prometheus_extra_vars.patch .
 RUN patch -p1 < ./feat_prometheus_extra_vars.patch
@@ -33,6 +39,9 @@ RUN patch -p1 -l < ./build_go.patch
 COPY ./patches/run_sh.patch .
 RUN patch -p1 < ./run_sh.patch
 
+# Download flant-statusmap-panel plugin.
+ARG STATUSMAP_VERSION
+RUN git clone --depth 1 --branch v${STATUSMAP_VERSION} ${SOURCE_REPO}/flant/grafana-statusmap.git /grafana-statusmap
 
 # ===================================================
 # Step 2. Frontend.
@@ -48,6 +57,13 @@ ENV NODE_ENV production
 ENV NODE_OPTIONS "--max_old_space_size=8000"
 RUN yarn build
 
+FROM $BASE_NODE_16_ALPINE as grafana-statusmap
+COPY --from=src-files /grafana-statusmap /grafana-statusmap
+WORKDIR /grafana-statusmap
+RUN apk --no-cache add git
+RUN yarn install
+ENV NODE_ENV production
+RUN yarn build
 
 # ===================================================
 # Step 3. Backend binaries.
@@ -59,11 +75,36 @@ RUN yarn build
 FROM $BASE_GOLANG_17_BUSTER as go-builder
 ARG GRAFANA_VERSION
 ENV GRAFANA_VERSION=${GRAFANA_VERSION}
+RUN apt-get update && \
+    apt-get -y --no-install-recommends install git gcc musl musl-tools
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
-RUN make gen-go
-RUN go run build.go build
 
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY} \
+    CGO_ENABLED=1 \
+    GOOS=linux \
+    GOARCH=amd64 \
+    CC=/usr/bin/musl-gcc
+
+RUN make gen-go
+RUN go build -ldflags -w -ldflags "-X main.version=${GRAFANA_VERSION} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
+RUN go build -ldflags -w -ldflags "-X main.version=${GRAFANA_VERSION} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana-cli ./pkg/cmd/grafana-cli
+
+FROM $BASE_GOLANG_20_ALPINE as entrypoint
+
+COPY /entrypoint/ /app/
+WORKDIR /app/
+
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
+RUN go build -ldflags="-s -w" -o entrypoint main.go
+RUN chown -R 64535:64535 /app/ && \
+    chmod 0700 /app/entrypoint
 
 # ===================================================
 # Step 4. Final image.
@@ -74,20 +115,20 @@ RUN go run build.go build
 # - Install additional plugins
 # - Install statusmap plugin
 # - Use debian because of grafana-image-renderer plugin: plugin_start_linux_amd64 binary is not working in musl environment.
-FROM $BASE_UBUNTU
+FROM $BASE_UBUNTU as grafana-distr
 
 ENV PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
     GF_PATHS_DATA="/var/lib/grafana" \
     GF_PATHS_HOME="/usr/share/grafana" \
     GF_PATHS_LOGS="/var/log/grafana" \
-    GF_PATHS_PLUGINS="/var/lib/grafana/plugins" \
+    GF_PATHS_PLUGINS="/usr/share/grafana/plugins-bundled" \
     GF_PATHS_PROVISIONING="/etc/grafana/provisioning"
 
 WORKDIR $GF_PATHS_HOME
 
 RUN apt-get update && \
-    apt-get -y --no-install-recommends install libfontconfig curl ca-certificates tzdata openssl unzip && \
+    apt-get -y --no-install-recommends install libfontconfig curl ca-certificates openssl unzip git && \
     apt-get clean && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
@@ -122,19 +163,48 @@ RUN echo Add bundled plugins: ${BUNDLED_PLUGINS} && \
 # Save path with bundled plugins.
 ENV BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
 
-# Download flant-statusmap-panel plugin.
-ARG STATUSMAP_VERSION
-RUN echo "Fetch flant-statusmap-panel v${STATUSMAP_VERSION}" && \
-    STATUSMAP_ARCHIVE=flant-statusmap-panel-${STATUSMAP_VERSION}.zip && \
-    curl -LSsO https://github.com/flant/grafana-statusmap/releases/download/v${STATUSMAP_VERSION}/${STATUSMAP_ARCHIVE} && \
-    unzip ${STATUSMAP_ARCHIVE} -d "${GF_PATHS_PLUGINS}" && \
-    rm ${STATUSMAP_ARCHIVE}
+# Copy flant-statusmap-panel plugin.
+COPY --from=grafana-statusmap /grafana-statusmap/dist/ ${GF_PATHS_PLUGINS}/flant-statusmap-panel/
 
 # Home Dashboard
 COPY ./grafana_home_dashboard.json /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
 COPY ./web/ /usr/share/grafana/public/img/
 
+RUN chown -R 64535:64535 /usr/share/grafana && \
+    chown -R 64535:64535 /etc/grafana && \
+    chown -R 64535:64535 /var/lib/grafana && \
+    chown -R 64535:64535 /var/log/grafana
+
+RUN chmod 0700 ./bin/grafana-server && \
+    chmod 0700 ./bin/grafana-cli
+
+# The some custom  plugins has dependencies on libraries that are not in the distroless container
+FROM $BASE_UBUNTU
+
+RUN apt-get update && \
+    apt-get -y --no-install-recommends install ca-certificates && \
+    apt-get clean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=entrypoint /app/entrypoint /usr/local/bin/
+COPY --from=grafana-distr /usr/share/grafana/ /usr/share/grafana/
+COPY --from=grafana-distr /etc/grafana/ /etc/grafana/
+COPY --from=grafana-distr /var/lib/grafana/ /var/lib/grafana/
+COPY --from=grafana-distr /var/log/grafana/ /var/log/grafana/
+
+ENV PATH="/usr/share/grafana/bin:$PATH" \
+    GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
+    GF_PATHS_DATA="/var/lib/grafana" \
+    GF_PATHS_HOME="/usr/share/grafana" \
+    GF_PATHS_LOGS="/var/log/grafana" \
+    GF_PATHS_PLUGINS="/usr/share/grafana/plugins-bundled" \
+    GF_PATHS_PROVISIONING="/etc/grafana/provisioning"
+
+ENV BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
+
+WORKDIR $GF_PATHS_HOME
+
 EXPOSE 3000
-# Patched entrypoint script.
-COPY --from=src-files /usr/src/app/packaging/docker/run.sh /run.sh
-ENTRYPOINT ["/run.sh"]
+
+ENTRYPOINT ["entrypoint"]

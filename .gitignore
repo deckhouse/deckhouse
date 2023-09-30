@@ -53,7 +53,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
-shell-operator
+/shell-operator
 
 # Helm lib
 deckhouse_lib_helm-*.tgz

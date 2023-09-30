@@ -33,6 +33,14 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd"]
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    kind: ClusterConfiguration
+    clusterType: Static
+    clusterDomain: "cluster.local"
+    kubernetesVersion: "1.25"
+    serviceSubnetCIDR: "10.222.0.0/16"
+    podSubnetCIDR: "10.111.0.0/16"
   modules:
     placement: {}
   discovery:
@@ -64,16 +72,44 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", "d8-chrony", "deckhouse-registry")
 
 			chronyDaemonSetTest := f.KubernetesResource("DaemonSet", "d8-chrony", "chrony")
+			chronyMasterDeploymentTest := f.KubernetesResource("Deployment", "d8-chrony", "chrony-master")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(chronyDaemonSetTest.Exists()).To(BeTrue())
-			Expect(chronyDaemonSetTest.Field("spec.template.spec.containers.0.env.0").String()).To(MatchJSON(`
-  {
-    "name": "NTP_SERVERS",
-    "value": "pool.ntp.org. ntp.ubuntu.com."
-  }
+			Expect(chronyMasterDeploymentTest.Exists()).To(BeTrue())
+			Expect(chronyDaemonSetTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
+        [
+          {
+            "name": "NTP_ROLE",
+            "value": "sink"
+          },
+          {
+            "name": "NTP_SERVERS",
+            "value": "pool.ntp.org. ntp.ubuntu.com."
+          },
+          {
+            "name": "CHRONY_MASTERS_SERVICE",
+            "value": "chrony-masters.d8-chrony.svc.cluster.local"
+          }
+        ]
+`))
+			Expect(chronyMasterDeploymentTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
+        [
+          {
+            "name": "NTP_ROLE",
+            "value": "source"
+          },
+          {
+            "name": "NTP_SERVERS",
+            "value": "pool.ntp.org. ntp.ubuntu.com."
+          },
+          {
+            "name": "POD_SUBNET",
+            "value": "10.111.0.0/16"
+          }
+        ]
 `))
 
 		})

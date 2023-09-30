@@ -20,9 +20,11 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var _ runtime.Object = (*Module)(nil)
 var ModuleGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Module"}
 
 // +genclient
@@ -78,18 +80,9 @@ func (m *Module) SetTags(tags []string) {
 }
 
 func (m *Module) SetSource(source string) {
-	if source == "" {
-		source = "Embedded"
-	}
-	m.Labels["type"] = "embedded"
-
-	if source != "Embedded" {
-		source = "External: " + source
-		m.Labels["type"] = "external"
-	}
-
 	m.Properties.Source = source
 }
+
 func (m *Module) SetEnabledState(enabled bool) {
 	if enabled {
 		m.Properties.State = "Enabled"

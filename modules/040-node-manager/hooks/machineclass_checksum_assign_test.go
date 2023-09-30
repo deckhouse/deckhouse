@@ -76,7 +76,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum calc
 - name: worker
   nodeType: CloudEphemeral
   cri:
-    type: Docker
+    type: Containerd
   kubernetesVersion: "1.23"
   manualRolloutID: ""
   updateEpoch: "112714"
@@ -180,7 +180,7 @@ spec: {}
                 "minPerZone": 3,
                 "zones": [ "nova" ]
             },
-            "cri": { "type": "Docker" },
+            "cri": { "type": "Containerd" },
             "disruptions": { "approvalMode": "Automatic" },
             "instanceClass": {
                 "flavorName": "m1.small",
@@ -313,7 +313,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.23"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: AWSInstanceClass
@@ -349,7 +349,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.23"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: GCPInstanceClass
@@ -385,7 +385,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.23"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: GCPInstanceClass
@@ -425,7 +425,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.23"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -447,7 +447,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.23"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -491,7 +491,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.23"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VsphereInstanceClass
@@ -537,7 +537,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.23"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: YandexInstanceClass

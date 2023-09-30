@@ -7,6 +7,6 @@
 - name: Etcd
   link: https://github.com/etcd-io/etcd
   description: A distributed reliable key-value store for the most critical data of a distributed system.
-  logo: https://cncf-branding.netlify.app/img/projects/etcd/icon/color/etcd-icon-color.svg
+  logo: /images/logos/etcd-icon-color.svg
   licence: Apache License 2.0
 

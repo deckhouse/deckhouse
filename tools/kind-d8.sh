@@ -15,7 +15,7 @@
 # limitations under the License.
 
 CONFIG_DIR=~/.kind-d8
-KIND_IMAGE=kindest/node:v1.23.13@sha256:e7968cda1b4ff790d5b0b5b0c29bda0404cdb825fd939fe50fd5accc43e3a730
+KIND_IMAGE=kindest/node:v1.25.9@sha256:c08d6c52820aa42e533b70bce0c2901183326d86dcdcbedecc9343681db45161
 D8_RELEASE_CHANNEL_TAG=stable
 D8_RELEASE_CHANNEL_NAME=Stable
 D8_REGISTRY_ADDRESS=registry.deckhouse.io
@@ -25,11 +25,11 @@ D8_LICENSE_KEY=
 KIND_INSTALL_DIRECTORY=$CONFIG_DIR
 KIND_PATH=kind
 KIND_CLUSTER_NAME=d8
-KIND_VERSION=v0.17.0
+KIND_VERSION=v0.19.0
 
 KUBECTL_INSTALL_DIRECTORY=$CONFIG_DIR
 KUBECTL_PATH=kubectl
-KUBECTL_VERSION=v1.23.13
+KUBECTL_VERSION=v1.25.9
 
 REQUIRE_MEMORY_MIN_BYTES=4000000000 # 4GB
 
@@ -262,14 +262,14 @@ You can find the installation instruction here: https://kubernetes.io/docs/tasks
 }
 
 kind_check() {
-  echo "Checking for kind..."
-  if command -v kind >/dev/null; then
-    echo "Detected kind..."
-  elif command -v ${KIND_INSTALL_DIRECTORY}/kind >/dev/null; then
+  echo "Checking for kind $KIND_VERSION..."
+  if [[ "v$(kind version -q 2>/dev/null)" == "$KIND_VERSION" ]]; then
+    echo "Detected kind $KIND_VERSION..."
+  elif [[ "v$(${KIND_INSTALL_DIRECTORY}/kind version -q 2>/dev/null)" == "$KIND_VERSION" ]]; then
     echo "Detected ${KIND_INSTALL_DIRECTORY}/kind..."
     KIND_PATH=${KIND_INSTALL_DIRECTORY}/kind
   else
-    echo "kind is not installed."
+    echo "kind is not installed or is not version $KIND_VERSION."
     while [[ "$should_install_kind" != "y" ]]; do
       read -rp "Install kind? y/[n]: " should_install_kind
 
@@ -294,6 +294,8 @@ You can find the installation instruction here: https://kind.sigs.k8s.io/docs/us
     fi
 
     echo "Installing kind to ${KIND_INSTALL_DIRECTORY}/kind ..."
+
+    mkdir -p ${KIND_INSTALL_DIRECTORY}
 
     curl -Lo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-${OS_NAME/mac/darwin}-${MACHINE_ARCH/x86_64/amd64}"
 
@@ -356,7 +358,6 @@ preinstall_checks() {
   done
 }
 configs_create() {
-  echo "Creating ${CONFIG_DIR} directory..."
   mkdir -p ${CONFIG_DIR}
 
   echo "Creating kind config file (${CONFIG_DIR}/kind.cfg)..."
@@ -424,6 +425,16 @@ spec:
 EOF
 }
 
+cluster_deletion_info() {
+
+    printf "
+To delete created cluster use the following command:
+
+    ${KIND_PATH} delete cluster --name "${KIND_CLUSTER_NAME}"
+
+"
+}
+
 cluster_create() {
 
   ${KIND_PATH} create cluster --name "${KIND_CLUSTER_NAME}" --image "${KIND_IMAGE}" --config "${CONFIG_DIR}/kind.cfg"
@@ -436,6 +447,7 @@ E.g., you can find programs that use these ports using the following command:
     sudo lsof -n -i TCP@0.0.0.0:80,443 -s TCP:LISTEN
 
 "
+    cluster_deletion_info
     exit 1
   fi
 
@@ -453,6 +465,7 @@ deckhouse_install() {
 
   if [ "$?" -ne "0" ]; then
     echo "Error installing Deckhouse!"
+    cluster_deletion_info
     exit 1
   fi
 }
@@ -465,14 +478,14 @@ ingress_check() {
   echo -n "Waiting for the Ingress controller to be ready..."
 
   while true; do
-    ingress_ready_pods=$(${KUBECTL_PATH} --context kind-"${KIND_CLUSTER_NAME}" -n d8-ingress-nginx get daemonset/controller-nginx -o jsonpath="{$.status.numberReady}" 2>/dev/null)
+    ingress_ready_pods=$(${KUBECTL_PATH} --context kind-"${KIND_CLUSTER_NAME}" -n d8-ingress-nginx get ads/controller-nginx -o jsonpath="{$.status.numberReady}" 2>/dev/null)
     if [ "$?" -ne "0" ]; then
       echo -n "."
       ((retries_count++))
       sleep 10
     else
       # Check Ingress readiness
-      if [ "$ingress_ready_pods" -eq "1" ]; then
+      if [ "$ingress_ready_pods" = "1" ]; then
         break
       else
         echo -n "."
@@ -485,13 +498,15 @@ ingress_check() {
       echo
       echo "Timeout waiting for the creation of Ingress controller!"
       echo
-      echo "Here is the output of the 'kubectl -n d8-ingress-nginx get ds controller-nginx -o wide' command:"
-      ${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-ingress-nginx get ds controller-nginx -o wide
+      echo "Here is the output of the 'kubectl -n d8-ingress-nginx get ads/controller-nginx -o wide' command:"
+      ${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-ingress-nginx get ads/controller-nginx -o wide
       echo
-      echo "Here is the output of the 'kubectl -n d8-ingress-nginx get po -l app=controller' command:"
-      ${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-ingress-nginx get po -l app=controller
+      echo "Here is the output of the 'kubectl -n d8-ingress-nginx get all' command:"
+      ${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-ingress-nginx get all
       echo
       echo "If the controller-nginx Pod is in the ContainerCreating status, you most likely have a slow connection. If so, wait a little longer until the controller-nginx Pod becomes Ready. After that, run the following command to get the admin password for Grafana: '${KUBECTL_PATH} --context kind-${KIND_CLUSTER_NAME} -n d8-system exec deploy/deckhouse -- sh -c \"deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'\""
+      echo
+      cluster_deletion_info
       exit 1
     fi
   done
@@ -513,14 +528,14 @@ generate_ee_access_string() {
 install_show_credentials() {
 
   local prometheus_password
-  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'")
+  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'")
   if [ "$?" -ne "0" ] || [ -z "$prometheus_password" ]; then
     printf "
 Error getting Prometheus password.
 
 Try to run the following command to get Prometheus password:
 
-    %s --context %s -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
+    %s --context %s -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
 
 " "${KUBECTL_PATH}" "kind-${KIND_CLUSTER_NAME}"
   else
@@ -541,7 +556,7 @@ You have installed Deckhouse Platform in kind!
 Don't forget that the default kubectl context has been changed to 'kind-${KIND_CLUSTER_NAME}'.
 
 Run '%s --context %s cluster-info' to see cluster info.
-Run '%s delete cluster --name %s' to remove cluster.
+Run '%s delete cluster --name %s' to delete the cluster.
 " "${KUBECTL_PATH}" "kind-${KIND_CLUSTER_NAME}" "${KIND_PATH}" "${KIND_CLUSTER_NAME}" >${CONFIG_DIR}/info.txt
 
   install_show_credentials >>${CONFIG_DIR}/info.txt

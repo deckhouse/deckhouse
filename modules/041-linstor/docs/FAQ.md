@@ -1,5 +1,6 @@
 ---
 title: "The linstor module: FAQ"
+description: LINSTOR Troubleshooting. What is difference between LVM and LVMThin? LINSTOR performance and reliability notes, comparison to Ceph. How to add existing LINSTOR LVM or LVMThin pool. How to configure Prometheus to use LINSTOR for storing data.
 ---
 
 ## What is difference between LVM and LVMThin?
@@ -11,7 +12,9 @@ Briefly:
 
 ## Performance and reliability notes, comparison to Ceph
 
-> You may be interested in our article ["Comparing Ceph, LINSTOR, Mayastor, and Vitastor storage performance in Kubernetes"](https://www.reddit.com/r/kubernetes/comments/v3tzze/comparing_ceph_linstor_mayastor_and_vitastor/).
+{% alert %}
+You may be interested in our article ["Comparing Ceph, LINSTOR, Mayastor, and Vitastor storage performance in Kubernetes"](https://www.reddit.com/r/kubernetes/comments/v3tzze/comparing_ceph_linstor_mayastor_and_vitastor/).
+{% endalert %}
 
 We take a practical view of the issue. A difference of several tens of percent — in practice it never matters. The difference is several times or more important.
 
@@ -90,8 +93,10 @@ kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-defa
 
 ## How to add existing LVM or LVMThin pool?
 
-> The general method is described in`[LINSTOR storage configuration](configuration.html#linstor-storage-configuration) page.
-> Unlike commands listed below it will automatically configure the StorageClasses as well.
+{% alert %}
+The general method is described in`[LINSTOR storage configuration](configuration.html#linstor-storage-configuration) page.
+Unlike commands listed below it will automatically configure the StorageClasses as well.
+{% endalert %}
 
 Example of adding an existing LVM pool:
 

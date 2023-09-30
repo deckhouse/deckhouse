@@ -58,6 +58,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 	}
 
 	indexedFields := []string{
+		"datetime",
 		"namespace",
 		"container",
 		"image",

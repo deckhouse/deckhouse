@@ -53,6 +53,8 @@ type VirtualMachineSpec struct {
 	Affinity *v1.Affinity `json:"affinity,omitempty"`
 	// TopologySpreadConstraints specifies how to spread matching pods among the given topology.
 	TopologySpreadConstraints []v1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+	// PriorityClassName indicates the pod's priority.
+	PriorityClassName string `json:"priorityClassName,omitempty"`
 }
 
 // The observed state of `VirtualMachine`.
