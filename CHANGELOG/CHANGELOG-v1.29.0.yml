@@ -1,11 +1,3 @@
-bashible:
-  fixes:
-    - description: Disable ntp.service on nodes due to d8-chrony module is work.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/568
-    - description: Fix incorrect auth value for containerd config only
-      pull_request: https://github.com/deckhouse/deckhouse/pull/521
-    - description: Cluster bootstrap on Azure works for Ubuntu 20.04
-      pull_request: https://github.com/deckhouse/deckhouse/pull/422
 cert-manager:
   features:
     - description: Upgrade cert-manager to v1.6.1
