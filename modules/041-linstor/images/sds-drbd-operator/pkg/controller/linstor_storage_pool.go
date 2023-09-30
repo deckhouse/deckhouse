@@ -232,7 +232,7 @@ func NewLinstorStoragePool(
 					return
 				}
 
-				var name, vg string
+				var vg string
 				var lvmType lclient.ProviderKind
 
 				log.Info("-------------------- LVM Group ---------------------------")
