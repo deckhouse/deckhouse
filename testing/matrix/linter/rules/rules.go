@@ -152,7 +152,7 @@ func containersReadinessProbesValid(object storage.StoreObject, containers []v1.
 				"CONTAINER00X",
 				object.Identity()+"; container = "+c.Name,
 				c,
-				"Container rediness probes should be unspecified",
+				"Container rediness probes should be specified",
 			))
 		}
 	}
