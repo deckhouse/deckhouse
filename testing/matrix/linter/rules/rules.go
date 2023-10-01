@@ -137,7 +137,7 @@ func containersLivenessProbesValid(object storage.StoreObject, containers []v1.C
 				"CONTAINER00X",
 				object.Identity()+"; container = "+c.Name,
 				c,
-				"Container liveness probes should be unspecified",
+				"Container liveness probes should be specified",
 			))
 		}
 	}
