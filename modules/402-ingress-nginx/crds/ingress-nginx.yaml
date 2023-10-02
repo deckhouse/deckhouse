@@ -68,7 +68,7 @@ spec:
                     After setting this parameter, the `sidecar.istio.io/inject: "true"` and `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"` annotations will be attached to the ingress-controller pods. During pod creation, the Istio's mutating webhook will add the sidecar to it. After that, the sidecar will catch the network traffic to Service CIDR.
 
                     To use this feature in your application, you must add these annotations to your Ingress resources:
-                    * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the ingress-controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress-controller's sidecar is only catching traffic directed to Service CIDR.
+                    * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the ingress-controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Istio sidecar containers only catching traffic directed to Service CIDR.
                     * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar can identify the application service that serves requests.
                 waitLoadBalancerOnTerminating:
                   x-kubernetes-int-or-string: true
