@@ -224,7 +224,7 @@ $PUBLIC_IP api.example.com
 $PUBLIC_IP argocd.example.com
 $PUBLIC_IP cdi-uploadproxy.example.com
 $PUBLIC_IP dashboard.example.com
-$PUBLIC_IP deckhouse.example.com
+$PUBLIC_IP documentation.example.com
 $PUBLIC_IP dex.example.com
 $PUBLIC_IP grafana.example.com
 $PUBLIC_IP hubble.example.com

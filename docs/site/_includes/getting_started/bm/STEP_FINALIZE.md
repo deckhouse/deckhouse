@@ -2,23 +2,64 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-At this point, you have created a basic **single-master** cluster.
+На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. Так как на master-узле по умолчанию работает только ограниченный набор системных компонентов, для полноценной работы кластера необходимо <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавить в кластер</a> хотя бы один worker-узел.
 
-<strong>Please note</strong> that at the moment only system components work on it!
+{% offtopic title="Если вам достаточно одного master-узла..." %}
+<div>
+<p>Если вы развернули кластер <strong>для ознакомительных целей</strong>, то кластера из одного узла может быть достаточно. Для того чтобы разрешить остальным компонентам Deckhouse работать на master-узле, необходимо снять с master-узла taint, выполнив на нем следующую команду:</p>
 
-For the cluster to work properly, it is necessary:
+<div markdown="0">
+{% snippetcut %}
+```bash
+sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+```
+{% endsnippetcut %}
+</div>
+
+<p><strong>Выполнять дальнейшие шаги по добавлению нового узла в кластер не нужно!</strong></p>
+</div>
+{%- endofftopic %}
+
+Добавьте узел в кластер:
+
 <ul>
-  <li><p>or <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">add nodes to the cluster</a> and familiarize yourself with <a href="/documentation/v1/modules/040-node-manager/">node management</a> (recommended for production environments and test environments);</p></li>
-  <li><p>or, if you have deployed a cluster <strong>for informational purposes</strong>, and one node is enough for you, allow the rest of the Deckhouse components to work on the master node. To do this, remove taint from the master node by running the following command on the master node:</p>
+  <li>
+    Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
+  </li>
+  <li>
+    Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:
+    {% snippetcut %}
+  ```bash
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+EOF
+  ```
+    {% endsnippetcut %}
+  </li>
+  <li>
+    Deckhouse подготовит скрипт, необходимый для настройки будущего узла и включения его в кластер. Выведите его содержимое в формате Base64 (оно понадобится на следующем шаге):
+    {% snippetcut %}
+  ```bash
+kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+  ```
+  {% endsnippetcut %}
+  </li>
+  <li>
+    <strong> На подготовленной виртуальной машине</strong> выполните следующую команду, вставив код скрипта, полученный на предыдущем шаге:
   {% snippetcut %}
   ```bash
-sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
   ```
   {% endsnippetcut %}
   </li>
 </ul>
 
-It may take some time to start Deckhouse components.
+<p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
 
 Before you go further:
 <ul><li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
@@ -87,6 +128,45 @@ NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {%- endofftopic %}
+</li>
+<li><p><strong>Создание StorageClass</strong></p>
+<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-monitoring
+spec:
+  nodeGroups:
+  - worker
+  path: "/opt/local-path-provisioner"
+EOF
+```
+{% endsnippetcut %}
+
+<li><p><strong>Настройка Prometheus</strong></p>
+
+Настройте Prometheus на использование созданного StorageClass'а (это позволит не терять данные при перезапуске Prometheus). Выполните на <strong>master-узле</strong> следующую команду:
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  enabled: true
+  settings:
+    longtermStorageClass: localpath-system
+    storageClass: localpath-monitoring
+  version: 2
+EOF
+```
+{% endsnippetcut %}
+</li>
+
 </li>
 <li><p><strong>Create a user</strong> to access the cluster web interfaces</p>
 <p>Create on the <strong>master node</strong> the <code>user.yml</code> file containing the user account data and access rights:</p>
