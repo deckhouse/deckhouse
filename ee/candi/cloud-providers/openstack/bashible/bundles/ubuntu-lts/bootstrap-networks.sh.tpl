@@ -24,18 +24,18 @@ for i in /sys/class/net/!(${configured_ifnames_pattern%?}); do
 }
 
 function cat_file() {
-  dev=$1
-  metric=$2
-  mac=$3
+  cat_dev=$1
+  cat_metric=$2
+  cat_mac=$3
   cat > /etc/netplan/100-cim-"$dev".yaml <<BOOTSTRAP_NETWORK_EOF
 network:
   version: 2
   ethernets:
-    $cim_dev:
+    $cat_dev:
       dhcp4-overrides:
-        route-metric: $metric
+        route-metric: $cat_metric
       match:
-        macaddress: $mac
+        macaddress: $cat_mac
 BOOTSTRAP_NETWORK_EOF
 }
 
