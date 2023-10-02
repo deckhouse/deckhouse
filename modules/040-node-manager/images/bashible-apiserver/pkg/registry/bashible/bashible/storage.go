@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"d8.io/bashible/pkg/apis/bashible"
-	"d8.io/bashible/pkg/template"
+	"bashible-apiserver/pkg/apis/bashible"
+	"bashible-apiserver/pkg/template"
 )
 
 const templateName = "bashible.sh.tpl"

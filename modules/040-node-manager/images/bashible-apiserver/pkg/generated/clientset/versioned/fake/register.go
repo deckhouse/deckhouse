@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	bashiblev1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	bashiblev1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -28,10 +28,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
-var (
-	scheme = runtime.NewScheme()
-	codecs = serializer.NewCodecFactory(scheme)
-)
+var scheme = runtime.NewScheme()
+var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
 	bashiblev1alpha1.AddToScheme,

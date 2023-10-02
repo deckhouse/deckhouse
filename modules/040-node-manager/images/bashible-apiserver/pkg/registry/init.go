@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,11 +17,13 @@ limitations under the License.
 package registry
 
 import (
+	"bashible-apiserver/pkg/registry/bashible/bootstrap"
+
 	"k8s.io/apiserver/pkg/registry/rest"
 
-	"d8.io/bashible/pkg/registry/bashible/bashible"
-	"d8.io/bashible/pkg/registry/bashible/nodegroupbundle"
-	"d8.io/bashible/pkg/template"
+	"bashible-apiserver/pkg/registry/bashible/bashible"
+	"bashible-apiserver/pkg/registry/bashible/nodegroupbundle"
+	"bashible-apiserver/pkg/template"
 )
 
 func GetStorage(rootDir string, bashibleContext *template.BashibleContext, stepsStorage *template.StepsStorage, manager CachesManager) map[string]rest.Storage {
@@ -32,6 +34,9 @@ func GetStorage(rootDir string, bashibleContext *template.BashibleContext, steps
 
 	ngStorage, err := nodegroupbundle.NewStorage(rootDir, stepsStorage, bashibleContext)
 	v1alpha1storage["nodegroupbundles"] = RESTInPeace(ngStorage, err, manager.GetCache())
+
+	bootstrapStorage, err := bootstrap.NewStorage(rootDir, bashibleContext)
+	v1alpha1storage["bootstrap"] = RESTBootstrapInPeace(bootstrapStorage, err, manager.GetCache())
 
 	return v1alpha1storage
 }

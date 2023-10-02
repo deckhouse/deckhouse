@@ -19,11 +19,13 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
+	bashiblev1alpha1 "bashible-apiserver/pkg/generated/applyconfiguration/bashible/v1alpha1"
+	scheme "bashible-apiserver/pkg/generated/clientset/versioned/scheme"
 	"context"
+	json "encoding/json"
+	"fmt"
 	"time"
-
-	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
-	scheme "d8.io/bashible/pkg/generated/clientset/versioned/scheme"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -47,6 +49,7 @@ type NodeGroupBundleInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.NodeGroupBundleList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.NodeGroupBundle, err error)
+	Apply(ctx context.Context, nodeGroupBundle *bashiblev1alpha1.NodeGroupBundleApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.NodeGroupBundle, err error)
 	NodeGroupBundleExpansion
 }
 
@@ -162,6 +165,31 @@ func (c *nodeGroupBundles) Patch(ctx context.Context, name string, pt types.Patc
 		Name(name).
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(data).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied nodeGroupBundle.
+func (c *nodeGroupBundles) Apply(ctx context.Context, nodeGroupBundle *bashiblev1alpha1.NodeGroupBundleApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.NodeGroupBundle, err error) {
+	if nodeGroupBundle == nil {
+		return nil, fmt.Errorf("nodeGroupBundle provided to Apply must not be nil")
+	}
+	patchOpts := opts.ToPatchOptions()
+	data, err := json.Marshal(nodeGroupBundle)
+	if err != nil {
+		return nil, err
+	}
+	name := nodeGroupBundle.Name
+	if name == nil {
+		return nil, fmt.Errorf("nodeGroupBundle.Name must be provided to Apply")
+	}
+	result = &v1alpha1.NodeGroupBundle{}
+	err = c.client.Patch(types.ApplyPatchType).
+		Resource("nodegroupbundles").
+		Name(*name).
+		VersionedParams(&patchOpts, scheme.ParameterCodec).
 		Body(data).
 		Do(ctx).
 		Into(result)

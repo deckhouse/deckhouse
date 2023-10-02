@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,10 +28,11 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
-	"d8.io/bashible/pkg/apis/bashible/v1alpha1"
-	"d8.io/bashible/pkg/apiserver"
-	"d8.io/bashible/pkg/apiserver/readyz"
-	bashibleopenapi "d8.io/bashible/pkg/generated/openapi"
+	"bashible-apiserver/pkg/apiserver"
+	"bashible-apiserver/pkg/apiserver/readyz"
+	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
+
+	"bashible-apiserver/pkg/apis/bashible/v1alpha1"
 )
 
 // BashibleServerOptions contains state for master/api server
@@ -105,12 +106,11 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 
-	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIConfig(
 		bashibleopenapi.GetOpenAPIDefinitions,
 		openapi.NewDefinitionNamer(apiserver.Scheme))
-	serverConfig.OpenAPIConfig.Info.Title = "Bashible"
-	serverConfig.OpenAPIConfig.Info.Version = "0.1"
-
+	serverConfig.OpenAPIV3Config.Info.Title = "Bashible"
+	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
 	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
 		return nil, err
 	}

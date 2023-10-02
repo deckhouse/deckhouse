@@ -76,7 +76,6 @@ spec:
           - "--bind-address=$(HOST_IP)"
           - "--cert-dir=/var/certs"
           - "--secure-port=10423"
-          - "--v=2"
         env:
         - name: HOST_IP
           valueFrom:

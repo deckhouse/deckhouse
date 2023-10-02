@@ -34,9 +34,10 @@ const (
 )
 
 type saveFromTo struct {
-	from string
-	to   string
-	data map[string]interface{}
+	from        string
+	to          string
+	data        map[string]interface{}
+	ignorePaths map[string]struct{}
 }
 
 func logTemplatesData(name string, data map[string]interface{}) {
@@ -100,6 +101,9 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 			from: candiBashibleDir,
 			to:   bashibleDir,
 			data: templateData,
+			ignorePaths: map[string]struct{}{
+				filepath.Join(candiBashibleDir, "bootstrap.sh.tpl"): {},
+			},
 		},
 	}
 
@@ -137,7 +141,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 
 	for _, info := range saveInfo {
 		log.InfoF("From %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
+		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
 			return err
 		}
 	}
@@ -169,7 +173,7 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 	}
 	for _, info := range saveInfo {
 		log.InfoF("From %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
+		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
 			return err
 		}
 	}

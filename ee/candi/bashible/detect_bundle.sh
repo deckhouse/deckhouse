@@ -1,8 +1,8 @@
 #!/bin/bash
-{{- /*
+
 # Copyright 2022 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
-*/}}
+
 function name_is_not_supported() {
     >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
     exit 1
@@ -71,9 +71,8 @@ case "$ID" in
     exit 1
   ;;
 esac
-{{- /*
+
 # try to determine os by ID_LIKE
-*/}}
 for ID in $ID_LIKE; do
   case "$ID" in
     centos|rhel)
@@ -87,9 +86,8 @@ for ID in $ID_LIKE; do
     ;;
   esac
 done
-{{- /*
+
 # try to determine os by packet manager
-*/}}
 bundle="debian"
 if yum -q --version >/dev/null 2>/dev/null; then
   bundle="centos"

@@ -1,6 +1,6 @@
 ---
 artifact: apiserver
-from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/040-node-manager/images/bashible-apiserver
   to: /src
@@ -41,9 +41,9 @@ import:
   to: /bashible-apiserver
   before: setup
 git:
-{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) | replace "/deckhouse/candi" "/bashible/templates" }}
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 - add: /{{ .ModulePath }}candi/bashible
-  to: /bashible/templates/bashible
+  to: /deckhouse/candi/bashible
   stageDependencies:
     beforeSetup:
     - "*"
@@ -51,11 +51,11 @@ git:
   - bundles
   - common-steps
   - bashible.sh.tpl
+  - bootstrap.sh.tpl
   excludePaths:
-  - "**/bootstrap.sh.tpl"
   - "**/cluster-bootstrap"
 - add: /{{ .ModulePath }}candi/cloud-providers
-  to: /bashible/templates/cloud-providers
+  to: /deckhouse/candi/cloud-providers
   stageDependencies:
     beforeSetup:
     - "*"
