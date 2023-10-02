@@ -65,18 +65,13 @@ type Runner struct {
 
 	excludedNodes map[string]bool
 	skipPhases    map[Phase]bool
+	commanderMode bool
 
 	stateCache dstate.Cache
 }
 
-type RunnerOptions struct {
-	PhasedExecutionContext *phases.PhasedExecutionContext
-}
-
-func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateCache dstate.Cache, opts RunnerOptions) *Runner {
+func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateCache dstate.Cache) *Runner {
 	return &Runner{
-		PhasedExecutionContext: opts.PhasedExecutionContext,
-
 		kubeCl:         kubeCl,
 		changeSettings: &terraform.ChangeActionSettings{},
 		lockRunner:     lockRunner,
@@ -85,6 +80,16 @@ func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateC
 		skipPhases:    make(map[Phase]bool),
 		stateCache:    stateCache,
 	}
+}
+
+func (r *Runner) WithCommanderMode(commanderMode bool) *Runner {
+	r.commanderMode = commanderMode
+	return r
+}
+
+func (r *Runner) WithPhasedExecutionContext(pec *phases.PhasedExecutionContext) *Runner {
+	r.PhasedExecutionContext = pec
+	return r
 }
 
 func (r *Runner) WithChangeSettings(changeSettings *terraform.ChangeActionSettings) *Runner {
@@ -214,6 +219,7 @@ func (r *Runner) converge() error {
 		ngState := nodesState[nodeGroupName]
 		controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache)
 		controller.WithChangeSettings(r.changeSettings)
+		controller.WithCommanderMode(r.commanderMode)
 		controller.WithExcludedNodes(r.excludedNodes)
 
 		if err := controller.Run(); err != nil {
@@ -242,9 +248,12 @@ func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", r.stateCache).
 			WithSkipChangesOnDeny(true).
 			WithVariables(metaConfig.MarshalConfig()).
-			WithState(clusterState).
 			WithAutoDismissDestructiveChanges(r.changeSettings.AutoDismissDestructive).
 			WithAutoApprove(r.changeSettings.AutoApprove)
+		if !r.commanderMode {
+			baseRunner = baseRunner.WithState(clusterState)
+		}
+
 		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
 		baseRunner.WithAdditionalStateSaverDestination(NewClusterStateSaver(r.kubeCl))
@@ -297,6 +306,8 @@ type NodeGroupController struct {
 	nodeToHost map[string]string
 	name       string
 	state      NodeGroupTerraformState
+
+	commanderMode bool
 }
 
 type NodeGroupGroupOptions struct {
@@ -322,6 +333,11 @@ func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.M
 		name:  name,
 		state: state,
 	}
+}
+
+func (c *NodeGroupController) WithCommanderMode(commanderMode bool) *NodeGroupController {
+	c.commanderMode = commanderMode
+	return c
 }
 
 func (c *NodeGroupController) WithChangeSettings(changeSettings *terraform.ChangeActionSettings) *NodeGroupController {
@@ -500,11 +516,13 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
 		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, nodeIndex, nodeGroup.CloudConfig)).
 		WithSkipChangesOnDeny(true).
-		WithState(state).
 		WithName(nodeName).
 		WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive).
 		WithAutoApprove(c.changeSettings.AutoApprove).
 		WithHook(checker)
+	if !c.commanderMode {
+		nodeRunner = nodeRunner.WithState(state)
+	}
 
 	tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
 
@@ -582,11 +600,13 @@ func (c *NodeGroupController) deleteRedundantNodes(nodeGroup *NodeGroupGroupOpti
 
 		nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
 			WithVariables(cfg.NodeGroupConfig(nodeGroup.Name, nodeIndex, nodeGroup.CloudConfig)).
-			WithState(state).
 			WithName(name).
 			WithAllowedCachedState(true).
 			WithSkipChangesOnDeny(true).
 			WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive)
+		if !c.commanderMode {
+			nodeRunner = nodeRunner.WithState(state)
+		}
 
 		tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
