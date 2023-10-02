@@ -27,7 +27,7 @@ function cat_file() {
   cat_dev=$1
   cat_metric=$2
   cat_mac=$3
-  cat > /etc/netplan/100-cim-"$dev".yaml <<BOOTSTRAP_NETWORK_EOF
+  cat > /etc/netplan/100-cim-"$cat_dev".yaml <<BOOTSTRAP_NETWORK_EOF
 network:
   version: 2
   ethernets:
