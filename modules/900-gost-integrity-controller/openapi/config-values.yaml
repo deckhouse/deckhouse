@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 properties:
   logLevel:
@@ -12,7 +13,6 @@ properties:
     description: Allow image references to be fetched without TLS.
   cacheEviction:
     type: integer
-    format: int64
     default: 60
     description: Cache eviction duration in seconds.
   defaultRegistry:
