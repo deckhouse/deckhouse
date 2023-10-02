@@ -248,7 +248,7 @@ Use the command below to calculate the password hash:
 echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'
 ```
 
-Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
+Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
 
 {% raw %}
 
