@@ -3,7 +3,7 @@
   {{- if $value.ccm.aws }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-fromImage: cloud-provider-aws/distroless
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/aws-cloud-controller-manager
@@ -11,6 +11,23 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["/usr/local/bin/aws-cloud-controller-manager"]
+# ---
+# artifact: {{ .ModuleName }}/distroless-{{ .ModuleName }}-artifact
+# from: {{ .Images.BASE_ALPINE }}
+# fromCacheVersion: 1
+# git:
+# - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}
+#   to: /workdir/
+#   includePaths:
+#   - '**/file-filter'
+# shell:
+#   install:
+#     - cd /workdir
+#     - apk update
+#     - apk add rsync
+#     - apk fetch -R -o . nginx nginx-mod-stream
+#     - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
+#     - mkdir /filtered-apk && rsync -av --include-from=file-filter --include='*/' --exclude '*' /apk/ /filtered-apk/
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.27" $version }}
