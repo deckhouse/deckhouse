@@ -1,0 +1,162 @@
+admission-policy-engine:
+  features:
+    - summary: >-
+        Add `external-data` and `trivy-provider` for the gatekeeper to prevent the container from
+        starting if high or critical CVEs are found in the image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5376
+candi:
+  fixes:
+    - summary: Client will get an error of missing shell-command in `bootstrap.sh`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5864
+    - summary: Delete registrypackage files if it failed to install before retrying installation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5739
+chrony:
+  features:
+    - summary: Master nodes act as NTP servers for cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5802
+ci:
+  features:
+    - summary: Add Kubernetes 1.28 e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5872
+cloud-provider-yandex:
+  fixes:
+    - summary: >-
+        Updated yandex-csi-driver. In the new version, the calculation of the limit of disks per
+        node has been fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5679
+control-plane-manager:
+  features:
+    - summary: All images are now based on distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5509
+deckhouse:
+  fixes:
+    - summary: Forbid changes to `podSubnetNodeCIDRPrefix` in a running cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5792
+dhctl:
+  features:
+    - summary: Revert
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5977
+    - summary: >-
+        Prepare dhctl for commander usage (reverted in
+        https://github.com/deckhouse/deckhouse/pull/5977).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5893
+    - summary: >-
+        Check `dhctl` compatibility with Deckhouse before bootstrapping (reverted in
+        https://github.com/deckhouse/deckhouse/pull/5977).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5832
+  fixes:
+    - summary: Fix restarting bootstrap process.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5892
+    - summary: Add `registryDockerCfg` validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5829
+docs:
+  fixes:
+    - summary: Refactor vSphere Getting Started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5743
+external-module-manager:
+  fixes:
+    - summary: >-
+        Handle deployed source modules with absent version directory. Avoid infinite deckhouse
+        restart on absent module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5994
+flant-integration:
+  fixes:
+    - summary: Fix `connect` response handling with respect of status code instead of error message.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5765
+ingress-nginx:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5937
+  fixes:
+    - summary: Add postpone updates for main controller of `HostWithFailover` inlet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5988
+    - summary: Fix controller preStop probe.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5948
+      impact: Ingress controller will restart.
+linstor:
+  features:
+    - summary: Update linstor controller version to `1.24.2`. Update DRBD version to `9.2.5`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5800
+      impact: Linstor controller and piraeus operator will restart.
+log-shipper:
+  features:
+    - summary: Suppress metrics timestamp to avoid out-of-order ingestion error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5835
+  fixes:
+    - summary: Fix validation for the buffer `ClusterLogDestination` schema.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5925
+    - summary: Add stricter validation for label selectors. Prevents the Deckhouse pods from panicking.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5925
+    - summary: >-
+        Fix custom multiline parser validation for `PodLoggingConfig` (previously, it was impossible
+        to use the Custom type due to a validation bug).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5925
+    - summary: Remove `libssl1.1_1.1.1f-1ubuntu2.17_amd64.deb` from the final image after installation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5794
+monitoring-applications:
+  features:
+    - summary: Add Grafana dashboard for pgbouncer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5846
+    - summary: Update Grafana dashboard for Elasticsearch. Add minimal alert rules for Prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5845
+    - summary: Added Grafana dashboard for displaying PHP-FPM queue status and slow requests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5843
+monitoring-kubernetes:
+  features:
+    - summary: Images are based on a distroless image. Bumped `node-exporter` version to `1.6.1`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5515
+  fixes:
+    - summary: Improve filtering in the Capacity Planning dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5880
+multitenancy-manager:
+  fixes:
+    - summary: When trying to delete a projectType used in a project, an error with project name displayed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5744
+node-manager:
+  features:
+    - summary: All images are now based on distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5520
+operator-prometheus:
+  features:
+    - summary: Add `EndpointSlice` support for service discovery.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5856
+operator-trivy:
+  features:
+    - summary: Add a flag to use BDU vulnerabilities instead of CVE in the vulnerability reports.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5678
+    - summary: All images are now based on distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5521
+    - summary: Run `operator-trivy` in client-server mode. Update `trivy` and `trivy-operator` versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5376
+prometheus:
+  features:
+    - summary: Add alert about `ServiceMonitors` with deprecated relabelings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5856
+  fixes:
+    - summary: Remove unused config for longterm Prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5856
+    - summary: >-
+        Clarify description and formula for the oldest metrics panel on the starting page of
+        Grafana.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5712
+runtime-audit-engine:
+  features:
+    - summary: Improve documentation and add advanced usage documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5168
+testing:
+  fixes:
+    - summary: Fix openapi validation rules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5801
+tools:
+  features:
+    - summary: An easily expandable tool that should help render helm templates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5702
+user-authn:
+  fixes:
+    - summary: Fixed a bug in the example Group object.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5936
+user-authz:
+  features:
+    - summary: All images are now based on distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5511
+
