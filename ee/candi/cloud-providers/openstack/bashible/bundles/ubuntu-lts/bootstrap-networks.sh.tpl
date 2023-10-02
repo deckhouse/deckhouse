@@ -58,9 +58,9 @@ if [[ "$count_default" -gt "1" ]]; then
       metric=100
       for i in $configured_ifnames_pattern; do
         cim_dev=$i
-        cim_mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
+        cim_mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$cim_dev" '.[] | select(.ifname == $ifname) | .address')"
         cim_metric=$metric
-        let metric+=100
+        metric=$((metric + 100))
         cat_file "$cim_dev" "$cim_metric" "$cim_mac"
       done
       netplan generate
