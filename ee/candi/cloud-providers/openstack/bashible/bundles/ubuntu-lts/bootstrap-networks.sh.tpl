@@ -51,18 +51,20 @@ if [[ "$count_default" -gt "1" ]]; then
   done
   count_configured_ifnames=$(echo $configured_ifnames_pattern | wc -w)
   if [[ "$count_configured_ifnames" -gt "1" ]]; then
+    set +e
     check_metric=$(grep -Po '(?<=route-metric: ).+' /etc/netplan/50-cloud-init.yaml | wc -l)
+    set -e
     if [[ "$check_metric" -eq "0" ]]; then
       metric=100
       for i in $configured_ifnames_pattern; do
         cim_dev=$i
         cim_mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
         cim_metric=$metric
-        metric=$(expr $metric + 100)
+        let metric+=100
         cat_file "$cim_dev" "$cim_metric" "$cim_mac"
-        netplan generate
-        netplan apply
       done
+      netplan generate
+      netplan apply
     fi
   fi
 fi
