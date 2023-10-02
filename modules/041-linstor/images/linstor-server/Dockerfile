@@ -4,7 +4,7 @@ ARG BASE_GOLANG_19_BULLSEYE
 FROM $BASE_UBUNTU as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
-ARG LINSTOR_VERSION=1.24.1
+ARG LINSTOR_VERSION=1.24.2
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -127,7 +127,7 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_UBUNTU
 ARG PIRAEUS_GITREPO=https://github.com/piraeusdatastore/piraeus
-ARG PIRAEUS_COMMIT_REF=01411fc6fe7f329fb91a64ba67d882c24dfcb3c6
+ARG PIRAEUS_COMMIT_REF=20e96f83f52631dc06d011b7f96293d4026236a1
 
 COPY --from=linstor-builder /linstor-common_*.deb /linstor-controller_*.deb /linstor-satellite_*.deb /packages/
 COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages/
