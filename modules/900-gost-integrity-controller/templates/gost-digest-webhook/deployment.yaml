@@ -25,8 +25,8 @@ spec:
       minAllowed:
         {{- include "gost_integrity_controller_gost_digest_webhook_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 100m
-        memory: 100Mi
+        cpu: 200m
+        memory: 200Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
