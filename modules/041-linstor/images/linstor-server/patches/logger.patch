@@ -237,25 +237,27 @@ index 95ad756ff..88e1992e0 100644
      {
          VOLUME("volume"), SNAPSHOT("snapshot"), THIN_POOL("thin pool");
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
-index a63c78cba..7549f6f28 100644
+index a63c78cba..28ac5c0da 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
-@@ -12,10 +12,10 @@ import com.linbit.linstor.storage.StorageException;
+@@ -11,11 +11,12 @@ import com.linbit.extproc.ExtCmdUtils;
+ import com.linbit.linstor.storage.StorageException;
  import com.linbit.utils.StringUtils;
  
++import java.io.BufferedReader;
  import java.io.IOException;
 -import java.util.ArrayList;
 -import java.util.Collection;
 -import java.util.Collections;
 -import java.util.List;
-+import java.nio.charset.StandardCharsets;
++import java.io.InputStreamReader;
 +import java.time.LocalDateTime;
 +import java.time.format.DateTimeFormatter;
 +import java.util.*;
  
  public class Commands
  {
-@@ -77,6 +77,23 @@ public class Commands
+@@ -77,6 +78,23 @@ public class Commands
          try
          {
              outData = extCmd.exec(command);
@@ -279,7 +281,7 @@ index a63c78cba..7549f6f28 100644
  
              boolean skipExitCodeCheck = false;
              while (!(outData.exitCode == ExtCmdUtils.DEFAULT_RET_CODE_OK || allowExitCodes.contains(outData.exitCode)))
-@@ -121,7 +138,6 @@ public class Commands
+@@ -121,7 +139,6 @@ public class Commands
                  exc
              );
          }
@@ -287,3 +289,53 @@ index a63c78cba..7549f6f28 100644
          return outData;
      }
  
+@@ -189,14 +206,24 @@ public class Commands
+         ExtCmd extCmd,
+         String devicePath
+     )
+-        throws StorageException
+-    {
++            throws StorageException, IOException {
++
++        // ------------ SymbolicLinkCheck
++        new CheckSymLink().Check(devicePath);
++        // ------------ SymbolicLinkCheck
++
+         OutputData output = genericExecutor(
+             extCmd,
+             new String[] {"blockdev", "--getsize64", devicePath},
+             "Failed to get block size of " + devicePath,
+             "Failed to get block size of " + devicePath
+         );
++        if (output.exitCode != 0)
++        {
++            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd/HH:mm:ss:SSS");
++            LocalDateTime now = LocalDateTime.now();
++            System.out.println(dtf.format(now) + " [lvresize-faceslapper activated]");
++        }
+         String outRaw = new String(output.stdoutData);
+         return SizeConv.convert(
+             Long.parseLong(outRaw.trim()),
+@@ -238,4 +265,22 @@ public class Commands
+     private Commands()
+     {
+     }
++
++
++}
++
++class CheckSymLink {
++    void Check(String filename) throws IOException {
++        Process p = Runtime.getRuntime().exec("ls -l " + filename);
++        BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
++        String inputLine;
++        Integer count = 0;
++        while ((inputLine = in.readLine()) != null) {
++            System.out.println(inputLine);
++            count++;
++        }
++        if (count == 0) {
++            System.out.println("[Error symlink]" + filename);
++        }
++    }
+ }
