@@ -19,11 +19,14 @@ properties:
 
   denyVulnerableImages:
     description: |
-      Настройки trivy провайдера.
-      Trivy провайдер запрещает создание `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` с образами, которые имеют уязвимости в пространствах имен с лейблом `security.deckhouse.io/trivy-provider: ""`.
+      Настройки trivy-провайдера.
+
+      Trivy-провайдер запрещает создание `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` с образами, которые имеют уязвимости в пространствах имен с лейблом `security.deckhouse.io/trivy-provider: ""`.
     properties:
       enabled:
-        description: "включить trivy-provider (только в EE)"
+        description: "Включить trivy-провайдер."
       registrySecrets:
         description: |
-          Секреты для приватных регистри для загрузки образов.
+          Список дополнительных секретов приватных регистри.
+
+          По умолчанию для загрузки образов для сканирования используется секрет `deckhouse-registry`.

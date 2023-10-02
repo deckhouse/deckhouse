@@ -45,12 +45,15 @@ properties:
       enabled:
         type: boolean
         default: false
-        description: "enable trivy provider (EE only)"
+        x-doc-d8Revision: ee
+        description: "Enable trivy provider."
       registrySecrets:
         type: array
         default: []
         description: |
-          Additional registry secrets to use for downloading images from private registries. By default, only `deckhouse-registry` secret is used. If you store all images in the same registry, you don't have to pass more secrets here.
+          List of additional registry secrets to use for downloading images from private registries.
+
+          By default, the `deckhouse-registry` secret is used to download images for scanning.
         items:
           type: object
           required:
