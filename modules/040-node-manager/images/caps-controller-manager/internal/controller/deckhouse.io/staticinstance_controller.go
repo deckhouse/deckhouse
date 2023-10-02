@@ -87,6 +87,10 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	defer func() {
 		err := instanceScope.Close(ctx)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return
+			}
+
 			logger.Error(err, "failed to close instance scope")
 		}
 	}()
