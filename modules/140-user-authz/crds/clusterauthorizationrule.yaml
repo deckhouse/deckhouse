@@ -216,14 +216,19 @@ spec:
 
                     Is available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter is enabled.
                   type: object
-                  required:
-                    - labelSelector
+                  oneOf:
+                    - required: ["labelSelector"]
+                    - required: ["matchAny"]
                   properties:
+                    matchAny:
+                      description: |
+                        Permits access to any namespace in the cluster, including system namespaces.
+                      type: boolean
                     labelSelector:
                       description: |
-                         Defines label selector-based filter of namespaces.
+                        Defines label selector-based filter of namespaces.
 
-                         If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
+                        If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
                       type: object
                       minProperties: 1
                       properties:

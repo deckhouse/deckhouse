@@ -116,6 +116,9 @@ spec:
 
                     **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
                   properties:
+                    matchAny:
+                      description: |
+                        Разрешить доступ к любому namespace, включая системные.
                     labelSelector:
                       description: |
                         Настройка фильтра меток (label) пространств имен.
