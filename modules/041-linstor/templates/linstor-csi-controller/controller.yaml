@@ -1,0 +1,47 @@
+###
+### controller
+###
+
+
+  {{- define "csi_controller_args" }}
+- "--csi-endpoint=unix:///csi/csi.sock"
+- "--node=$(KUBE_NODE_NAME)"
+- "--linstor-endpoint=$(LS_CONTROLLERS)"
+- "--log-level=info"
+  {{- end }}
+
+  {{- define "csi_controller_envs" }}
+- name: KUBE_NODE_NAME
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: spec.nodeName
+- name: LS_CONTROLLERS
+  value: https://linstor.d8-{{ .Chart.Name }}.svc:3371
+- name: LS_ROOT_CA
+  valueFrom:
+    secretKeyRef:
+      key: ca.crt
+      name: linstor-client-https-cert
+- name: LS_USER_CERTIFICATE
+  valueFrom:
+    secretKeyRef:
+      key: tls.crt
+      name: linstor-client-https-cert
+- name: LS_USER_KEY
+  valueFrom:
+    secretKeyRef:
+      key: tls.key
+      name: linstor-client-https-cert
+  {{- include "helm_lib_envs_for_proxy" . }}
+  {{- end }}
+
+  {{- $csiControllerImage := include "helm_lib_module_image" (list . "linstorCsi") }}
+
+  {{- $csiControllerConfig := dict }}
+  {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+  {{- $_ := set $csiControllerConfig "snapshotterEnabled" true }}
+  {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
