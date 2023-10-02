@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"go.uber.org/zap/zapcore"
@@ -105,7 +106,7 @@ func parseFlags() {
 func main() {
 	parseFlags()
 
-	zapLogLevel, err := zapcore.ParseLevel(logLevel)
+	zapLogLevel, err := zapcore.ParseLevel(strings.ToLower(logLevel))
 	if err != nil {
 		os.Exit(1)
 	}

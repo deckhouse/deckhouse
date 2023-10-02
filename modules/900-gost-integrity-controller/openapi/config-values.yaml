@@ -4,7 +4,7 @@ properties:
   logLevel:
     type: string
     enum: ["Debug", "Info", "Error"]
-    x-examples: ["info"]
+    x-examples: ["Info"]
     description: Webhook logging level.
     default: "Info"
   tlsSkipVerify:
