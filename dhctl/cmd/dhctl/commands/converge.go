@@ -37,7 +37,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		converger := converge.NewConverger(&converge.Params{
 			SSHClient: sshClient,
 		})
-		return converger.Converge(false)
+		return converger.Converge()
 	})
 	return cmd
 }
@@ -50,7 +50,7 @@ func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		converger := converge.NewConverger(&converge.Params{})
+		converger := converge.NewConverger(&converge.Params{AutoDismissDestructive: true, AutoApprove: true})
 		return converger.AutoConverge()
 	})
 	return cmd

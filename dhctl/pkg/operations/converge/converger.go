@@ -31,9 +31,12 @@ import (
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient    *ssh.Client
-	InitialState phases.DhctlState
-	OnPhaseFunc  phases.OnPhaseFunc
+	SSHClient              *ssh.Client
+	InitialState           phases.DhctlState
+	OnPhaseFunc            phases.OnPhaseFunc
+	CommanderMode          bool
+	AutoDismissDestructive bool
+	AutoApprove            bool
 
 	*client.KubernetesInitParams
 }
@@ -65,7 +68,7 @@ func (c *Converger) applyParams() error {
 }
 
 // FIXME(dhctl-for-commander): optionally initialize config-path from parameter, use specified config instead of in-cluster
-func (c *Converger) Converge(autoApprove bool) error {
+func (c *Converger) Converge() error {
 	if err := c.applyParams(); err != nil {
 		return err
 	}
@@ -108,11 +111,13 @@ func (c *Converger) Converge(autoApprove bool) error {
 	}
 	defer c.PhasedExecutionContext.Finalize(stateCache)
 
-	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache, converge.RunnerOptions{PhasedExecutionContext: c.PhasedExecutionContext})
-	runner.WithChangeSettings(&terraform.ChangeActionSettings{
-		AutoDismissDestructive: false,
-		AutoApprove:            autoApprove,
-	})
+	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache).
+		WithPhasedExecutionContext(c.PhasedExecutionContext).
+		WithCommanderMode(c.Params.CommanderMode).
+		WithChangeSettings(&terraform.ChangeActionSettings{
+			AutoDismissDestructive: c.AutoDismissDestructive,
+			AutoApprove:            c.AutoApprove,
+		})
 
 	err = runner.RunConverge()
 	if err != nil {
@@ -145,10 +150,10 @@ func (c *Converger) AutoConverge() error {
 
 	app.DeckhouseTimeout = 1 * time.Hour
 
-	runner := converge.NewRunner(kubeCl, inLockRunner, cache.Global(), converge.RunnerOptions{}).
+	runner := converge.NewRunner(kubeCl, inLockRunner, cache.Global()).
 		WithChangeSettings(&terraform.ChangeActionSettings{
-			AutoDismissDestructive: true,
-			AutoApprove:            true,
+			AutoDismissDestructive: c.AutoDismissDestructive,
+			AutoApprove:            c.AutoApprove,
 		}).
 		WithExcludedNodes([]string{app.RunningNodeName}).
 		WithSkipPhases([]converge.Phase{converge.PhaseAllNodes})
