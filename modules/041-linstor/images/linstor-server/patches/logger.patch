@@ -237,14 +237,15 @@ index 95ad756ff..88e1992e0 100644
      {
          VOLUME("volume"), SNAPSHOT("snapshot"), THIN_POOL("thin pool");
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
-index a63c78cba..187da5458 100644
+index a63c78cba..ca5df3167 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
-@@ -11,11 +11,12 @@ import com.linbit.extproc.ExtCmdUtils;
+@@ -11,11 +11,13 @@ import com.linbit.extproc.ExtCmdUtils;
  import com.linbit.linstor.storage.StorageException;
  import com.linbit.utils.StringUtils;
  
 +import java.io.BufferedReader;
++import java.io.File;
  import java.io.IOException;
 -import java.util.ArrayList;
 -import java.util.Collection;
@@ -257,7 +258,7 @@ index a63c78cba..187da5458 100644
  
  public class Commands
  {
-@@ -77,6 +78,23 @@ public class Commands
+@@ -77,6 +79,23 @@ public class Commands
          try
          {
              outData = extCmd.exec(command);
@@ -281,7 +282,7 @@ index a63c78cba..187da5458 100644
  
              boolean skipExitCodeCheck = false;
              while (!(outData.exitCode == ExtCmdUtils.DEFAULT_RET_CODE_OK || allowExitCodes.contains(outData.exitCode)))
-@@ -121,7 +139,6 @@ public class Commands
+@@ -121,7 +140,6 @@ public class Commands
                  exc
              );
          }
@@ -289,7 +290,19 @@ index a63c78cba..187da5458 100644
          return outData;
      }
  
-@@ -197,6 +214,12 @@ public class Commands
+@@ -191,12 +209,24 @@ public class Commands
+     )
+         throws StorageException
+     {
++
++        File f = new File(devicePath);
++        if (!f.exists()) {
++            System.out.println("[error symlink] " + devicePath);
++        }
++
+         OutputData output = genericExecutor(
+             extCmd,
+             new String[] {"blockdev", "--getsize64", devicePath},
              "Failed to get block size of " + devicePath,
              "Failed to get block size of " + devicePath
          );
@@ -302,26 +315,3 @@ index a63c78cba..187da5458 100644
          String outRaw = new String(output.stdoutData);
          return SizeConv.convert(
              Long.parseLong(outRaw.trim()),
-@@ -238,4 +261,22 @@ public class Commands
-     private Commands()
-     {
-     }
-+
-+
-+}
-+
-+class CheckSymLink {
-+    void Check(String filename) throws IOException {
-+        Process p = Runtime.getRuntime().exec("ls -l " + filename);
-+        BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
-+        String inputLine;
-+        Integer count = 0;
-+        while ((inputLine = in.readLine()) != null) {
-+            System.out.println(inputLine);
-+            count++;
-+        }
-+        if (count == 0) {
-+            System.out.println("[Error symlink]" + filename);
-+        }
-+    }
- }
