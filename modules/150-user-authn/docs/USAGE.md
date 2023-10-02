@@ -240,9 +240,9 @@ data:
 
 ## An example of creating a static user
 
-Придумайте пароль и укажите его хеш-сумму в поле `password`.
+Create a password and enter its hash in the `password` field.
 
-Для вычисления хеш-суммы пароля воспользуйтесь командой:
+Use the command below to calculate the password hash:
 
 ```shell
 echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'
