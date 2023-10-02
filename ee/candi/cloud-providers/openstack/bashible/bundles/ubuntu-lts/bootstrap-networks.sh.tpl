@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 {{- /*
 # Copyright 2023 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
@@ -69,5 +68,4 @@ if [[ "$count_default" -gt "1" ]]; then
   fi
 fi
 
-set +x
 shopt -u extglob
