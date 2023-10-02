@@ -386,14 +386,15 @@ func validateVolumeGroup(ctx context.Context, cl client.Client, lsp *v1alpha1.Li
 	var tempNameNode []string
 
 	for _, g := range lsp.Spec.LvmVolumeGroups {
+		name = g.Name
 
-		switch lsp.Spec.Type {
-		case TypeLVM:
-			name = g.Name
-
-		case TypeLVMThin:
-			name = g.ThinPoolName
-		}
+		// switch lsp.Spec.Type {
+		// case TypeLVM:
+		// 	name = g.Name
+		//
+		// case TypeLVMThin:
+		// 	name = g.ThinPoolName
+		// }
 
 		group, err := getLvmVolumeGroup(ctx, cl, lsp.Namespace, name)
 		if err != nil {
