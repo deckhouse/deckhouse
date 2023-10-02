@@ -104,10 +104,6 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
           {
             "name": "NTP_SERVERS",
             "value": "pool.ntp.org. ntp.ubuntu.com."
-          },
-          {
-            "name": "POD_SUBNET",
-            "value": "10.111.0.0/16"
           }
         ]
 `))
