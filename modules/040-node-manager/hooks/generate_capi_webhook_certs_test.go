@@ -36,7 +36,7 @@ import (
 const clusterDomain = "cluster.local"
 
 var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
-	f := HookExecutionConfigInit(`{"global": {"discovery": {"clusterDomain": "`+clusterDomain+`"}},"nodeManager":{"internal":{"capiWebhookCert": {}}}}`, "")
+	f := HookExecutionConfigInit(`{"global": {"discovery": {"clusterDomain": "`+clusterDomain+`"}},"nodeManager":{"internal":{"capiControllerManagerWebhookCert": {}}}}`, "")
 
 	Context("Without secret", func() {
 		BeforeEach(func() {
@@ -48,17 +48,17 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.crt").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.key").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.key").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").Exists()).To(BeTrue())
 
-			blockCA, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiWebhookCert.ca").String()))
+			blockCA, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()))
 			certCA, err := x509.ParseCertificate(blockCA.Bytes)
 			Expect(err).To(BeNil())
 			Expect(certCA.IsCA).To(BeTrue())
 			Expect(certCA.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiWebhookCert.crt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()))
 			cert, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).To(BeNil())
 			Expect(cert.IsCA).To(BeFalse())
@@ -92,9 +92,9 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.ca").String()).To(Equal(caAuthority.Cert))
-			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.key").String()).To(Equal(tlsAuthority.Key))
-			Expect(f.ValuesGet("nodeManager.internal.capiWebhookCert.crt").String()).To(Equal(tlsAuthority.Cert))
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()).To(Equal(caAuthority.Cert))
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.key").String()).To(Equal(tlsAuthority.Key))
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()).To(Equal(tlsAuthority.Cert))
 		})
 	})
 })

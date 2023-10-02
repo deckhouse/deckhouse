@@ -4,7 +4,7 @@ memory: 50Mi
 {{- end }}
 
 {{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -27,7 +27,7 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 50Mi
-{{- end }}
+  {{- end }}
 
 ---
 apiVersion: policy/v1
@@ -75,7 +75,6 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: caps-controller-manager
-{{/*        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}*/}}
         image: {{ include "helm_lib_module_image" (list . "capsControllerManager") }}
         imagePullPolicy: IfNotPresent
         ports:
@@ -103,9 +102,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "static_controller_manager_resources" . | nindent 12 }}
-{{- end }}
+  {{- end }}
       volumes:
         - name: cert
           secret:

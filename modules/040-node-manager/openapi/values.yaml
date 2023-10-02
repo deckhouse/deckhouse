@@ -6,7 +6,7 @@ properties:
     type: object
     default: {}
     properties:
-      capiWebhookCert:
+      capiControllerManagerWebhookCert:
         type: object
         default: { }
         x-required-for-helm:
@@ -48,7 +48,7 @@ properties:
         type: boolean
       capsControllerManagerEnabled:
         type: boolean
-        
+
       clusterMasterAddresses:
         type: array
         description: |

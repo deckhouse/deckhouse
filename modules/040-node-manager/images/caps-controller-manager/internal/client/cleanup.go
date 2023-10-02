@@ -33,12 +33,12 @@ func (c *Client) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
 		err := c.cleanupFromRunningPhase(ctx, instanceScope)
 		if err != nil {
-			return errors.Wrap(err, "failed to cleanup StaticInstance from running phase")
+			return errors.Wrap(err, "failed to clean up StaticInstance from running phase")
 		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
 		err := c.cleanupFromCleaningPhase(ctx, instanceScope)
 		if err != nil {
-			return errors.Wrap(err, "failed to cleanup StaticInstance from cleaning phase")
+			return errors.Wrap(err, "failed to clean up StaticInstance from cleaning phase")
 		}
 	default:
 		return errors.New("StaticInstance is not running or cleaning")
@@ -57,7 +57,7 @@ func (c *Client) cleanupFromRunningPhase(ctx context.Context, instanceScope *sco
 
 	err = c.cleanup(instanceScope)
 	if err != nil {
-		return errors.Wrap(err, "failed to cleanup")
+		return errors.Wrap(err, "failed to clean up")
 	}
 
 	return nil
@@ -67,7 +67,7 @@ func (c *Client) cleanupFromRunningPhase(ctx context.Context, instanceScope *sco
 func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	err := c.cleanup(instanceScope)
 	if err != nil {
-		return errors.Wrap(err, "failed to cleanup")
+		return errors.Wrap(err, "failed to clean up")
 	}
 
 	instanceScope.Instance.Status.MachineRef = nil
@@ -90,7 +90,7 @@ func (c *Client) cleanup(instanceScope *scope.InstanceScope) error {
 	done := c.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
 		err := ssh.ExecSSHCommand(instanceScope, "test -d /opt/deckhouse || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing", nil)
 		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to cleanup StaticInstance: failed to exec ssh command")
+			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
 
 			return false
 		}

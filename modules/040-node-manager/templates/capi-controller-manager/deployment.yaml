@@ -4,7 +4,7 @@ memory: 50Mi
 {{- end }}
 
 {{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -28,7 +28,7 @@ spec:
         cpu: 20m
         memory: 70Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
-{{- end }}
+  {{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -83,7 +83,7 @@ spec:
         args:
         - --leader-elect
         - --metrics-bind-addr=127.0.0.1:8083
-        - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false,LazyRestmapper=false
+        - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false
         - --health-addr=$(HOST_IP):9442
         - --webhook-port=9443
         livenessProbe:

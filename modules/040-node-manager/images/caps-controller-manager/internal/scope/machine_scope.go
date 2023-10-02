@@ -20,6 +20,7 @@ import (
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"context"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -92,6 +93,16 @@ func (m *MachineScope) Patch(ctx context.Context) error {
 	return nil
 }
 
+// SetReady sets the StaticMachine Ready Status.
+func (m *MachineScope) SetReady() {
+	m.StaticMachine.Status.Ready = true
+}
+
+// SetNotReady sets the StaticMachine Ready Status to false.
+func (m *MachineScope) SetNotReady() {
+	m.StaticMachine.Status.Ready = false
+}
+
 // Fail marks the StaticMachine as failed.
 func (m *MachineScope) Fail(reason capierrors.MachineStatusError, err error) {
 	m.StaticMachine.Status.FailureReason = &reason
@@ -107,5 +118,12 @@ func (m *MachineScope) HasFailed() bool {
 
 // Close the MachineScope by updating the machine spec and status.
 func (m *MachineScope) Close(ctx context.Context) error {
-	return m.Patch(ctx)
+	err := m.Patch(ctx)
+	if err != nil {
+		if apierrors.IsNotFound(errors.Unwrap(err)) {
+			return nil
+		}
+	}
+
+	return err
 }

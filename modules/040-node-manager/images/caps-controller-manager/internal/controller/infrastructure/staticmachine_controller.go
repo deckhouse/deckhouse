@@ -23,15 +23,17 @@ import (
 	"caps-controller-manager/internal/pool"
 	"caps-controller-manager/internal/scope"
 	"context"
+	"time"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
@@ -45,8 +47,8 @@ import (
 )
 
 const (
-	DefaultStaticInstanceBootstrapTimeout = 20 * time.Minute
-	DefaultStaticInstanceCleanupTimeout   = 10 * time.Minute
+	DefaultStaticInstanceBootstrapTimeout = 60 * time.Minute
+	DefaultStaticInstanceCleanupTimeout   = 30 * time.Minute
 )
 
 // StaticMachineReconciler reconciles a StaticMachine object
@@ -61,7 +63,7 @@ type StaticMachineReconciler struct {
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines/finalizers,verbs=update
 //+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;list;watch;update;patch;delete
-//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines/status,verbs=get;list;watch
+//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines/status,verbs=get;list;watch;update;patch
 
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=create;get;list;watch
 //+kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch;update;patch
@@ -135,6 +137,13 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 	}
 
+	// If the StaticMachine is in an error state, return early.
+	if machineScope.HasFailed() {
+		machineScope.Logger.Info("Not reconciling StaticMachine in failed state. See staticMachine.status.failureReason, staticMachine.status.failureMessage, or previously logged error for details")
+
+		return ctrl.Result{}, nil
+	}
+
 	// Handle deleted machines
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		machineScope.Logger.Info("Reconciling delete StaticMachine")
@@ -150,13 +159,6 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	machineScope *scope.MachineScope,
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
-	// If the StaticMachine is in an error state, return early.
-	if machineScope.HasFailed() {
-		machineScope.Logger.Info("Not reconciling StaticMachine in failed state. See staticMachine.status.failureReason, staticMachine.status.failureMessage, or previously logged error for details")
-
-		return ctrl.Result{}, nil
-	}
-
 	// If the StaticMachine doesn't have finalizer, add it.
 	if controllerutil.AddFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer) {
 		err := machineScope.Patch(ctx)
@@ -198,10 +200,10 @@ func (r *StaticMachineReconciler) reconcileNormal(
 
 		err = r.HostClient.Bootstrap(ctx, instanceScope)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to bootstrap StaticInstance")
+			instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
 		}
 
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: 60 * time.Second}, nil
 	}
 
 	return r.reconcileStaticInstancePhase(ctx, instanceScope)
@@ -226,9 +228,9 @@ func (r *StaticMachineReconciler) reconcileDelete(
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
 	if instanceScope != nil {
-		result, err := r.reconcileStaticInstancePhase(ctx, instanceScope)
+		result, err := r.cleanup(ctx, instanceScope)
 		if err != nil {
-			return result, errors.Wrap(err, "failed to reconcile StaticInstance")
+			return result, errors.Wrap(err, "failed to cleanup StaticInstance")
 		}
 
 		if !result.IsZero() {
@@ -236,14 +238,68 @@ func (r *StaticMachineReconciler) reconcileDelete(
 		}
 	}
 
-	if controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer) {
-		err := machineScope.Patch(ctx)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer")
+	controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
+
+	return ctrl.Result{}, nil
+}
+
+func (r *StaticMachineReconciler) cleanup(
+	ctx context.Context,
+	instanceScope *scope.InstanceScope,
+) (ctrl.Result, error) {
+	result, err := r.reconcileStaticInstancePhase(ctx, instanceScope)
+	if err != nil {
+		return result, errors.Wrap(err, "failed to reconcile StaticInstance")
+	}
+
+	if !result.IsZero() {
+		return result, nil
+	}
+
+	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning {
+		return ctrl.Result{}, nil
+	}
+
+	instanceScope.MachineScope.SetNotReady()
+
+	patchHelper, err := patch.NewHelper(instanceScope.MachineScope.Machine, r.Client)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
+	}
+
+	if instanceScope.MachineScope.Machine.Status.NodeRef == nil {
+		instanceScope.MachineScope.Machine.Status.NodeRef = &corev1.ObjectReference{
+			APIVersion: instanceScope.Instance.Status.NodeRef.APIVersion,
+			Kind:       instanceScope.Instance.Status.NodeRef.Kind,
+			Name:       instanceScope.Instance.Status.NodeRef.Name,
+			UID:        instanceScope.Instance.Status.NodeRef.UID,
 		}
 	}
 
-	return ctrl.Result{}, nil
+	if instanceScope.MachineScope.Machine.Annotations == nil {
+		instanceScope.MachineScope.Machine.Annotations = make(map[string]string)
+	}
+
+	if instanceScope.MachineScope.Machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] != "true" {
+		instanceScope.MachineScope.Machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] = "true"
+	}
+
+	cond := conditions.Get(instanceScope.MachineScope.Machine, clusterv1.PreTerminateDeleteHookSucceededCondition)
+	if cond != nil && cond.Status == corev1.ConditionFalse {
+		err = r.HostClient.Cleanup(ctx, instanceScope)
+		if err != nil {
+			instanceScope.Logger.Error(err, "failed to clean up StaticInstance")
+		}
+
+		delete(instanceScope.MachineScope.Machine.Annotations, clusterv1.PreTerminateDeleteHookAnnotationPrefix)
+	}
+
+	err = patchHelper.Patch(ctx, instanceScope.MachineScope.Machine)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to patch Machine with NodeRef")
+	}
+
+	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 }
 
 func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
@@ -252,6 +308,8 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 ) (ctrl.Result, error) {
 	switch instanceScope.GetPhase() {
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
+		instanceScope.MachineScope.SetNotReady()
+
 		instanceScope.Logger.Info("StaticInstance is bootstrapping")
 
 		estimated := DefaultStaticInstanceBootstrapTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
@@ -269,22 +327,17 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 
 		err := r.HostClient.Bootstrap(ctx, instanceScope)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to bootstrap StaticInstance")
+			instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
 		}
 
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: 60 * time.Second}, nil
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
+		instanceScope.MachineScope.SetReady()
+
 		instanceScope.Logger.Info("StaticInstance is running")
-
-		if !instanceScope.MachineScope.StaticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-			err := r.HostClient.Cleanup(ctx, instanceScope)
-			if err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to clean up StaticInstance")
-			}
-
-			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
+		instanceScope.MachineScope.SetNotReady()
+
 		instanceScope.Logger.Info("StaticInstance is cleaning")
 
 		estimated := DefaultStaticInstanceCleanupTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
@@ -302,10 +355,10 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 
 		err := r.HostClient.Cleanup(ctx, instanceScope)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to clean up StaticInstance")
+			instanceScope.Logger.Error(err, "failed to clean up StaticInstance")
 		}
 
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -377,25 +430,25 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return []string{string(staticInstance.Status.MachineRef.UID)}
 		})
 	if err != nil {
-		return errors.Wrap(err, "failed to setup StaticInstance field 'status.currentStatus.phase' indexer")
+		return errors.Wrap(err, "failed to setup StaticInstance field 'status.machineRef.uid' indexer")
 	}
 
-	err = mgr.GetFieldIndexer().IndexField(
-		context.Background(),
-		&deckhousev1.StaticInstance{},
-		"status.currentStatus.phase",
-		func(rawObj k8sClient.Object) []string {
-			staticInstance := rawObj.(*deckhousev1.StaticInstance)
-
-			if staticInstance.Status.CurrentStatus == nil {
-				return []string{""}
-			}
-
-			return []string{string(staticInstance.Status.CurrentStatus.Phase)}
-		})
-	if err != nil {
-		return errors.Wrap(err, "failed to setup StaticInstance field 'status.currentStatus.phase' indexer")
-	}
+	//err = mgr.GetFieldIndexer().IndexField(
+	//	context.Background(),
+	//	&deckhousev1.StaticInstance{},
+	//	"status.currentStatus.phase",
+	//	func(rawObj k8sClient.Object) []string {
+	//		staticInstance := rawObj.(*deckhousev1.StaticInstance)
+	//
+	//		if staticInstance.Status.CurrentStatus == nil {
+	//			return []string{""}
+	//		}
+	//
+	//		return []string{string(staticInstance.Status.CurrentStatus.Phase)}
+	//	})
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to setup StaticInstance field 'status.currentStatus.phase' indexer")
+	//}
 
 	err = mgr.GetFieldIndexer().IndexField(
 		context.Background(),
@@ -407,7 +460,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return []string{node.Spec.ProviderID}
 		})
 	if err != nil {
-		return errors.Wrap(err, "failed to setup Node field 'status.nodeInfo.machineID' indexer")
+		return errors.Wrap(err, "failed to setup Node field 'spec.providerID' indexer")
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -420,15 +473,51 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // StaticInstanceToStaticMachineMapFunc returns a handler.ToRequestsFunc that watches for
-// Machine events and returns reconciliation requests for an infrastructure provider object
+// StaticInstance events and returns reconciliation requests for an infrastructure provider object
 func (r *StaticMachineReconciler) StaticInstanceToStaticMachineMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
 	return func(ctx context.Context, object k8sClient.Object) []reconcile.Request {
+		logger := ctrl.LoggerFrom(ctx)
+
 		staticInstance, ok := object.(*deckhousev1.StaticInstance)
 		if !ok {
 			return nil
 		}
+		if staticInstance.Status.CurrentStatus != nil && staticInstance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
+			machines := &infrav1.StaticMachineList{}
+
+			err := r.List(
+				ctx,
+				machines,
+			)
+			if err != nil {
+				logger.Error(err, "failed to get StaticMachineList")
+
+				return nil
+			}
+
+			if len(machines.Items) == 0 {
+				return nil
+			}
+
+			requests := make([]reconcile.Request, 0, len(machines.Items))
+
+			for _, machine := range machines.Items {
+				if machine.Status.Ready {
+					continue
+				}
+
+				requests = append(requests, reconcile.Request{
+					NamespacedName: k8sClient.ObjectKey{
+						Namespace: machine.Namespace,
+						Name:      machine.Name,
+					},
+				})
+			}
+
+			return requests
+		}
+
 		if staticInstance.Status.MachineRef == nil {
-			// TODO, we can enqueue the static machine which providerID is nil to get better performance than requeue
 			return nil
 		}
 

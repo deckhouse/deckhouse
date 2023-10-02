@@ -102,7 +102,6 @@ func (c *Client) bootstrapFromBootstrappingPhase(ctx context.Context, instanceSc
 	instanceScope.Logger.Info("Node successfully bootstrapped", "node", node.Name)
 
 	instanceScope.MachineScope.StaticMachine.Status.Addresses = mapAddresses(node.Status.Addresses)
-	instanceScope.MachineScope.StaticMachine.Status.Ready = true
 
 	conditions.MarkTrue(instanceScope.MachineScope.StaticMachine, infrav1.StaticMachineStaticInstanceReadyCondition)
 

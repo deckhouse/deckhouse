@@ -20,6 +20,7 @@ import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"context"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -111,5 +112,12 @@ func (i *InstanceScope) Patch(ctx context.Context) error {
 
 // Close the InstanceScope by updating the instance spec and status.
 func (i *InstanceScope) Close(ctx context.Context) error {
-	return i.Patch(ctx)
+	err := i.Patch(ctx)
+	if err != nil {
+		if apierrors.IsNotFound(errors.Unwrap(err)) {
+			return nil
+		}
+	}
+
+	return err
 }

@@ -19,59 +19,50 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
-	v1 "k8s.io/api/core/v1"
 	"os"
-
-	"github.com/pkg/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/kubeconfig"
 )
 
 const (
 	clusterAPINamespace          = "d8-cloud-instance-manager"
 	clusterAPIServiceAccountName = "capi-controller-manager"
+	clusterAPIStaticClusterName  = "static"
+)
+
+var (
+	clusterAPIClusterGVR = schema.GroupVersionResource{
+		Group:    "cluster.x-k8s.io",
+		Version:  "v1beta1",
+		Resource: "clusters",
+	}
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Kubernetes: []go_hook.KubernetesConfig{
+	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:       "cluster_api_cluster",
-			ApiVersion: "cluster.x-k8s.io/v1beta1",
-			Kind:       "Cluster",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{clusterAPINamespace},
-				},
-			},
-			FilterFunc: applyClusterFilter,
+			Name:    "static_kubeconfig_secret",
+			Crontab: "* * * * *",
 		},
 	},
 }, dependency.WithExternalDependencies(generateStaticKubeconfigSecret))
 
-func applyClusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj, nil
-}
-
 func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container) error {
-	if len(input.Snapshots["cluster_api_cluster"]) == 0 {
-		return nil
-	}
-
-	cluster := input.Snapshots["cluster_api_cluster"][0].(*unstructured.Unstructured)
-
 	restConfig, err := rest.InClusterConfig()
 	if err != nil {
 		return errors.Wrap(err, "failed to get kubeconfig")
@@ -80,6 +71,15 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
 		return errors.Wrap(err, "failed to get k8s client")
+	}
+
+	cluster, err := k8sClient.Dynamic().Resource(clusterAPIClusterGVR).Namespace(clusterAPINamespace).Get(context.TODO(), clusterAPIStaticClusterName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		return errors.Wrap(err, "failed to get cluster")
 	}
 
 	secretForServiceAccountToken, err := getSecretForServiceAccountToken(k8sClient, cluster)

@@ -22,7 +22,6 @@ import (
 	"context"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	"math/rand"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -101,17 +100,27 @@ func (p *StaticInstancePool) findStaticInstancesInPhase(
 		return nil, errors.Wrap(err, "unable to convert StaticMachine label selector")
 	}
 
-	phaseSelector := fields.OneTermEqualSelector("status.currentStatus.phase", string(phase))
+	//phaseSelector := fields.OneTermEqualSelector("status.currentStatus.phase", string(phase))
 
 	err = p.List(
 		ctx,
 		staticInstances,
 		client.MatchingLabelsSelector{Selector: labelSelector},
-		client.MatchingFieldsSelector{Selector: phaseSelector},
+		//client.MatchingFieldsSelector{Selector: phaseSelector},
 	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to find static instances in phase '%s'", phase)
 	}
 
-	return staticInstances.Items, nil
+	var staticInstancesInPhase []deckhousev1.StaticInstance
+
+	for _, staticInstance := range staticInstances.Items {
+		if staticInstance.Status.CurrentStatus == nil || staticInstance.Status.CurrentStatus.Phase != phase {
+			continue
+		}
+
+		staticInstancesInPhase = append(staticInstancesInPhase, staticInstance)
+	}
+
+	return staticInstancesInPhase, nil
 }
