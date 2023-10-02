@@ -17,7 +17,7 @@ properties:
               Он может понадобиться, если в кластере не используется Dex или если нужно настроить доступ в CLI утилитой `argocd` (читайте подробнее в разделе [Примеры](usage.html)).
   storageClass:
     description: |
-      Имя storageClass'а, который использовать.
+      Имя StorageClass'а, который предполагается использовать.
 
       Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
 
@@ -26,17 +26,17 @@ properties:
       Если указать `false` — будет форсироваться использование emptyDir'а.
   https:
     description: |
-      Тип сертификата используемого для веб-приложения Argo CD.
+      Тип сертификата, используемого для веб-приложения Argo CD.
 
       При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `Disabled` — веб-интерфейс Argo CD будет работать только по HTTP.
-          - `CertManager` — веб-интерфейс Argo CD будет работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
-          - `CustomCertificate` — веб-интерфейс Argo CD будет работать по https используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — веб-интерфейс Argo CD будет работать по HTTP (подразумевая, что перед ним стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](../../modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `Disabled` — веб-интерфейс Argo CD будет работать только по HTTP;
+          - `CertManager` — веб-интерфейс Argo CD будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
+          - `CustomCertificate` — веб-интерфейс Argo CD будет работать по HTTPS, используя сертификат из namespace `d8-system`;
+          - `OnlyInURI` — веб-интерфейс Argo CD будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](../../modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
       certManager:
         properties:
           clusterIssuerName:
@@ -48,9 +48,9 @@ properties:
         properties:
           secretName:
             description: |
-              Имя secret'а в namespace `d8-system`, который будет использоваться для Argo CD.
+              Имя Secret'а в namespace `d8-system`, который будет использоваться для Argo CD.
 
-              Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
