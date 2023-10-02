@@ -3,7 +3,7 @@
   {{- if $value.ccm.yandex }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-fromImage: cloud-provider-yandex/distroless
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/yandex-cloud-controller-manager

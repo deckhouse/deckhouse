@@ -35,7 +35,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager126": "imageHash-cloudProviderAws-cloudControllerManager126",
 		"cloudControllerManager127": "imageHash-cloudProviderAws-cloudControllerManager127",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAws-cloudDataDiscoverer",
-		"distroless":                "imageHash-cloudProviderAws-distroless",
 		"ebsCsiPlugin":              "imageHash-cloudProviderAws-ebsCsiPlugin",
 		"nodeTerminationHandler":    "imageHash-cloudProviderAws-nodeTerminationHandler",
 	},
@@ -47,7 +46,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager126": "imageHash-cloudProviderAzure-cloudControllerManager126",
 		"cloudControllerManager127": "imageHash-cloudProviderAzure-cloudControllerManager127",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
-		"distroless":                "imageHash-cloudProviderAzure-distroless",
 	},
 	"cloudProviderGcp": map[string]interface{}{
 		"cloudControllerManager123": "imageHash-cloudProviderGcp-cloudControllerManager123",
@@ -56,7 +54,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager126": "imageHash-cloudProviderGcp-cloudControllerManager126",
 		"cloudControllerManager127": "imageHash-cloudProviderGcp-cloudControllerManager127",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderGcp-cloudDataDiscoverer",
-		"distroless":                "imageHash-cloudProviderGcp-distroless",
 		"pdCsiPlugin":               "imageHash-cloudProviderGcp-pdCsiPlugin",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
@@ -88,7 +85,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager126": "imageHash-cloudProviderYandex-cloudControllerManager126",
 		"cloudControllerManager127": "imageHash-cloudProviderYandex-cloudControllerManager127",
 		"cloudMetricsExporter":      "imageHash-cloudProviderYandex-cloudMetricsExporter",
-		"distroless":                "imageHash-cloudProviderYandex-distroless",
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
 	"cniCilium": map[string]interface{}{
