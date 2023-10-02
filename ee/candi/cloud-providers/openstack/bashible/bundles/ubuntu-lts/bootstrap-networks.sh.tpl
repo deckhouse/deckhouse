@@ -39,12 +39,12 @@ network:
 BOOTSTRAP_NETWORK_EOF
 }
 
-ip_route_show_default_output=$(ip -json route show default)
+ip_addr_show_output=$(ip -json addr show)
 count_default=$(ip -json route show default | jq length)
 if [[ "$count_default" != "1" ]]; then
   configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
   for mac in $configured_macs; do
-    ifname="$(echo "$ip_route_show_default_output" | jq -re --arg mac "$mac" '.[] | select(.address == $mac) | .ifname')|"
+    ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$mac" '.[] | select(.address == $mac) | .ifname')|"
     if [[ "$ifname" != "" ]]; then
       configured_ifnames_pattern+="$ifname"
     fi
@@ -56,7 +56,7 @@ if [[ "$count_default" != "1" ]]; then
       metric=100
       for i in $configured_ifnames_pattern; do
         cim_dev=$i
-        cim_mac="$(echo "$ip_route_show_default_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
+        cim_mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
         cim_metric=$metric
         metric=$(expr $metric + 100)
         cat_file "$cim_dev" "$cim_metric" "$cim_mac"
