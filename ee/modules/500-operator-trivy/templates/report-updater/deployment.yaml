@@ -72,8 +72,6 @@ spec:
         - mountPath: /root/.docker
           name: docker-config
           readOnly: true
-        - mountPath: /tmp/.dictionary
-          name: cache-dir
         ports:
           - name: https
             containerPort: 40443
@@ -103,8 +101,4 @@ spec:
           - key: .dockerconfigjson
             path: config.json
           secretName: deckhouse-registry
-      - name: cache-dir
-        emptyDir: 
-          medium: Memory
-          sizeLimit: 5Mi
 {{- end }}

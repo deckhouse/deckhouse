@@ -47,7 +47,7 @@ func (h *Handler) StartRenewCacheLoop() {
 		select {
 		case <-ticker.C:
 			h.logger.Println("Starting periodic dictionary update")
-			h.dictionary.DownloadAndApplyBduDictionary()
+			h.dictionary.RenewBduDictionary()
 		}
 	}
 }

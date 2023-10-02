@@ -25,20 +25,18 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
-	oc "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const (
-	dockerConfigPath      = "/home/mscherba/.docker/config.json"
-	bduTmpDir             = "/tmp/.dictionary"
+	dockerConfigPath      = "/root/.docker/config.json"
 	bduDictionaryFilename = "export.json"
-	ociDescriptormMediaType = "application/deckhouse.io.bdu.layer.v1.tar+gzip"
+	tarGzMediaType        = "application/deckhouse.io.bdu.layer.v1.tar+gzip"
 )
 
 type Cache interface {
 	Get(string) ([]string, bool)
 	Check() error
-	DownloadAndApplyBduDictionary() error
+	RenewBduDictionary() error
 }
 
 type ContainerRegistry struct {
@@ -102,7 +100,6 @@ func NewVulnerabilityCache(logger *log.Logger) (*VulnerabilityCache, error) {
 	}
 
 	if containerRegistry, ok = dockerConfig.Auths[registry]; !ok {
-		fmt.Println(dockerConfig)
 		return nil, fmt.Errorf("failed to find auth config for bdu registry %s", registry)
 	}
 
@@ -151,27 +148,9 @@ func (c *VulnerabilityCache) Check() error {
 	return nil
 }
 
-func (c *VulnerabilityCache) processDescriptors(descriptors []oc.Descriptor) error {
-	//iterate over descriptors to get the ones with relevant MediaType
-	for _, descriptor := range descriptors {
-		switch descriptor.MediaType {
-			case ociDescriptormMediaType:
-				readerCloser, err := store.Fetch(ctx, descriptor)
-				if err != nil {
-					fmt.Errorf("applying BDU failed: couldn't fetch blob: %w", err)
-				}
-				defer readerCloser.Close()
-				processTarGzMedia(readerCloser)
-			case default:
-		}
-	}
-	return nil
-}
-
-func (c *VulnerabilityCache) DownloadAndApplyBduDictionary() error {
-	var bduTarGz io.ReadCloser
+func (c *VulnerabilityCache) getDataFromImageDescriptors() error {
 	//download
-	c.logger.Println("downloading BDU dictionary")
+	c.logger.Println("downloading BDU image")
 	//create oras in-memory storage
 	store := memory.New()
 	ctx := context.Background()
@@ -195,31 +174,45 @@ func (c *VulnerabilityCache) DownloadAndApplyBduDictionary() error {
 	//copy requested image from remote repository to oras in-memory storage and save its descriptor
 	descriptor, err := oras.Copy(ctx, repo, c.sourceConfig.tag, store, c.sourceConfig.tag, oras.DefaultCopyOptions)
 	if err != nil {
-		return fmt.Errorf("applying BDU failed: couldn't copy BDU image: %w", err)
+		return fmt.Errorf("renewing BDU failed: couldn't copy BDU image to memory: %w", err)
 	}
 
 	//get successor descriptors of the descriptor
 	successors, err := content.Successors(ctx, store, descriptor)
 	if err != nil {
-		return fmt.Errorf("applying BDU failed: couldn't get descriptors from BDU image: %w", err)
+		return fmt.Errorf("renewing BDU failed: couldn't get descriptors from BDU image: %w", err)
 	}
 
-	err := c.processDescriptors(successors)
-	if err != nil {
-		return fmt.Errorf("applying BDU failed: couldn't process descriptors: %w", err)
+	//iterate over descriptors to get the ones with relevant MediaType
+	for _, descriptor := range successors {
+		switch descriptor.MediaType {
+		case tarGzMediaType:
+			readCloser, err := store.Fetch(ctx, descriptor)
+			if err != nil {
+				fmt.Errorf("renewing BDU failed: couldn't fetch tar archive: %w", err)
+			}
+			defer readCloser.Close()
+
+			err = c.processTarGzMedia(readCloser)
+			if err != nil {
+				fmt.Errorf("renewing BDU failed: couldn't process tar archive: %w", err)
+			}
+		default:
+			//skip
+		}
 	}
 
-	//apply
-	c.logger.Println("applying BDU dictionary")
+	return nil
 
-	uncompressedStream, err := gzip.NewReader(bduTarGz)
+}
+
+func (c *VulnerabilityCache) processTarGzMedia(tarGz io.ReadCloser) error {
+	uncompressedStream, err := gzip.NewReader(tarGz)
 	if err != nil {
-		return fmt.Errorf("applying BDU failed: couldn't uncompress tar %w", err)
+		return fmt.Errorf("renewing BDU failed: couldn't uncompress tar archive %w", err)
 	}
 
 	tarReader := tar.NewReader(uncompressedStream)
-
-
 	for true {
 		header, err := tarReader.Next()
 
@@ -228,13 +221,13 @@ func (c *VulnerabilityCache) DownloadAndApplyBduDictionary() error {
 		}
 
 		if err != nil {
-			return fmt.Errorf("applying BDU failed: couldn't iterate over tar: %w", err)
+			return fmt.Errorf("renewing BDU failed: couldn't iterate over tar: %w", err)
 		}
 
 		if header.Name == bduDictionaryFilename {
 			b, err := io.ReadAll(tarReader)
 			if err != nil {
-				return fmt.Errorf("applying BDU failed: couldn't read from tar: %w", err)
+				return fmt.Errorf("renewing BDU failed: couldn't read from tar: %w", err)
 			}
 
 			tempDict := &VulnerabilityDictionary{
@@ -243,13 +236,12 @@ func (c *VulnerabilityCache) DownloadAndApplyBduDictionary() error {
 
 			err = json.Unmarshal(b, &tempDict)
 			if err != nil {
-				return fmt.Errorf("applying BDU failed: couldn't unmarshal bdu dictionary: %w", err)
+				return fmt.Errorf("renewing BDU failed: couldn't unmarshal bdu dictionary: %w", err)
 			}
 
 			if len(tempDict.Data) == 0 {
-				return fmt.Errorf("applying BDU failed: dictionary is empty")
+				return fmt.Errorf("renewing BDU failed: dictionary is empty")
 			}
-
 			if tempDict.TS != c.Dictionary.TS {
 				c.mu.Lock()
 				defer c.mu.Unlock()
@@ -268,11 +260,20 @@ func (c *VulnerabilityCache) DownloadAndApplyBduDictionary() error {
 	return nil
 }
 
+func (c *VulnerabilityCache) RenewBduDictionary() error {
+	err := c.getDataFromImageDescriptors()
+	if err != nil {
+		return fmt.Errorf("renewing BDU failed: couldn't get data from image descriptors: %w", err)
+	}
+
+	return nil
+}
+
 func (c *VulnerabilityCache) initDictionary() error {
 	c.logger.Println("initializing BDU dictionary")
-	err := c.DownloadAndApplyBduDictionary()
+	err := c.RenewBduDictionary()
 	if err != nil {
-		c.logger.Println("failed to update BDU dictionary")
+		c.logger.Println("failed to initialize BDU dictionary")
 		return err
 	}
 
