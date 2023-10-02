@@ -240,6 +240,16 @@ data:
 
 ## An example of creating a static user
 
+Придумайте пароль и укажите его хеш-сумму в поле `password`.
+
+Для вычисления хеш-суммы пароля воспользуйтесь командой:
+
+```shell
+echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'
+```
+
+Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
+
 {% raw %}
 
 ```yaml
