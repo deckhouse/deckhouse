@@ -237,7 +237,7 @@ index 95ad756ff..88e1992e0 100644
      {
          VOLUME("volume"), SNAPSHOT("snapshot"), THIN_POOL("thin pool");
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
-index a63c78cba..28ac5c0da 100644
+index a63c78cba..187da5458 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 @@ -11,11 +11,12 @@ import com.linbit.extproc.ExtCmdUtils;
@@ -289,21 +289,7 @@ index a63c78cba..28ac5c0da 100644
          return outData;
      }
  
-@@ -189,14 +206,24 @@ public class Commands
-         ExtCmd extCmd,
-         String devicePath
-     )
--        throws StorageException
--    {
-+            throws StorageException, IOException {
-+
-+        // ------------ SymbolicLinkCheck
-+        new CheckSymLink().Check(devicePath);
-+        // ------------ SymbolicLinkCheck
-+
-         OutputData output = genericExecutor(
-             extCmd,
-             new String[] {"blockdev", "--getsize64", devicePath},
+@@ -197,6 +214,12 @@ public class Commands
              "Failed to get block size of " + devicePath,
              "Failed to get block size of " + devicePath
          );
@@ -316,7 +302,7 @@ index a63c78cba..28ac5c0da 100644
          String outRaw = new String(output.stdoutData);
          return SizeConv.convert(
              Long.parseLong(outRaw.trim()),
-@@ -238,4 +265,22 @@ public class Commands
+@@ -238,4 +261,22 @@ public class Commands
      private Commands()
      {
      }
