@@ -51,7 +51,7 @@ properties:
         type: array
         default: []
         description: |
-          Names of additional registry secrets to use for downloading images from private registries.
+          List of additional registry secrets to use for downloading images from private registries.
 
           By default, the `deckhouse-registry` secret is used to download images for scanning.
         items:
