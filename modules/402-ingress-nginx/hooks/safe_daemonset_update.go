@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -33,6 +34,10 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Settings: &go_hook.HookConfigSettings{
+		ExecutionMinInterval: 5 * time.Second,
+		ExecutionBurst:       1,
+	},
 	Queue:       "/modules/ingress-nginx/safe_daemonset_update",
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -83,12 +88,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, safeControllerUpdate)
 
 func safeControllerUpdate(input *go_hook.HookInput) (err error) {
-	proxys := input.Snapshots["proxy_ads"]
-	failovers := input.Snapshots["failover_ads"]
 	controllerPods := input.Snapshots["for_delete"]
 	if len(controllerPods) == 0 {
 		return nil
 	}
+
+	proxys := input.Snapshots["proxy_ads"]
+	failovers := input.Snapshots["failover_ads"]
 
 	controllers := set.New()
 
@@ -130,6 +136,20 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
+		// postpone main controller's pod update for the first time so that failover controller could catch up with the hook
+		if !podForDelete.PostponedUpdate {
+			input.LogEntry.Infof("Assuring that %s/%s has met update conditions", podForDelete.ControllerName, podForDelete.Name)
+			metadata := map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]interface{}{
+						"ingress.deckhouse.io/update-postponed-at": time.Now().Format(time.RFC3339),
+					},
+				},
+			}
+			input.PatchCollector.MergePatch(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
+			continue
+		}
+
 		// proxy and failover pods are ready
 		metadata := map[string]interface{}{
 			"metadata": map[string]interface{}{
@@ -145,9 +165,9 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 }
 
 type ingressControllerPod struct {
-	Name           string
-	Node           string
-	ControllerName string
+	Name            string
+	ControllerName  string
+	PostponedUpdate bool
 }
 
 type daemonSet struct {
@@ -183,9 +203,11 @@ func applyIngressPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
+	_, postponedUpdate := pod.Annotations["ingress.deckhouse.io/update-postponed-at"]
+
 	return ingressControllerPod{
-		Name:           pod.Name,
-		Node:           pod.Spec.NodeName,
-		ControllerName: pod.Labels["name"],
+		Name:            pod.Name,
+		ControllerName:  pod.Labels["name"],
+		PostponedUpdate: postponedUpdate,
 	}, nil
 }
