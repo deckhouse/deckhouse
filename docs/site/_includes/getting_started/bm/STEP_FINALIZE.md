@@ -98,7 +98,7 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 {%- endofftopic %}
 </li></ul>
 
-After that, creating an Ingress controller, creating a user to access web interfaces, and configuring DNS remains.
+Далее нужно создать Ingress-контроллер, Storage Class для хранения данных, пользователя для доступа в веб-интерфейсы и настроить DNS.
 <ul><li><p><strong>Setup Ingress controller</strong></p>
 <p>On the <strong>master node</strong>, create the <code>ingress-nginx-controller.yml</code> file containing the Ingress controller configuration:</p>
   {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
