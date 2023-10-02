@@ -10,8 +10,6 @@ import:
   to: /usr/local/bin/aws-cloud-controller-manager
   before: setup
 docker:
-  # ENV:
-  #   container: docker
   ENTRYPOINT: ["/usr/local/bin/aws-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
@@ -38,7 +36,6 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync
-  # - apk add --no-cache ca-certificates
   install:
   - mkdir /src
   - wget https://github.com/kubernetes/cloud-provider-aws/archive/refs/tags/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/

@@ -4,18 +4,12 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: cloud-provider-yandex/distroless
-# from: {{ $.Images.BASE_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/yandex-cloud-controller-manager
   to: /usr/local/bin/cloud-controller-manager
   before: setup
-# shell:
-#   beforeInstall:
-#   - apk add --no-cache ca-certificates
 docker:
-  # ENV:
-  #   container: docker
   ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
