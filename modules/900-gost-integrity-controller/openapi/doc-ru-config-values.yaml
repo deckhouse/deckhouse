@@ -1,6 +1,6 @@
 properties:
-    logLevel:
-      description: Уровень логирования в вебхуке.
+  logLevel:
+    description: Уровень логирования в вебхуке.
   tlsSkipVerify:
     description: Разрешить получение образов без проверки TLS.
   cacheEviction:
