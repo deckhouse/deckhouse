@@ -188,15 +188,15 @@ index efa919929..241a4dad8 100644
              {
                  throw new ExtCmdFailedException(command, outputData);
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
-index e06e93901..580aebb28 100644
+index e06e93901..090cfbd72 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/lvm/LvmProvider.java
 @@ -452,6 +452,8 @@ public class LvmProvider extends AbsStorageProvider<LvsInfo, LvmData<Resource>,
                  config
              )
          );
-+        LvmCommands.vgscanmknodes(extCmdFactory.create());
-+        System.out.println("point vgscan --mknodes after resizeLvImpl");
++        //LvmCommands.vgscanmknodes(extCmdFactory.create());
++        //System.out.println("point vgscan --mknodes after resizeLvImpl");
      }
  
      @Override
@@ -237,7 +237,7 @@ index 95ad756ff..88e1992e0 100644
      {
          VOLUME("volume"), SNAPSHOT("snapshot"), THIN_POOL("thin pool");
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
-index a63c78cba..ca5df3167 100644
+index a63c78cba..485782d88 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
 @@ -11,11 +11,13 @@ import com.linbit.extproc.ExtCmdUtils;
@@ -290,13 +290,19 @@ index a63c78cba..ca5df3167 100644
          return outData;
      }
  
-@@ -191,12 +209,24 @@ public class Commands
+@@ -191,12 +209,30 @@ public class Commands
      )
          throws StorageException
      {
 +
 +        File f = new File(devicePath);
 +        if (!f.exists()) {
++
++            try {
++                Process p = Runtime.getRuntime().exec("vgscan --mknodes");
++            } catch (Exception e) {
++                e.printStackTrace();
++            }
 +            System.out.println("[error symlink] " + devicePath);
 +        }
 +
