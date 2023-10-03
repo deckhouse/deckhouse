@@ -43,7 +43,7 @@ spec:
                   description: |
                     URL of the registry API.
 
-                    Automatically derived from `imageRepo` if not specified.
+                    Automatically derived from the [imageRepo](#werfsource-v1alpha1-spec-imagerepo) parameter if not specified.
                     E.g. if `imageRepo=cr.example.com/myproject`, then `apiURL` is derived as
                     `https://cr.example.com/`.
                 pullSecretName:
