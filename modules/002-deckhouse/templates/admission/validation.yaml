@@ -62,6 +62,9 @@ webhooks:
           operator: "In"
           values:
             - "d8-system"
+    objectSelector:
+      matchLabels:
+        heritage: deckhouse
     rules:
       - apiGroups:
           - ""
