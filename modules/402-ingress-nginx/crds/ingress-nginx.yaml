@@ -29,7 +29,7 @@ spec:
                 ingressClass:
                   type: string
                   description: |
-                    The name of the Ingress class to use with the Ingress nginx controller.
+                    The name of the Ingress class to use with the NGINX Ingress controller.
 
                     Using this option, you can create several controllers to use with a single ingress
 
@@ -56,7 +56,7 @@ spec:
                 controllerVersion:
                   type: string
                   description: |
-                    One of the supported NGINX Ingress Controller versions.
+                    One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
                   enum: ['1.1','1.6']
@@ -68,7 +68,7 @@ spec:
                     After setting this parameter, the `sidecar.istio.io/inject: "true"` and `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"` annotations will be attached to the ingress-controller pods. During pod creation, the Istio's mutating webhook will add the sidecar to it. After that, the sidecar will catch the network traffic to Service CIDR.
 
                     To use this feature in your application, you must add these annotations to your Ingress resources:
-                    * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the ingress-controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress-controller's sidecar is only catching traffic directed to Service CIDR.
+                    * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the ingress-controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Istio sidecar containers only catching traffic directed to Service CIDR.
                     * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar can identify the application service that serves requests.
                 waitLoadBalancerOnTerminating:
                   x-kubernetes-int-or-string: true
@@ -432,7 +432,7 @@ spec:
                   description: |
                     The section with parameters of custom HTTP errors.
 
-                    All parameters in this section are mandatory if it is defined. Changing any parameter **leads to the restart of all Ingress nginx controllers**.
+                    All parameters in this section are mandatory if it is defined. Changing any parameter **leads to the restart of all NGINX Ingress controllers**.
                   required: ['namespace', 'serviceName', 'codes']
                   properties:
                     serviceName:

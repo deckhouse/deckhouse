@@ -32,5 +32,5 @@ The following parameters are pushed to the user's computer after connecting to t
 ## User's traffic audit
 
 The module can log user's activity via VPN in JSON format. Traffic is grouped
-by `src_ip, dst_ip, src_port, dst_port, ip_proto` fields. Container logs can be collected and sent to storage for further audit
+by `src_ip`, `dst_ip`, `src_port`, `dst_port`, `ip_proto` fields. Container logs can be collected and sent to storage for further audit
 using the [log-shipper](../460-log-shipper/) module.
