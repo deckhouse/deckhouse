@@ -32,12 +32,12 @@ import:
   before: setup
 git:
 - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs/
-  to: /roorfs
+  to: /
+  stageDependencies:
+    install:
+    - '**/*.tpl'
 shell:
   beforeInstall:
   - rm -rf /etc/nginx
-  install:
-  - cp /rootfs/ /
-  - rm -rf /rootfs
 docker:
   ENTRYPOINT: ["/entrypoint"]
