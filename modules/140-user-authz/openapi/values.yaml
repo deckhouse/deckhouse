@@ -88,6 +88,8 @@ properties:
                     - required: ["labelSelectors"]
                     - required: ["matchAny"]
                   properties:
+                    matchAny:
+                      type: boolean
                     labelSelectors:
                       type: array
                       items:
