@@ -84,8 +84,9 @@ properties:
                     minLength: 1
                 namespaceSelector:
                   type: object
-                  required:
-                    - labelSelectors
+                  oneOf:
+                    - required: ["labelSelectors"]
+                    - required: ["matchAny"]
                   properties:
                     labelSelectors:
                       type: array
@@ -120,7 +121,6 @@ properties:
                               maxLength: 63
                               pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
                             type: object
-                          minLength: 1
                 subjects:
                   type: array
                   items:
