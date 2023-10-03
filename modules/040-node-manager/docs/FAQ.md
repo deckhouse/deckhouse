@@ -52,20 +52,20 @@ You can automate the bootstrap process with any automation platform you prefer. 
    kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
-2. Check the k8s version if it is >= 1.25, you should create ``node-group-token``.
+1. Check the k8s version if it is >= 1.25, you should create ``node-group-token``.
 
    ```shell
    kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
    ```
 
-3. Get Kubernetes API token for special `ServiceAccount` that Deckhouse manages:
+1. Get Kubernetes API token for special `ServiceAccount` that Deckhouse manages:
 
    ```shell
    kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 
-4. Create Ansible playbook with `vars` replaced with values from previous steps:
+1. Create Ansible playbook with `vars` replaced with values from previous steps:
 
    ```yaml
    - hosts: all
@@ -103,7 +103,7 @@ You can automate the bootstrap process with any automation platform you prefer. 
          when: bootstrapped.stat.exists == False
    ```
 
-5. Specify one more `node_group` variable. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, for example, by using an inventory file.:
+1. Specify one more `node_group` variable. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, for example, by using an inventory file.:
 
    ```text
    [system]
@@ -121,7 +121,7 @@ You can automate the bootstrap process with any automation platform you prefer. 
    node_group=worker
    ```
 
-6. Run the playbook with the inventory file.
+1. Run the playbook with the inventory file.
 
 ## How do I change the NodeGroup of a static node?
 
