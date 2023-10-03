@@ -2,11 +2,11 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. Так как на master-узле по умолчанию работает только ограниченный набор системных компонентов, для полноценной работы кластера необходимо <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавить в кластер</a> хотя бы один worker-узел.
+At this point, you have created a cluster that consists of a **single** master node. Since only a limited set of system components run on the master node by default, <a href="/documentation/v1/modules/040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster">you have to add</a> at least one worker node to the cluster for the cluster to work properly.
 
-{% offtopic title="Если вам достаточно одного master-узла..." %}
+{% offtopic title="If a single master node is all you need…" %}
 <div>
-<p>Если вы развернули кластер <strong>для ознакомительных целей</strong>, то кластера из одного узла может быть достаточно. Для того чтобы разрешить остальным компонентам Deckhouse работать на master-узле, необходимо снять с master-узла taint, выполнив на нем следующую команду:</p>
+<p>A single-node cluster may be sufficient for <strong>familiarization purposes</strong>. In this case, you do not need to add more nodes to the cluster. To permit the other Deckhouse components to run on the master node, remove the taint from the master node by running the following command on it:</p>
 
 <div markdown="0">
 {% snippetcut %}
@@ -16,18 +16,18 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
 {% endsnippetcut %}
 </div>
 
-<p><strong>Выполнять дальнейшие шаги по добавлению нового узла в кластер не нужно!</strong></p>
+<p><strong>Note that you do not need to follow the steps below on how to add a new node to the cluster.</strong></p>
 </div>
 {%- endofftopic %}
 
-Добавьте узел в кластер:
+Add a new node to the cluster:
 
 <ul>
   <li>
-    Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
+    Start a <strong>new virtual machine</strong> that will become the cluster node.
   </li>
   <li>
-    Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:
+    Create a <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:
     {% snippetcut %}
   ```bash
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -42,7 +42,7 @@ EOF
     {% endsnippetcut %}
   </li>
   <li>
-    Deckhouse подготовит скрипт, необходимый для настройки будущего узла и включения его в кластер. Выведите его содержимое в формате Base64 (оно понадобится на следующем шаге):
+    Deckhouse will generate the script needed to configure the prospective node and include it in the cluster. Print its contents in Base64 format (you will need them at the next step):
     {% snippetcut %}
   ```bash
 kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
@@ -50,16 +50,16 @@ kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o j
   {% endsnippetcut %}
   </li>
   <li>
-    <strong> На подготовленной виртуальной машине</strong> выполните следующую команду, вставив код скрипта, полученный на предыдущем шаге:
+    On the <strong>virtual machine you have started</strong>, run the following command by pasting the script code from the previous step:    
   {% snippetcut %}
   ```bash
-echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
+echo <Base64-SCRIPT-CODE> | base64 -d | sudo bash
   ```
   {% endsnippetcut %}
   </li>
 </ul>
 
-<p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
+<p>Note that it may take some time to get all Deckhouse components up and running after the installation is complete.</p>
 
 Before you go further:
 <ul><li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
@@ -98,8 +98,8 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 {%- endofftopic %}
 </li></ul>
 
-Далее нужно создать Ingress-контроллер, Storage Class для хранения данных, пользователя для доступа в веб-интерфейсы и настроить DNS.
-<ul><li><p><strong>Setup Ingress controller</strong></p>
+Next, you will need to create an Ingress controller, a Storage Class for data storage, a user to access the web interfaces, and configure the DNS.
+<ul><li><p><strong>Setting up an Ingress controller</strong></p>
 <p>On the <strong>master node</strong>, create the <code>ingress-nginx-controller.yml</code> file containing the Ingress controller configuration:</p>
   {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
   {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
@@ -129,8 +129,8 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {%- endofftopic %}
 </li>
-<li><p><strong>Создание StorageClass</strong></p>
-<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+<li><p><strong>Creating a StorageClass</strong></p>
+<p>Configure the StorageClass for the <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -146,9 +146,9 @@ EOF
 ```
 {% endsnippetcut %}
 
-<li><p><strong>Настройка Prometheus</strong></p>
+<li><p><strong>Configuring Prometheus</strong></p>
 
-Настройте Prometheus на использование созданного StorageClass'а (это позволит не терять данные при перезапуске Prometheus). Выполните на <strong>master-узле</strong> следующую команду:
+Configure Prometheus to use the created StorageClass (this will prevent data loss if Prometheus gets restarted). Run the following command on the <strong>master node</strong>:
 
 {% snippetcut %}
 ```shell
