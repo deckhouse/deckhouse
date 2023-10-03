@@ -79,7 +79,7 @@ func (c *Client) bootstrapFromPendingPhase(ctx context.Context, instanceScope *s
 		return errors.Wrap(err, "failed to patch StaticInstance MachineRef and Phase")
 	}
 
-	err = c.bootstrap(ctx, instanceScope)
+	_, err = c.bootstrap(ctx, instanceScope)
 	if err != nil {
 		return errors.Wrap(err, "failed to bootstrap")
 	}
@@ -89,9 +89,12 @@ func (c *Client) bootstrapFromPendingPhase(ctx context.Context, instanceScope *s
 
 // bootstrapFromBootstrappingPhase finishes the bootstrap process by waiting for bootstrapping Node to appear and patching StaticMachine and StaticInstance.
 func (c *Client) bootstrapFromBootstrappingPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	err := c.bootstrap(ctx, instanceScope)
+	done, err := c.bootstrap(ctx, instanceScope)
 	if err != nil {
 		return errors.Wrap(err, "failed to bootstrap")
+	}
+	if !done {
+		return nil
 	}
 
 	node, err := waitForNode(ctx, instanceScope)
@@ -129,10 +132,10 @@ func (c *Client) bootstrapFromBootstrappingPhase(ctx context.Context, instanceSc
 	return nil
 }
 
-func (c *Client) bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
+func (c *Client) bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) (bool, error) {
 	bootstrapScript, err := getBootstrapScript(ctx, instanceScope)
 	if err != nil {
-		return errors.Wrap(err, "failed to get bootstrap script")
+		return false, errors.Wrap(err, "failed to get bootstrap script")
 	}
 
 	done := c.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
@@ -147,10 +150,10 @@ func (c *Client) bootstrap(ctx context.Context, instanceScope *scope.InstanceSco
 		return true
 	})
 	if !done {
-		return errors.New("bootstrapping is not finished yet, waiting...")
+		instanceScope.Logger.Info("Bootstrapping is not finished yet, waiting...")
 	}
 
-	return nil
+	return done, nil
 }
 
 // waitForNode waits for the node to appear and checks that it has 'node.deckhouse.io/configuration-checksum' annotation.

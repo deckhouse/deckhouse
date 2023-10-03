@@ -55,19 +55,16 @@ func (c *Client) cleanupFromRunningPhase(ctx context.Context, instanceScope *sco
 		return errors.Wrap(err, "failed to patch StaticInstance phase")
 	}
 
-	err = c.cleanup(instanceScope)
-	if err != nil {
-		return errors.Wrap(err, "failed to clean up")
-	}
+	c.cleanup(instanceScope)
 
 	return nil
 }
 
 // cleanupFromCleaningPhase finishes the cleanup process by checking if the cleanup script was successfully executed and patching StaticInstance.
 func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	err := c.cleanup(instanceScope)
-	if err != nil {
-		return errors.Wrap(err, "failed to clean up")
+	done := c.cleanup(instanceScope)
+	if !done {
+		return nil
 	}
 
 	instanceScope.Instance.Status.MachineRef = nil
@@ -78,7 +75,7 @@ func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *sc
 
 	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
-	err = instanceScope.Patch(ctx)
+	err := instanceScope.Patch(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to patch StaticInstance phase")
 	}
@@ -86,7 +83,7 @@ func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *sc
 	return nil
 }
 
-func (c *Client) cleanup(instanceScope *scope.InstanceScope) error {
+func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
 	done := c.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
 		err := ssh.ExecSSHCommand(instanceScope, "test -d /opt/deckhouse || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing", nil)
 		if err != nil {
@@ -98,8 +95,8 @@ func (c *Client) cleanup(instanceScope *scope.InstanceScope) error {
 		return true
 	})
 	if !done {
-		return errors.New("cleaning is not finished yet, waiting...")
+		instanceScope.Logger.Info("Cleaning is not finished yet, waiting...")
 	}
 
-	return nil
+	return done
 }
