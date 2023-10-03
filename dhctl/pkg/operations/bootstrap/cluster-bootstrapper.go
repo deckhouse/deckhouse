@@ -73,6 +73,7 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
 	InitialState               phases.DhctlState
+	ResetInitialState          bool
 	DisableBootstrapClearCache bool
 	OnPhaseFunc                phases.OnPhaseFunc
 
@@ -192,7 +193,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	// next init cache
 	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState}); err != nil {
+	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}
