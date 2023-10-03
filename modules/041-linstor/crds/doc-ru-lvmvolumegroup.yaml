@@ -1,35 +1,36 @@
 spec:
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
-          type: object
-          description: "lvm volume group"
+          description: |
+            LVM volume group
           properties:
             spec:
-              type: object
               properties:
                 type:
-                  type: string
+                  description: |
+                    Используемая LVM volume group
                 actualvgonthenode:
-                  type: string
+                  description: |
+                    Имя LVM volume group на узле
                 thinpool:
-                  type: object
+                  description: |
+                    Используемый thin pool
                   properties:
                     name:
-                      type: string
+                      description: |
+                        Имя thin pool
                     size:
-                      type: string
+                      description: |
+                        Размер thin pool
             status:
-              type: object
               properties:
                 nodes:
-                  type: array
+                  description: |
+                    Список нод
                   items:
-                    type: object
                     properties:
                       name:
-                        type: string
-
+                        description: |
+                          Имена нод

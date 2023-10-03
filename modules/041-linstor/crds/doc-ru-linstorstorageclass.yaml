@@ -3,32 +3,28 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          type: object
-          description: "пустой linstor storage class "
+          description: |
+            Linstor storage class
           properties:
             spec:
-              type: object
               properties:
                 linstorstoragepool:
-                  type: string
+                  description: |
+                    Связанный Linstor storage pool
                 placementcount:
-                  type: integer
+                  description: |
+                    Количество реплик ресурсов
                 reclaimpolicy:
-                  type: string
+                  description: |
+                    Действие при удалениии ресурса
                 volumebindingmode:
-                  type: string
+                  description: |
+                    Режим подключения тома
                 allowvolumeexpand:
-                  type: boolean
+                  description: |
+                    Разрешено ли расширять тома
                 drbdoptions:
-                  type: object
                   properties:
                     autoquorum:
-                      type: string
-            status:
-              type: object
-              properties:
-                phase:
-                  type: string
-                  enum: [ 'Failed', 'Completed' ]
-                reason:
-                  type: string
+                      description: |
+                        Автоматически подтверждать кворум ресурсов
