@@ -260,15 +260,15 @@ spec:
                                   pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
                                   minLength: 1
                                   maxLength: 63
-                          matchLabels:
-                            type: object
-                            description: A set of labels a namespace must have to match.
-                            example: { "foo": "bar", "baz": "who" }
-                            additionalProperties:
-                              type: string
-                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
-                              minLength: 1
-                              maxLength: 63
+                        matchLabels:
+                          type: object
+                          description: A set of labels a namespace must have to match.
+                          example: { "foo": "bar", "baz": "who" }
+                          additionalProperties:
+                            type: string
+                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                            minLength: 1
+                            maxLength: 63
                 limitNamespaces:
                   type: array
                   x-doc-deprecated: true
