@@ -1,10 +1,10 @@
 ---
-title: "The istio module"
+title: "The Istio module"
 webIfaces:
-- name: istio
+- name: Istio
 ---
 
-Currently supported istio versions:
+Currently supported Istio versions:
 * 1.12 (deprecated)
 * 1.13 (deprecated)
 * 1.16
@@ -182,8 +182,8 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
 It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
 
 **Note!** Istio-proxy, running as a sidecar container, consumes resources and adds overhead:
-* Each request is DNAT'ed to envoy that processes it and creates another one. The same thing happens on the receiving side.
-* Each envoy stores information about all the services in the cluster, thereby consuming memory. The bigger the cluster, the more memory envoy consumes. You can use the [Sidecar](istio-cr.html#sidecar) CustomResource to solve this problem.
+* Each request is DNAT'ed to Envoy that processes it and creates another one. The same thing happens on the receiving side.
+* Each Envoy stores information about all the services in the cluster, thereby consuming memory. The bigger the cluster, the more memory Envoy consumes. You can use the [Sidecar](istio-cr.html#sidecar) CustomResource to solve this problem.
 
 It is also important to get the Ingress controller and the application's Ingress resources ready:
 * Enable [`enableIstioSidecar`](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) of the `IngressNginxController` resource.
