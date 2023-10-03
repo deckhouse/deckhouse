@@ -43,7 +43,7 @@ spec:
                   description: |
                     URL of the registry API.
 
-                    Automatically derived from `imageRepo` if not specified.
+                    Automatically derived from the [imageRepo](#werfsource-v1alpha1-spec-imagerepo) parameter if not specified.
                     E.g. if `imageRepo=cr.example.com/myproject`, then `apiURL` is derived as
                     `https://cr.example.com/`.
                 pullSecretName:
@@ -51,14 +51,14 @@ spec:
                   pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                   description: |
                     Name of the secret of type `kubernetes.io/dockerconfigjson` with credentials for the registry.
-                    
+
                     The secret must be in namespace `d8-delivery`.
                 argocdRepoEnabled:
                   type: boolean
                   default: true
                   description: |
                     Whether to create Argo CD repository for this source.
-                    
+
                     If `true`, then the OCI-enabled repository
                     will be created in Argo CD with name `name`. Turn it off if you want to create the repository manually,
                     e.g. based on git or Helm Chart Museum.
