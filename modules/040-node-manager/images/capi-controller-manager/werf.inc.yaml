@@ -15,7 +15,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache make git
+  - apk add --no-cache make git bash
   install:
   - mkdir /src
   - export GOPROXY={{ $.GOPROXY }}
