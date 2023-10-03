@@ -19,16 +19,16 @@ spec:
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 100 # Максимальное число коннектов в сторону host, суммарно для всех эндпоинтов
+        maxConnections: 100 # Максимальное число коннектов в сторону host, суммарно для всех эндпоинтов.
       http:
-        maxRequestsPerConnection: 10 # Каждые 10 запросов коннект будет пересоздаваться
+        maxRequestsPerConnection: 10 # Каждые 10 запросов коннект будет пересоздаваться.
     outlierDetection:
       consecutive5xxErrors: 7 # Допустимо 7 ошибок (включая пятисотые, TCP-таймауты и HTTP-таймауты)
-      interval: 5m            # В течение пяти минут
-      baseEjectionTime: 15m   # После которых эндпоинт будет исключён из балансировки на 15 минут.
+      interval: 5m            # в течение пяти минут,
+      baseEjectionTime: 15m   # после которых эндпоинт будет исключен из балансировки на 15 минут.
 ```
 
-А также, для настройки HTTP-таймаутов используется ресурс [VirtualService](istio-cr.html#virtualservice). Эти таймауты также учитываются при подсчёте статистики ошибок на эндпоинтах.
+А также для настройки HTTP-таймаутов используется ресурс [VirtualService](istio-cr.html#virtualservice). Эти таймауты также учитываются при подсчете статистики ошибок на эндпоинтах.
 
 Пример:
 
@@ -50,7 +50,7 @@ spec:
 
 ## Балансировка gRPC
 
-**Важно!** Для того, чтобы балансировка gRPC-сервисов заработала автоматически, присвойте name с префиксом или значением `grpc` для порта в соответствующем Service.
+**Важно!** Чтобы балансировка gRPC-сервисов заработала автоматически, присвойте name с префиксом или значением `grpc` для порта в соответствующем Service.
 
 ## Locality Failover
 
@@ -58,13 +58,13 @@ spec:
 
 Istio позволяет настроить приоритетный географический фейловер между эндпоинтами. Для определения зоны Istio использует лейблы узлов с соответствующей иерархией:
 
-* `topology.istio.io/subzone`
-* `topology.kubernetes.io/zone`
-* `topology.kubernetes.io/region`
+* `topology.istio.io/subzone`;
+* `topology.kubernetes.io/zone`;
+* `topology.kubernetes.io/region`.
 
 Это полезно для межкластерного фейловера при использовании совместно с [мультикластером](#устройство-мультикластера-из-двух-кластеров-с-помощью-ресурса-istiomulticluster).
 
-> **Важно!** Для включения Locality Failover используется ресурс DestinationRule, в котором также необходимо настроить outlierDetection.
+> **Важно!** Для включения Locality Failover используется ресурс DestinationRule, в котором также необходимо настроить `outlierDetection`.
 
 Пример:
 
@@ -78,8 +78,8 @@ spec:
   trafficPolicy:
     loadBalancer:
       localityLbSetting:
-        enabled: true # включили LF
-    outlierDetection: # outlierDetection включить обязательно
+        enabled: true # Включили LF.
+    outlierDetection: # outlierDetection включить обязательно.
       consecutive5xxErrors: 1
       interval: 1s
       baseEjectionTime: 1m
@@ -113,12 +113,12 @@ spec:
 
 ## Canary
 
-**Важно!** Istio отвечает лишь за гибкую маршрутизацию запросов, которая опирается на спец-заголовки запросов (например, cookie) или просто на случайность. За настройку этой маршрутизации и "переключение" между канареечными версиями отвечает CI/CD система.
+**Важно!** Istio отвечает лишь за гибкую маршрутизацию запросов, которая опирается на спецзаголовки запросов (например, cookie) или просто на случайность. За настройку этой маршрутизации и «переключение» между канареечными версиями отвечает CI/CD-система.
 
-Подразумевается, что в одном namespace выкачено два Deployment с разными версиями приложения. У Pod'ов разных версий разные лейблы (`version: v1` и `version: v2`).
+Подразумевается, что в одном namespace выкачено два Deployment с разными версиями приложения. У подов разных версий разные лейблы (`version: v1` и `version: v2`).
 
 Требуется настроить два custom resource:
-* [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения (subset-ы).
+* [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения (subset'ы);
 * [VirtualService](istio-cr.html#virtualservice) с описанием, как распределять трафик между разными версиями приложения.
 
 Пример:
@@ -130,8 +130,8 @@ metadata:
   name: productpage-canary
 spec:
   host: productpage
-  # subset-ы доступны только при обращении к хосту через через VirtualService из Pod'а под управлением Istio.
-  # Эти subset-ы должны быть указаны в маршрутах.
+  # subset'ы доступны только при обращении к хосту через VirtualService из пода под управлением Istio.
+  # Эти subset'ы должны быть указаны в маршрутах.
   subsets:
   - name: v1
     labels:
@@ -181,7 +181,7 @@ spec:
     - destination:
         host: productpage
         subset: v1 # Ссылка на subset из DestinationRule.
-      weight: 90 # Процент трафика, который получат Pod'ы с лейблом version: v1.
+      weight: 90 # Процент трафика, который получат поды с лейблом version: v1.
   - route:
     - destination:
         host: productpage
@@ -201,7 +201,7 @@ kind: IngressIstioController
 metadata:
  name: main
 spec:
-  # ingressGatewayClass содержит значение селектора меток, используемое при создании ресурса Gateway
+  # ingressGatewayClass содержит значение селектора меток, используемое при создании ресурса Gateway.
   ingressGatewayClass: istio-hp
   inlet: HostPort
   hostPort:
@@ -223,7 +223,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: app-tls-secert
-  namespace: d8-ingress-istio # обратите внимание, что namespace не является app-ns
+  namespace: d8-ingress-istio # Обратите внимание, что namespace не является app-ns.
 type: kubernetes.io/tls
 data:
   tls.crt: |
@@ -240,25 +240,25 @@ metadata:
   namespace: app-ns
 spec:
   selector:
-    # селектор меток для использования Istio Ingress Gateway main-hp
+    # Селектор меток для использования Istio Ingress Gateway main-hp.
     istio.deckhouse.io/ingress-gateway-class: istio-hp
   servers:
     - port:
-        # стандартный шаблон для использования протокола HTTP
+        # Стандартный шаблон для использования протокола HTTP.
         number: 80
         name: http
         protocol: HTTP
       hosts:
         - app.example.com
     - port:
-        # стандартный шаблон для использования протокола HTTPS
+        # Стандартный шаблон для использования протокола HTTPS.
         number: 443
         name: https
         protocol: HTTPS
       tls:
         mode: SIMPLE
-        # секрет с сертификатом и ключем, который должен быть создан в d8-ingress-istio namespace
-        # поддерживаемые форматы секретов можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats
+        # Secret с сертификатом и ключем, который должен быть создан в d8-ingress-istio namespace.
+        # Поддерживаемые форматы Secret'ов можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
         credentialName: app-tls-secrets
       hosts:
         - app.example.com
@@ -281,12 +281,12 @@ spec:
             host: app-svc
 ```
 
-### Nginx Ingress
+### NGINX Ingress
 
-Для работы с Nginx Ingress требуется подготовить:
+Для работы с NGINX Ingress требуется подготовить:
 * Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у custom resource [IngressNginxController](../../modules/402-ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/402-ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
-  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в Pod'ы приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией sidecar сможет идентифицировать прикладной сервис, для которого предназначен запрос.
 
 Примеры:
@@ -298,11 +298,11 @@ metadata:
   name: productpage
   namespace: bookinfo
   annotations:
-    # Просим nginx проксировать трафик на ClusterIP вместо собственных IP Pod'ов.
+    # Просим nginx проксировать трафик на ClusterIP вместо собственных IP подов.
     nginx.ingress.kubernetes.io/service-upstream: "true"
     # В Istio вся маршрутизация осуществляется на основе `Host:` заголовка запросов. 
     # Чтобы не сообщать Istio о существовании внешнего домена `productpage.example.com`, 
-    # мы просто используем внутренний домен, о котором Istio осведомлён.
+    # мы просто используем внутренний домен, о котором Istio осведомлен.
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
   rules:
@@ -337,18 +337,18 @@ spec:
 
 ### Алгоритм принятия решения
 
-**Важно!** Как только для приложения создаётся `AuthorizationPolicy`, начинает работать следующий алгоритм принятия решения о судьбе запроса:
+**Важно!** Как только для приложения создается `AuthorizationPolicy`, начинает работать следующий алгоритм принятия решения о судьбе запроса:
 * Если запрос попадает под политику DENY — запретить запрос.
 * Если для данного приложения нет политик ALLOW — разрешить запрос.
 * Если запрос попадает под политику ALLOW — разрешить запрос.
 * Все остальные запросы — запретить.
 
-Иными словами, если вы явно что-то запретили, то работает только ваш запрет. Если же вы что-то явно разрешили, то теперь разрешены только явно одобренные запросы (запреты никуда не исчезают и имеют приоритет).
+Иными словами, если вы явно что-то запретили, работает только ваш запрет. Если же вы что-то явно разрешили, теперь разрешены только явно одобренные запросы (запреты никуда не исчезают и имеют приоритет).
 
-**Важно!** Для работы политик, основанных на высокоуровневых параметрах, таких как namespace или principal, необходимо, чтобы все вовлечённые сервисы работали под управлением Istio. Также, между приложениями должен быть организован Mutual TLS.
+**Важно!** Для работы политик, основанных на высокоуровневых параметрах, таких как namespace или principal, необходимо, чтобы все вовлеченные сервисы работали под управлением Istio. Также между приложениями должен быть организован Mutual TLS.
 
 Примеры:
-* Запретим POST-запросы для приложения myapp. Отныне, так как для приложения появилась политика, то согласно алгоритму выше будут запрещены только POST-запросы к приложению.
+* Запретим POST-запросы для приложения myapp. Отныне, так как для приложения появилась политика, согласно алгоритму выше будут запрещены только POST-запросы к приложению.
 
   ```yaml
   apiVersion: security.istio.io/v1beta1
@@ -367,7 +367,7 @@ spec:
           methods: ["POST"]
   ```
 
-* Здесь для приложения создана политика ALLOW. При ней будут разрешены только запросы из NS `bar`. Остальные — запрещены.
+* Здесь для приложения создана политика ALLOW. При ней будут разрешены только запросы из NS `bar`, остальные запрещены.
 
   ```yaml
   apiVersion: security.istio.io/v1beta1
@@ -379,14 +379,14 @@ spec:
     selector:
       matchLabels:
         app: myapp
-    action: ALLOW # default, можно не указывать
+    action: ALLOW # default, можно не указывать.
     rules:
     - from:
       - source:
           namespaces: ["bar"]
   ```
 
-* Здесь для приложения создана политика ALLOW. При этом она не имеет ни одного правила и поэтому ни один запрос под неё не попадёт, но она таки есть. Поэтому, согласно алгоритму, раз что-то разрешено, то всё остальное — запрещено. В данном случае всё остальное — это вообще все запросы.
+* Здесь для приложения создана политика ALLOW. При этом она не имеет ни одного правила, и поэтому ни один запрос под нее не попадет, но она таки есть. Поэтому, согласно алгоритму, раз что-то разрешено, то все остальное запрещено. В данном случае все остальное — это вообще все запросы.
 
   ```yaml
   apiVersion: security.istio.io/v1beta1
@@ -402,7 +402,7 @@ spec:
     rules: []
   ```
 
-* Здесь для приложения создана политика ALLOW (это default) и одно пустое правило. Под это правило попадает любой запрос и автоматически этот запрос получает добро.
+* Здесь для приложения созданы политика ALLOW (это default) и одно пустое правило. Под это правило попадает любой запрос и автоматически получает добро.
 
   ```yaml
   apiVersion: security.istio.io/v1beta1
@@ -418,11 +418,11 @@ spec:
     - {}
   ```
 
-### Запретить вообще всё в рамках namespace foo
+### Запретить вообще все в рамках namespace foo
 
 Два способа:
 
-* Запретить явно. Здесь мы создаём политику DENY с единственным универсальным фильтром `{}`, под который попадают все запросы:
+* Запретить явно. Здесь мы создаем политику DENY с единственным универсальным фильтром `{}`, под который попадают все запросы:
 
   ```yaml
   apiVersion: security.istio.io/v1beta1
@@ -436,7 +436,7 @@ spec:
     - {}
   ```
 
-* Неявно. Здесь мы создаём политику ALLOW (по умолчанию), но не создаём ни одного фильтра так, что ни один запрос под неё не попадёт и будет автоматически запрещён.
+* Неявно. Здесь мы создаем политику ALLOW (по умолчанию), но не создаем ни одного фильтра, так что ни один запрос под нее не попадет и будет автоматически запрещен.
 
   ```yaml
   apiVersion: security.istio.io/v1beta1
@@ -523,14 +523,14 @@ spec:
  action: ALLOW
  rules:
  - from:
-   - source: # правила ниже логически перемножаются
+   - source: # Правила ниже логически перемножаются.
        namespaces: ["baz"]
        principals: ["foo.local/*", "bar.local/*"]
 ```
 
-### Разрешить из любого кластера (по mtls)
+### Разрешить из любого кластера (по mTLS)
 
-**Важно!** Если есть запрещающие правила, то у них будет приоритет. Смотри [алгоритм](#алгоритм-принятия-решения).
+**Важно!** Если есть запрещающие правила, у них будет приоритет. Смотри [алгоритм](#алгоритм-принятия-решения).
 
 Пример:
 
@@ -545,10 +545,10 @@ spec:
  rules:
  - from:
    - source:
-       principals: ["*"] # to set MTLS mandatory
+       principals: ["*"] # To set mTLS mandatory.
 ```
 
-### Разрешить вообще откуда угодно (в том числе без mtls)
+### Разрешить вообще откуда угодно (в том числе без mTLS)
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -615,35 +615,35 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
-## Управление поведением data-plane
+## Управление поведением data plane
 
 ### [экспериментальная функция] Предотвратить завершение работы istio-proxy до завершения соединений основного приложения
 
-По умолчанию, в процессе остановки пода, все контейнеры, включая istio-proxy, получают сигнал SIGTERM одновременно. Но некоторым приложениям для правильного завершения работы необходимо время и иногда дополнительная сетевая активность. Это невозможно если istio-proxy завершился раньше.
-Решение — добавить в istio-proxy preStop-хук для оценки активности прикладных контейнеров, а единственный доступный метод — это выявление сетевых сокетов приложения, и если таковых нет, то можно останавливать контейнер.
+По умолчанию в процессе остановки пода все контейнеры, включая istio-proxy, получают сигнал SIGTERM одновременно. Но некоторым приложениям для правильного завершения работы необходимо время и иногда дополнительная сетевая активность. Это невозможно, если istio-proxy завершился раньше.
+Решение — добавить в istio-proxy preStop-хук для оценки активности прикладных контейнеров, а единственный доступный метод — это выявление сетевых сокетов приложения, и если таковых нет, тогда можно останавливать контейнер.
 Аннотация ниже добавляет описанный выше preStop-хук в контейнер istio-proxy прикладного пода:
 `inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops`.
 
 ## Обновление Istio
 
-## Обновление control-plane Istio
+## Обновление control plane Istio
 
-* Deckhouse позволяет инсталлировать несколько версий control-plane одновременно:
-  * Одна глобальная, обслуживает namespace'ы или Pod'ы без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
-  * Остальные — дополнительные, обслуживают namespace'ы или Pod'ы с явным указанием версии (label у namespace или у Pod `istio.io/rev: v1x16`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
-* Istio заявляет обратную совместимость между data-plane и control-plane в диапазоне двух минорных версий:
+* Deckhouse позволяет инсталлировать несколько версий control plane одновременно:
+  * Одна глобальная, обслуживает namespace'ы или поды без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
+  * Остальные — дополнительные, обслуживают namespace'ы или поды с явным указанием версии (label у namespace или пода `istio.io/rev: v1x16`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
+* Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
 * Алгоритм обновления (для примера, на версию `1.16`):
   * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.16"]`).
-  * Дождаться появления соответствующего Pod'а `istiod-v1x16-xxx-yyy` в namespace `d8-istio`.
+  * Дождаться появления соответствующего пода `istiod-v1x16-xxx-yyy` в namespace `d8-istio`.
   * Для каждого прикладного namespace, где включен istio:
-    * Поменять label `istio-injection: enabled` на `istio.io/rev: v1x16`.
-    * По очереди пересоздать Pod'ы в namespace, параллельно контролируя работоспособность приложения.
+    * поменять label `istio-injection: enabled` на `istio.io/rev: v1x16`;
+    * по очереди пересоздать поды в namespace, параллельно контролируя работоспособность приложения.
   * Поменять настройку `globalVersion` на `1.16` и удалить `additionalVersions`.
-  * Убедиться, что старый Pod `istiod` удалился.
+  * Убедиться, что старый под `istiod` удалился.
   * Поменять лейблы прикладных namespace на `istio-injection: enabled`.
 
-Чтобы найти все Pod'ы под управлением старой ревизии Istio, выполните:
+Чтобы найти все поды под управлением старой ревизии Istio, выполните:
 
 ```shell
 kubectl get pods -A -o json | jq --arg revision "v1x13" \
@@ -651,8 +651,8 @@ kubectl get pods -A -o json | jq --arg revision "v1x13" \
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
 
-### Автоматическое обновление data-plane Istio
+### Автоматическое обновление data plane Istio
 
 > Доступно только в редакции Enterprise Edition.
 
-Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс, `Deployment`, `DaemonSet` или `StatefulSet`.
+Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
