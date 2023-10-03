@@ -31,13 +31,15 @@ import (
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient              *ssh.Client
-	InitialState           phases.DhctlState
-	ResetInitialState      bool
-	OnPhaseFunc            phases.OnPhaseFunc
-	CommanderMode          bool
-	AutoDismissDestructive bool
-	AutoApprove            bool
+	SSHClient                                 *ssh.Client
+	InitialState                              phases.DhctlState
+	ResetInitialState                         bool
+	OnPhaseFunc                               phases.OnPhaseFunc
+	CommanderMode                             bool
+	CommanderClusterConfigurationData         []byte
+	CommanderProviderClusterConfigurationData []byte
+	AutoDismissDestructive                    bool
+	AutoApprove                               bool
 
 	*client.KubernetesInitParams
 }
@@ -115,6 +117,8 @@ func (c *Converger) Converge() error {
 	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache).
 		WithPhasedExecutionContext(c.PhasedExecutionContext).
 		WithCommanderMode(c.Params.CommanderMode).
+		WithCommanderClusterConfigurationData(c.Params.CommanderClusterConfigurationData).
+		WithCommanderProviderClusterConfigurationData(c.Params.CommanderProviderClusterConfigurationData).
 		WithChangeSettings(&terraform.ChangeActionSettings{
 			AutoDismissDestructive: c.AutoDismissDestructive,
 			AutoApprove:            c.AutoApprove,
