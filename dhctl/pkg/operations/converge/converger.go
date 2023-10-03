@@ -33,6 +33,7 @@ import (
 type Params struct {
 	SSHClient              *ssh.Client
 	InitialState           phases.DhctlState
+	ResetInitialState      bool
 	OnPhaseFunc            phases.OnPhaseFunc
 	CommanderMode          bool
 	AutoDismissDestructive bool
@@ -98,7 +99,7 @@ func (c *Converger) Converge() error {
 		return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 	}
 
-	err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{InitialState: c.InitialState})
+	err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{InitialState: c.InitialState, ResetInitialState: c.ResetInitialState})
 	if err != nil {
 		return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
 	}
