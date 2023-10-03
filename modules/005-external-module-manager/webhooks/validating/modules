@@ -23,13 +23,13 @@ kubernetesValidating:
 - name: modules.deckhouse.io
   rules:
   - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["*"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
     resources:   ["externalmodulesources"]
     scope:       "Cluster"
   - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["*"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
     resources:   ["externalmodulereleases"]
     scope:       "Cluster"
 EOF
