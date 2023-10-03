@@ -90,6 +90,7 @@ properties:
                   properties:
                     matchAny:
                       type: boolean
+                      enum: [true]
                     labelSelectors:
                       type: array
                       items:

@@ -224,6 +224,7 @@ spec:
                       description: |
                         Permits access to any namespace in the cluster, including system namespaces.
                       type: boolean
+                      enum: [true]
                     labelSelectors:
                       description: |
                         Defines label selector-based filters of namespaces.
