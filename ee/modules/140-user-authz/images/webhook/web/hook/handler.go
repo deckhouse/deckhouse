@@ -112,7 +112,7 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 			}
 		}
 	} else {
-	// there is no filters - assume a positive outcome
+		// there is no filters - assume a positive outcome
 		request.Status.Denied = false
 	}
 

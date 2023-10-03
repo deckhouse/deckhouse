@@ -24,7 +24,7 @@ type DirectoryEntry struct {
 
 type NamespaceSelector struct {
 	LabelSelectors []*metav1.LabelSelector `json:"labelSelectors"`
-	MatchAny bool `json:"matchAny"`
+	MatchAny       bool                    `json:"matchAny"`
 }
 
 // UserAuthzConfig is a config composed from ClusterAuthorizationRules collected from Kubernetes cluster
