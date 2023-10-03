@@ -181,7 +181,7 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
 
 	} else if namespaced && hasAnyFilters(entry) {
-		// we should not allow cluster scoped requests for namespaced objects if namespaces access is limited
+		// we should not allow cluster scoped requests for namespaced objects if access to namespaces is limited
 		h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
 	}
 
@@ -275,7 +275,7 @@ func (h *Handler) renewDirectories() {
 
 			// If there are neither LimitNamespaces nor NamespaceSelector options, it means all non-system namespaces are allowed.
 			// We need to know whether we have at least one such a CR for the user in a cluster.
-			dirEntry.NamespaceFiltersAbsent = dirEntry.NamespaceFiltersAbsent || (len(crd.Spec.LimitNamespaces) == 0 && crd.Spec.NamespaceSelector == nil)
+			dirEntry.NamespaceFiltersAbsent = dirEntry.NamespaceFiltersAbsent || (len(crd.Spec.LimitNamespaces) == 0 && !isLabelSelectorApplied(crd.Spec.NamespaceSelector))
 
 			// if the NamespaceSelector field is empty - take the limitNamespaces entries and check the allowAccessToSystemNamespaces flag
 			if crd.Spec.NamespaceSelector == nil {
@@ -302,6 +302,18 @@ func (h *Handler) renewDirectories() {
 
 	h.directory = directory
 	h.logger.Println("configuration was reloaded successfully")
+}
+
+func isLabelSelectorApplied(namespaceSelector *NamespaceSelector) bool {
+	if namespaceSelector == nil {
+		return false
+	}
+
+	if len(namespaceSelector.LabelSelectors) == 0 {
+		return false
+	}
+
+	return true
 }
 
 // StartRenewConfigLoop periodically reads new config file from the file system and composes directories.
@@ -356,12 +368,14 @@ func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSe
 	labelsSet = namespace.ObjectMeta.GetLabels()
 
 	for _, namespaceSelector := range namespaceSelectors {
-		selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
-		if err != nil {
-			return false, err
-		}
-		if selector.Matches(labelsSet) {
-			return true, nil
+		for _, labelSelector := range namespaceSelector.LabelSelectors {
+			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+			if err != nil {
+				return false, err
+			}
+			if selector.Matches(labelsSet) {
+				return true, nil
+			}
 		}
 	}
 	return false, nil

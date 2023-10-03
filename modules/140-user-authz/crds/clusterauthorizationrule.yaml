@@ -217,54 +217,56 @@ spec:
                     Is available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter is enabled.
                   type: object
                   oneOf:
-                    - required: ["labelSelector"]
+                    - required: ["labelSelectors"]
                     - required: ["matchAny"]
                   properties:
                     matchAny:
                       description: |
                         Permits access to any namespace in the cluster, including system namespaces.
                       type: boolean
-                    labelSelector:
+                    labelSelectors:
                       description: |
-                        Defines label selector-based filter of namespaces.
+                        Defines label selector-based filters of namespaces.
 
                         If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
-                      type: object
-                      minProperties: 1
-                      properties:
-                        matchExpressions:
-                          type: array
-                          description: An array of set-based expressions.
-                          items:
-                            type: object
-                            required:
-                              - key
-                              - operator
-                            properties:
-                              key:
-                                description: A label name.
-                                type: string
-                              operator:
-                                description: A comparison operator.
-                                type: string
-                                enum: [In,NotIn,Exists,DoesNotExist]
-                              values:
-                                type: array
-                                description: A label value.
-                                items:
+                      type: array
+                      items: 
+                        type: object
+                        minProperties: 1
+                        properties:
+                          matchExpressions:
+                            type: array
+                            description: An array of set-based expressions.
+                            items:
+                              type: object
+                              required:
+                                - key
+                                - operator
+                              properties:
+                                key:
+                                  description: A label name.
                                   type: string
-                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
-                                  minLength: 1
-                                  maxLength: 63
-                        matchLabels:
-                          type: object
-                          description: A set of labels a namespace must have to match.
-                          example: { "foo": "bar", "baz": "who" }
-                          additionalProperties:
-                            type: string
-                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
-                            minLength: 1
-                            maxLength: 63
+                                operator:
+                                  description: A comparison operator.
+                                  type: string
+                                  enum: [In,NotIn,Exists,DoesNotExist]
+                                values:
+                                  type: array
+                                  description: A label value.
+                                  items:
+                                    type: string
+                                    pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                    minLength: 1
+                                    maxLength: 63
+                          matchLabels:
+                            type: object
+                            description: A set of labels a namespace must have to match.
+                            example: { "foo": "bar", "baz": "who" }
+                            additionalProperties:
+                              type: string
+                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                              minLength: 1
+                              maxLength: 63
                 limitNamespaces:
                   type: array
                   x-doc-deprecated: true
