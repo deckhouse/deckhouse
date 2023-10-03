@@ -1,10 +1,10 @@
 ---
-title: "The Istio module"
+title: "The istio module"
 webIfaces:
-- name: Istio
+- name: istio
 ---
 
-Currently supported Istio versions:
+Currently supported istio versions:
 * 1.12 (deprecated)
 * 1.13 (deprecated)
 * 1.16

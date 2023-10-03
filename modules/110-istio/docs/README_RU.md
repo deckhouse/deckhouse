@@ -1,5 +1,5 @@
 ---
-title: "Модуль Istio"
+title: "Модуль istio"
 webIfaces:
 - name: Istio
 ---
