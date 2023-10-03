@@ -98,7 +98,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    {% offtopic title="Requirements..." %}
    - at least 4 CPU cores
    - at least 8 GB of RAM
-   - at least 40 GB of disk space for the cluster and etcd data
+   - at least 40 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
    - [supported OS](/documentation/v1/supported_versions.html)
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images
@@ -107,8 +107,15 @@ Scheme of Deckhouse installation in a private environment:<br />
    - HTTPS access to the `registry.deckhouse.io` container image registry
    {%- endif %}
    - SSH key access from the **personal computer** (section 1)
+   - network access from the **personal computer** (section 1) via port <code>22322/TCP</code>
    - container runtime packages, such as containerd or docker, should not be installed on the node
    {% endofftopic %}
 {%- endif %}
 </li>
+{% if page.platform_type == "baremetal" or page.platform_type == "baremetal" %}
+<li>
+   <p><strong>Physical server or virtual machine for the worker node.</strong></p>
+   <p>The requirements are similar to the requirements for the master node but also depend on the applications running on the nodes.</p>
+</li>
+{%- endif %}
 </ol>

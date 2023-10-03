@@ -2,20 +2,64 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-На данном этапе вы создали кластер, который состоит из **единственного** master-узла.
+На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. Так как на master-узле по умолчанию работает только ограниченный набор системных компонентов, для полноценной работы кластера необходимо <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавить в кластер</a> хотя бы один worker-узел.
 
-Для полноценной работы кластера <a href="/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">добавьте узлы</a> в кластер и ознакомьтесь с <a href="/documentation/v1/modules/040-node-manager/">управлением узлами</a> (рекомендуется для production-окружений и тестовых сред).
+{% offtopic title="Если вам достаточно одного master-узла..." %}
+<div>
+<p>Если вы развернули кластер <strong>для ознакомительных целей</strong>, то кластера из одного узла может быть достаточно. Для того чтобы разрешить остальным компонентам Deckhouse работать на master-узле, необходимо снять с master-узла taint, выполнив на нем следующую команду:</p>
 
-<blockquote>
-<p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на master-узле. Для этого, снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
+<div markdown="0">
 {% snippetcut %}
 ```bash
 sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
-</blockquote>
+</div>
 
-Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время. 
+<p><strong>Выполнять дальнейшие шаги по добавлению нового узла в кластер не нужно!</strong></p>
+</div>
+{%- endofftopic %}
+
+Добавьте узел в кластер:
+
+<ul>
+  <li>
+    Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
+  </li>
+  <li>
+    Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:
+    {% snippetcut %}
+  ```bash
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+EOF
+  ```
+    {% endsnippetcut %}
+  </li>
+  <li>
+    Deckhouse подготовит скрипт, необходимый для настройки будущего узла и включения его в кластер. Выведите его содержимое в формате Base64 (оно понадобится на следующем шаге):
+    {% snippetcut %}
+  ```bash
+kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+  ```
+  {% endsnippetcut %}
+  </li>
+  <li>
+    <strong> На подготовленной виртуальной машине</strong> выполните следующую команду, вставив код скрипта, полученный на предыдущем шаге:
+  {% snippetcut %}
+  ```bash
+echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
+  ```
+  {% endsnippetcut %}
+  </li>
+</ul>
+
+<p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
 
 Прежде чем продолжить:
 <ul><li><p>Если вы добавляли дополнительные узлы в кластер, убедитесь что они находятся в статусе <code>Ready</code>.</p>
@@ -53,7 +97,7 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 {%- endofftopic %}
 </li></ul>
 
-Далее, остается создать Ingress-контроллер, создать пользователя для доступа в веб-интерфейсы, и настроить DNS.
+Далее нужно создать Ingress-контроллер, Storage Class для хранения данных, пользователя для доступа в веб-интерфейсы и настроить DNS.
 
 <ul><li><p><strong>Установка Ingress-контроллера</strong></p>
 <p>Создайте на <strong>master-узле</strong> файл <code>ingress-nginx-controller.yml</code> содержащий конфигурацию Ingress-контроллера:</p>
@@ -75,7 +119,7 @@ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
-Дождитесь перехода подов Ingress-контролллера в статус <code>Ready</code>.
+Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.
 
 {% offtopic title="Пример вывода..." %}
 ```
@@ -84,6 +128,45 @@ NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {%- endofftopic %}
+</li>
+<li><p><strong>Создание StorageClass</strong></p>
+<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-monitoring
+spec:
+  nodeGroups:
+  - worker
+  path: "/opt/local-path-provisioner"
+EOF
+```
+{% endsnippetcut %}
+
+<li><p><strong>Настройка Prometheus</strong></p>
+
+Настройте Prometheus на использование созданного StorageClass'а (это позволит не терять данные при перезапуске Prometheus). Выполните на <strong>master-узле</strong> следующую команду:
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  enabled: true
+  settings:
+    longtermStorageClass: localpath-system
+    storageClass: localpath-monitoring
+  version: 2
+EOF
+```
+{% endsnippetcut %}
+</li>
+
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
 <p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
@@ -115,7 +198,7 @@ sudo /opt/deckhouse/bin/kubectl create -f user.yml
 argocd.example.com
 cdi-uploadproxy.example.com
 dashboard.example.com
-deckhouse.example.com
+documentation.example.com
 dex.example.com
 grafana.example.com
 hubble.example.com
@@ -141,7 +224,7 @@ $PUBLIC_IP api.example.com
 $PUBLIC_IP argocd.example.com
 $PUBLIC_IP cdi-uploadproxy.example.com
 $PUBLIC_IP dashboard.example.com
-$PUBLIC_IP deckhouse.example.com
+$PUBLIC_IP documentation.example.com
 $PUBLIC_IP dex.example.com
 $PUBLIC_IP grafana.example.com
 $PUBLIC_IP hubble.example.com

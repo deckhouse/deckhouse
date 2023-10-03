@@ -2,20 +2,64 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-At this point, you have created a basic **single-master** cluster.
+At this point, you have created a cluster that consists of a **single** master node. Since only a limited set of system components run on the master node by default, <a href="/documentation/v1/modules/040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster">you have to add</a> at least one worker node to the cluster for the cluster to work properly.
 
-For real-world conditions (production and test environments), <a href="/documentation/v1/modules/040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster">add nodes</a> to the cluster and familiarize yourself with how to <a href="/documentation/v1/modules/040-node-manager/">manage nodes</a>.
+{% offtopic title="If a single master node is all you need…" %}
+<div>
+<p>A single-node cluster may be sufficient for <strong>familiarization purposes</strong>. In this case, you do not need to add more nodes to the cluster. To permit the other Deckhouse components to run on the master node, remove the taint from the master node by running the following command on it:</p>
 
-<blockquote>
-<p>If you install Deckhouse for <strong>evaluation purposes</strong> and one node in  the cluster is enough for you, allow Deckhouse components to work on the master node. To do this, remove the taint from the master node by running the following command:</p>
+<div markdown="0">
 {% snippetcut %}
 ```bash
 sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
-</blockquote>
+</div>
 
-It may take some time to start Deckhouse components.
+<p><strong>Note that you do not need to follow the steps below on how to add a new node to the cluster.</strong></p>
+</div>
+{%- endofftopic %}
+
+Add a new node to the cluster:
+
+<ul>
+  <li>
+    Start a <strong>new virtual machine</strong> that will become the cluster node.
+  </li>
+  <li>
+    Create a <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:
+    {% snippetcut %}
+  ```bash
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+EOF
+  ```
+    {% endsnippetcut %}
+  </li>
+  <li>
+    Deckhouse will generate the script needed to configure the prospective node and include it in the cluster. Print its contents in Base64 format (you will need them at the next step):
+    {% snippetcut %}
+  ```bash
+kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+  ```
+  {% endsnippetcut %}
+  </li>
+  <li>
+    On the <strong>virtual machine you have started</strong>, run the following command by pasting the script code from the previous step:    
+  {% snippetcut %}
+  ```bash
+echo <Base64-SCRIPT-CODE> | base64 -d | sudo bash
+  ```
+  {% endsnippetcut %}
+  </li>
+</ul>
+
+<p>Note that it may take some time to get all Deckhouse components up and running after the installation is complete.</p>
 
 Before you go further:
 <ul><li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
@@ -54,13 +98,13 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 {%- endofftopic %}
 </li></ul>
 
-After that, creating an Ingress controller, creating a user to access web interfaces, and configuring DNS remains.
-<ul><li><p><strong>Setup Ingress controller</strong></p>
+Next, you will need to create an Ingress controller, a Storage Class for data storage, a user to access the web interfaces, and configure the DNS.
+<ul><li><p><strong>Setting up an Ingress controller</strong></p>
 <p>On the <strong>master node</strong>, create the <code>ingress-nginx-controller.yml</code> file containing the Ingress controller configuration:</p>
   {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
   {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
   {% endsnippetcut %}
-  <p>Apply it using the following command on the <strong>master node</strong>>:</p>
+  <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
@@ -84,6 +128,45 @@ NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {%- endofftopic %}
+</li>
+<li><p><strong>Creating a StorageClass</strong></p>
+<p>Configure the StorageClass for the <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-monitoring
+spec:
+  nodeGroups:
+  - worker
+  path: "/opt/local-path-provisioner"
+EOF
+```
+{% endsnippetcut %}
+
+<li><p><strong>Configuring Prometheus</strong></p>
+
+Configure Prometheus to use the created StorageClass (this will prevent data loss if Prometheus gets restarted). Run the following command on the <strong>master node</strong>:
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  enabled: true
+  settings:
+    longtermStorageClass: localpath-system
+    storageClass: localpath-monitoring
+  version: 2
+EOF
+```
+{% endsnippetcut %}
+</li>
+
 </li>
 <li><p><strong>Create a user</strong> to access the cluster web interfaces</p>
 <p>Create on the <strong>master node</strong> the <code>user.yml</code> file containing the user account data and access rights:</p>
