@@ -478,15 +478,17 @@ func TestAuthorizeRequest(t *testing.T) {
 			allRegex, _ := regexp.Compile("^.*$")
 			systemRegex, _ := regexp.Compile("^d8-.*$")
 			namespaceSelector := &NamespaceSelector{
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"match": "true",
-					},
-					MatchExpressions: []metav1.LabelSelectorRequirement{
-						{
-							Key:      "expression",
-							Operator: "In",
-							Values:   []string{"match", "allow"},
+				LabelSelectors: []*metav1.LabelSelector{
+					{
+						MatchLabels: map[string]string{
+							"match": "true",
+						},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "expression",
+								Operator: "In",
+								Values:   []string{"match", "allow"},
+							},
 						},
 					},
 				},
