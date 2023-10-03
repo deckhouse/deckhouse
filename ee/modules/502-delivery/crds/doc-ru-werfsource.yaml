@@ -14,9 +14,9 @@ spec:
                   description: Registry с образами.
                 apiURL:
                   description: |
-                    Ссылка на API registry.
+                    Адрес API registry.
 
-                    Если не указана — автоматически берется из `imageRepo`.
+                    Если не указана — автоматически берется из параметра [imageRepo](#werfsource-v1alpha1-spec-imagerepo).
                     Например, если `imageRepo=cr.example.com/myproject`, то `apiURL` будет
                     `https://cr.example.com/`.
                 pullSecretName:
