@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -290,7 +290,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	}
 
 	for _, node := range ar.nodes {
-		if !(node.IsDisruptionRequired && !node.IsDraining) {
+		if !((node.IsDisruptionRequired || node.IsRollingUpdate) && !node.IsDraining) {
 			continue
 		}
 
@@ -438,6 +438,7 @@ type updateApprovalNode struct {
 	IsUnschedulable      bool
 	IsDraining           bool
 	IsDrained            bool
+	IsRollingUpdate      bool
 }
 
 type updateNodeGroup struct {
@@ -504,13 +505,16 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		return nil, err
 	}
 
-	var isApproved, isWaitingForApproval, isDisruptionRequired, isDraining, isReady, isDrained, isDisruptionApproved bool
+	var isApproved, isWaitingForApproval, isDisruptionRequired, isDraining, isReady, isDrained, isDisruptionApproved, isRollingUpdate bool
 
 	if _, ok := node.Annotations["update.node.deckhouse.io/approved"]; ok {
 		isApproved = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/waiting-for-approval"]; ok {
 		isWaitingForApproval = true
+	}
+	if _, ok := node.Annotations["update.node.deckhouse.io/rolling-update"]; ok {
+		isRollingUpdate = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-required"]; ok {
 		isDisruptionRequired = true
@@ -552,6 +556,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		IsUnschedulable:       node.Spec.Unschedulable,
 		IsWaitingForApproval:  isWaitingForApproval,
 		IsDrained:             isDrained,
+		IsRollingUpdate:       isRollingUpdate,
 	}
 
 	return n, nil
@@ -590,6 +595,9 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 
 	case node.ConfigurationChecksum == desiredChecksum:
 		return "UpToDate"
+
+	case node.IsRollingUpdate:
+		return "RollingUpdate"
 
 	default:
 		return "Unknown"
