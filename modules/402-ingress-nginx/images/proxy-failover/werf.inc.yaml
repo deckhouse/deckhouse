@@ -1,0 +1,46 @@
+---
+artifact: {{ .ModuleName }}/build-entrypoint-artifact
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-extldflags "-static" -s -w' -o entrypoint main.go
+  - chown -R 64535:64535 entrypoint
+  - chmod 0700 entrypoint
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ .Images.BASE_NGINX_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/build-entrypoint-artifact
+  add: /src/entrypoints
+  to: /entrypoint
+  before: setup
+git:
+- add: /deckhouse/modules/402-ingress-nginx/images/proxy-failover/rootfs
+  to: /roorfs
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y nginx
+  - rm -rf /var/cache/apt /var/lib/apt /var/lib/rpm
+  - rm -rf /etc/nginx
+  install:
+  - cp /rootfs/ /
+  - rm -rf /rootfs
+docker:
+  ENTRYPOINT: ["/entrypoint"]
