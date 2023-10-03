@@ -104,7 +104,7 @@ Next, you will need to create an Ingress controller, a Storage Class for data st
   {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
   {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
   {% endsnippetcut %}
-  <p>Apply it using the following command on the <strong>master node</strong>>:</p>
+  <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml

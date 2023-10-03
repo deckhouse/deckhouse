@@ -198,7 +198,7 @@ sudo /opt/deckhouse/bin/kubectl create -f user.yml
 argocd.example.com
 cdi-uploadproxy.example.com
 dashboard.example.com
-deckhouse.example.com
+documentation.example.com
 dex.example.com
 grafana.example.com
 hubble.example.com
