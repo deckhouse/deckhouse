@@ -10,6 +10,7 @@ spec:
           properties:
             spec:
               properties:
+                imageRepo:
                   description: Registry с образами.
                 apiURL:
                   description: |
@@ -25,7 +26,7 @@ spec:
                     Secret должен располагаться в пространстве имен `d8-delivery`.
                 argocdRepoEnabled:
                   description: |
-                    Необходимость создания репозиторий Argo CD для этого источника.
+                    Необходимость создания репозитория Argo CD для этого источника.
 
                     Если установлено `true` — в Argo CD будет создан OCI-репозиторий c именем `name`. Отключите этот параметр, если хотите создать репозиторий вручную,
                     например, на основе Git или Helm Chart Museum.
