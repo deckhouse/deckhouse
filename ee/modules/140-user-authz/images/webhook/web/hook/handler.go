@@ -383,16 +383,18 @@ func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSe
 
 // checks if an entry has any namespace-related filters
 func hasAnyFilters(entry *DirectoryEntry) bool {
+	// check for MatchAny field of any namespace selector which permits literally any namespace
+	for _, namespaceSelector := range entry.NamespaceSelectors {
+		if namespaceSelector.MatchAny {
+			return false
+		}
+	}
+
 	if entry.NamespaceFiltersAbsent {
 		// The limitNamespaces option has a priority over the allowAccessToSystemNamespaces option.
 		// If limited namespaces are not specified, check whether access to system namespaces is limited.
 		// If it is not - user has no limited namespaces.
 		return !entry.AllowAccessToSystemNamespaces
-	}
-
-	// if entry has a NamespaceSelector list, it's limited.
-	if len(entry.NamespaceSelectors) > 0 {
-		return true
 	}
 
 	for _, regex := range entry.LimitNamespaces {
