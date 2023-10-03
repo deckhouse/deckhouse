@@ -43,7 +43,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure() error {
 	}
 
 	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState}); err != nil {
+	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}

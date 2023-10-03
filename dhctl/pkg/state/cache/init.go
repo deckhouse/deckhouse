@@ -49,7 +49,7 @@ func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
 	}
 
 	if app.CacheKubeNamespace == "" {
-		if opts.InitialState != nil {
+		if opts.ResetInitialState {
 			return cache.NewStateCacheWithInitialState(tmpDir, opts.InitialState)
 		}
 		return cache.NewStateCache(tmpDir)
@@ -99,7 +99,8 @@ func initCache(identity string, opts CacheOptions) error {
 }
 
 type CacheOptions struct {
-	InitialState map[string][]byte
+	InitialState      map[string][]byte
+	ResetInitialState bool
 }
 
 func Init(identity string) error {
