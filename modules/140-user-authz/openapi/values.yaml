@@ -85,45 +85,43 @@ properties:
                 namespaceSelector:
                   type: object
                   oneOf:
-                    - required: ["labelSelectors"]
+                    - required: ["labelSelector"]
                     - required: ["matchAny"]
                   properties:
                     matchAny:
                       type: boolean
                       enum: [true]
-                    labelSelectors:
-                      type: array
-                      items:
-                        type: object
-                        minProperties: 1
-                        properties:
-                          matchExpressions:
-                            items:
-                              properties:
-                                key:
+                    labelSelector:
+                      type: object
+                      minProperties: 1
+                      properties:
+                        matchExpressions:
+                          items:
+                            properties:
+                              key:
+                                type: string
+                              operator:
+                                type: string
+                                enum: [In,NotIn,Exists,DoesNotExist]
+                              values:
+                                type: array
+                                items:
                                   type: string
-                                operator:
-                                  type: string
-                                  enum: [In,NotIn,Exists,DoesNotExist]
-                                values:
-                                  type: array
-                                  items:
-                                    type: string
-                                    minLength: 1
-                                    maxLength: 63
-                                    pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
-                              required:
-                                - key
-                                - operator
-                              type: object
-                            type: array
-                          matchLabels:
-                            additionalProperties:
-                              type: string
-                              minLength: 1
-                              maxLength: 63
-                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                  minLength: 1
+                                  maxLength: 63
+                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                            required:
+                              - key
+                              - operator
                             type: object
+                          type: array
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                          type: object
                 subjects:
                   type: array
                   items:

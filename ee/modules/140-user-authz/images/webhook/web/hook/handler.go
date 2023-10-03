@@ -309,7 +309,7 @@ func isLabelSelectorApplied(namespaceSelector *NamespaceSelector) bool {
 		return false
 	}
 
-	if len(namespaceSelector.LabelSelectors) == 0 {
+	if namespaceSelector.LabelSelector == nil {
 		return false
 	}
 
@@ -368,8 +368,8 @@ func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSe
 	labelsSet = namespace.ObjectMeta.GetLabels()
 
 	for _, namespaceSelector := range namespaceSelectors {
-		for _, labelSelector := range namespaceSelector.LabelSelectors {
-			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+		if namespaceSelector.LabelSelector != nil {
+			selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
 			if err != nil {
 				return false, err
 			}

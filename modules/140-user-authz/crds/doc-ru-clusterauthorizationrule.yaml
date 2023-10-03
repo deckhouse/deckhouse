@@ -118,26 +118,27 @@ spec:
                   properties:
                     matchAny:
                       description: |
-                        Разрешить доступ к любому namespace, включая системные.
-                    labelSelectors:
+                        Разрешает безусловный доступ ко всем namespace в кластере, включая системные.
+
+                        Так как `labelSelector` предоставляет доступ только к определенному перечню namespace, имеющих соответствующие метки, параметр `matchAny` необходим в случаях когда нужно разрешить запросы одновременно ко всем namespace.
+                    labelSelector:
                       description: |
                         Настройка фильтров меток (label) для пространств имен.
 
                         Если указаны одновременно `matchExpressions` и `matchLabels`, то учитываются оба фильтра (AND).
-                      items:
-                        properties:
-                          matchExpressions:
-                            description: Список фильтров на основе выражений.
-                            items:
-                              properties:
-                                key:
-                                  description: Имя метки.
-                                operator:
-                                  description: Оператор сравнения.
-                                values:
-                                  description: Значение метки.
-                          matchLabels:
-                            description: Фильтр на основе совпадения/не совпадения меток.
+                      properties:
+                        matchExpressions:
+                          description: Список фильтров на основе выражений.
+                          items:
+                            properties:
+                              key:
+                                description: Имя метки.
+                              operator:
+                                description: Оператор сравнения.
+                              values:
+                                description: Значение метки.
+                        matchLabels:
+                          description: Фильтр на основе совпадения/не совпадения меток.
                 limitNamespaces:
                   description: |
                     Список разрешённых namespace в формате регулярных выражений.
