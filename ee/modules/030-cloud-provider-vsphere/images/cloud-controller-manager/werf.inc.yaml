@@ -3,19 +3,13 @@
   {{- if $value.ccm.vsphere }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-# from: {{ $.Images.BASE_ALPINE }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
   to: /bin/vsphere-cloud-controller-manager
   before: setup
-# shell:
-#   beforeInstall:
-#   - apk add --no-cache ca-certificates
 docker:
-  # ENV:
-  #   container: docker
   ENTRYPOINT: ["/bin/vsphere-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}

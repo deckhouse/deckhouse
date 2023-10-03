@@ -6,7 +6,11 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare ">=1.27" $version }}
   add: /src/openstack-cloud-controller-manager
+    {{- else }}
+  add: /src/openstack-cloud-controller-manager-amd64
+    {{- end }}
   to: /bin/openstack-cloud-controller-manager
   before: setup
 docker:
@@ -41,7 +45,12 @@ shell:
   - cd /src
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - make VERSION={{ $value.ccm.openstack }} GIT_VERSION={{ $value.ccm.openstack }} openstack-cloud-controller-manager
+  {{- if semverCompare ">=1.27" $version }}
   - chown 64535:64535 /src/openstack-cloud-controller-manager
   - chmod 0755 /src/openstack-cloud-controller-manager
+  {{- else }}
+  - chown 64535:64535 /src/openstack-cloud-controller-manager-amd64
+  - chmod 0755 /src/openstack-cloud-controller-manager-amd64
+  {{- end }}
   {{- end }}
 {{- end }}
