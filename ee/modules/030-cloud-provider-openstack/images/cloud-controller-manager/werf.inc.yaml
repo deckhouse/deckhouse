@@ -3,25 +3,13 @@
   {{- if $value.ccm.openstack }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_UBUNTU }}
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.27" $version }}
   add: /src/openstack-cloud-controller-manager
-    {{- else }}
-  add: /src/openstack-cloud-controller-manager-amd64
-    {{- end }}
   to: /bin/openstack-cloud-controller-manager
   before: setup
-shell:
-  beforeInstall:
-  - apt update
-  - apt install ca-certificates e2fsprogs mount xfsprogs udev -y
-  - rm -rf /var/lib/apt/lists/*
 docker:
-  ENV:
-    DEBIAN_FRONTEND: noninteractive
-    container: docker
   ENTRYPOINT: ["/bin/openstack-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
@@ -53,5 +41,7 @@ shell:
   - cd /src
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - make VERSION={{ $value.ccm.openstack }} GIT_VERSION={{ $value.ccm.openstack }} openstack-cloud-controller-manager
+  - chown 64535:64535 /src/openstack-cloud-controller-manager
+  - chmod 0755 /src/openstack-cloud-controller-manager
   {{- end }}
 {{- end }}
