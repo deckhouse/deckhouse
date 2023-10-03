@@ -17,11 +17,9 @@ limitations under the License.
 package controller
 
 import (
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
-	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
-	controller "caps-controller-manager/internal/controller/infrastructure"
-	"caps-controller-manager/internal/scope"
 	"context"
+	"time"
+
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +33,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"time"
+
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
+	controller "caps-controller-manager/internal/controller/infrastructure"
+	"caps-controller-manager/internal/scope"
 )
 
 // StaticInstanceReconciler reconciles a StaticInstance object
@@ -87,10 +89,6 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	defer func() {
 		err := instanceScope.Close(ctx)
 		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return
-			}
-
 			logger.Error(err, "failed to close instance scope")
 		}
 	}()
