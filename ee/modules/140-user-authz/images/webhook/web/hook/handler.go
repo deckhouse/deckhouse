@@ -305,15 +305,11 @@ func (h *Handler) renewDirectories() {
 }
 
 func isLabelSelectorApplied(namespaceSelector *NamespaceSelector) bool {
-	if namespaceSelector == nil {
-		return false
+	if namespaceSelector != nil && namespaceSelector.LabelSelector != nil {
+		return true
 	}
 
-	if namespaceSelector.LabelSelector == nil {
-		return false
-	}
-
-	return true
+	return false
 }
 
 // StartRenewConfigLoop periodically reads new config file from the file system and composes directories.
