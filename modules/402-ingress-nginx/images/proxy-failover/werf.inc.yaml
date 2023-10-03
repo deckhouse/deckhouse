@@ -35,9 +35,6 @@ git:
   to: /roorfs
 shell:
   beforeInstall:
-  - apt-get update
-  - apt-get install -y nginx
-  - rm -rf /var/cache/apt /var/lib/apt /var/lib/rpm
   - rm -rf /etc/nginx
   install:
   - cp /rootfs/ /
