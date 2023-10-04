@@ -50,6 +50,8 @@ deckhouse:
         enable: true
         https:
           mode: Global
+          global:
+            kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Section containing the parameters of the cloud provider.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
