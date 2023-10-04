@@ -3,7 +3,7 @@ type: object
 properties:
   globalVersion:
     type: string
-    description: Specific version of Istio control-plane which handles unspecific versions of data-plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`). Must be in supported versions list (`kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.supportedVersions'`). By default — the latest version in supported versions list.
+    description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`). Must be in supported versions list (`kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.supportedVersions'`). By default — the latest version in supported versions list.
     examples: ["1.12"]
     default: "1.16"
   additionalVersions:
@@ -137,7 +137,7 @@ properties:
     properties:
       enabled:
         type: boolean
-        description: Turn on or off tracing collection and displaying in kiali.
+        description: Turn on or off tracing collection and displaying in Kiali.
         default: false
         x-examples: [true]
       sampling:
@@ -180,21 +180,21 @@ properties:
       kiali:
         type: object
         description: |
-          Span displaying settings for kiali.
+          Span displaying settings for Kiali.
 
-          When not configured, kiali won't show any tracing dashboards.
+          When not configured, Kiali won't show any tracing dashboards.
         default: {}
         properties:
           jaegerURLForUsers:
             type: string
-            description: Jaeger UI address for users. Mandatory parameter if kiali is enabled.
+            description: Jaeger UI address for users. Mandatory parameter if Kiali is enabled.
             example: "https://tracing-service:4443/jaeger"
           jaegerGRPCEndpoint:
             type: string
             description: |
-              Accessible from cluster address of jaeger GRPC interface for system queries by kiali.
+              Accessible from cluster address of jaeger GRPC interface for system queries by Kiali.
 
-              When not configured, kiali will only show external links using the `jaegerURLForUsers` config without interpretationing.
+              When not configured, Kiali will only show external links using the `jaegerURLForUsers` config without interpretationing.
             example: "http://tracing.myjaeger.svc:16685/"
         x-examples:
         - {}
@@ -534,13 +534,13 @@ properties:
     additionalProperties:
       type: string
     description: |
-      Optional `nodeSelector` for istio-operator, metadata-exporter and kiali. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+      Optional `nodeSelector` for istio-operator, metadata-exporter and Kiali. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
-      Optional `tolerations` for istio-operator, metadata-exporter and kiali. The same as `spec.tolerations` for the Kubernetes pod.
+      Optional `tolerations` for istio-operator, metadata-exporter and Kiali. The same as `spec.tolerations` for the Kubernetes pod.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
     items:
