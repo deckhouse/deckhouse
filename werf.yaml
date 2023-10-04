@@ -637,6 +637,7 @@ import:
 image: {{ .ModuleName }}/{{ .ImageName }}
 context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
 dockerfile: Dockerfile
+staged: true
 args:
   BASE_ALPINE: {{ .Images.BASE_ALPINE }}
   BASE_RUST: {{ .Images.BASE_RUST }}
