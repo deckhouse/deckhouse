@@ -45,6 +45,8 @@ deckhouse:
         enable: true
         https:
           mode: Global
+          global:
+            kubeconfigGeneratorMasterCA: ""
     # [<en>] Enable cni-cilium module
     # [<ru>] Включить модуль cni-cilium
     cniCiliumEnabled: true
