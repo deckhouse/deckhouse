@@ -49,7 +49,7 @@ You can automate the bootstrap process with any automation platform you prefer. 
 1. Pick up one of Kubernetes API Server endpoints. Note that this IP must be accessible from nodes that are being added to the cluster:
 
    ```shell
-   kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
 2. Get Kubernetes API token for special `ServiceAccount` that Deckhouse manages:
