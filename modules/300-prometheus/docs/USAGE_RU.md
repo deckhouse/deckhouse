@@ -2,7 +2,7 @@
 title: "Prometheus-мониторинг: примеры конфигурации"
 type:
   - instruction
-search: prometheus remote write, как подключится к Prometheus, пользовательская Grafana, prometheus remote write
+search: prometheus remote write, как подключиться к Prometheus, пользовательская Grafana, prometheus remote write
 ---
 
 ## Пример конфигурации модуля
@@ -30,7 +30,7 @@ spec:
 
 ## Запись данных Prometheus в longterm storage
 
-У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка данного механизма реализована с помощью Custom Resource `PrometheusRemoteWrite`.
+У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка данного механизма реализована с помощью custom resource `PrometheusRemoteWrite`.
 
 ### Пример минимального PrometheusRemoteWrite
 
@@ -66,7 +66,7 @@ spec:
 
 ## Подключение Prometheus к сторонней Grafana
 
-У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Всё что нужно - создать дополнительный `Ingress`-ресурс.
+У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Все, что нужно, — создать дополнительный `Ingress`-ресурс.
 
 > В приведенном ниже примере предполагается, что Secret `example-com-tls` уже существует в namespace d8-monitoring.
 >
@@ -124,14 +124,14 @@ data:
 
 * **Basic-авторизация** не является надежной мерой безопасности. Рекомендуется ввести дополнительные меры безопасности, например указать аннотацию `nginx.ingress.kubernetes.io/whitelist-source-range`.
 
-* **Огромный минус** подключения таким способом - необходимость создания Ingress-ресурса в системном namespace'е.
+* **Огромный минус** подключения таким способом — необходимость создания Ingress-ресурса в системном namespace'е.
 Deckhouse **не гарантирует** сохранение работоспособности данной схемы подключения в связи с его активными постоянными обновлениями.
 
-* Этот Ingress-ресурс может быть использован для доступа к Prometheus API не только для Grafana, но и для других интеграций, например, для федерации Prometheus.
+* Этот Ingress-ресурс может быть использован для доступа к Prometheus API не только для Grafana, но и для других интеграций, например для федерации Prometheus.
 
 ## Подключение стороннего приложения к Prometheus
 
-Подключение к Prometheus защищено при помощи [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy). Для подключения понадобится создать `ServiceAccount` с необходимыми правами.
+Подключение к Prometheus защищено с помощью [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy). Для подключения понадобится создать `ServiceAccount` с необходимыми правами.
 
 ```yaml
 ---
@@ -165,7 +165,7 @@ subjects:
   namespace: default
 ```
 
-Далее сделаем запрос используя `curl`:
+Далее сделаем запрос, используя `curl`:
 
 ```yaml
 apiVersion: batch/v1
@@ -235,4 +235,4 @@ spec:
       repeatInterval: 12h
 ```
 
-Поле `token` в секрете и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
+Поля `token` в Secret'е и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.

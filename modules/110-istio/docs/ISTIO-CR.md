@@ -16,7 +16,7 @@ Allows you to:
   * Sticky Sessions;
   * Circuit Breaker;
 * Define alternative endpoint groups for traffic processing (suitable for Canary Deployments). Also, you can configure balancing strategies for each group;
-* Configuring tls for outgoing requests.
+* Configuring TLS for outgoing requests.
 
 ### VirtualService
 
@@ -27,11 +27,11 @@ Using VirtualService is optional; regular services fit just fine if their capabi
 Allows you to configure request routing:
 * Arguments on which routing decisions are based on:
   * Host;
-  * uri;
+  * URI;
   * Weight;
 * Parameters of the resulting directions:
   * The new host;
-  * The new uri;
+  * The new URI;
   * If the host is defined using [DestinationRule](#destinationrule), then requests can be sent to subsets;
   * Timeout and retry settings.
 
@@ -65,7 +65,7 @@ Allows you to configure JWT authentication for requests.
 
 ## Authorization
 
-**Caution!** Authorization without the use of mTLS or JWT authentication will not work fully. In this case, you will be able to use only basic arguments, such as source.ip and request.headers, for defining policies.
+**Caution!** Authorization without the use of mTLS or JWT authentication will not work fully. In this case, you will be able to use only basic arguments, such as `source.ip` and `request.headers`, for defining policies.
 
 ### AuthorizationPolicy
 
@@ -82,12 +82,12 @@ The following arguments are used in the decision-making algorithm:
 * source:
   * namespace
   * principal (i.e., the ID the user has received after authentication)
-  * ip
+  * IP
 * destination:
   * method (GET, POST, ...)
   * Host
   * port
-  * uri
+  * URI
 
 ### Sidecar
 
