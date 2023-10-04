@@ -46,7 +46,7 @@ func handleProjectTypes(input *go_hook.HookInput) error {
 		internal.SetProjectTypeStatus(input.PatchCollector, pt.Name, true, "")
 	}
 
-	input.Values.Set(internal.ModuleValuePath(internal.PTValuesPath), projectTypesValues)
+	// input.Values.Set(internal.ModuleValuePath(internal.PTValuesPath), projectTypesValues)
 	return nil
 }
 
