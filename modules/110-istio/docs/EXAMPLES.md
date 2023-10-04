@@ -527,7 +527,7 @@ spec:
        principals: ["foo.local/*", "bar.local/*"]
 ```
 
-### Allow from any cluster (via mtls)
+### Allow from any cluster (via mTLS)
 
 > **Caution!** The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
 
@@ -544,7 +544,7 @@ spec:
  rules:
  - from:
    - source:
-       principals: ["*"] # To force the MTLS usage.
+       principals: ["*"] # To force the mTLS usage.
 ```
 
 ### Allow all requests from anywhere (including no mTLS - plain text traffic)
