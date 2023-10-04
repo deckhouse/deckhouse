@@ -1,16 +1,16 @@
 type: object
 properties:
   globalVersion:
-    description: Явно заданная версия control-plane Istio, который обслуживает data-plane с неявной версией (Namespace с лейблом `istio-injection=enabled`, но не `istio.io/rev=`). Должна быть из списка поддерживаемых версий (`kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.supportedVersions'`). По умолчанию — последняя версия из списка поддерживаемых версий.
+    description: Явно заданная версия control plane Istio, который обслуживает data plane с неявной версией (namespace с лейблом `istio-injection=enabled`, но не `istio.io/rev=`). Должна быть из списка поддерживаемых версий (`kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.supportedVersions'`). По умолчанию используется последняя версия из списка поддерживаемых версий.
   additionalVersions:
-    description: Дополнительные версии control-plane Istio, которые будут установлены. Они будут обслуживать Namespace-ы, где явно указана версия с помощью лейбла `istio.io/rev=`.
+    description: Дополнительные версии control plane Istio, которые будут установлены. Они будут обслуживать namespace'ы, где явно указана версия с помощью лейбла `istio.io/rev=`.
   enableHTTP10:
     description: |
-      Обрабатывать ли HTTP/1.0 запросы в sidecar-контейнерах или отвергать их с кодом ответа `426 Upgrade Required`.
+      Обрабатывать ли HTTP/1.0-запросы в sidecar-контейнерах или отвергать их с кодом ответа `426 Upgrade Required`.
   outboundTrafficPolicyMode:
     description: |
-      Как поступать с запросами в сторону внешних, то есть, не учтённых в mesh'е сервисов.
-      - `AllowAny` — пропускать.
+      Как поступать с запросами в сторону внешних, то есть не учтенных в mesh'е сервисов:
+      - `AllowAny` — пропускать;
       - `RegistryOnly` — запрещать. В данном случае для работы с внешними сервисами потребуется регистрировать их с помощью ресурса ServiceEntry или организовывать egressgateway.
   federation:
     description: Параметры федерации с другими кластерами.
@@ -30,15 +30,15 @@ properties:
         properties:
           inlet:
             description: |
-              Способ публикации ingressgateway.
-              - `LoadBalancer` — рекомендуется в случае, если площадка облачная и поддерживает LB.
+              Способ публикации ingressgateway:
+              - `LoadBalancer` — рекомендуется в случае, если площадка облачная и поддерживает LB;
               - `NodePort` — для площадок без LB.
           nodePort:
             description: Специальные настройки для ingressgateway с инлетом `NodePort`.
             properties:
               port:
                 type: integer
-                description: Статичный порт для сервиса с типом NodePort. Должен быть из диапазона, заданного аргументом kube-apiserver --service-node-port-range (по умолчанию 30000-32767).
+                description: Статичный порт для сервиса с типом NodePort. Должен быть из диапазона, заданного аргументом `kube-apiserver --service-node-port-range` (по умолчанию 30000-32767).
           serviceAnnotations:
             description: |
               Дополнительные аннотации для сервиса ingressgateway.
@@ -53,19 +53,19 @@ properties:
             description: |
               tolerations для DaemonSet'а ingressgateway.
 
-              Структура, аналогичная `spec.tolerations` Kubernetes pod.
+              Структура, аналогичная `spec.tolerations` пода Kubernetes.
   tracing:
     description: Параметры трассировки.
     properties:
       enabled:
-        description: Включить отправку трейсов в коллектор и интегрировать их отображение в kiali.
+        description: Включить отправку трейсов в коллектор и интегрировать их отображение в Kiali.
       sampling:
         description: |
           Параметр sampling используется для определения процента запросов, которые передаются в систему трассировки.
 
           Этот параметр должен быть настроен в зависимости от трафика в сети и количества данных трассировки, которые необходимо собрать.
 
-          Параметр можно переопределить для каждого Pod'а индивидуально при помощи следующей аннотации:
+          Параметр можно переопределить для каждого пода индивидуально с помощью следующей аннотации:
 
           ```yaml
           proxy.istio.io/config: |
@@ -85,20 +85,20 @@ properties:
                 description: Сетевой адрес в формате `<IP of FQDN>:<port>`, по которому доступен zipkin-коллектор.
       kiali:
         description: |
-          Настройки отображения span-ов в Kiali.
+          Настройки отображения span'ов в Kiali.
 
-          Если настройки не предоставлены, kiali не будет отображать трассировку.
+          Если настройки не предоставлены, Kiali не будет отображать трассировку.
         properties:
           jaegerURLForUsers:
             description: |
-              Адрес UI jaeger, доступный пользователю в формате `<proto>://<fqdn>[:port]/<base path>`.
+              Адрес UI Jaeger, доступный пользователю в формате `<proto>://<fqdn>[:port]/<base path>`.
 
               Обязательный параметр.
           jaegerGRPCEndpoint:
             description: |
-              Адрес GRPC-интерфейса jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису kiali изнутри кластера для служебных запросов.
+              Адрес GRPC-интерфейса Jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису Kiali изнутри кластера для служебных запросов.
 
-              Если не указать, то kiali не будет интерпретировать трейсы самостоятельно и ограничится генерацией ссылок на `jaegerURLForUsers`.
+              Если не указать, то Kiali не будет интерпретировать трейсы самостоятельно и ограничится генерацией ссылок на `jaegerURLForUsers`.
   sidecar:
     description: Настройки для перехвата сетевого трафика в istio-sidecar.
     properties:
@@ -106,22 +106,22 @@ properties:
         description: |
           Трафик в сторону этих диапазонов IP безоговорочно заворачивается через Istio.
 
-          Можно переопределить этот параметр для отдельного Pod'а с помощью аннотации `traffic.sidecar.istio.io/includeOutboundIPRanges`.
+          Можно переопределить этот параметр для отдельного пода с помощью аннотации `traffic.sidecar.istio.io/includeOutboundIPRanges`.
       excludeOutboundIPRanges:
         description: |
           Трафик в сторону этих диапазонов IP гарантированно не заворачивается через Istio.
 
-          Можно переопределить этот параметр для отдельного Pod'а с помощью аннотации `traffic.sidecar.istio.io/excludeOutboundIPRanges`.
+          Можно переопределить этот параметр для отдельного пода с помощью аннотации `traffic.sidecar.istio.io/excludeOutboundIPRanges`.
       excludeInboundPorts:
         description: |
           Диапазоны входящих портов, чей трафик гарантированно не заворачивается через Istio.
 
-          Можно переопределить этот параметр для отдельного Pod'а с помощью аннотации `traffic.sidecar.istio.io/excludeInboundPorts`.
+          Можно переопределить этот параметр для отдельного пода с помощью аннотации `traffic.sidecar.istio.io/excludeInboundPorts`.
       excludeOutboundPorts:
         description: |
           Диапазоны исходящих портов, чей трафик гарантированно не заворачивается через Istio.
 
-          Можно переопределить этот параметр для отдельного Pod'а с помощью аннотации `traffic.sidecar.istio.io/excludeOutboundPorts`.
+          Можно переопределить этот параметр для отдельного пода с помощью аннотации `traffic.sidecar.istio.io/excludeOutboundPorts`.
         items:
           type: string
           pattern: '^[0-9]{1,5}$'
@@ -129,7 +129,7 @@ properties:
         description: |
           Управляет ресурсами sidecar-контейнера Istio.
 
-          **Внимание!** Настройка применяется только для новых Pod'ов с `istio-proxy`.
+          **Внимание!** Настройка применяется только для новых подов с `istio-proxy`.
         properties:
           mode:
           static:
@@ -140,18 +140,18 @@ properties:
                 properties:
                   cpu:
                     description: |
-                      Реквесты CPU.
+                      Реквесты к CPU.
                   memory:
                     description: |
-                      Реквесты памяти.
+                      Реквесты к памяти.
               limits:
                 properties:
                   cpu:
                     description: |
-                      Лимиты CPU.
+                      Лимиты для CPU.
                   memory:
                     description: |
-                      Лимиты памяти.
+                      Лимиты для памяти.
   ca:
     description: Явно заданный корневой сертификат, который будет использован для подписывания индивидуальных сертификатов сервисов в случае включения MTLS.
     properties:
@@ -160,18 +160,18 @@ properties:
       key:
         description: Ключ корневого сертификата в формате PEM.
       chain:
-        description: Цепочка сертификатов в формате PEM на случай  если `cert` — промежуточный сертификат.
+        description: Цепочка сертификатов в формате PEM на случай, если `cert` — промежуточный сертификат.
       root:
-        description: Корневой сертификат в формате PEM на  случай если `cert` — промежуточный сертификат.
+        description: Корневой сертификат в формате PEM на случай, если `cert` — промежуточный сертификат.
   proxyConfig:
     description: |
       Централизованная настройка [ProxyConfig](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
     properties:
       holdApplicationUntilProxyStarts:
         description: |
-          Этот параметр заставляет sidecar-injector вставлять sidecar-контейнер на первое место в списке контейнеров Pod'а. Также он добавляет postStart-хук для того, чтобы убедиться, что Envoy инициализировался раньше самого приложения. Это позволит избежать сетевых ошибок при старте Pod'а.
+          Этот параметр заставляет sidecar-injector вставлять sidecar-контейнер на первое место в списке контейнеров пода. Также он добавляет postStart-хук для того, чтобы убедиться, что Envoy инициализировался раньше самого приложения. Это позволит избежать сетевых ошибок при старте пода.
 
-          Этот глобальный параметр может быть переопределён на уровне Pod'а аннотацией `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
+          Этот глобальный параметр может быть переопределен на уровне пода аннотацией `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
   controlPlane:
     description: Настройки для компонента istiod.
     properties:
@@ -202,23 +202,23 @@ properties:
               cpu:
                 min:
                   description: |
-                    Минимально допустимый requests для cpu.
+                    Минимально допустимые реквесты к CPU.
                 max:
                   description: |
-                    Максимально допустимый requests для cpu.
+                    Максимально допустимые реквесты к CPU.
                 limitRatio:
                   description: |
-                    Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+                    Коэффициент для вычисления лимитов для CPU. Опционально используется для подсчета первичных лимитов для CPU у пода. VPA при своей работе сохраняет пропорцию лимиты/реквесты и при вычислении подходящих актуальных реквестов настраивает лимиты в том же соотношении.
               memory:
                 min:
                   description: |
-                    Минимально допустимый requests для memory.
+                    Минимально допустимые реквесты к памяти.
                 max:
                   description: |
-                    Максимально допустимый requests для memory.
+                    Максимально допустимые реквесты к памяти.
                 limitRatio:
                   description: |
-                    Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+                    Коэффициент для вычисления лимитов для CPU. Опционально используется для подсчета первичных лимитов для CPU у пода. VPA при своей работе сохраняет пропорцию лимиты/реквесты и при вычислении подходящих актуальных реквестов настраивает лимиты в том же соотношении.
           static:
             description: |
               Настройки управления ресурсами в статическом режиме.
@@ -227,46 +227,46 @@ properties:
                 properties:
                   cpu:
                     description: |
-                      Реквесты CPU.
+                      Реквесты к CPU.
                   memory:
                     description: |
-                      Реквесты памяти.
+                      Реквесты к памяти.
               limits:
                 properties:
                   cpu:
                     description: |
-                      Лимиты CPU.
+                      Лимиты для CPU.
                   memory:
                     description: |
-                      Лимиты памяти.
+                      Лимиты для памяти.
   nodeSelector:
     description: |
-      Опциональный селектор для компонентов istio-operator, metadata-exporter и kiali.
+      Опциональный селектор для компонентов istio-operator, metadata-exporter и Kiali.
 
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Опциональные tolerations для компонентов istio-operator, metadata-exporter и kiali.
+      Опциональные tolerations для компонентов istio-operator, metadata-exporter и Kiali.
 
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   https:
     description: |
-      Тип сертификата используемого для публичных веб-интерфейсов модуля.
+      Тип сертификата, используемого для публичных веб-интерфейсов модуля.
 
       При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
-          - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по https используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer заданном в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS, используя сертификат из namespace `d8-system`.
+          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
 
-          **Важно!** В отличие от остальных модулей, Istio не поддерживает работу без использования HTTPS (`mode: Disabled`).
+          **Важно!** В отличие от остальных модулей, istio не поддерживает работу без использования HTTPS (`mode: Disabled`).
       certManager:
         properties:
           clusterIssuerName:
@@ -278,9 +278,9 @@ properties:
         properties:
           secretName:
             description: |
-              Имя secret'а в namespace `d8-system`, который будет использоваться для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
+              Имя Secret'а в namespace `d8-system`, который будет использоваться для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
 
-              Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
@@ -298,7 +298,7 @@ properties:
           authURL:
             description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
           authSignInURL:
-            description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+            description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
       allowedUserGroups:
         description: |
           Массив групп, пользователям которых позволен доступ в публичные веб-интерфейсы модуля.
@@ -307,7 +307,7 @@ properties:
 
           **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider) DexProvider.
       whitelistSourceRanges:
-        description: Массив CIDR, которым разрешено проходить авторизацию в публичные веб-интерфейсы модуля.
+        description: Массив адресов в формате CIDR, которым разрешено проходить авторизацию в публичные веб-интерфейсы модуля.
       satisfyAny:
         description: |
           Разрешает пройти только одну из аутентификаций.
