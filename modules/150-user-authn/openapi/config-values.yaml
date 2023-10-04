@@ -48,7 +48,7 @@ properties:
                 description: |
                   If there is an external load balancer in front of the Ingress that terminates HTTPS traffic using non-public CA, then you need to specify the CA so it will be included in kubectl-config.
 
-                  If you are using certificates issued by cert-manager and Let's Encrypt in your cluster, you should set an empty string "" as the value.
+                  If you are using certificates issued by the `cert-manager` module and Let's Encrypt in your cluster, you should set an empty string `""` as the value.
 
                   Also, you can set the external LB's certificate itself as a CA if you can't get the CA that signed it for some reason. Note that after the certificate is updated on the LB, all the previously generated kubeconfigs will stop working.
   kubeconfigGenerator:
