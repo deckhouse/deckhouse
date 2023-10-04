@@ -5,8 +5,4 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package hooks
 
-import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
-)
-
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/160-multitenancy-manager/crds/*.yaml")
+// var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/160-multitenancy-manager/crds/*.yaml")

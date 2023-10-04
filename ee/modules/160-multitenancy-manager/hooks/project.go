@@ -114,7 +114,7 @@ func handleProjects(input *go_hook.HookInput) error {
 	}
 
 	input.PatchCollector.Create(valuesSecret, object_patch.UpdateIfExists())
-	input.Values.Set(internal.ModuleValuePath(internal.ProjectValuesPath), projectValuesmapToSlice(values))
+	// input.Values.Set(internal.ModuleValuePath(internal.ProjectValuesPath), projectValuesmapToSlice(values))
 
 	return nil
 }
