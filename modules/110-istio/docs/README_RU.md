@@ -1,7 +1,7 @@
 ---
 title: "Модуль istio"
 webIfaces:
-- name: Istio
+- name: istio
 ---
 
 На данный момент поддерживаются следующие версии istio:
