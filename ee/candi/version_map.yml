@@ -6,14 +6,6 @@ bashible:
   astra: &astra
     '1.7':
 k8s:
-  '1.23':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
-      astra:
-        !!merge <<: *astra
   '1.24':
     bashible:
       redos:

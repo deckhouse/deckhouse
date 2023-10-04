@@ -15,27 +15,6 @@ bashible: &bashible
     'p10':
     '10.1':
 k8s:
-  '1.23':
-    status: available
-    patch: 17
-    cniVersion: 1.2.0
-    bashible: *bashible
-    clusterAutoscalerPatch: 4
-    ccm:
-      openstack: v1.23.1
-      yandex: v0.23.0
-      aws: v1.23.4
-      vsphere: v1.23.0
-      azure: v1.23.10
-      gcp: 66064c62c6c23110c7a93faca5fba668018df732
-    csi:
-      openstack: v1.23.1
-      provisioner: v3.4.1
-      attacher: v4.2.0
-      resizer: v1.7.0
-      registrar: v2.7.0
-      snapshotter: v6.2.1
-      livenessprobe: v2.9.0
   '1.24':
     status: available
     patch: 17
