@@ -52,7 +52,7 @@ You can automate the bootstrap process with any automation platform you prefer. 
    kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
-1. Check the k8s version if it is >= 1.25, you should create ``node-group-token``.
+1. Check the K8s version if it is >= 1.25, you should create ``node-group-token``.
 
    ```shell
    kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
