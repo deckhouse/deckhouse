@@ -49,7 +49,7 @@ search: добавить ноду в кластер, добавить узел �
 1. Получите один из адресов Kubernetes API-сервера. Обратите внимание, что IP-адрес должен быть доступен с узлов, которые добавляются в кластер:
 
    ```shell
-   kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
 2. Получите Kubernetes API-токен для специального `ServiceAccount`, которым управляет Deckhouse:
