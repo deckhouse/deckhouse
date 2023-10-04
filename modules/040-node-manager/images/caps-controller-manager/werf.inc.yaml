@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: {{ .Images.BASE_ALPINE }}
 docker:
   ENTRYPOINT: ["/caps-controller-manager"]
 import:
@@ -8,6 +8,11 @@ import:
   add: /caps-controller-manager
   to: /caps-controller-manager
   before: setup
+shell:
+  beforeInstall:
+  - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /filtered-apk/etc/passwd
+  - echo "deckhouse:x:64535:" >> /filtered-apk/etc/group
+  - echo "deckhouse:!::0:::::" >> /filtered-apk/etc/shadow
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
