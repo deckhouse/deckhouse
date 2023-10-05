@@ -16,4 +16,9 @@ package config
 
 import "errors"
 
-var ErrSchemaNotFound = errors.New("schema not found")
+var (
+	ErrUnsafeFieldChanged   = errors.New("unsafe field has been changed")
+	ErrConfigAmountChanged  = errors.New("cannot change amount of cluster configuration yamls")
+	ErrSchemaNotFound       = errors.New("schema not found")
+	ErrValidationRuleFailed = errors.New("validation rule failed")
+)
