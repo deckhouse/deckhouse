@@ -22,9 +22,9 @@ spec:
           type: object
           required: ["spec"]
           description: |
-            CustomResource for namespaced Kubernetes source.
+            Custom resource for namespaced Kubernetes source.
 
-            Each CustomResource `PodLoggingConfig` describes rules for log fetching from specified Namespace.
+            Each custom resource `PodLoggingConfig` describes rules for log fetching from specified namespace.
           properties:
             spec:
               type: object
@@ -308,7 +308,7 @@ spec:
                               description: Regex string, which treats as match only strings that match the regex.
                 clusterDestinationRefs:
                   type: array
-                  description: Array of `ClusterLogDestination` CustomResource names which this source will output with.
+                  description: Array of `ClusterLogDestination` custom resource names which this source will output with.
                   minItems: 1
                   items:
                     type: string
