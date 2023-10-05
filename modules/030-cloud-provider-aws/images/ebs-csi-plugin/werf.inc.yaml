@@ -1,6 +1,3 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
-  {{- if $value.ccm.aws }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
@@ -12,7 +9,7 @@ import:
 docker:
   ENTRYPOINT: ["/bin/aws-ebs-csi-driver"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
@@ -27,5 +24,3 @@ shell:
   - make bin/aws-ebs-csi-driver
   - chown 64535:64535 /src/bin/aws-ebs-csi-driver
   - chmod 0755 /src/bin/aws-ebs-csi-driver
-  {{- end }}
-{{- end }}
