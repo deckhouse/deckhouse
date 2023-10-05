@@ -51,7 +51,7 @@ type StaticInstanceReconciler struct {
 //+kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances/finalizers,verbs=update
 
-//+kubebuilder:rbac:groups=deckhouse.io,resources=sshcredentials,verbs=get
+//+kubebuilder:rbac:groups=deckhouse.io,resources=sshcredentials,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

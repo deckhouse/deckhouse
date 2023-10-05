@@ -65,6 +65,8 @@ rules:
     - sshcredentials
   verbs:
     - get
+    - list
+    - watch
 - apiGroups:
     - deckhouse.io
   resources:
