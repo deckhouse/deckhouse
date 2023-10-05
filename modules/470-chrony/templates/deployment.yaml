@@ -73,8 +73,6 @@ spec:
               value: source
             - name: NTP_SERVERS
               value: {{ join " " $ntpServers | quote }}
-            - name: POD_SUBNET
-              value: {{ .Values.global.clusterConfiguration.podSubnetCIDR | quote }}
       volumes:
         - name: tz-config
           hostPath:

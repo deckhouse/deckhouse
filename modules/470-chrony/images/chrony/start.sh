@@ -30,18 +30,18 @@ driftfile /var/run/chrony/chrony.drift
 makestep 1.0 -1
 rtcsync
 bindaddress 0.0.0.0
+cmdallow 127/8
 EOF
 
 case ${NTP_ROLE} in
   "source")
-    echo "allow ${POD_SUBNET}" >> /var/run/chrony/chrony.conf
-    echo "deny 127/8" >> /var/run/chrony/chrony.conf
     echo "local stratum 5" >> /var/run/chrony/chrony.conf
+    echo "allow" >> /var/run/chrony/chrony.conf
   ;;
   "sink")
+    echo "local stratum 9" >> /var/run/chrony/chrony.conf
+    echo "allow 127/8" >> /var/run/chrony/chrony.conf
     echo "pool ${CHRONY_MASTERS_SERVICE} iburst" >> /var/run/chrony/chrony.conf
-    echo "port 0" >> /var/run/chrony/chrony.conf
-    echo "local stratum 10" >> /var/run/chrony/chrony.conf
   ;;
 esac
 
