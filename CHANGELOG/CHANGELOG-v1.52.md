@@ -34,6 +34,7 @@
 
  - **[candi]** Add creation of the `TMPDIR` directory in the `bashible.sh` script. [#6059](https://github.com/deckhouse/deckhouse/pull/6059)
  - **[candi]** Delete registrypackage files if it failed to install before retrying installation. [#5739](https://github.com/deckhouse/deckhouse/pull/5739)
+ - **[chrony]** Run chrony pods in host network namespace. [#6007](https://github.com/deckhouse/deckhouse/pull/6007)
  - **[cloud-provider-yandex]** Updated yandex-csi-driver. In the new version, the calculation of the limit of disks per node has been fixed. [#5679](https://github.com/deckhouse/deckhouse/pull/5679)
  - **[dhctl]** Fix restarting bootstrap process. [#5892](https://github.com/deckhouse/deckhouse/pull/5892)
  - **[dhctl]** Add `registryDockerCfg` validation. [#5829](https://github.com/deckhouse/deckhouse/pull/5829)
@@ -42,6 +43,7 @@
  - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#5988](https://github.com/deckhouse/deckhouse/pull/5988)
  - **[ingress-nginx]** Fix controller preStop probe. [#5948](https://github.com/deckhouse/deckhouse/pull/5948)
     Ingress controller will restart.
+ - **[linstor]** Workaround for several annoying issues in LINSTOR related to hanging controller. [#6037](https://github.com/deckhouse/deckhouse/pull/6037)
  - **[log-shipper]** Fix validation for the buffer `ClusterLogDestination` schema. [#5925](https://github.com/deckhouse/deckhouse/pull/5925)
  - **[log-shipper]** Add stricter validation for label selectors. Prevents the Deckhouse pods from panicking. [#5925](https://github.com/deckhouse/deckhouse/pull/5925)
  - **[log-shipper]** Fix custom multiline parser validation for `PodLoggingConfig` (previously, it was impossible to use the Custom type due to a validation bug). [#5925](https://github.com/deckhouse/deckhouse/pull/5925)
