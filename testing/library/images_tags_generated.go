@@ -35,7 +35,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager127": "imageHash-cloudProviderAws-cloudControllerManager127",
 		"cloudControllerManager128": "imageHash-cloudProviderAws-cloudControllerManager128",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAws-cloudDataDiscoverer",
-		"ebsCsiPlugin":              "imageHash-cloudProviderAws-ebsCsiPlugin",
 		"ebsCsiPlugin130":           "imageHash-cloudProviderAws-ebsCsiPlugin130",
 		"nodeTerminationHandler":    "imageHash-cloudProviderAws-nodeTerminationHandler",
 	},
