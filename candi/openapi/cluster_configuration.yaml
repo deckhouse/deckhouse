@@ -42,6 +42,7 @@ apiVersions:
         enum: [ClusterConfiguration]
       clusterType:
         type: string
+        x-unsafe: true
         description: |
           Type of the cluster infrastructure:
           - `Static` — a cluster on bare metal (physical servers) or virtual machines. In the case of virtual machines, it is assumed that Deckhouse doesn't have access to the API for managing virtual machines (they are managed by the administrator using the usual cloud infrastructure tools);
@@ -49,6 +50,7 @@ apiVersions:
         enum: [Cloud, Static]
       cloud:
         type: object
+        x-unsafe: true
         description: |
           Cloud provider-related settings (if the `Cloud` [clusterType](#clusterconfiguration-clustertype) is used).
         required: [provider]
@@ -74,6 +76,7 @@ apiVersions:
             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
       podSubnetCIDR:
         type: string
+        x-unsafe: true
         description: |
           Address space of the cluster's Pods.
 
@@ -87,6 +90,7 @@ apiVersions:
         default: "24"
       serviceSubnetCIDR:
         type: string
+        x-unsafe: true
         description: |
           Address space of the cluster's services.
 
