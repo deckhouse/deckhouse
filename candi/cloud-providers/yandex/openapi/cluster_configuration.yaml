@@ -286,6 +286,7 @@ apiVersions:
           The ID of the existing VPC Network.
       nodeNetworkCIDR:
         type: string
+        x-unsafe: true
         description: |
           This subnet will be split into **three** equal parts.
 
@@ -382,10 +383,12 @@ apiVersions:
             description: |
               The cloud ID.
             type: string
+            x-unsafe: true
           folderID:
             description: |
               ID of the directory.
             type: string
+            x-unsafe: true
           serviceAccountJSON:
             description: |
               A key to the Service Account in the JSON format.
