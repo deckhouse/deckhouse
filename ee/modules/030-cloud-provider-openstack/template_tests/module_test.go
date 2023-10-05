@@ -268,8 +268,8 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
-	Context("Openstack with k8s 1.23", func() {
-		openstackCheck(f, "1.23")
+	Context("Openstack with k8s 1.24", func() {
+		openstackCheck(f, "1.24")
 	})
 
 	Context("Openstack", func() {
@@ -278,7 +278,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 
 	Context("Openstack with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.23", "1.23"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.24", "1.24"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.internal.defaultStorageClass", `slowhdd`)
@@ -303,7 +303,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack bad config", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.23", "1.23"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.24", "1.24"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
 			f.HelmRender()
@@ -317,7 +317,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Unsupported Kubernetes version", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.23", "1.23"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.24", "1.24"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -333,7 +333,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack StorageClass topology disabled", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.23", "1.23"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.24", "1.24"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.storageClass.topologyEnabled", "false")
