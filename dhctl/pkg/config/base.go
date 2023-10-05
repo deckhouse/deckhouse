@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -175,34 +176,70 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		doc = strings.TrimSpace(doc)
-		if doc == "" {
-			continue
-		}
-
-		docData := []byte(doc)
-
-		index, err := schemaStore.Validate(&docData)
+		err := parseSingleDoc(schemaStore, doc, &metaConfig)
 		if err != nil {
-			return nil, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
-		}
-
-		var data map[string]json.RawMessage
-		if err = yaml.Unmarshal(docData, &data); err != nil {
-			return nil, fmt.Errorf("config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
-		}
-
-		switch {
-		case index.Kind == "InitConfiguration":
-			metaConfig.InitClusterConfig = data
-		case index.Kind == "ClusterConfiguration":
-			metaConfig.ClusterConfig = data
-		case index.Kind == "StaticClusterConfiguration":
-			metaConfig.StaticClusterConfig = data
-		case strings.HasSuffix(index.Kind, "ClusterConfiguration"):
-			metaConfig.ProviderClusterConfig = data
+			return nil, err
 		}
 	}
 
 	return metaConfig.Prepare()
+}
+
+// ValidateClusterSettings parses and validates cluster configuration and resources.
+// It checks the cluster configuration yamls for compliance with the yaml format and schema.
+// Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
+// It can be used as an imported functionality in external modules.
+func ValidateClusterSettings(configData string) error {
+	schemaStore := NewSchemaStore()
+
+	bigFileTmp := strings.TrimSpace(configData)
+	docs := regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
+
+	metaConfig := MetaConfig{}
+	for _, doc := range docs {
+		err := parseSingleDoc(schemaStore, doc, &metaConfig)
+		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
+		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
+			return err
+		}
+	}
+
+	_, err := metaConfig.Prepare()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func parseSingleDoc(schemaStore *SchemaStore, doc string, metaConfig *MetaConfig) error {
+	doc = strings.TrimSpace(doc)
+	if doc == "" {
+		return nil
+	}
+
+	docData := []byte(doc)
+
+	index, err := schemaStore.Validate(&docData)
+	if err != nil {
+		return fmt.Errorf("config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
+	}
+
+	var data map[string]json.RawMessage
+	if err = yaml.Unmarshal(docData, &data); err != nil {
+		return fmt.Errorf("config unmarshal: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
+	}
+
+	switch {
+	case index.Kind == "InitConfiguration":
+		metaConfig.InitClusterConfig = data
+	case index.Kind == "ClusterConfiguration":
+		metaConfig.ClusterConfig = data
+	case index.Kind == "StaticClusterConfiguration":
+		metaConfig.StaticClusterConfig = data
+	case strings.HasSuffix(index.Kind, "ClusterConfiguration"):
+		metaConfig.ProviderClusterConfig = data
+	}
+
+	return nil
 }

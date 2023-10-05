@@ -96,7 +96,7 @@ func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
 
 	err := yaml.Unmarshal(*doc, &index)
 	if err != nil {
-		return nil, fmt.Errorf("json unmarshal: %v", err)
+		return nil, fmt.Errorf("yaml unmarshal: %w", err)
 	}
 
 	err = s.ValidateWithIndex(&index, doc)
@@ -124,7 +124,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 
 	schema := s.getV1alpha1CompatibilitySchema(index)
 	if schema == nil {
-		return fmt.Errorf("Schema for %s wasn't found.", index.String())
+		return fmt.Errorf("%w: no schema for index %s", ErrSchemaNotFound, index.String())
 	}
 
 	isValid, err := openAPIValidate(doc, schema)
