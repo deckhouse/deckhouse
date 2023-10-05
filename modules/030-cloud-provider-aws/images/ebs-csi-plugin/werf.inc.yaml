@@ -1,8 +1,8 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-1-3-0
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/bin/aws-ebs-csi-driver
   to: /bin/aws-ebs-csi-driver
   before: setup
