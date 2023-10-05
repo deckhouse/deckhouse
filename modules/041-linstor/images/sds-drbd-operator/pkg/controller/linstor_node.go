@@ -211,6 +211,9 @@ func AddOrConfigureDRBDNodes(ctx context.Context, cl client.Client, lc *lclient.
 
 			originalNode := selectedKubernetesNode.DeepCopy()
 			newNode := selectedKubernetesNode.DeepCopy()
+			if newNode.Labels == nil {
+				newNode.Labels = make(map[string]string, len(drbdNodeSelector))
+			}
 			for labelKey, labelValue := range drbdNodeSelector {
 				newNode.Labels[labelKey] = labelValue
 			}
@@ -336,12 +339,10 @@ func GetNodeSelectorFromConfig(secret v1.Secret) (map[string]string, error) {
 }
 
 func DiffNodeLists(leftList, rightList v1.NodeList) v1.NodeList {
-	// diff := []string{}
 	var diff v1.NodeList
 
 	for _, leftNode := range leftList.Items {
 		if !ContainsNode(rightList, leftNode) {
-			// diff = append(diff, leftNode)
 			diff.Items = append(diff.Items, leftNode)
 		}
 	}

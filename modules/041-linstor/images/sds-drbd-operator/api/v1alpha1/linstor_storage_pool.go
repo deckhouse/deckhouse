@@ -24,17 +24,23 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type LinstorStoragePool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              struct {
-		Type            string `json:"type"`
-		LvmVolumeGroups []struct {
-			Name         string `json:"name"`
-			ThinPoolName string `json:"thinPoolName"`
-		} `json:"lvmvolumegroups"`
-	} `json:"spec"`
-	Status struct {
-		Phase  string `json:"phase"`
-		Reason string `json:"reason"`
-	} `json:"status,omitempty"`
+	Spec              LinstorStoragePoolSpec   `json:"spec"`
+	Status            LinstorStoragePoolStatus `json:"status,omitempty"`
+}
+
+type LinstorStoragePoolSpec struct {
+	Type            string               `json:"type"`
+	LvmVolumeGroups []LSPLvmVolumeGroups `json:"lvmvolumegroups"`
+}
+
+type LSPLvmVolumeGroups struct {
+	Name         string `json:"name"`
+	ThinPoolName string `json:"thinPoolName"`
+}
+
+type LinstorStoragePoolStatus struct {
+	Phase  string `json:"phase"`
+	Reason string `json:"reason"`
 }
 
 // LinstorStoragePoolList contains a list of empty block device

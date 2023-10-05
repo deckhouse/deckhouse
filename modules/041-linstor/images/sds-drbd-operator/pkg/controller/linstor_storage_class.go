@@ -72,7 +72,7 @@ func NewLinstorStorageClass(
 
 				// ----------------------- get LinstorStorageClass ----------------------------------
 				log.Info("get LinstorStorageClass " + e.Object.GetName())
-				lsc, err1 := getLinstorStorageClass(ctx, cl, e.Object.GetNamespace(), e.Object.GetName())
+				lsc, err1 := GetLinstorStorageClass(ctx, cl, e.Object.GetNamespace(), e.Object.GetName())
 				if err1 != nil {
 					log.Error(err1, "error get LinstorStorageClass ")
 					return
@@ -85,12 +85,12 @@ func NewLinstorStorageClass(
 
 				// ------------------------ get StorageClass -----------------------------------------
 				log.Info("get StorageClass " + e.Object.GetName())
-				sc, err2 := getStorageClass(ctx, cl, lsc.Namespace, lsc.Name)
+				sc, err2 := GetStorageClass(ctx, cl, lsc.Namespace, lsc.Name)
 				if err2 != nil {
 					log.Error(err2, "error get StorageClass")
 					if strings.Contains(err2.Error(), "not found") {
 						// ------------------------- LinstorStorageClass -> create CreateStorage -------------
-						err = createStorageClass(ctx, cl, lsc)
+						err = CreateStorageClass(ctx, cl, lsc)
 						if err != nil {
 							log.Error(err, "error create storage class")
 							return
@@ -100,7 +100,7 @@ func NewLinstorStorageClass(
 						lsc.Status.Phase = Completed
 						lsc.Status.Reason = "storage class created"
 
-						err = updateLinstorStorageClass(ctx, cl, lsc)
+						err = UpdateLinstorStorageClass(ctx, cl, lsc)
 						if err != nil {
 							log.Error(err, "error update linstor storage class")
 							return
@@ -116,7 +116,7 @@ func NewLinstorStorageClass(
 					lsc.Status.Reason = "error Provisioner "
 					log.Error(errors.New("error storage class provisioner "), sc.Provisioner)
 
-					err = updateLinstorStorageClass(ctx, cl, lsc)
+					err = UpdateLinstorStorageClass(ctx, cl, lsc)
 					if err != nil {
 						log.Error(err, "error update linstor storage class")
 						return
@@ -161,7 +161,7 @@ func NewLinstorStorageClass(
 					}
 				}
 
-				err = updateStorageClass(ctx, cl, sc)
+				err = UpdateStorageClass(ctx, cl, sc)
 				if err != nil {
 					log.Error(err, "error update  storage class")
 					return
@@ -170,7 +170,7 @@ func NewLinstorStorageClass(
 				lsc.Status.Phase = Completed
 				lsc.Status.Reason = "storage class created / updated"
 
-				err = updateLinstorStorageClass(ctx, cl, lsc)
+				err = UpdateLinstorStorageClass(ctx, cl, lsc)
 				if err != nil {
 					log.Error(err, "error update linstor storage class")
 					return
@@ -178,7 +178,7 @@ func NewLinstorStorageClass(
 			},
 			UpdateFunc: nil,
 			DeleteFunc: func(ctx context.Context, e event.DeleteEvent, q workqueue.RateLimitingInterface) {
-				err = deleteStorageClass(ctx, cl, e.Object.GetName())
+				err = DeleteStorageClass(ctx, cl, e.Object.GetNamespace(), e.Object.GetName())
 				if err != nil {
 					log.Error(err, "error deleting storage class "+e.Object.GetName())
 				}
@@ -191,7 +191,7 @@ func NewLinstorStorageClass(
 	return c, err
 }
 
-func createStorageClass(ctx context.Context, cl client.Client, lsc *v1alpha1.LinstorStorageClass) error {
+func CreateStorageClass(ctx context.Context, cl client.Client, lsc *v1alpha1.LinstorStorageClass) error {
 
 	rp := v1.PersistentVolumeReclaimPolicy(lsc.Spec.ReclaimPolicy)
 	vbm := storagev1.VolumeBindingMode(lsc.Spec.VolumeBindingMode)
@@ -227,7 +227,7 @@ func createStorageClass(ctx context.Context, cl client.Client, lsc *v1alpha1.Lin
 	return nil
 }
 
-func getLinstorStorageClass(ctx context.Context, cl client.Client, namespace, name string) (*v1alpha1.LinstorStorageClass, error) {
+func GetLinstorStorageClass(ctx context.Context, cl client.Client, namespace, name string) (*v1alpha1.LinstorStorageClass, error) {
 	obj := &v1alpha1.LinstorStorageClass{}
 	err := cl.Get(ctx, client.ObjectKey{
 		Name:      name,
@@ -239,7 +239,7 @@ func getLinstorStorageClass(ctx context.Context, cl client.Client, namespace, na
 	return obj, err
 }
 
-func getStorageClass(ctx context.Context, cl client.Client, namespace, name string) (*storagev1.StorageClass, error) {
+func GetStorageClass(ctx context.Context, cl client.Client, namespace, name string) (*storagev1.StorageClass, error) {
 	obj := &storagev1.StorageClass{}
 	err := cl.Get(ctx, client.ObjectKey{
 		Name:      name,
@@ -251,7 +251,7 @@ func getStorageClass(ctx context.Context, cl client.Client, namespace, name stri
 	return obj, nil
 }
 
-func updateLinstorStorageClass(ctx context.Context, cl client.Client, lsc *v1alpha1.LinstorStorageClass) error {
+func UpdateLinstorStorageClass(ctx context.Context, cl client.Client, lsc *v1alpha1.LinstorStorageClass) error {
 	err := cl.Update(ctx, lsc)
 	if err != nil {
 		return err
@@ -259,7 +259,7 @@ func updateLinstorStorageClass(ctx context.Context, cl client.Client, lsc *v1alp
 	return nil
 }
 
-func updateStorageClass(ctx context.Context, cl client.Client, sc *storagev1.StorageClass) error {
+func UpdateStorageClass(ctx context.Context, cl client.Client, sc *storagev1.StorageClass) error {
 	err := cl.Update(ctx, sc)
 	if err != nil {
 		return nil
@@ -267,14 +267,15 @@ func updateStorageClass(ctx context.Context, cl client.Client, sc *storagev1.Sto
 	return nil
 }
 
-func deleteStorageClass(ctx context.Context, cl client.Client, name string) error {
+func DeleteStorageClass(ctx context.Context, cl client.Client, namespace, name string) error {
 	csObject := &storagev1.StorageClass{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       StorageClassKind,
 			APIVersion: StorageClassAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: namespace,
 		},
 	}
 	err := cl.Delete(ctx, csObject)

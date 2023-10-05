@@ -24,20 +24,8 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type LinstorStorageClass struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              struct {
-		LinstorStoragePool string `json:"linstorstoragepool,omitempty"`
-		PlacementCount     int    `json:"placementcount"`
-		ReclaimPolicy      string `json:"reclaimpolicy"`
-		VolumeBindingMode  string `json:"volumebindingmode"`
-		AllowVolumeExpand  bool   `json:"allowvolumeexpand"`
-		DrbdOptions        struct {
-			AutoQuorum string `json:"autoquorum"`
-		} `json:"drbdoptions"`
-	} `json:"spec"`
-	Status struct {
-		Phase  string `json:"phase"`
-		Reason string `json:"reason"`
-	} `json:"status,omitempty"`
+	Spec              LinstorStorageClassSpec   `json:"spec"`
+	Status            LinstorStorageClassStatus `json:"status,omitempty"`
 }
 
 // LinstorStorageClassList contains a list of empty block device
@@ -46,4 +34,22 @@ type LinstorStorageClassList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []LinstorStorageClass `json:"items"`
+}
+
+type LinstorStorageClassSpec struct {
+	LinstorStoragePool string      `json:"linstorstoragepool,omitempty"`
+	PlacementCount     int         `json:"placementcount"`
+	ReclaimPolicy      string      `json:"reclaimpolicy"`
+	VolumeBindingMode  string      `json:"volumebindingmode"`
+	AllowVolumeExpand  bool        `json:"allowvolumeexpand"`
+	DrbdOptions        DrbdOptions `json:"drbdoptions"`
+}
+
+type LinstorStorageClassStatus struct {
+	Phase  string `json:"phase"`
+	Reason string `json:"reason"`
+}
+
+type DrbdOptions struct {
+	AutoQuorum string `json:"autoquorum"`
 }

@@ -24,19 +24,27 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type LvmVolumeGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              struct {
-		Type              string `json:"type"`
-		ActuaLvgOnTheNode string `json:"actualvgonthenode"`
-		ThinPool          struct {
-			Name string `json:"name,omitempty"`
-			Size string `json:"size,omitempty"`
-		} `json:"thinpool,omitempty"`
-	} `json:"spec"`
-	Status struct {
-		Nodes []struct {
-			Name string `json:"name"`
-		} `json:"nodes"`
-	} `json:"status,omitempty"`
+	Spec              LvmVGSpec   `json:"spec"`
+	Status            LvmVGStatus `json:"status,omitempty"`
+}
+
+type LvmVGSpec struct {
+	Type              string   `json:"type"`
+	ActuaLvgOnTheNode string   `json:"actualvgonthenode"`
+	ThinPool          ThinPool `json:"thinpool,omitempty"`
+}
+
+type ThinPool struct {
+	Name string `json:"name,omitempty"`
+	Size string `json:"size,omitempty"`
+}
+
+type LvmVGStatus struct {
+	Nodes []LvmVGNode `json:"nodes"`
+}
+
+type LvmVGNode struct {
+	Name string `json:"name"`
 }
 
 // LvmVolumeGroupList
