@@ -1,5 +1,5 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-1-3-0
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
