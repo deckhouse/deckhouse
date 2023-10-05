@@ -203,6 +203,7 @@ RUN curl -Lfo /usr/bin/piraeus-entry.sh ${PIRAEUS_GITREPO}/raw/${PIRAEUS_COMMIT_
 
 # Add liveness probe script
 COPY liveness.sh /liveness.sh
+RUN chmod 755 /liveness.sh
 
 CMD ["startSatellite"]
 ENTRYPOINT ["/usr/bin/k8s-await-election", "/usr/bin/piraeus-entry.sh"]
