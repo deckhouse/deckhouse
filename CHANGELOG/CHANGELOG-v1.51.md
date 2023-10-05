@@ -32,6 +32,8 @@
     The most awaited module that can be enabled now is the `deckhouse-admin` module — a convenient web-interface to administer deckhouse clusters.
  - **[external-module-manager]** Rename custom resources ExternalModule* -> Module* [#5599](https://github.com/deckhouse/deckhouse/pull/5599)
  - **[external-module-manager]** Support custom CA for `ExternalModuleSource`. [#5498](https://github.com/deckhouse/deckhouse/pull/5498)
+ - **[linstor]** **(PR was reverted in https://github.com/deckhouse/deckhouse/pull/5755)** Update linstor controller version to `1.24.1`. Update DRBD version to `9.2.5`. [#5469](https://github.com/deckhouse/deckhouse/pull/5469)
+    Linstor controller and piraeus operator will restart.
  - **[log-shipper]** Images are based on a distroless image. [#5523](https://github.com/deckhouse/deckhouse/pull/5523)
  - **[loki]** Images are based on a distroless image. [#5391](https://github.com/deckhouse/deckhouse/pull/5391)
  - **[monitoring-kubernetes]** Images are based on a distroless image. [#5378](https://github.com/deckhouse/deckhouse/pull/5378)
@@ -66,8 +68,10 @@
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
  - **[global-hooks]** Fix orphaned endpointslice deletion. [#5912](https://github.com/deckhouse/deckhouse/pull/5912)
+ - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#6015](https://github.com/deckhouse/deckhouse/pull/6015)
  - **[ingress-nginx]** Fix bug with absent auth cookie, which leads to logout users sometimes from web pages with authorization. [#5978](https://github.com/deckhouse/deckhouse/pull/5978)
     Ingress controller 1.6 will restart.
+ - **[linstor]** Revert the commit that updated the versions of Linstor and DRBD (reverts https://github.com/deckhouse/deckhouse/pull/5469). [#5755](https://github.com/deckhouse/deckhouse/pull/5755)
  - **[loki]** Fixed a volume mount init container. [#5941](https://github.com/deckhouse/deckhouse/pull/5941)
  - **[loki]** Fixed permissions for existing files after changing GID and UID. [#5904](https://github.com/deckhouse/deckhouse/pull/5904)
  - **[monitoring-kubernetes]** Revert `node-exporter` `kube-rbac-proxy` liveness probe. [#5642](https://github.com/deckhouse/deckhouse/pull/5642)
