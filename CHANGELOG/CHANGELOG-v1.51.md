@@ -68,7 +68,7 @@
  - **[flant-integration]** Take values from the `clusterConfiguration` parameter instead of the global parameter. [#5681](https://github.com/deckhouse/deckhouse/pull/5681)
  - **[flant-integration]** Change `sum` to `avg` in `controller_metrics` hook and refactor utils. [#5517](https://github.com/deckhouse/deckhouse/pull/5517)
  - **[global-hooks]** Fix orphaned endpointslice deletion. [#5912](https://github.com/deckhouse/deckhouse/pull/5912)
- - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#6015](https://github.com/deckhouse/deckhouse/pull/6015)
+ - **[ingress-nginx]** Add postpone updates for the main controller with `HostWithFailover` inlet. [#6015](https://github.com/deckhouse/deckhouse/pull/6015)
  - **[ingress-nginx]** Fix bug with absent auth cookie, which leads to logout users sometimes from web pages with authorization. [#5978](https://github.com/deckhouse/deckhouse/pull/5978)
     Ingress controller 1.6 will restart.
  - **[linstor]** Revert the commit that updated the versions of Linstor and DRBD (reverts https://github.com/deckhouse/deckhouse/pull/5469). [#5755](https://github.com/deckhouse/deckhouse/pull/5755)
