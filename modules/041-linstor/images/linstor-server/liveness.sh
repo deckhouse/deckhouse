@@ -14,17 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This is default linstor controller liveness probe
+if ! curl --connect-timeout 3 -sf http://localhost:9999/ > /dev/null; then exit 1; fi
+
 # Sometimes nodes can be shown as Online without established connection to them.
-# This is a workaround for https://github.com/LINBIT/linstor-server/issues/331
-
-# Collect list of satellite nodes
-SATELLITES_ONLINE=$(linstor -m --output-version=v1 n l | jq -r '.[][] | select(.type == "SATELLITE" and .connection_status == "ONLINE").name' || true)
-if [ -z "$SATELLITES_ONLINE" ]; then
-  exit 0
-fi
-
-# Check online nodes with lost connection
-linstor -m --output-version=v1 sp l -s DfltDisklessStorPool -n $SATELLITES_ONLINE | jq '.[][].reports[]?.message' | grep 'No active connection to satellite'
-if [ $? -eq 0 ]; then
-  exit 1
-fi
+# This is a workaround for https://github.com/LINBIT/linstor-server/issues/331, https://github.com/LINBIT/linstor-server/issues/219
+tail -n 1000 /var/log/linstor-controller/linstor-Controller.log | grep -q 'Target decrypted buffer is too small' && exit 1

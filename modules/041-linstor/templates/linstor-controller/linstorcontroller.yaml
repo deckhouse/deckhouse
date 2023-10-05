@@ -133,29 +133,3 @@ spec:
         {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
         {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
         {{- end }}
-  - name: liveness
-    {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 4 }}
-    image: {{ include "helm_lib_module_image" (list . "linstorServer") }}
-    command: [ "/bin/sh", "-ec", "while sleep 60; do /liveness.sh > /dev/termination-log; done" ]
-    terminationMessagePath: "/dev/termination-log"
-    volumeMounts:
-    - mountPath: /etc/linstor
-      name: linstor-conf
-    - mountPath: /etc/linstor/https
-      name: linstor-https
-    - mountPath: /etc/linstor/https-pem
-      name: linstor-https-pem
-      readOnly: true
-    - mountPath: /etc/linstor/client
-      name: linstor-client
-    - mountPath: /etc/linstor/ssl
-      name: linstor-ssl
-    - mountPath: /etc/linstor/ssl-pem
-      name: linstor-ssl-pem
-      readOnly: true
-    resources:
-      requests:
-        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
-        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-        {{- include "linstor_liveness_resources" . | nindent 6 }}
-        {{- end }}
