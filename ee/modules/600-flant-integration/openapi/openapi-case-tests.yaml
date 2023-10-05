@@ -10,10 +10,10 @@ positive:
         releaseChannel: "test"
         bundle: "Default"
         cloudProvider: "TestCloud"
-        controlPlaneVersion: "1.23"
+        controlPlaneVersion: "1.24"
         clusterType: "Static"
         nodeStats:
-          minimalKubeletVersion: "1.23"
+          minimalKubeletVersion: "1.24"
           staticNodesCount: 0
           mastersCount: 3
           masterIsDedicated: True

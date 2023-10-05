@@ -28,7 +28,7 @@ clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: 1.23
+kubernetesVersion: 1.24
 defaultCRI: "Containerd"
 clusterDomain: cluster.local
 ---
@@ -132,7 +132,7 @@ After successfully connection to the Kubernetes API, `dhctl` creates or updates:
 * Secrets with terraform state
   * `d8-cluster-terraform-state`
   * `d8-node-terraform-state-.*`
-  
+
 After installation ends, `dhctl` will wait for the `deckhouse` pod to become `Ready`.
 Readiness probe is working the way that deckhouse become ready only if there is no task to install or update a module.
 
