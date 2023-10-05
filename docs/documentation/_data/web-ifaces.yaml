@@ -1,0 +1,111 @@
+#- name: Web interface name.
+#  description:
+#    en: Description in English.
+#    ru: Description in Russian.
+#  domain: Domain to access to web interface inside a cluster (according to the PublicDomainTemplate global parameter).
+#  location: URL path to access to web interface inside a cluster (according to the PublicDomainTemplate global parameter).
+#  module: A module, that provides the web interface.
+- name: Kubernetes Dashboard
+  description:
+    en: |
+      A Web UI panel for users that helps perform functions such as viewing resources, restarting pods, viewing logs, executing arbitrary commands in container pods, etc.
+    ru: |
+      Web UI панель для пользователей, помогающая выполнять такие функции, как просмотр ресурсов, перезапуск подов, просмотр логов, выполнение произвольных команд в контейнерах подов и т. д.
+  domain: dashboard
+  module: dashboard
+- name: Argo CD
+  description:
+    en: Argo CD web interface.
+    ru: Веб интерфейс Argo CD.
+  domain: argocd
+  module: delivery
+- name:
+    en: Availability status page
+    ru:  Страница доступности
+  description:
+    en: |
+      A page with brief information about the status of the main components of the cluster.
+    ru: |
+      Страница с краткой информацией о статусе основных компонентов кластера.
+  domain: status
+  module: upmeter
+- name: Upmeter
+  description:
+    en: |
+      Detailed SLA statistics for all cluster components for the selected period.
+    ru: |
+      Детальная статистика SLA по всем компонентам кластера за выбранный период.
+  domain: upmeter
+  module: upmeter
+- name: Cilium Hubble
+  description:
+    en: Hubble is a web interface for Cilium. Provides visualization of the cluster network stack.
+    ru: Hubble — веб интерфейс для Cilium. Обеспечивает визуализацию сетевого стека кластера.
+  domain: hubble
+  module: cilium-hubble
+- name:  OpenVPN admin panel
+  description:
+    en: |
+      Simple web UI to manage OpenVPN users, their certificates & routes in Linux.
+    ru: |
+      Простой веб-интерфейс управления пользователями OpenVPN.
+  domain: openvpn-admin
+  module: openvpn
+- name: Kubernetes Configurator
+  description:
+    en: |
+      A web interface for obtaining a configuration file for remote access to the cluster using the kubectl CLI utility.
+    ru: |
+      Веб-интерфейс для получения файла конфигурации, для удаленного доступа к кластеру с помощью CLI-утилиты kubectl.
+  additionalSetupSteps:
+    en: |
+      Configure parameter <a href="modules/150-user-authn/configuration.html#parameters-publishapi">publishAPI</a>.
+    ru: |
+      Настройте параметр <a href="modules/150-user-authn/configuration.html#parameters-publishapi">publishAPI</a>
+  domain: kubeconfig
+  module: user-authn
+  additionalInfo:
+    en: |
+      Read the <a href="modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api">additional info.</a>
+    ru: |
+      <a href="modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api">Дополнительная информация.</a>
+- name: Grafana
+  description:
+    en: |
+      The heart of cluster monitoring visualization.
+      It has a "Home screen" with the output of various key information and the status of resources, for example, versions of important components, diagrams of summary information on the number of resources, links to auxiliary administrator web interfaces, and the most used dashboards.
+    ru: |
+      Сердце визуализации мониторинга кластера.
+      Имеет "стартовый экран" с выводом различной ключевой информации и статусе ресурсов, например, версий важных компонентов, диаграмм сводной информации по количеству ресурсов, ссылок на вспомогательные веб-интерфейсы администратора и наиболее используемые доски с графиками.
+  domain: grafana
+  module: prometheus
+- name: Prometheus
+  description:
+    en: |
+      <p>Prometheus web interface.</p>
+      <p>Allows you to perform PromQL queries directly into the monitoring system.</p>
+    ru: |
+      <p>Веб интерфейс Prometheus.</p>
+      <p>Позволят выполнять PromQL-запросы напрямую в систему мониторинга.</p>
+  domain: grafana
+  location: /prometheus/
+  module: prometheus
+- name: Kiali (Istio)
+  description:
+    en: Kiali is a web interface to Istio.
+    ru: Kiali — веб-интерфейс к Istio.
+  domain: istio
+  module: istio
+- name:
+    en: Deckhouse documentation
+    ru: Документация Deckhouse
+  description:
+    en: |
+      <p>Deckhouse documentation, which is available within the cluster.</p>
+      <p>Corresponds to the Deckhouse version used in the cluster.</p>
+    ru: |
+      <p>Документация Deckhouse, доступная внутри кластера.</p>
+      <p>Соответствует используемой в кластере версии Deckhouse.</p>
+  domain: documentation
+  module: documentation
+
