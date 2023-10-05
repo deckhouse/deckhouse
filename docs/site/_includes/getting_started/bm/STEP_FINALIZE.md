@@ -153,6 +153,7 @@ Configure Prometheus to use the created StorageClass (this will prevent data los
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: prometheus
