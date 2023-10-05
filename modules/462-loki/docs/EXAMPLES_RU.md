@@ -4,7 +4,7 @@ title: "Модуль loki: примеры"
 
 {% raw %}
 
-## Чтение логов из всех Pod'ов из указанного namespace и направление их в Loki
+## Чтение логов из всех подов из указанного namespace и направление их в Loki
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
