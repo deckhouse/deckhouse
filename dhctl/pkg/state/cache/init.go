@@ -92,9 +92,15 @@ func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
 
 func initCache(identity string, opts CacheOptions) error {
 	var err error
-	once.Do(func() {
+
+	if opts.ResetInitialState {
 		globalCache, err = choiceCache(identity, opts)
-	})
+	} else {
+		once.Do(func() {
+			globalCache, err = choiceCache(identity, opts)
+		})
+	}
+
 	return err
 }
 
