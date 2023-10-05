@@ -1,0 +1,5 @@
+ingress-nginx:
+  fixes:
+    - summary: Add postpone updates for main controller of `HostWithFailover` inlet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6015
+
