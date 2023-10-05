@@ -3,8 +3,8 @@
 ## Know before update
 
 
+ - All nodes with DRBD will restart. Linstor controller and piraeus operator will restart.
  - All pods using `kube-rbac-proxy` will restart.
- - Linstor controller and piraeus operator will restart.
 
 ## Features
 
@@ -14,7 +14,7 @@
  - **[control-plane-manager]** All images are now based on distroless image. [#5509](https://github.com/deckhouse/deckhouse/pull/5509)
  - **[ingress-nginx]** Images are based on a distroless image. [#5937](https://github.com/deckhouse/deckhouse/pull/5937)
  - **[linstor]** Update linstor controller version to `1.24.2`. Update DRBD version to `9.2.5`. [#5800](https://github.com/deckhouse/deckhouse/pull/5800)
-    Linstor controller and piraeus operator will restart.
+    All nodes with DRBD will restart. Linstor controller and piraeus operator will restart.
  - **[log-shipper]** Suppress metrics timestamp to avoid out-of-order ingestion error. [#5835](https://github.com/deckhouse/deckhouse/pull/5835)
  - **[monitoring-applications]** Add Grafana dashboard for pgbouncer. [#5846](https://github.com/deckhouse/deckhouse/pull/5846)
  - **[monitoring-applications]** Update Grafana dashboard for Elasticsearch. Add minimal alert rules for Prometheus. [#5845](https://github.com/deckhouse/deckhouse/pull/5845)
@@ -32,6 +32,7 @@
 ## Fixes
 
 
+ - **[candi]** Add creation of the `TMPDIR` directory in the `bashible.sh` script. [#6059](https://github.com/deckhouse/deckhouse/pull/6059)
  - **[candi]** Delete registrypackage files if it failed to install before retrying installation. [#5739](https://github.com/deckhouse/deckhouse/pull/5739)
  - **[cloud-provider-yandex]** Updated yandex-csi-driver. In the new version, the calculation of the limit of disks per node has been fixed. [#5679](https://github.com/deckhouse/deckhouse/pull/5679)
  - **[dhctl]** Fix restarting bootstrap process. [#5892](https://github.com/deckhouse/deckhouse/pull/5892)

@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - summary: Add creation of the `TMPDIR` directory in the `bashible.sh` script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6059
+docs:
+  fixes:
+    - summary: Fix `user-authn` module documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6025
+
