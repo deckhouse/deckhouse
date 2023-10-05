@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # This is default linstor controller liveness probe
-if ! curl -sf http://localhost:9999/ > /dev/null; then exit 1; fi
+if ! curl --connect-timeout 3 -sf http://localhost:9999/ > /dev/null; then exit 1; fi
 
 # Sometimes nodes can be shown as Online without established connection to them.
 # This is a workaround for https://github.com/LINBIT/linstor-server/issues/331, https://github.com/LINBIT/linstor-server/issues/219
