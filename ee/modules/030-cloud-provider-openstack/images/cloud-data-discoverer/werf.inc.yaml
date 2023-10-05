@@ -1,7 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ .Images.BASE_ALPINE }}
-fromCacheVersion: "2023-03-24.0"
+fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /discoverer
