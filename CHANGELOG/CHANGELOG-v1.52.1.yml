@@ -1,0 +1,17 @@
+candi:
+  fixes:
+    - summary: Add creation of the `TMPDIR` directory in the `bashible.sh` script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6059
+chrony:
+  fixes:
+    - summary: Run chrony pods in host network namespace.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6007
+docs:
+  fixes:
+    - summary: Fix `user-authn` module documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6025
+linstor:
+  fixes:
+    - summary: Workaround for several annoying issues in LINSTOR related to hanging controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6037
+
