@@ -74,8 +74,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var request WebhookRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		// this case is exceptional
-		h.logger.Fatalf("cannot unmarshal kubernetes request: %v", err)
+		h.logger.Printf("cannot unmarshal kubernetes request: %v", err)
 	}
 
 	h.authorizeRequest(&request)
@@ -112,7 +111,7 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 			}
 		}
 	} else {
-	// there is no filters - assume a positive outcome
+		// there is no filters - assume a positive outcome
 		request.Status.Denied = false
 	}
 
