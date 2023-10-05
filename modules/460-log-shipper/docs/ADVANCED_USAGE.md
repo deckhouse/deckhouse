@@ -100,7 +100,7 @@ del(.test2)
 
 ## How to add a new source/sink support for log-shipper?
 
-Vector in the log-shipper module has been built with the limited number of enabled [features](https://doc.rust-lang.org/cargo/reference/features.html) (to improve building speed and decrease the size of the final binary).
+Vector in the `log-shipper` module has been built with the limited number of enabled [features](https://doc.rust-lang.org/cargo/reference/features.html) (to improve building speed and decrease the size of the final binary).
 
 You can see a list of all supported features by executing the `vector list` command.
 
