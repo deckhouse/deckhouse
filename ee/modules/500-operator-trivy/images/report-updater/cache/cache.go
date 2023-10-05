@@ -89,12 +89,7 @@ func NewVulnerabilityCache(logger *log.Logger) (*VulnerabilityCache, error) {
 	}
 	defer dockerConfigFile.Close()
 
-	b, err := io.ReadAll(dockerConfigFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read docker config.json: %w", err)
-	}
-
-	err = json.Unmarshal(b, &dockerConfig)
+	err = json.NewDecoder(dockerConfigFile).Decode(&dockerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal docker config.json: %w", err)
 	}
@@ -225,21 +220,17 @@ func (c *VulnerabilityCache) processTarGzMedia(tarGz io.ReadCloser) error {
 		}
 
 		if header.Name == bduDictionaryFilename {
-			b, err := io.ReadAll(tarReader)
-			if err != nil {
-				return fmt.Errorf("renewing BDU failed: couldn't read from tar: %w", err)
-			}
-
 			tempDict := &VulnerabilityDictionary{
 				Data: make(map[string][]string),
 			}
 
-			err = json.Unmarshal(b, &tempDict)
+			err = json.NewDecoder(tarReader).Decode(&tempDict)
 			if err != nil {
 				return fmt.Errorf("renewing BDU failed: couldn't unmarshal bdu dictionary: %w", err)
 			}
 
 			if len(tempDict.Data) == 0 {
+
 				return fmt.Errorf("renewing BDU failed: dictionary is empty")
 			}
 			if tempDict.TS != c.Dictionary.TS {

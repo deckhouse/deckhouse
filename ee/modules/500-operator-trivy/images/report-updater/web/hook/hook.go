@@ -25,6 +25,11 @@ var _ http.Handler = (*Handler)(nil)
 type Handler struct {
 	logger     *log.Logger
 	dictionary cache.Cache
+	settings   *HandlerSettings
+}
+
+type HandlerSettings struct {
+	DictRenewInterval time.Duration
 }
 
 type patchOperation struct {
@@ -33,15 +38,16 @@ type patchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func NewHandler(logger *log.Logger, dict cache.Cache) (*Handler, error) {
+func NewHandler(logger *log.Logger, dict cache.Cache, settings *HandlerSettings) (*Handler, error) {
 	return &Handler{
 		logger:     logger,
 		dictionary: dict,
+		settings:   settings,
 	}, nil
 }
 
 func (h *Handler) StartRenewCacheLoop() {
-	ticker := time.NewTicker(6 * time.Hour)
+	ticker := time.NewTicker(h.settings.DictRenewInterval)
 	defer ticker.Stop()
 	for {
 		select {
