@@ -25,6 +25,8 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
+
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const (
@@ -182,13 +184,7 @@ func (c *VulnerabilityCache) getDataFromImageDescriptors() error {
 	for _, descriptor := range successors {
 		switch descriptor.MediaType {
 		case tarGzMediaType:
-			readCloser, err := store.Fetch(ctx, descriptor)
-			if err != nil {
-				fmt.Errorf("renewing BDU failed: couldn't fetch tar archive: %w", err)
-			}
-			defer readCloser.Close()
-
-			err = c.processTarGzMedia(readCloser)
+			err = c.processTarGzMedia(store, descriptor, ctx)
 			if err != nil {
 				fmt.Errorf("renewing BDU failed: couldn't process tar archive: %w", err)
 			}
@@ -198,10 +194,15 @@ func (c *VulnerabilityCache) getDataFromImageDescriptors() error {
 	}
 
 	return nil
-
 }
 
-func (c *VulnerabilityCache) processTarGzMedia(tarGz io.ReadCloser) error {
+func (c *VulnerabilityCache) processTarGzMedia(store *memory.Store, descriptor ocispec.Descriptor, ctx context.Context) error {
+	tarGz, err := store.Fetch(ctx, descriptor)
+	if err != nil {
+		fmt.Errorf("renewing BDU failed: couldn't fetch tar archive: %w", err)
+	}
+	defer tarGz.Close()
+
 	uncompressedStream, err := gzip.NewReader(tarGz)
 	if err != nil {
 		return fmt.Errorf("renewing BDU failed: couldn't uncompress tar archive %w", err)
