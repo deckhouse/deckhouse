@@ -18,7 +18,5 @@
 if ! curl -sf http://localhost:9999/ > /dev/null; then exit 1; fi
 
 # Sometimes nodes can be shown as Online without established connection to them.
-# This is a workaround for https://github.com/LINBIT/linstor-server/issues/331
-
-# This is temporary hack for some cases, when linstor controller looks alive, but in fact it stuck
-tail -n 1000 /var/log/linstor-controller/linstor-Controller.log | grep -q 'Target decrypted buffer is too small' && exit 1 || exit 0
+# This is a workaround for https://github.com/LINBIT/linstor-server/issues/331, https://github.com/LINBIT/linstor-server/issues/219
+tail -n 1000 /var/log/linstor-controller/linstor-Controller.log | grep -q 'Target decrypted buffer is too small' && exit 1
