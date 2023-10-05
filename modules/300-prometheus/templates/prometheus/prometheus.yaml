@@ -67,10 +67,9 @@ spec:
       value: 10ms
   initContainers:
   - command:
-    - sh
-    - -c
-    - chown -vfR 64535:64535 /prometheus-db/
-    image: {{ include "helm_lib_module_image" (list . "prometheus") }}
+    - /usr/local/bin/chperm
+    - /prometheus-db/
+    image: {{ include "helm_lib_module_image" (list . "goChperm") }}
     imagePullPolicy: IfNotPresent
     name: fix-permissions
     securityContext:
