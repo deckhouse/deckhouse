@@ -110,7 +110,7 @@ spec:
                   description: |
                     Определяет доступные пространства имен на основе значений, указанных в параметре `namespaceSelector.labelSelector`.
 
-                    Если параметр `namespaceSelector` указан, то значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны все пространства имен с метками, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия, включая системные пространства имен.
+                    Если параметр `namespaceSelector` указан, то значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с метками, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
 
                     Если параметр `namespaceSelector` не указан, то набор доступных пространств имен определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, то будут доступны все пространства имен, за исключением системных (`kube-*`, `d8-*`, `loghouse`, `default`).
 
@@ -118,12 +118,16 @@ spec:
                   properties:
                     matchAny:
                       description: |
-                        Разрешает безусловный доступ ко всем namespace в кластере, включая системные.
+                        Разрешает доступ ко всем namespace в кластере, включая системные.
 
-                        Так как `labelSelector` предоставляет доступ только к определенному перечню namespace, имеющих соответствующие метки, параметр `matchAny` необходим в случаях когда нужно разрешить запросы одновременно ко всем namespace.
+                        Не может использоваться совместно с параметром `labelSelector`.
+
+                        Так как с помощью параметра `labelSelector` можно предоставить доступ только к определенному перечню namespace, параметр `matchAny` необходим в случаях, когда нужно предоставить доступ ко всем namespace.
                     labelSelector:
                       description: |
                         Настройка фильтра меток (label) для пространств имен.
+
+                        Не может использоваться совместно с параметром `matchAny`.
 
                         Если указаны одновременно `matchExpressions` и `matchLabels`, то учитываются оба фильтра (AND).
                       properties:
@@ -149,7 +153,7 @@ spec:
 
                     **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
 
-                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) (версия `v1` custom resource'а).
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
                 subjects:
                   description: |
                     Пользователи и/или группы, которым необходимо предоставить права.

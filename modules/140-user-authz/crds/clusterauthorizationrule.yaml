@@ -210,7 +210,7 @@ spec:
                   description: |
                     Defines a set of namespaces accessible by the user, using the value of the `namespaceSelector.labelSelector` parameter.
 
-                    If the parameter `namespaceSelector` is specified, the values of the parameters `limitNamespaces` and `allowAccessToSystemNamespaces` **are ignored**. Thus, all namespaces with labels that fall under the conditions specified in the `namespace Selector.labelSelector` parameter, including system namespaces, will be available.
+                    Если параметр `namespaceSelector` указан, то значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с метками, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
 
                     If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters. If none of the parameters `namespaceSelector`, `limitNamespaces` and `allowAccessToSystemNamespaces` are specified, then all namespaces will be available, except for the system ones (`kube-*`, `d8-*`, `loghouse`, `default`).
 
@@ -224,12 +224,16 @@ spec:
                       description: |
                         Unconditionally permits access to any namespace in the cluster, including system namespaces.
 
+                        Не может использоваться совместно с параметром `labelSelector`.
+
                         As a `labelSelector` provides access to a finite number of the namespaces that match it, `matchAny` is required in case across all namespaces requests for namespaced resources should be allowed.
                       type: boolean
                       enum: [true]
                     labelSelector:
                       description: |
                         Defines label selector-based filter of namespaces.
+
+                        Не может использоваться совместно с параметром `matchAny`.
 
                         If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
                         if a few `matchExpression` are provided, they must all be satisfied in order to match.
