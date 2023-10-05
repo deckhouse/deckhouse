@@ -92,20 +92,6 @@ status:
     containerRuntimeVersion: containerd
     kubeletVersion: v1.24.17
 `
-
-	nodeUnknownVersion = `
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: node3
-  labels:
-    node.deckhouse.io/group: group
-status:
-  nodeInfo:
-    containerRuntimeVersion: foo
-    kubeletVersion: v1.24.17
-`
 )
 
 var _ = Describe("node-manager :: check_containerd_nodes ", func() {
