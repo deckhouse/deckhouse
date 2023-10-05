@@ -3,18 +3,13 @@
   {{- if $value.ccm.gcp }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/gcp-cloud-controller-manager
     to: /usr/local/bin/cloud-controller-manager
     before: setup
-shell:
-  beforeInstall:
-    - apk add --no-cache ca-certificates
 docker:
-  ENV:
-    container: docker
   ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
@@ -46,5 +41,7 @@ shell:
       {{- else }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/main.go cmd/cloud-controller-manager/nodeipamcontroller.go
       {{- end }}
+    - chown 64535:64535 /src/gcp-cloud-controller-manager
+    - chmod 0755 /src/gcp-cloud-controller-manager
   {{- end }}
 {{- end }}

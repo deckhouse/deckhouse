@@ -4,18 +4,13 @@
   {{- if $value.ccm.azure }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/bin/azure-cloud-controller-manager
     to: /usr/local/bin/azure-cloud-controller-manager
     before: setup
-shell:
-  beforeInstall:
-    - apk add --no-cache ca-certificates
 docker:
-  ENV:
-    container: docker
   ENTRYPOINT: ["/usr/local/bin/azure-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
@@ -50,5 +45,7 @@ shell:
     - hack/pkg-config.sh > .pkg_config
     - export VERSION={{ $value.ccm.azure }}
     - make bin/azure-cloud-controller-manager
+    - chown 64535:64535 /src/bin/azure-cloud-controller-manager
+    - chmod 0755 /src/bin/azure-cloud-controller-manager
   {{- end }}
 {{- end }}
