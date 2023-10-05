@@ -23,7 +23,6 @@ import (
 )
 
 const (
-
 	ngCriNotManagedKubeVer1_24 = `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
