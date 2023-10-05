@@ -18,11 +18,16 @@ rules:
     - cluster.x-k8s.io
   resources:
     - clusters
-    - clusters/status
   verbs:
     - get
     - list
     - watch
+- apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - clusters/status
+  verbs:
+    - get
 - apiGroups:
     - cluster.x-k8s.io
   resources:
@@ -40,10 +45,8 @@ rules:
     - machines/status
   verbs:
     - get
-    - list
     - patch
     - update
-    - watch
 - apiGroups:
     - ""
   resources:
@@ -51,28 +54,11 @@ rules:
   verbs:
     - get
     - list
-    - patch
-    - update
     - watch
 - apiGroups:
     - ""
   resources:
     - secrets
-  verbs:
-    - create
-    - get
-    - list
-    - watch
-- apiGroups:
-    - ""
-  resources:
-    - serviceaccounts/token
-  verbs:
-    - create
-- apiGroups:
-    - deckhouse.io
-  resources:
-    - nodegroups
   verbs:
     - get
 - apiGroups:
@@ -88,8 +74,6 @@ rules:
   resources:
     - staticinstances
   verbs:
-    - create
-    - delete
     - get
     - list
     - patch
@@ -114,19 +98,11 @@ rules:
   resources:
     - staticclusters
   verbs:
-    - create
-    - delete
     - get
     - list
     - patch
     - update
     - watch
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticclusters/finalizers
-  verbs:
-    - update
 - apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
@@ -140,19 +116,11 @@ rules:
   resources:
     - staticcontrolplanes
   verbs:
-    - create
-    - delete
     - get
     - list
     - patch
     - update
     - watch
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticcontrolplanes/finalizers
-  verbs:
-    - update
 - apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
@@ -166,8 +134,6 @@ rules:
   resources:
     - staticmachines
   verbs:
-    - create
-    - delete
     - get
     - list
     - patch

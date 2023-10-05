@@ -88,6 +88,8 @@ func instanceMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}
 
 	return &machineForInstance{
+		APIVersion:        machine.APIVersion,
+		Kind:              machine.Kind,
 		NodeGroup:         machine.Spec.NodeTemplateSpec.Labels["node.deckhouse.io/group"],
 		NodeName:          machine.GetLabels()["node"],
 		Name:              machine.GetName(),
@@ -118,9 +120,11 @@ func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	}
 
 	return &machineForInstance{
-		NodeGroup: machine.GetLabels()["node-group"],
-		NodeName:  nodeName,
-		Name:      machine.GetName(),
+		APIVersion: machine.APIVersion,
+		Kind:       machine.Kind,
+		NodeGroup:  machine.GetLabels()["node-group"],
+		NodeName:   nodeName,
+		Name:       machine.GetName(),
 		CurrentStatus: mcmv1alpha1.CurrentStatus{
 			Phase:          mcmv1alpha1.MachinePhase(machine.Status.Phase),
 			LastUpdateTime: lastUpdated,
@@ -309,8 +313,8 @@ func newInstance(machine *machineForInstance, ng *nodeGroupForInstance) *d8v1alp
 				Kind: ng.ClassReference.Kind,
 			},
 			MachineRef: d8v1alpha1.MachineRef{
-				APIVersion: "machine.sapcloud.io/v1alpha1",
-				Kind:       "Machine",
+				APIVersion: machine.APIVersion,
+				Kind:       machine.Kind,
 				Name:       machine.Name,
 				Namespace:  "d8-cloud-instance-manager",
 			},
@@ -398,6 +402,8 @@ func getInstanceStatusPatch(ic *d8v1alpha1.Instance, machine *machineForInstance
 }
 
 type machineForInstance struct {
+	APIVersion        string
+	Kind              string
 	NodeGroup         string
 	NodeName          string
 	Name              string

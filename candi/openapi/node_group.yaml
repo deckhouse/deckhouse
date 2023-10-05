@@ -2045,11 +2045,20 @@ spec:
                     nodeType:
                       enum:
                         - CloudEphemeral
+                    staticInstances:
+                      not: {}
                   required:
                     - cloudInstances
                 - properties:
                     nodeType:
                       enum:
+                        - Static
+                    cloudInstances:
+                      not: {}
+                - properties:
+                    nodeType:
+                      enum:
                         - CloudPermanent
                         - CloudStatic
-                        - Static
+                    staticInstances:
+                      not: {}

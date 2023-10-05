@@ -11,5 +11,5 @@ spec:
     - port: 443
       targetPort: webhook-server
   selector:
-    cluster.x-k8s.io/provider: infrastructure-static
+    app: caps-controller-manager
 {{- end }}

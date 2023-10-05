@@ -41,7 +41,6 @@ rm -rf /etc/systemd/system/d8-containerd-cgroup-migration.*
 rm -rf /etc/systemd/system/containerd-deckhouse.service /etc/systemd/system/containerd-deckhouse.service.d
 rm -rf /etc/systemd/system/kubelet.service /etc/systemd/system/kubelet.service.d
 
-rm -rf /var/lib/bashible
 rm -rf /var/cache/registrypackages
 rm -rf /etc/kubernetes
 rm -rf /var/lib/kubelet
@@ -51,6 +50,7 @@ rm -rf /var/lib/cni
 rm -rf /var/lib/etcd
 rm -rf /opt/cni
 rm -rf /opt/deckhouse
+rm -rf /var/lib/bashible
 
 # run reboot in the background to normally ends cleanup script and ssh session from client
 (sleep 5 && shutdown -r now) &

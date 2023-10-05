@@ -11,5 +11,5 @@ spec:
     - port: 443
       targetPort: webhook-server
   selector:
-    cluster.x-k8s.io/provider: cluster-api
+    app: capi-controller-manager
 {{- end }}

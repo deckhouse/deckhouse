@@ -33,8 +33,6 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const clusterDomain = "cluster.local"
-
 var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {"clusterDomain": "`+clusterDomain+`"}},"nodeManager":{"internal":{"capiControllerManagerWebhookCert": {}}}}`, "")
 
@@ -67,7 +65,7 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 	})
 	Context("With secrets", func() {
 		caAuthority, _ := genWebhookCa(nil)
-		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{LogEntry: logrus.New().WithContext(context.Background())}, caAuthority)
+		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{LogEntry: logrus.New().WithContext(context.Background())}, caAuthority, "capi-manager-webhook", "capi-webhook-service")
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(`
@@ -110,9 +108,9 @@ func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
 	return &ca, nil
 }
 
-func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certificate.Certificate, error) {
+func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority, cn string, sanPrefix string) (*certificate.Certificate, error) {
 	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
-		"capi-manager-webhook",
+		cn,
 		*ca,
 		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
@@ -122,10 +120,10 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certif
 			"requestheader-client",
 		}),
 		certificate.WithSANs(
-			"capi-webhook-service.d8-cloud-instance-manager",
-			"capi-webhook-service.d8-cloud-instance-manager.svc",
-			"capi-webhook-service.d8-cloud-instance-manager."+clusterDomain,
-			"capi-webhook-service.d8-cloud-instance-manager.svc."+clusterDomain,
+			sanPrefix+".d8-cloud-instance-manager",
+			sanPrefix+".d8-cloud-instance-manager.svc",
+			sanPrefix+".d8-cloud-instance-manager."+clusterDomain,
+			sanPrefix+".d8-cloud-instance-manager.svc."+clusterDomain,
 		),
 	)
 	if err != nil {

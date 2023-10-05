@@ -214,7 +214,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/caps-controller-manager"
+  directory: "/modules/040-node-manager/images/caps-controller-manager/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
