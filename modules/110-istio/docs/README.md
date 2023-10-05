@@ -4,7 +4,7 @@ webIfaces:
 - name: istio
 ---
 
-Currently supported istio versions:
+Currently supported Istio versions:
 * 1.12 (deprecated)
 * 1.13 (deprecated)
 * 1.16
