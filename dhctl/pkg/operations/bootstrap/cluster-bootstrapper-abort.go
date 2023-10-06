@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -136,16 +137,37 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
-		if err = cache.InitWithOptions(sshClient.Check().String(), cache.CacheOptions{}); err != nil {
-			return fmt.Errorf(bootstrapAbortInvalidCacheMessage, sshClient.Check().String(), err)
-		}
-		destroyer = destroy.NewClusterDestroyer(&destroy.Params{
-			SSHClient:   sshClient,
-			StateCache:  cache.Global(),
-			OnPhaseFunc: b.OnPhaseFunc,
 
+		if !b.CommanderMode {
+			if err = cache.InitWithOptions(sshClient.Check().String(), cache.CacheOptions{}); err != nil {
+				return fmt.Errorf(bootstrapAbortInvalidCacheMessage, sshClient.Check().String(), err)
+			}
+		}
+
+		destroyParams := &destroy.Params{
+			SSHClient:     sshClient,
+			StateCache:    cache.Global(),
+			OnPhaseFunc:   b.OnPhaseFunc,
 			SkipResources: app.SkipResources,
-		})
+		}
+
+		if b.CommanderMode {
+			clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
+			if err != nil {
+				return err
+			}
+			providerClusterConfigurationData, err := metaConfig.ProviderClusterConfigYAML()
+			if err != nil {
+				return err
+			}
+			destroyParams.CommanderMode = true
+			destroyParams.CommanderModeParams = commander.NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData)
+		}
+
+		destroyer, err = destroy.NewClusterDestroyer(destroyParams)
+		if err != nil {
+			return err
+		}
 
 		log.InfoLn("Deckhouse installation was started before. Destroy cluster")
 		return nil
