@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
@@ -68,9 +69,8 @@ type Runner struct {
 	excludedNodes map[string]bool
 	skipPhases    map[Phase]bool
 
-	commanderMode                             bool
-	commanderClusterConfigurationData         []byte
-	commanderProviderClusterConfigurationData []byte
+	commanderMode       bool
+	commanderModeParams *commander.CommanderModeParams
 
 	stateCache dstate.Cache
 }
@@ -87,13 +87,8 @@ func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateC
 	}
 }
 
-func (r *Runner) WithCommanderClusterConfigurationData(data []byte) *Runner {
-	r.commanderClusterConfigurationData = data
-	return r
-}
-
-func (r *Runner) WithCommanderProviderClusterConfigurationData(data []byte) *Runner {
-	r.commanderProviderClusterConfigurationData = data
+func (r *Runner) WithCommanderModeParams(params *commander.CommanderModeParams) *Runner {
+	r.commanderModeParams = params
 	return r
 }
 
@@ -151,13 +146,6 @@ func (r *Runner) converge() error {
 	var metaConfig *config.MetaConfig
 	var err error
 	if r.commanderMode {
-		if r.commanderClusterConfigurationData == nil {
-			panic("cluster configuration param required")
-		}
-		if r.commanderProviderClusterConfigurationData == nil {
-			panic("provider cluster configuration param required")
-		}
-
 		if r.PhasedExecutionContext != nil {
 			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.InstallDeckhousePhase, false, r.stateCache); err != nil {
 				return err
@@ -166,19 +154,10 @@ func (r *Runner) converge() error {
 			}
 		}
 
-		clusterUUIDBytes, err := r.stateCache.Load("uuid")
-		if err != nil {
-			return err
-		}
-		clusterUUID := string(clusterUUIDBytes)
-		log.InfoF("Cluster UUID from cache: %s\n", clusterUUID)
-
-		configData := fmt.Sprintf("%s\n---\n%s", r.commanderClusterConfigurationData, r.commanderProviderClusterConfigurationData)
-		metaConfig, err = config.ParseConfigFromData(configData)
+		metaConfig, err = commander.ParseMetaConfig(r.stateCache, r.commanderModeParams)
 		if err != nil {
 			return fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
-		metaConfig.UUID = clusterUUID
 
 		clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
 		if err != nil {
@@ -188,7 +167,7 @@ func (r *Runner) converge() error {
 		if err != nil {
 			return fmt.Errorf("unable to get provider cluster config yaml: %w", err)
 		}
-		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, clusterUUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
+		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, metaConfig.UUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
 			return fmt.Errorf("unable to update deckhouse configuration: %w", err)
 		}
 

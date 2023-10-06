@@ -76,6 +76,7 @@ type Params struct {
 	ResetInitialState          bool
 	DisableBootstrapClearCache bool
 	OnPhaseFunc                phases.OnPhaseFunc
+	CommanderMode              bool
 
 	ConfigPath              string
 	ResourcesPath           string
