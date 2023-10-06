@@ -470,6 +470,111 @@ func TestAuthorizeRequest(t *testing.T) {
 				Reason: "user has no access to the namespace",
 			},
 		},
+		{
+			Name:  "Limited with MatchAny NamespaceSelector and limitNamespaces, wants d8-system",
+			Group: []string{"limited", "limited-with-match-any-namespace-selector"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "d8-system",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "d8-system",
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Limited with MatchAny NamespaceSelector and limitNamespaces, wants across all namespaces",
+			Group: []string{"limited", "limited-with-match-any-namespace-selector"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "d8-system",
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelector, wants across all namespaces",
+			Group: []string{"limited-namespace-selector"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "d8-system",
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "making cluster-scoped requests for namespaced resources is not allowed",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelector and unlimited limitNamespaces, wants across all namespaces",
+			Group: []string{"limited-namespace-selector", "limited-with-unlimited-regex"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "d8-system",
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "making cluster-scoped requests for namespaced resources is not allowed",
+			},
+		},
+		{
+			Name:  "Limited with NamespaceSelector and unlimited limitNamespaces plus system, wants across all namespaces",
+			Group: []string{"limited-namespace-selector", "limited-with-unlimited-regex-and-system-allowed"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "",
+			},
+			Namespaces: []runtime.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "d8-system",
+					},
+				},
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
 	}
 
 	for _, testCase := range tc {
@@ -490,6 +595,9 @@ func TestAuthorizeRequest(t *testing.T) {
 						},
 					},
 				},
+			}
+			namespaceSelectorMatchAny := &NamespaceSelector{
+				MatchAny: true,
 			}
 
 			handler := &Handler{
@@ -525,17 +633,26 @@ func TestAuthorizeRequest(t *testing.T) {
 						"limited-with-system-regex": {
 							LimitNamespaces: []*regexp.Regexp{systemRegex},
 						},
-						"limited-namespace-selector": {
-							NamespaceSelectors: []*NamespaceSelector{
-								namespaceSelector,
-							},
-						},
 						"limited-with-unlimited-regex": {
 							LimitNamespaces: []*regexp.Regexp{allRegex},
 						},
 						"limited-and-system-allowed": {
 							LimitNamespaces:               []*regexp.Regexp{nsRegex},
 							AllowAccessToSystemNamespaces: true,
+						},
+						"limited-with-unlimited-regex-and-system-allowed": {
+							LimitNamespaces:               []*regexp.Regexp{allRegex},
+							AllowAccessToSystemNamespaces: true,
+						},
+						"limited-namespace-selector": {
+							NamespaceSelectors: []*NamespaceSelector{
+								namespaceSelector,
+							},
+						},
+						"limited-with-match-any-namespace-selector": {
+							NamespaceSelectors: []*NamespaceSelector{
+								namespaceSelectorMatchAny,
+							},
 						},
 					},
 				},

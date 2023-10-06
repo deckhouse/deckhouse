@@ -84,9 +84,13 @@ properties:
                     minLength: 1
                 namespaceSelector:
                   type: object
-                  required:
-                    - labelSelector
+                  oneOf:
+                    - required: ["labelSelector"]
+                    - required: ["matchAny"]
                   properties:
+                    matchAny:
+                      type: boolean
+                      enum: [true]
                     labelSelector:
                       type: object
                       minProperties: 1
