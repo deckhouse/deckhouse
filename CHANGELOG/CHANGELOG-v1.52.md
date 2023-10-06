@@ -50,6 +50,7 @@
  - **[log-shipper]** Remove `libssl1.1_1.1.1f-1ubuntu2.17_amd64.deb` from the final image after installation. [#5794](https://github.com/deckhouse/deckhouse/pull/5794)
  - **[multitenancy-manager]** When trying to delete a projectType used in a project, an error with project name displayed. [#5744](https://github.com/deckhouse/deckhouse/pull/5744)
  - **[prometheus]** Clarify description and formula for the oldest metrics panel on the starting page of Grafana. [#5712](https://github.com/deckhouse/deckhouse/pull/5712)
+ - **[user-authn]** Fix generation a self signed certificate for `crowd-basic-auth-proxy`. [#6074](https://github.com/deckhouse/deckhouse/pull/6074)
 
 ## Chore
 
