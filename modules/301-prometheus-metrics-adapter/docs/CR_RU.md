@@ -10,11 +10,11 @@ search: autoscaler, HorizontalPodAutoscaler
   * `<<.GroupBy>>` — заменится на перечисление лейблов `namespace###PLACEHOLDER2###` для группировки (`max() by(...)`, `sum() by (...)` и пр.).
 {% endcapture %}
 
-Настройка ванильного `prometheus-metrics-adapter` — достаточно трудоёмкий процесс. Мы его несколько упростили, определив набор **CustomResourceDefinition** с разной областью видимости (scope).
+Настройка ванильного `prometheus-metrics-adapter` — достаточно трудоемкий процесс. Мы его несколько упростили, определив набор **CustomResourceDefinition** с разной областью видимости (scope).
 
-С помощью cluster-wide-ресурса можно определить метрику глобально, а с помощью Namespaced-ресурса её можно локально переопределять. Формат всех custom resource'ов — одинаковый.
+С помощью cluster-wide-ресурса можно определить метрику глобально, а с помощью namespaced-ресурса ее можно локально переопределять. Формат всех custom resource'ов — одинаковый.
 
-## Namespaced Custom resources
+## Namespaced custom resources
 
 ### `ServiceMetric`
 
@@ -44,7 +44,7 @@ search: autoscaler, HorizontalPodAutoscaler
 
 {{ cr_spec | replace: '###PLACEHOLDER###', ',daemonset="mydaemonset"' | replace: '###PLACEHOLDER2###', ',daemonset' }}
 
-## Cluster Custom resources
+## Cluster custom resources
 
 ### `ClusterServiceMetric` (недоступен пользователям)
 
