@@ -74,8 +74,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var request WebhookRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		// this case is exceptional
-		h.logger.Fatalf("cannot unmarshal kubernetes request: %v", err)
+		h.logger.Printf("cannot unmarshal kubernetes request: %v", err)
+		http.Error(w, "Invalid json request", http.StatusBadRequest)
+		return
 	}
 
 	h.authorizeRequest(&request)
