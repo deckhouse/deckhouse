@@ -16,6 +16,7 @@ package converge
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"time"
 
@@ -31,17 +32,15 @@ import (
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient                                 *ssh.Client
-	InitialState                              phases.DhctlState
-	ResetInitialState                         bool
-	OnPhaseFunc                               phases.OnPhaseFunc
-	CommanderMode                             bool
-	CommanderClusterConfigurationData         []byte
-	CommanderProviderClusterConfigurationData []byte
-	AutoDismissDestructive                    bool
-	AutoApprove                               bool
+	SSHClient              *ssh.Client
+	OnPhaseFunc            phases.OnPhaseFunc
+	AutoDismissDestructive bool
+	AutoApprove            bool
 
 	*client.KubernetesInitParams
+
+	CommanderMode bool
+	*commander.CommanderModeParams
 }
 
 type Converger struct {
@@ -81,30 +80,30 @@ func (c *Converger) Converge() error {
 		return err
 	}
 
-	cacheIdentity := ""
-	if app.KubeConfigInCluster {
-		cacheIdentity = "in-cluster"
+	if !c.CommanderMode {
+		cacheIdentity := ""
+		if app.KubeConfigInCluster {
+			cacheIdentity = "in-cluster"
+		}
+		if c.SSHClient != nil {
+			cacheIdentity = c.SSHClient.Check().String()
+		}
+		if app.KubeConfig != "" {
+			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
+				app.KubeConfig,
+				app.KubeConfigContext,
+			)
+		}
+		if cacheIdentity == "" {
+			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+		}
+
+		err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
+		}
 	}
 
-	if c.SSHClient != nil {
-		cacheIdentity = c.SSHClient.Check().String()
-	}
-
-	if app.KubeConfig != "" {
-		cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
-			app.KubeConfig,
-			app.KubeConfigContext,
-		)
-	}
-
-	if cacheIdentity == "" {
-		return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
-	}
-
-	err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{InitialState: c.InitialState, ResetInitialState: c.ResetInitialState})
-	if err != nil {
-		return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
-	}
 	inLockRunner := converge.NewInLockLocalRunner(kubeCl, "local-converger")
 
 	stateCache := cache.Global()
@@ -117,8 +116,8 @@ func (c *Converger) Converge() error {
 	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache).
 		WithPhasedExecutionContext(c.PhasedExecutionContext).
 		WithCommanderMode(c.Params.CommanderMode).
-		WithCommanderClusterConfigurationData(c.Params.CommanderClusterConfigurationData).
-		WithCommanderProviderClusterConfigurationData(c.Params.CommanderProviderClusterConfigurationData).
+		WithCommanderClusterConfigurationData(c.Params.CommanderModeParams.ClusterConfigurationData).
+		WithCommanderProviderClusterConfigurationData(c.Params.CommanderModeParams.ProviderClusterConfigurationData).
 		WithChangeSettings(&terraform.ChangeActionSettings{
 			AutoDismissDestructive: c.AutoDismissDestructive,
 			AutoApprove:            c.AutoApprove,
