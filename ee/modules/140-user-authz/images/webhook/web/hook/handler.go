@@ -181,7 +181,7 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
 
 	} else if namespaced && hasAnyFilters(entry) {
-		// we should not allow cluster scoped requests for namespaced objects if access to namespaces is limited
+		// we should not allow cluster-scoped requests for the namespaced objects if access to the namespaces is limited
 		h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
 	}
 
