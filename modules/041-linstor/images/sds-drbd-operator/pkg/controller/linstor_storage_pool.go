@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strings"
 	"time"
 )
 
@@ -75,10 +76,20 @@ func NewLinstorStoragePool(
 					return
 				}
 
-				doubleNodes, err := ValidateVolumeGroup(ctx, cl, lsp)
-				if err != nil || doubleNodes == 1 {
+				doubleNodes, msg, err := ValidateVolumeGroup(ctx, cl, lsp)
+				if err != nil {
 					lsp.Status.Phase = "Failed"
-					lsp.Status.Reason = "lvmVolumeGroupsNames is contains doubles"
+					lsp.Status.Reason = msg.Error
+					err = UpdateLinstorStoragePool(ctx, cl, lsp)
+					if err != nil {
+						log.Error(err, "error UpdateLinstorStoragePool")
+					}
+					return
+				}
+
+				if doubleNodes == 1 {
+					lsp.Status.Phase = "Failed"
+					lsp.Status.Reason = "lvmVolumeGroupsNames is contains doubles " + msg.Node + " " + strings.Join(msg.Lvm, ",")
 					err = UpdateLinstorStoragePool(ctx, cl, lsp)
 					if err != nil {
 						log.Error(err, "error UpdateLinstorStoragePool")
@@ -385,25 +396,29 @@ func GetLvmVolumeGroup(ctx context.Context, cl client.Client, namespace, name st
 	return obj, err
 }
 
-func ValidateVolumeGroup(ctx context.Context, cl client.Client, lsp *v1alpha1.LinstorStoragePool) (int, error) {
+func ValidateVolumeGroup(ctx context.Context, cl client.Client, lsp *v1alpha1.LinstorStoragePool) (int, v1alpha1.MessageDouble, error) {
 	var name string
 	var tempNameNode []string
+	var msg v1alpha1.MessageDouble
 
 	for _, g := range lsp.Spec.LvmVolumeGroups {
 		name = g.Name
 
 		group, err := GetLvmVolumeGroup(ctx, cl, lsp.Namespace, name)
 		if err != nil {
-			return 0, err
+			msg.Error = err.Error()
+			return 0, msg, err
 		}
 
 		for _, n := range group.Status.Nodes {
 			tempNameNode = append(tempNameNode, n.Name)
 		}
-	}
 
-	if HasDuplicates(tempNameNode) {
-		return 1, nil
+		if HasDuplicates(tempNameNode) {
+			msg.Node = name
+			msg.Lvm = tempNameNode
+			return 1, msg, nil
+		}
 	}
-	return 0, nil
+	return 0, msg, nil
 }

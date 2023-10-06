@@ -50,3 +50,9 @@ type LinstorStoragePoolList struct {
 	metav1.ListMeta `json:"metadata"`
 	Items           []LinstorStoragePool `json:"items"`
 }
+
+type MessageDouble struct {
+	Node  string
+	Lvm   []string
+	Error string
+}

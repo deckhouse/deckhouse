@@ -96,7 +96,7 @@ func reconcileLinstorNodes(ctx context.Context, cl client.Client, lc *lclient.Cl
 	timeoutCtx, cancel := context.WithTimeout(ctx, reachableTimeout)
 	defer cancel()
 
-	log.Info("reconcileLinstorNodes: Get config from secret: " + secretNamespace + "/" + secretName)
+	// log.Debug("reconcileLinstorNodes: Get config from secret: " + secretNamespace + "/" + secretName)
 	configSecret, err := GetKubernetesSecretByName(ctx, cl, secretName, secretNamespace)
 	if err != nil {
 		log.Error(err, "Failed get secret:"+secretName+"/"+secretNamespace)
@@ -114,7 +114,7 @@ func reconcileLinstorNodes(ctx context.Context, cl client.Client, lc *lclient.Cl
 		return err
 	}
 
-	log.Info("reconcileLinstorNodes: Get LINSTOR nodes")
+	// log.Debug("reconcileLinstorNodes: Get LINSTOR nodes")
 	linstorNodes, err := lc.Nodes.GetAll(timeoutCtx, &lclient.ListOpts{})
 	if err != nil {
 		log.Error(err, "Failed get LINSTOR nodes")
@@ -122,14 +122,14 @@ func reconcileLinstorNodes(ctx context.Context, cl client.Client, lc *lclient.Cl
 	}
 
 	if len(selectedKubernetesNodes.Items) != 0 {
-		log.Info("reconcileLinstorNodes: Start AddOrConfigureDRBDNodes")
+		// log.Debug("reconcileLinstorNodes: Start AddOrConfigureDRBDNodes")
 		err = AddOrConfigureDRBDNodes(ctx, cl, lc, log, selectedKubernetesNodes, linstorNodes, drbdNodeSelector)
 		if err != nil {
 			log.Error(err, "Failed add DRBD nodes:")
 			return err
 		}
 	} else {
-		log.Info("reconcileLinstorNodes: There are not any Kubernetes nodes for LINSTOR that can be selected by selector:" + fmt.Sprint(configNodeSelector))
+		// log.Warn("reconcileLinstorNodes: There are not any Kubernetes nodes for LINSTOR that can be selected by selector:" + fmt.Sprint(configNodeSelector))
 	}
 
 	// Remove logic
@@ -140,16 +140,16 @@ func reconcileLinstorNodes(ctx context.Context, cl client.Client, lc *lclient.Cl
 	}
 	drbdNodesToRemove := DiffNodeLists(allKubernetesNodes, selectedKubernetesNodes)
 
-	log.Info("reconcileLinstorNodes: Start removeDRBDNodes")
+	// log.Debug("reconcileLinstorNodes: Start removeDRBDNodes")
 	err = removeDRBDNodes(ctx, cl, lc, log, drbdNodesToRemove, linstorNodes, drbdNodeSelector)
 
 	return nil
 }
 
 func removeDRBDNodes(ctx context.Context, cl client.Client, lc *lclient.Client, log logr.Logger, drbdNodesToRemove v1.NodeList, linstorNodes []lclient.Node, drbdNodeSelector map[string]string) error {
-	log.Info("removeDRBDNodes: Start")
+	// log.Debug("removeDRBDNodes: Start")
 	for _, drbdNodeToRemove := range drbdNodesToRemove.Items {
-		log.Info("removeDRBDNodes: Process Kubernetes node: " + drbdNodeToRemove.Name)
+		// log.Debug("removeDRBDNodes: Process Kubernetes node: " + drbdNodeToRemove.Name)
 
 		for _, linstorNode := range linstorNodes {
 			if drbdNodeToRemove.Name == linstorNode.Name {
@@ -186,10 +186,10 @@ func removeDRBDNodes(ctx context.Context, cl client.Client, lc *lclient.Client, 
 }
 
 func AddOrConfigureDRBDNodes(ctx context.Context, cl client.Client, lc *lclient.Client, log logr.Logger, selectedKubernetesNodes v1.NodeList, linstorNodes []lclient.Node, drbdNodeSelector map[string]string) error {
-	log.Info("AddOrConfigureDRBDNodes: Start")
+	// log.Debug("AddOrConfigureDRBDNodes: Start")
 
 	for _, selectedKubernetesNode := range selectedKubernetesNodes.Items {
-		log.Info("AddOrConfigureDRBDNodes: Process Kubernetes node: " + selectedKubernetesNode.Name)
+		// log.Debug("AddOrConfigureDRBDNodes: Process Kubernetes node: " + selectedKubernetesNode.Name)
 
 		drbdNodeProperties := KubernetesNodeLabelsToProperties(selectedKubernetesNode.Labels)
 		findMatch := false
@@ -197,7 +197,7 @@ func AddOrConfigureDRBDNodes(ctx context.Context, cl client.Client, lc *lclient.
 		for _, linstorNode := range linstorNodes {
 			if selectedKubernetesNode.Name == linstorNode.Name {
 				findMatch = true
-				log.Info("AddOrConfigureDRBDNodes: Start ConfigureDRBDNode: " + linstorNode.Name)
+				// log.Debug("AddOrConfigureDRBDNodes: Start ConfigureDRBDNode: " + linstorNode.Name)
 				err := ConfigureDRBDNode(ctx, lc, linstorNode, drbdNodeProperties)
 				if err != nil {
 					return fmt.Errorf("unable set drbd properties to node %s: %w", linstorNode.Name, err)
@@ -207,7 +207,7 @@ func AddOrConfigureDRBDNodes(ctx context.Context, cl client.Client, lc *lclient.
 		}
 
 		if !labels.Set(drbdNodeSelector).AsSelector().Matches(labels.Set(selectedKubernetesNode.Labels)) {
-			log.Info("AddOrConfigureDRBDNodes: Kubernetes node: " + selectedKubernetesNode.Name + " doesn't have drbd label. Set it")
+			// log.("AddOrConfigureDRBDNodes: Kubernetes node: " + selectedKubernetesNode.Name + " doesn't have drbd label. Set it")
 
 			originalNode := selectedKubernetesNode.DeepCopy()
 			newNode := selectedKubernetesNode.DeepCopy()
