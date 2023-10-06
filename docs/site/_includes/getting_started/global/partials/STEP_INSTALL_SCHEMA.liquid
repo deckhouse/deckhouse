@@ -102,10 +102,10 @@ Scheme of Deckhouse installation in a private environment:<br />
    - [supported OS](/documentation/v1/supported_versions.html)
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images
-   - доступ к стандартным для используемой ОС репозиториям пакетов (через прокси-сервер или до внутреннего сервера-репозитория пакетов);
+   - access to the default OS package repositories (via a proxy server or an internal package repository server);
    {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry
-   - доступ к стандартным для используемой ОС репозиториям пакетов;
+   - access to the default package repositories for the operating system you are using;
    {%- endif %}
    - SSH key access from the **personal computer** (section 1)
    - network access from the **personal computer** (section 1) via port <code>22322/TCP</code>
