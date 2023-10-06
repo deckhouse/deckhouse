@@ -15,12 +15,16 @@
 # limitations under the License.
 
 # This is default linstor controller liveness probe
-if ! curl --connect-timeout 3 -sf http://localhost:9999/ > /dev/null; then exit 1; fi
+if ! curl --connect-timeout 3 -sf http://localhost:9999/ > /dev/null; then
+  exit 1;
+fi
 
 # Sometimes nodes can be shown as Online without established connection to them.
 # This is a workaround for https://github.com/LINBIT/linstor-server/issues/331, https://github.com/LINBIT/linstor-server/issues/219
 if test -f "/var/log/linstor-controller/linstor-Controller.log"; then
   tail -n 1000 /var/log/linstor-controller/linstor-Controller.log | grep -q 'Target decrypted buffer is too small' && exit 1
+  # Because shell keeps last exit code, we must force exit with code 0. If not, we will have exit code 1 because of grep, that not founded anything
+  exit 0
 else
   exit 0
 fi
