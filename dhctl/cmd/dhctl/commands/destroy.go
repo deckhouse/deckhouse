@@ -64,11 +64,14 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
-		destroyer := destroy.NewClusterDestroyer(&destroy.Params{
+		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
 			SSHClient:     sshClient,
 			StateCache:    cache.Global(),
 			SkipResources: app.SkipResources,
 		})
+		if err != nil {
+			return err
+		}
 
 		return destroyer.DestroyCluster(app.SanityCheck)
 	})
