@@ -104,5 +104,15 @@ func generateSelfSignedCertFromFrontProxyCA() ([]byte, error) {
 		return nil, err
 	}
 
-	return s.Sign(signer.SignRequest{Request: os.Getenv("CSR")})
+	csrBase64 := os.Getenv("CSR")
+	if len(csrBase64) == 0 {
+		return nil, fmt.Errorf("CSR is empty")
+	}
+
+	csr, err := base64.StdEncoding.DecodeString(csrBase64)
+	if err != nil {
+		return nil, fmt.Errorf("Decode base64 error: %w", err)
+	}
+
+	return s.Sign(signer.SignRequest{Request: string(csr)})
 }
