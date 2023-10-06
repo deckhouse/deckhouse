@@ -2,7 +2,7 @@
 title: "Модуль descheduler: примеры"
 ---
 
-## Пример CR
+## Пример custom resource
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -11,22 +11,22 @@ metadata:
   name: example
 spec:
   deschedulerPolicy:
-    # укажите параметры, применяющиеся ко всем стратегиям
+    # Укажите параметры, применяющиеся ко всем стратегиям.
     globalParameters:
       evictFailedBarePods: true
     strategies:
-      # включите конкретную стратегию, указав её параметры
+      # Включите конкретную стратегию, указав ее параметры.
       podLifeTime:
         enabled: true
 
-      # включите стратегию и укажите дополнительные параметры
+      # Включите стратегию и укажите дополнительные параметры.
       removeDuplicates:
         enabled: true
         parameters:
           nodeFit: true
 ```
 
-## Пример CR для NodeGroup (labelSelector ноды)
+## Пример custom resource для NodeGroup (labelSelector узла)
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
