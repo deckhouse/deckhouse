@@ -210,20 +210,33 @@ spec:
                   description: |
                     Defines a set of namespaces accessible by the user, using the value of the `namespaceSelector.labelSelector` parameter.
 
-                    If the parameter `namespaceSelector` is specified, the values of the parameters `limitNamespaces` and `allowAccessToSystemNamespaces` **are ignored**. Thus, all namespaces with labels that fall under the conditions specified in the `namespace Selector.labelSelector` parameter, including system namespaces, will be available.
+                    If the `namespaceSelector` parameter is specified, the values of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters are **ignored**. If the `namespaceSelector.matchAny` field is specified, then all namespaces (including system namespaces) will be accessible. Otherwise, only the namespaces with labels matching the `namespaceSelector.labelSelector` conditions will be accessible (including system namespaces).
 
                     If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters. If none of the parameters `namespaceSelector`, `limitNamespaces` and `allowAccessToSystemNamespaces` are specified, then all namespaces will be available, except for the system ones (`kube-*`, `d8-*`, `loghouse`, `default`).
 
                     Is available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter is enabled.
                   type: object
-                  required:
-                    - labelSelector
+                  oneOf:
+                    - required: ["labelSelector"]
+                    - required: ["matchAny"]
                   properties:
+                    matchAny:
+                      description: |
+                        Unconditionally permits access to any namespace in the cluster, including system namespaces.
+
+                        Cannot be used together with the `labelSelector` parameter.
+
+                        Since `labelSelector` provides access to a limited number of the namespaces that match it, `matchAny` is needed in cases where access to all namespaces is to be granted.
+                      type: boolean
+                      enum: [true]
                     labelSelector:
                       description: |
-                         Defines label selector-based filter of namespaces.
+                        Defines the label selector-based filter of the namespaces.
 
-                         If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
+                        Cannot be used together with the `matchAny` parameter.
+
+                        If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
+                        If multiple `matchExpression` conditions are provided, they all must be satisfied in order to match.
                       type: object
                       minProperties: 1
                       properties:
