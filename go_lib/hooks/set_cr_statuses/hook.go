@@ -32,7 +32,7 @@ func getTimeStamp() string {
 	return curTime.Format(time.RFC3339)
 }
 
-var SetProcessedStatus = func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+func SetProcessedStatus(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	objCopy := obj.DeepCopy()
 	if err := unstructured.SetNestedField(objCopy.Object, objCopy.GetGeneration(), "status", "deckhouse", "processed", "generation"); err != nil {
 		return nil, fmt.Errorf("cannot set generation status field: %v", err)
