@@ -194,26 +194,8 @@ jobs:
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.validators) | strings.Indent 6 }!}
 
-{!{/* Autodeploy site to production (EU) env on push to the main branch. */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_site_prod_eu" "(Prod EU) Deploy latest site") }!}
-  deploy_latest_web_site_prod_eu:
-    name: {!{ $jobNames.deploy_latest_web_site_prod_eu }!}
-    needs:
-      - git_info
-      - doc_web_build
-      - main_web_build
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_site_prod_eu) | strings.Indent 6 }!}
-
 {!{/* Autodeploy site to production (SEL) env on push to the main branch. */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_site_prod_sel" "(Prod SEL) Deploy latest site") }!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_site_prod_sel" "(Prod) Deploy latest site") }!}
   deploy_latest_web_site_prod_sel:
     name: {!{ $jobNames.deploy_latest_web_site_prod_sel }!}
     needs:
@@ -230,26 +212,8 @@ jobs:
 {!{ tmpl.Exec "deploy_site_template" "preproduction" | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_site_prod_sel) | strings.Indent 6 }!}
 
-{!{/* Autodeploy docs to production (EU) env on push to the main branch. */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_doc_prod_eu" "(Prod EU) Deploy latest doc") }!}
-  deploy_latest_web_doc_prod_eu:
-    name: {!{ $jobNames.deploy_latest_web_doc_prod_eu }!}
-    needs:
-      - git_info
-      - doc_web_build
-      - main_web_build
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_doc_prod_eu) | strings.Indent 6 }!}
-
 {!{/* Autodeploy docs to production (SEL) env on push to the main branch. */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_doc_prod_sel" "(Prod SEL) Deploy latest doc") }!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_doc_prod_sel" "(Prod) Deploy latest doc") }!}
   deploy_latest_web_doc_prod_sel:
     name: {!{ $jobNames.deploy_latest_web_doc_prod_sel }!}
     needs:
@@ -278,9 +242,7 @@ jobs:
       - build_ce
       - doc_web_build
       - main_web_build
-      - deploy_latest_web_site_prod_eu
       - deploy_latest_web_site_prod_sel
-      - deploy_latest_web_doc_prod_eu
       - deploy_latest_web_doc_prod_sel
       - tests
       - matrix_tests
