@@ -20,10 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	lclient "github.com/LINBIT/golinstor/client"
-	"k8s.io/client-go/util/workqueue"
 	"reflect"
 	"sds-drbd-operator/api/v1alpha1"
+	"time"
+
+	lclient "github.com/LINBIT/golinstor/client"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -31,8 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strings"
-	"time"
 )
 
 const (
@@ -76,20 +76,10 @@ func NewLinstorStoragePool(
 					return
 				}
 
-				doubleNodes, msg, err := ValidateVolumeGroup(ctx, cl, lsp)
-				if err != nil {
+				ok, msg := ValidateVolumeGroup(ctx, cl, lsp)
+				if !ok {
 					lsp.Status.Phase = "Failed"
-					lsp.Status.Reason = msg.Error
-					err = UpdateLinstorStoragePool(ctx, cl, lsp)
-					if err != nil {
-						log.Error(err, "error UpdateLinstorStoragePool")
-					}
-					return
-				}
-
-				if doubleNodes == 1 {
-					lsp.Status.Phase = "Failed"
-					lsp.Status.Reason = "lvmVolumeGroupsNames is contains doubles " + msg.Node + " " + strings.Join(msg.Lvm, ",")
+					lsp.Status.Reason = fmt.Sprintf("%v", msg)
 					err = UpdateLinstorStoragePool(ctx, cl, lsp)
 					if err != nil {
 						log.Error(err, "error UpdateLinstorStoragePool")
@@ -372,18 +362,6 @@ func GetLinstorStoragePool(ctx context.Context, cl client.Client, namespace, nam
 	return obj, err
 }
 
-func HasDuplicates(arr []string) bool {
-	if len(arr) == 1 {
-		return false
-	}
-
-	m := make(map[string]struct{}, len(arr))
-	for _, v := range arr {
-		m[v] = struct{}{}
-	}
-	return len(arr) != len(m)
-}
-
 func GetLvmVolumeGroup(ctx context.Context, cl client.Client, namespace, name string) (*v1alpha1.LvmVolumeGroup, error) {
 	obj := &v1alpha1.LvmVolumeGroup{}
 	err := cl.Get(ctx, client.ObjectKey{
@@ -396,29 +374,55 @@ func GetLvmVolumeGroup(ctx context.Context, cl client.Client, namespace, name st
 	return obj, err
 }
 
-func ValidateVolumeGroup(ctx context.Context, cl client.Client, lsp *v1alpha1.LinstorStoragePool) (int, v1alpha1.MessageDouble, error) {
-	var name string
-	var tempNameNode []string
-	var msg v1alpha1.MessageDouble
+func ValidateVolumeGroup(ctx context.Context, cl client.Client, lsp *v1alpha1.LinstorStoragePool) (bool, map[string]string) {
+	var lvmVolumeGroupName string
+	var nodeName string
+	nodesWithlvmVolumeGroups := make(map[string]string)
+	invalidLvmVolumeGroups := make(map[string]string)
+	lvmVolumeGroupsNames := make(map[string]bool)
 
 	for _, g := range lsp.Spec.LvmVolumeGroups {
-		name = g.Name
+		lvmVolumeGroupName = g.Name
 
-		group, err := GetLvmVolumeGroup(ctx, cl, lsp.Namespace, name)
+		if lvmVolumeGroupsNames[lvmVolumeGroupName] {
+			//UpdateMapValue(invalidLvmVolumeGroups, lvmVolumeGroupName, fmt.Sprintf("LvmVolumeGroup name is not unique, %v", lvmVolumeGroupsNames[lvmVolumeGroupName]))
+			invalidLvmVolumeGroups[lvmVolumeGroupName] = "LvmVolumeGroup name is not unique"
+			continue
+		}
+		lvmVolumeGroupsNames[lvmVolumeGroupName] = true
+
+		group, err := GetLvmVolumeGroup(ctx, cl, lsp.Namespace, lvmVolumeGroupName)
 		if err != nil {
-			msg.Error = err.Error()
-			return 0, msg, err
+			UpdateMapValue(invalidLvmVolumeGroups, lvmVolumeGroupName, fmt.Sprintf("Error getting LVMVolumeGroup: %s", err.Error()))
+			continue
 		}
 
-		for _, n := range group.Status.Nodes {
-			tempNameNode = append(tempNameNode, n.Name)
-		}
+		if len(group.Status.Nodes) != 1 {
+			UpdateMapValue(invalidLvmVolumeGroups, lvmVolumeGroupName, "expected LvmVolumeGroup for LINSTOR Storage Pool to have only one node")
+		} else {
 
-		if HasDuplicates(tempNameNode) {
-			msg.Node = name
-			msg.Lvm = tempNameNode
-			return 1, msg, nil
+			nodeName = group.Status.Nodes[0].Name
+
+			if value, ok := nodesWithlvmVolumeGroups[nodeName]; ok {
+				UpdateMapValue(invalidLvmVolumeGroups, lvmVolumeGroupName, fmt.Sprintf("This LvmVolumeGroup have same node %s as LvmVolumeGroup with name: %s. This is forbidden", nodeName, value))
+				continue
+			}
+
+			nodesWithlvmVolumeGroups[nodeName] = lvmVolumeGroupName
 		}
 	}
-	return 0, msg, nil
+
+	if len(invalidLvmVolumeGroups) > 0 {
+		return false, invalidLvmVolumeGroups
+	}
+
+	return true, nil
+}
+
+func UpdateMapValue(m map[string]string, key string, additionalValue string) {
+	if oldValue, ok := m[key]; ok {
+		m[key] = fmt.Sprintf("%s. Also: %s", oldValue, additionalValue)
+	} else {
+		m[key] = additionalValue
+	}
 }

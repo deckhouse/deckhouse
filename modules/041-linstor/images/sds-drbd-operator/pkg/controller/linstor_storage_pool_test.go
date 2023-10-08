@@ -2,11 +2,14 @@ package controller_test
 
 import (
 	"context"
+	"fmt"
+	"sds-drbd-operator/api/v1alpha1"
+	"sds-drbd-operator/pkg/controller"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sds-drbd-operator/api/v1alpha1"
-	"sds-drbd-operator/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe(controller.LinstorStoragePoolControllerName, func() {
@@ -54,16 +57,32 @@ var _ = Describe(controller.LinstorStoragePoolControllerName, func() {
 		Expect(updatedLsp.Labels[testLblKey]).To(Equal(testLblValue))
 	})
 
-	It("HasDuplicates", func() {
-		unique := []string{"a", "b", "c", "d"}
+	It("UpdateMapValue", func() {
+		m := make(map[string]string)
 
-		hasDuplicates := controller.HasDuplicates(unique)
-		Expect(hasDuplicates).To(BeFalse())
+		// Test adding a new key-value pair
+		controller.UpdateMapValue(m, "key1", "value1")
+		Expect(m["key1"]).To(Equal("value1"))
 
-		duplicates := []string{"a", "a", "b", "c"}
+		// Test updating an existing key-value pair
+		controller.UpdateMapValue(m, "key1", "value2")
+		Expect(m["key1"]).To(Equal("value1. Also: value2"))
 
-		hasDuplicates = controller.HasDuplicates(duplicates)
-		Expect(hasDuplicates).To(BeTrue())
+		// Test another updating an existing key-value pair
+		controller.UpdateMapValue(m, "key1", "value3")
+		Expect(m["key1"]).To(Equal("value1. Also: value2. Also: value3"))
+
+		// Test adding another new key-value pair
+		controller.UpdateMapValue(m, "key2", "value2")
+		Expect(m["key2"]).To(Equal("value2"))
+
+		// Test updating an existing key-value pair with an empty value
+		controller.UpdateMapValue(m, "key2", "")
+		Expect(m["key2"]).To(Equal("value2. Also: "))
+
+		// Test adding a new key-value pair with an empty key
+		controller.UpdateMapValue(m, "", "value3")
+		Expect(m[""]).To(Equal("value3"))
 	})
 
 	It("GetLvmVolumeGroup", func() {
@@ -85,66 +104,73 @@ var _ = Describe(controller.LinstorStoragePoolControllerName, func() {
 
 	It("ValidateVolumeGroup", func() {
 		const (
-			uniqueNodeName     = "uniqueNodeName"
-			duplicatedNodeName = "duplicatedNodeName"
+			lvmVGOneOnFirstNodeName  = "lvmVG-1-on-FirstNode"
+			lvmVGTwoOnFirstNodeName  = "lvmVG-2-on-FirstNode"
+			lvmVGOneOnSecondNodeName = "lvmVG-1-on-SecondNode"
+			notExistedlvnVGName      = "not_existed_lvmVG"
+			firstNodeName            = "first_node"
+			secondNodeName           = "second_node"
+			thirdNodeName            = "third_node"
 		)
-		uniqueNodesLvm := &v1alpha1.LvmVolumeGroup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      uniqueNodeName,
-				Namespace: testNameSpace,
-			},
-			Status: v1alpha1.LvmVGStatus{Nodes: []v1alpha1.LvmVGNode{
-				{
-					Name: "first_node",
-				},
-				{
-					Name: "second_node",
-				},
-			}},
-		}
 
-		err := cl.Create(ctx, uniqueNodesLvm)
+		err := CreateLVMVolumeGroup(ctx, cl, lvmVGOneOnFirstNodeName, testNameSpace, []string{firstNodeName})
 		Expect(err).NotTo(HaveOccurred())
 
-		duplicatedNodesLvm := &v1alpha1.LvmVolumeGroup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      duplicatedNodeName,
-				Namespace: testNameSpace,
-			},
-			Status: v1alpha1.LvmVGStatus{Nodes: []v1alpha1.LvmVGNode{
-				{
-					Name: "first_node",
-				},
-				{
-					Name: "first_node",
-				},
-			}},
-		}
-
-		err = cl.Create(ctx, duplicatedNodesLvm)
+		err = CreateLVMVolumeGroup(ctx, cl, lvmVGTwoOnFirstNodeName, testNameSpace, []string{firstNodeName})
 		Expect(err).NotTo(HaveOccurred())
 
-		testLsp.Spec.LvmVolumeGroups = []v1alpha1.LSPLvmVolumeGroups{
-			{
-				Name:         uniqueNodeName,
-				ThinPoolName: "",
-			},
-		}
-
-		noDuplicates, err := controller.ValidateVolumeGroup(ctx, cl, testLsp)
+		err = CreateLVMVolumeGroup(ctx, cl, lvmVGOneOnSecondNodeName, testNameSpace, []string{secondNodeName})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(noDuplicates).To(Equal(0))
 
-		testLsp.Spec.LvmVolumeGroups = []v1alpha1.LSPLvmVolumeGroups{
-			{
-				Name:         duplicatedNodeName,
-				ThinPoolName: "",
-			},
+		GoodListorStoragePool := GetListorStoragePool(testLsp, []string{lvmVGOneOnFirstNodeName, lvmVGOneOnSecondNodeName})
+
+		ok, msg := controller.ValidateVolumeGroup(ctx, cl, GoodListorStoragePool)
+		Expect(ok).To(BeTrue())
+		Expect(msg).To(BeNil())
+
+		BadListorStoragePool := GetListorStoragePool(testLsp, []string{lvmVGOneOnFirstNodeName, notExistedlvnVGName, lvmVGOneOnSecondNodeName, lvmVGTwoOnFirstNodeName, lvmVGOneOnSecondNodeName})
+		expectedMsg := map[string]string{
+			"lvmVG-2-on-FirstNode":  "This LvmVolumeGroup have same node first_node as LvmVolumeGroup with name: lvmVG-1-on-FirstNode. This is forbidden",
+			"lvmVG-2-on-SecondNode": "LvmVolumeGroup name is not unique",
+			"sdasd":                 "Error getting LVMVolumeGroup: lvmvolumegroups.storage.deckhouse.io \"sdasd\" not found",
 		}
-
-		hasDuplicates, err := controller.ValidateVolumeGroup(ctx, cl, testLsp)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(hasDuplicates).To(Equal(1))
-
+		ok, msg = controller.ValidateVolumeGroup(ctx, cl, BadListorStoragePool)
+		Expect(ok).To(BeFalse())
+		Expect(msg).To(HaveLen(len(expectedMsg)))
+		Expect(msg).To(HaveKeyWithValue(lvmVGTwoOnFirstNodeName, fmt.Sprintf("This LvmVolumeGroup have same node %s as LvmVolumeGroup with name: %s. This is forbidden", firstNodeName, lvmVGOneOnFirstNodeName)))
+		Expect(msg).To(HaveKeyWithValue(lvmVGOneOnSecondNodeName, "LvmVolumeGroup name is not unique"))
+		Expect(msg).To(HaveKeyWithValue(notExistedlvnVGName, fmt.Sprintf("Error getting LVMVolumeGroup: lvmvolumegroups.storage.deckhouse.io \"%s\" not found", notExistedlvnVGName)))
 	})
 })
+
+func CreateLVMVolumeGroup(ctx context.Context, cl client.WithWatch, name string, namespace string, nodes []string) error {
+	vgNodes := make([]v1alpha1.LvmVGNode, len(nodes))
+	for i, node := range nodes {
+		vgNodes[i] = v1alpha1.LvmVGNode{Name: node}
+	}
+	lvmVolumeGroup := &v1alpha1.LvmVolumeGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Status: v1alpha1.LvmVGStatus{Nodes: vgNodes},
+	}
+
+	err := cl.Create(ctx, lvmVolumeGroup)
+	return err
+}
+
+func GetListorStoragePool(lsp *v1alpha1.LinstorStoragePool, vgNames []string) *v1alpha1.LinstorStoragePool {
+
+	volumeGroups := make([]v1alpha1.LSPLvmVolumeGroups, len(vgNames))
+
+	for i, vgName := range vgNames {
+		volumeGroups[i] = v1alpha1.LSPLvmVolumeGroups{
+			Name:         vgName,
+			ThinPoolName: "",
+		}
+	}
+
+	lsp.Spec.LvmVolumeGroups = volumeGroups
+	return lsp
+}
