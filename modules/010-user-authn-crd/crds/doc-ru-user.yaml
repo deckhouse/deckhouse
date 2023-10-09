@@ -12,14 +12,14 @@ spec:
               properties:
                 email:
                   description: |
-                    E-mail пользователя.
+                    Email пользователя.
 
-                    **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/documentation/v1/modules/140-user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
+                    **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/documentation/v1/modules/140-user-authz/) для выдачи прав конкретному пользователю в качестве имени пользователя в custom resource [ClusterAuthorizationRule](https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
                 password:
                   description: |
                     Хэшированный пароль пользователя.
 
-                    Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`. Или воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
+                    Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'` или [онлайн-сервисом](https://bcrypt-generator.com/).
                 userID:
                   description: |
                     Уникальное имя (ID) пользователя.
@@ -33,16 +33,16 @@ spec:
                   description: |
                     Время жизни учетной записи пользователя (TTL).
 
-                    Задаётся в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
+                    Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
 
-                    Указать TTL можно только 1 раз. При повторном изменении TTL, дата `expireAt` не обновляется.
+                    Указать TTL можно только 1 раз. При повторном изменении TTL дата `expireAt` не обновляется.
             status:
               type: object
               properties:
                 expireAt:
                   type: string
                   description: |
-                    Дата окончания действия учетной записи пользователя.
+                    Дата окончания действия учетной записи пользователя:
                     * Появляется только при заполнении поля `.spec.ttl`.
                     * При достижении этой даты учетная запись будет удалена.
                     * Синхронизируется раз в 5 минут. Возможен временной лаг между датой в этом поле и датой фактического удаления пользователя.
@@ -61,9 +61,9 @@ spec:
               properties:
                 email:
                   description: |
-                    E-mail пользователя.
+                    Email пользователя.
 
-                    **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/documentation/v1/modules/140-user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
+                    **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/documentation/v1/modules/140-user-authz/) для выдачи прав конкретному пользователю в качестве имени пользователя в custom resource [ClusterAuthorizationRule](https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
                 password:
                   description: |
                     Хэш пароля пользователя в явном виде или закодированный в Base64.
@@ -76,16 +76,16 @@ spec:
                   description: |
                     Время жизни учетной записи пользователя (TTL).
 
-                    Задаётся в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
+                    Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
 
-                    Указать TTL можно только 1 раз. При повторном изменении TTL, дата `expireAt` не обновляется.
+                    Указать TTL можно только 1 раз. При повторном изменении TTL дата `expireAt` не обновляется.
             status:
               type: object
               properties:
                 expireAt:
                   type: string
                   description: |
-                    Дата окончания действия учетной записи пользователя.
+                    Дата окончания действия учетной записи пользователя:
                     * Появляется только при заполнении поля `.spec.ttl`.
                     * При достижении этой даты учетная запись будет удалена.
                     * Синхронизируется раз в 5 минут. Возможен временной лаг между датой в этом поле и датой фактического удаления пользователя.
