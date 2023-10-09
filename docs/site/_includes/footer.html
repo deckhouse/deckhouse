@@ -21,26 +21,24 @@
       </div>
       <div class="footer__cols">
         <div class="footer__navigation">
-          {%- for column in site.data.footer.columns[page.lang] %}
-          <div class="footer__navigation-column">
-            {%- if column.title %}
-            <div class="footer__navigation-column-title">
-              {{- column.title -}}
+            {%- for column in site.data.footer.columns[page.lang] %}
+            <div class="footer__navigation-column">
+                {%- if column.title %}
+                <div class="footer__navigation-column-title">
+                    {{- column.title -}}
+                </div>
+                {%- endif %}
+                <ul class="footer__navigation-list">
+                {%- for item in column.items %}
+                <li>
+                    <a {% if item.url %}href="{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>
+                        {{- item.title -}}
+                    </a>
+                </li>
+                {%- endfor %}
+                </ul>
             </div>
-            {%- endif %}
-            <ul class="footer__navigation-list">
-              {%- for item in column.items %}
-              <li>
-                {%- if item.external_url %}<a href="{{ item.external_url }}" target="_blank">
-                {%- elsif item.url %}<a href="{{ item.url }}">
-                {%- else %}<a href="#">{% endif %}
-                {{- item.title -}}
-              </a>
-              </li>
-              {%- endfor %}
-            </ul>
-          </div>
-          {%- endfor %}
+            {%- endfor %}
         </div>
 <!--        <div class="footer__content&#45;&#45;wrap">-->
 <!--            <div class="footer__logo">-->
@@ -106,3 +104,5 @@
       </div>
     </div>
 </footer>
+
+{% include copyright.html %}
