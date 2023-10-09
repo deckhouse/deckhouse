@@ -43,7 +43,7 @@ kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 
 Вы можете использовать утилиту [event-generator](https://github.com/falcosecurity/event-generator) для генерации событий Falco.
 
-`event-generator` может генерировать различные подозрительные действия(syscalls, k8s audit events, ...).
+`event-generator` может генерировать различные подозрительные действия (syscalls, k8s audit events и др.).
 
 Вы можете использовать следующую команду для запуска тестового набора событий в кластере Kubernetes:
 
