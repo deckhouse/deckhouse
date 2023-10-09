@@ -1,8 +1,13 @@
-ARG BASE_ALPINE
-FROM registry.k8s.io/autoscaling/vpa-admission-controller:0.12.0@sha256:997b6efac7bda2b0fd9fe8b54feaeac5fb77cadbbe01a46806f3b0c84a354429 as artifact
+ARG BASE_DISTROLESS
+ARG BASE_GOLANG_19_ALPINE
+FROM $BASE_GOLANG_19_ALPINE as artifact
+WORKDIR /src/
+RUN apk add --no-cache git mercurial && \
+    wget https://codeload.github.com/kubernetes/autoscaler/tar.gz/vertical-pod-autoscaler/v0.14.0 -O - | tar -xz --strip-components=1 -C /src/ && \
+    cd vertical-pod-autoscaler/pkg/admission-controller && \
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o admission-controller
 
-FROM $BASE_ALPINE
-COPY --from=artifact /admission-controller /
-
+FROM $BASE_DISTROLESS
+COPY --from=artifact /src/vertical-pod-autoscaler/pkg/admission-controller/admission-controller /admission-controller
 ENTRYPOINT ["/admission-controller"]
 CMD ["--v=4", "--stderrthreshold=info"]
