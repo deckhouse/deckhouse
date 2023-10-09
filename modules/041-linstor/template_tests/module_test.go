@@ -44,8 +44,7 @@ const (
 `
 	moduleValues = `
   dataNodes:
-    nodeSelector:
-      "kubernetes.io/os: linux"
+    nodeSelector: "kubernetes.io/os: linux"
   internal:
     masterPassphrase: hackme
     drbdVersion: 9.2.1
