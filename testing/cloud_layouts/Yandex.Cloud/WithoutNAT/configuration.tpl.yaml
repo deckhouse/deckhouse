@@ -33,7 +33,7 @@ masterNodeGroup:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: '${IMAGE_ID}'
+    imageID: 'fd8emvfmfoaordspe1jr'
     diskSizeGB: 50
     externalIPAddresses:
     - Auto
