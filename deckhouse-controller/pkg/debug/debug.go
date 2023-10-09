@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -58,7 +59,60 @@ func (c *Command) Save(tarWriter *tar.Writer) error {
 	return nil
 }
 
-func createTarball() *bytes.Buffer {
+func saveLinstorSosInfo(tarWriter *tar.Writer) error {
+	podExtractCmd := "kubectl -n d8-linstor get po -l app=linstor-controller -o jsonpath='{.items[*].metadata.name}'"
+	podName, err := exec.Command(podExtractCmd).Output()
+	if err != nil {
+		return fmt.Errorf("execute %s command: %v", podExtractCmd, err)
+	}
+	reportGetCmd := "kubectl exec -n d8-linstor %s -- sh -c \"linstor sos-report create | grep SOS | awk '{print $NF}'\""
+	reportGenOut, err := exec.Command(fmt.Sprintf(reportGetCmd, string(podName))).Output()
+	if err != nil {
+		return fmt.Errorf("execute %s command: %v", fmt.Sprintf(reportGetCmd, string(podName)), err)
+	}
+	lines := strings.Split(string(reportGenOut), "\n")
+	if len(lines)-2 < 0 {
+		return fmt.Errorf("wrong output of command sos-report create: %s", reportGenOut)
+	}
+	lastLine := lines[len(lines)-2]
+	parts := strings.Split(lastLine, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf("output doesn't contain file name: %s", lastLine)
+	}
+
+	reportDownloadCmd := "kubectl cp d8-linstor/%s:%s linstor-sos.tar.gz"
+	err = exec.Command(fmt.Sprintf(reportDownloadCmd, string(podName), parts[1])).Run()
+	if err != nil {
+		return fmt.Errorf("error while download sos info report from pod: %v", err)
+	}
+	file, err := os.Open("linstor-sos.tar.gz")
+	if err != nil {
+		return fmt.Errorf("error opening linstor-sos.tar.gz file: %v", err)
+	}
+	defer file.Close()
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("error getting stat linstor-sos.tar.gz file: %v", err)
+	}
+
+	header := &tar.Header{
+		Name: "linstor-sos.tar.gz",
+		Mode: 0600,
+		Size: fileInfo.Size(),
+	}
+
+	if err := tarWriter.WriteHeader(header); err != nil {
+		return fmt.Errorf("write tar header: %v", err)
+	}
+
+	if _, err := io.Copy(tarWriter, file); err != nil {
+		return fmt.Errorf("copy content: %v", err)
+	}
+
+	return nil
+}
+
+func createTarball(withLinstor bool) *bytes.Buffer {
 	var buf bytes.Buffer
 
 	gzipWriter := gzip.NewWriter(&buf)
@@ -66,6 +120,39 @@ func createTarball() *bytes.Buffer {
 
 	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close()
+
+	linstorCommands := []Command{
+		{
+			File: "linstor-sos-info.",
+			Cmd:  "kubectl exec -n d8-linstor deploy/linstor-controller -- linstor",
+			Args: []string{"get", "events", "--sort-by=.metadata.creationTimestamp", "-A", "-o", "json"},
+		},
+		{
+			File: "linstor-csi-node-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n d8-linstor", "logs", "daemonset.apps/linstor-csi-node", "-c", "linstor-csi-plugin", "--tail", "3000"},
+		},
+		{
+			File: "linstor-node-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n d8-linstor", "logs", "daemonset.apps/linstor-node", "-c", "linstor-satellite", "--tail", "3000"},
+		},
+		{
+			File: "linstor-controller-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n d8-linstor", "logs", "deployment.apps/linstor-controller", "-c", "linstor-controller", "--tail", "3000"},
+		},
+		{
+			File: "linstor-csi-controller-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n d8-linstor", "logs", "deployment.apps/linstor-csi-controller", "--tail", "3000"},
+		},
+		{
+			File: "linstor-drbd-operator-logs.txt",
+			Cmd:  "kubectl",
+			Args: []string{"-n d8-linstor", "logs", "deployment.apps/sds-drbd-operator", "--tail", "3000"},
+		},
+	}
 
 	debugCommands := []Command{
 		{
@@ -170,6 +257,13 @@ func createTarball() *bytes.Buffer {
 		},
 	}
 
+	if withLinstor {
+		debugCommands = append(debugCommands, linstorCommands...)
+		if err := saveLinstorSosInfo(tarWriter); err != nil {
+			fmt.Fprint(os.Stderr, err.Error())
+		}
+	}
+
 	for _, cmd := range debugCommands {
 		if err := cmd.Save(tarWriter); err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
@@ -180,9 +274,11 @@ func createTarball() *bytes.Buffer {
 }
 
 func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
+	var withLinstor bool
 	collectDebug := kpApp.Command("collect-debug-info", "Collect debug info from your cluster.")
+	collectDebug.Flag("linstor", "Collect Linstor info").BoolVar(&withLinstor)
 	collectDebug.Action(func(c *kingpin.ParseContext) error {
-		res := createTarball()
+		res := createTarball(withLinstor)
 		_, err := io.Copy(os.Stdout, res)
 		return err
 	})
