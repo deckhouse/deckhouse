@@ -12,11 +12,11 @@ spec:
                   description: Произвольное описание назначения окружения.
                 projectTypeName:
                   description: |
-                    Имя CR [ProjectType](cr.html#projecttype), который будет использоваться
+                    Имя custom resource [ProjectType](cr.html#projecttype), который будет использоваться
                     как шаблон для создания ресурсов окружения.
                 template:
                   description: |
-                    Значения для [темплейтов ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) из шаблона окружения (CR [ProjectType](cr.html#projecttype))
+                    Значения для [темплейтов ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) из шаблона окружения (custom resource [ProjectType](cr.html#projecttype))
                     в формате helm values, которые соотносятся с
                     OpenAPI-спецификацией (поле [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) шаблона окружения).
             status:
