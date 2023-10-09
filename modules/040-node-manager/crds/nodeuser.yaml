@@ -66,6 +66,7 @@ spec:
                   example: [ 'ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC' ]
                 passwordHash:
                   type: string
+                  x-doc-required: true
                   description: |
                     Hashed user password.
 
