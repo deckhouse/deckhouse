@@ -40,6 +40,7 @@ shell:
   - make -j1 install
   - chown -R 64535:64535 /opt/nginx-static
   - chmod 0700 /opt/nginx-static/sbin/nginx
+  - chmod -R 0600 /opt/nginx-static/conf
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
