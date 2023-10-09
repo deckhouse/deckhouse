@@ -1,15 +1,15 @@
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 
 <div class="header-container">
-  <header class="header" style="background: #02003E;">
+  <header class="header">
     <div class="header__content container">
       <div class="header__left-box">
         <div class="header__logo">
           <a href="/documentation/v1/deckhouse-overview.html" class="header__logo">
             {%- if page.lang == "ru" %}
-              <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-dock-ru.svg" alt="Deckhouse" />
+              <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-dock-black-ru.svg" alt="Deckhouse" />
             {%- else %}
-              <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-dock.svg" alt="Deckhouse" />
+              <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-dock-black.svg" alt="Deckhouse" />
             {%- endif %}
           </a>
           {%- if site.mode == 'local' %}
@@ -81,22 +81,7 @@
         </ul>
       </div>
       <div class="header__right-box">
-        <!--start search-->
-        <div class="search">
-          <form action='{{ "search.html" | true_relative_url }}' method="get">
-            <input type="text" class="search__input" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" />
-          </form>
-        </div>
-        <!--end search-->
-        <a href="/" class="button button--small button--primary">DECKHOUSE
-          <svg class="icon icon--home" xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none"><path fill="#fff" fill-rule="evenodd" d="M8.456 7.86V3.158a.83.83 0 0 0-.321-.66L5.213.227a.828.828 0 0 0-1.027 0l-2.922 2.27a.828.828 0 0 0-.321.655L.922 7.861V8.487h7.534v-.626Zm-5.115.626V5.629c0-.24.182-.433.408-.433h1.903c.225 0 .407.193.407.433v2.857H3.341Z" clip-rule="evenodd"/></svg>
-        </a>
         <ul class="header__navigation">
-          <li class="header__navigation-item-icon header__navigation-item-icon_first">
-            <a href="{{ site.social_links[page.lang]['telegram'] }}" target="_blank">
-              {% include icons/telegram.svg %}
-            </a>
-          </li>
           <li class="header__navigation-item-icon">
             <a href="https://github.com/deckhouse/deckhouse" target="_blank">
               {% include icons/github.svg %}
