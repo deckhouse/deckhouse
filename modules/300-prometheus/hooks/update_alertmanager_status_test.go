@@ -59,7 +59,8 @@ const (
 			}
 		}]
 	}`
-	nowTime = "2023-03-03T16:49:52Z"
+	nowTime  = "2023-03-03T16:49:52Z"
+	checkSum = "123123123123123"
 )
 
 var _ = Describe("Modules :: prometheus :: hooks :: update alertmanagers' statuses", func() {
@@ -73,24 +74,65 @@ var _ = Describe("Modules :: prometheus :: hooks :: update alertmanagers' status
 		panic(err)
 	}
 
-	Context("Alertmanagers' statuses are updated", func() {
+	err = os.Setenv("TEST_CONDITIONS_CALC_CHKSUM", checkSum)
+	if err != nil {
+		panic(err)
+	}
+
+	Context("Alertmanagers' processed status set to false", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("prometheus.internal.alertmanagers", []byte(alertmanagersValues))
-			f.KubeStateSet(testAlertmanagers)
+			f.KubeStateSet(testAlertmanagersWithIncorrectCheckSum)
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.RunHook()
 		})
-		It("should have generated resources", func() {
+		It("should have generated resources with 'synced' false", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byAddress").Array()).To(HaveLen(1))
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").Array()).To(HaveLen(1))
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.internal").Array()).To(HaveLen(1))
 			const expectedStatus = `{
 				"deckhouse": {
-        				"processed": {
-						"generation": 0,
+        				"observed": {
+						"checkSum": "123",
 						"lastTimestamp": "2023-03-03T16:49:52Z"
-					}
+					},
+        				"processed": {
+						"checkSum": "123123123123123",
+						"lastTimestamp": "2023-03-03T16:49:52Z"
+					},
+					"synced": "False"
+				}
+			}`
+			Expect(f.KubernetesGlobalResource("CustomAlertmanager", "alerts-receiver").Field("status").String()).To(MatchJSON(expectedStatus))
+			Expect(f.KubernetesGlobalResource("CustomAlertmanager", "my-fqdn-alertmanager").Field("status").String()).To(MatchJSON(expectedStatus))
+			Expect(f.KubernetesGlobalResource("CustomAlertmanager", "webhook").Field("status").String()).To(MatchJSON(expectedStatus))
+		})
+	})
+
+	Context("Alertmanagers' processed status set to true", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("prometheus.internal.alertmanagers", []byte(alertmanagersValues))
+			f.KubeStateSet(testAlertmanagersWithCorrectCheckSum)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+		It("should have generated resources with 'synced' true", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byAddress").Array()).To(HaveLen(1))
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").Array()).To(HaveLen(1))
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers.internal").Array()).To(HaveLen(1))
+			const expectedStatus = `{
+				"deckhouse": {
+        				"observed": {
+						"checkSum": "123123123123123",
+						"lastTimestamp": "2023-03-03T16:49:52Z"
+					},
+        				"processed": {
+						"checkSum": "123123123123123",
+						"lastTimestamp": "2023-03-03T16:49:52Z"
+					},
+					"synced": "True"
 				}
 			}`
 			Expect(f.KubernetesGlobalResource("CustomAlertmanager", "alerts-receiver").Field("status").String()).To(MatchJSON(expectedStatus))
@@ -100,7 +142,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: update alertmanagers' status
 	})
 })
 
-var testAlertmanagers = `
+var testAlertmanagersWithIncorrectCheckSum = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -114,6 +156,11 @@ spec:
       namespace: d8-monitoring
       path: /
   type: External
+status:
+  deckhouse:
+    observed:
+      checkSum: "123"
+      lastTimestamp: "2023-03-03T16:49:52Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -123,6 +170,11 @@ spec:
   external:
     address: https://alertmanager.mycompany.com/myprefix
   type: External
+status:
+  deckhouse:
+    observed:
+      checkSum: "123"
+      lastTimestamp: "2023-03-03T16:49:52Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -142,4 +194,68 @@ spec:
       receiver: webhook
       repeatInterval: 12h
   type: Internal
+status:
+  deckhouse:
+    observed:
+      checkSum: "123"
+      lastTimestamp: "2023-03-03T16:49:52Z"
+`
+
+var testAlertmanagersWithCorrectCheckSum = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  generation: 1
+  name: alerts-receiver
+spec:
+  external:
+    service:
+      name: alerts-receiver
+      namespace: d8-monitoring
+      path: /
+  type: External
+status:
+  deckhouse:
+    observed:
+      checkSum: "123123123123123"
+      lastTimestamp: "2023-03-03T16:49:52Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: my-fqdn-alertmanager
+spec:
+  external:
+    address: https://alertmanager.mycompany.com/myprefix
+  type: External
+status:
+  deckhouse:
+    observed:
+      checkSum: "123123123123123"
+      lastTimestamp: "2023-03-03T16:49:52Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: webhook
+spec:
+  internal:
+    receivers:
+    - name: webhook
+      webhookConfigs:
+      - url: http://webhookserver:8080/
+    route:
+      groupBy:
+      - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: webhook
+      repeatInterval: 12h
+  type: Internal
+status:
+  deckhouse:
+    observed:
+      checkSum: "123123123123123"
+      lastTimestamp: "2023-03-03T16:49:52Z"
 `

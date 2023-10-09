@@ -22,7 +22,6 @@ import (
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 )
@@ -44,7 +43,7 @@ func updateSpStatus(input *go_hook.HookInput) error {
 
 	// update SPs' statuses
 	for _, sp := range securityPolicies {
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus, "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"))
+		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name)
 	}
 
 	return nil

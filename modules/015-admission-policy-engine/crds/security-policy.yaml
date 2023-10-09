@@ -16,15 +16,19 @@ spec:
   versions:
     - name: v1alpha1
       additionalPrinterColumns:
-      - jsonPath: .metadata.generation
-        name: Last observed
-        type: integer
-        description: Last observed generation
+      - jsonPath: .status.deckhouse.synced
+        name: Synced
+        type: string
+        description: Status message if current version of the security policy was processed by the operator.
+      - name: Observed
+        jsonPath: .status.deckhouse.observed.lastTimestamp
+        type: string
+        description: Timestamp when the resource was observed by the operator last time.
         priority: 1
-      - jsonPath: .status.deckhouse.processed.generation
-        name: Last applied
-        type: integer
-        description: Last applied generation
+      - name: Processed
+        jsonPath: .status.deckhouse.processed.lastTimestamp
+        type: string
+        description: Timestamp when the resource was processed by the operator last time.
         priority: 1
       served: true
       storage: true
@@ -45,16 +49,29 @@ spec:
                 deckhouse:
                   type: object
                   properties:
+                    synced:
+                      type: string
+                      description: True if last obseved version of the security policy was successfully applied in the cluster.
+                    observed:
+                      type: object
+                      description: Contains last timestamp when the security policy change was noted by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when a change of the security policy was noted by the operator.
+                        checkSum:
+                          type: string
+                          description: The checksum of last observed change of the security policy.
                     processed:
                       type: object
-                      description: Contains last timestamp when the security policy was applied in the cluster by the operator and its generation number.
+                      description: Contains last timestamp when the security policy was applied in the cluster by the operator and its checksum.
                       properties:
                         lastTimestamp:
                           type: string
                           description: Last timestamp when the security policy was applied in the cluster.
-                        generation:
-                          type: integer
-                          description: Last applied generation number of the security policy.
+                        checkSum:
+                          type: string
+                          description: The checksum of last applied security policy.
             spec:
               type: object
               required: ["match", "policies"]

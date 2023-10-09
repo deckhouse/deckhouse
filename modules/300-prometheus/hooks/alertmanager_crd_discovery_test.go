@@ -178,7 +178,6 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").String()).To(MatchJSON(`[
           {
-            "resourceName": "external-alertmanager",
             "name": "test",
             "namespace": "test",
             "pathPrefix": "/",
@@ -208,14 +207,12 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").String()).To(MatchJSON(`[
           {
-            "resourceName": "external-alertmanager",
             "name": "test",
             "namespace": "test",
             "pathPrefix": "/",
             "port": "https"
           },
           {
-            "resourceName": "",
             "name": "deprecatedsvc1",
             "namespace": "myns1",
             "pathPrefix": "/myprefix/",

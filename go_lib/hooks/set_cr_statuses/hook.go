@@ -17,10 +17,13 @@ limitations under the License.
 package set_cr_statuses
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	utils_checksum "github.com/flant/shell-operator/pkg/utils/checksum"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -32,15 +35,90 @@ func getTimeStamp() string {
 	return curTime.Format(time.RFC3339)
 }
 
-func SetProcessedStatus(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	objCopy := obj.DeepCopy()
-	if err := unstructured.SetNestedField(objCopy.Object, objCopy.GetGeneration(), "status", "deckhouse", "processed", "generation"); err != nil {
-		return nil, fmt.Errorf("cannot set generation status field: %v", err)
+func getCheckSum(bytes []byte) string {
+	checkSum := utils_checksum.CalculateChecksum(string(bytes))
+	if env, ok := os.LookupEnv("TEST_CONDITIONS_CALC_CHKSUM"); ok {
+		checkSum = env
 	}
+	return checkSum
+}
 
-	if err := unstructured.SetNestedField(objCopy.Object, getTimeStamp(), "status", "deckhouse", "processed", "lastTimestamp"); err != nil {
-		return nil, fmt.Errorf("cannot set generation status field: %v", err)
+func SetObservedStatus(snapshot go_hook.FilterResult, filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	snBytes, _ := json.Marshal(snapshot)
+	checkSum := getCheckSum(snBytes)
+
+	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		objCopy := obj.DeepCopy()
+		filteredObj, err := filterFunc(objCopy)
+		if err != nil {
+			return nil, fmt.Errorf("cannot apply filterFunc to object: %v", err)
+		}
+
+		objBytes, err := json.Marshal(filteredObj)
+		if err != nil {
+			return nil, fmt.Errorf("cannot marshal filtered object: %v", err)
+		}
+
+		objCheckSum := getCheckSum(objBytes)
+		if checkSum == objCheckSum {
+			processedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "processed", "checkSum")
+			if err != nil {
+				return nil, fmt.Errorf("cannot get processed checksum status field: %v", err)
+			}
+
+			if !found || checkSum != processedCheckSum {
+				if err := unstructured.SetNestedField(objCopy.Object, "False", "status", "deckhouse", "synced"); err != nil {
+					return nil, fmt.Errorf("cannot set synced status field: %v", err)
+				}
+			} else {
+				if err := unstructured.SetNestedField(objCopy.Object, "True", "status", "deckhouse", "synced"); err != nil {
+					return nil, fmt.Errorf("cannot set synced status field: %v", err)
+				}
+			}
+
+			if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": getTimeStamp(), "checkSum": objCheckSum}, "status", "deckhouse", "observed"); err != nil {
+				return nil, fmt.Errorf("cannot set observed status field: %v", err)
+			}
+		} else {
+			return nil, fmt.Errorf("object has changed since last snapshot")
+		}
+		return objCopy, nil
 	}
+}
 
-	return objCopy, nil
+func SetProcessedStatus(filterFunc func(*unstructured.Unstructured) (go_hook.FilterResult, error)) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		objCopy := obj.DeepCopy()
+		filteredObj, err := filterFunc(objCopy)
+		if err != nil {
+			return nil, fmt.Errorf("cannot apply filterFunc to object: %v", err)
+		}
+
+		objBytes, err := json.Marshal(filteredObj)
+		if err != nil {
+			return nil, fmt.Errorf("cannot marshal filtered object: %v", err)
+		}
+
+		objCheckSum := getCheckSum(objBytes)
+
+		observedCheckSum, found, err := unstructured.NestedString(objCopy.Object, "status", "deckhouse", "observed", "checkSum")
+		if err != nil {
+			return nil, fmt.Errorf("cannot get observed checksum status field: %v", err)
+		}
+
+		if !found || objCheckSum != observedCheckSum {
+			if err := unstructured.SetNestedField(objCopy.Object, "False", "status", "deckhouse", "synced"); err != nil {
+				return nil, fmt.Errorf("cannot set synced status field: %v", err)
+			}
+		} else {
+			if err := unstructured.SetNestedField(objCopy.Object, "True", "status", "deckhouse", "synced"); err != nil {
+				return nil, fmt.Errorf("cannot set synced status field: %v", err)
+			}
+		}
+
+		if err := unstructured.SetNestedStringMap(objCopy.Object, map[string]string{"lastTimestamp": getTimeStamp(), "checkSum": objCheckSum}, "status", "deckhouse", "processed"); err != nil {
+			return nil, fmt.Errorf("cannot set processed status field: %v", err)
+		}
+		return objCopy, nil
+	}
 }

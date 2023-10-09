@@ -22,6 +22,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 )
 
@@ -44,6 +45,8 @@ func handleSP(input *go_hook.HookInput) error {
 
 	for _, sn := range snap {
 		sp := sn.(*securityPolicy)
+		// set observed status
+		input.StatusCollector.UpdateStatus(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name)
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
 	}

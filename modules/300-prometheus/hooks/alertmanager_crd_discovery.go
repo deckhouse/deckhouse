@@ -29,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -112,6 +113,9 @@ func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.C
 	for _, s := range snap {
 		am := s.(Alertmanager)
 
+		// set observed status
+		input.StatusCollector.UpdateStatus(set_cr_statuses.SetObservedStatus(s, applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name)
+
 		// External AlertManagers by service or address
 		if _, ok, _ := unstructured.NestedMap(am.Spec, "external"); ok {
 			address, _, _ := unstructured.NestedString(am.Spec, "external", "address")
@@ -191,7 +195,6 @@ func parseServiceCR(am Alertmanager, k8 k8s.Client) (alertmanagerService, error)
 		return value, err
 	}
 
-	value.ResourceName = am.Name
 	value.Name = svc.Name
 	value.Namespace = svc.Namespace
 	if len(svc.Spec.Ports) > 0 {
@@ -293,11 +296,10 @@ type tlsConfig struct {
 }
 
 type alertmanagerService struct {
-	ResourceName string      `json:"resourceName"`
-	Name         string      `json:"name"`
-	Namespace    string      `json:"namespace"`
-	PathPrefix   string      `json:"pathPrefix"`
-	Port         interface{} `json:"port"`
+	Name       string      `json:"name"`
+	Namespace  string      `json:"namespace"`
+	PathPrefix string      `json:"pathPrefix"`
+	Port       interface{} `json:"port"`
 }
 
 type Alertmanager struct {

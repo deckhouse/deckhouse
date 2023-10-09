@@ -276,6 +276,12 @@ status:
 		panic(err)
 	}
 
+	const checkSum = "123123123123123"
+	err = os.Setenv("TEST_CONDITIONS_CALC_CHKSUM", checkSum)
+	if err != nil {
+		panic(err)
+	}
+
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -334,9 +340,10 @@ status:
 				],
 				"deckhouse": {
 					"processed": {
-						"generation": 0,
+						"checkSum": "123123123123123",
 						"lastTimestamp": "2023-03-03T16:49:52Z"
-					}
+					},
+					"synced": "False"
 				}
 			}`
 
@@ -396,9 +403,10 @@ status:
 					],
 					"deckhouse": {
 						"processed": {
-							"generation": 0,
+							"checkSum": "123123123123123",
 							"lastTimestamp": "2023-03-03T16:49:52Z"
-						}
+						},
+						"synced": "False"
 					}
 				}
 			`
@@ -448,9 +456,10 @@ status:
 					],
 					"deckhouse": {
 						"processed": {
-							"generation": 0,
+							"checkSum": "123123123123123",
 							"lastTimestamp": "2023-03-03T16:49:52Z"
-						}
+						},
+						"synced": "False"
 					}
 				}
 			`
@@ -501,9 +510,10 @@ status:
 					],
 					"deckhouse": {
 						"processed": {
-							"generation": 0,
+							"checkSum": "123123123123123",
 							"lastTimestamp": "2023-03-03T16:49:52Z"
-						}
+						},
+						"synced": "False"
 					}
 				}
 			`
@@ -542,9 +552,10 @@ status:
 					],
 					"deckhouse": {
 						"processed": {
-							"generation": 0,
+							"checkSum": "123123123123123",
 							"lastTimestamp": "2023-03-03T16:49:52Z"
-						}
+						},
+						"synced": "False"
 					}
 				}
 			`
@@ -631,9 +642,10 @@ status:
 						],
 						"deckhouse": {
 							"processed": {
-								"generation": 0,
+								"checkSum": "123123123123123",
 								"lastTimestamp": "2023-03-03T16:49:52Z"
-							}
+							},
+							"synced": "False"
 						}
 					}
 				`
@@ -725,9 +737,10 @@ status:
 					],
 					"deckhouse": {
 						"processed": {
-							"generation": 0,
+							"checkSum": "123123123123123",
 							"lastTimestamp": "2023-03-03T16:49:52Z"
-						}
+						},
+						"synced": "False"
 					}
 				}
 			`

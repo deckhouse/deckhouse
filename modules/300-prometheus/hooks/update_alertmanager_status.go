@@ -54,16 +54,16 @@ func updateAmStatus(input *go_hook.HookInput) error {
 
 	// update AMs' statuses
 	for _, am := range addressDeclaredAlertmanagers {
-		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus, "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name)
+		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name)
 	}
 
 	for _, am := range serviceDeclaredAlertmanagers {
-		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus, "deckhouse.io/v1alpha1", "customalertmanager", "", am.ResourceName)
+		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name)
 	}
 
 	for _, am := range internalDeclaredAlertmanagers {
 		name := am["name"].(string)
-		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus, "deckhouse.io/v1alpha1", "customalertmanager", "", name)
+		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", name)
 	}
 
 	return nil
