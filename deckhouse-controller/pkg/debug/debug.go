@@ -61,27 +61,28 @@ func (c *Command) Save(tarWriter *tar.Writer) error {
 
 func saveLinstorSosInfo(tarWriter *tar.Writer) error {
 	podExtractCmd := []string{"-n", "d8-linstor", "get", "po", "-l", "app=linstor-controller", "-o", "jsonpath='{.items[*].metadata.name}'"}
-	podName, err := exec.Command("kubectl", podExtractCmd...).Output()
+	output, err := exec.Command("kubectl", podExtractCmd...).Output()
 	if err != nil {
 		return fmt.Errorf("execute %s command: %v", "kubectl -n d8-linstor get po ...", err)
 	}
-	reportGetCmd := []string{"exec", "-n", "d8-linstor", string(podName), "--", "sh", "-c", "\"linstor", "sos-report", "create", "|grep SOS|", "awk", "'{print $NF}'\""}
+	podName := strings.TrimSpace(string(output))
+	reportGetCmd := []string{"exec", "-n", "d8-linstor", podName, "--", "sh", "-c", "\"linstor", "sos-report", "create", "|grep SOS|", "awk", "'{print $NF}'\""}
 
 	reportGenOut, err := exec.Command("kubectl", reportGetCmd...).Output()
 	if err != nil {
-		return fmt.Errorf("execute %s command: %v", "kubectl exec -n d8-linstor ...", err)
+		return fmt.Errorf("execute kubectl %s command: %v", strings.Join(reportGetCmd, " "), err)
 	}
 	lines := strings.Split(string(reportGenOut), "\n")
 	if len(lines)-2 < 0 {
-		return fmt.Errorf("wrong output of command sos-report create: %s", "kubectl exec -n d8-linstor ...")
+		return fmt.Errorf("wrong output of command sos-report create: %s", strings.Join(reportGetCmd, " "))
 	}
 	lastLine := lines[len(lines)-2]
 	parts := strings.Split(lastLine, ":")
 	if len(parts) != 2 {
 		return fmt.Errorf("output doesn't contain file name: %s", lastLine)
 	}
-
-	reportDownloadCmd := []string{"cp", "d8-linstor/" + string(podName) + ":" + parts[1], "linstor-sos.tar.gz"}
+	filePathOnPod := strings.TrimSpace(parts[1])
+	reportDownloadCmd := []string{"cp", "d8-linstor/" + podName + ":" + filePathOnPod, "linstor-sos.tar.gz"}
 
 	err = exec.Command("kubectl", reportDownloadCmd...).Run()
 	if err != nil {
