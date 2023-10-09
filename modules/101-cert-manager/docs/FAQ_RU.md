@@ -53,23 +53,23 @@ default            example-com                     13m
 ## Какие виды сертификатов поддерживаются?
 
 На данный момент модуль устанавливает два ClusterIssuer'а:
-* letsencrypt
-* letsencrypt-staging
+* letsencrypt;
+* letsencrypt-staging.
 
-## Работает ли старая аннотация tls-acme?
+## Работает ли старая аннотация TLS-acme?
 
 Да, работает! Специальный компонент (`cert-manager-ingress-shim`) видит эти аннотации и на их основании автоматически создает ресурсы `Certificate` (в тех же namespace, что и Ingress-ресурсы с аннотациями).
 
-> **Важно!** При использовании аннотации, Certificate создается "прилинкованным" к существующему Ingress-ресурсу, и для прохождения challenge НЕ создается отдельный Ingress, а вносятся дополнительные записи в существующий. Это означает, что если на основном Ingress'е настроена аутентификация или whitelist — ничего не выйдет. Лучше не использовать аннотацию и переходить на Certificate.
+> **Важно!** При использовании аннотации Certificate создается «прилинкованным» к существующему Ingress-ресурсу, и для прохождения Challenge НЕ создается отдельный Ingress, а вносятся дополнительные записи в существующий. Это означает, что если на основном Ingress'е настроена аутентификация или whitelist — ничего не выйдет. Лучше не использовать аннотацию и переходить на Certificate.
 >
-> **Важно!** При переходе с аннотации на Certificate нужно удалить Certificate который был создан по аннотации. Иначе, по обоим Certificate будет обновляться один Secret и это может привести к достижению лимита запросов Let’s Encrypt.
+> **Важно!** При переходе с аннотации на Certificate нужно удалить Certificate, который был создан по аннотации. Иначе по обоим Certificate будет обновляться один Secret, и это может привести к достижению лимита запросов Let’s Encrypt.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/tls-acme: "true"           # вот она, аннотация!
+    kubernetes.io/tls-acme: "true"           # Вот она, аннотация!
   name: example-com
   namespace: default
 spec:
@@ -85,7 +85,7 @@ spec:
               number: 80
         path: /
         pathType: ImplementationSpecific
-  - host: www.example.com                    # дополнительный домен
+  - host: www.example.com                    # Дополнительный домен.
     http:
       paths:
       - backend:
@@ -95,7 +95,7 @@ spec:
               number: 80
         path: /
         pathType: ImplementationSpecific
-  - host: admin.example.com                  # еще один дополнительный домен
+  - host: admin.example.com                  # Еще один дополнительный домен.
     http:
       paths:
       - backend:
@@ -108,9 +108,9 @@ spec:
   tls:
   - hosts:
     - example.com
-    - www.example.com                        # дополнительный домен
-    - admin.example.com                      # еще один дополнительный домен
-    secretName: example-com-tls              # так будут называться и certificate и secret
+    - www.example.com                        # Дополнительный домен.
+    - admin.example.com                      # Еще один дополнительный домен.
+    secretName: example-com-tls              # Так будут называться и Certificate, и Secret.
 ```
 
 ## Ошибка: CAA record does not match issuer
@@ -121,8 +121,8 @@ spec:
 CAA record does not match issuer
 ```
 
-То необходимо проверить `CAA (Certificate Authority Authorization)` DNS запись у домена, для которого заказывается сертификат.
-Если вы хотите использовать Let’s Encrypt сертификаты, то у домена должна быть CAA запись: `issue "letsencrypt.org"`.
+то необходимо проверить `CAA (Certificate Authority Authorization)` DNS-запись у домена, для которого заказывается сертификат.
+Если вы хотите использовать Let’s Encrypt-сертификаты, у домена должна быть CAA-запись: `issue "letsencrypt.org"`.
 Подробнее про CAA можно почитать [тут](https://www.xolphin.com/support/Terminology/CAA_DNS_Records) и [тут](https://letsencrypt.org/docs/caa/).
 
 ## Интеграция с Vault
@@ -130,7 +130,7 @@ CAA record does not match issuer
 Вы можете использовать [данную инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) для выпуска сертификатов с помощью Vault.
 
 После конфигурации PKI и [включения авторизации](../../modules/140-user-authz/) в Kubernetes, вам нужно:
-- Создать service account и скопировать ссылку на его секрет:
+- Создать ServiceAccount и скопировать ссылку на его Secret:
 
   ```shell
   kubectl create serviceaccount issuer
@@ -148,9 +148,9 @@ CAA record does not match issuer
     namespace: default
   spec:
     vault:
-      # если Vault разворачивался по вышеуказанной инструкции, в это месте в инструкции опечатка
+      # Если Vault разворачивался по вышеуказанной инструкции, в этом месте в инструкции опечатка.
       server: http://vault.default.svc.cluster.local:8200
-      # указывается на этапе конфигурации PKI 
+      # Указывается на этапе конфигурации PKI. 
       path: pki/sign/example-dot-com 
       auth:
         kubernetes:
@@ -162,7 +162,7 @@ CAA record does not match issuer
   EOF
   ```
 
-- Создать ресурс Certificate, для получения TLS сертификата подписанного Vault CA:
+- Создать ресурс Certificate для получения TLS-сертификата подписанного Vault CA:
 
   ```shell
   kubectl apply -f - <<EOF
@@ -175,7 +175,7 @@ CAA record does not match issuer
     secretName: example-com-tls
     issuerRef:
       name: vault-issuer
-    # домены указываются на этапе конфигурации PKI в Vault
+    # Домены указываются на этапе конфигурации PKI в Vault.
     commonName: www.example.com 
     dnsNames:
     - www.example.com
@@ -184,10 +184,10 @@ CAA record does not match issuer
 
 ## Как защитить учетные данные cert-manager?
 
-Если вы не хотите хранить учетные данные конфигурации Deckhouse (например, по соображениям безопасности), вы можете создать
+Если вы не хотите хранить учетные данные конфигурации Deckhouse (например, по соображениям безопасности), можете создать
 свой собственный ClusterIssuer / Issuer.
 Например, вы можете создать свой ClusterIssuer для сервиса [route53](https://aws.amazon.com/route53/) следующим образом:
-- Создайте секрет с учетными данными:
+- Создайте Secret с учетными данными:
 
   ```shell
   kubectl apply -f - <<EOF
@@ -202,7 +202,7 @@ CAA record does not match issuer
   EOF
   ```
 
-- Создайте простой ClusterIssuer со ссылкой на этот секрет:
+- Создайте простой ClusterIssuer со ссылкой на этот Secret:
 
   ```shell
   kubectl apply -f - <<EOF
