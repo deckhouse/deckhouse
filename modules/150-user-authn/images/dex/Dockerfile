@@ -7,14 +7,16 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
 WORKDIR /dex
-COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch patches/connector-data.patch patches/oidc-ca-insecure.patch patches/robots-txt.patch /
+COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch patches/connector-data.patch patches/oidc-ca-insecure.patch patches/robots-txt.patch patches/401-password-auth.patch /
 RUN git clone --branch v2.35.3 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /client-groups.patch \
   && git apply /static-user-groups.patch \
   && git apply /gitlab-refresh-context.patch \
   && git apply /connector-data.patch \
   && git apply /oidc-ca-insecure.patch \
-  && git apply /robots-txt.patch
+  && git apply /robots-txt.patch \
+  && git apply /401-password-auth.patch
+
 RUN CGO_ENABLED=1 GOOS=linux go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo ./cmd/dex
 
 RUN chown 64535:64535 dex

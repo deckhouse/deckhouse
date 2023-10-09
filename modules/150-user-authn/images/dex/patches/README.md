@@ -36,3 +36,9 @@ Upstream PR that should fix the problem in general - https://github.com/dexidp/d
 Add robots.txt to avoid indexing by bots.
 
 Upstream PR  - https://github.com/dexidp/dex/pull/2834
+
+### 401 code for password auth
+
+Return 401 instead of 200 if a password authentication attempt failed.
+
+Upstream PR  - https://github.com/dexidp/dex/pull/2796
