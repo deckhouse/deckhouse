@@ -116,6 +116,7 @@ tolerations:
   {{- end }}
 {{- end }}
 
+
 {{- /* Check cluster type. */ -}}
 {{- /* Returns not empty string if this is cloud or hybrid cluster */ -}}
 {{- define "_helm_lib_cloud_or_hybrid_cluster" }}
