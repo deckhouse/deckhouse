@@ -1,0 +1,31 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/bin/gce-pd-csi-driver
+  to: /gce-pd-csi-driver
+  before: setup
+docker:
+  ENTRYPOINT: ["/gce-pd-csi-driver"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_ALPINE }}
+git:
+- url: https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver
+  to: /src
+  tag: v1.3.3
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache make bash git mercurial patch rsync
+  install:
+  - cd /src
+  - GOOS=linux GCE_PD_CSI_STAGING_VERSION=v1.3.3 make gce-pd-driver
+  - chown 64535:64535 bin/gce-pd-csi-driver
+  - chmod 0755 bin/gce-pd-csi-driver
