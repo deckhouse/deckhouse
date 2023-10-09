@@ -49,4 +49,4 @@ masterNodeGroup:
     flavorName: m1.large
     imageName: "debian-11-genericcloud-amd64-20220911-1135"
   volumeTypeMap:
-    ru-3a: "fast.ru-3b"
+    ru-3b: "fast.ru-3b"
