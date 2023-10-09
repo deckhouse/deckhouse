@@ -14,19 +14,20 @@ import:
   add: /
   to: /
   includePaths:
-  - '/etc/mke2fs.conf'
-  - '/bin/*mount'
-  - '/sbin/blkid'
-  - '/sbin/fsck*'
-  - '/sbin/mkfs*'
-  - '/sbin/fsck.xfs'
-  - '/sbin/blockdev'
-  - '/sbin/dumpe2fs'
-  - '/sbin/xfs_repair'
-  - '/usr/lib/xfsprogs/xfs*'
-  - '/usr/sbin/xfs*'
-  - '/usr/bin/xxd'
-  - '/bin/udevadm'
+  - 'etc/mke2fs.conf'
+  - 'bin/*mount'
+  - 'sbin/blkid'
+  - 'sbin/fsck*'
+  - 'sbin/mkfs*'
+  - 'sbin/fsck.xfs'
+  - 'sbin/blockdev'
+  - 'sbin/dumpe2fs'
+  - 'sbin/xfs_repair'
+  - 'usr/lib/xfsprogs/xfs*'
+  - 'usr/sbin/xfs*'
+  - 'usr/bin/xxd'
+  - 'bin/udevadm'
+  before: setup
 docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
 ---
