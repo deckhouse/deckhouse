@@ -65,14 +65,15 @@ func saveLinstorSosInfo(tarWriter *tar.Writer) error {
 	if err != nil {
 		return fmt.Errorf("execute %s command: %v", "kubectl -n d8-linstor get po ...", err)
 	}
-	podName := strings.Trim(strings.TrimSpace(string(output)), "'")
+	lines := strings.Split(string(output), "\n")
+	podName := strings.Trim(lines[0], "' ")
 	reportGetCmd := []string{"exec", "-n", "d8-linstor", podName, "--", "linstor", "sos-report", "create"}
 
 	reportGenOut, err := exec.Command("kubectl", reportGetCmd...).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("execute kubectl %s command with output %s: %v", strings.Join(reportGetCmd, " "), string(reportGenOut), err)
 	}
-	lines := strings.Split(string(reportGenOut), "\n")
+	lines = strings.Split(string(reportGenOut), "\n")
 	if len(lines)-2 < 0 {
 		return fmt.Errorf("wrong output of command sos-report create: %s", strings.Join(reportGetCmd, " "))
 	}
