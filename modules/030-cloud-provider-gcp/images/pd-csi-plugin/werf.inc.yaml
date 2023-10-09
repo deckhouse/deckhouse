@@ -6,28 +6,6 @@ import:
   add: /src/bin/gce-pd-csi-driver
   to: /gce-pd-csi-driver
   before: setup
-# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-ubuntu-base-artifact
-#   add: /lib/udev/scsi_id 
-#   to: /lib/udev_containerized/scsi_id
-#   before: setup
-# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-ubuntu-base-artifact
-#   add: /
-#   to: /
-#   includePaths:
-#   - 'etc/mke2fs.conf'
-#   - 'bin/*mount'
-#   - 'sbin/blkid'
-#   - 'sbin/fsck*'
-#   - 'sbin/mkfs*'
-#   - 'sbin/fsck.xfs'
-#   - 'sbin/blockdev'
-#   - 'sbin/dumpe2fs'
-#   - 'sbin/xfs_repair'
-#   - 'usr/lib/xfsprogs/xfs*'
-#   - 'usr/sbin/xfs*'
-#   - 'usr/bin/xxd'
-#   - 'bin/udevadm'
-#   before: setup
 docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
 ---
@@ -51,10 +29,3 @@ shell:
   - GOOS=linux GCE_PD_CSI_STAGING_VERSION=v1.3.3 make gce-pd-driver
   - chown 64535:64535 /src/bin/gce-pd-csi-driver
   - chmod 0755 /src/bin/gce-pd-csi-driver
-# ---
-# artifact: {{ $.ModuleName }}/{{ $.ImageName }}-ubuntu-base-artifact
-# from: {{ $.Images.BASE_UBUNTU }}
-# shell:
-#   beforeInstall:
-#   - apt-get update
-#   - apt-get install -y --no-install-recommends util-linux e2fsprogs mount ca-certificates udev xfsprogs && apt-get clean -y && rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*
