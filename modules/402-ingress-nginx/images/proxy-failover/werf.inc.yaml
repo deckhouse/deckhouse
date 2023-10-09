@@ -28,7 +28,7 @@ from: {{ .Images.BASE_UBUNTU }}
 shell:
   install:
   - mkdir build && cd build
-  - apt install libxslt1-dev libxml2-dev zlib1g-dev libpcre3-dev libbz2-dev libssl-dev git wget build-essential
+  - apt update && apt install libxslt1-dev libxml2-dev zlib1g-dev libpcre3-dev libbz2-dev libssl-dev git wget build-essential
   - export NGINX_VERSION=1.24.0 OPENSSL_VERSION=3.1.3
   - wget http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && tar xf nginx-${NGINX_VERSION}.tar.gz; cd nginx-${NGINX_VERSION} \
