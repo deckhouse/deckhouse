@@ -11,14 +11,14 @@ spec:
                 accessLevel:
                   description: |
                     Уровень доступа:
-                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам Pod'ов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
-                    * `PrivilegedUser` — то же самое, что и User, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять Pod'ы (что обеспечивает возможность перезагрузки);
+                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать Secret'ы и выполнять port-forward;
+                    * `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать Secret'ы, а также удалять поды (что обеспечивает возможность перезагрузки);
                     * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
-                    * `Admin` — то же самое, что и Editor, но позволяет удалять служебные объекты (производные ресурсы, например, `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т.д). Роль для работы оператора кластера.
-                    * `ClusterAdmin` — то же самое, что и ClusterEditor + Admin, но позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., а так же `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
+                    * `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
+                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т. д). Роль для работы оператора кластера;
+                    * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
 
-                      **Важно!** т.к. `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
+                      **Важно!** Так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия;
                     * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (см. ниже) продолжат работать.
                 portForwarding:
                   description: |
@@ -30,16 +30,16 @@ spec:
                   description: |
                     Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
 
-                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
                 limitNamespaces:
                   description: |
-                    Список разрешённых namespace в формате регулярных выражений.
+                    Список разрешенных namespace в формате регулярных выражений.
 
                     Политика:
-                    * Если список указан, то разрешаем доступ только по нему.
-                    * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+                    * Если список указан, разрешаем доступ только по нему.
+                    * Если список не указан, считаем, что разрешено все, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
 
-                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
 
                     Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) (версия `v1` custom resource'а).
                 subjects:
@@ -48,9 +48,9 @@ spec:
 
                     [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
 
-                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/), обратите внимание на следующие нюансы:
-                    - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`;
-                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, т.е. указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) обратите внимание на следующие нюансы:
+                    - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
                   items:
                     properties:
                       kind:
@@ -86,14 +86,14 @@ spec:
                 accessLevel:
                   description: |
                     Уровень доступа:
-                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам Pod'ов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
-                    * `PrivilegedUser` — то же самое, что и User, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять Pod'ы (что обеспечивает возможность перезагрузки);
+                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать Secret'ы и выполнять port-forward;
+                    * `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать Secret'ы, а также удалять поды (что обеспечивает возможность перезагрузки);
                     * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
-                    * `Admin` — то же самое, что и Editor, но позволяет удалять служебные объекты (производные ресурсы, например, `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т.д). Роль для работы оператора кластера.
-                    * `ClusterAdmin` — то же самое, что и ClusterEditor + Admin, но позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., а так же `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
+                    * `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
+                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т. д). Роль для работы оператора кластера;
+                    * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
 
-                      **Важно!** т.к. `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
+                      **Важно!** Так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия;
                     * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` (см. ниже) продолжат работать.
                 portForwarding:
                   description: |
@@ -105,16 +105,16 @@ spec:
                   description: |
                     Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
 
-                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
                 namespaceSelector:
                   description: |
                     Определяет доступные пространства имен на основе значений, указанных в параметре `namespaceSelector.labelSelector`.
 
-                    Если параметр `namespaceSelector` указан, то значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с метками, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
+                    Если параметр `namespaceSelector` указан, значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с метками, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
 
-                    Если параметр `namespaceSelector` не указан, то набор доступных пространств имен определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, то будут доступны все пространства имен, за исключением системных (`kube-*`, `d8-*`, `loghouse`, `default`).
+                    Если параметр `namespaceSelector` не указан, набор доступных пространств имен определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, будут доступны все пространства имен, за исключением системных (`kube-*`, `d8-*`, `loghouse`, `default`).
 
-                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
                   properties:
                     matchAny:
                       description: |
@@ -129,7 +129,7 @@ spec:
 
                         Не может использоваться совместно с параметром `matchAny`.
 
-                        Если указаны одновременно `matchExpressions` и `matchLabels`, то учитываются оба фильтра (AND).
+                        Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (AND).
                       properties:
                         matchExpressions:
                           description: Список фильтров на основе выражений.
@@ -142,16 +142,16 @@ spec:
                               values:
                                 description: Значение метки.
                         matchLabels:
-                          description: Фильтр на основе совпадения/не совпадения меток.
+                          description: Фильтр на основе совпадения/несовпадения меток.
                 limitNamespaces:
                   description: |
-                    Список разрешённых namespace в формате регулярных выражений.
+                    Список разрешенных namespace в формате регулярных выражений.
 
                     Политика:
-                    * Если список указан, то разрешаем доступ только по нему.
-                    * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+                    * Если список указан, разрешаем доступ только по нему.
+                    * Если список не указан, считаем, что разрешено все, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
 
-                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
 
                     Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
                 subjects:
@@ -160,9 +160,9 @@ spec:
 
                     [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
 
-                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/), обратите внимание на следующие нюансы:
-                    - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`;
-                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, т.е. указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) обратите внимание на следующие нюансы:
+                    - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
                   items:
                     properties:
                       kind:
