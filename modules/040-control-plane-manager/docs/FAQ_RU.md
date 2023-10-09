@@ -276,6 +276,7 @@ title: "Управление control plane: FAQ"
 Используйте команду `etcdctl member list`
 
 Пример:
+
    ```shell
    kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \

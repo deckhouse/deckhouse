@@ -280,6 +280,7 @@ Repeat the steps below for **each master node one by one**, starting with the no
 ## How do I view the list of etcd members?
 
 ### Option 1
+
 Use the `etcdctl member list` command.
 
 Example:
