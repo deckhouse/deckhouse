@@ -6,6 +6,8 @@ properties:
     properties:
       nodeSelector:
         type: object
+        default:
+          kubernetes.io/os: linux
         additionalProperties:
           type: string
         description: |
