@@ -33,7 +33,7 @@ shell:
   - wget http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
   - tar -xzf nginx-${NGINX_VERSION}.tar.gz
   - cd nginx-${NGINX_VERSION}
-  - wget http://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
+  - wget --no-check-certificate https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
   - tar -xzf openssl-${OPENSSL_VERSION}.tar.gz
   - ./configure --prefix=/opt/nginx-static --with-cc-opt="-static -static-libgcc" \
             --with-ld-opt="-static" --with-cpu-opt=generic --with-pcre \
