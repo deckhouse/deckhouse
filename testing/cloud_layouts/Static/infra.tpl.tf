@@ -1,5 +1,5 @@
 variable "az_zone" {
-  default = "ru-3a"
+  default = "ru-3b"
 }
 
 variable "region" {
@@ -7,7 +7,7 @@ variable "region" {
 }
 
 variable "volume_type" {
-  default = "fast.ru-3a"
+  default = "fast.ru-3b"
 }
 
 variable "flavor_name_large" {
