@@ -44,7 +44,7 @@ func main() {
 
 	err = os.Remove(confNginx)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	err = os.WriteFile(confNginx, []byte(nginxConfTemplate), 0666)
