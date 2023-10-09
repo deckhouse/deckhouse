@@ -56,7 +56,6 @@ type DexUser struct {
 type DexUserSpec struct {
 	Email    string   `json:"email"`
 	Password string   `json:"password"`
-	UserID   string   `json:"userID,omitempty"`
 	Groups   []string `json:"groups,omitempty"`
 	TTL      string   `json:"ttl,omitempty"`
 }
@@ -137,10 +136,6 @@ func getDexUsers(input *go_hook.HookInput) error {
 		groups = set.New(groups...).Slice()
 
 		dexUser.Spec.Groups = groups
-
-		if dexUser.Spec.UserID == "" {
-			dexUser.Spec.UserID = dexUser.Name
-		}
 
 		var expireAt string
 
