@@ -1,5 +1,6 @@
 @import "components/common/_variables.scss";
 @import 'components/common/_mixins.scss';
+@import 'components/common/_breakpoints.scss';
 
 html {
     scroll-padding-top: 80px;
@@ -7,27 +8,26 @@ html {
 
 .header-container {
     position: sticky;
-    top: 0px;
+    top: 0;
     z-index: 100;
 }
 
 .header {
   position: sticky;
   top: 0;
-  color: var(--color-main);
-  //@include bg-color($white);
+  @include bg-color($white);
   transition: .2s ease-in-out;
   z-index: 100;
 
-  body.admin-bar & {
-    @media screen and (min-width: 601px) {
-      top: 46px;
-    }
-
-    @media screen and (min-width: 782px) {
-      top: 32px;
-    }
-  }
+  //body.admin-bar & {
+  //  @media screen and (min-width: 601px) {
+  //    top: 46px;
+  //  }
+  //
+  //  @media screen and (min-width: 782px) {
+  //    top: 32px;
+  //  }
+  //}
 
   //&_float {
   //  @include box-shadow;
@@ -41,14 +41,10 @@ html {
     justify-content: space-between;
     font-size: 12px;
 
-    //@include min-w(m) {
-    //  padding-top: 24px;
-    //  padding-bottom: 24px;
-    //}
-    //
-    //@include min-w(l) {
-    //  align-items: flex-end;
-    //}
+    @include min-w(m) {
+      padding-top: 24px;
+      padding-bottom: 24px;
+    }
   }
 
   &__logo {
@@ -56,9 +52,9 @@ html {
     overflow: hidden;
     transition: .2s;
 
-    //@include min-w(xs) {
-    //  width: auto;
-    //}
+    @include min-w(xs) {
+      width: auto;
+    }
 
     body.sidebar-opened & {
       width: inherit;
@@ -69,9 +65,9 @@ html {
       height: 40px;
       width: auto;
 
-      //@include min-w(xl) {
-      //  height: 52px;
-      //}
+      @include min-w(xl) {
+        height: 52px;
+      }
     }
   }
 
@@ -84,26 +80,26 @@ html {
 
   &__nav {
     &.nav {
-      //display: none;
-      display: flex;
-      gap: 12px 32px;
+      display: none;
+      //display: flex;
+      //gap: 12px 32px;
       margin: 0;
       padding: 0;
       list-style: none;
 
-      //@include min-w(l) {
-      //  display: flex;
-      //  gap: 12px 16px;
-      //}
-      //
-      //@include min-w(xl) {
-      //  display: flex;
-      //  gap: 12px 24px;
-      //}
-      //
-      //@include min-w(xxl) {
-      //  gap: 12px 32px;
-      //}
+      @include min-w(l) {
+        display: flex;
+        gap: 12px 16px;
+      }
+
+      @include min-w(xl) {
+        display: flex;
+        gap: 12px 24px;
+      }
+
+      @include min-w(xxl) {
+        gap: 12px 32px;
+      }
     }
 
     .menu-item {
@@ -125,9 +121,9 @@ html {
       box-shadow: 0 0 4px rgba(0,0,0, .15);
       list-style: none;
 
-      //@include min-w(xl) {
-      //  gap: 12px;
-      //}
+      @include min-w(xl) {
+        gap: 12px;
+      }
 
       &-container {
         position: absolute;
@@ -140,8 +136,8 @@ html {
     }
 
     a {
-      color: $white;
-      //@include color($ntrl-800);
+      //color: $white;
+      @include color($ntrl-800);
       white-space: nowrap;
       text-decoration: none;
     }
@@ -304,12 +300,12 @@ html {
     text-decoration: none;
     text-transform: uppercase;
     border-radius: 50px;
-    background-color: $white;
-    //color: $primary-700;
+    background-color: $primary-700;
+    color: $white;
 
-    //@include max-w(l) {
-    //  display: none;
-    //}
+    @include max-w(l) {
+      display: none;
+    }
   }
 }
 
@@ -319,10 +315,10 @@ html {
   a {
     text-decoration: none;
     text-transform: uppercase;
-    //@include color($ntrl-800);
+    @include color($ntrl-800);
 
     &.active {
-      //@include color($primary-700);
+      @include color($primary-700);
     }
   }
 }
@@ -370,7 +366,7 @@ html {
             //}
             a {
                 display: inline-block;
-                filter: brightness(10);
+                //filter: brightness(10);
                 svg {
                     height: 15px;
                     @media (min-width: $container-breakpoint-lg) {

@@ -1,4 +1,5 @@
 @import "components/common/_variables.scss";
+@import 'components/common/_breakpoints.scss';
 
 body {
     font-family: 'Open Sans', sans-serif;
@@ -7,4 +8,10 @@ body {
     line-height: 1.3;
     color: $color-main;
     letter-spacing: 0.02em;
+
+    --wp--style--global--content-size: 1664px;
+
+    @include max-w(m) {
+      --wp--preset--font-size--medium: 16px;
+    }
 }
