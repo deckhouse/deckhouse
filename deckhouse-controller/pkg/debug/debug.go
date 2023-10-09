@@ -60,19 +60,20 @@ func (c *Command) Save(tarWriter *tar.Writer) error {
 }
 
 func saveLinstorSosInfo(tarWriter *tar.Writer) error {
-	podExtractCmd := "kubectl -n d8-linstor get po -l app=linstor-controller -o jsonpath='{.items[*].metadata.name}'"
-	podName, err := exec.Command(podExtractCmd).Output()
+	podExtractCmd := []string{"-n", "d8-linstor", "get", "po", "-l", "app=linstor-controller", "-o", "jsonpath='{.items[*].metadata.name}'"}
+	podName, err := exec.Command("kubectl", podExtractCmd...).Output()
 	if err != nil {
-		return fmt.Errorf("execute %s command: %v", podExtractCmd, err)
+		return fmt.Errorf("execute %s command: %v", "kubectl -n d8-linstor get po ...", err)
 	}
-	reportGetCmd := "kubectl exec -n d8-linstor %s -- sh -c \"linstor sos-report create | grep SOS | awk '{print $NF}'\""
-	reportGenOut, err := exec.Command(fmt.Sprintf(reportGetCmd, string(podName))).Output()
+	reportGetCmd := []string{"exec", "-n", "d8-linstor", string(podName), "--", "sh", "-c", "\"linstor", "sos-report", "create", "|grep SOS|", "awk", "'{print $NF}'\""}
+
+	reportGenOut, err := exec.Command("kubectl", reportGetCmd...).Output()
 	if err != nil {
-		return fmt.Errorf("execute %s command: %v", fmt.Sprintf(reportGetCmd, string(podName)), err)
+		return fmt.Errorf("execute %s command: %v", "kubectl exec -n d8-linstor ...", err)
 	}
 	lines := strings.Split(string(reportGenOut), "\n")
 	if len(lines)-2 < 0 {
-		return fmt.Errorf("wrong output of command sos-report create: %s", reportGenOut)
+		return fmt.Errorf("wrong output of command sos-report create: %s", "kubectl exec -n d8-linstor ...")
 	}
 	lastLine := lines[len(lines)-2]
 	parts := strings.Split(lastLine, ":")
@@ -80,8 +81,9 @@ func saveLinstorSosInfo(tarWriter *tar.Writer) error {
 		return fmt.Errorf("output doesn't contain file name: %s", lastLine)
 	}
 
-	reportDownloadCmd := "kubectl cp d8-linstor/%s:%s linstor-sos.tar.gz"
-	err = exec.Command(fmt.Sprintf(reportDownloadCmd, string(podName), parts[1])).Run()
+	reportDownloadCmd := []string{"cp", "d8-linstor/" + string(podName) + ":" + parts[1], "linstor-sos.tar.gz"}
+
+	err = exec.Command("kubectl", reportDownloadCmd...).Run()
 	if err != nil {
 		return fmt.Errorf("error while download sos info report from pod: %v", err)
 	}
