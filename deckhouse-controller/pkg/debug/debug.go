@@ -123,34 +123,29 @@ func createTarball(withLinstor bool) *bytes.Buffer {
 
 	linstorCommands := []Command{
 		{
-			File: "linstor-sos-info.",
-			Cmd:  "kubectl exec -n d8-linstor deploy/linstor-controller -- linstor",
-			Args: []string{"get", "events", "--sort-by=.metadata.creationTimestamp", "-A", "-o", "json"},
-		},
-		{
 			File: "linstor-csi-node-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n d8-linstor", "logs", "daemonset.apps/linstor-csi-node", "-c", "linstor-csi-plugin", "--tail", "3000"},
+			Args: []string{"-n", "d8-linstor", "logs", "daemonset.apps/linstor-csi-node", "-c", "linstor-csi-plugin", "--tail", "3000"},
 		},
 		{
 			File: "linstor-node-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n d8-linstor", "logs", "daemonset.apps/linstor-node", "-c", "linstor-satellite", "--tail", "3000"},
+			Args: []string{"-n", "d8-linstor", "logs", "daemonset.apps/linstor-node", "-c", "linstor-satellite", "--tail", "3000"},
 		},
 		{
 			File: "linstor-controller-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n d8-linstor", "logs", "deployment.apps/linstor-controller", "-c", "linstor-controller", "--tail", "3000"},
+			Args: []string{"-n", "d8-linstor", "logs", "deployment.apps/linstor-controller", "-c", "linstor-controller", "--tail", "3000"},
 		},
 		{
 			File: "linstor-csi-controller-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n d8-linstor", "logs", "deployment.apps/linstor-csi-controller", "--tail", "3000"},
+			Args: []string{"-n", "d8-linstor", "logs", "deployment.apps/linstor-csi-controller", "--tail", "3000"},
 		},
 		{
 			File: "linstor-drbd-operator-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n d8-linstor", "logs", "deployment.apps/sds-drbd-operator", "--tail", "3000"},
+			Args: []string{"-n", "d8-linstor", "logs", "deployment.apps/sds-drbd-operator", "--tail", "3000"},
 		},
 	}
 
