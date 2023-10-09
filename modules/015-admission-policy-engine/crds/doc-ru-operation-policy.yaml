@@ -12,10 +12,10 @@ spec:
               properties:
                 enforcementAction:
                   description: |
-                    Действие, которое будет выполнено по результатам проверки ограничений.
-                    - Deny — Запрет.
-                    - Dryrun — Отсутствие действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или в консоли с помощью kubectl.
-                    - Warn — Аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
+                    Действие, которое будет выполнено по результатам проверки ограничений:
+                    - Deny — запрет;
+                    - Dryrun — отсутствие действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или консоли с помощью kubectl;
+                    - Warn — аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
                 policies:
                   properties:
                     allowedRepos:
@@ -28,7 +28,7 @@ spec:
                         limits:
                           description: "Список ограничений, которые должны соблюдаться (процессор, память или оба)."
                         requests:
-                          description: "Список запросов, которые должны быть выполнены (вычислительная мощность, память или и то, и другое)."
+                          description: "Список запросов, которые должны быть выполнены (вычислительная мощность, память или и то и другое)."
                     disallowedImageTags:
                       description: "Требует, чтобы образы контейнера имели тег, отличный от указанных в списке."
                     requiredLabels:
@@ -72,9 +72,9 @@ spec:
                     imagePullPolicy:
                       description: "Требуемая политика скачивания образов для контейнеров."
                     checkHostNetworkDNSPolicy:
-                      description: "Проверка, что dnsPolicy `ClusterFirstWithHostNet` установлена для Pod'ов с `hostNetwork: true`."
+                      description: "Проверка, что dnsPolicy `ClusterFirstWithHostNet` установлена для подов с `hostNetwork: true`."
                     checkContainerDuplicates:
-                      description: "Проверка имена контейнеров и переменные env на наличие дубликатов."
+                      description: "Проверка имен контейнеров и переменных env на наличие дубликатов."
                 match:
                   properties:
                     namespaceSelector:
@@ -96,11 +96,11 @@ spec:
                               description: Список выражений лейблов для пространств имен.
                     labelSelector:
                       description: |
-                        Указывает селектор лейблов для фильтрации Pod'ов.
+                        Указывает селектор лейблов для фильтрации подов.
 
                         Больше информации [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
                         matchLabels:
-                          description: Список лейблов, которые должен иметь Pod.
+                          description: Список лейблов, которые должен иметь под.
                         matchExpressions:
-                          description: Список выражений лейблов для Pod'ов.
+                          description: Список выражений лейблов для подов.
