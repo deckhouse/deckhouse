@@ -112,6 +112,8 @@ spec:
                 secretKeyRef:
                   name: cloud-controller-manager
                   key: service-acount-json
+            - name: YANDEX_CLOUD_FOLDER_ID
+              value: {{ .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID | quote }}
             - name: YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID
               value: {{ .Values.cloudProviderYandex.internal.defaultLbListenerSubnetId | quote }}
             - name: YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID
