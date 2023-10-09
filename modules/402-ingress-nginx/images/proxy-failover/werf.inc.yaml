@@ -58,8 +58,5 @@ git:
   stageDependencies:
     install:
     - '**/*.tpl'
-shell:
-  beforeInstall:
-  - rm -rf /opt/nginx-static/conf/nginx.conf
 docker:
   ENTRYPOINT: ["/entrypoint"]
