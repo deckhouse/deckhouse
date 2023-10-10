@@ -21,7 +21,7 @@ export no_proxy=${NO_PROXY}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
 yum updateinfo
-until yum install dnf nc curl wget jq -y; do
+until yum install nc curl-7.81.0 wget jq -y; do
   echo "Error installing packages"
   yum updateinfo
   sleep 10
