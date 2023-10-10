@@ -10,7 +10,6 @@ shell:
     - mkdir -p /src
     - cd /src
     - git clone --depth 1 -b v1.0.42 https://github.com/stakater/Reloader.git .
-    - cd reloader
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /reloader main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
