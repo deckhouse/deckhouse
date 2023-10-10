@@ -50,7 +50,8 @@ shell:
   - rm /opt/nginx-static/conf/nginx.conf
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+# fromImage: common/distroless
+from: {{ .Images.BASE_ALPINE }}
 import:
 - artifact: {{ .ModuleName }}/build-entrypoint-artifact
   add: /src/entrypoint
