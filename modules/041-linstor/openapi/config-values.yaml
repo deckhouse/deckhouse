@@ -8,7 +8,8 @@ properties:
       nodeSelector:
         type: object
         default:
-          kubernetes.io/os: linux
+          #kubernetes.io/os: linux
+          aaa: bbb
         additionalProperties:
           type: string
         description: |
