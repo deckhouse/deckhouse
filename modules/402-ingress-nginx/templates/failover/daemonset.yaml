@@ -68,6 +68,8 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailover") }}
         name: nginx
+        command: [ "/bin/bash", "-c", "--" ]
+        args: [ "while true; do sleep 30; done;" ]
         env:
         - name: CONTROLLER_NAME
           value: {{ $crd.name }}
