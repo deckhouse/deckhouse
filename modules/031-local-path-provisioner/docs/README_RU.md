@@ -6,13 +6,13 @@ title: "Модуль local-path-provisioner"
 
 ## Как это работает?
 
-Для каждого CR [LocalPathProvisioner](cr.html) создается соответствующий `StorageClass`.
+Для каждого custom resource [LocalPathProvisioner](cr.html) создается соответствующий `StorageClass`.
 
-Допустимая топология для `StorageClass` вычисляется на основе списка `nodeGroup` из CR. Топология используется при шедулинге Pod'ов.
+Допустимая топология для `StorageClass` вычисляется на основе списка `nodeGroup` из custom resource. Топология используется при шедулинге подов.
 
-Когда Pod заказывает диск, то:
-- создается `HostPath` PV
-- `Provisioner` создает на нужном узле локальную папку по пути, состоящем из параметра `path` CR, имени PV и имени PVC.
+Когда под заказывает диск, то:
+- создается `HostPath` PV;
+- `Provisioner` создает на нужном узле локальную папку по пути, состоящем из параметра `path` custom resource, имени PV и имени PVC.
   
   Пример пути:
 
