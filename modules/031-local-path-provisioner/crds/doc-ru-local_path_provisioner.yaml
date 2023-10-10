@@ -12,7 +12,7 @@ spec:
             properties:
               nodeGroups:
                 description: |
-                  nodeGroup'ы, в которых работает данный storageClass.
+                  nodeGroup'ы, в которых работает данный StorageClass.
               path:
                 description: |
                   Корневой путь на узле к директории для хранения PV.
