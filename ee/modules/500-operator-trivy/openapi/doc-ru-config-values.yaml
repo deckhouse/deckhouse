@@ -2,18 +2,18 @@ type: object
 properties:
   linkCVEtoBDU:
     description: |
-      Включенить конвертацию отчетов уязвимостей. Заменяет уязвимости из базы CVE на данные из базы BDU и выводит их в отчете.
+      Включить конвертацию отчетов уязвимостей. Заменяет уязвимости из базы CVE на данные из базы BDU и выводит их в отчете.
 
   tolerations:
     description: |
-      Опциональные tolerations для компонентов trivy operator и заданий сканирования (Jobs).
+      Опциональные tolerations для компонентов operator-trivy и заданий сканирования (Jobs).
 
-      Структура, аналогичная `spec.tolerations` Kubernetes pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   nodeSelector:
     description: |
-      Опциональный селектор для компонентов trivy operator и заданий сканирования (Jobs).
+      Опциональный селектор для компонентов operator-trivy и заданий сканирования (Jobs).
 
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
