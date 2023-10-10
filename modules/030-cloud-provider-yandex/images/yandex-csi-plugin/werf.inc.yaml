@@ -1,0 +1,36 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /go/bin/yandex-csi-driver
+  to: /bin/yandex-csi-driver
+  before: setup
+docker:
+  ENTRYPOINT: ["/bin/yandex-csi-driver"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+git:
+- url: https://github.com/deckhouse/yandex-csi-driver
+  to: /go/src/app
+  tag: v0.10.0
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache ca-certificates e2fsprogs findmnt xfsprogs blkid e2fsprogs-extra
+  install:
+  - cd /go/src/app
+  - |
+    VERSION=$(cat VERSION)
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
+    -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version=${VERSION}' \
+    -o /go/bin/yandex-csi-driver \
+    github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
+  - chown 64535:64535 /go/bin/yandex-csi-driver
+  - chmod 0755 /go/bin/yandex-csi-driver
