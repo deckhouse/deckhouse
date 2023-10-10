@@ -35,6 +35,7 @@
  - **[candi]** Add creation of the `TMPDIR` directory in the `bashible.sh` script. [#6059](https://github.com/deckhouse/deckhouse/pull/6059)
  - **[candi]** Delete registrypackage files if it failed to install before retrying installation. [#5739](https://github.com/deckhouse/deckhouse/pull/5739)
  - **[chrony]** Run chrony pods in host network namespace. [#6007](https://github.com/deckhouse/deckhouse/pull/6007)
+ - **[cloud-provider-yandex]** Fix working in hybrid environments. [#6094](https://github.com/deckhouse/deckhouse/pull/6094)
  - **[cloud-provider-yandex]** Updated yandex-csi-driver. In the new version, the calculation of the limit of disks per node has been fixed. [#5679](https://github.com/deckhouse/deckhouse/pull/5679)
  - **[dhctl]** Fix restarting bootstrap process. [#5892](https://github.com/deckhouse/deckhouse/pull/5892)
  - **[dhctl]** Add `registryDockerCfg` validation. [#5829](https://github.com/deckhouse/deckhouse/pull/5829)
