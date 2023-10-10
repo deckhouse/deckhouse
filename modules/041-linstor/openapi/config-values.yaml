@@ -3,13 +3,12 @@ properties:
   dataNodes:
     type: object
     description: Settings for Linstor on nodes with data
-    #default: {}
+    default: {}
     properties:
       nodeSelector:
         type: object
         default:
-          #kubernetes.io/os: linux
-          aaa: bbb
+          kubernetes.io/os: linux
         additionalProperties:
           type: string
         description: |
