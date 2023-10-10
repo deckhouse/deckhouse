@@ -22,7 +22,7 @@ spec:
                       description: Параметры HTTP(S) источника.
                       properties:
                         certConfigMap:
-                          description: Ссылка на ConfigMap, содержащий публичный ключ для центров сертификации(CA), а также закодированный в Base64 PEM-сертификат.
+                          description: Ссылка на ConfigMap, содержащий публичный ключ для центров сертификации (CA), а также закодированный в Base64 PEM-сертификат.
                         extraHeaders:
                           description: Список дополнительных заголовков для включения в HTTP-запросы.
                         secretExtraHeaders:
@@ -36,7 +36,7 @@ spec:
 
                             Secret должен содержать accessKeyId (имя пользователя) в кодировке Base64 и secretKey (пароль) также в кодировке Base64.
                         url:
-                          description: URL представляет HTTP(S) адрес.
+                          description: URL представляет HTTP(S)-адрес.
                     pvc:
                       description: Параметры для создания тома данных из существующего PVC.
                       properties:
@@ -58,9 +58,9 @@ spec:
                       description: Параметры для создания тома данных из хранилища S3.
                       properties:
                         certConfigMap:
-                          description: Ссылка на ConfigMap, содержащий публичный ключ для центров сертификации(CA), а также закодированный в Base64 PEM-сертификат.
+                          description: Ссылка на ConfigMap, содержащий публичный ключ для центров сертификации (CA), а также закодированный в Base64 PEM-сертификат.
                         secretRef:
-                          description: Имя Secret'а необходимого для доступа к хранилищу S3.
+                          description: Имя Secret'а, необходимого для доступа к хранилищу S3.
                         url:
                           description: Адрес образа в хранилище S3.
                 source:
