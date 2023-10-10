@@ -3,27 +3,27 @@ title: "Модуль linstor: расширенная конфигурация"
 description: Шаги по ручному созданию пулов хранения и StorageClass’ов при включении модуля linstor Deckhouse. Настройка резервного копирования снапшотов томов linstor в S3.
 ---
 
-[Упрощенное руководство](configuration.html#конфигурация-хранилища-linstor) содержит шаги, в результате выполнения которых автоматически создаются пулы хранения (storage-пулы) и StorageClass'ы, при появлении на узле LVM-группы томов или LVMThin-пула с тегом `linstor-<имя_пула>`. Далее рассматривается шаги по ручному созданию пулов хранения и StorageClass'ов.
+[Упрощенное руководство](configuration.html#конфигурация-хранилища-linstor) содержит шаги, в результате выполнения которых автоматически создаются пулы хранения (storage-пулы) и StorageClass'ы при появлении на узле LVM-группы томов или LVMThin-пула с тегом `linstor-<имя_пула>`. Далее рассматриваются шаги по ручному созданию пулов хранения и StorageClass'ов.
 
 Для выполнения дальнейших действий потребуется CLI-утилита `linstor`. Используйте один из следующих вариантов запуска утилиты `linstor`:
 - Установите плагин [kubectl-linstor](https://github.com/piraeusdatastore/kubectl-linstor).
-- Добавьте alias в BASH для запуска утилиты `linstor` из Pod'а контроллера linstor:
+- Добавьте alias в BASH для запуска утилиты `linstor` из пода контроллера linstor:
 
   ```shell
   alias linstor='kubectl exec -n d8-linstor deploy/linstor-controller -- linstor'
   ```
 
 {% alert %}
-Большинство пунктов на этой странице позаимствованы из [официальной документации LINSTOR](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/).  
-Несмотря на то, что здесь мы постарались собрать наиболее распространённые вопросы, не стесняйтесь обращаться к первоисточнику.
+Большинство пунктов на этой странице позаимствованы [из официальной документации LINSTOR](https://linbit.com/drbd-user-guide/linstor-guide-1_0-en/).  
+Несмотря на то что здесь мы постарались собрать наиболее распространенные вопросы, не стесняйтесь обращаться к первоисточнику.
 {% endalert %}
 
 ## Ручная конфигурация
 
-После включения модуля `linstor` кластер и его узлы настраиваются на использование LINSTOR автоматически. Для того чтобы начать использовать хранилище, необходимо:
+После включения модуля `linstor` кластер и его узлы настраиваются на использование LINSTOR автоматически. Чтобы начать использовать хранилище, необходимо:
 
-- [Создать пулы хранения](#создание-пулов-хранения)
-- [Создать StorageClass](#создание-storageclass)
+- [создать пулы хранения](#создание-пулов-хранения);
+- [создать StorageClass](#создание-storageclass).
 
 ### Создание пулов хранения
 
@@ -66,13 +66,13 @@ description: Шаги по ручному созданию пулов хране
      ```
 
      > Обратите внимание, что отображаются только пустые устройства, без какой-либо разметки.
-     > Тем не менее, создание пулов хранения из разделов и других блочных устройств также поддерживается.
+     > Тем не менее создание пулов хранения из разделов и других блочных устройств также поддерживается.
      >
      > Вы также можете [добавить](faq.html#как-добавить-существующий-lvm-или-lvmthin-пул) уже существующий пул LVM или LVMthin в кластер.
 
 1. Создайте пулы LVM или LVMThin.
 
-   На необходимых узлах хранилища создайте несколько пулов из устройств, полученных на предыдущем шаге. Их названия должны быть одинаковыми, в случае если вы хотите иметь один storageClass.
+   На необходимых узлах хранилища создайте несколько пулов из устройств, полученных на предыдущем шаге. Их названия должны быть одинаковыми, если вы хотите иметь один StorageClass.
 
    - Пример команды создания **LVM-пула** хранения из двух устройств на одном из узлов:
 
@@ -80,8 +80,8 @@ description: Шаги по ручному созданию пулов хране
      linstor physical-storage create-device-pool lvm node01 /dev/nvme0n1 /dev/nvme1n1 --pool-name linstor_data --storage-pool lvm
      ```
 
-     , где:
-     - `--pool-name` — имя VG/LV создаваемом на узле.
+     где:
+     - `--pool-name` — имя VG/LV, создаваемого на узле;
      - `--storage-pool` — то, как будет называться пул хранения в LINSTOR.
 
    - Пример команды создания **ThinLVM-пула** хранения из двух устройств на одном из узлов:
@@ -90,13 +90,13 @@ description: Шаги по ручному созданию пулов хране
      linstor physical-storage create-device-pool lvmthin node01 /dev/nvme0n1 /dev/nvme1n1 --pool-name data --storage-pool lvmthin
      ```
 
-     , где:
-     - `--pool-name` — имя VG/LV создаваемом на узле.
+     где:
+     - `--pool-name` — имя VG/LV, создаваемого на узле;
      - `--storage-pool` — то, как будет называться пул хранения в LINSTOR.
 
 1. Проверьте создание пулов хранения.
 
-   Как только пулы хранения созданы, можете увидеть их выполнив следующую команду:
+   Как только пулы хранения созданы, можете увидеть их, выполнив следующую команду:
 
    ```shell
    linstor storage-pool list
@@ -146,12 +146,12 @@ volumeBindingMode: WaitForFirstConsumer
 ## Резервное копирование в S3
 
 {% alert level="warning" %}
-Использование данной возможности требует настроенного мастер-пароля (см. инструкции вначале страницы [конфигурации модуля](configuration.html)).
+Использование данной возможности требует настроенного мастер-пароля (см. инструкции в начале страницы [конфигурации модуля](configuration.html)).
 
 Резервное копирование с помощью снапшотов поддерживается только для LVMThin-пулов.
 {% endalert %}
 
-{% alert level="warning" %}Функционал находится в экспериментальном режиме, и может работать некорректно{% endalert %}
+{% alert level="warning" %}Функционал находится в экспериментальном режиме и может работать некорректно.{% endalert %}
 
 Резервное копирование данных реализовано с помощью [снапшотов томов](https://kubernetes.io/docs/concepts/storage/volume-snapshots/). Поддержка работы снапшотов обеспечивается модулем [snapshot-controller](../045-snapshot-controller/), который включается автоматически для поддерживаемых CSI-драйверов в кластерах Kubernetes версий 1.20 и выше.
 
@@ -176,7 +176,7 @@ volumeBindingMode: WaitForFirstConsumer
      snap.linstor.csi.linbit.com/type: S3
      snap.linstor.csi.linbit.com/remote-name: backup-remote               # Уникальное название backup-подключения в linstor.   
      snap.linstor.csi.linbit.com/allow-incremental: "false"               # Использовать ли инкрементальные копии. 
-     snap.linstor.csi.linbit.com/s3-bucket: snapshot-bucket               # Название S3 bucket, для хранения данных.
+     snap.linstor.csi.linbit.com/s3-bucket: snapshot-bucket               # Название S3 bucket для хранения данных.
      snap.linstor.csi.linbit.com/s3-endpoint: s3.us-west-1.amazonaws.com  # S3 endpoint URL.
      snap.linstor.csi.linbit.com/s3-signing-region: us-west-1             # Регион S3. 
      # Использовать virtual hosted–style или path-style S3 URL 
@@ -219,7 +219,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 1. Создайте `VolumeSnapshot`.
 
-   Пример `VolumeSnapshot`, использующего `VolumeSnapshotClass` созданный ранее:
+   Пример `VolumeSnapshot`, использующего `VolumeSnapshotClass`, созданный ранее:
 
    ```yaml
    apiVersion: snapshot.storage.k8s.io/v1
@@ -228,14 +228,14 @@ volumeBindingMode: WaitForFirstConsumer
      name: my-linstor-snapshot
      namespace: storage
    spec:
-     volumeSnapshotClassName: linstor-csi-snapshot-class-s3  # Имя VolumeSnapshotClass, с доступом к хранилищу S3.
+     volumeSnapshotClassName: linstor-csi-snapshot-class-s3  # Имя VolumeSnapshotClass с доступом к хранилищу S3.
      source:
        persistentVolumeClaimName: my-linstor-volume          # Имя PVC, данные с тома которого необходимо копировать. 
    ```
 
-   После создания `VolumeSnapshot` связанного с `PersistentVolumeClaim` относящимся к существующему тому с данными, произойдет создание снапшота в linstor и загрузка его в хранилище S3.
+   После создания `VolumeSnapshot`, связанного с `PersistentVolumeClaim`, относящимся к существующему тому с данными, произойдут создание снапшота в linstor и загрузка его в хранилище S3.
 
-1. Проверьте, статус выполнения резервного копирования.
+1. Проверьте статус выполнения резервного копирования.
 
    Пример:
 
@@ -243,13 +243,13 @@ volumeBindingMode: WaitForFirstConsumer
    kubectl get volumesnapshot my-linstor-snapshot -n storage
    ```
 
-   Если значение READYTOUSE `VolumeSnapshot` не `true`, то посмотрите причину, выполнив следующую команду:  
+   Если значение READYTOUSE `VolumeSnapshot` не `true`, посмотрите причину, выполнив следующую команду:  
 
    ```shell
    kubectl describe volumesnapshot my-linstor-snapshot -n storage
    ```
 
-Посмотреть список и состояние созданных снапшотов в linstor, можно выполнив следующую команду:
+Посмотреть список и состояние созданных снапшотов в linstor можно, выполнив следующую команду:
 
 ```shell
 linstor snapshot list
@@ -280,7 +280,7 @@ spec:
       storage: 2Gi
 ```
 
-Для восстановления данных из хранилища S3 в другом пространстве имен или кластере Kubernetes, выполните следующие шаги:
+Для восстановления данных из хранилища S3 в другом пространстве имен или кластере Kubernetes выполните следующие шаги:
 
 1. Создайте `VolumeSnapshotClass` и `Secret`, содержащий access key и secret key доступа к хранилищу S3, если они не были созданы ранее (например, если вы восстанавливаете данные в новом кластере).
 
@@ -297,7 +297,7 @@ spec:
      snap.linstor.csi.linbit.com/type: S3
      snap.linstor.csi.linbit.com/remote-name: backup-remote               # Уникальное название backup-подключения в linstor.   
      snap.linstor.csi.linbit.com/allow-incremental: "false"               # Использовать ли инкрементальные копии. 
-     snap.linstor.csi.linbit.com/s3-bucket: snapshot-bucket               # Название S3 bucket, для хранения данных.
+     snap.linstor.csi.linbit.com/s3-bucket: snapshot-bucket               # Название S3 bucket для хранения данных.
      snap.linstor.csi.linbit.com/s3-endpoint: s3.us-west-1.amazonaws.com  # S3 endpoint URL.
      snap.linstor.csi.linbit.com/s3-signing-region: us-west-1             # Регион S3. 
      # Использовать virtual hosted–style или path-style S3 URL 
@@ -319,21 +319,21 @@ spec:
      secret-key: *!SECRET_KEY*  # Secret key доступа к хранилищу S3.
    ```
 
-1. Получите id снапшота для восстановления одним из следующих способов:
+1. Получите ID снапшота для восстановления одним из следующих способов:
 
-   1. Получите список снапшотов в кластере linstor, и выберите нужный (колонка `SnapshotName`):
+   1. Получите список снапшотов в кластере linstor и выберите нужный (колонка `SnapshotName`):
 
       ```shell
       linstor backup list <backup-remote-name>
       ```
 
-      , где `<backup-remote-name>` — название backup-подключения, использованное в `VolumeSnapshotClass`.
+      где `<backup-remote-name>` — название backup-подключения, использованное в `VolumeSnapshotClass`.
 
-   1. Получите id-снапшота из имени объекта в S3-бакете через UI-интерфейс или CLI-утилиты S3-сервиса.
+   1. Получите ID снапшота из имени объекта в S3-бакете через UI-интерфейс или CLI-утилиты S3-сервиса.
 
-1. Создайте `VolumeSnapshotContent`, указывающий на конкретный id снапшота.
+1. Создайте `VolumeSnapshotContent`, указывающий на конкретный ID снапшота.
 
-   > VolumeSnapshotContent — ресурс на уровне кластера. Каждый VolumeSnapshotClass может быть связан только с одним VolumeSnapshot. Поэтому удостоверьтесь в уникальности его имени.
+   > VolumeSnapshotContent — ресурс на уровне кластера. Каждый VolumeSnapshotClass может быть связан только с одним VolumeSnapshot, поэтому удостоверьтесь в уникальности его имени.
 
    Пример:
 
@@ -347,7 +347,7 @@ spec:
      driver: linstor.csi.linbit.com
      source:
        snapshotHandle: *!snapshot_id*                        # ID снапшота.  
-     volumeSnapshotClassName: linstor-csi-snapshot-class-s3  # Имя VolumeSnapshotClass, с доступом к хранилищу S3.
+     volumeSnapshotClassName: linstor-csi-snapshot-class-s3  # Имя VolumeSnapshotClass с доступом к хранилищу S3.
      volumeSnapshotRef:
        apiVersion: snapshot.storage.k8s.io/v1
        kind: VolumeSnapshot
@@ -368,7 +368,7 @@ spec:
    spec:
      source:
        volumeSnapshotContentName: restored-snap-content-from-s3 # Имя VolumeSnapshotContent, созданного ранее.
-     volumeSnapshotClassName: linstor-csi-snapshot-class-s3     # Имя VolumeSnapshotClass, с доступом к хранилищу S3.
+     volumeSnapshotClassName: linstor-csi-snapshot-class-s3     # Имя VolumeSnapshotClass с доступом к хранилищу S3.
    ```
 
 1. Создайте `PersistentVolumeClaim`.
