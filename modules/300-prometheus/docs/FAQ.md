@@ -45,7 +45,7 @@ subsets:
 
 ## How do I create custom Grafana dashboards?
 
-Custom Grafana dashboards can be added to the project using the infrastructure as a code approach.
+Custom Grafana dashboards can be added to the project using the Infrastructure as a Code approach.
 To add your dashboard to Grafana, create the dedicated [`GrafanaDashboardDefinition`](cr.html#grafanadashboarddefinition) Custom Resource in the cluster.
 
 An example:
@@ -56,7 +56,7 @@ kind: GrafanaDashboardDefinition
 metadata:
   name: my-dashboard
 spec:
-  folder: My folder # The folder where the custom dashboard will be located
+  folder: My folder # The folder where the custom dashboard will be located.
   definition: |
     {
       "annotations": {

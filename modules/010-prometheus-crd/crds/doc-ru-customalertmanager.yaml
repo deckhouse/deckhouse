@@ -15,10 +15,10 @@ spec:
                     address:
                       description: 'URL-адрес внешнего сервиса Alertmanager.'
                     service:
-                      description: 'Service в Kubernetes ссылающийся на развернутый Alertmanager.'
+                      description: 'Service в Kubernetes, ссылающийся на развернутый Alertmanager.'
                       properties:
                         namespace:
-                          description: Пространство имён Service'а Alertmanager.
+                          description: Пространство имен Service'а Alertmanager.
                         name:
                           description: Имя Service'а Alertmanager.
                         path:
@@ -58,18 +58,18 @@ spec:
                           equal:
                             description: Лейблы, которые должны иметь одинаковое значение в исходном и целевом алерте, чтобы подавление вступило в силу.
                           sourceMatch:
-                            description: Список условий которым должен удовлетворять один или более алертов, чтобы подавление вступило в силу.
+                            description: Список условий, которым должен удовлетворять один или более алертов, чтобы подавление вступило в силу.
                             items:
                               description: Условие содержит критерии сравнения лейблов алертов.
                               properties: &match-properties
                                 name:
                                   description: Имя лейбла для сравнения.
                                 regex:
-                                  description: Тип сравнения — по равенству (false) или по регулярному выражению (true).
+                                  description: Тип сравнения — по равенству (false) или регулярному выражению (true).
                                 value:
                                   description: Значение лейбла (regex-шаблон) для удовлетворения условию.
                           targetMatch:
-                            description: Список условий проверяемых в алертах, при выполнении которых алерты будут подавлены.
+                            description: Список условий, проверяемых в алертах, при выполнении которых алерты будут подавлены.
                             items:
                               description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
                               properties: *match-properties
@@ -133,7 +133,7 @@ spec:
 
                                     Обратите внимание, что Go не поддерживает незашифрованные SMTP-подключения.
                                 sendResolved:
-                                  description: Уведомлять или нет о том, алерт более не активен.
+                                  description: Уведомлять или нет о том, что алерт более не активен.
                                 smarthost:
                                   description: SMTP-хост, через который отправляются электронные письма.
                                 text:
@@ -145,7 +145,7 @@ spec:
                                       description: Структура, содержащая сертификат CA для target'ов.
                                       properties:
                                         configMap:
-                                          description: ConfigMap, содержащая данные для использования в target'е.
+                                          description: ConfigMap, содержащий данные для использования в target'е.
                                           properties: &data-in-cm-properties
                                             key:
                                               description: Ключ ConfigMap, из которого брать данные.
@@ -161,7 +161,7 @@ spec:
                                       description: Структура, содержащая файл клиентского сертификата target'а.
                                       properties:
                                         configMap:
-                                          description: ConfigMap, содержащая данные для использования в target'е.
+                                          description: ConfigMap, содержащий данные для использования в target'е.
                                           properties: *data-in-cm-properties
                                         secret:
                                           description: Secret, содержащий данные, используемые для target'а.
@@ -216,7 +216,7 @@ spec:
                                       description: |
                                         Ключ Secret'а, содержащий bearer-токен, который будет использоваться клиентом для аутентификации.
 
-                                        Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                        Secret должен находиться в пространстве имен `d8-monitoring`.
                                       properties: *data-in-secret-properties
                                     proxyURL:
                                       description: URL-адрес прокси-сервера (опционально).
@@ -226,7 +226,7 @@ spec:
                                 note:
                                   description: Дополнительный текст алерта.
                                 priority:
-                                  description: Приоритет алерта. Доступны варианты P1, P2, P3, P4, и P5.
+                                  description: Приоритет алерта. Доступны варианты P1, P2, P3, P4 и P5.
                                 responders:
                                   description: Список responder'ов, ответственных за уведомления.
                                   items:
@@ -260,7 +260,7 @@ spec:
                                 clientURL:
                                   description: Обратная ссылка на отправителя уведомления.
                                 component:
-                                  description: Компонент системы отноящийся к алерту.
+                                  description: Компонент системы, отноящийся к алерту.
                                 description:
                                   description: Описание инцидента.
                                 details:
@@ -301,7 +301,7 @@ spec:
                                   description: Уведомлять или нет о завершении алертов.
                                 serviceKey:
                                   description: |
-                                    Ключ Secret'а, содержащий служебный ключ PagerDuty (при использовании типа интеграции "Prometheus").
+                                    Ключ Secret'а, содержащий служебный ключ PagerDuty (при использовании типа интеграции «Prometheus»).
 
                                     Необходимо определить либо это поле, либо `routingKey`.
 
@@ -429,7 +429,7 @@ spec:
                                     description: |
                                       Каждый элемент списка настраивает одно поле Slack, которое отправляется с каждым уведомлением.
 
-                                      Каждое поле должно содержать заголовок (`title`), значение (`value`) и, необязательный параметр `short`, указывающий, достаточно ли короткое поле для отображения рядом с другими 'короткими' полями. [Подробнее...](https://api.slack.com/docs/message-attachments#fields)
+                                      Каждое поле должно содержать заголовок (`title`), значение (`value`) и необязательный параметр `short`, указывающий, достаточно ли короткое поле для отображения рядом с другими короткими полями. [Подробнее...](https://api.slack.com/docs/message-attachments#fields)
                                 footer:
                                   type: string
                                 httpConfig:
@@ -532,7 +532,7 @@ spec:
                               description: |
                                 Конфигурация определяет параметры отправки оповещений с помощью Telegram. 
                                 
-                                [Подробнее, в документации Prometheus…](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config)
+                                [Подробнее см. в документации Prometheus…](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config)
                               properties:
                                 apiURL:
                                   description: |
@@ -611,7 +611,7 @@ spec:
                                       type: object
                                     bearerTokenSecret:
                                       description: |
-                                        Secret, содержащий токен носителя который будет использоваться клиентом для аутентификации.
+                                        Secret, содержащий токен носителя, который будет использоваться клиентом для аутентификации.
 
                                         Secret должен находиться в пространстве имен `d8-monitoring`.
                                       properties: *data-in-secret-properties
@@ -807,7 +807,7 @@ spec:
 
                                     Должен быть определен либо `urlSecret`, либо `url`.
 
-                                    Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
                                   properties: *data-in-secret-properties
                           wechatConfigs:
                             description: Список конфигураций для отправки оповещений через WeChat.
@@ -843,7 +843,7 @@ spec:
                                       description: URL-адрес прокси-сервера (опционально).
                                     tlsConfig: *tls-config
                                 message:
-                                  description: Данные, для запроса через API WeChat.
+                                  description: Данные для запроса через API WeChat.
                                     API.
                                 messageType:
                                   type: string
@@ -859,7 +859,7 @@ spec:
                       description: |
                         Определение маршрута алертов, соответствующих пространству имен ресурса.
 
-                        Если он присутствует, то он будет добавлен в сгенерированную
+                        Если он присутствует, то будет добавлен в сгенерированную
                         конфигурацию Alertmanager'а в качестве маршрута первого уровня.
                       properties:
                         continue:
@@ -895,7 +895,7 @@ spec:
                           description: |
                             Имя receiver'а для этого маршрута.
 
-                            Если он не пустой, он должен быть указан в поле `receivers`.
+                            Если он не пустой, то должен быть указан в поле `receivers`.
                         repeatInterval:
                           description: |
                             Время ожидания, прежде чем повторять последнее уведомление.

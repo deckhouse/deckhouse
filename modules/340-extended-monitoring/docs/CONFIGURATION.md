@@ -13,7 +13,7 @@ Attach the `extended-monitoring.deckhouse.io/enabled` label to the Namespace to 
 - attaching it manually (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`).
 - configuring via [namespace-configurator](/documentation/v1/modules/600-namespace-configurator/) module.
 
-Any of the methods above would result in the emergence of the default metrics (+ any custom metrics with the `threshold.extended-monitoring.deckhouse.io/` prefix) for all supported Kubernetes objects in the target Namespace. Note that monitoring and standard labels are enabled automatically for a number of [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes objects described below.
+Any of the methods above would result in the emergence of the default metrics (+ any custom metrics with the `threshold.extended-monitoring.deckhouse.io/` prefix) for all supported Kubernetes objects in the target namespace. Note that monitoring and standard labels are enabled automatically for a number of [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes objects described below.
 
 You can also add custom labels with the specified value to `threshold.extended-monitoring.deckhouse.io/something` Kubernetes objects, e.g., `kubectl label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning-threshold=30`.
 In this case, the label value will replace the default one.
@@ -30,7 +30,7 @@ Below is the list of labels used in Prometheus Rules and their default values.
 
 #### Non-namespaced Kubernetes objects
 
-Do not require a Namespace label and are enabled by default.
+Do not require a namespace label and are enabled by default.
 
 ##### Node
 
@@ -75,7 +75,7 @@ The default values are available [here](https://github.com/kubernetes/kubernetes
 |------------------------|---------------|---------------|
 | replicas-not-ready     | int (count)   | 0             |
 
-The threshold implies the number of unavailable replicas **in addition** to [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). This threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` by the amount specified. Suppose `replicas-not-ready` is 0. In this case, the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable`. If `replicas-not-ready` is set to 1, then the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` + 1. This way, you can fine-tune this parameter for specific Deployments (that may be unavailable) in the Namespace with the extended monitoring enabled to avoid getting excessive alerts.
+The threshold implies the number of unavailable replicas **in addition** to [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). This threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` by the amount specified. Suppose `replicas-not-ready` is 0. In this case, the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable`. If `replicas-not-ready` is set to 1, then the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` + 1. This way, you can fine-tune this parameter for specific Deployments (that may be unavailable) in the namespace with the extended monitoring enabled to avoid getting excessive alerts.
 
 ##### Statefulset
 
