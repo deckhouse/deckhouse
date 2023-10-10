@@ -147,9 +147,29 @@ func createTarball(withLinstor bool) *bytes.Buffer {
 			Args: []string{"-n", "d8-linstor", "logs", "deployment.apps/linstor-csi-controller", "--tail", "3000"},
 		},
 		{
-			File: "linstor-drbd-operator-logs.txt",
+			File: "linstor-piraeus-operator-logs.txt",
 			Cmd:  "kubectl",
 			Args: []string{"-n", "d8-linstor", "logs", "deployment.apps/piraeus-operator", "--tail", "3000"},
+		},
+		{
+			File: "linstor-failed-sched-events.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "events", "--sort-by=.metadata.creationTimestamp", "-A", "-o", "json", "--field-selector=reason==FailedScheduling"},
+		},
+		{
+			File: "linstor-failed-createpod-events.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "events", "--sort-by=.metadata.creationTimestamp", "-A", "-o", "json", "--field-selector=reason==FailedCreatePodContainer"},
+		},
+		{
+			File: "linstor-failed-attach-events.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "events", "--sort-by=.metadata.creationTimestamp", "-A", "-o", "json", "--field-selector=reason==FailedAttachVolume"},
+		},
+		{
+			File: "linstor-failed-mount-events.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "events", "--sort-by=.metadata.creationTimestamp", "-A", "-o", "json", "--field-selector=reason==FailedMount"},
 		},
 	}
 
