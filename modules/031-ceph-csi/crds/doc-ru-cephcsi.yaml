@@ -33,13 +33,13 @@ spec:
                             description: |
                               Часть имени StorageClass после `-`.
 
-                              В качестве первой части используется имя из CustomResource `CephCSIDriver`.
+                              В качестве первой части используется имя из custom resource `CephCSIDriver`.
                           pool:
                             description: |
-                              Название пула в котором будут создаваться RBD-образы.
+                              Название пула, в котором будут создаваться RBD-образы.
                           reclaimPolicy:
                             description: |
-                              Политика возврата для PersistentVolume.
+                              Политика возврата для Persistent Volume.
 
                               [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
                           allowVolumeExpansion:
@@ -70,13 +70,13 @@ spec:
                             description: |
                               Часть имени StorageClass после `-`.
 
-                              В качестве первой части используется имя из CustomResource `CephCSIDriver`.
+                              В качестве первой части используется имя из custom resource `CephCSIDriver`.
                           pool:
                             description: |
-                              Название пула в котором будут создаваться RBD-образы.
+                              Название пула, в котором будут создаваться RBD-образы.
                           reclaimPolicy:
                             description: |
-                              Политика возврата для PersistentVolume.
+                              Политика возврата для Persistent Volume.
                           allowVolumeExpansion:
                             description: |
                               Включает возможность изменять размер тома, редактируя соответствующий объект PersistentVolumeClaim.
