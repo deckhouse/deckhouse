@@ -50,6 +50,7 @@ spec:
                   x-doc-required: true
                 sshPublicKey:
                   type: string
+                  x-doc-deprecated: true
                   description: |
                     Node user SSH public key.
 
