@@ -259,13 +259,13 @@ func createTarball(withLinstor bool) *bytes.Buffer {
 	if withLinstor {
 		debugCommands = append(debugCommands, linstorCommands...)
 		if err := saveLinstorSosInfo(tarWriter); err != nil {
-			fmt.Fprint(os.Stderr, err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 		}
 	}
 
 	for _, cmd := range debugCommands {
 		if err := cmd.Save(tarWriter); err != nil {
-			fmt.Fprint(os.Stderr, err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 		}
 	}
 
