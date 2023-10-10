@@ -1,0 +1,24 @@
+---
+artifact: {{ .ModuleName }}/controller-artifact
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+git:
+- add: /controller
+  to: /controller
+shell:
+  install:
+    - apk add --no-cache git
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 -b v0.13.11 https://github.com/metallb/metallb.git .
+    - cd controller
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /controller main.go
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/controller-artifact
+  add: /controller
+  to: /controller
+  before: setup
+docker:
+  ENTRYPOINT: ["/controller"]
