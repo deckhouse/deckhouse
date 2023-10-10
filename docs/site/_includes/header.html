@@ -23,25 +23,29 @@
               {%- assign item_url_parts = item.url | split: '/' -%}
               {%- assign is_getting_started_item = page_url_without_lang | startswith: '/gs/' -%}
               <li class="header__navigation-item
-                  {%- if page.mode == 'ssi' and site.mode != 'local' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
-                  {%- if page.mode != 'ssi' and is_getting_started_item and item.url == '/gs/' %} header__navigation-item_active{% endif %}
-                  {%- if item.url.size>1 and page.url == item.url %} header__navigation-item_active{% endif %}
-                  {%- if page_url_without_lang == item.url %} header__navigation-item_active{% endif %}
-                  {%- if item.items %} header__navigation-item_parent submenu-parent{% endif %}
-                  {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}"
-                  {%- if item.items %} data-proofer-ignore{% endif %}>
-                  <a {% if item.url %}href="{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{- item.title -}}</a>
+                {%- if page.mode == 'ssi' and site.mode != 'local' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
+                {%- if page.mode != 'ssi' and is_getting_started_item and item.url == '/gs/' %} header__navigation-item_active{% endif %}
+                {%- if item.url.size>1 and page.url == item.url %} header__navigation-item_active{% endif %}
+                {%- if page_url_without_lang == item.url %} header__navigation-item_active{% endif %}
+                {%- if item.items %} current-menu-parent menu-item-has-children{% endif %}
+                {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}"
+                {%- if item.items %} data-proofer-ignore{% endif %}
+              >
+                <a {% if item.url %}href="{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{- item.title -}}</a>
 
-                  {% if item.items %}
-                    <div class="submenu-container">
-                      <ul class="submenu">
-                        {% for subitem in item.items %}
-                          {%- assign item_url_parts = subitem.url | split: '/' -%}
-                          <li data-proofer-ignore class="submenu-item">
-                            {%- if subitem.url %}
-                              <a href="{{ subitem.url }}" {% if subitem.target.size > 0 %}target="{{ subitem.target }}"{% endif %} class="submenu-item-link">
+                {% if item.items %}
+                  <div class="sub-menu-container">
+                    <ul class="sub-menu">
+                      {% for subitem in item.items %}
+                        {%- assign item_url_parts = subitem.url | split: '/' -%}
+                        <li data-proofer-ignore class="submenu-item">
+                          <a
+                            {%- if subitem.external_url %}
+                              href="{{ subitem.external_url }}"
+                            {%- elsif subitem.url %}
+                              href="{{ subitem.url }}"
                             {%- else %}
-                              <a href="#" {% if subitem.target.size > 0 %}target="{{ subitem.target }}"{% endif %} class="submenu-item-link">
+                              href="#"
                             {% endif %}
                               class="submenu-item-link menu-item menu-item-type-post_type menu-item-object-page"
                               target="_blank"
