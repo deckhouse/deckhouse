@@ -15,6 +15,7 @@
 package log
 
 import (
+	"github.com/werf/logboek"
 	"os"
 	"testing"
 	"time"
@@ -72,7 +73,7 @@ func TestProcessLoggers(t *testing.T) {
 		},
 
 		{
-			logger: newPrettyProcessLogger(),
+			logger: newPrettyProcessLogger(logboek.DefaultLogger()),
 			name:   "pretty logger",
 		},
 	}
