@@ -223,6 +223,7 @@ var _ = Describe("Module :: linstor :: helm template ::", func() {
 		})
 
 		It("Everything must render properly", func() {
+			//fmt.Println(f.KubernetesResource("Secret", "d8-linstor", "d8-sds-drbd-operator-config").ToYaml())
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
