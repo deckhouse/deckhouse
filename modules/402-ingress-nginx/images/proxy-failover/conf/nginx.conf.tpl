@@ -1,5 +1,3 @@
-user 64535;
-group 64535;
 worker_processes auto;
 error_log /dev/stderr warn;
 pid /var/run/nginx.pid;
