@@ -1,10 +1,10 @@
 ---
 title: "Модуль operator-trivy: FAQ"
-description: Как в модуле operator-trivy Deckhouse посмотреть ресурсы, которые не прошли CIS compliance проверки.
+description: Как в модуле operator-trivy Deckhouse посмотреть ресурсы, которые не прошли CIS compliance-проверки.
 ---
 {% raw %}
 
-## Как посмотреть все ресурсы, которые не прошли CIS compliance проверки?
+## Как посмотреть все ресурсы, которые не прошли CIS compliance-проверки?
 
 ```bash
 kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
