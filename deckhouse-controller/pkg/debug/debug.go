@@ -149,7 +149,7 @@ func createTarball(withLinstor bool) *bytes.Buffer {
 		{
 			File: "linstor-drbd-operator-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n", "d8-linstor", "logs", "deployment.apps/sds-drbd-operator", "--tail", "3000"},
+			Args: []string{"-n", "d8-linstor", "logs", "deployment.apps/piraeus-operator", "--tail", "3000"},
 		},
 	}
 
