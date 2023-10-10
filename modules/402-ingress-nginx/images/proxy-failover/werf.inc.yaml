@@ -25,6 +25,12 @@ shell:
 ---
 artifact: {{ .ModuleName }}/build-nginx-static-artifact
 from: {{ .Images.BASE_UBUNTU }}
+git:
+- add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/conf/
+  to: /opt/nginx-static/conf
+  stageDependencies:
+    install:
+    - '**/*.tpl'
 shell:
   install:
   - mkdir build && cd build
@@ -41,6 +47,7 @@ shell:
   - chown -R 64535:64535 /opt/nginx-static
   - chmod 0700 /opt/nginx-static/sbin/nginx
   - chmod -R 0600 /opt/nginx-static/conf
+  - rm /opt/nginx-static/conf/nginx.conf
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -51,13 +58,6 @@ import:
   before: setup
 - artifact: {{ .ModuleName }}/build-nginx-static-artifact
   add: /opt/nginx-static/
-  to: /opt/nginx-static
   before: setup
-git:
-- add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/conf/
-  to: /opt/nginx-static/conf
-  stageDependencies:
-    install:
-    - '**/*.tpl'
 docker:
   ENTRYPOINT: ["/entrypoint"]

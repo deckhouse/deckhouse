@@ -42,11 +42,6 @@ func main() {
 
 	nginxConfTemplate := os.ExpandEnv(string(nginxConfTemplateBytes))
 
-	err = os.Remove(confNginx)
-	if err != nil {
-		log.Println(err)
-	}
-
 	err = os.WriteFile(confNginx, []byte(nginxConfTemplate), 0666)
 	if err != nil {
 		log.Fatal(err)
