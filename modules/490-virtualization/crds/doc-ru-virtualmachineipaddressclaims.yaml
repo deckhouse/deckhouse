@@ -3,7 +3,7 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: Ресурс определяющий запрос IP-адреса для виртуальной машины.
+          description: Ресурс, определяющий запрос IP-адреса для виртуальной машины.
           properties:
             apiVersion: {}
             kind: {}
@@ -14,7 +14,7 @@ spec:
                   description: |
                     IP-адрес, который будет запрошен.
 
-                    Если не указан, то будет назначен следующий доступный IP-адрес.
+                    Если не указан, будет назначен следующий доступный IP-адрес.
                 leaseName:
                   description: |
                     Имя выпущенного `VirtualMachineIPAddressLease`.
@@ -26,6 +26,6 @@ spec:
               description: Определяет наблюдаемое состояние `VirtualMachineIPAddressClaim`.
               properties:
                 phase:
-                  description: Отображает текущее состояние запроса IP адреса.
+                  description: Отображает текущее состояние запроса IP-адреса.
                 vmName:
-                  description: Отображает виртуальную машину, которая в настоящее время использует этот IP адрес.
+                  description: Отображает виртуальную машину, которая в настоящее время использует этот IP-адрес.
