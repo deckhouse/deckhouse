@@ -90,6 +90,8 @@ spec:
           capabilities:
             add:
             - NET_RAW
+            - NET_ADMIN
+            - NET_BIND_SERVICE
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailoverIptables") }}
         name: iptables-loop
         resources:
