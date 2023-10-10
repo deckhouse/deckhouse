@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            The resource for storing and managing Grafana Dashboards
+            The resource for storing and managing Grafana dashboards.
           required:
             - spec
           properties:

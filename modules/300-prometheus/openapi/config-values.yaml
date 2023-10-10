@@ -20,7 +20,7 @@ properties:
     type: string
     x-examples: ["ceph-ssd"]
     description: |
-      The name of the storageClass to use for Longterm Prometheus.
+      The name of the StorageClass to use for Longterm Prometheus.
 
       If omitted, the StorageClass of the existing Longterm Prometheus PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data;
 
@@ -120,7 +120,7 @@ properties:
         hostname: $(HOSTNAME)
     description: |
       The set of external labels to add to the metrics.
-      
+
       It's possible to expand the environment variables of the `config-reloader` container in external labels
       such as:
       * `HOSTNAME`/`POD_NAME` - contains the name of the pod (for example `prometheus-main-0`, `prometheus-main-1`, etc.).
