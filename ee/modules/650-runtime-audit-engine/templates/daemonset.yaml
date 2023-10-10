@@ -96,6 +96,7 @@ spec:
         - $(FALCO_K8S_NODE_NAME)
         - -pk
         - --modern-bpf
+        - --unbuffered
         env:
         - name: FALCO_K8S_NODE_NAME
           valueFrom:
