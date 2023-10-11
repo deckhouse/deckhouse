@@ -112,28 +112,27 @@ html {
 
     .sub-menu {
       display: flex;
-      padding: 1em 2em;
-      gap: 9px;
+      padding: 18px 16px 20px;
+      gap: .6rem;
       flex-direction: column;
       @include bg-color($white);
-      border-radius: 4px;
+      border-radius: 1px;
       //@include box-shadow;
       box-shadow: 0 0 4px rgba(0,0,0, .15);
       list-style: none;
 
       @include min-w(xl) {
-        gap: 12px;
+        gap: 1rem;
       }
 
       &-container {
         position: absolute;
-        padding-top: 3.5em;
         left: -2em;
-        top: -2em;
         opacity: 0;
         visibility: hidden;
       }
     }
+
 
     a {
       //color: $white;
@@ -144,39 +143,49 @@ html {
 
     .menu-item-has-children {
       position: relative;
-      //display: flex;
-      //align-items: baseline;
+      display: inline-block;
 
       &:hover {
-        &:after {
-          //opacity: .5;
+        a:after {
           transform: translateY(2px);
         }
 
         .sub-menu-container {
           display: flex;
-          top: -1em;
+          padding-top: 1em;
           visibility: visible;
           opacity: 1;
           transition: .2s;
+
+          a {
+            color: $ntrl-700;
+          }
         }
       }
 
-      &:after {
+      > a:after {
         content: '';
         display: inline-block;
-        margin-bottom: 1px;
+        margin-bottom: 2px;
         margin-left: 4px;
         width: 9px;
         height: 6px;
-        background: bottom / contain no-repeat url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5IiBoZWlnaHQ9IjYiPjxwYXRoIGQ9Ik04LjYwNyAyLjM2NCA1LjM2NCA1LjYwN2ExIDEgMCAwIDEtMS40MTQgMEwuNzA3IDIuMzY0QTEgMSAwIDAgMSAxLjQxNC42NTdINy45YTEgMSAwIDAgMSAuNzA4IDEuNzA3WiIgZmlsbD0iIzQwNzVGRiIgZmlsbC1ydWxlPSJldmVub2RkIi8+PC9zdmc+);
+        background: bottom / contain no-repeat url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSI4IiBmaWxsPSJub25lIj48cGF0aCBmaWxsPSIjMDA2NEZGIiBkPSJNNS42MSA3LjUyYy4yLjI1LjU4LjI1Ljc4IDBsNS4wMS02LjJhLjUuNSAwIDAgMC0uMzgtLjgySC45OGEuNS41IDAgMCAwLS4zOC44MWw1LjAxIDYuMloiLz48L3N2Zz4=");
         transition: .15s;
 
-        //@include min-w(xl) {
-        //  margin-left: 8px;
-        //  width: 12px;
-        //  height: 1em;
-        //}
+        @include min-w(xl) {
+          margin-left: 8px;
+          width: 11px;
+          height: 7px;
+        }
+      }
+
+      > a:where(.button--primary) {
+        &:after {
+          width: 7px;
+          height: 4px;
+          filter: grayscale(1) brightness(20);
+        }
       }
     }
   }
@@ -281,11 +290,11 @@ html {
   }
 
   a {
-    //font-size: 12px;
+    font-size: 12px;
 
-    //@include min-w(xl) {
-    //  font-size: 14px;
-    //}
+    @include min-w(xl) {
+      font-size: 14px;
+    }
   }
 
   .language-button {

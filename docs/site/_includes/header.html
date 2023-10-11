@@ -38,7 +38,7 @@
                     <ul class="sub-menu">
                       {% for subitem in item.items %}
                         {%- assign item_url_parts = subitem.url | split: '/' -%}
-                        <li data-proofer-ignore class="submenu-item">
+                        <li data-proofer-ignore>
                           <a
                             {%- if subitem.external_url %}
                               href="{{ subitem.external_url }}"
@@ -47,7 +47,6 @@
                             {%- else %}
                               href="#"
                             {% endif %}
-                              class="submenu-item-link menu-item menu-item-type-post_type menu-item-object-page"
                               target="_blank"
                             >
                               {{ subitem.title }}
@@ -60,15 +59,6 @@
               </li>
             {% endfor %}
           {% endfor %}
-<!--          <li class="menu-item menu-item-type-custom menu-item-object-custom"><a>Быстрый старт</a></li>-->
-<!--          <li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children "><a>Руководства</a>-->
-<!--            <div class="sub-menu-container">-->
-<!--              <ul class="sub-menu">-->
-<!--                <li class="menu-item menu-item-type-post_type menu-item-object-page "><a href="https://deckhouse.ru.test.flant.com/services/managed/">Подготовка к production</a></li>-->
-<!--              </ul>-->
-<!--            </div>-->
-<!--          </li>-->
-<!--          <li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="/documentation/v1/">Документация</a></li>-->
         </ul>
       </div>
       <div class="header__right-box">

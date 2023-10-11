@@ -19,15 +19,15 @@ body {
 .footer {
   flex-shrink: 0;
   background: $color-main;
-  font-size: $font-size-small;
+  //font-size: $font-size-small;
 
-  &__content {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: flex-start;
-    padding: 50px 0;
-  }
+  //&__content {
+  //  display: flex;
+  //  flex-direction: row;
+  //  justify-content: flex-start;
+  //  align-items: flex-start;
+  //  padding: 50px 0;
+  //}
 
   &__contact-info {
     margin-top: 20px;
@@ -174,6 +174,7 @@ body {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
+      list-style: none;
 
       a {
         @include color($white);
@@ -277,6 +278,7 @@ body {
         display: block;
         width: 100%;
         height: auto;
+        filter: brightness(10);
       }
     }
   }
@@ -298,5 +300,11 @@ body {
     path {
       fill: $white;
     }
+  }
+
+  .button.button--primary {
+    font-weight: 700;
+    padding: 12px 20px;
+    text-transform: uppercase;
   }
 }

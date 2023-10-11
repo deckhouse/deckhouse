@@ -5,9 +5,9 @@
       <div class="footer__pre-line">
         <a href="/documentation/v1/deckhouse-overview.html" class="header__logo">
           {%- if page.lang == "ru" %}
-          <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-dock-black-ru.svg" alt="Deckhouse" />
+            <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-dock-white-ru.svg" alt="Deckhouse" />
           {%- else %}
-          <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-dock-black.svg" alt="Deckhouse" />
+            <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-dock-white.svg" alt="Deckhouse" />
           {%- endif %}
         </a>
         <div class="socials">
@@ -20,89 +20,40 @@
         </div>
       </div>
       <div class="footer__cols">
-        <div class="footer__navigation">
-            {%- for column in site.data.footer.columns[page.lang] %}
-            <div class="footer__navigation-column">
-                {%- if column.title %}
-                <div class="footer__navigation-column-title">
-                    {{- column.title -}}
-                </div>
-                {%- endif %}
-                <ul class="footer__navigation-list">
-                {%- for item in column.items %}
-                <li>
-                    <a {% if item.url %}href="{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>
-                        {{- item.title -}}
-                    </a>
-                </li>
-                {%- endfor %}
-                </ul>
-            </div>
-            {%- endfor %}
+        <div class="footer__col">
+          <div class="heading heading--sup">Контакты</div>
+          <ul class="nav footer__nav">
+            <li>
+              <a href="mailto:contact@deckhouse.ru">contact@deckhouse.ru</a>
+            </li>
+            <li>
+              <a href="tel:+74957211027">+7 (495) 721-10-27</a>
+            </li>
+            <li class="button button--primary menu-item">
+              <a data-popup="callback">Заказать звонок</a>
+            </li>
+          </ul>
         </div>
-<!--        <div class="footer__content&#45;&#45;wrap">-->
-<!--            <div class="footer__logo">-->
-<!--                <a href="/">-->
-<!--                    <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-white.svg"-->
-<!--                         alt="Deckhouse Kubernetes Platform"/>-->
-<!--                </a>-->
-<!--            </div>-->
-<!--            <div class="footer__contact-info">-->
-<!--            {%- if page.lang == "ru" %}-->
-<!--                © «Флант», 2023. Все права защищены.-->
-<!--            {%- endif %}-->
-<!--            </div>-->
-<!--            <div class="footer__contact-info">-->
-<!--            {%- if page.lang == "ru" %}-->
-<!--                <a href="mailto:contact@deckhouse.ru">-->
-<!--                  contact@deckhouse.ru-->
-<!--                </a>-->
-<!--            {%- else %}-->
-<!--                <a href="mailto:contact@deckhouse.io">-->
-<!--                  contact@deckhouse.io-->
-<!--                </a>-->
-<!--            {%- endif %}-->
-<!--            </div>-->
-<!--            <div class="footer__contact-info">-->
-<!--                {%- if page.lang == "ru" %}-->
-<!--                <a href="tel:74957211027">-->
-<!--                    +7 (495) 721-10-27-->
-<!--                </a>-->
-<!--                {%- else %}-->
-<!--                <a href="tel:3727770007">-->
-<!--                  +372-777-00-07-->
-<!--                </a>-->
-<!--                {%- endif %}-->
-<!--            </div>-->
-<!--            <div class="footer__contact-info">-->
-<!--                <a href="" data-open-modal="request_callback" class="button button_alt">-->
-<!--                  {%- if page.lang == "ru" %}-->
-<!--                  Перезвоните мне-->
-<!--                  {%- else %}-->
-<!--                  Request a call-->
-<!--                  {%- endif %}-->
-<!--                </a>-->
-<!--            </div>-->
-<!--        </div>-->
+        {%- for column in site.data.footer.columns[page.lang] %}
+          <div class="footer__col">
+            {%- if column.title %}
+              <div class="heading heading--sup">{{- column.title -}}</div>
+            {%- endif %}
+            <ul class="nav footer__nav">
+              {%- for item in column.items %}
+                <li>
+                  <a {% if item.url %}href="{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>
+                    {{- item.title -}}
+                  </a>
+                </li>
+              {%- endfor %}
+            </ul>
+          </div>
+        {%- endfor %}
       </div>
-      <div class="footer__copyright">
-        <ul id="footer-copy-nav" class="nav footer__nav">
-          <li id="menu-item-1365" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-privacy-policy">
-            <a rel="privacy-policy" href="https://deckhouse.ru/security-policy/">Политика конфиденциальности</a>
-          </li>
-          <li id="menu-item-1368" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-1368">
-            <a href="https://deckhouse.ru/license/">Лицензионное соглашение</a>
-          </li>
-          <li id="menu-item-1371" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-1371">
-            <a href="https://deckhouse.ru/license-rules/">Правила лицензирования</a>
-          </li>
-          <li id="menu-item-1364" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-1364">
-            <a href="https://deckhouse.ru/regulations/">Регламент технической поддержки</a>
-          </li>
-        </ul>
-        <span>© 2023 «Флант». Все права защищены.</span>
-      </div>
+
+      {% include copyright.html %}
+
     </div>
 </footer>
 
-{% include copyright.html %}
