@@ -1449,6 +1449,7 @@ jobs:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+          DOC_API_URL: "${{env.DOC_API_URL}}"
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 
@@ -2476,6 +2477,7 @@ jobs:
           WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLmlvIiwgInJ1IiA6ICJkZWNraG91c2UucnUifQ=="
           WERF_SET_DCNAME: "web.dc_name=prod-sel"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+          DOC_API_URL: "${{env.DOC_API_URL}}"
       # </template: deploy_site_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
