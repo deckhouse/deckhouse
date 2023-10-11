@@ -212,5 +212,9 @@ RUN curl -Lfo /usr/bin/piraeus-entry.sh ${PIRAEUS_GITREPO}/raw/${PIRAEUS_COMMIT_
 COPY liveness.sh /liveness.sh
 RUN chmod 755 /liveness.sh
 
+# Add wrapper for linstor client with only allowed commands
+COPY client-wrapper.sh /usr/local/bin/linstor
+RUN chmod 755 /usr/local/bin/linstor
+
 CMD ["startSatellite"]
 ENTRYPOINT ["/usr/bin/k8s-await-election", "/usr/bin/piraeus-entry.sh"]
