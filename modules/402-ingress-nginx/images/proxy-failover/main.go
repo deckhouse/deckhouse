@@ -27,7 +27,6 @@ const (
 	confTpl   = "/opt/nginx-static/conf/nginx.conf.tpl"
 	confNginx = "/opt/nginx-static/conf/nginx.conf"
 	binNginx  = "/opt/nginx-static/sbin/nginx"
-	pidNginx  = "/opt/nginx-static/logs/nginx.pid"
 )
 
 func main() {
@@ -48,7 +47,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = unix.Exec(binNginx, []string{"nginx", "-g", "daemon off;pid " + pidNginx + ";"}, os.Environ())
+	err = unix.Exec(binNginx, []string{"nginx", "-g", "daemon off;"}, os.Environ())
 	if err != nil {
 		log.Fatal(err)
 	}

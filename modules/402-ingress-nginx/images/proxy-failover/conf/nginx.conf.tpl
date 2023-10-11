@@ -1,6 +1,6 @@
 worker_processes auto;
 error_log /dev/stderr warn;
-pid /var/run/nginx.pid;
+pid /opt/nginx-static/logs/nginx.pid;
 
 timer_resolution 100ms;
 worker_cpu_affinity auto;
