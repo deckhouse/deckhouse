@@ -38,12 +38,13 @@ apiVersions:
           По умолчанию `*`.
       vNetCIDR:
         description: |
-          Адресное пространство виртуальной сети в формате [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing).
-
+          Адресное пространство [виртуальной сети](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#virtual-networks) в формате [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing).
+          Виртуальная сеть — это виртуальная изолированная часть общедоступной сети Azure. Каждая виртуальная сеть выделена для вашей подписки.
           **Важно!** Надо учитывать что в случаи настройки пиринга, vpn или связывания сетей других кластеров значение не должно пересекаться.
       subnetCIDR:
         description: |
-          Подсеть из адресного пространства `vNetCIDR`, в которой будут работать узлы кластера.
+          [Подсеть](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#subnets) из адресного пространства `vNetCIDR`, в которой будут работать узлы кластера.
+          Виртуальную сеть можно сегментировать на одну или несколько подсетей в пределах ограничений.
       peeredVNets:
         description: |
           Массив VNet, с которыми будет объединена сеть кластера.
