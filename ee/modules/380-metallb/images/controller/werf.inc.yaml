@@ -1,9 +1,6 @@
 ---
 artifact: {{ .ModuleName }}/controller-artifact
 from: {{ .Images.BASE_GOLANG_19_ALPINE }}
-git:
-- add: /controller
-  to: /controller
 shell:
   install:
     - apk add --no-cache git
