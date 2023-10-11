@@ -552,7 +552,6 @@ jobs:
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
-
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 
@@ -610,9 +609,8 @@ jobs:
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
-
+          DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
-
 
     # </template: web_build_template>
 
