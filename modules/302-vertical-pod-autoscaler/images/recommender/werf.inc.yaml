@@ -1,0 +1,28 @@
+---
+artifact: {{ .ModuleName }}/recommender-artifact
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}/modules/302-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+    - apk add --no-cache git
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 https://github.com/kubernetes/autoscaler.git .
+    - find /patches -name '*.patch' -exec git apply {} \;
+    - cd vertical-pod-autoscaler/pkg/recommender
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /recommender
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/recommender-artifact
+  add: /recommender
+  to: /recommender
+  before: setup
+docker:
+  ENTRYPOINT: ["/recommender"]

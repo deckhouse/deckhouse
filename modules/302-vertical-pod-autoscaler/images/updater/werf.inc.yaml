@@ -1,0 +1,22 @@
+---
+artifact: {{ .ModuleName }}/updater-artifact
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+shell:
+  install:
+    - apk add --no-cache git
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 https://github.com/kubernetes/autoscaler.git .
+    - cd vertical-pod-autoscaler/pkg/updater
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /updater
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/updater-artifact
+  add: /updater
+  to: /updater
+  before: setup
+docker:
+  ENTRYPOINT: ["/updater"]
+  CMD: ["--v=4", "--stderrthreshold=info"]
