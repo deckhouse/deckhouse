@@ -95,7 +95,7 @@ type Params struct {
 type ClusterBootstrapper struct {
 	*Params
 	*phases.PhasedExecutionContext
-	reinitializeSSHPrivateKeys bool
+	initializeNewAgent bool
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
@@ -146,7 +146,7 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.SSHPrivateKeys, privKeys))
 
 		// NOTICE: disable "ssh-agent is singleton" logic
-		b.reinitializeSSHPrivateKeys = true
+		b.initializeNewAgent = true
 	}
 	if b.PostBootstrapScriptPath != "" {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.PostBootstrapScriptPath, b.PostBootstrapScriptPath))
@@ -212,10 +212,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
 	sshClient := ssh.NewClientFromFlags()
-	sshClient.ReinitializeAgentPrivateKeys = b.reinitializeSSHPrivateKeys
+	sshClient.InitializeNewAgent = b.initializeNewAgent
 	// after verifying configs and cache ask password
 	if _, err := sshClient.Start(); err != nil {
 		return fmt.Errorf("unable to start ssh client: %w", err)
+	}
+	if b.initializeNewAgent {
+		defer sshClient.Stop()
 	}
 
 	err = terminal.AskBecomePassword()

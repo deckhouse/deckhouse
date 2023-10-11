@@ -121,10 +121,15 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			setBastionHostFromCloudProvider(bastionHost, nil)
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
+		sshClient := ssh.NewClientFromFlags()
+		sshClient.InitializeNewAgent = b.initializeNewAgent
+		if _, err := sshClient.Start(); err != nil {
+			return fmt.Errorf("unable to start ssh client: %w", err)
 		}
+		if b.initializeNewAgent {
+			defer sshClient.Stop()
+		}
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
