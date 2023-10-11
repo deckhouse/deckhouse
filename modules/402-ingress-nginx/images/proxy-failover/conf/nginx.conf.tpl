@@ -35,11 +35,6 @@ stream {
   proxy_connect_timeout 2s;
   proxy_timeout 12h;
   proxy_protocol on;
-  log_format proxy '$remote_addr [$time_local] '
-                 '$protocol $status $bytes_sent $bytes_received '
-                 '$session_time "$upstream_addr" '
-                 '"$upstream_bytes_sent" "$upstream_bytes_received" "$upstream_connect_time"';
-  access_log /dev/stdout proxy;
 
   upstream http {
     server controller-${CONTROLLER_NAME}-failover:80 max_fails=0;
