@@ -35,7 +35,7 @@ stream {
   proxy_connect_timeout 2s;
   proxy_timeout 12h;
   proxy_protocol on;
-  access_log /dev/stdout basic buffer=32k;
+  access_log /dev/stdout;
 
   upstream http {
     server controller-${CONTROLLER_NAME}-failover:80 max_fails=0;
