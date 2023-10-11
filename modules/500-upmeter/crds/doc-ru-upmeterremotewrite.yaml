@@ -3,7 +3,7 @@ spec:
     - name: v1alpha1
       schema: &schema
         openAPIV3Schema:
-          description: Конфигурация отправки результатов проб модуля upmeter по протоколу `remote_write`.
+          description: Конфигурация отправки результатов проб модуля `upmeter` по протоколу `remote_write`.
           properties:
             spec:
               properties:
@@ -13,7 +13,7 @@ spec:
                     url:
                       description: URL endpoint'а для отправки данных.
                     basicAuth:
-                      description: Параметры Basic-авторизации для endpoint.
+                      description: Параметры Basic-авторизации для endpoint'а.
                       properties:
                         username:
                           description: Имя для аутентификации.

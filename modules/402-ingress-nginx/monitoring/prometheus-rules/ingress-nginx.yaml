@@ -22,7 +22,7 @@
         1. Check controllers logs: `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c controller`;
         2. Find the newest Ingress in the cluster: `kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"`;
         3. Probably, there is an error in configuration-snippet or server-snippet.
-      summary: Config test failed on Nginx Ingress {{ $labels.controller }} in the {{ $labels.controller_namespace }} Namespace.
+      summary: Config test failed on NGINX Ingress {{ $labels.controller }} in the {{ $labels.controller_namespace }} Namespace.
   - alert: NginxIngressSslWillExpire
     expr: count by (job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < (time() + (14 * 24 * 3600)))
     for: 1h
@@ -70,11 +70,11 @@
     annotations:
       description: |-
         The number of restarts in the last hour: {{ $value }}.
-        Excessive nginx ingress restarts indicate that something is wrong. Normally, it should be up and running all the time.
+        Excessive NGINX Ingress restarts indicate that something is wrong. Normally, it should be up and running all the time.
       plk_labels_as_annotations: "pod"
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: Too many nginx ingress restarts have been detected.
+      summary: Too many NGINX Ingress restarts have been detected.
 
   - alert: D8NginxIngressKruiseControllerPodIsRestartingTooOften
     expr: |
@@ -111,9 +111,9 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       summary: |-
-        Some replicas of Nginx Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
+        Some replicas of NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
       description: |-
-        Some replicas of Nginx Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
+        Some replicas of NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
         Currently at: {{ .Value }} unavailable replica(s)
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
@@ -137,9 +137,9 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       summary: |-
-        Count of available replicas in Nginx Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+        Count of available replicas in NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
       description: |-
-        Count of available replicas in Nginx Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+        Count of available replicas in NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
 

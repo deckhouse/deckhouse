@@ -14,7 +14,7 @@ Setting up a vanilla `prometheus-metrics-adapter` is a time-consuming process. H
 
 You can globally define a metric using the cluster-wide resource, while the namespaced resource allows you to redefine it locally. All custom resources have the same format.
 
-## Namespaced Custom resources
+## Namespaced custom resources
 
 ### `ServiceMetric`
 
@@ -44,7 +44,7 @@ You can globally define a metric using the cluster-wide resource, while the name
 
 {{ cr_spec | replace: '###PLACEHOLDER###', ',daemonset="mydaemonset"' | replace: '###PLACEHOLDER2###', ',daemonset' }}
 
-## Cluster Custom resources
+## Cluster custom resources
 
 ### `ClusterServiceMetric` (not available to users)
 

@@ -280,7 +280,7 @@ spec:
             host: app-svc
 ```
 
-### Nginx Ingress
+### NGINX Ingress
 
 To use Ingress, you need to:
 * Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/402-ingress-nginx/) module's [IngressNginxController](../../modules/402-ingress-nginx/cr.html#ingressnginxcontroller) custom resource.

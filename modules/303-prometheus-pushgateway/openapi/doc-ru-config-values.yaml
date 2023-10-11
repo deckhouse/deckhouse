@@ -1,7 +1,7 @@
 properties:
   instances:
     description: |
-      Содержит список PushGateway-ев для каждого из которых будет создан отдельный PushGateway.
+      Содержит список инстансов, для каждого из которых будет создан отдельный PushGateway.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.

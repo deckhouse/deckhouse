@@ -2,13 +2,13 @@
 title: "The descheduler module"
 ---
 
-The module runs a [descheduler](https://github.com/kubernetes-incubator/descheduler) with [strategies](#strategies) defined in a `Descheduler` CR.
+The module runs a [descheduler](https://github.com/kubernetes-incubator/descheduler) with [strategies](#strategies) defined in a `Descheduler` custom resource.
 
-descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the `Descheduler` CR. This leads to forced run the scheduling process for evicted Pods.
+descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the `Descheduler` custom resource. This leads to forced run the scheduling process for evicted Pods.
 
 ## Nuances of descheduler operation
 
-* descheduler takes into account the priorityClass when evicting Pods from a high-loaded node (check out the [priority-class](../001-priority-class/) module);
+* descheduler takes into account the priority class when evicting Pods from a high-loaded node (check out the [priority-class](../001-priority-class/) module);
 * Pods with [priorityClassName](../001-priority-class/) set to `system-cluster-critical` or `system-node-critical` (*critical* Pods) are never evicts;
 * Pods that are associated with a DaemonSet or aren't covered by a controller are never evicts;
 * Pods with local storage enabled are never evicts;
@@ -17,7 +17,7 @@ descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the 
 
 ## Strategies
 
-You can enable, disable, and configure a strategy in the [`Descheduler` CR](cr.html).
+You can enable, disable, and configure a strategy in the [`Descheduler` custom resource](cr.html).
 
 ### HighNodeUtilization
 

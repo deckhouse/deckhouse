@@ -27,11 +27,11 @@ If you have metric flapping problems which lead to unwanted scales, there are op
 ## What scaling type should I prefer?
 
 1. The typical use-cases of a [classic](#classic-resource-consumption-based-scaling) type are pretty obvious.
-1. Suppose you have a single application, the source of metrics is located inside the Namespace, and it is associated with one of the objects. In this case, we recommend using the [custom](#custom-metrics-based-scaling) Namespace-scoped metrics.
-1. Use [custom](#custom-metrics-based-scaling) Cluster-wide metrics if multiple applications use the same metric associated with one of the objects, and the metric's source belongs to the Application Namespace. Such metrics can help you combine common infrastructure components into a separate ("infra") Deployment.
-1. Use [external](#using-external-metrics-with-hpa) metrics if the source of the metric does not belong to the App Namespace. These can be, for example, cloud provider or SaaS-related metrics.
+1. Suppose you have a single application, the source of metrics is located inside the namespace, and it is associated with one of the objects. In this case, we recommend using the [custom](#custom-metrics-based-scaling) namespace-scoped metrics.
+1. Use [custom](#custom-metrics-based-scaling) Cluster-wide metrics if multiple applications use the same metric associated with one of the objects, and the metric's source belongs to the application namespace. Such metrics can help you combine common infrastructure components into a separate ("infra") Deployment.
+1. Use [external](#using-external-metrics-with-hpa) metrics if the source of the metric does not belong to the application namespace. These can be, for example, cloud provider or SaaS-related metrics.
 
-**Caution!** We strongly recommend using either Option 1. ([classic](#classic-resource-consumption-based-scaling) metrics) or Option 2. ([custom](#custom-metrics-based-scaling) metrics defined in the Namespace). In this case, you can define the entire configuration of the application (including the autoscaling logic) in the repository of the application. Options 3 and 4 should only be considered if you have a large collection of identical microservices.
+**Caution!** We strongly recommend using either Option 1. ([classic](#classic-resource-consumption-based-scaling) metrics) or Option 2. ([custom](#custom-metrics-based-scaling) metrics defined in the namespace). In this case, you can define the entire configuration of the application (including the autoscaling logic) in the repository of the application. Options 3 and 4 should only be considered if you have a large collection of identical microservices.
 
 ## Classic resource consumption-based scaling
 
@@ -104,7 +104,7 @@ Custom metrics must be registered with the `/apis/custom.metrics.k8s.io/` API. I
   * `ClusterStatefulsetMetric` (not available to users)
   * `ClusterDaemonSetMetric` (not available to users)
 
-You can globally define a metric using the Cluster-scoped resource, while the Namespaced resource allows you to redefine it locally. All CRs have the same [format](cr.html).
+You can globally define a metric using the Cluster-scoped resource, while the namespaced resource allows you to redefine it locally. All CRs have the same [format](cr.html).
 
 ### Using custom metrics with HPA
 

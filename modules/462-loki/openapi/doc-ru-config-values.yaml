@@ -4,9 +4,9 @@ properties:
     description: |
       Имя storageClass'а, который использовать.
 
-      Если не указано — используется StorageClass существующей PVC Loki, а если PVC пока нет — используется или  [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в `emptyDir`.
+      Если не указано, используется StorageClass существующей PVC Loki, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в `emptyDir`.
 
-      `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть Pod придется руками
+      `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть под придется вручную.
 
       **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Loki будет перезаказан, а все данные удалены.
   diskSizeGigabytes:
@@ -18,10 +18,10 @@ properties:
 
       Занятый объем автоматически мониторится с помощью модуля [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-objects)
 
-      **ОСТОРОЖНО!**  Если диск с данными Loki переполнится, то приложение перестанет работать. Вам следует выбрать необходимый баланс между значениями параметров `retentionPeriodHours` и `diskSizeGigabytes`.
+      **ОСТОРОЖНО!**  Если диск с данными Loki переполнится, приложение перестанет работать. Вам следует выбрать необходимый баланс между значениями параметров `retentionPeriodHours` и `diskSizeGigabytes`.
   retentionPeriodHours:
     description: |
-      Сколько часов логи будут храниться прежде чем будут удалены.
+      Сколько часов логи будут храниться, прежде чем будут удалены.
   storeSystemLogs:
     type: boolean
     default: true
@@ -42,9 +42,9 @@ properties:
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   resourcesRequests:
     description: |
-      Настройки максимальных значений CPU и memory, которые может запросить Pod при выборе узла.
+      Настройки максимальных значений CPU и памяти, которые может запросить под при выборе узла.
 
-      Если модуль [vertical-pod-autoscaler](../302-vertical-pod-autoscaler/) выключен, то максимальные значения становятся значениями по умолчанию.
+      Если модуль [vertical-pod-autoscaler](../302-vertical-pod-autoscaler/) выключен, максимальные значения становятся значениями по умолчанию.
     properties:
       mode:
         description: |
@@ -62,27 +62,27 @@ properties:
             properties:
               max:
                 description: |
-                  Максимальное значение, которое может выставить VPA для запроса CPU.
+                  Максимальное значение, которое может выставить VPA для реквеста к CPU.
               min:
                 description: |
-                  Минимальное значение, которое может выставить VPA для запроса CPU.
+                  Минимальное значение, которое может выставить VPA для реквеста к CPU.
           memory:
             description: |
-              Значение для запроса memory.
+              Значение для реквеста к памяти.
             properties:
               max:
                 description: |
-                  Максимальное значение, которое может выставить VPA для запроса memory.
+                  Максимальное значение, которое может выставить VPA для реквеста к памяти.
               min:
                 description: |
-                  Минимальное значение, которое может выставить VPA для запроса memory.
+                  Минимальное значение, которое может выставить VPA для реквеста к памяти.
       static:
         description: |
           Настройки статического режима управления.
         properties:
           cpu:
             description: |
-              Значение для запроса CPU.
+              Значение для реквеста к CPU.
           memory:
             description: |
-              Значение для запроса memory.
+              Значение для реквеста к памяти.
