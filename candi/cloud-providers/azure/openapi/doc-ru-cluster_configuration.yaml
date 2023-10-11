@@ -39,6 +39,8 @@ apiVersions:
       vNetCIDR:
         description: |
           Адресное пространство виртуальной сети в формате [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing).
+
+          **Важно!** Надо учитывать что в случаи настройки пиринга, vpn или связывания сетей других кластеров значение не должно пересекаться.
       subnetCIDR:
         description: |
           Подсеть из адресного пространства `vNetCIDR`, в которой будут работать узлы кластера.
