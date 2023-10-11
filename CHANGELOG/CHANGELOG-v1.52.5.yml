@@ -5,6 +5,10 @@ linstor:
         provisioner, snapshotter, resizer).
       pull_request: https://github.com/deckhouse/deckhouse/pull/6129
   fixes:
+    - summary: Disabled usermode_helper param on LINSTOR nodes for more stable management.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6137
+    - summary: Removed HA controller because of harmful behavior.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6132
     - summary: Automatically fix symlinks for devices.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6026
 
