@@ -52,11 +52,13 @@ search: добавить ноду в кластер, добавить узел �
    kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
-1. Проверьте версию K8s, если она >= 1.25, следует создать `node-group-token`.
+   1.1 Проверьте версию K8s, если она >= 1.25, следует создать `node-group-token`.
 
-   ```shell
-   kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
-   ```
+     ```shell
+     kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
+     ```
+
+     Полученный токен в выводе команды, сохранить и после добавить в playbook ansible поле `token:`
 
 1. Получите Kubernetes API-токен для специального `ServiceAccount`, которым управляет Deckhouse:
 
