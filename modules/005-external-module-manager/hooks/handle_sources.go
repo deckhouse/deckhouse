@@ -35,6 +35,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -404,26 +405,22 @@ func mutateOpenapiSchema(sourceValuesData []byte, moduleSource v1alpha1.ModuleSo
 }
 
 func copyModuleToFS(rootPath string, img v1.Image) error {
-	layers, err := img.Layers()
-	if err != nil {
-		return err
-	}
+	rc := mutate.Extract(img)
+	defer rc.Close()
 
-	for _, layer := range layers {
-		rc, err := layer.Uncompressed()
-		if err != nil {
-			return err
-		}
-		err = copyLayerToFS(rootPath, rc)
-		if err != nil {
-			return err
-		}
+	err := copyLayersToFS(rootPath, rc)
+	if err != nil {
+		return fmt.Errorf("copy tar to fs: %w", err)
 	}
 
 	return nil
 }
 
-func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
+func copyLayersToFS(rootPath string, rc io.ReadCloser) error {
+	if err := os.MkdirAll(rootPath, 0700); err != nil {
+		return fmt.Errorf("mkdir root path: %w", err)
+	}
+
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
@@ -432,11 +429,7 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 			return nil
 		}
 		if err != nil {
-			return err
-		}
-
-		if strings.HasSuffix(hdr.Name, ".wh..wh..opq") {
-			continue
+			return fmt.Errorf("tar reader next: %w", err)
 		}
 
 		if strings.Contains(hdr.Name, "..") {
@@ -452,17 +445,17 @@ func copyLayerToFS(rootPath string, rc io.ReadCloser) error {
 		case tar.TypeReg:
 			outFile, err := os.Create(path.Join(rootPath, hdr.Name))
 			if err != nil {
-				return err
+				return fmt.Errorf("create file: %w", err)
 			}
 			if _, err := io.Copy(outFile, tr); err != nil {
 				outFile.Close()
-				return err
+				return fmt.Errorf("copy: %w", err)
 			}
 			outFile.Close()
 
 			err = os.Chmod(outFile.Name(), os.FileMode(hdr.Mode)&0700) // remove only 'user' permission bit, E.x.: 644 => 600, 755 => 700
 			if err != nil {
-				return err
+				return fmt.Errorf("chmod: %w", err)
 			}
 
 		default:
