@@ -34,6 +34,14 @@ spec:
 
     bb-log-info "we need drbd on node: "$is_linstor_data_node
 
+    # Usermode helper has been disabled according to vendor recommendations. More information can be found here:
+    # https://github.com/LINBIT/drbd/commit/819285d065f1f81bad7b97e32a64017b5e15948d
+    # https://github.com/LINBIT/linstor-server/issues/121
+    # https://github.com/piraeusdatastore/piraeus-operator/issues/134
+    bb-sync-file /etc/modprobe.d/drbd.conf - << "EOF"
+    options drbd usermode_helper=disabled
+    EOF
+
     if [ $is_linstor_data_node == "false" ]; then
       if [ -e "/proc/drbd" ]; then
         sed -i 's/^drbd$//' /etc/modules
