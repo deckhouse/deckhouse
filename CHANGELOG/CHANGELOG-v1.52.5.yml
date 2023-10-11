@@ -1,0 +1,10 @@
+linstor:
+  features:
+    - summary: >-
+        A setting has been added to specify the number of parallel CSI workers (attacher,
+        provisioner, snapshotter, resizer).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6129
+  fixes:
+    - summary: Automatically fix symlinks for devices.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6026
+
