@@ -45,6 +45,8 @@
  - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#5988](https://github.com/deckhouse/deckhouse/pull/5988)
  - **[ingress-nginx]** Fix controller preStop probe. [#5948](https://github.com/deckhouse/deckhouse/pull/5948)
     Ingress controller will restart.
+ - **[linstor]** Disabled usermode_helper param on LINSTOR nodes for more stable management. [#6137](https://github.com/deckhouse/deckhouse/pull/6137)
+ - **[linstor]** Removed HA controller because of harmful behavior. [#6132](https://github.com/deckhouse/deckhouse/pull/6132)
  - **[linstor]** Automatically fix symlinks for devices. [#6026](https://github.com/deckhouse/deckhouse/pull/6026)
  - **[linstor]** Fixed error in LINSTOR controller liveness probe logic. [#6083](https://github.com/deckhouse/deckhouse/pull/6083)
     Linstor controller will be restarted.
@@ -81,8 +83,6 @@
     All pods using `kube-rbac-proxy` will restart.
  - **[deckhouse-controller]** `bashible-apiserver` no longer scaled-down during registry changes. [#5722](https://github.com/deckhouse/deckhouse/pull/5722)
  - **[dhctl]** Render bootstrap bundle into `/opt/deckhouse/tmp`. [#5739](https://github.com/deckhouse/deckhouse/pull/5739)
- - **[linstor]** Disabled usermode_helper param on LINSTOR nodes for more stable management. [#6137](https://github.com/deckhouse/deckhouse/pull/6137)
- - **[linstor]** Removed HA controller because of harmful behavior. [#6132](https://github.com/deckhouse/deckhouse/pull/6132)
  - **[node-manager]** `bashible-apiserver`'s readiness probe now fails if `deckhouse` deployment has no pods in `Ready` state. [#5722](https://github.com/deckhouse/deckhouse/pull/5722)
  - **[operator-prometheus]** Bump `prometheus-operator` from `0.62` to `0.68` version. [#5856](https://github.com/deckhouse/deckhouse/pull/5856)
  - **[registrypackages]** Bump `containerd` version to `1.6.24`. [#5938](https://github.com/deckhouse/deckhouse/pull/5938)
