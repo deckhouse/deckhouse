@@ -14,10 +14,11 @@ index 8fa5257..c430ff8 100644
 +	)
  	ds.Spec.Template.Spec.InitContainers = []corev1.Container{
  		{
- 			Name:            "kernel-module-injector",
+-			Name:            "kernel-module-injector",
++			Name:            "wait-drbd-ver-9-2",
  			Image:           satelliteSet.Spec.KernelModuleInjectionImage,
  			ImagePullPolicy: satelliteSet.Spec.ImagePullPolicy,
-+			Command:         []string{"/bin/bash", "-c", "find /host/usr/lib -maxdepth 1 -mindepth 1 -exec ln -vs {} /usr/lib \\; 2>/dev/null; exec /entry.sh"},
++			Command:         []string{"/bin/bash", "-c", "exec /entry.sh"},
  			SecurityContext: &corev1.SecurityContext{Privileged: &kubeSpec.Privileged,
  				SELinuxOptions: &corev1.SELinuxOptions{Level: kubeSpec.Level, Type: kubeSpec.Type}},
  			Env:          env,
