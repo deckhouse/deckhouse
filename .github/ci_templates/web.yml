@@ -24,12 +24,15 @@ steps:
     env:
       WERF_DIR: "{!{ $dir }!}"
       WERF_LOG_VERBOSE: "on"
-{!{ if eq $buildType "release" }!}
+{!{- if eq $docPart "main" }!}
+      DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+{!{- end }!}
+{!{- if eq $buildType "release" }!}
       WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
       WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 {!{- else }!}
       WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
-{!{ end }!}
+{!{- end }!}
 
 # </template: web_build_template>
 {!{- end -}!}
@@ -263,5 +266,6 @@ steps:
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
     WERF_SET_DOMAIN_MAP: "global.domain_map={!{ base64.Encode $siteDomainMap }!}"
     WERF_SET_DCNAME: "web.dc_name={!{ $dcName }!}"
+    DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
 # </template: deploy_site_template>
 {!{- end -}!}
