@@ -8,7 +8,7 @@ shell:
     - cd /src
     - git clone --depth 1 -b v0.13.11 https://github.com/metallb/metallb.git .
     - cd controller
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /controller main.go
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /controller
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless

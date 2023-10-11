@@ -8,7 +8,7 @@ shell:
     - cd /src
     - git clone --depth 1 -b v0.13.11 https://github.com/metallb/metallb.git .
     - cd speaker
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /speaker main.go
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /speaker
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
