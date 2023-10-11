@@ -3,8 +3,8 @@
 ## Know before update
 
 
+ - All nodes with DRBD will restart. Linstor controller and piraeus operator will restart.
  - All pods using `kube-rbac-proxy` will restart.
- - Linstor controller and piraeus operator will restart.
 
 ## Features
 
@@ -14,7 +14,7 @@
  - **[control-plane-manager]** All images are now based on distroless image. [#5509](https://github.com/deckhouse/deckhouse/pull/5509)
  - **[ingress-nginx]** Images are based on a distroless image. [#5937](https://github.com/deckhouse/deckhouse/pull/5937)
  - **[linstor]** Update linstor controller version to `1.24.2`. Update DRBD version to `9.2.5`. [#5800](https://github.com/deckhouse/deckhouse/pull/5800)
-    Linstor controller and piraeus operator will restart.
+    All nodes with DRBD will restart. Linstor controller and piraeus operator will restart.
  - **[log-shipper]** Suppress metrics timestamp to avoid out-of-order ingestion error. [#5835](https://github.com/deckhouse/deckhouse/pull/5835)
  - **[monitoring-applications]** Add Grafana dashboard for pgbouncer. [#5846](https://github.com/deckhouse/deckhouse/pull/5846)
  - **[monitoring-applications]** Update Grafana dashboard for Elasticsearch. Add minimal alert rules for Prometheus. [#5845](https://github.com/deckhouse/deckhouse/pull/5845)
@@ -32,7 +32,10 @@
 ## Fixes
 
 
+ - **[candi]** Add creation of the `TMPDIR` directory in the `bashible.sh` script. [#6059](https://github.com/deckhouse/deckhouse/pull/6059)
  - **[candi]** Delete registrypackage files if it failed to install before retrying installation. [#5739](https://github.com/deckhouse/deckhouse/pull/5739)
+ - **[chrony]** Run chrony pods in host network namespace. [#6007](https://github.com/deckhouse/deckhouse/pull/6007)
+ - **[cloud-provider-yandex]** Fix working in hybrid environments. [#6094](https://github.com/deckhouse/deckhouse/pull/6094)
  - **[cloud-provider-yandex]** Updated yandex-csi-driver. In the new version, the calculation of the limit of disks per node has been fixed. [#5679](https://github.com/deckhouse/deckhouse/pull/5679)
  - **[dhctl]** Fix restarting bootstrap process. [#5892](https://github.com/deckhouse/deckhouse/pull/5892)
  - **[dhctl]** Add `registryDockerCfg` validation. [#5829](https://github.com/deckhouse/deckhouse/pull/5829)
@@ -41,12 +44,18 @@
  - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#5988](https://github.com/deckhouse/deckhouse/pull/5988)
  - **[ingress-nginx]** Fix controller preStop probe. [#5948](https://github.com/deckhouse/deckhouse/pull/5948)
     Ingress controller will restart.
+ - **[linstor]** Fixed error in LINSTOR controller liveness probe logic. [#6083](https://github.com/deckhouse/deckhouse/pull/6083)
+    Linstor controller will be restarted.
+ - **[linstor]** Workaround for several annoying issues in LINSTOR related to hanging controller. [#6037](https://github.com/deckhouse/deckhouse/pull/6037)
  - **[log-shipper]** Fix validation for the buffer `ClusterLogDestination` schema. [#5925](https://github.com/deckhouse/deckhouse/pull/5925)
  - **[log-shipper]** Add stricter validation for label selectors. Prevents the Deckhouse pods from panicking. [#5925](https://github.com/deckhouse/deckhouse/pull/5925)
  - **[log-shipper]** Fix custom multiline parser validation for `PodLoggingConfig` (previously, it was impossible to use the Custom type due to a validation bug). [#5925](https://github.com/deckhouse/deckhouse/pull/5925)
  - **[log-shipper]** Remove `libssl1.1_1.1.1f-1ubuntu2.17_amd64.deb` from the final image after installation. [#5794](https://github.com/deckhouse/deckhouse/pull/5794)
  - **[multitenancy-manager]** When trying to delete a projectType used in a project, an error with project name displayed. [#5744](https://github.com/deckhouse/deckhouse/pull/5744)
+ - **[prometheus]** fix fix-permissions init-container to run under kesl security. [#6082](https://github.com/deckhouse/deckhouse/pull/6082)
  - **[prometheus]** Clarify description and formula for the oldest metrics panel on the starting page of Grafana. [#5712](https://github.com/deckhouse/deckhouse/pull/5712)
+ - **[user-authn]** Fix generation a self signed certificate for `crowd-basic-auth-proxy`. [#6074](https://github.com/deckhouse/deckhouse/pull/6074)
+ - **[user-authz]** Add matchAny parameter to namespaceSelector for granting access to all namespaces. [#6014](https://github.com/deckhouse/deckhouse/pull/6014)
 
 ## Chore
 

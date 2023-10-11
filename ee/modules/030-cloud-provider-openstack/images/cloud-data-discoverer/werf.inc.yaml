@@ -1,7 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ .Images.BASE_ALPINE }}
-fromCacheVersion: "2023-03-24.0"
+fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /discoverer
@@ -22,6 +21,8 @@ shell:
   setup:
     - cd {{ $discovererAbsPath }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
+    - chown 64535:64535 /discoverer
+    - chmod 0755 /discoverer
 
 git:
 - add: /{{ $discovererRelPath }}

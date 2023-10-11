@@ -121,26 +121,8 @@ jobs:
       - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_deckhouse") | strings.Indent 4 }!}
 
-{!{/* Autodeploy documentation to production (EU) envs on push to release branch */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_release_doc_prod_eu" "(Prod EU) Deploy release documentation") }!}
-  deploy_release_doc_prod_eu:
-    name: {!{ $jobNames.deploy_release_doc_prod_eu }!}
-    needs:
-      - git_info
-      - doc_web_build
-    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_release_doc_prod_eu) | strings.Indent 6 }!}
-
-{!{/* Autodeploy documentation to production (SEL) envs on push to release branch */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_release_doc_prod_sel" "(Prod SEL) Deploy release documentation") }!}
+{!{/* Autodeploy documentation to production envs on push to release branch */}!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_release_doc_prod_sel" "(Prod) Deploy release documentation") }!}
   deploy_release_doc_prod_sel:
     name: {!{ $jobNames.deploy_release_doc_prod_sel }!}
     needs:

@@ -74,8 +74,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var request WebhookRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		// this case is exceptional
-		h.logger.Fatalf("cannot unmarshal kubernetes request: %v", err)
+		h.logger.Printf("cannot unmarshal kubernetes request: %v", err)
+		http.Error(w, "Invalid json request", http.StatusBadRequest)
+		return
 	}
 
 	h.authorizeRequest(&request)
@@ -112,7 +113,7 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 			}
 		}
 	} else {
-	// there is no filters - assume a positive outcome
+		// there is no filters - assume a positive outcome
 		request.Status.Denied = false
 	}
 
@@ -181,7 +182,7 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
 
 	} else if namespaced && hasAnyFilters(entry) {
-		// we should not allow cluster scoped requests for namespaced objects if namespaces access is limited
+		// we should not allow cluster-scoped requests for the namespaced objects if access to the namespaces is limited
 		h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
 	}
 
@@ -275,7 +276,7 @@ func (h *Handler) renewDirectories() {
 
 			// If there are neither LimitNamespaces nor NamespaceSelector options, it means all non-system namespaces are allowed.
 			// We need to know whether we have at least one such a CR for the user in a cluster.
-			dirEntry.NamespaceFiltersAbsent = dirEntry.NamespaceFiltersAbsent || (len(crd.Spec.LimitNamespaces) == 0 && crd.Spec.NamespaceSelector == nil)
+			dirEntry.NamespaceFiltersAbsent = dirEntry.NamespaceFiltersAbsent || (len(crd.Spec.LimitNamespaces) == 0 && !isLabelSelectorApplied(crd.Spec.NamespaceSelector))
 
 			// if the NamespaceSelector field is empty - take the limitNamespaces entries and check the allowAccessToSystemNamespaces flag
 			if crd.Spec.NamespaceSelector == nil {
@@ -302,6 +303,14 @@ func (h *Handler) renewDirectories() {
 
 	h.directory = directory
 	h.logger.Println("configuration was reloaded successfully")
+}
+
+func isLabelSelectorApplied(namespaceSelector *NamespaceSelector) bool {
+	if namespaceSelector != nil && namespaceSelector.LabelSelector != nil {
+		return true
+	}
+
+	return false
 }
 
 // StartRenewConfigLoop periodically reads new config file from the file system and composes directories.
@@ -356,12 +365,14 @@ func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSe
 	labelsSet = namespace.ObjectMeta.GetLabels()
 
 	for _, namespaceSelector := range namespaceSelectors {
-		selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
-		if err != nil {
-			return false, err
-		}
-		if selector.Matches(labelsSet) {
-			return true, nil
+		if namespaceSelector.LabelSelector != nil {
+			selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
+			if err != nil {
+				return false, err
+			}
+			if selector.Matches(labelsSet) {
+				return true, nil
+			}
 		}
 	}
 	return false, nil
@@ -369,16 +380,18 @@ func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSe
 
 // checks if an entry has any namespace-related filters
 func hasAnyFilters(entry *DirectoryEntry) bool {
+	// check for MatchAny field of any namespace selector which permits literally any namespace
+	for _, namespaceSelector := range entry.NamespaceSelectors {
+		if namespaceSelector.MatchAny {
+			return false
+		}
+	}
+
 	if entry.NamespaceFiltersAbsent {
 		// The limitNamespaces option has a priority over the allowAccessToSystemNamespaces option.
 		// If limited namespaces are not specified, check whether access to system namespaces is limited.
 		// If it is not - user has no limited namespaces.
 		return !entry.AllowAccessToSystemNamespaces
-	}
-
-	// if entry has a NamespaceSelector list, it's limited.
-	if len(entry.NamespaceSelectors) > 0 {
-		return true
 	}
 
 	for _, regex := range entry.LimitNamespaces {

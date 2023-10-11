@@ -43,11 +43,10 @@ spec:
                 password:
                   type: string
                   description: |
-                    Hashed user password.
+                    User password hash in plaintext or Base64-encoded.
 
-                    You can use the following command to encrypt the user password: `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`. Also, you can use the [online service](https://bcrypt-generator.com/).
-                  example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
-                  pattern: '^\$2[ayb]\$.{56}$'
+                    Use the following command to encode the password hash in Base64: `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
+                  example: 'JDJ5JDEwJE9HN1lOOUhnOXU5NmY2cGp4R3NIcS56NWQuOVQxQ0VrdWIud3BRdVJ5Sy5QQU5INlpKNDguCgo='
                 userID:
                   type: string
                   description: 'Unique issuer user ID. It equals to .metadata.name by default.'

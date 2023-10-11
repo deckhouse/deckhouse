@@ -24,7 +24,7 @@ spec:
           description: |
             Describes a log source in log-pipeline.
 
-            Each CustomResource `ClusterLoggingConfig` describes rules for log fetching from cluster.
+            Each custom resource `ClusterLoggingConfig` describes rules for log fetching from cluster.
           properties:
             spec:
               not:
@@ -62,7 +62,7 @@ spec:
                       - required: [excludeNames]
                       - required: [labelSelector]
                       type: object
-                      description: Specifies the Namespace selector to filter Pods with.
+                      description: Specifies the namespace selector to filter Pods with.
                       properties:
                         matchNames:
                           type: array
@@ -417,7 +417,7 @@ spec:
                 destinationRefs:
                   type: array
                   description: |
-                    Array of `ClusterLogDestination` CustomResource names which this source will output with.
+                    Array of `ClusterLogDestination` custom resource names which this source will output with.
 
                     Fields with float or boolean values will be converted to strings.
                   minItems: 1

@@ -265,23 +265,14 @@ function prepare_environment() {
 
   case "$PROVIDER" in
   "Yandex.Cloud")
-    if [[ $CRI == "Containerd" ]]; then
-      ssh_user="cloud-user"
-      # RedOS 7.3
-      IMAGE_ID="fd8q0kjl4l1iovds9f29"
-    else
-      ssh_user="ubuntu"
-      # Ubuntu 22.04 LTS
-      IMAGE_ID="fd8emvfmfoaordspe1jr"
-    fi
-
     # shellcheck disable=SC2016
     env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
         SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" IMAGE_ID="$IMAGE_ID" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON} ${IMAGE_ID}' \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
+    ssh_user="cloud-user"
     ;;
 
   "GCP")

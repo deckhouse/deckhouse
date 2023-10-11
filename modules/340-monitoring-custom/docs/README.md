@@ -32,7 +32,7 @@ To enable the `monitoring-custom` module to collect application metrics, you mus
     ```yaml
     annotations:
       prometheus.deckhouse.io/port: "443"
-      prometheus.deckhouse.io/tls: "true"  # you don't need to specify this annotation if metrics are sent over http
+      prometheus.deckhouse.io/tls: "true"  # you don't need to specify this annotation if metrics are sent over HTTP
     ```
 
 - When using service mesh [Istio](../110-istio/) in mTLS STRICT mode, add the following Service annotation to force collecting metrics with proper mTLS certificate: `prometheus.deckhouse.io/istio-mtls: "true"`. Note that the application metrics must be exported via pure HTTP without TLS.

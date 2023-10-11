@@ -85,7 +85,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"kube-state-metrics",
 	"linstor-affinity-controller",
 	"linstor-controller",
-	"linstor-ha-controller",
 	"linstor-node",
 	"linstor-pools-importer",
 	"linstor-scheduler",
