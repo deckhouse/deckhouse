@@ -38,8 +38,8 @@ var (
 	saveMarkRule         = strings.Fields("-j CONNMARK --save-mark")
 	restoreHttpMarkRule  = strings.Fields("-p tcp --dport 80 -j CONNMARK --restore-mark")
 	restoreHttpsMarkRule = strings.Fields("-p tcp --dport 443 -j CONNMARK --restore-mark")
-	dnatHttpRule         = strings.Fields("-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:81")
-	dnatHttpsRule        = strings.Fields("-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:444")
+	dnatHttpRule         = strings.Fields("-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:1081")
+	dnatHttpsRule        = strings.Fields("-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:1444")
 	inputAcceptRule      = strings.Fields("-p tcp -m multiport --dport 81,444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT")
 
 	linkName = "ingressfailover"
@@ -134,7 +134,6 @@ func main() {
 
 func loop(iptablesMgr *iptables.IPTables) error {
 	resp, err := http.Get("http://127.0.0.1:10254/healthz")
-
 	if err != nil {
 		log.Println(err)
 		return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
