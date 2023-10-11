@@ -2,7 +2,7 @@
 title: "The descheduler module: examples"
 ---
 
-## Example CR
+## Example custom resource
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -11,22 +11,22 @@ metadata:
   name: example
 spec:
   deschedulerPolicy:
-    # provide common parameters that apply to all strategies
+    # Provide common parameters that apply to all strategies.
     globalParameters:
       evictFailedBarePods: true
     strategies:
-      # enable a strategy
+      # Enable a strategy.
       podLifeTime:
         enabled: true
 
-      # enable a strategy and set additional parameters
+      # Enable a strategy and set additional parameters.
       removeDuplicates:
         enabled: true
         parameters:
           nodeFit: true
 ```
 
-## Example CR for specific NodeGroup (Node labelSelector)
+## Example custom resource for specific NodeGroup (node labelSelector)
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

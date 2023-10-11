@@ -8,7 +8,7 @@ descheduler каждые 15 минут вытесняет поды, которы
 
 ## Особенности работы descheduler
 
-* При вытеснении подов с нагруженного узла учитывается `PriorityClass` (ознакомьтесь с модулем [priority-class](../001-priority-class/)).
+* При вытеснении подов с нагруженного узла учитывается класс приоритета (ознакомьтесь с модулем [priority-class](../001-priority-class/)).
 * Поды с [priorityClassName](../001-priority-class/) `system-cluster-critical` или `system-node-critical` (*критичные* поды) не вытесняются.
 * Поды без контроллера или с контроллером DaemonSet не вытесняются.
 * Поды с local storage не вытесняются.

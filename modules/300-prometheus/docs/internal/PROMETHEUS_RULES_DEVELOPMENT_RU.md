@@ -12,7 +12,7 @@ search: Разработка правил Prometheus, prometheus alerting rules
   * alerting rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/))— позволяют отправлять уведомления на основании результата выполнения PromQL выражения.
 * Все правила распределены по модулям и лежат в каталоге [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/main/modules/300-prometheus/monitoring/prometheus-rules/)`. Правила делятся на три категории:
   * в `coreos` лежат правила, происходящие из репозитория prometheus-operator (местами сильно нами поправленные),
-  * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (Pod'ы, CronJob'ы, место на диске и пр.).
+  * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, NGINX Ingress, Prometheus, etc) и мониторинг "объектов" в kubernetes (Pod'ы, CronJob'ы, место на диске и пр.).
   * в `applications` лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)
 * Изменения этих файлов (в том числе и создание новых) должно автоматически показываться на странице `/prometheus/rules` (требуется подождать около минуты после деплоя deckhouse, пока отработает Prometheus Operator и компания).
 * Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. в документации модуля [Prometheus Operator](../../modules/200-operator-prometheus/)):
