@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -44,7 +45,7 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(forceAbortFromCache) })
 }
 
-func getSSHClient() (*ssh.Client, error) {
+func getSSHClient(initializeNewAgent bool) (*ssh.Client, error) {
 	mastersIPs, err := GetMasterHostsIPs()
 	if err != nil {
 		return nil, err
@@ -61,7 +62,13 @@ func getSSHClient() (*ssh.Client, error) {
 		setBastionHost(bastionHost, nil)
 	}
 
-	return ssh.NewClientFromFlags().Start()
+	sshClient := ssh.NewClientFromFlags()
+	sshClient.InitializeNewAgent = initializeNewAgent
+	if _, err := sshClient.Start(); err != nil {
+		return fmt.Errorf("unable to start ssh client: %w", err)
+	}
+
+	return nil
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
@@ -101,6 +108,15 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 
 	var destroyer destroy.Destroyer
 
+	var sshClient *ssh.Client
+	if b.initializeNewAgent {
+		defer func() {
+			if sshClient != nil {
+				sshClient.Stop()
+			}
+		}()
+	}
+
 	err = log.Process("common", "Choice abort type", func() error {
 		ok, err := stateCache.InCache(ManifestCreatedInClusterCacheKey)
 		if err != nil {
@@ -112,7 +128,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 				terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
 				destroyer = infrastructure.NewClusterInfra(terraStateLoader, stateCache)
 			} else {
-				sshClient, err := getSSHClient()
+				sshClient, err := getSSHClient(b.initializeNewAgent)
 				if err != nil {
 					return err
 				}
@@ -129,7 +145,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			return nil
 		}
 
-		sshClient, err := getSSHClient()
+		sshClient, err := getSSHClient(b.initializeNewAgent)
 		if err != nil {
 			return err
 		}
