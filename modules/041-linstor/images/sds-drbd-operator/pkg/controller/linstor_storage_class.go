@@ -19,11 +19,14 @@ package controller
 import (
 	"context"
 	"errors"
+	"sds-drbd-operator/api/v1alpha1"
+	"strconv"
+	"strings"
+
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
-	"sds-drbd-operator/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -31,8 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -41,9 +42,9 @@ const (
 	StorageClassKind                  = "StorageClass"
 	StorageClassAPIVersion            = "storage.k8s.io/v1"
 
-	LinstorPlacementCount = "linstor.csi.linbit.com/placementCount"
-	LinstorStoragePool    = "linstor.csi.linbit.com/storagePool"
-	AutoQuorum            = "property.linstor.csi.linbit.com/DrbdOptions/auto-quorum"
+	LinstorPlacementCount   = "linstor.csi.linbit.com/placementCount"
+	DRBDOperatorStoragePool = "linstor.csi.linbit.com/storagePool"
+	AutoQuorum              = "property.linstor.csi.linbit.com/DrbdOptions/auto-quorum"
 
 	Completed = "Completed"
 	Failed    = "Failed"
@@ -132,8 +133,8 @@ func NewLinstorStorageClass(
 						sc.Parameters[LinstorPlacementCount] = strconv.Itoa(lsc.Spec.PlacementCount)
 					}
 
-					if lsc.Spec.LinstorStoragePool != sc.Parameters[LinstorStoragePool] {
-						sc.Parameters[LinstorStoragePool] = lsc.Spec.LinstorStoragePool
+					if lsc.Spec.DRBDOperatorStoragePool != sc.Parameters[DRBDOperatorStoragePool] {
+						sc.Parameters[DRBDOperatorStoragePool] = lsc.Spec.DRBDOperatorStoragePool
 					}
 
 					if lsc.Spec.DrbdOptions.AutoQuorum != sc.Parameters[AutoQuorum] {
@@ -197,9 +198,9 @@ func CreateStorageClass(ctx context.Context, cl client.Client, lsc *v1alpha1.Lin
 	vbm := storagev1.VolumeBindingMode(lsc.Spec.VolumeBindingMode)
 
 	paramets := map[string]string{
-		LinstorPlacementCount: strconv.Itoa(lsc.Spec.PlacementCount),
-		LinstorStoragePool:    lsc.Spec.LinstorStoragePool,
-		AutoQuorum:            lsc.Spec.DrbdOptions.AutoQuorum}
+		LinstorPlacementCount:   strconv.Itoa(lsc.Spec.PlacementCount),
+		DRBDOperatorStoragePool: lsc.Spec.DRBDOperatorStoragePool,
+		AutoQuorum:              lsc.Spec.DrbdOptions.AutoQuorum}
 
 	csObj := storagev1.StorageClass{
 		TypeMeta: metav1.TypeMeta{

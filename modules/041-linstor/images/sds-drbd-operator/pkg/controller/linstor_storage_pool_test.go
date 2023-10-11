@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe(controller.LinstorStoragePoolControllerName, func() {
+var _ = Describe(controller.DRBDOperatorStoragePoolControllerName, func() {
 	const (
 		testNameSpace = "test_namespace"
 		testName      = "test_name"
@@ -37,7 +37,7 @@ var _ = Describe(controller.LinstorStoragePoolControllerName, func() {
 	var (
 		ctx     = context.Background()
 		cl      = NewFakeClient()
-		testLsp = &v1alpha1.LinstorStoragePool{
+		testLsp = &v1alpha1.DRBDOperatorStoragePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      testName,
 				Namespace: testNameSpace,
@@ -45,17 +45,17 @@ var _ = Describe(controller.LinstorStoragePoolControllerName, func() {
 		}
 	)
 
-	It("GetLinstorStoragePool", func() {
+	It("GetDRBDOperatorStoragePool", func() {
 		err := cl.Create(ctx, testLsp)
 		Expect(err).NotTo(HaveOccurred())
 
-		lsp, err := controller.GetLinstorStoragePool(ctx, cl, testNameSpace, testName)
+		lsp, err := controller.GetDRBDOperatorStoragePool(ctx, cl, testNameSpace, testName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(lsp.Name).To(Equal(testName))
 		Expect(lsp.Namespace).To(Equal(testNameSpace))
 	})
 
-	It("UpdateLinstorStoragePool", func() {
+	It("UpdateDRBDOperatorStoragePool", func() {
 		const (
 			testLblKey   = "test_label_key"
 			testLblValue = "test_label_value"
@@ -66,10 +66,10 @@ var _ = Describe(controller.LinstorStoragePoolControllerName, func() {
 		lspLabs := map[string]string{testLblKey: testLblValue}
 		testLsp.Labels = lspLabs
 
-		err := controller.UpdateLinstorStoragePool(ctx, cl, testLsp)
+		err := controller.UpdateDRBDOperatorStoragePool(ctx, cl, testLsp)
 		Expect(err).NotTo(HaveOccurred())
 
-		updatedLsp, _ := controller.GetLinstorStoragePool(ctx, cl, testNameSpace, testName)
+		updatedLsp, _ := controller.GetDRBDOperatorStoragePool(ctx, cl, testNameSpace, testName)
 		Expect(updatedLsp.Labels[testLblKey]).To(Equal(testLblValue))
 	})
 
@@ -176,12 +176,12 @@ func CreateLVMVolumeGroup(ctx context.Context, cl client.WithWatch, name string,
 	return err
 }
 
-func GetListorStoragePool(lsp *v1alpha1.LinstorStoragePool, vgNames []string) *v1alpha1.LinstorStoragePool {
+func GetListorStoragePool(lsp *v1alpha1.DRBDOperatorStoragePool, vgNames []string) *v1alpha1.DRBDOperatorStoragePool {
 
-	volumeGroups := make([]v1alpha1.LSPLvmVolumeGroups, len(vgNames))
+	volumeGroups := make([]v1alpha1.DRBDStoragePoolLVMVolumeGroups, len(vgNames))
 
 	for i, vgName := range vgNames {
-		volumeGroups[i] = v1alpha1.LSPLvmVolumeGroups{
+		volumeGroups[i] = v1alpha1.DRBDStoragePoolLVMVolumeGroups{
 			Name:         vgName,
 			ThinPoolName: "",
 		}

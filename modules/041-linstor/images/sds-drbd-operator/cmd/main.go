@@ -19,6 +19,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	goruntime "runtime"
+	"sds-drbd-operator/api/v1alpha1"
+	"sds-drbd-operator/config"
+	"sds-drbd-operator/pkg/controller"
+	kubutils "sds-drbd-operator/pkg/kubeutils"
+
 	lclient "github.com/LINBIT/golinstor/client"
 	"go.uber.org/zap/zapcore"
 	v1 "k8s.io/api/core/v1"
@@ -27,12 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"os"
-	goruntime "runtime"
-	"sds-drbd-operator/api/v1alpha1"
-	"sds-drbd-operator/config"
-	"sds-drbd-operator/pkg/controller"
-	kubutils "sds-drbd-operator/pkg/kubeutils"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -99,11 +100,11 @@ func main() {
 
 	lc, err := lclient.NewClient()
 
-	if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval); err != nil {
-		log.Error(err, "failed create controller NewLinstorNode", err)
-		os.Exit(1)
-	}
-	log.Info("controller NewLinstorNode start")
+	// if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval); err != nil {
+	// 	log.Error(err, "failed create controller NewLinstorNode", err)
+	// 	os.Exit(1)
+	// }
+	// log.Info("controller NewLinstorNode start")
 
 	if _, err := controller.NewLinstorStorageClass(ctx, mgr); err != nil {
 		log.Error(err, "failed create controller NewLinstorStorageClass")
@@ -111,11 +112,11 @@ func main() {
 	}
 	log.Info("controller NewLinstorStorageClass start")
 
-	if _, err := controller.NewLinstorStoragePool(ctx, mgr, lc); err != nil {
-		log.Error(err, "failed create controller NewLinstorStoragePool", err)
+	if _, err := controller.NewDRBDOperatorStoragePool(ctx, mgr, lc, cfgParams.ScanInterval); err != nil {
+		log.Error(err, "failed create controller NewDRBDOperatorStoragePool", err)
 		os.Exit(1)
 	}
-	log.Info("controller NewLinstorStoragePool start")
+	log.Info("controller NewDRBDOperatorStoragePool start")
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		log.Error(err, "unable to set up health check")

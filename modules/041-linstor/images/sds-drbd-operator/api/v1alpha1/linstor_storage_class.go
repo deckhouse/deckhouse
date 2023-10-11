@@ -37,12 +37,12 @@ type LinstorStorageClassList struct {
 }
 
 type LinstorStorageClassSpec struct {
-	LinstorStoragePool string      `json:"linstorstoragepool,omitempty"`
-	PlacementCount     int         `json:"placementcount"`
-	ReclaimPolicy      string      `json:"reclaimpolicy"`
-	VolumeBindingMode  string      `json:"volumebindingmode"`
-	AllowVolumeExpand  bool        `json:"allowvolumeexpand"`
-	DrbdOptions        DrbdOptions `json:"drbdoptions"`
+	DRBDOperatorStoragePool string      `json:"DRBDOperatorStoragePool,omitempty"`
+	PlacementCount          int         `json:"placementcount"`
+	ReclaimPolicy           string      `json:"reclaimpolicy"`
+	VolumeBindingMode       string      `json:"volumebindingmode"`
+	AllowVolumeExpand       bool        `json:"allowvolumeexpand"`
+	DrbdOptions             DrbdOptions `json:"drbdoptions"`
 }
 
 type LinstorStorageClassStatus struct {

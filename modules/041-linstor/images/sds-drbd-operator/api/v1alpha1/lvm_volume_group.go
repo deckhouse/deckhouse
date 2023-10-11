@@ -29,14 +29,14 @@ type LvmVolumeGroup struct {
 }
 
 type LvmVGSpec struct {
-	Type              string   `json:"type"`
-	ActuaLvgOnTheNode string   `json:"actualvgonthenode"`
-	ThinPool          ThinPool `json:"thinpool,omitempty"`
+	Type              string     `json:"type"`
+	ActuaLvgOnTheNode string     `json:"actualvgonthenode"`
+	ThinPools         []ThinPool `json:"thinpools,omitempty"`
 }
 
 type ThinPool struct {
-	Name string `json:"name,omitempty"`
-	Size string `json:"size,omitempty"`
+	Name string `json:"name"`
+	Size string `json:"size"`
 }
 
 type LvmVGStatus struct {

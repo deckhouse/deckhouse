@@ -33,6 +33,7 @@ rules:
       - linstorstorageclasses
       - linstorstoragepools
       - lvmvolumegroups
+      - drbdoperatorstoragepools
     verbs:
       - get
       - list

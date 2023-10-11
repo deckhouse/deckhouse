@@ -69,8 +69,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&LVMChangeRequestList{},
 		&LinstorStorageClass{},
 		&LinstorStorageClassList{},
-		&LinstorStoragePool{},
-		&LinstorStoragePoolList{},
+		&DRBDOperatorStoragePool{},
+		&DRBDOperatorStoragePoolList{},
 		&LvmVolumeGroup{},
 		&LvmVolumeGroupList{},
 	)

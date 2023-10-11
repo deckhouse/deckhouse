@@ -18,35 +18,35 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// LinstorStoragePool
+// DRBDOperatorStoragePool
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type LinstorStoragePool struct {
+type DRBDOperatorStoragePool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              LinstorStoragePoolSpec   `json:"spec"`
-	Status            LinstorStoragePoolStatus `json:"status,omitempty"`
+	Spec              DRBDOperatorStoragePoolSpec   `json:"spec"`
+	Status            DRBDOperatorStoragePoolStatus `json:"status,omitempty"`
 }
 
-type LinstorStoragePoolSpec struct {
-	Type            string               `json:"type"`
-	LvmVolumeGroups []LSPLvmVolumeGroups `json:"lvmvolumegroups"`
+type DRBDOperatorStoragePoolSpec struct {
+	Type            string                           `json:"type"`
+	LvmVolumeGroups []DRBDStoragePoolLVMVolumeGroups `json:"lvmvolumegroups"`
 }
 
-type LSPLvmVolumeGroups struct {
+type DRBDStoragePoolLVMVolumeGroups struct {
 	Name         string `json:"name"`
 	ThinPoolName string `json:"thinPoolName"`
 }
 
-type LinstorStoragePoolStatus struct {
+type DRBDOperatorStoragePoolStatus struct {
 	Phase  string `json:"phase"`
 	Reason string `json:"reason"`
 }
 
-// LinstorStoragePoolList contains a list of empty block device
+// DRBDOperatorStoragePoolList contains a list of empty block device
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type LinstorStoragePoolList struct {
+type DRBDOperatorStoragePoolList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []LinstorStoragePool `json:"items"`
+	Items           []DRBDOperatorStoragePool `json:"items"`
 }
