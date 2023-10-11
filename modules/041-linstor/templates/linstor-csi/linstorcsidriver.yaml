@@ -159,6 +159,10 @@ spec:
   csiResizerImage: {{ include "helm_lib_module_common_image" (list $ (list "csiExternalResizer" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
   csiSnapshotterImage: {{ include "helm_lib_module_common_image" (list $ (list "csiExternalSnapshotter" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
   {{- end }}
+  csiAttacherWorkerThreads: 1
+  csiProvisionerWorkerThreads: 1
+  csiResizerWorkerThreads: 1
+  csiSnapshotterWorkerThreads: 1
   linstorHttpsClientSecret: linstor-client-https-cert
   priorityClassName: ""
   controllerReplicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
