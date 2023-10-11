@@ -52,11 +52,13 @@ You can automate the bootstrap process with any automation platform you prefer. 
    kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
-1. Check the K8s version if it is >= 1.25, you should create ``node-group-token``.
+   1.1 Check the K8s version, if it is >= 1.25, `node-group-token` should be created.
 
-   ```shell
-   kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
-   ```
+       ```shell
+       kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
+       ```
+
+       The resulting token in the output of the command, save and then add the `token:` field to the playbook ansible.
 
 1. Get Kubernetes API token for special `ServiceAccount` that Deckhouse manages:
 
