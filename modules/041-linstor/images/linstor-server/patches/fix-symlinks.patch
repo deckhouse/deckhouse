@@ -3,13 +3,10 @@ From: Andrei Kvapil <kvapss@gmail.com>
 Date: Tue, 3 Oct 2023 13:32:21 +0200
 Subject: [PATCH] Automatically fix symlinks for devices
 
-Introduce an additional handler that checks for the device path before each such modification.
-If the device is not found, it attempts to fix the symlink using dmsetup output.
-
 This change is workaround for specific set of issues, often related to udev,
 which lead to the disappearance of symlinks for LVM devices on a working system.
 These issues commonly occur during device resizing and deactivation,
-causing LINSTOR expceptions diring accessing DRBD super-block of volume.
+causing LINSTOR exceptions during accessing DRBD super-block of volume.
 
 fixes: https://github.com/LINBIT/linstor-server/issues/326
 
@@ -140,7 +137,7 @@ index 16034c550..9fc09fa3e 100644
          }
  
 +        if (!Files.exists(Paths.get(metaDiskPath))) {
-+            errorReporter.logWarning("Device path %s does not exists, fixing symlink", metaDiskPath);
++            errorReporter.logWarning("Device path %s does not exist, fixing symlink", metaDiskPath);
 +            try
 +            {
 +                DmSetupUtils.fixSymlinkForDevice(extCmdFactory.create(), metaDiskPath);
