@@ -255,7 +255,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"linstorSchedulerAdmission": "imageHash-linstor-linstorSchedulerAdmission",
 		"linstorSchedulerExtender":  "imageHash-linstor-linstorSchedulerExtender",
 		"linstorServer":             "imageHash-linstor-linstorServer",
-		"piraeusHaController":       "imageHash-linstor-piraeusHaController",
 		"piraeusOperator":           "imageHash-linstor-piraeusOperator",
 		"spaas":                     "imageHash-linstor-spaas",
 	},
