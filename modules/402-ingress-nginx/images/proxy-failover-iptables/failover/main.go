@@ -40,7 +40,7 @@ var (
 	restoreHttpsMarkRule = strings.Fields("-p tcp --dport 443 -j CONNMARK --restore-mark")
 	dnatHttpRule         = strings.Fields("-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:1081")
 	dnatHttpsRule        = strings.Fields("-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:1444")
-	inputAcceptRule      = strings.Fields("-p tcp -m multiport --dport 81,444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT")
+	inputAcceptRule      = strings.Fields("-p tcp -m multiport --dport 1081,1444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT")
 
 	linkName = "ingressfailover"
 )
@@ -60,7 +60,7 @@ func main() {
 	_ = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...)
 	// do nothing on error, since ingress-failover chain may not exist yet
 
-	// check 81/444 ports accepted
+	// check 1081/1444 ports accepted
 	err = insertUnique(iptablesMgr, "filter", "INPUT", inputAcceptRule, 1)
 	if err != nil {
 		log.Fatal(err)
