@@ -45,12 +45,12 @@ stream {
   }
 
   server {
-    listen 169.254.20.11:81 so_keepalive=off reuseport;
+    listen 169.254.20.11:1081 so_keepalive=off reuseport;
     proxy_pass http;
   }
 
   server {
-    listen 169.254.20.11:444 so_keepalive=off reuseport;
+    listen 169.254.20.11:1444 so_keepalive=off reuseport;
     proxy_pass https;
   }
 }
