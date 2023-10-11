@@ -15,11 +15,15 @@ import (
 	"github.com/aquasecurity/trivy/pkg/fanal/image"
 	ftypes "github.com/aquasecurity/trivy/pkg/fanal/types"
 	"github.com/aquasecurity/trivy/pkg/rpc/client"
+	"github.com/aquasecurity/trivy/pkg/javadb"
 	"github.com/aquasecurity/trivy/pkg/scanner"
 	"github.com/aquasecurity/trivy/pkg/types"
+
+	_ "modernc.org/sqlite"
 )
 
 func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeaders http.Header, scanOpts types.ScanOptions) (types.Report, error) {
+	javadb.Init("/tmp", "ghcr.io/aquasecurity/trivy-java-db", false, false, false)
 	img, cleanup, err := image.NewContainerImage(ctx, imageName, ftypes.ImageOptions{
 		ImageSources: ftypes.ImageSources{ftypes.RemoteImageSource},
 	})
