@@ -7,6 +7,22 @@ that we include for now to support in-tree Ceph Volume Provisioner
   {{- $version := toString $key }}
   {{- $patch := toString $value.patch }}
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+  {{- if semverCompare ">= 1.24" $version }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+fromImage: common/distroless
+import:
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- artifact: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kube-controller-manager
+  to: /usr/bin/kube-controller-manager
+  before: setup
+docker:
+  ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
+  {{- else }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_UBUNTU }}
@@ -35,4 +51,5 @@ docker:
     DEBIAN_FRONTEND: noninteractive
     container: docker
   ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
+  {{- end }}
 {{- end }}
