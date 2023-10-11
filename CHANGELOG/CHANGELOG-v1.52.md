@@ -13,6 +13,7 @@
  - **[chrony]** Master nodes act as NTP servers for cluster. [#5802](https://github.com/deckhouse/deckhouse/pull/5802)
  - **[control-plane-manager]** All images are now based on distroless image. [#5509](https://github.com/deckhouse/deckhouse/pull/5509)
  - **[ingress-nginx]** Images are based on a distroless image. [#5937](https://github.com/deckhouse/deckhouse/pull/5937)
+ - **[linstor]** A setting has been added to specify the number of parallel CSI workers (attacher, provisioner, snapshotter, resizer). [#6129](https://github.com/deckhouse/deckhouse/pull/6129)
  - **[linstor]** Update linstor controller version to `1.24.2`. Update DRBD version to `9.2.5`. [#5800](https://github.com/deckhouse/deckhouse/pull/5800)
     All nodes with DRBD will restart. Linstor controller and piraeus operator will restart.
  - **[log-shipper]** Suppress metrics timestamp to avoid out-of-order ingestion error. [#5835](https://github.com/deckhouse/deckhouse/pull/5835)
@@ -44,6 +45,7 @@
  - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#5988](https://github.com/deckhouse/deckhouse/pull/5988)
  - **[ingress-nginx]** Fix controller preStop probe. [#5948](https://github.com/deckhouse/deckhouse/pull/5948)
     Ingress controller will restart.
+ - **[linstor]** Automatically fix symlinks for devices. [#6026](https://github.com/deckhouse/deckhouse/pull/6026)
  - **[linstor]** Fixed error in LINSTOR controller liveness probe logic. [#6083](https://github.com/deckhouse/deckhouse/pull/6083)
     Linstor controller will be restarted.
  - **[linstor]** Workaround for several annoying issues in LINSTOR related to hanging controller. [#6037](https://github.com/deckhouse/deckhouse/pull/6037)
@@ -79,6 +81,8 @@
     All pods using `kube-rbac-proxy` will restart.
  - **[deckhouse-controller]** `bashible-apiserver` no longer scaled-down during registry changes. [#5722](https://github.com/deckhouse/deckhouse/pull/5722)
  - **[dhctl]** Render bootstrap bundle into `/opt/deckhouse/tmp`. [#5739](https://github.com/deckhouse/deckhouse/pull/5739)
+ - **[linstor]** Disabled usermode_helper param on LINSTOR nodes for more stable management. [#6137](https://github.com/deckhouse/deckhouse/pull/6137)
+ - **[linstor]** Removed HA controller because of harmful behavior. [#6132](https://github.com/deckhouse/deckhouse/pull/6132)
  - **[node-manager]** `bashible-apiserver`'s readiness probe now fails if `deckhouse` deployment has no pods in `Ready` state. [#5722](https://github.com/deckhouse/deckhouse/pull/5722)
  - **[operator-prometheus]** Bump `prometheus-operator` from `0.62` to `0.68` version. [#5856](https://github.com/deckhouse/deckhouse/pull/5856)
  - **[registrypackages]** Bump `containerd` version to `1.6.24`. [#5938](https://github.com/deckhouse/deckhouse/pull/5938)
