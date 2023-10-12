@@ -33,6 +33,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix RedOS installation. [#6121](https://github.com/deckhouse/deckhouse/pull/6121)
  - **[candi]** Add creation of the `TMPDIR` directory in the `bashible.sh` script. [#6059](https://github.com/deckhouse/deckhouse/pull/6059)
  - **[candi]** Delete registrypackage files if it failed to install before retrying installation. [#5739](https://github.com/deckhouse/deckhouse/pull/5739)
  - **[chrony]** Run chrony pods in host network namespace. [#6007](https://github.com/deckhouse/deckhouse/pull/6007)
@@ -45,6 +46,8 @@
  - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#5988](https://github.com/deckhouse/deckhouse/pull/5988)
  - **[ingress-nginx]** Fix controller preStop probe. [#5948](https://github.com/deckhouse/deckhouse/pull/5948)
     Ingress controller will restart.
+ - **[linstor]** Removed alert about HA-controller absence. [#6166](https://github.com/deckhouse/deckhouse/pull/6166)
+ - **[linstor]** Added an init container for LINSTOR satellite, that waits for DRBD v9.x to be loaded on the node. [#6151](https://github.com/deckhouse/deckhouse/pull/6151)
  - **[linstor]** Disabled usermode_helper param on LINSTOR nodes for more stable management. [#6137](https://github.com/deckhouse/deckhouse/pull/6137)
  - **[linstor]** Removed HA controller because of harmful behavior. [#6132](https://github.com/deckhouse/deckhouse/pull/6132)
  - **[linstor]** Automatically fix symlinks for devices. [#6026](https://github.com/deckhouse/deckhouse/pull/6026)
@@ -58,6 +61,8 @@
  - **[multitenancy-manager]** When trying to delete a projectType used in a project, an error with project name displayed. [#5744](https://github.com/deckhouse/deckhouse/pull/5744)
  - **[prometheus]** fix fix-permissions init-container to run under kesl security. [#6082](https://github.com/deckhouse/deckhouse/pull/6082)
  - **[prometheus]** Clarify description and formula for the oldest metrics panel on the starting page of Grafana. [#5712](https://github.com/deckhouse/deckhouse/pull/5712)
+ - **[registrypackages]** Fix disabling the old `containerd` service in Ubuntu `18.04`. [#6172](https://github.com/deckhouse/deckhouse/pull/6172)
+    `containerd` on Ubuntu 18.04 will restart.
  - **[user-authn]** Fix generation a self signed certificate for `crowd-basic-auth-proxy`. [#6074](https://github.com/deckhouse/deckhouse/pull/6074)
  - **[user-authz]** Add matchAny parameter to namespaceSelector for granting access to all namespaces. [#6014](https://github.com/deckhouse/deckhouse/pull/6014)
 
