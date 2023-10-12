@@ -31,12 +31,14 @@ data:
   {{- end }}
 
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
-  tunnel: "vxlan"
+  tunnel-protocol: "vxlan"
+  routing-mode: "tunnel"
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
-  tunnel: "disabled"
+  routing-mode: "native"
   auto-direct-node-routes: "true"
   {{- else if eq .Values.cniCilium.internal.mode "Direct" }}
-  tunnel: "disabled"
+  routing-mode: "native"
+  auto-direct-node-routes: "false"
   {{- else }}
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
@@ -95,6 +97,8 @@ data:
   enable-endpoint-health-checking: "true"
   enable-health-checking: "true"
   policy-audit-mode: {{ .Values.cniCilium.policyAuditMode | quote }}
+
+  enable-pmtu-discovery: "true"
 
   ipam: kubernetes
   k8s-require-ipv4-pod-cidr: "true"
