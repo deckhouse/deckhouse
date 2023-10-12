@@ -124,7 +124,7 @@ Deckhouse использует `cloud-init` для настройки вирту
 * open-vm-tools
 * [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (для версий `cloud-init` старше 21.3)
 
-Для добавления ssh-ключа, в `/etc/cloud/cloud.cfg` должен быть указан `default_user`.
+Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
 
 ## Инфраструктура
 
