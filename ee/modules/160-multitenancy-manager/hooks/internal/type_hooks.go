@@ -18,13 +18,20 @@ const (
 )
 
 var (
-	ProjectTypeHookKubeConfig = go_hook.KubernetesConfig{
+	ProjectTypeHookKubeConfig = projectTypeHookConfig(filterProjectTypes)
+)
+
+func projectTypeHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConfig {
+	return go_hook.KubernetesConfig{
 		Name:       ProjectTypesQueue,
 		ApiVersion: APIVersion,
 		Kind:       ProjectTypeKind,
 		FilterFunc: filterProjectTypes,
+		// only snapshot update is needed
+		ExecuteHookOnEvents:          go_hook.Bool(false),
+		ExecuteHookOnSynchronization: go_hook.Bool(false),
 	}
-)
+}
 
 type ProjectTypeSnapshot struct {
 	Name string

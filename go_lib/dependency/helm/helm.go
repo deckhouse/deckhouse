@@ -1,0 +1,199 @@
+/*
+Copyright 2023 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package helm
+
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/releaseutil"
+	"helm.sh/helm/v3/pkg/storage/driver"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/rest"
+)
+
+// const defaultNamespace = "d8-multitenancy-manager"
+const helmDriver = "secret"
+
+type Client interface {
+	// Install(releaseName, namespace string, debug bool) error
+	Upgrade(releaseName, namespace string, templates, values map[string]interface{}, debug bool) error
+	Delete(releaseName string) error
+}
+
+type helmClient struct {
+	actionConfig *action.Configuration
+	options      helmOptions
+}
+
+func NewClient(options ...Option) (Client, error) {
+	opts := &helmOptions{}
+
+	for _, opt := range options {
+		opt(opts)
+	}
+
+	conf, err := getActionConfig("namespace")
+	if err != nil {
+		return nil, err
+	}
+
+	client := helmClient{
+		actionConfig: conf,
+	}
+
+	return &client, nil
+}
+
+type helmOptions struct {
+	Namespace  string
+	HistoryMax int32
+	Timeout    time.Duration
+}
+
+type Option func(options *helmOptions)
+
+func (client *helmClient) Upgrade(releaseName, namespace string, templates, values map[string]interface{}, debug bool) error {
+	ch := &chart.Chart{
+		Metadata: &chart.Metadata{
+			Name:    releaseName,
+			Version: "0.0.1", // TODO ???
+		},
+	}
+
+	for name, template := range templates {
+		data, ok := template.([]byte)
+		if !ok {
+			return fmt.Errorf("invalid template. Template name: %v", name)
+		}
+
+		chartFile := chart.File{
+			Name: name,
+			Data: data,
+		}
+
+		ch.Templates = append(ch.Templates, &chartFile)
+	}
+
+	upgradeObject := action.NewUpgrade(client.actionConfig)
+	if namespace != "" {
+		upgradeObject.Namespace = namespace
+	}
+
+	upgradeObject.Install = true
+	upgradeObject.MaxHistory = int(client.options.HistoryMax)
+	upgradeObject.Timeout = client.options.Timeout
+
+	releases, err := action.NewHistory(client.actionConfig).Run(releaseName)
+	if err == driver.ErrReleaseNotFound {
+		installObject := action.NewInstall(client.actionConfig)
+		if namespace != "" {
+			installObject.Namespace = namespace
+		}
+		installObject.Timeout = client.options.Timeout
+		installObject.ReleaseName = releaseName
+		installObject.UseReleaseName = true
+
+		_, err = installObject.Run(ch, values)
+		return err
+	}
+
+	if len(releases) > 0 {
+		releaseutil.Reverse(releases, releaseutil.SortByRevision)
+		latestRelease := releases[0]
+
+		if latestRelease.Info.Status.IsPending() {
+			client.rollbackLatestRelease(releases)
+		}
+	}
+
+	_, err = upgradeObject.Run(releaseName, ch, values)
+	if err != nil {
+		return fmt.Errorf("helm upgrade failed: %s", err)
+	}
+
+	return nil
+}
+
+func (client *helmClient) Delete(releaseName string) error {
+	uninstallObject := action.NewUninstall(client.actionConfig)
+	_, err := uninstallObject.Run(releaseName)
+	if err != nil {
+		return fmt.Errorf("helm uninstall %s invocation error: %v", releaseName, err)
+	}
+
+	return nil
+}
+
+func (client *helmClient) rollbackLatestRelease(releases []*release.Release) {
+	latestRelease := releases[0]
+	// nsReleaseName := fmt.Sprintf("%s/%s", latestRelease.Namespace, latestRelease.Name)
+
+	// client.LogEntry.Infof("Trying to rollback '%s'", nsReleaseName)
+
+	if latestRelease.Version == 1 || client.options.HistoryMax == 1 || len(releases) == 1 {
+		uninstallObject := action.NewUninstall(client.actionConfig)
+		uninstallObject.KeepHistory = false
+		_, err := uninstallObject.Run(latestRelease.Name)
+		if err != nil {
+			// client.LogEntry.Warnf("Failed to uninstall pending release %s: %s", nsReleaseName, err)
+			return
+		}
+	} else {
+		previousVersion := latestRelease.Version - 1
+		for i := 1; i < len(releases); i++ {
+			if !releases[i].Info.Status.IsPending() {
+				previousVersion = releases[i].Version
+				break
+			}
+		}
+		rollbackObject := action.NewRollback(client.actionConfig)
+		rollbackObject.Version = previousVersion
+		rollbackObject.CleanupOnFail = true
+		err := rollbackObject.Run(latestRelease.Name)
+		if err != nil {
+			// client.LogEntry.Warnf("Failed to rollback pending release %s: %s", nsReleaseName, err)
+			return
+		}
+	}
+
+	// client.LogEntry.Infof("Rollback '%s' successful", nsReleaseName)
+}
+
+func getActionConfig(namespace string) (*action.Configuration, error) {
+	actionConfig := new(action.Configuration)
+	var kubeConfig *genericclioptions.ConfigFlags
+	// Create the rest config instance with ServiceAccount values loaded in them
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+	// Create the ConfigFlags struct instance with initialized values from ServiceAccount
+	kubeConfig = genericclioptions.NewConfigFlags(false)
+	kubeConfig.APIServer = &config.Host
+	kubeConfig.BearerToken = &config.BearerToken
+	kubeConfig.CAFile = &config.CAFile
+	kubeConfig.Namespace = &namespace
+	if err := actionConfig.Init(kubeConfig, namespace, helmDriver, log.Printf); err != nil { // TODO <-- заменить логер. Пробросить из хука?
+		return nil, err
+	}
+	return actionConfig, nil
+}

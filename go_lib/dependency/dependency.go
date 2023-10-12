@@ -31,6 +31,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/helm"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/vsphere"
@@ -45,6 +46,7 @@ type Container interface {
 	MustGetK8sClient(options ...k8s.Option) k8s.Client
 	GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error)
 	GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error)
+	GetHelmClient(options ...helm.Option) (helm.Client, error)
 	GetClientConfig() (*rest.Config, error)
 }
 
@@ -72,6 +74,7 @@ type dependencyContainer struct {
 	m          sync.RWMutex
 	isTestEnv  *bool
 	httpClient http.Client
+	helmClient helm.Client
 }
 
 func (dc *dependencyContainer) isTestEnvironment() bool {
@@ -89,6 +92,25 @@ func (dc *dependencyContainer) isTestEnvironment() bool {
 	dc.m.Unlock()
 
 	return *dc.isTestEnv
+}
+
+func (dc *dependencyContainer) GetHelmClient(options ...helm.Option) (helm.Client, error) {
+	dc.m.Lock()
+	defer dc.m.Unlock()
+
+	if dc.isTestEnvironment() {
+		// return TestDC.GetHelmClient(options...)
+	}
+
+	if dc.helmClient == nil {
+		hc, err := helm.NewClient(options...)
+		if err != nil {
+			return nil, err
+		}
+		dc.helmClient = hc
+	}
+
+	return dc.helmClient, nil
 }
 
 func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
@@ -228,12 +250,17 @@ func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) err
 type mockedDependencyContainer struct {
 	ctrl *minimock.Controller // maybe we need it somewhere in tests
 
+	// HelmClient    *helm.ClientMock
 	HTTPClient    *http.ClientMock
 	EtcdClient    *etcd.ClientMock
 	K8sClient     k8s.Client
 	CRClient      *cr.ClientMock
 	VsphereClient *vsphere.ClientMock
 }
+
+// func (mdc *mockedDependencyContainer) GetHelmClient(options ...http.Option) helm.Client {
+// 	return mdc.HelmClient
+// }
 
 func (mdc *mockedDependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
 	return mdc.HTTPClient

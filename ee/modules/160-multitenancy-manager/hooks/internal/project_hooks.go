@@ -28,6 +28,9 @@ func projectHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConfig {
 		ApiVersion: APIVersion,
 		Kind:       ProjectKind,
 		FilterFunc: filterFunc,
+		// only snapshot update is needed
+		ExecuteHookOnEvents:          go_hook.Bool(false),
+		ExecuteHookOnSynchronization: go_hook.Bool(false),
 	}
 }
 
