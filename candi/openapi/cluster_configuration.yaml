@@ -21,7 +21,7 @@ apiVersions:
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.24"
+      kubernetesVersion: "1.25"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
