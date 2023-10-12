@@ -9,6 +9,8 @@ shell:
     - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 https://github.com/kubernetes/autoscaler.git .
     - cd vertical-pod-autoscaler/pkg/updater
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /updater
+    - chown -R 64535:64535 /updater
+    - chmod 0700 /updater
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
