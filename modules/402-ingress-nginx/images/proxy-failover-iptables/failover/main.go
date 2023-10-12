@@ -191,3 +191,47 @@ func addLinkAndAddress() error {
 
 	return nil
 }
+
+type rulespec struct {
+	table string
+	chain string
+	rule  []string
+}
+
+// TODO: remove old rules after change ports 81->1081, 444->1444
+func migrationRemoveOldRules(iptablesMgr *iptables.IPTables) {
+	rules := []rulespec{
+		{
+			table: "nat",
+			chain: chainName,
+			rule:  strings.Fields("-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:81"),
+		},
+		{
+			table: "nat",
+			chain: chainName,
+			rule:  strings.Fields("-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:444"),
+		},
+		{
+			table: "filter",
+			chain: "INPUT",
+			rule:  strings.Fields("-p tcp -m multiport --dport 81,444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT"),
+		},
+	}
+
+	for _, rule := range rules {
+		ok, err := iptablesMgr.Exists(rule.table, rule.chain, rule.rule...)
+		if err != nil {
+			log.Printf("migrationRemoveOldRules error: %v", err)
+			continue
+		}
+
+		if !ok {
+			continue
+		}
+
+		err = iptablesMgr.Delete(rule.table, rule.chain, rule.rule...)
+		if err != nil {
+			log.Printf("migrationRemoveOldRules error: %v", err)
+		}
+	}
+}
