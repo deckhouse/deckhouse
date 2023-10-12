@@ -110,7 +110,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		helmClient.Delete(projectName)
 	}
 
-	// Новое состояние в секреты
 	valuesSecret, err := newSecretFromProjectValues(toUpdate)
 	if err != nil {
 		return err
@@ -138,7 +137,7 @@ func getProjectTypeValues(input *go_hook.HookInput) map[string]v1alpha1.ProjectT
 			continue
 		}
 
-		projectTypesValues[pt.Name] = pt.Spec // TODO Спорная строчка
+		projectTypesValues[pt.Name] = pt.Spec // TODO replace
 
 		internal.SetProjectTypeStatus(input.PatchCollector, pt.Name, true, "")
 	}
@@ -290,15 +289,12 @@ func projectValuesCompareNew(oldValues, newValues map[string]projectValues) ( /*
 		toUpdate[projectName] = newValue
 
 		/*switch {
-		// Старго нет, новое есть. Создать.
 		case !oldValueExist && newValueExist:
 			toUpdate[projectName] = newValue
 
-		// Старое и новое значения есть. Значения не совпадают. Обновить.
 		case newValueExist && !reflect.DeepEqual(oldValue, newValue):
 			toUpdate[projectName] = newValue
 
-		// Старое есть, нового нет. Удалить.
 		case oldValueExist && !newValueExist:
 			toDelete[projectName] = oldValue
 		}*/
