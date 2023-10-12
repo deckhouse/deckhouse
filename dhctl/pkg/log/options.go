@@ -28,6 +28,15 @@ func BootstrapOptions() logboek.LogProcessOptions {
 		},
 	}
 }
+func MirrorOptions() logboek.LogProcessOptions {
+	return logboek.LogProcessOptions{
+		LevelLogProcessOptions: logboek.LevelLogProcessOptions{
+			Style: &logboek.Style{
+				Attributes: []color.Attribute{color.FgGreen, color.Bold},
+			},
+		},
+	}
+}
 
 func CommonOptions() logboek.LogProcessOptions {
 	return logboek.LogProcessOptions{
