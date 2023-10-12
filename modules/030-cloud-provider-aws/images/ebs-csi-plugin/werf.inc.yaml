@@ -27,5 +27,5 @@ shell:
   install:
   - cd /src
   - GIT_COMMIT='' make bin/aws-ebs-csi-driver
-  - chown 64535:64535 /src/bin/aws-ebs-csi-driver
-  - chmod 0755 /src/bin/aws-ebs-csi-driver
+  # - chown 64535:64535 /src/bin/aws-ebs-csi-driver
+  # - chmod 0755 /src/bin/aws-ebs-csi-driver
