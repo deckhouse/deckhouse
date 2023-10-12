@@ -1,5 +1,5 @@
 ---
-image: {{ .ModuleName }}/build-nginx-static-artifact
+artifact: {{ .ModuleName }}/build-nginx-static-artifact
 from: {{ .Images.BASE_UBUNTU }}
 shell:
   install:
