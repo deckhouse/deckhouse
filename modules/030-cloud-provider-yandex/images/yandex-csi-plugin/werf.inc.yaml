@@ -16,7 +16,7 @@ import:
   - mke2fs
   - mkfs.xfs
   - xfs_repair
-
+  before: setup
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
