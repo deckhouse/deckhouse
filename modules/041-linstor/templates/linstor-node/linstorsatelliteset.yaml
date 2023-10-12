@@ -83,9 +83,8 @@ spec:
       {{- end }}
   monitoringImage: {{ include "helm_lib_module_image" (list . "drbdReactor") }}
   monitoringBindAddress: 127.0.0.1
-  kernelModuleInjectionImage: {{ include "helm_lib_module_image" (list . "drbdDriverLoader") }}
-  kernelModuleInjectionMode: None
-  kernelModuleInjectionResources: {}
+  kernelModuleInjectionImage: {{ include "helm_lib_module_image" (list . "linstorDrbdWait") }}
+  kernelModuleInjectionMode: Compile
   kernelModuleInjectionExtraVolumeMounts:
     - name: spaas-certs
       mountPath: /etc/spaas/certs/ca.crt
