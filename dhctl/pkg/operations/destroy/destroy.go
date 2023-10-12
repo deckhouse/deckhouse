@@ -85,7 +85,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 
 	defer d.d8Destroyer.UnlockConverge(true)
 
-	if err := d.PhasedExecutionContext.Init(d.stateCache); err != nil {
+	if err := d.PhasedExecutionContext.InitPipeline(d.stateCache); err != nil {
 		return err
 	}
 	defer d.PhasedExecutionContext.Finalize(d.stateCache)
@@ -99,7 +99,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		if err := d.d8Destroyer.DeleteResources(); err != nil {
 			return err
 		}
-		if err := d.PhasedExecutionContext.CommitState(d.stateCache); err != nil {
+		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache); err != nil {
 			return err
 		}
 	}
@@ -134,5 +134,5 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	}
 
 	d.state.Clean()
-	return d.PhasedExecutionContext.Complete(d.stateCache)
+	return d.PhasedExecutionContext.CompletePipeline(d.stateCache)
 }

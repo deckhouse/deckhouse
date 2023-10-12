@@ -172,7 +172,7 @@ func (r *Runner) converge() error {
 		}
 
 		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CommitState(r.stateCache); err != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
 				return err
 			}
 		}
@@ -197,7 +197,7 @@ func (r *Runner) converge() error {
 		}
 
 		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CommitState(r.stateCache); err != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
 				return err
 			}
 		}
@@ -273,7 +273,7 @@ func (r *Runner) converge() error {
 	}
 
 	if r.PhasedExecutionContext != nil {
-		return r.PhasedExecutionContext.CommitState(r.stateCache)
+		return r.PhasedExecutionContext.CompletePhase(r.stateCache)
 	} else {
 		return nil
 	}

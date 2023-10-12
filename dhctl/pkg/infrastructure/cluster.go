@@ -103,7 +103,7 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 	}
 
 	if r.PhasedExecutionContext != nil {
-		return r.PhasedExecutionContext.CommitState(r.cache)
+		return r.PhasedExecutionContext.CompletePhase(r.cache)
 	} else {
 		return nil
 	}

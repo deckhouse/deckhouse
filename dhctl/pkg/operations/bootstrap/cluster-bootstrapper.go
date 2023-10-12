@@ -206,7 +206,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		stateCache.Delete(state.TombstoneKey)
 	}
 
-	if err := b.PhasedExecutionContext.Init(stateCache); err != nil {
+	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
 	defer b.PhasedExecutionContext.Finalize(stateCache)
@@ -447,7 +447,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		})
 	}
 
-	return b.PhasedExecutionContext.CommitAndComplete(stateCache)
+	return b.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache)
 }
 
 func printBanner() {
