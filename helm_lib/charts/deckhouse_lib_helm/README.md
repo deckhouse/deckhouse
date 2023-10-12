@@ -34,6 +34,7 @@
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
 | **Module Init Container** |
 | [helm_lib_module_init_container_chown_nobody_volume](#helm_lib_module_init_container_chown_nobody_volume) |
+| [helm_lib_module_init_container_chown_deckhouse_volume](#helm_lib_module_init_container_chown_deckhouse_volume) |
 | [helm_lib_module_init_container_check_linux_kernel](#helm_lib_module_init_container_check_linux_kernel) |
 | **Module Labels** |
 | [helm_lib_module_labels](#helm_lib_module_labels) |
@@ -385,6 +386,16 @@ list:
 #### Usage
 
 `{{ include "helm_lib_module_init_container_chown_nobody_volume" (list . "volume-name") }} `
+
+
+
+### helm_lib_module_init_container_chown_deckhouse_volume
+
+ returns initContainer which chowns recursively all files and directories in passed volume 
+
+#### Usage
+
+`{{ include "helm_lib_module_init_container_chown_deckhouse_volume" (list . "volume-name") }} `
 
 
 

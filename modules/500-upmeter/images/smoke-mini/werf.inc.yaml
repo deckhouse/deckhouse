@@ -1,0 +1,34 @@
+---
+artifact: {{ .ModuleName }}/build-smoke-mini-artifact
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o smoke-mini .
+  - chown 64535:64535 smoke-mini
+  - chmod 0700 smoke-mini
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/build-smoke-mini-artifact
+  add: /src/smoke-mini
+  to: /smoke-mini
+  before: setup
+docker:
+  ENTRYPOINT: ["/smoke-mini"]

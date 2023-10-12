@@ -19,6 +19,26 @@
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
 {{- end }}
 
+{{- /* Usage: {{ include "helm_lib_module_init_container_chown_deckhouse_volume" (list . "volume-name") }} */ -}}
+{{- /* returns initContainer which chowns recursively all files and directories in passed volume */ -}}
+{{- define "helm_lib_module_init_container_chown_deckhouse_volume"  }}
+  {{- $context := index . 0 -}}
+  {{- $volume_name := index . 1  -}}
+- name: chown-volume-{{ $volume_name }}
+  image: {{ include "helm_lib_module_common_image" (list $context "alpine") }}
+  command: ["sh", "-c", "chown -R 64535:64535 /tmp/{{ $volume_name }}"]
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
+  volumeMounts:
+  - name: {{ $volume_name }}
+    mountPath: /tmp/{{ $volume_name }}
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_module_init_container_check_linux_kernel" (list . ">= 4.9.17") }} */ -}}
 {{- /* returns initContainer which checks the kernel version on the node for compliance to semver constraint */ -}}
 {{- define "helm_lib_module_init_container_check_linux_kernel"  }}
