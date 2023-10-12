@@ -16,7 +16,7 @@ shell:
     - find /patches -name '*.patch' -exec git apply {} \;
     - cd vertical-pod-autoscaler/pkg/recommender
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /recommender
-    - chown -R 64535:64535 /recommender
+    - chown 64535:64535 /recommender
     - chmod 0700 /recommender
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
