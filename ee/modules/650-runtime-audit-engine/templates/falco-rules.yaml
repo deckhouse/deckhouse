@@ -222,6 +222,26 @@ spec:
           - fstec
           - container_drift
     - rule:
+        name: K8s Pod created
+        condition: (kevt and kcreate and pod and response_successful)
+        desc: Detect any attempt to create a pod
+        output: K8s Pod Created (user=%ka.user.name pod=%ka.target.name ns=%ka.target.namespace resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
+        priority: Informational
+        tags:
+          - fstec
+          - container_drift
+        source: K8sAudit
+    - rule:
+        name: K8s Pod deleted
+        condition: (kevt and kdelete and pod and response_successful)
+        desc: Detect any attempt to delete a pod
+        output: K8s Pod Deleted (user=%ka.user.name pod=%ka.target.name ns=%ka.target.namespace resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
+        priority: Informational
+        tags:
+          - fstec
+          - container_drift
+        source: K8sAudit
+    - rule:
         name: ServiceAccount created in a system namespace
         condition: |
           kevt and serviceaccount and kcreate and system_namespace and response_successful and not trusted_sa
