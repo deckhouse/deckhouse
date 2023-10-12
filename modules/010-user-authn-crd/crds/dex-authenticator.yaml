@@ -29,7 +29,7 @@ spec:
             * Deployment containing oauth2-proxy and redis containers
             * Service, pointing to a Deployment with an oauth2-proxy
             * Ingress, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side
-            * Secrets, needed to access dex
+            * Secrets, needed to access Dex
 
             **NOTE!** After restarting a pod with an oauth2-proxy, the current `access token` and `id token` will be queried (using the refresh token) and stored in a redis memory.
           properties:
@@ -49,7 +49,7 @@ spec:
                   description: 'Request to application will be sent with "Authorization: Bearer" header when the option is switched to true.'
                 applicationIngressCertificateSecretName:
                   type: string
-                  description: 'Name of TLS-certificate secret specified in your application Ingress object to add to dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
+                  description: 'Name of TLS-certificate secret specified in your application Ingress object to add to Dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
                   example: 'ingress-tls'
                   pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
                 applicationIngressClassName:

@@ -157,7 +157,7 @@ spec:
                       description: |
                         Optional parameter to include team groups.
 
-                        If enabled, the groups claim of dex id_token will looks like this:
+                        If enabled, the groups claim of Dex id_token will looks like this:
                         ```yaml
                         ["my_team", "my_team/administrators", "my_team/members"]
                         ```
@@ -228,7 +228,7 @@ spec:
                       type: boolean
                       description: |
                         Use POST requests to interact with the provider instead of including the token in the Basic Authorization header.
-                        Generally, dex automatically determines the type of request to make, while in some cases enabling this parameter can help.
+                        Generally, Dex automatically determines the type of request to make, while in some cases enabling this parameter can help.
                       default: false
                     getUserInfo:
                       type: boolean
@@ -319,7 +319,7 @@ spec:
                       default: false
                       description: |
                         Following field is required if the LDAP host is not using TLS (port 389).
-                        This option inherently leaks passwords to anyone on the same network as dex.
+                        This option inherently leaks passwords to anyone on the same network as Dex.
                         Equals to false by default.
                     startTLS:
                       type: boolean
@@ -387,18 +387,18 @@ spec:
                           type: string
                           example: 'uid'
                           description: |
-                            LDAP attribute that will be matched to dex user id entry.
+                            LDAP attribute that will be matched to Dex user id entry.
                         emailAttr:
                           type: string
                           example: 'mail'
                           description: |
-                            LDAP attribute that will be matched to dex user email entry.
+                            LDAP attribute that will be matched to Dex user email entry.
                             When an email address is not available, use another value unique to the user, like uid.
                         nameAttr:
                           type: string
                           example: 'name'
                           description: |
-                            LDAP attribute that will be matched to dex user name entry.
+                            LDAP attribute that will be matched to Dex user name entry.
                             No default value provided.
                     groupSearch:
                       type: object

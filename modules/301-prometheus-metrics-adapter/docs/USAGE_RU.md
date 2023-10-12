@@ -104,7 +104,7 @@ spec:
   * `ClusterStatefulsetMetric` (недоступен пользователям);
   * `ClusterDaemonSetMetric` (недоступен пользователям).
 
-С помощью Cluster-scoped-ресурса можно определить метрику глобально, а с помощью Namespaced-ресурса можно ее локально переопределять. [Формат](cr.html) у всех CR — одинаковый.
+С помощью Cluster-scoped-ресурса можно определить метрику глобально, а с помощью Namespaced-ресурса можно ее локально переопределять. [Формат](cr.html) у всех custom resource — одинаковый.
 
 ### Применяем кастомные метрики в HPA
 
@@ -145,8 +145,8 @@ spec:
         kind: Ingress
         name: myingress
       metric:
-        # Метрика, зарегистрированная с помощью CR IngressMetric или ClusterIngressMetric.
-        # Можно использовать rps_1m, rps_5m или rps_15m, которые поставляются с модулем prometheus-metrics-adapter.
+        # Метрика, зарегистрированная с помощью custom resource IngressMetric или ClusterIngressMetric.
+        # Можно использовать rps_1m, rps_5m или rps_15m которые поставляются с модулем prometheus-metrics-adapter.
         name: mymetric
       target:
         # Для метрик типа Object можно использовать `Value` или `AverageValue`.
@@ -283,7 +283,7 @@ spec:
     # Указывать describedObject в отличие от type: Object не надо.
     pods:
       metric:
-        # Кастомная метрика, зарегистрированная с помощью CR PodMetric.
+        # Кастомная метрика, зарегистрированная с помощью custom resource PodMetric.
         name: php-fpm-active-workers
       target:
         # Для метрик с type: Pods можно использовать только AverageValue.

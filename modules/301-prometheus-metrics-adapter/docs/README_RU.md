@@ -8,9 +8,9 @@ search: autoscaler, HorizontalPodAutoscaler
 Устанавливает в кластер [имплементацию](https://github.com/kubernetes-sigs/prometheus-adapter) Kubernetes [resource metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md), [custom metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/custom-metrics-api.md) и [external metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/external-metrics-api.md) для получения метрик из Prometheus.
 
 Это позволяет:
-- `kubectl top` брать метрики из Prometheus через адаптер;
-- использовать CR-версии [autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling) для масштабирования приложений (HPA);
-- получать информацию из Prometheus средствами API Kubernetes для других модулей (Vertical Pod Autoscaler и др.).
+- `kubectl top` брать метрики из Prometheus, через адаптер;
+- использовать custom resource версии [autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling) для масштабирования приложений (HPA);
+- получать информацию из Prometheus средствами API Kubernetes для других модулей (Vertical Pod Autoscaler, ...).
 
 Модуль позволяет производить масштабирование по следующим параметрам:
 * CPU (пода);

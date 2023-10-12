@@ -25,7 +25,7 @@ spec:
                     name:
                       description: Имя ресурса.
                 storageClassName:
-                  description: Storage class для `VirtualMachineDisk`.
+                  description: StorageClass для `VirtualMachineDisk`.
             status:
               description: Определяет наблюдаемое состояние `VirtualMachineDisk`.
               properties:

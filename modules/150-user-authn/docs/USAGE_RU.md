@@ -97,7 +97,7 @@ spec:
     - users
 ```
 
-В соответствующем проекте Atlassian Crowd, необходимо создать новое `Generic` приложение.
+В соответствующем проекте Atlassian Crowd необходимо создать новое `Generic`-приложение.
 
 Для этого необходимо перейти в `Applications` -> `Add application`.
 
@@ -148,7 +148,7 @@ spec:
     getUserInfo: true
 ```
 
-Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, для [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration)).
+Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration)).
 
 Полученные в ходе выполнения инструкции `clientID` и `clientSecret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
@@ -188,16 +188,16 @@ spec:
       nameAttr: cn
 ```
 
-Для настройки аутентификации необходимо завести в LDAP read-only пользователя (service account).
+Для настройки аутентификации необходимо завести в LDAP read-only-пользователя (service account).
 
 Полученные путь до пользователя и пароль необходимо указать в полях `bindDN` и `bindPW` custom resource [DexProvider](cr.html#dexprovider).
 1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
-2. В поле `bindPW` необходимо указывать пароль в plain-виде. Стратегии с передачей хешированных паролей не предусмотрены.
+2. В поле `bindPW` необходимо указывать пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
-## Настройка OAuth2 клиента в Dex для подключения приложения
+## Настройка OAuth2-клиента в Dex для подключения приложения
 
-Данный вариант настройки подходит приложением, которые имеют возможность использовать oauth2-аутентификацию самостоятельно без помощи oauth2-proxy.
-Чтобы позволить подобным приложениям взаимодействовать с Dex используется Custom Resource [`DexClient`](cr.html#dexclient).
+Данный вариант настройки подходит приложениям, которые имеют возможность использовать oauth2-аутентификацию самостоятельно, без помощи oauth2-proxy.
+Чтобы позволить подобным приложениям взаимодействовать с Dex, используется custom resource [`DexClient`](cr.html#dexclient).
 
 {% raw %}
 
@@ -220,9 +220,9 @@ spec:
 
 {% endraw %}
 
-После создание такого ресурса, в Dex будет зарегистрирован клиент с идентификатором (**clientID**) - `dex-client-myname@mynamespace`
+После создания такого ресурса в Dex будет зарегистрирован клиент с идентификатором (**clientID**) `dex-client-myname@mynamespace`.
 
-Пароль для доступа к клиенту (**clientSecret**) будет сохранен в секрете:
+Пароль для доступа к клиенту (**clientSecret**) будет сохранен в Secret'е:
 {% raw %}
 
 ```yaml
@@ -240,9 +240,9 @@ data:
 
 ## Пример создания статического пользователя
 
-Придумайте пароль и укажите его хеш-сумму в поле `password`.
+Придумайте пароль и укажите его хэш-сумму в поле `password`.
 
-Для вычисления хеш-суммы пароля воспользуйтесь командой:
+Для вычисления хэш-суммы пароля воспользуйтесь командой:
 
 ```shell
 echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'

@@ -209,7 +209,7 @@ stringData:
   token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
 
-Задеплойте CR `CustomAlertManager`:
+Задеплойте custom resource `CustomAlertManager`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

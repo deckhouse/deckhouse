@@ -31,12 +31,12 @@ spec:
                     Шаблоны совместимы со всеми функциями `helm`. Читайте подробнее про [создание изолированных окружений](usage.html#создание-изолированного-окружения)...
 
                     В шаблонах доступны также следующие параметры (`values`):
-                    - `{{ .projectName }}` — имя `Project` (окружения), для которого рендерится шаблон.
-                    - `{{ .projectTypeName }}` — имя `ProjectType`.
+                    - `{{ .projectName }}` — имя `Project` (окружения), для которого рендерится шаблон;
+                    - `{{ .projectTypeName }}` — имя `ProjectType`;
                     - `{{ .params }}` — словарь пользовательских значений, описанных в параметре [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) и определенных в параметре [.spec.template](cr.html#project-v1alpha1-spec-template).
 
                     > **Внимание!** Указывать поля `.metadata.namespace` для объектов необязательно,
-                    > так как они автоматически проставятся из названия окружения (CR `Project`).
+                    > так как они автоматически проставятся из названия окружения (custom resource `Project`).
                 subjects:
                   description:
                     Список ServiceAccount'ов, групп (`Group`) и пользователей
@@ -47,12 +47,12 @@ spec:
                       kind:
                         description:
                           Kind целевого ресурса для применения доступа к
-                          окружению. (`ServiceAccount`, `Group` или `User`).
+                          окружению (`ServiceAccount`, `Group` или `User`).
                       name:
                         description: Имя целевого ресурса для применения доступа к окружению.
                       namespace:
                         description: |
-                          Пространство имен (`namespace`) целевого ресурса для применения доступа окружению.
+                          Пространство имен (`namespace`) целевого ресурса для применения доступа к окружению.
 
                           Требуется только при использовании ServiceAccount'а из другого пространства имен (`namespace`).
                       role:

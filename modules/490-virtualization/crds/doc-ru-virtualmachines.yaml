@@ -12,11 +12,11 @@ spec:
               properties:
                 affinity:
                   description: |
-                    Как в `spec.affinity` у Pod'ов.
+                    Как в `spec.affinity` у подов.
 
-                    Если ничего не указано — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано, будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список [topologySpreadConstraint](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity). Pod'ы инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список [topologySpreadConstraint](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity). Поды инстанса унаследуют это поле как есть.
                   properties:
                     nodeAffinity:
                       description: ""
@@ -277,7 +277,7 @@ spec:
                       description: |
                         Имя загрузочного диска виртуальной машины.
 
-                        Если не указано, то по умолчанию используется `{vm name}-boot`.
+                        Если не указано, по умолчанию используется `{vm name}-boot`.
                     size:
                       description: Размер создаваемого диска.
                     source:
@@ -288,7 +288,7 @@ spec:
                       properties:
                         apiGroup:
                           description: |
-                            Группа API ресурса.
+                            Группа API-ресурса.
 
                             Если APIGroup не указан, указанный вид должен находиться в основной группе API. Для любых других сторонних типов требуется указание группы API.
                         kind:
@@ -296,10 +296,10 @@ spec:
                         name:
                           description: Имя ресурса.
                     storageClassName:
-                      description: Имя желаемого storage class для создаваемого диска.
+                      description: Имя желаемого StorageClass для создаваемого диска.
                 cloudInit:
                   description: |
-                    Пользовательская конфигурация для cloud-init nocloud. [Подробнее...](https://cloudinit.readthedocs.io/en/latest/reference/datasources/nocloud.html)
+                    Пользовательская конфигурация для cloud-init NoCloud. [Подробнее...](https://cloudinit.readthedocs.io/en/latest/reference/datasources/nocloud.html)
                   properties:
                     networkData:
                       description: Параметры NoCloud cloud-init networkdata в виде строки.
@@ -337,14 +337,14 @@ spec:
                   description: |
                     Имя связанного `VirtualMachineIPAddressClaim`.
 
-                    Если не указано, то по умолчанию используется `{vm name}`.
+                    Если не указано, по умолчанию используется `{vm name}`.
                 nodeSelector:
                   description: |
-                    Как в `spec.nodeSelector` у Pod'ов.
+                    Как в `spec.nodeSelector` у подов.
 
-                    Если ничего не указано — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано, будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список `nodeSelector`. Pod'ы инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 priorityClassName:
                   description: Определяет приоритет пода для виртуальной машины.
                 resources:
@@ -358,11 +358,11 @@ spec:
                     Для этой опции требуется `cloud-init` внутри виртуальной машины.
                 tolerations:
                   description: |
-                    Как в `spec.tolerations` у Pod'ов.
+                    Как в `spec.tolerations` у подов.
 
-                    Если ничего не указано — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано, будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                   items:
                     description: ""
                     properties:
@@ -378,11 +378,11 @@ spec:
                         description: ""
                 topologySpreadConstraints:
                   description: |
-                    Как в `spec.topologySpreadConstraints` у Pod'ов.
+                    Как в `spec.topologySpreadConstraints` у подов.
 
-                    Если ничего не указано — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано, будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список [topologySpreadConstraint](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/). Pod'ы инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список [topologySpreadConstraint](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/). Поды инстанса унаследуют это поле как есть.
                   items:
                     description: ""
                     properties:
@@ -425,6 +425,6 @@ spec:
               description: Определяет наблюдаемое состояние `VirtualMachine`.
               properties:
                 ipAddress:
-                  description: IP адрес виртуальной машины
+                  description: IP-адрес виртуальной машины
                 phase:
                   description: Phase представляет собой удобочитаемое высокоуровневое представление состояния виртуальной машины.

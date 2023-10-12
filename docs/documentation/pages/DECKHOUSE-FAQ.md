@@ -188,7 +188,7 @@ Every minute Deckhouse checks a new release appeared in the release channel spec
 
 When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
 
-After creating a `DeckhouseRelease` CR in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/002-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
+After creating a `DeckhouseRelease` custom resource in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/002-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
 
 To get list and status of all releases use the following command:
 

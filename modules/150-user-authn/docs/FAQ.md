@@ -33,7 +33,7 @@ spec:
 
 {% endraw %}
 
-After the `DexAuthenticator` CR is created in the cluster, Kubernetes will make the necessary deployment, service, ingress, secret in the specified namespace.
+After the `DexAuthenticator` custom resource is created in the cluster, Kubernetes will make the necessary deployment, service, ingress, secret in the specified namespace.
 Add the following annotations to your app's Ingress resource to connect your application to dex:
 
 {% raw %}

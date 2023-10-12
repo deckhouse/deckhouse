@@ -561,7 +561,7 @@ spec:
  rules: [{}]
 ```
 
-## Устройство федерации из двух кластеров с помощью CR IstioFederation
+## Устройство федерации из двух кластеров с помощью custom resource IstioFederation
 
 > Доступно только в редакции Enterprise Edition.
 

@@ -4,7 +4,7 @@ type:
   - instruction
 ---
 
-## How do I disable chrony and use ntp daemon on nodes?
+## How do I disable chrony and use NTP daemon on nodes?
 
 1. [Disable](configuration.html) usage of chrony module.
 
