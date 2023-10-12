@@ -247,10 +247,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeProxy127":  "imageHash-kubeProxy-kubeProxy127",
 	},
 	"linstor": map[string]interface{}{
-		"drbdDriverLoader":          "imageHash-linstor-drbdDriverLoader",
 		"drbdReactor":               "imageHash-linstor-drbdReactor",
 		"linstorAffinityController": "imageHash-linstor-linstorAffinityController",
 		"linstorCsi":                "imageHash-linstor-linstorCsi",
+		"linstorDrbdWait":           "imageHash-linstor-linstorDrbdWait",
 		"linstorPoolsImporter":      "imageHash-linstor-linstorPoolsImporter",
 		"linstorSchedulerAdmission": "imageHash-linstor-linstorSchedulerAdmission",
 		"linstorSchedulerExtender":  "imageHash-linstor-linstorSchedulerExtender",
