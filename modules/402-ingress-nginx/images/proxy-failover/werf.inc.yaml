@@ -31,12 +31,6 @@ git:
   stageDependencies:
     install:
     - '**/*.tpl'
-ansible:
-  install:
-  - name: Remove file (delete file)
-    file:
-      path: /opt/nginx-static/conf/nginx.conf
-      state: absent
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
