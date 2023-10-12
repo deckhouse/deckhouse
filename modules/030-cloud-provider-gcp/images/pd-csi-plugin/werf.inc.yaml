@@ -32,5 +32,5 @@ shell:
   install:
   - cd /src
   - GCE_PD_CSI_STAGING_VERSION=v1.3.3 make gce-pd-driver
-  - chown 64535:64535 /src/bin/gce-pd-csi-driver
-  - chmod 0755 /src/bin/gce-pd-csi-driver
+  # - chown 64535:64535 /src/bin/gce-pd-csi-driver
+  # - chmod 0755 /src/bin/gce-pd-csi-driver
