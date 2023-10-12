@@ -35,6 +35,16 @@ type Kafka struct {
 	Compression string `json:"compression,omitempty"`
 
 	TLS CommonTLS `json:"tls,omitempty"`
+
+	SASL KafkaSASL `json:"sasl,omitempty"`
+}
+
+type KafkaSASL struct {
+	Username  string `json:"username,omitempty"`
+	Password  string `json:"password,omitempty"`
+	Mechanism string `json:"mechanism,omitempty"`
+
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
@@ -58,6 +68,16 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		tls.Enabled = true
 	}
 
+	sasl := KafkaSASL{
+		Enabled:   false,
+		Username:  spec.SASL.Username,
+		Password:  spec.SASL.Password,
+		Mechanism: string(spec.SASL.Mechanism),
+	}
+	if sasl.Mechanism != "" && sasl.Username != "" && sasl.Password != "" {
+		sasl.Enabled = true
+	}
+
 	return &Kafka{
 		CommonSettings: CommonSettings{
 			Name:   ComposeName(name),
@@ -71,6 +91,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 			Codec:           "json",
 			TimestampFormat: "rfc3339",
 		},
+		SASL:             sasl,
 		Compression:      "gzip",
 		BootstrapServers: strings.Join(spec.BootstrapServers, ","),
 	}
