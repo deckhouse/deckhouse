@@ -36,14 +36,14 @@ spec:
                 email:
                   type: string
                   description: |
-                    User E-mail.
+                    User email.
 
                     **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/documentation/v1/modules/140-user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
                   example: 'user@domain.com'
                 password:
                   type: string
                   description: |
-                    User password hash in plaintext or Base64-encoded.
+                    User password hash in plaintext or Base64 encoded.
 
                     Use the following command to encode the password hash in Base64: `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
                   example: 'JDJ5JDEwJE9HN1lOOUhnOXU5NmY2cGp4R3NIcS56NWQuOVQxQ0VrdWIud3BRdVJ5Sy5QQU5INlpKNDguCgo='
@@ -57,7 +57,7 @@ spec:
                   description: |
                     Static user groups.
 
-                    Deprecated. Use the [Group](#group) resource.
+                    Since the parameter has been deprecated, use the [Group](#group) resource to add users to groups.
                   items:
                     type: string
                 ttl:
@@ -65,8 +65,10 @@ spec:
                   pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
                   description: |
                     Static user TTL.
-                    * It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
-                    * You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
+
+                    It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+
+                    You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
                   example: '24h'
             status:
               type: object
@@ -119,14 +121,14 @@ spec:
                 email:
                   type: string
                   description: |
-                    User E-mail.
+                    User email.
 
                     **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/documentation/v1/modules/140-user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
                   example: 'user@domain.com'
                 password:
                   type: string
                   description: |
-                    User password hash in plaintext or Base64-encoded.
+                    User password hash in plaintext or Base64 encoded.
 
                     Use the following command to encode the password hash in Base64: `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
                   example: 'JDJ5JDEwJE9HN1lOOUhnOXU5NmY2cGp4R3NIcS56NWQuOVQxQ0VrdWIud3BRdVJ5Sy5QQU5INlpKNDguCgo='
@@ -143,7 +145,7 @@ spec:
                   description: |
                     Static user groups.
 
-                    Deprecated. Use the [Group](#group) resource.
+                    Since the parameter has been deprecated, use the [Group](#group) resource to add users to groups.
                   items:
                     type: string
                 ttl:
@@ -151,8 +153,10 @@ spec:
                   pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
                   description: |
                     Static user TTL.
-                    * It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
-                    * You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
+
+                    It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+
+                    You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
                   example: '24h'
             status:
               type: object

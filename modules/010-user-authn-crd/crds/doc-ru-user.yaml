@@ -1,7 +1,7 @@
 spec:
   versions:
     - name: v1alpha1
-      schema: &schema
+      schema:
         openAPIV3Schema:
           description: |
             Содержит информацию о статическом пользователе.
@@ -17,9 +17,9 @@ spec:
                     **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/documentation/v1/modules/140-user-authz/) для выдачи прав конкретному пользователю в качестве имени пользователя в custom resource [ClusterAuthorizationRule](https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
                 password:
                   description: |
-                    Хэшированный пароль пользователя.
+                    Хэш пароля пользователя в явном виде или закодированный в Base64.
 
-                    Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`. Или воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
+                    Для получения хэша пароля в Base64 можно воспользоваться командой `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Также можно воспользоваться онлайн-сервисом (например, https://bcrypt-generator.com/).
                 userID:
                   description: |
                     Уникальное имя (ID) пользователя.
@@ -60,14 +60,14 @@ spec:
               properties:
                 email:
                   description: |
-                    E-mail пользователя.
+                    Email пользователя.
 
                     **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/documentation/v1/modules/140-user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
                 password:
                   description: |
-                    Хэшированный пароль пользователя.
+                    Хэш пароля пользователя в явном виде или закодированный в Base64.
 
-                    Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`. Или воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
+                    Для получения хэша пароля в Base64 можно воспользоваться командой `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Также можно воспользоваться онлайн-сервисом (например, https://bcrypt-generator.com/).
                 userID:
                   description: |
                     Уникальное имя (ID) пользователя.
@@ -77,8 +77,7 @@ spec:
                   description: |
                     Список групп, в которых у пользователя есть членство.
 
-                    Больше не используется. Добавление пользователя в группы теперь осуществляется через ресурс [Group](#group).
-
+                    Т.к. параметр устарел, добавление пользователя в группы теперь осуществляется через ресурс [Group](#group).
                 ttl:
                   description: |
                     Время жизни учетной записи пользователя (TTL).
@@ -99,41 +98,3 @@ spec:
                 groups:
                   description: |
                     Список групп, в которых у пользователя есть членство.
-    - name: v2alpha1
-      schema:
-        openAPIV3Schema:
-          description: |
-            Содержит информацию о статическом пользователе.
-          properties:
-            spec:
-              properties:
-                email:
-                  description: |
-                    E-mail пользователя.
-
-                    **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/documentation/v1/modules/140-user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
-                password:
-                  description: |
-                    Хэш пароля пользователя в явном виде или закодированный в Base64.
-
-                    Для получения хэша пароля в Base64 можно воспользоваться командой `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Также можно воспользоваться онлайн-сервисом (например, https://bcrypt-generator.com/).
-                userID:
-                  description: |
-                    Уникальное имя (ID) пользователя.
-                ttl:
-                  description: |
-                    Время жизни учетной записи пользователя (TTL).
-
-                    Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
-
-                    Указать TTL можно только 1 раз. При повторном изменении TTL дата `expireAt` не обновляется.
-            status:
-              type: object
-              properties:
-                expireAt:
-                  type: string
-                  description: |
-                    Дата окончания действия учетной записи пользователя:
-                    * Появляется только при заполнении поля `.spec.ttl`.
-                    * При достижении этой даты учетная запись будет удалена.
-                    * Синхронизируется раз в 5 минут. Возможен временной лаг между датой в этом поле и датой фактического удаления пользователя.
