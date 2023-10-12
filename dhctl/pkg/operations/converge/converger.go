@@ -107,7 +107,7 @@ func (c *Converger) Converge() error {
 
 	stateCache := cache.Global()
 
-	if err := c.PhasedExecutionContext.Init(stateCache); err != nil {
+	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
 	defer c.PhasedExecutionContext.Finalize(stateCache)
@@ -126,7 +126,7 @@ func (c *Converger) Converge() error {
 		return fmt.Errorf("converge problem: %v", err)
 	}
 
-	return c.PhasedExecutionContext.Complete(stateCache)
+	return c.PhasedExecutionContext.CompletePipeline(stateCache)
 }
 
 func (c *Converger) AutoConverge() error {
