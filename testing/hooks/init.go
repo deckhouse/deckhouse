@@ -32,7 +32,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook/status_collector"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"
@@ -693,7 +692,6 @@ func (hec *HookExecutionConfig) RunGoHook() {
 
 	// make spec generator to reproduce behavior with deferred object mutations like in addon-operator
 	patchCollector := object_patch.NewPatchCollector()
-	statusCollector := status_collector.NewCollector()
 	hec.PatchCollector = patchCollector
 
 	hookInput := &go_hook.HookInput{
@@ -703,7 +701,6 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		MetricsCollector: metricsCollector,
 		LogEntry:         logger.WithField("output", "gohook"),
 		PatchCollector:   patchCollector,
-		StatusCollector:  statusCollector,
 		BindingActions:   &bindingActions,
 	}
 
@@ -736,12 +733,6 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	}
 
 	if operations := patchCollector.Operations(); len(operations) > 0 {
-		patcher := object_patch.NewObjectPatcher(hec.getFakeClient())
-		err := patcher.ExecuteOperations(operations)
-		Expect(err).ShouldNot(HaveOccurred())
-	}
-
-	if operations := statusCollector.Operations(); len(operations) > 0 {
 		patcher := object_patch.NewObjectPatcher(hec.getFakeClient())
 		err := patcher.ExecuteOperations(operations)
 		Expect(err).ShouldNot(HaveOccurred())

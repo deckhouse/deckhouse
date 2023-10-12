@@ -24,6 +24,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
 // hook for setting CR statuses
@@ -43,7 +44,7 @@ func updateSpStatus(input *go_hook.HookInput) error {
 
 	// update SPs' statuses
 	for _, sp := range securityPolicies {
-		input.StatusCollector.UpdateStatus(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name)
+		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
 	}
 
 	return nil

@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -46,7 +47,7 @@ func handleSP(input *go_hook.HookInput) error {
 	for _, sn := range snap {
 		sp := sn.(*securityPolicy)
 		// set observed status
-		input.StatusCollector.UpdateStatus(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name)
+		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
 	}
