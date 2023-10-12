@@ -27,5 +27,5 @@ shell:
   install:
   - cd /src
   - make azuredisk
-  - chown 64535:64535 _output/amd64/azurediskplugin
-  - chmod 0755 _output/amd64/azurediskplugin
+  # - chown 64535:64535 _output/amd64/azurediskplugin
+  # - chmod 0755 _output/amd64/azurediskplugin
