@@ -20,11 +20,11 @@ import (
 	"fmt"
 
 	"github.com/clarketm/json"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-
-	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+
 )
 
 // hook for setting CR statuses

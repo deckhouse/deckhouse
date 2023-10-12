@@ -20,11 +20,11 @@ import (
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
