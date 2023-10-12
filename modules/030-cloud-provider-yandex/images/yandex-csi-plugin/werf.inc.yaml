@@ -6,6 +6,17 @@ import:
   add: /go/bin/yandex-csi-driver
   to: /bin/yandex-csi-driver
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /sbin
+  to: /bin
+  includePaths:
+  - blkid
+  - e2fsck
+  - fsck.xfs
+  - mke2fs
+  - mkfs.xfs
+  - xfs_repair
+
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
