@@ -115,7 +115,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	input.PatchCollector.Create(valuesSecret, object_patch.UpdateIfExists()) // <-- Это просто создание секрета
+	input.PatchCollector.Create(valuesSecret, object_patch.UpdateIfExists()) // <--
 
 	return nil
 }

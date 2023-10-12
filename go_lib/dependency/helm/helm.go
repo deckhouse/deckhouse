@@ -192,7 +192,7 @@ func getActionConfig(namespace string) (*action.Configuration, error) {
 	kubeConfig.BearerToken = &config.BearerToken
 	kubeConfig.CAFile = &config.CAFile
 	kubeConfig.Namespace = &namespace
-	if err := actionConfig.Init(kubeConfig, namespace, helmDriver, log.Printf); err != nil { // TODO <-- заменить логер. Пробросить из хука?
+	if err := actionConfig.Init(kubeConfig, namespace, helmDriver, log.Printf); err != nil { // TODO <-- logger replace
 		return nil, err
 	}
 	return actionConfig, nil
