@@ -1,5 +1,5 @@
 ---
-title: "Модуль virtualization: custom resources"
+title: "Модуль virtualization: Custom Resources"
 ---
 
 <!-- SCHEMA -->

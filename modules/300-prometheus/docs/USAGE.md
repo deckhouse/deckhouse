@@ -235,4 +235,4 @@ spec:
       repeatInterval: 12h
 ```
 
-The fields `token` in the Secret and `chatID` in the `CustomAlertmanager` CR must be set on your own. [Read more](https://core.telegram.org/bots) about Telegram API.
+The fields `token` in the Secret and `chatID` in the `CustomAlertmanager` custom resource must be set on your own. [Read more](https://core.telegram.org/bots) about Telegram API.

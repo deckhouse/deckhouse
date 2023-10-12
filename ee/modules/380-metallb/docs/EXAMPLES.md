@@ -6,10 +6,10 @@ title: "The metallb module: examples"
 
 Metallb can be used in Static (Bare Metal) clusters when you can't order a load balancer from a cloud provider. Metallb can work in L2 or BGP modes. Below is an example of Metallb usage in L2 mode.
 
-We will create an Ingress Controller with `LoadBalancer` inlet. And we will also expose standalone Nginx using a Service with the `LoadBalancer` type.
+We will create an Ingress Controller with `LoadBalancer` inlet. And we will also expose standalone Nginx web server using a Service with the `LoadBalancer` type.
 
-First, you have to decide which NodeGroups will be used to deploy applications that have to be exposed by the LoadBalancer service.
-Ingress controllers run on frontend nodes, and Nginx runs on a worker node in this example. They have common label `node-role/metallb=""`.
+First, you have to decide, which NodeGroups will be used to deploy applications that have to be exposed by the LoadBalancer service.
+Ingress controllers run on frontend nodes, and Nginx web server runs on a worker node in this example. They have common label `node-role/metallb=""`.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -113,7 +113,7 @@ curl -s -o /dev/null -w "%{http_code}" 192.168.199.100
 404
 ```
 
-Expose your standalone Nginx on `8080` port.
+Expose your standalone Nginx web server on `8080` port.
 
 ```shell
 kubectl create deploy nginx --image=nginx

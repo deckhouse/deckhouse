@@ -1,7 +1,7 @@
 ---
 title: "The multitenancy-manager module"
 search: multitenancy
-description: The multitenancy-manager Deckhouse module helps to conveniently create templated environments in a Kubernetes cluster using Custom Resources. Rendering environment templates with Helm makes it possible to use any Kubernetes objects in an environment template.   
+description: The multitenancy-manager Deckhouse module helps to conveniently create templated environments in a Kubernetes cluster using custom resources. Rendering environment templates with Helm makes it possible to use any Kubernetes objects in an environment template.   
 ---
 
 The module allows you to create isolated environments in a Kubernetes cluster.

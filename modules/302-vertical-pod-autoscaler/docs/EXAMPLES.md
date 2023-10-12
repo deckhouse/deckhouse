@@ -21,7 +21,7 @@ spec:
       value: example
 ```
 
-## The basic `VerticalPodAutoscaler` CR example
+## The basic `VerticalPodAutoscaler` custom resource example
 
 ```yaml
 apiVersion: autoscaling.k8s.io/v1
@@ -35,7 +35,7 @@ spec:
     name: my-app
 ```
 
-## The advanced `VerticalPodAutoscaler` CR example
+## The advanced `VerticalPodAutoscaler` custom resource example
 
 ```yaml
 apiVersion: autoscaling.k8s.io/v1

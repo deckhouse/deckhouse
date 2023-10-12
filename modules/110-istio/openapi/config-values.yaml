@@ -22,7 +22,7 @@ properties:
     description: |
       How to handle requests directed to external services which aren't registered in service mesh.
       - `AllowAny` — allow.
-      - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry CR or to organize egressgateway.
+      - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry custom resource or to organize egressgateway.
     default: AllowAny
   enableHTTP10:
     type: boolean

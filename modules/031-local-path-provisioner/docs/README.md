@@ -6,14 +6,14 @@ Local Path Provisioner provides a way for the Kubernetes users to utilize the lo
 
 ## How does it work?
 
-For each CR [LocalPathProvisioner](cr.html), a corresponding `StorageClass` is created.
+For each custom resource [LocalPathProvisioner](cr.html), a corresponding `StorageClass` is created.
 
 The allowed topology for `StorageClass` is calculated based on the list of `nodeGroup` names from the CR.
 The topology is used for scheduling Pods.
 
 When a Pod orders a disk:
 - a `HostPath` PV is created
-- the `Provisioner` creates a local disk folder on the desired node along the path consisting of the `path` CR parameter, the PV name and the PVC name.
+- the `Provisioner` creates a local disk folder on the desired node along the path consisting of the `path` custom resource parameter, the PV name and the PVC name.
   
   Example of a path:
 

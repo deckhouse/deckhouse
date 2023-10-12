@@ -4,7 +4,7 @@ title: "Модуль descheduler"
 
 Модуль запускает в кластере [descheduler](https://github.com/kubernetes-incubator/descheduler/) с набором [стратегий](#стратегии), заданных в custom resource `Descheduler`.
 
-descheduler каждые 15 минут вытесняет поды, которые удовлетворяют включенным в custom resource `Descheduler` стратегиям. Это приводит к принудительному запуску процесса шедулинга в отношении вытесненных подов.
+descheduler каждые 15 минут вытесняет Pod'ы, которые удовлетворяют включенным в custom resource `Descheduler` стратегиям. Это приводит к принудительному запуску процесса шедулинга в отношении вытесненных подов.
 
 ## Особенности работы descheduler
 
