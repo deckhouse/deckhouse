@@ -17,6 +17,22 @@ import:
   - mkfs.xfs
   - xfs_repair
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /bin
+  to: /bin
+  includePaths:
+  - findmnt
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /usr/sbin
+  to: /bin
+  includePaths:
+  - badblocks
+  - debugfs
+  - dumpe2fs
+  - 'e2*'
+  - resize2fs
+  before: setup
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
