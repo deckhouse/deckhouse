@@ -51,6 +51,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	migrationRemoveOldRules(iptablesMgr)
+
 	err = addLinkAndAddress()
 	if err != nil {
 		log.Fatal(err)
@@ -198,7 +200,7 @@ type rulespec struct {
 	rule  []string
 }
 
-// TODO: remove old rules after change ports 81->1081, 444->1444
+// TODO: remove in 1.54 remove old rules after change ports 81->1081, 444->1444
 func migrationRemoveOldRules(iptablesMgr *iptables.IPTables) {
 	rules := []rulespec{
 		{
