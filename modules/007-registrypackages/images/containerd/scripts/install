@@ -36,7 +36,7 @@ cp -f containerd containerd-shim containerd-shim-runc-v1 containerd-shim-runc-v2
 cp -f containerd.service /lib/systemd/system/containerd-deckhouse.service
 systemctl daemon-reload
 
-if [[ -f /etc/systemd/system/containerd.service ]] || [[ -f /usr/lib/systemd/system/containerd.service ]]; then
+if [[ -f /etc/systemd/system/containerd.service ]] || [[ -f /usr/lib/systemd/system/containerd.service ]] || [[ -f /lib/systemd/system/containerd.service ]]; then
   systemctl disable --now containerd.service &> /dev/null
 fi
 
