@@ -32,5 +32,5 @@ shell:
     -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version=${VERSION}' \
     -o /go/bin/yandex-csi-driver \
     github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
-  - chown 64535:64535 /go/bin/yandex-csi-driver
-  - chmod 0755 /go/bin/yandex-csi-driver
+  # - chown 64535:64535 /go/bin/yandex-csi-driver
+  # - chmod 0755 /go/bin/yandex-csi-driver
