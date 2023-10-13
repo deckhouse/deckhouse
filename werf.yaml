@@ -557,6 +557,10 @@ import:
   add: /version_map_{{ $.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   after: setup
+- image: deckhouse-image-hash
+  add: /deckhouse_digest.txt
+  to: /deckhouse/image_digest
+  after: setup
 docker:
   ENV:
     EDITOR: vim
@@ -768,6 +772,18 @@ shell:
       )
     ' > /images_digests.json
 
+---
+image: deckhouse-image-hash
+from: {{ .Images.BASE_ALPINE }}
+dependencies:
+  - image: dev
+    before: setup
+    imports:
+      - type: ImageDigest
+        targetEnv: MODULE_IMAGE_DIGEST
+shell:
+  setup:
+    - echo ${MODULE_IMAGE_DIGEST} >> /deckhouse_digest.txt
 ---
 image: dev
 fromImage: dev-prebuild
