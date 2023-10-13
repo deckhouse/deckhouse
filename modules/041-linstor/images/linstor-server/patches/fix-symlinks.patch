@@ -1,4 +1,4 @@
-From 4823d8a23f1cd7bbefd16fa5e44aed45b869ac4b Mon Sep 17 00:00:00 2001
+From 63f32955077f935a28477599d90b02b134935faf Mon Sep 17 00:00:00 2001
 From: Andrei Kvapil <kvapss@gmail.com>
 Date: Tue, 3 Oct 2023 13:32:21 +0200
 Subject: [PATCH] Automatically fix symlinks for devices
@@ -153,7 +153,7 @@ index 16034c550..d44d2bc57 100644
          try
          {
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java
-index a1643daa5..da87adb4d 100644
+index a1643daa5..ef6f4240a 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java
 @@ -3,6 +3,10 @@ package com.linbit.linstor.layer.storage.utils;
@@ -173,7 +173,7 @@ index a1643daa5..da87adb4d 100644
              {
 +                if (!Files.exists(Paths.get(devicePath))) {
 +                    errorReporter.logWarning("Device path %s does not exist, fixing symlink", devicePath);
-+                    DmSetupUtils.fixSymlinkForDevice(extCmdFactory.create(), devicePath);
++                    DmSetupUtils.fixSymlinkForDevice(extCmd, devicePath);
 +                }
 +
                  size = getAllocatedSize(devicePath, extCmd);
