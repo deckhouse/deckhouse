@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -177,11 +178,13 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		close(drainingNodesC)
 	}()
 
+	input.MetricsCollector.Expire("d8_node_draining")
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
 			input.LogEntry.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
 			event := drainedNode.buildEvent()
 			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
+			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
 			continue
 		}
 		input.PatchCollector.MergePatch(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
