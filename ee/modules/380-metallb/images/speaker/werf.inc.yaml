@@ -6,7 +6,6 @@ shell:
     - apk add --no-cache git
     - mkdir -p /src
     - cd /src
-    - echo {{ $metallbVersion }}
     - git clone --depth 1 -b v0.13.7 https://github.com/metallb/metallb.git .
     - cd speaker
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /speaker
