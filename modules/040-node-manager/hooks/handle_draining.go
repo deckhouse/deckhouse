@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 	"io"
-	"strings"
 	"sync"
 	"time"
 
