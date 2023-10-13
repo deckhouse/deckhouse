@@ -8,8 +8,11 @@ import:
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
   add: /builds/busybox-1.36.1/busybox
-  to: /bin/blkid
+  to: /bin/busybox
   before: setup
+shell:
+  setup:
+    - /bin/busybox --install -s
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
