@@ -14,7 +14,7 @@ import (
 	"os"
 	"time"
 
-	"report-updater/vulndb"
+	"report-updater/cache"
 	"report-updater/web/hook"
 )
 
@@ -59,18 +59,23 @@ type Server struct {
 	logger  *log.Logger
 }
 
-func NewServer(l *log.Logger) (*Server, error) {
-	c, err := vulndb.NewVulnDbCache(l)
+type ServerConfig struct {
+	Logger          *log.Logger
+	HandlerSettings hook.HandlerSettings
+}
+
+func NewServer(config *ServerConfig) (*Server, error) {
+	c, err := cache.NewVulnerabilityCache(config.Logger)
 	if err != nil {
 		return nil, err
 	}
 
-	h, err := hook.NewHandler(l, c)
+	h, err := hook.NewHandler(config.Logger, c, &config.HandlerSettings)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Server{logger: l, handler: h}, nil
+	return &Server{logger: config.Logger, handler: h}, nil
 }
 
 func (s *Server) prepareHTTPServer() (*http.Server, error) {
@@ -116,13 +121,7 @@ func (s *Server) Run() error {
 
 	s.logger.Println("server is starting to listen on ", listenAddr, "...")
 
-	// Register and stop bdu cache updater
-	stopCh := make(chan struct{})
-	go s.handler.StartRenewBduCache(stopCh)
-
-	httpServer.RegisterOnShutdown(func() {
-		stopCh <- struct{}{}
-	})
+	go s.handler.StartRenewCacheLoop()
 
 	if err := httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("could not listen on %s: %v", listenAddr, err)
