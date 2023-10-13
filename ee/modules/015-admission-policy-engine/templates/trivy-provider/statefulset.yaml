@@ -118,8 +118,8 @@ spec:
           requests:
             storage: 2Gi
 {{- else }}
-        - name: data
-          emptyDir: {}
+      - name: data
+        emptyDir: {}
 {{- end }}
 ---
 apiVersion: policy/v1
