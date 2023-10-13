@@ -133,7 +133,7 @@ apiVersions:
         properties:
           httpProxy:
             type: string
-            pattern: '^https?://[0-9a-zA-Z\.\-:@]+$'
+            pattern: '^https?://[0-9a-zA-Z\.\-:@_]+$'
             description: |
               Proxy URL for HTTP requests.
 
@@ -143,7 +143,7 @@ apiVersions:
             - 'https://user:password@proxy.company.my:8443'
           httpsProxy:
             type: string
-            pattern: '^https?://[0-9a-zA-Z\.\-:@]+$'
+            pattern: '^https?://[0-9a-zA-Z\.\-:@_]+$'
             description: |
               Proxy URL for HTTPS requests.
 
