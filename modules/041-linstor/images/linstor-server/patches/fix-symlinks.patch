@@ -1,4 +1,4 @@
-From 2f4e83bf4de23408a37621b10e6caf5f771c863c Mon Sep 17 00:00:00 2001
+From 4823d8a23f1cd7bbefd16fa5e44aed45b869ac4b Mon Sep 17 00:00:00 2001
 From: Andrei Kvapil <kvapss@gmail.com>
 Date: Tue, 3 Oct 2023 13:32:21 +0200
 Subject: [PATCH] Automatically fix symlinks for devices
@@ -14,8 +14,8 @@ Signed-off-by: Andrei Kvapil <kvapss@gmail.com>
 ---
  .../linstor/layer/dmsetup/DmSetupUtils.java   | 79 ++++++++++++++++++-
  .../linbit/linstor/layer/drbd/DrbdLayer.java  | 13 +++
- .../storage/utils/StltProviderUtils.java      |  6 ++
- 3 files changed, 97 insertions(+), 1 deletion(-)
+ .../storage/utils/StltProviderUtils.java      |  9 +++
+ 3 files changed, 100 insertions(+), 1 deletion(-)
 
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java b/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java
 index ba753577d..cc90ad898 100644
@@ -153,18 +153,21 @@ index 16034c550..d44d2bc57 100644
          try
          {
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java
-index a1643daa5..2bf347d08 100644
+index a1643daa5..da87adb4d 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java
-@@ -3,6 +3,7 @@ package com.linbit.linstor.layer.storage.utils;
+@@ -3,6 +3,10 @@ package com.linbit.linstor.layer.storage.utils;
  import com.linbit.extproc.ExtCmd;
  import com.linbit.linstor.storage.StorageException;
  import com.linbit.linstor.storage.interfaces.categories.resource.VlmProviderObject;
 +import com.linbit.linstor.layer.dmsetup.DmSetupUtils;
++
++import java.nio.file.Files;
++import java.nio.file.Paths;
  
  public class StltProviderUtils
  {
-@@ -15,6 +16,11 @@ public class StltProviderUtils
+@@ -15,6 +19,11 @@ public class StltProviderUtils
              String devicePath = vlmData.getDevicePath();
              if (devicePath != null)
              {
