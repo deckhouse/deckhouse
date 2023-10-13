@@ -14,7 +14,8 @@ Signed-off-by: Andrei Kvapil <kvapss@gmail.com>
 ---
  .../linstor/layer/dmsetup/DmSetupUtils.java   | 79 ++++++++++++++++++-
  .../linbit/linstor/layer/drbd/DrbdLayer.java  | 13 +++
- 2 files changed, 91 insertions(+), 1 deletion(-)
+ .../storage/utils/StltProviderUtils.java      |  6 ++
+ 3 files changed, 97 insertions(+), 1 deletion(-)
 
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java b/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java
 index ba753577d..cc90ad898 100644
@@ -121,7 +122,7 @@ index ba753577d..cc90ad898 100644
      {
          Commands.genericExecutor(
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java b/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java
-index 16034c550..9fc09fa3e 100644
+index 16034c550..d44d2bc57 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java
 @@ -37,6 +37,7 @@ import com.linbit.linstor.core.objects.Volume;
@@ -151,6 +152,29 @@ index 16034c550..9fc09fa3e 100644
          MdSuperblockBuffer mdUtils = new MdSuperblockBuffer();
          try
          {
+diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java
+index a1643daa5..2bf347d08 100644
+--- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java
++++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/StltProviderUtils.java
+@@ -3,6 +3,7 @@ package com.linbit.linstor.layer.storage.utils;
+ import com.linbit.extproc.ExtCmd;
+ import com.linbit.linstor.storage.StorageException;
+ import com.linbit.linstor.storage.interfaces.categories.resource.VlmProviderObject;
++import com.linbit.linstor.layer.dmsetup.DmSetupUtils;
+ 
+ public class StltProviderUtils
+ {
+@@ -15,6 +16,11 @@ public class StltProviderUtils
+             String devicePath = vlmData.getDevicePath();
+             if (devicePath != null)
+             {
++                if (!Files.exists(Paths.get(devicePath))) {
++                    errorReporter.logWarning("Device path %s does not exist, fixing symlink", devicePath);
++                    DmSetupUtils.fixSymlinkForDevice(extCmdFactory.create(), devicePath);
++                }
++
+                 size = getAllocatedSize(devicePath, extCmd);
+             }
+             else
 -- 
-2.32.0 (Apple Git-132)
-
+2.39.3 (Apple Git-145)
