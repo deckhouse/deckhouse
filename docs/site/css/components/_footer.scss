@@ -1,6 +1,5 @@
 @import "components/common/_variables.scss";
 @import 'components/common/_mixins.scss';
-@import 'components/common/_breakpoints.scss';
 
 html,
 body {
@@ -119,50 +118,27 @@ body {
 
 .footer {
   margin-top: auto;
-  padding: 24px 0;
+  padding: 40px 0 32px;
   @include color($white);
   @include bg-color($dark-blue);
 
-  @include min-w(xs) {
-    padding: 32px 0;
-  }
-
-  @include min-w(s) {
-    padding: 40px 0 32px;
-  }
-
   &__cols {
-    display: grid;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
     padding: 25px 0;
     gap: 24px 64px;
-    flex-direction: column;
     border-top: $ntrl-300 solid 1px;
-
-    @include min-w(s) {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    @include min-w(m) {
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      justify-content: space-between;
-    }
   }
 
   &__col {
     display: flex;
-    gap: 12px 64px;
+    gap: 16px 64px;
     flex-direction: column;
 
-    @include min-w(m) {
-      gap: 16px 64px;
-    }
-
     &:first-of-type {
-      @include min-w(l) {
-        margin-right: auto;
-      }
+      margin-right: auto;
     }
 
     .heading {
@@ -184,57 +160,38 @@ body {
 
   &__copyright {
     display: flex;
-    padding-top: 20px;
+    padding-top: 100px;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
     gap: 30px 20px;
     flex-wrap: wrap;
-    flex-direction: column;
     font-size: 14px;
     @include color($ntrl-300);
 
-    @include min-w(m) {
-      padding-top: 60px;
-      align-items: center;
-      flex-direction: initial;
-      justify-content: space-between;
-    }
-
-    @include min-w(l) {
-      padding-top: 100px;
-    }
-
     .nav {
       display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
       gap: 0.8em 20px;
-      flex-direction: column;
-      align-items: baseline;
 
-      @include min-w(m) {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
+      li:not(:first-of-type) {
+        position: relative;
 
-        li:not(:first-of-type) {
-          position: relative;
-
-          &:before {
-            content: '';
-            position: absolute;
-            left: -10px;
-            top: 25%;
-            width: 1px;
-            height: 60%;
-            @include bg-color($ntrl-300);
-          }
+        &:before {
+          content: '';
+          position: absolute;
+          left: -10px;
+          top: 25%;
+          width: 1px;
+          height: 60%;
+          @include bg-color($ntrl-300);
         }
       }
 
       a {
-        @include color($white);
-
-        @include min-w(m) {
-          @include color($ntrl-300);
-        }
+        @include color($ntrl-300);
 
         &:hover {
           @include color($white);
@@ -254,15 +211,11 @@ body {
 
   &__pre-line {
     display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
     padding-bottom: 25px;
     gap: 24px;
-    flex-direction: column;
-    align-items: center;
-
-    @include min-w(xxs) {
-      flex-direction: row;
-      justify-content: space-between;
-    }
 
     .socials {
       display: flex;
@@ -278,7 +231,6 @@ body {
         display: block;
         width: 100%;
         height: auto;
-        filter: brightness(10);
       }
     }
   }
@@ -287,14 +239,6 @@ body {
     svg, img {
       width: auto;
       max-height: 52px;
-
-      @include min-w(xxs) {
-        max-height: 46px;
-      }
-
-      @include min-w(s) {
-        max-height: 52px;
-      }
     }
 
     path {
@@ -303,8 +247,10 @@ body {
   }
 
   .button.button--primary {
+    font-size: 15px;
     font-weight: 700;
     padding: 12px 20px;
     text-transform: uppercase;
   }
 }
+

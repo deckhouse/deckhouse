@@ -32,21 +32,9 @@ $ntrl-900: #02003E;
   background-color: $color;
 }
 
-//@mixin palette-colors($args...) {
-//  @each $name, $color in meta.keywords($args) {
-//    .#{$name} {
-//      color: $color;
-//    }
-//  }
-//}
-//
-//@mixin palette-bg-colors($args...) {
-//  @each $name, $color in meta.keywords($args) {
-//    .bg-#{$name} {
-//      background-color: $color;
-//    }
-//  }
-//}
+@mixin box-shadow {
+  box-shadow: 0 0 4px rgba(0, 0, 0, .15);
+}
 
 @function rem($px) {
   @return $px / 14px+0rem;
