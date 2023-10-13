@@ -22,11 +22,11 @@
     ]
   },
   "description": "",
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 20,
-  "iteration": 1663071955430,
+  "id": 65,
+  "iteration": 1697204260649,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -78,7 +78,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -141,7 +141,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -204,7 +204,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -235,7 +235,7 @@
         "content": "✓ If you have pods in pending state in your cluster, it can be caused because the scheduler cannot find a node with enough memory and CPU allocatable. <br>\n✓ Check that you have at least 1 node in your cluster with enough allocatable CPU and memory to accomplish the requests of the pending pods. <b>Be sure that the node with enough resources has not a taint or is not unscheduleable.</b> <br>\n✓ Check that that node has pods available to schedule in it. <br>\n✓ If the nodes ran out of allocatable resources you can try to adjust the requests of your pods to optimize the capacity of your nodes using the Memory Allocation Optimization and CPU Allocation Optimization dashboards. If this is not possible, you will have to increase the number of nodes in your cluster. <br>\n✓ If there are enough resources in the nodes, go to the Main folder dashboards and check the available resource in the quotas of the namespace.",
         "mode": "markdown"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "title": "Tips",
       "transparent": true,
       "type": "text"
@@ -302,7 +302,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -310,7 +310,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__interval_sx3]))) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__interval_sx3])))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__interval_sx3])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__interval_sx3])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -372,7 +372,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -380,7 +380,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__interval_sx3]))) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__interval_sx3])))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__interval_sx3])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__interval_sx3])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -442,7 +442,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -512,7 +512,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -582,7 +582,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -652,7 +652,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -722,7 +722,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "datasource": {
@@ -995,7 +995,7 @@
             "uid": "P0D6E4079E36703EB"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",node=~\"$node\"}[$__interval_sx3])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__interval_sx3])))",
+          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",node=~\"$node\"}[$__interval_sx3])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__interval_sx3])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"}))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1010,7 +1010,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",node=~\"$node\"}[$__interval_sx3])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__interval_sx3]))))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",node=~\"$node\"}[$__interval_sx3])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__interval_sx3])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1393,7 +1393,7 @@
             "uid": "P0D6E4079E36703EB"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",node=~\"$node\"}[$__interval_sx3])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__interval_sx3])))",
+          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",node=~\"$node\"}[$__interval_sx3])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__interval_sx3])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"}))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1408,7 +1408,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",node=~\"$node\"}[$__interval_sx3])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__interval_sx3]))))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",node=~\"$node\"}[$__interval_sx3])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__interval_sx3])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1597,8 +1597,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1729,8 +1728,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1850,8 +1848,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "#EAB839",
@@ -1973,8 +1970,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "yellow",
@@ -2101,8 +2097,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "#EAB839",
@@ -2224,8 +2219,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "yellow",
@@ -2360,12 +2354,12 @@
       {
         "allValue": "",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
-            "All"
+            "kube-node-e3d1bdf6-6f9b4-svxrz"
           ],
           "value": [
-            "$__all"
+            "kube-node-e3d1bdf6-6f9b4-svxrz"
           ]
         },
         "datasource": {
@@ -2395,7 +2389,7 @@
       {
         "allValue": "",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -2469,6 +2463,6 @@
   "timezone": "browser",
   "title": "Capacity Planning",
   "uid": "Tf3tuvziz1fds",
-  "version": 1,
+  "version": 3,
   "weekStart": ""
 }
