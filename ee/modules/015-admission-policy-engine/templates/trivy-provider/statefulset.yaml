@@ -15,7 +15,7 @@ metadata:
 spec:
   targetRef:
     apiVersion: "apps/v1"
-    kind: Deployment
+    kind: StatefulSet
     name: trivy-provider
   updatePolicy:
     updateMode: "Auto"
@@ -30,13 +30,13 @@ spec:
   {{- end }}
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: trivy-provider
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "trivy-provider" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  replicas: 1
   selector:
     matchLabels:
       app: trivy-provider
@@ -61,7 +61,7 @@ spec:
           - --key-file=/certs/tls.key
           - --cert-file=/certs/tls.crt
           - --client-ca-file=/client-cert/ca.crt
-          - --timeout=10
+          - --timeout=25
         env:
         - name: TRIVY_REMOTE_URL
           value: "http://trivy-server.d8-operator-trivy:4954"
@@ -78,6 +78,9 @@ spec:
         - mountPath: /.docker
           name: docker-config
           readOnly: true
+        - mountPath: /tmp
+          name: data
+          readOnly: false
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -103,6 +106,21 @@ spec:
         secret:
           defaultMode: 420
           secretName: trivy-provider-registry-secret
+{{- $storageClass := .Values.admissionPolicyEngine | dig "internal" "effectiveStorageClass" false }}
+{{- if $storageClass }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ $storageClass }}
+        resources:
+          requests:
+            storage: 2Gi
+{{- else }}
+        - name: data
+          emptyDir: {}
+{{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

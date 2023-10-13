@@ -7,6 +7,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "trivy-provider" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
 spec:
   url: https://trivy-provider.d8-{{ .Chart.Name }}:8443/validate
-  timeout: 12
+  timeout: 27
   caBundle: {{ .Values.admissionPolicyEngine.internal.denyVulnerableImages.webhook.ca | b64enc | quote }}
 {{- end }}
