@@ -6,32 +6,9 @@ import:
   add: /go/bin/yandex-csi-driver
   to: /bin/yandex-csi-driver
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /sbin
-  to: /bin
-  includePaths:
-  - blkid
-  - e2fsck
-  - fsck.xfs
-  - mke2fs
-  - mkfs.xfs
-  - xfs_repair
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /bin
-  to: /bin
-  includePaths:
-  - findmnt
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/sbin
-  to: /bin
-  includePaths:
-  - badblocks
-  - debugfs
-  - dumpe2fs
-  - 'e2*'
-  - resize2fs
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
+  add: /builds/busybox-1.36.1/busybox
+  to: /bin/blkid
   before: setup
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
@@ -42,9 +19,9 @@ git:
 - url: https://github.com/deckhouse/yandex-csi-driver
   to: /go/src/app
   tag: v0.10.0
-  stageDependencies:
-    install:
-    - '**/*'
+  # stageDependencies:
+  #   install:
+  #   - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -61,3 +38,18 @@ shell:
     github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
   # - chown 64535:64535 /go/bin/yandex-csi-driver
   # - chmod 0755 /go/bin/yandex-csi-driver
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+    - apt update
+    - apt install -y wget bzip2 curl tar gcc make
+  install:
+    - mkdir /builds
+    - cd /builds
+    - wget -cO- https://busybox.net/downloads/busybox-1.36.1.tar.bz2 | tar -xjv 
+    - cd busybox-1.36.1
+    - make defconfig
+    - sed 's/^.*CONFIG_STATIC .*$/CONFIG_STATIC=y/g' -i .config
+    - make -j8
