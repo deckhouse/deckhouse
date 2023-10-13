@@ -44,7 +44,7 @@ const (
   modules:
     placement: {}
   discovery:
-    kubernetesVersion: 1.23.5
+    kubernetesVersion: 1.24.5
     d8SpecificNodeCountByRole:
       worker: 3
       master: 3

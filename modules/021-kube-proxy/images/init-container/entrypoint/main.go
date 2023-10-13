@@ -101,7 +101,6 @@ func main() {
 	}
 
 	featureGates := map[string]bool{
-		"EndpointSliceTerminatingCondition": true,
 		"ProxyTerminatingEndpoints":         true,
 		"TopologyAwareHints":                true,
 	}
@@ -115,6 +114,12 @@ func main() {
 	k8s127, _ := semver.NewVersion("1.27")
 	if kubernetesVersion.LessThan(k8s127) {
 		featureGates["DaemonSetUpdateSurge"] = true
+	}
+
+	// The EndpointSliceTerminatingCondition feature gate has been removed in Kubernetes v1.28.
+	k8s128, _ := semver.NewVersion("1.28")
+	if kubernetesVersion.LessThan(k8s128) {
+		featureGates["EndpointSliceTerminatingCondition"] = true
 	}
 
 	kubeProxyConfig := &v1alpha1.KubeProxyConfiguration{

@@ -120,7 +120,7 @@ func SetupHelmConfig(values string) *Config {
 
 	BeforeEach(func() {
 		config.values = values_store.NewStoreFromRawJSON(initialValuesJSON)
-		config.values.SetByPath("global.discovery.kubernetesVersion", "1.23.0")
+		config.values.SetByPath("global.discovery.kubernetesVersion", "1.24.0")
 	})
 
 	return config

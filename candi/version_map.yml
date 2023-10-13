@@ -15,27 +15,6 @@ bashible: &bashible
     'p10':
     '10.1':
 k8s:
-  '1.23':
-    status: available
-    patch: 17
-    cniVersion: 1.2.0
-    bashible: *bashible
-    clusterAutoscalerPatch: 4
-    ccm:
-      openstack: v1.23.1
-      yandex: v0.23.0
-      aws: v1.23.4
-      vsphere: v1.23.0
-      azure: v1.23.10
-      gcp: 66064c62c6c23110c7a93faca5fba668018df732
-    csi:
-      openstack: v1.23.1
-      provisioner: v3.4.1
-      attacher: v4.2.0
-      resizer: v1.7.0
-      registrar: v2.7.0
-      snapshotter: v6.2.1
-      livenessprobe: v2.9.0
   '1.24':
     status: available
     patch: 17
@@ -97,7 +76,7 @@ k8s:
       snapshotter: v6.2.1
       livenessprobe: v2.9.0
   '1.27':
-    status: preview
+    status: available
     patch: 6
     bashible: *bashible
     clusterAutoscalerPatch: '0'
@@ -116,3 +95,23 @@ k8s:
       registrar: v2.8.0
       snapshotter: v6.2.1
       livenessprobe: v2.10.0
+  '1.28':
+    status: preview
+    patch: 2
+    bashible: *bashible
+    clusterAutoscalerPatch: '0'
+    ccm:
+      openstack: v1.28.0
+      yandex: v0.27.0
+      aws: v1.28.1
+      vsphere: v1.28.0
+      azure: v1.28.0
+      gcp: ccm/v27.1.6
+    csi:
+      openstack: v1.28.0
+      provisioner: v3.6.0
+      attacher: v4.4.0
+      resizer: v1.9.0
+      registrar: v2.9.0
+      snapshotter: v6.3.0
+      livenessprobe: v2.11.0
