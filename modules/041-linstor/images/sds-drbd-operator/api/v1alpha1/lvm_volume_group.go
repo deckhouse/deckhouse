@@ -29,9 +29,9 @@ type LvmVolumeGroup struct {
 }
 
 type LvmVGSpec struct {
-	Type              string     `json:"type"`
-	ActuaLvgOnTheNode string     `json:"actualvgonthenode"`
-	ThinPools         []ThinPool `json:"thinpools,omitempty"`
+	Type                  string     `json:"type"`
+	ActualVGnameOnTheNode string     `json:"actualvgnameonthenode"`
+	ThinPools             []ThinPool `json:"thinpools,omitempty"`
 }
 
 type ThinPool struct {

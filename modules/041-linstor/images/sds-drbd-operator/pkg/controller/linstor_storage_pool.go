@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"reflect"
 	"sds-drbd-operator/api/v1alpha1"
 	"sort"
 	"time"
@@ -56,31 +57,17 @@ func NewDRBDOperatorStoragePool(
 	c, err := controller.New(DRBDOperatorStoragePoolControllerName, mgr, controller.Options{
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 
-			log.Info("start from reconciler reconcile of DRBDOperator storage pool with name: " + request.Name)
+			log.Info("START from reconciler reconcile of DRBDOperator storage pool with name: " + request.Name)
 
-			drbdsp := &v1alpha1.DRBDOperatorStoragePool{}
-			err := cl.Get(ctx, request.NamespacedName, drbdsp)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					log.Info("DRBDOperatorStoragePool with name: " + request.Name + " not found. Object was probably deleted. Remove it from queue as deletion logic not implemented yet.") // #TODO: warn
-					return reconcile.Result{Requeue: false}, nil
-				}
-				log.Error(err, fmt.Sprintf("Failed to get DRBDOperatorStoragePool. Add to retry after %d seconds.", interval))
-				return reconcile.Result{
-					RequeueAfter: time.Duration(interval) * time.Second,
-				}, err
-			}
-
-			err = reconcileDRBDOperatorStoragePool(ctx, cl, lc, log, drbdsp)
-			if err != nil {
-				log.Error(err, fmt.Sprintf("error in reconcileDRBDOperatorStoragePool. Add to retry after %d seconds.", interval))
+			shouldRequeue, err := reconcileEvent(ctx, cl, request, log, lc)
+			if shouldRequeue {
+				log.Error(err, fmt.Sprintf("error in reconcileEvent. Add to retry after %d seconds.", interval))
 				return reconcile.Result{
 					RequeueAfter: time.Duration(interval) * time.Second,
 				}, err
 			}
 
 			log.Info("END from reconciler reconcile of DRBDOperator storage pool with name: " + request.Name)
-
 			return reconcile.Result{Requeue: false}, nil
 		}),
 	})
@@ -95,40 +82,55 @@ func NewDRBDOperatorStoragePool(
 			CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.RateLimitingInterface) {
 				log.Info("START from CREATE reconcile of DRBDOperator storage pool with name: " + e.Object.GetName())
 
-				request := reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: e.Object.GetNamespace(),
-						Name:      e.Object.GetName(),
-					},
-				}
-
-				drbdsp := &v1alpha1.DRBDOperatorStoragePool{}
-
-				err := cl.Get(ctx, request.NamespacedName, drbdsp)
-				if err != nil {
-					if errors.IsNotFound(err) {
-						log.Info("DRBDOperatorStoragePool with name: " + request.Name + " not found. Object was probably deleted. Remove it from quie as deletion logic not implemented yet.") // #TODO: warn
-						return
-					}
-					log.Error(err, fmt.Sprintf("Failed to get DRBDOperatorStoragePool. Add to retry after %d seconds.", interval))
+				request := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: e.Object.GetNamespace(), Name: e.Object.GetName()}}
+				shouldRequeue, err := reconcileEvent(ctx, cl, request, log, lc)
+				if shouldRequeue {
+					log.Error(err, fmt.Sprintf("error in reconcileEvent. Add to retry after %d seconds.", interval))
 					q.AddAfter(request, time.Duration(interval)*time.Second)
-					return
 				}
 
-				err = reconcileDRBDOperatorStoragePool(ctx, cl, lc, log, drbdsp)
-				if err != nil {
-					log.Error(err, fmt.Sprintf("error reconcileDRBDOperatorStoragePool. Add to retry after %d seconds.", interval))
-					q.AddAfter(request, time.Duration(interval)*time.Second)
-					return
-				}
-
-				log.Info("END from CREATE reconcile of DRBDOperator storage pool with name: " + e.Object.GetName())
+				log.Info("END from CREATE reconcile of DRBDOperator storage pool with name: " + request.Name)
 			},
-			UpdateFunc: nil,
+			UpdateFunc: func(ctx context.Context, e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+				log.Info("START from UPDATE reconcile of DRBDOperator storage pool with name: " + e.ObjectNew.GetName())
+
+				oldDRBDSP := e.ObjectOld.(*v1alpha1.DRBDOperatorStoragePool)
+				newDRBDSP := e.ObjectNew.(*v1alpha1.DRBDOperatorStoragePool)
+				if reflect.DeepEqual(oldDRBDSP.Spec, newDRBDSP.Spec) {
+					log.Info("DRBDOperatorStoragePool spec not changed. Nothing to do")
+					return
+				}
+
+				request := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: e.ObjectNew.GetNamespace(), Name: e.ObjectNew.GetName()}}
+				shouldRequeue, err := reconcileEvent(ctx, cl, request, log, lc)
+				if shouldRequeue {
+					log.Error(err, fmt.Sprintf("error in reconcileEvent. Add to retry after %d seconds.", interval))
+					q.AddAfter(request, time.Duration(interval)*time.Second)
+				}
+
+				log.Info("END from UPDATE reconcile of DRBDOperator storage pool with name: " + request.Name)
+			},
 			DeleteFunc: nil,
 		})
 
 	return c, err
+}
+
+func reconcileEvent(ctx context.Context, cl client.Client, request reconcile.Request, log logr.Logger, lc *lclient.Client) (bool, error) {
+	drbdsp := &v1alpha1.DRBDOperatorStoragePool{}
+	err := cl.Get(ctx, request.NamespacedName, drbdsp)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Info("DRBDOperatorStoragePool with name: " + request.Name + " not found. Object was probably deleted. Remove it from quie as deletion logic not implemented yet.") // #TODO: warn
+			return false, nil
+		}
+		return true, fmt.Errorf("error getting DRBDOperatorStoragePool: %s", err.Error())
+	}
+	err = reconcileDRBDOperatorStoragePool(ctx, cl, lc, log, drbdsp)
+	if err != nil {
+		return true, fmt.Errorf("error reconcileDRBDOperatorStoragePool: %s", err.Error())
+	}
+	return false, nil
 }
 
 func reconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc *lclient.Client, log logr.Logger, drbdsp *v1alpha1.DRBDOperatorStoragePool) error {
@@ -160,10 +162,10 @@ func reconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc 
 		switch drbdsp.Spec.Type {
 		case TypeLVM:
 			lvmType = lclient.LVM
-			lvmVgForLinstor = lvmVolumeGroup.Spec.ActuaLvgOnTheNode
+			lvmVgForLinstor = lvmVolumeGroup.Spec.ActualVGnameOnTheNode
 		case TypeLVMThin:
 			lvmType = lclient.LVM_THIN
-			lvmVgForLinstor = lvmVolumeGroup.Spec.ActuaLvgOnTheNode + "/" + drbdspLvmVolumeGroup.ThinPoolName
+			lvmVgForLinstor = lvmVolumeGroup.Spec.ActualVGnameOnTheNode + "/" + drbdspLvmVolumeGroup.ThinPoolName
 		}
 
 		newStoragePool := lclient.StoragePool{
@@ -366,15 +368,6 @@ func GetOrderedMapValuesAsString(m map[string]string) string {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-
-	// var sb strings.Builder
-	// for _, k := range keys {
-	// 	sb.WriteString(k)
-	// 	sb.WriteString(": ")
-	// 	sb.WriteString(m[k])
-	// 	sb.WriteString("; ")
-	// }
-	// return sb.String()
 
 	var buf bytes.Buffer
 	for _, k := range keys {
