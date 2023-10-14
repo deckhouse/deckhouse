@@ -26,7 +26,7 @@ import (
 	"sds-drbd-operator/pkg/controller"
 	kubutils "sds-drbd-operator/pkg/kubeutils"
 
-	lclient "github.com/LINBIT/golinstor/client"
+	lapi "github.com/LINBIT/golinstor/client"
 	"go.uber.org/zap/zapcore"
 	v1 "k8s.io/api/core/v1"
 	sv1 "k8s.io/api/storage/v1"
@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -83,11 +84,24 @@ func main() {
 	}
 	log.Info("read scheme CR")
 
+	// configMap := make(map[string]cache.Config)
+	// configMap.("default", cache.Config{
+	// 	// Namespace:          OperatorNamespace,
+
+	// })
+
+	cacheOpt := cache.Options{
+		DefaultNamespaces: map[string]cache.Config{
+			OperatorNamespace: {},
+		},
+	}
+
 	managerOpts := manager.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: cfgParams.MetricsPort,
-		Logger:             log,
-		Namespace:          OperatorNamespace, // TODO: change to cache options
+		Scheme: scheme,
+		// MetricsBindAddress: cfgParams.MetricsPort,
+		Logger: log,
+		Cache:  cacheOpt,
+		// Namespace:          OperatorNamespace, // TODO: change to cache options
 	}
 
 	mgr, err := manager.New(kConfig, managerOpts)
@@ -98,7 +112,7 @@ func main() {
 
 	log.Info("create kubernetes manager")
 
-	lc, err := lclient.NewClient()
+	lc, err := lapi.NewClient()
 
 	// if _, err := controller.NewLinstorNode(ctx, mgr, lc, cfgParams.ConfigSecretName, cfgParams.ScanInterval); err != nil {
 	// 	log.Error(err, "failed create controller NewLinstorNode", err)

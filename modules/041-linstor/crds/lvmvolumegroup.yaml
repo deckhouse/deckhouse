@@ -28,7 +28,7 @@ spec:
               properties:
                 type:
                   type: string
-                actualvgonthenode:
+                actualvgnameonthenode:
                   type: string
                 thinpool:
                   type: object

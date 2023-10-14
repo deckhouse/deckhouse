@@ -25,7 +25,7 @@ import (
 	"sort"
 	"time"
 
-	lclient "github.com/LINBIT/golinstor/client"
+	lapi "github.com/LINBIT/golinstor/client"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,12 +43,13 @@ const (
 	DRBDOperatorStoragePoolControllerName = "drbd-operator-storage-pool-controller"
 	TypeLVMThin                           = "LVMThin"
 	TypeLVM                               = "LVM"
+	LVMVGTypeLocal                        = "Local"
 )
 
 func NewDRBDOperatorStoragePool(
 	ctx context.Context,
 	mgr manager.Manager,
-	lc *lclient.Client,
+	lc *lapi.Client,
 	interval int,
 ) (controller.Controller, error) {
 	cl := mgr.GetClient()
@@ -59,9 +60,9 @@ func NewDRBDOperatorStoragePool(
 
 			log.Info("START from reconciler reconcile of DRBDOperator storage pool with name: " + request.Name)
 
-			shouldRequeue, err := reconcileEvent(ctx, cl, request, log, lc)
+			shouldRequeue, err := ReconcileEvent(ctx, cl, request, log, lc)
 			if shouldRequeue {
-				log.Error(err, fmt.Sprintf("error in reconcileEvent. Add to retry after %d seconds.", interval))
+				log.Error(err, fmt.Sprintf("error in ReconcileEvent. Add to retry after %d seconds.", interval))
 				return reconcile.Result{
 					RequeueAfter: time.Duration(interval) * time.Second,
 				}, err
@@ -83,9 +84,9 @@ func NewDRBDOperatorStoragePool(
 				log.Info("START from CREATE reconcile of DRBDOperator storage pool with name: " + e.Object.GetName())
 
 				request := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: e.Object.GetNamespace(), Name: e.Object.GetName()}}
-				shouldRequeue, err := reconcileEvent(ctx, cl, request, log, lc)
+				shouldRequeue, err := ReconcileEvent(ctx, cl, request, log, lc)
 				if shouldRequeue {
-					log.Error(err, fmt.Sprintf("error in reconcileEvent. Add to retry after %d seconds.", interval))
+					log.Error(err, fmt.Sprintf("error in ReconcileEvent. Add to retry after %d seconds.", interval))
 					q.AddAfter(request, time.Duration(interval)*time.Second)
 				}
 
@@ -102,9 +103,9 @@ func NewDRBDOperatorStoragePool(
 				}
 
 				request := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: e.ObjectNew.GetNamespace(), Name: e.ObjectNew.GetName()}}
-				shouldRequeue, err := reconcileEvent(ctx, cl, request, log, lc)
+				shouldRequeue, err := ReconcileEvent(ctx, cl, request, log, lc)
 				if shouldRequeue {
-					log.Error(err, fmt.Sprintf("error in reconcileEvent. Add to retry after %d seconds.", interval))
+					log.Error(err, fmt.Sprintf("error in ReconcileEvent. Add to retry after %d seconds.", interval))
 					q.AddAfter(request, time.Duration(interval)*time.Second)
 				}
 
@@ -116,7 +117,7 @@ func NewDRBDOperatorStoragePool(
 	return c, err
 }
 
-func reconcileEvent(ctx context.Context, cl client.Client, request reconcile.Request, log logr.Logger, lc *lclient.Client) (bool, error) {
+func ReconcileEvent(ctx context.Context, cl client.Client, request reconcile.Request, log logr.Logger, lc *lapi.Client) (bool, error) {
 	drbdsp := &v1alpha1.DRBDOperatorStoragePool{}
 	err := cl.Get(ctx, request.NamespacedName, drbdsp)
 	if err != nil {
@@ -126,14 +127,14 @@ func reconcileEvent(ctx context.Context, cl client.Client, request reconcile.Req
 		}
 		return true, fmt.Errorf("error getting DRBDOperatorStoragePool: %s", err.Error())
 	}
-	err = reconcileDRBDOperatorStoragePool(ctx, cl, lc, log, drbdsp)
+	err = ReconcileDRBDOperatorStoragePool(ctx, cl, lc, log, drbdsp)
 	if err != nil {
-		return true, fmt.Errorf("error reconcileDRBDOperatorStoragePool: %s", err.Error())
+		return true, fmt.Errorf("error ReconcileDRBDOperatorStoragePool: %s", err.Error())
 	}
 	return false, nil
 }
 
-func reconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc *lclient.Client, log logr.Logger, drbdsp *v1alpha1.DRBDOperatorStoragePool) error {
+func ReconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc *lapi.Client, log logr.Logger, drbdsp *v1alpha1.DRBDOperatorStoragePool) error {
 
 	ok, msg, lvmVolumeGroups := GetAndValidateVolumeGroups(ctx, cl, drbdsp.Namespace, drbdsp.Spec.Type, drbdsp.Spec.LvmVolumeGroups)
 	if !ok {
@@ -147,7 +148,7 @@ func reconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc 
 	}
 
 	var lvmVgForLinstor string
-	var lvmType lclient.ProviderKind
+	var lvmType lapi.ProviderKind
 
 	for _, drbdspLvmVolumeGroup := range drbdsp.Spec.LvmVolumeGroups {
 		lvmVolumeGroup, ok := lvmVolumeGroups[drbdspLvmVolumeGroup.Name]
@@ -161,14 +162,14 @@ func reconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc 
 
 		switch drbdsp.Spec.Type {
 		case TypeLVM:
-			lvmType = lclient.LVM
+			lvmType = lapi.LVM
 			lvmVgForLinstor = lvmVolumeGroup.Spec.ActualVGnameOnTheNode
 		case TypeLVMThin:
-			lvmType = lclient.LVM_THIN
+			lvmType = lapi.LVM_THIN
 			lvmVgForLinstor = lvmVolumeGroup.Spec.ActualVGnameOnTheNode + "/" + drbdspLvmVolumeGroup.ThinPoolName
 		}
 
-		newStoragePool := lclient.StoragePool{
+		newStoragePool := lapi.StoragePool{
 			StoragePoolName: drbdsp.Name,
 			NodeName:        nodeName,
 			ProviderKind:    lvmType,
@@ -179,7 +180,7 @@ func reconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc 
 
 		existedStoragePool, err := lc.Nodes.GetStoragePool(ctx, nodeName, drbdsp.Name)
 		if err != nil {
-			if err == lclient.NotFoundError {
+			if err == lapi.NotFoundError {
 				log.Info(fmt.Sprintf("Storage Pool %s on node %s on vg %s not found. Creating it", drbdsp.Name, nodeName, lvmVgForLinstor))
 				err := lc.Nodes.CreateStoragePool(ctx, nodeName, newStoragePool)
 				if err != nil {
@@ -272,20 +273,6 @@ func GetLvmVolumeGroup(ctx context.Context, cl client.Client, namespace, name st
 	return obj, err
 }
 
-// func ValidateDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc *lclient.Client, drbdsp *v1alpha1.DRBDOperatorStoragePool) (bool, string) {
-
-// 	ok, msg := GetAndValidateVolumeGroups(ctx, cl, drbdsp.Namespace, drbdsp.Spec.Type, drbdsp.Spec.LvmVolumeGroups)
-// 	if !ok {
-// 		return false, msg
-// 	}
-
-// 	// linstorStoragePool, err := lc.Nodes.
-// 	// (drbdsp.ObjectMeta.Name)
-
-// 	return true, ""
-
-// }
-
 func GetAndValidateVolumeGroups(ctx context.Context, cl client.Client, namespace, lvmType string, drbdspLVMVolumeGroups []v1alpha1.DRBDStoragePoolLVMVolumeGroups) (bool, string, map[string]v1alpha1.LvmVolumeGroup) {
 	var lvmVolumeGroupName string
 	var nodeName string
@@ -307,6 +294,11 @@ func GetAndValidateVolumeGroups(ctx context.Context, cl client.Client, namespace
 		lvmVolumeGroup, err := GetLvmVolumeGroup(ctx, cl, namespace, lvmVolumeGroupName)
 		if err != nil {
 			UpdateMapValue(invalidLvmVolumeGroups, lvmVolumeGroupName, fmt.Sprintf("Error getting LVMVolumeGroup: %s", err.Error()))
+			continue
+		}
+
+		if lvmVolumeGroup.Spec.Type != LVMVGTypeLocal {
+			UpdateMapValue(invalidLvmVolumeGroups, lvmVolumeGroupName, fmt.Sprintf("LvmVolumeGroup type is not %s", LVMVGTypeLocal))
 			continue
 		}
 

@@ -20,11 +20,18 @@ import (
 	"context"
 	"sds-drbd-operator/api/v1alpha1"
 	"sds-drbd-operator/pkg/controller"
+	"strings"
+
+	lapi "github.com/LINBIT/golinstor/client"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/zap/zapcore"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var _ = Describe(controller.DRBDOperatorStoragePoolControllerName, func() {
@@ -34,8 +41,11 @@ var _ = Describe(controller.DRBDOperatorStoragePoolControllerName, func() {
 	)
 
 	var (
-		ctx        = context.Background()
-		cl         = NewFakeClient()
+		ctx   = context.Background()
+		cl    = NewFakeClient()
+		log   = zap.New(zap.Level(zapcore.Level(-1)), zap.UseDevMode(true))
+		lc, _ = lapi.NewClient()
+
 		testDRBDSP = &v1alpha1.DRBDOperatorStoragePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      testName,
@@ -129,98 +139,106 @@ var _ = Describe(controller.DRBDOperatorStoragePoolControllerName, func() {
 			LvmVGOneOnSecondNodeNameDublicate = "lvmVG-1-on-SecondNode"
 			ActualVGOneOnSecondNodeName       = "actualVG-1-on-SecondNode"
 
-			NotExistedlvnVGName = "not_existed_lvmVG"
+			NotExistedlvmVGName   = "not_existed_lvmVG"
+			SharedLvmVGName       = "shared_lvm_vg"
+			LvmVGWithSeveralNodes = "several_nodes_lvm_vg"
 
 			FirstNodeName  = "first_node"
 			SecondNodeName = "second_node"
 			ThirdNodeName  = "third_node"
 
-			GoodDRBDOperatorStoragePoolName = "goodDRBDOperatorStoragePool"
-			BadDRBDOperatorStoragePoolName  = "badDRBDOperatorStoragePool"
+			GoodDRBDOperatorStoragePoolName = "gooddrbdoperatorstoragepool"
+			BadDRBDOperatorStoragePoolName  = "baddrbdoperatorstoragepool"
 			TypeLVMThin                     = "LVMThin"
 			TypeLVM                         = "LVM"
+			LVMVGTypeLocal                  = "Local"
+			LVMVGTypeShared                 = "Shared"
 		)
 
-		err := CreateLVMVolumeGroup(ctx, cl, LvmVGOneOnFirstNodeName, TypeLVM, ActualVGOneOnFirstNodeName, []string{FirstNodeName}, nil)
+		err := CreateLVMVolumeGroup(ctx, cl, LvmVGOneOnFirstNodeName, testNameSpace, LVMVGTypeLocal, ActualVGOneOnFirstNodeName, []string{FirstNodeName}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = CreateLVMVolumeGroup(ctx, cl, LvmVGTwoOnFirstNodeName, TypeLVM, ActualVGTwoOnFirstNodeName, []string{FirstNodeName}, nil)
+		err = CreateLVMVolumeGroup(ctx, cl, LvmVGTwoOnFirstNodeName, testNameSpace, LVMVGTypeLocal, ActualVGTwoOnFirstNodeName, []string{FirstNodeName}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = CreateLVMVolumeGroup(ctx, cl, LvmVGOneOnSecondNodeName, TypeLVM, ActualVGOneOnSecondNodeName, []string{SecondNodeName}, nil)
+		err = CreateLVMVolumeGroup(ctx, cl, LvmVGOneOnSecondNodeName, testNameSpace, LVMVGTypeLocal, ActualVGOneOnSecondNodeName, []string{SecondNodeName}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = CreateDRBDOperatorStoragePool(ctx, cl, GoodDRBDOperatorStoragePoolName, TypeLVM, map[string]string{LvmVGOneOnFirstNodeName: "", LvmVGOneOnSecondNodeName: ""})
+		err = CreateLVMVolumeGroup(ctx, cl, SharedLvmVGName, testNameSpace, LVMVGTypeShared, ActualVGOneOnSecondNodeName, []string{FirstNodeName, SecondNodeName, ThirdNodeName}, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = CreateDRBDOperatorStoragePool(ctx, cl, BadDRBDOperatorStoragePoolName, TypeLVM, map[string]string{LvmVGOneOnFirstNodeName: "", NotExistedlvnVGName: "", LvmVGOneOnSecondNodeName: "", LvmVGTwoOnFirstNodeName: "", LvmVGOneOnSecondNodeNameDublicate: ""})
+		err = CreateLVMVolumeGroup(ctx, cl, LvmVGWithSeveralNodes, testNameSpace, LVMVGTypeLocal, ActualVGOneOnSecondNodeName, []string{FirstNodeName, SecondNodeName, ThirdNodeName}, nil)
+		Expect(err).NotTo(HaveOccurred())
 
-		// err := CreateLVMVolumeGroup(ctx, cl, LvmVGOneOnFirstNodeName, testNameSpace, []string{FirstNodeName})
-		// Expect(err).NotTo(HaveOccurred())
+		// TODO: add mock for linstor client and add positive test
 
-		// err = CreateLVMVolumeGroup(ctx, cl, LvmVGTwoOnFirstNodeName, testNameSpace, []string{FirstNodeName})
-		// Expect(err).NotTo(HaveOccurred())
+		// Negative test with good LVMVolumeGroups.
+		goodLVMvgs := []map[string]string{{LvmVGOneOnFirstNodeName: ""}, {LvmVGOneOnSecondNodeName: ""}}
+		err = CreateDRBDOperatorStoragePool(ctx, cl, GoodDRBDOperatorStoragePoolName, testNameSpace, TypeLVM, goodLVMvgs)
+		Expect(err).NotTo(HaveOccurred())
 
-		// err = CreateLVMVolumeGroup(ctx, cl, LvmVGOneOnSecondNodeName, testNameSpace, []string{SecondNodeName})
-		// Expect(err).NotTo(HaveOccurred())
+		goodDRBDOperatorStoragePool, err := controller.GetDRBDOperatorStoragePool(ctx, cl, testNameSpace, GoodDRBDOperatorStoragePoolName)
+		Expect(err).NotTo(HaveOccurred())
 
-		// err = CreateDRBDOperatorStoragePool(ctx, cl, GoodDRBDOperatorStoragePoolName, testNameSpace, []string{LvmVGOneOnFirstNodeName, LvmVGOneOnSecondNodeName})
-		// Expect(err).NotTo(HaveOccurred())
+		goodDRBDOperatorStoragePoolrequest := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: goodDRBDOperatorStoragePool.ObjectMeta.Namespace, Name: goodDRBDOperatorStoragePool.ObjectMeta.Name}}
+		shouldRequeue, err := controller.ReconcileEvent(ctx, cl, goodDRBDOperatorStoragePoolrequest, log, lc)
+		Expect(err).To(HaveOccurred()) // TODO: add mock for linstor client and change to Expect(err).NotTo(HaveOccurred()) and Expect(shouldRequeue).To(BeFalse())
+		Expect(shouldRequeue).To(BeTrue())
 
-		// 		goodDRBDOperatorStoragePool := GetDRBDOperatorStoragePool(testDRBDSP, []string{LvmVGOneOnFirstNodeName, LvmVGOneOnSecondNodeName})
-		// 		badDRBDOperatorStoragePool := GetDRBDOperatorStoragePool(testDRBDSP, []string{LvmVGOneOnFirstNodeName, NotExistedlvnVGName, LvmVGOneOnSecondNodeName, LvmVGTwoOnFirstNodeName, LvmVGOneOnSecondNodeName})
+		reconciledGoodDRBDOperatorStoragePool, err := controller.GetDRBDOperatorStoragePool(ctx, cl, testNameSpace, GoodDRBDOperatorStoragePoolName)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reconciledGoodDRBDOperatorStoragePool.Status.Phase).To(Equal("Failed"))
+		Expect(reconciledGoodDRBDOperatorStoragePool.Status.Reason).To(Equal("Error getting LINSTOR Storage Pool gooddrbdoperatorstoragepool on node first_node on vg actualVG-1-on-FirstNode: Get \"http://localhost:3370/v1/nodes/first_node/storage-pools/gooddrbdoperatorstoragepool\": dial tcp [::1]:3370: connect: connection refused"))
 
-		// 		// Check Kubernetes objects
+		// Negative test with bad LVMVolumeGroups.
 
-		// 		// Check functions
-		// 		ok, msg, _ := controller.GetAndValidateVolumeGroups(ctx, cl, goodDRBDOperatorStoragePool.Namespace, goodDRBDOperatorStoragePool.Spec.Type, goodDRBDOperatorStoragePool.Spec.LvmVolumeGroups)
-		// 		//Expect(ok).To(BeTrue())
-		// 		Expect(msg).To(HaveLen(0))
+		// err = CreateDRBDOperatorStoragePool(ctx, cl, BadDRBDOperatorStoragePoolName, testNameSpace, TypeLVM, []map[string]string{{LvmVGOneOnFirstNodeName: ""}, {NotExistedlvnVGName: ""}, {LvmVGOneOnSecondNodeName: ""}, {LvmVGTwoOnFirstNodeName: ""}, {LvmVGOneOnSecondNodeNameDublicate: ""}})
 
-		// 		expectedMsg := `lvmVG-1-on-SecondNode: LvmVolumeGroup name is not unique
-		// lvmVG-2-on-FirstNode: This LvmVolumeGroup have same node first_node as LvmVolumeGroup with name: lvmVG-1-on-FirstNode. LINSTOR Storage Pool is allowed to have only one LvmVolumeGroup per node
-		// not_existed_lvmVG: Error getting LVMVolumeGroup: lvmvolumegroups.storage.deckhouse.io "not_existed_lvmVG" not found`
+		badLVMvgs := []map[string]string{{LvmVGOneOnFirstNodeName: ""}, {NotExistedlvmVGName: ""}, {LvmVGOneOnSecondNodeName: ""}, {LvmVGTwoOnFirstNodeName: ""}, {LvmVGOneOnSecondNodeNameDublicate: ""}, {SharedLvmVGName: ""}, {LvmVGWithSeveralNodes: ""}}
+		err = CreateDRBDOperatorStoragePool(ctx, cl, BadDRBDOperatorStoragePoolName, testNameSpace, TypeLVM, badLVMvgs)
 
-		// 		ok, msg, _ = controller.GetAndValidateVolumeGroups(ctx, cl, badDRBDOperatorStoragePool.Namespace, badDRBDOperatorStoragePool.Spec.Type, badDRBDOperatorStoragePool.Spec.LvmVolumeGroups)
-		// 		Expect(ok).To(BeFalse())
-		// 		Expect(strings.TrimSpace(msg)).To(Equal(strings.TrimSpace(expectedMsg)))
+		Expect(err).NotTo(HaveOccurred())
+
+		badDRBDOperatorStoragePool, err := controller.GetDRBDOperatorStoragePool(ctx, cl, testNameSpace, BadDRBDOperatorStoragePoolName)
+		Expect(err).NotTo(HaveOccurred())
+
+		badDRBDOperatorStoragePoolrequest := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: badDRBDOperatorStoragePool.ObjectMeta.Namespace, Name: badDRBDOperatorStoragePool.ObjectMeta.Name}}
+		shouldRequeue, err = controller.ReconcileEvent(ctx, cl, badDRBDOperatorStoragePoolrequest, log, lc)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(shouldRequeue).To(BeFalse())
+
+		expectedMsg := `lvmVG-1-on-SecondNode: LvmVolumeGroup name is not unique
+lvmVG-2-on-FirstNode: This LvmVolumeGroup have same node first_node as LvmVolumeGroup with name: lvmVG-1-on-FirstNode. LINSTOR Storage Pool is allowed to have only one LvmVolumeGroup per node
+not_existed_lvmVG: Error getting LVMVolumeGroup: lvmvolumegroups.storage.deckhouse.io "not_existed_lvmVG" not found
+several_nodes_lvm_vg: LvmVolumeGroup has more than one node in status.nodes. LvmVolumeGroup for LINSTOR Storage Pool must to have only one node
+shared_lvm_vg: LvmVolumeGroup type is not Local`
+		reconciledBadDRBDOperatorStoragePool, err := controller.GetDRBDOperatorStoragePool(ctx, cl, testNameSpace, BadDRBDOperatorStoragePoolName)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reconciledBadDRBDOperatorStoragePool.Status.Phase).To(Equal("Failed"))
+		Expect(strings.TrimSpace(reconciledBadDRBDOperatorStoragePool.Status.Reason)).To(Equal(strings.TrimSpace(expectedMsg)))
+		//Expect(reconciledBadDRBDOperatorStoragePool.Status.Reason).To(Equal("s"))
 
 	})
 })
 
-// func CreateLVMVolumeGroup(ctx context.Context, cl client.WithWatch, name, namespace string, nodes []string) error {
-// 	vgNodes := make([]v1alpha1.LvmVGNode, len(nodes))
-// 	for i, node := range nodes {
-// 		vgNodes[i] = v1alpha1.LvmVGNode{Name: node}
-// 	}
-// 	lvmVolumeGroup := &v1alpha1.LvmVolumeGroup{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name: name,
-// 		},
-// 		Status: v1alpha1.LvmVGStatus{Nodes: vgNodes},
-// 	}
-
-// 	err := cl.Create(ctx, lvmVolumeGroup)
-// 	return err
-// }
-
-func CreateLVMVolumeGroup(ctx context.Context, cl client.WithWatch, lvmVolumeGroupName, lvmType, actualVGnameOnTheNode string, nodes []string, thinPools map[string]string) error {
+func CreateLVMVolumeGroup(ctx context.Context, cl client.WithWatch, lvmVolumeGroupName, namespace, lvmVGType, actualVGnameOnTheNode string, nodes []string, thinPools map[string]string) error {
 	vgNodes := make([]v1alpha1.LvmVGNode, len(nodes))
 	for i, node := range nodes {
 		vgNodes[i] = v1alpha1.LvmVGNode{Name: node}
 	}
 
-	vgThinPools := make([]v1alpha1.ThinPool, len(thinPools))
+	vgThinPools := make([]v1alpha1.ThinPool, 0)
 	for thinPoolname, thinPoolsize := range thinPools {
 		vgThinPools = append(vgThinPools, v1alpha1.ThinPool{Name: thinPoolname, Size: thinPoolsize})
 	}
 
 	lvmVolumeGroup := &v1alpha1.LvmVolumeGroup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: lvmVolumeGroupName,
+			Name:      lvmVolumeGroupName,
+			Namespace: namespace,
 		},
 		Spec: v1alpha1.LvmVGSpec{
-			Type:                  lvmType,
+			Type:                  lvmVGType,
 			ActualVGnameOnTheNode: actualVGnameOnTheNode,
 			ThinPools:             vgThinPools,
 		},
@@ -232,19 +250,22 @@ func CreateLVMVolumeGroup(ctx context.Context, cl client.WithWatch, lvmVolumeGro
 	return err
 }
 
-func CreateDRBDOperatorStoragePool(ctx context.Context, cl client.WithWatch, name, lvmType string, lvmVolumeGroups map[string]string) error {
+func CreateDRBDOperatorStoragePool(ctx context.Context, cl client.WithWatch, drbdOperatorStoragePoolName, namespace, lvmType string, lvmVolumeGroups []map[string]string) error {
 
-	volumeGroups := make([]v1alpha1.DRBDStoragePoolLVMVolumeGroups, len(lvmVolumeGroups))
-	for vgName, vgThinPoolName := range lvmVolumeGroups {
-		volumeGroups = append(volumeGroups, v1alpha1.DRBDStoragePoolLVMVolumeGroups{
-			Name:         vgName,
-			ThinPoolName: vgThinPoolName,
-		})
+	volumeGroups := make([]v1alpha1.DRBDStoragePoolLVMVolumeGroups, 0)
+	for i := range lvmVolumeGroups {
+		for key, value := range lvmVolumeGroups[i] {
+			volumeGroups = append(volumeGroups, v1alpha1.DRBDStoragePoolLVMVolumeGroups{
+				Name:         key,
+				ThinPoolName: value,
+			})
+		}
 	}
 
 	drbdsp := &v1alpha1.DRBDOperatorStoragePool{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      drbdOperatorStoragePoolName,
+			Namespace: namespace,
 		},
 		Spec: v1alpha1.DRBDOperatorStoragePoolSpec{
 			Type:            "LVM",
