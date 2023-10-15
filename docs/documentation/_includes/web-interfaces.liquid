@@ -17,14 +17,14 @@
   {%- if page.lang == "ru"%}
     Чтобы попасть в веб-интерфейс:
     <ul>
-    <li>Включите модуль <a href='{{ modules[iface.module].path }}'>{{ iface.module }}</a>:
+      <li>Включите модуль <a href='{{ modules[iface.module].path }}'>{{ iface.module }}</a>:
 <div markdown="1">
 ```shell
 kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module enable {{ iface.module }}
 ```
 </div>
-    </li>
-    {% if iface.additionalSetupSteps %}<li>{{ iface.additionalSetupSteps }}</li>{% endif %}
+      </li>
+    {% if iface.additionalSetupSteps %}<li>{{ iface.additionalSetupSteps[page.lang] }}</li>{% endif %}
     <li>Веб интерфейс будет доступен по доменному имени <code>{{ iface.domain }}</code>{% if iface.location %} и адресу
       <code>{{ iface.location }}</code>{% endif %},
       согласно параметру <a href="deckhouse-configure-global.html#parameters-modules-publicdomaintemplate">publicDomainTemplate</a>.
@@ -35,9 +35,12 @@ kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-control
   {%- else %}
     To get into the web interface:
     <ul>
-      <li>Enable the <a href='{{ modules[iface.module].path }}'>{{ iface.module }}</a> module: <code>kubectl -ti -n
-          d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module enable {{ iface.module }}</code>;
+      <li>Enable the <a href='{{ modules[iface.module].path }}'>{{ iface.module }}</a> module:
+<div markdown="1">
+```shell
+</div>
       </li>
+    {% if iface.additionalSetupSteps %}<li>{{ iface.additionalSetupSteps[page.lang] }}</li>{% endif %}
       <li>The web interface will be available on the <code>{{ iface.domain }}</code> domain {% if iface.location %} and
         <code>{{ iface.location }}</code> location{% endif %}, according to the <a
           href="deckhouse-configure-global.html#parameters-modules-publicdomaintemplate">publicDomainTemplate</a>
@@ -48,7 +51,7 @@ kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-control
     </ul>
   {%- endif %}
 </p>
-{% if iface.additionalInfo %}<p>{{ iface.additionalInfo }}</p>{% endif %}
+{% if iface.additionalInfo %}<p>{{ iface.additionalInfo[page.lang] }}</p>{% endif %}
 </td>
 </tr>
 {% endfor %}
