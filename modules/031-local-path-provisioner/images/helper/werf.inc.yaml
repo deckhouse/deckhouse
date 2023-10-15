@@ -2,7 +2,7 @@
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
 git:
-  - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/dir-manager
+  - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/dir-manager
     to: /src
     stageDependencies:
       setup:
