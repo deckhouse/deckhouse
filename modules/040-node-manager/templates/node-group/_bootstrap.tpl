@@ -90,17 +90,17 @@ function get_phase2() {
 function run_cloud_network_setup() {
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- if $bootstrap_script_common := $context.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type)  }}
-  cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh <<"EOF"
+  cat > /tmp/cloud-provider-bootstrap-networks.sh <<"EOF"
       {{- tpl $bootstrap_script_common $tpl_context | nindent 0 }}
 EOF
-  chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh
+  chmod +x /tmp/cloud-provider-bootstrap-networks.sh
     {{- else }}
       {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}
         {{- $bundle := (dir $path | base) }}
-  cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-{{ $bundle }}.sh <<"EOF"
+  cat > /tmp/cloud-provider-bootstrap-networks-{{ $bundle }}.sh <<"EOF"
         {{ tpl ($context.Files.Get $path) $tpl_context | nindent 0 }}
 EOF
-  chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
+  chmod +x /tmp/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
       {{- end }}
     {{- end }}
   {{- end }}
@@ -108,17 +108,17 @@ EOF
   # Execute cloud provider specific network bootstrap script. It will organize connectivity to kube-apiserver.
   */}}
 
-#  if [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh ]] ; then
-#    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh; do
-#      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-#      sleep 10
-#    done
-#  elif [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
-#    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh; do
-#      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-#      sleep 10
-#    done
-#  fi
+  if [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh ]] ; then
+    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh; do
+      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
+      sleep 10
+    done
+  elif [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
+    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh; do
+      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
+      sleep 10
+    done
+  fi
 }
 
 BUNDLE="$(detect_bundle)"
