@@ -90,17 +90,17 @@ function get_phase2() {
 function run_cloud_network_setup() {
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- if $bootstrap_script_common := $context.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type)  }}
-  cat > /tmp/cloud-provider-bootstrap-networks.sh <<"EOF"
+  cat > /root/cloud-provider-bootstrap-networks.sh <<"EOF"
       {{- tpl $bootstrap_script_common $tpl_context | nindent 0 }}
 EOF
-  chmod +x /tmp/cloud-provider-bootstrap-networks.sh
+  chmod +x /root/cloud-provider-bootstrap-networks.sh
     {{- else }}
       {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}
         {{- $bundle := (dir $path | base) }}
-  cat > /tmp/cloud-provider-bootstrap-networks-{{ $bundle }}.sh <<"EOF"
+  cat > /root/cloud-provider-bootstrap-networks-{{ $bundle }}.sh <<"EOF"
         {{ tpl ($context.Files.Get $path) $tpl_context | nindent 0 }}
 EOF
-  chmod +x /tmp/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
+  chmod +x /root/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
       {{- end }}
     {{- end }}
   {{- end }}
