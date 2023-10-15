@@ -1,6 +1,14 @@
 {{- define "bootstrap_script" }}
-  {{- $context := index . 0 }}
-  {{- $ng := index . 1 }}
+  {{- $context := index . 0 -}}
+  {{- $ng := index . 1 -}}
+  {{- $tpl_context := dict -}}
+  {{- $_ := set $tpl_context "Release" $context.Release -}}
+  {{- $_ := set $tpl_context "Chart" $context.Chart -}}
+  {{- $_ := set $tpl_context "Files" $context.Files -}}
+  {{- $_ := set $tpl_context "Capabilities" $context.Capabilities -}}
+  {{- $_ := set $tpl_context "Template" $context.Template -}}
+  {{- $_ := set $tpl_context "Values" $context.Values -}}
+  {{- $_ := set $tpl_context "nodeGroup" $ng -}}
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
@@ -83,13 +91,14 @@ function run_cloud_network_setup() {
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- if $bootstrap_script_common := $context.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type)  }}
   cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh <<"EOF"
-      {{- tpl $bootstrap_script_common (list $context $ng) }}
+      {{- tpl $bootstrap_script_common $tpl_context | nindent 0 }}
 EOF
     {{- else }}
       {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}
         {{- $bundle := (dir $path | base) }}
-  cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-{{ $bundle }}.sh'
-        {{- tpl ($context.Files.Get $path) (list $context $ng)}}
+  cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-{{ $bundle }}.sh <<"EOF"
+        {{ tpl ($context.Files.Get $path) $tpl_context | nindent 0 }}
+EOF
       {{- end }}
     {{- end }}
   {{- end }}
