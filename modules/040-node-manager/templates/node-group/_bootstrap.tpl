@@ -74,7 +74,7 @@ EOF
 function get_phase2() {
   check_python
   bootstrap_bundle_name="${BUNDLE}.{{ $ng.name }}"
-  token="$(</var/lib/bashible/bootstrap-token)"
+  token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   while true; do
     for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
       url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_bundle_name}"
@@ -107,17 +107,18 @@ EOF
   {{- /*
   # Execute cloud provider specific network bootstrap script. It will organize connectivity to kube-apiserver.
   */}}
-  if [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh ]] ; then
-    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh; do
-      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-      sleep 10
-    done
-  elif [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
-    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh; do
-      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-      sleep 10
-    done
-  fi
+
+#  if [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh ]] ; then
+#    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh; do
+#      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
+#      sleep 10
+#    done
+#  elif [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
+#    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh; do
+#      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
+#      sleep 10
+#    done
+#  fi
 }
 
 BUNDLE="$(detect_bundle)"
