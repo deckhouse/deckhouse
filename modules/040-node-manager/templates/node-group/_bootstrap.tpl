@@ -1,14 +1,14 @@
 {{- define "bootstrap_script" }}
-  {{- $context := index . 0 -}}
-  {{- $ng := index . 1 -}}
-  {{- $tpl_context := dict -}}
-  {{- $_ := set $tpl_context "Release" $context.Release -}}
-  {{- $_ := set $tpl_context "Chart" $context.Chart -}}
-  {{- $_ := set $tpl_context "Files" $context.Files -}}
-  {{- $_ := set $tpl_context "Capabilities" $context.Capabilities -}}
-  {{- $_ := set $tpl_context "Template" $context.Template -}}
-  {{- $_ := set $tpl_context "Values" $context.Values -}}
-  {{- $_ := set $tpl_context "nodeGroup" $ng -}}
+  {{- $context := index . 0 }}
+  {{- $ng := index . 1 }}
+  {{- $tpl_context := dict }}
+  {{- $_ := set $tpl_context "Release" $context.Release }}
+  {{- $_ := set $tpl_context "Chart" $context.Chart }}
+  {{- $_ := set $tpl_context "Files" $context.Files }}
+  {{- $_ := set $tpl_context "Capabilities" $context.Capabilities }}
+  {{- $_ := set $tpl_context "Template" $context.Template }}
+  {{- $_ := set $tpl_context "Values" $context.Values }}
+  {{- $_ := set $tpl_context "nodeGroup" $ng }}
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
