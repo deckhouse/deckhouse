@@ -39,7 +39,7 @@ index b6591d0..52c796c 100644
 +               if p.configData.TeardownCommand == "" {
 +                       cleanupCmdsForPath = append(cleanupCmdsForPath, "/bin/sh", "/script/teardown")
 +               } else {
-+                       cleanupCmdsForPath = append(cleanupCmdsForPath, p.configData.SetupCommand)
++                       cleanupCmdsForPath = append(cleanupCmdsForPath, p.configData.TeardownCommand)
 +               }
                 if err := p.createHelperPod(ActionTypeDelete, cleanupCmdsForPath, pv.Name, path, node, volMode, storage.Value()); err != nil {
                         logrus.Infof("clean up volume %v failed: %v", pv.Name, err)
