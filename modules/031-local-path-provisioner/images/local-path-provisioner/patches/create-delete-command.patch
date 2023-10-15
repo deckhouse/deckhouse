@@ -1,0 +1,142 @@
+diff --git a/provisioner.go b/provisioner.go
+index b6591d0..52c796c 100644
+--- a/provisioner.go
++++ b/provisioner.go
+@@ -62,7 +62,9 @@ type NodePathMapData struct {
+ }
+
+ type ConfigData struct {
+-       NodePathMap []*NodePathMapData `json:"nodePathMap,omitempty"`
++       NodePathMap     []*NodePathMapData `json:"nodePathMap,omitempty"`
++       SetupCommand    string             `json:"setupCommand,omitempty"`
++       TeardownCommand string             `json:"teardownCommand,omitempty"`
+ }
+
+ type NodePathMap struct {
+@@ -206,10 +208,13 @@ func (p *LocalPathProvisioner) Provision(opts pvController.ProvisionOptions) (*v
+        storage := pvc.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
+        volMode := string(*pvc.Spec.VolumeMode)
+
+-       createCmdsForPath := []string{
+-               "/bin/sh",
+-               "/script/setup",
++       createCmdsForPath := make([]string, 0, 2)
++       if p.configData.SetupCommand == "" {
++               createCmdsForPath = append(createCmdsForPath, "/bin/sh", "/script/setup")
++       } else {
++               createCmdsForPath = append(createCmdsForPath, p.configData.SetupCommand)
+        }
++
+        if err := p.createHelperPod(ActionTypeCreate, createCmdsForPath, name, path, node.Name, volMode, storage.Value()); err != nil {
+                return nil, err
+        }
+@@ -272,7 +277,12 @@ func (p *LocalPathProvisioner) Delete(pv *v1.PersistentVolume) (err error) {
+                logrus.Infof("Deleting volume %v at %v:%v", pv.Name, node, path)
+                storage := pv.Spec.Capacity[v1.ResourceName(v1.ResourceStorage)]
+                volMode := string(*pv.Spec.VolumeMode)
+-               cleanupCmdsForPath := []string{"/bin/sh", "/script/teardown"}
++               cleanupCmdsForPath := make([]string, 0, 2)
++               if p.configData.TeardownCommand == "" {
++                       cleanupCmdsForPath = append(cleanupCmdsForPath, "/bin/sh", "/script/teardown")
++               } else {
++                       cleanupCmdsForPath = append(cleanupCmdsForPath, p.configData.SetupCommand)
++               }
+                if err := p.createHelperPod(ActionTypeDelete, cleanupCmdsForPath, pv.Name, path, node, volMode, storage.Value()); err != nil {
+                        logrus.Infof("clean up volume %v failed: %v", pv.Name, err)
+                        return err
+@@ -354,26 +364,6 @@ func (p *LocalPathProvisioner) createHelperPod(action ActionType, cmdsForPath []
+                                },
+                        },
+                },
+-               {
+-                       Name: "script",
+-                       VolumeSource: v1.VolumeSource{
+-                               ConfigMap: &v1.ConfigMapVolumeSource{
+-                                       LocalObjectReference: v1.LocalObjectReference{
+-                                               Name: p.configMapName,
+-                                       },
+-                                       Items: []v1.KeyToPath{
+-                                               {
+-                                                       Key:  "setup",
+-                                                       Path: "setup",
+-                                               },
+-                                               {
+-                                                       Key:  "teardown",
+-                                                       Path: "teardown",
+-                                               },
+-                                       },
+-                               },
+-                       },
+-               },
+        }
+        lpvVolumeMounts := []v1.VolumeMount{
+                {
+@@ -381,17 +371,48 @@ func (p *LocalPathProvisioner) createHelperPod(action ActionType, cmdsForPath []
+                        ReadOnly:  false,
+                        MountPath: parentDir,
+                },
+-               {
+-                       Name:      "script",
+-                       ReadOnly:  false,
+-                       MountPath: "/script",
+-               },
+        }
+        lpvTolerations := []v1.Toleration{
+                {
+                        Operator: v1.TolerationOpExists,
+                },
+        }
++
++       KeyToPathItems := make([]v1.KeyToPath, 0, 2)
++
++       if p.configData.SetupCommand == "" {
++               KeyToPathItems = append(KeyToPathItems, v1.KeyToPath{
++                       Key:  "setup",
++                       Path: "setup",
++               })
++       }
++
++       if p.configData.TeardownCommand == "" {
++               KeyToPathItems = append(KeyToPathItems, v1.KeyToPath{
++                       Key:  "teardown",
++                       Path: "teardown",
++               })
++       }
++
++       if len(KeyToPathItems) > 0 {
++               lpvVolumes = append(lpvVolumes, v1.Volume{
++                       Name: "script",
++                       VolumeSource: v1.VolumeSource{
++                               ConfigMap: &v1.ConfigMapVolumeSource{
++                                       LocalObjectReference: v1.LocalObjectReference{
++                                               Name: p.configMapName,
++                                       },
++                                       Items: KeyToPathItems,
++                               },
++                       },
++               })
++
++               lpvVolumeMounts = append(lpvVolumeMounts, v1.VolumeMount{
++                       Name:      "script",
++                       ReadOnly:  false,
++                       MountPath: "/script",
++               })
++       }
+        helperPod := p.helperPod.DeepCopy()
+
+        // use different name for helper pods
+@@ -408,9 +429,12 @@ func (p *LocalPathProvisioner) createHelperPod(action ActionType, cmdsForPath []
+        helperPod.Spec.Volumes = append(helperPod.Spec.Volumes, lpvVolumes...)
+        helperPod.Spec.Containers[0].VolumeMounts = append(helperPod.Spec.Containers[0].VolumeMounts, lpvVolumeMounts...)
+        helperPod.Spec.Containers[0].Command = cmdsForPath
+-       helperPod.Spec.Containers[0].Args = []string{"-p", filepath.Join(parentDir, volumeDir),
++       helperPod.Spec.Containers[0].Args = []string{
++               "-p", filepath.Join(parentDir, volumeDir),
+                "-s", strconv.FormatInt(sizeInBytes, 10),
+-               "-m", volumeMode}
++               "-m", volumeMode,
++               "-a", string(action),
++       }
+
+        // If it already exists due to some previous errors, the pod will be cleaned up later automatically
+        // https://github.com/rancher/local-path-provisioner/issues/27
