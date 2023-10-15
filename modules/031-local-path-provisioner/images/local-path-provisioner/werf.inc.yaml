@@ -2,10 +2,7 @@
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALPINE }}
-shell:
-  beforeInstall:
-  - apk add --no-cache ca-certificates e2fsprogs findmnt xfsprogs blkid e2fsprogs-extra
+fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /local-path-provisioner
