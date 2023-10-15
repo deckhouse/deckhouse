@@ -1,0 +1,222 @@
+/*
+Copyright 2023 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
+package hooks_test
+
+import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/helm"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
+)
+
+var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
+	f := HookExecutionConfigInit(`{"multitenancyManager":{"internal":{"projects":[]}}}`, `{}`)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Project", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ProjectType", false)
+
+	Context("Empty cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("Cluster with valid and invalid Projects", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(validProjectType + validProject + invalidProject))
+			dependency.TestDC.HelmClient = helm.NewClientMock(GinkgoT())
+			dependency.TestDC.HelmClient.UpgradeMock.Return(nil)
+			f.RunHook()
+		})
+
+		It("Execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Projects with valid status", func() {
+			for _, tc := range testCasesForProjectStatuses {
+				checkProjectStatus(f, tc)
+			}
+		})
+	})
+})
+
+var (
+	testCasesForProjectStatuses = []testProjectStatus{
+		{
+			name:   "test-project",
+			exists: true,
+			status: `{"sync":true,"state":"Sync"}`,
+		},
+		{
+			name:   "test-project-2",
+			exists: true,
+			status: `{"sync":false,"state":"Error","message": "template data doesn't match the OpenAPI schema for 'test-project-type' ProjectType: validation failure list:\nrequests.cpu should match '^[0-9]+m?$'"}`,
+		},
+		// TODO add more cases
+	}
+)
+
+const validProject = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Project
+metadata:
+  name: test-project
+spec:
+  description: Test case from Deckhouse documentation
+  projectTypeName: test-project-type
+  template:
+    requests:
+      cpu: 5
+      memory: 5Gi
+      storage: 1Gi
+    limits:
+      cpu: 5
+      memory: 5Gi
+`
+
+const invalidProject = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Project
+metadata:
+  name: test-project-2
+spec:
+  description: Test case from Deckhouse documentation
+  projectTypeName: test-project-type
+  template:
+    requests:
+      cpu: qwerty
+      memory: 5Gi
+      storage: 1Gi
+    limits:
+      cpu: 5
+      memory: 5Gi
+`
+
+const validProjectType = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectType
+metadata:
+  name: test-project-type
+spec:
+  subjects:
+    - kind: User
+      name: admin@cluster
+      role: Admin
+    - kind: User
+      name: user@cluster
+      role: User
+  namespaceMetadata:
+    annotations:
+      extended-monitoring.deckhouse.io/enabled: ""
+    labels:
+      created-from-project-type: test-project-type
+  openAPI:
+    requests:
+      type: object
+      properties:
+        cpu:
+          oneOf:
+            - type: number
+              format: int
+            - type: string
+          pattern: "^[0-9]+m?$"
+        memory:
+          oneOf:
+            - type: number
+              format: int
+            - type: string
+          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+        storage:
+          type: string
+          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+    limits:
+      type: object
+      properties:
+        cpu:
+          oneOf:
+            - type: number
+              format: int
+            - type: string
+          pattern: "^[0-9]+m?$"
+        memory:
+          oneOf:
+            - type: number
+              format: int
+            - type: string
+          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+  resourcesTemplate: |
+    ---
+    # Max requests and limits for resource and storage consumption for all pods in a namespace.
+    # Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
+    apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: all-pods
+    spec:
+      hard:
+        {{ with .params.requests.cpu }}requests.cpu: {{ . }}{{ end }}
+        {{ with .params.requests.memory }}requests.memory: {{ . }}{{ end }}
+        {{ with .params.requests.storage }}requests.storage: {{ . }}{{ end }}
+        {{ with .params.limits.cpu }}limits.cpu: {{ . }}{{ end }}
+        {{ with .params.limits.memory }}limits.memory: {{ . }}{{ end }}
+    ---
+    # Max requests and limits for resource consumption per pod in a namespace.
+    # All the containers in a namespace must have requests and limits specified.
+    # Refer to https://kubernetes.io/docs/concepts/policy/limit-range/
+    apiVersion: v1
+    kind: LimitRange
+    metadata:
+      name: all-containers
+    spec:
+      limits:
+        - max:
+            {{ with .params.limits.cpu }}cpu: {{ . }}{{ end }}
+            {{ with .params.limits.memory }}memory: {{ . }}{{ end }}
+          maxLimitRequestRatio:
+            cpu: 1
+            memory: 1
+          type: Container
+    ---
+    # Deny all network traffic by default except namespaced traffic and dns.
+    # Refer to https://kubernetes.io/docs/concepts/services-networking/network-policies/
+    kind: NetworkPolicy
+    apiVersion: networking.k8s.io/v1
+    metadata:
+      name: deny-all-except-current-namespace
+    spec:
+      podSelector:
+        matchLabels: {}
+      policyTypes:
+        - Ingress
+        - Egress
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "{{ .projectName }}"
+      egress:
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "{{ .projectName }}"
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: kube-system
+          ports:
+            - protocol: UDP
+              port: 53
+`

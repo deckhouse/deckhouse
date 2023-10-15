@@ -30,12 +30,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// const defaultNamespace = "d8-multitenancy-manager"
 const helmDriver = "secret"
 
 type Client interface {
-	// Install(releaseName, namespace string, debug bool) error
-	Upgrade(releaseName, namespace string, templates, values map[string]interface{}, debug bool) error
+	Upgrade(releaseName string, templates, values map[string]interface{}, debug bool) error
 	Delete(releaseName string) error
 }
 
@@ -44,14 +42,18 @@ type helmClient struct {
 	options      helmOptions
 }
 
-func NewClient(options ...Option) (Client, error) {
-	opts := &helmOptions{}
+func NewClient(namespace string, options ...Option) (Client, error) {
+	opts := &helmOptions{
+		Namespace:  namespace,
+		HistoryMax: 3,
+		Timeout:    time.Duration(15 * float64(time.Second)),
+	}
 
 	for _, opt := range options {
 		opt(opts)
 	}
 
-	conf, err := getActionConfig("namespace")
+	conf, err := getActionConfig(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -71,12 +73,23 @@ type helmOptions struct {
 
 type Option func(options *helmOptions)
 
-func (client *helmClient) Upgrade(releaseName, namespace string, templates, values map[string]interface{}, debug bool) error {
+func WithHistoryMax(historyMax int32) Option {
+	return func(options *helmOptions) {
+		options.HistoryMax = historyMax
+	}
+}
+
+func WithTimeout(timeout time.Duration) Option {
+	return func(options *helmOptions) {
+		options.Timeout = timeout
+	}
+}
+
+func (client *helmClient) Upgrade(releaseName string, templates, values map[string]interface{}, debug bool) error {
 	ch := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,
-			Version: "0.0.1", // TODO ???
-		},
+			Version: "0.0.1"},
 	}
 
 	for name, template := range templates {
@@ -94,10 +107,7 @@ func (client *helmClient) Upgrade(releaseName, namespace string, templates, valu
 	}
 
 	upgradeObject := action.NewUpgrade(client.actionConfig)
-	if namespace != "" {
-		upgradeObject.Namespace = namespace
-	}
-
+	upgradeObject.Namespace = client.options.Namespace
 	upgradeObject.Install = true
 	upgradeObject.MaxHistory = int(client.options.HistoryMax)
 	upgradeObject.Timeout = client.options.Timeout
@@ -105,9 +115,7 @@ func (client *helmClient) Upgrade(releaseName, namespace string, templates, valu
 	releases, err := action.NewHistory(client.actionConfig).Run(releaseName)
 	if err == driver.ErrReleaseNotFound {
 		installObject := action.NewInstall(client.actionConfig)
-		if namespace != "" {
-			installObject.Namespace = namespace
-		}
+		installObject.Namespace = client.options.Namespace
 		installObject.Timeout = client.options.Timeout
 		installObject.ReleaseName = releaseName
 		installObject.UseReleaseName = true
@@ -135,8 +143,8 @@ func (client *helmClient) Upgrade(releaseName, namespace string, templates, valu
 
 func (client *helmClient) Delete(releaseName string) error {
 	uninstallObject := action.NewUninstall(client.actionConfig)
-	_, err := uninstallObject.Run(releaseName)
-	if err != nil {
+
+	if _, err := uninstallObject.Run(releaseName); err != nil {
 		return fmt.Errorf("helm uninstall %s invocation error: %v", releaseName, err)
 	}
 
@@ -145,16 +153,15 @@ func (client *helmClient) Delete(releaseName string) error {
 
 func (client *helmClient) rollbackLatestRelease(releases []*release.Release) {
 	latestRelease := releases[0]
-	// nsReleaseName := fmt.Sprintf("%s/%s", latestRelease.Namespace, latestRelease.Name)
 
-	// client.LogEntry.Infof("Trying to rollback '%s'", nsReleaseName)
+	// TODO fix logger client.LogEntry.Infof("Trying to rollback '%s'", nsReleaseName)
 
 	if latestRelease.Version == 1 || client.options.HistoryMax == 1 || len(releases) == 1 {
 		uninstallObject := action.NewUninstall(client.actionConfig)
 		uninstallObject.KeepHistory = false
 		_, err := uninstallObject.Run(latestRelease.Name)
 		if err != nil {
-			// client.LogEntry.Warnf("Failed to uninstall pending release %s: %s", nsReleaseName, err)
+			// TODO fix logger client.LogEntry.Warnf("Failed to uninstall pending release %s: %s", nsReleaseName, err)
 			return
 		}
 	} else {
@@ -170,15 +177,18 @@ func (client *helmClient) rollbackLatestRelease(releases []*release.Release) {
 		rollbackObject.CleanupOnFail = true
 		err := rollbackObject.Run(latestRelease.Name)
 		if err != nil {
-			// client.LogEntry.Warnf("Failed to rollback pending release %s: %s", nsReleaseName, err)
+			// TODO fix logger client.LogEntry.Warnf("Failed to rollback pending release %s: %s", nsReleaseName, err)
 			return
 		}
 	}
 
-	// client.LogEntry.Infof("Rollback '%s' successful", nsReleaseName)
+	// TODO fix logger client.LogEntry.Infof("Rollback '%s' successful", nsReleaseName)
 }
 
 func getActionConfig(namespace string) (*action.Configuration, error) {
+	if namespace == "" {
+		return nil, fmt.Errorf("namespace must be specified")
+	}
 	actionConfig := new(action.Configuration)
 	var kubeConfig *genericclioptions.ConfigFlags
 	// Create the rest config instance with ServiceAccount values loaded in them

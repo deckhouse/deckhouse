@@ -6,6 +6,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package internal
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,10 +29,7 @@ func projectTypeHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConf
 		Name:       ProjectTypesQueue,
 		ApiVersion: APIVersion,
 		Kind:       ProjectTypeKind,
-		FilterFunc: filterProjectTypes,
-		// only snapshot update is needed
-		ExecuteHookOnEvents:          go_hook.Bool(false),
-		ExecuteHookOnSynchronization: go_hook.Bool(false),
+		FilterFunc: filterFunc,
 	}
 }
 
@@ -48,4 +48,39 @@ func filterProjectTypes(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		Name: pt.Name,
 		Spec: pt.Spec,
 	}, nil
+}
+
+func validateProjectType(projectType ProjectTypeSnapshot) error {
+	// TODO (alex123012): Add open-api spec validation
+	if _, err := LoadOpenAPISchema(projectType.Spec.OpenAPI); err != nil {
+		return fmt.Errorf("can't load open api schema from '%s' ProjectType spec: %s", projectType.Name, err)
+	}
+	return nil
+}
+
+func GetProjectTypeSnapshots(input *go_hook.HookInput) map[string]ProjectTypeSnapshot {
+	ptSnapshots := input.Snapshots[ProjectTypesQueue]
+
+	projectTypesValues := make(map[string]ProjectTypeSnapshot)
+
+	for _, ptSnapshot := range ptSnapshots {
+		pt, ok := ptSnapshot.(ProjectTypeSnapshot)
+		if !ok {
+			input.LogEntry.Errorf("can't convert snapshot to 'projectTypeSnapshot': %v", ptSnapshot)
+			continue
+		}
+
+		if err := validateProjectType(pt); err != nil {
+			SetProjectTypeStatusError(input.PatchCollector, pt.Name, err.Error())
+			continue
+		}
+
+		projectTypesValues[pt.Name] = pt
+
+		SetProjectTypeStatusReady(input.PatchCollector, pt.Name)
+	}
+
+	pt, _ := json.Marshal(projectTypesValues)
+	input.LogEntry.Infof("project types from snap %s", string(pt))
+	return projectTypesValues
 }

@@ -62,7 +62,16 @@ func init() {
 
 // NewDependencyContainer creates new Dependency container with external clients
 func NewDependencyContainer() Container {
-	return &dependencyContainer{}
+	return &dependencyContainer{
+		helmClient: clients{
+			clients: make(map[string]helm.Client),
+		},
+	}
+}
+
+type clients struct {
+	clients map[string]helm.Client
+	m       sync.Mutex
 }
 
 type dependencyContainer struct {
@@ -74,7 +83,7 @@ type dependencyContainer struct {
 	m          sync.RWMutex
 	isTestEnv  *bool
 	httpClient http.Client
-	helmClient helm.Client
+	helmClient clients
 }
 
 func (dc *dependencyContainer) isTestEnvironment() bool {
@@ -94,23 +103,26 @@ func (dc *dependencyContainer) isTestEnvironment() bool {
 	return *dc.isTestEnv
 }
 
-func (dc *dependencyContainer) GetHelmClient(options ...helm.Option) (helm.Client, error) {
-	dc.m.Lock()
-	defer dc.m.Unlock()
-
+func (dc *dependencyContainer) GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error) {
 	if dc.isTestEnvironment() {
-		// return TestDC.GetHelmClient(options...)
+		return TestDC.GetHelmClient(namespace, options...)
 	}
 
-	if dc.helmClient == nil {
-		hc, err := helm.NewClient(options...)
-		if err != nil {
-			return nil, err
-		}
-		dc.helmClient = hc
+	dc.helmClient.m.Lock()
+	defer dc.helmClient.m.Unlock()
+
+	if hc, ok := dc.helmClient.clients[namespace]; ok {
+		return hc, nil
 	}
 
-	return dc.helmClient, nil
+	hc, err := helm.NewClient(namespace, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	dc.helmClient.clients[namespace] = hc
+
+	return hc, nil
 }
 
 func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
@@ -250,7 +262,7 @@ func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) err
 type mockedDependencyContainer struct {
 	ctrl *minimock.Controller // maybe we need it somewhere in tests
 
-	// HelmClient    *helm.ClientMock
+	HelmClient    *helm.ClientMock
 	HTTPClient    *http.ClientMock
 	EtcdClient    *etcd.ClientMock
 	K8sClient     k8s.Client
@@ -258,9 +270,9 @@ type mockedDependencyContainer struct {
 	VsphereClient *vsphere.ClientMock
 }
 
-// func (mdc *mockedDependencyContainer) GetHelmClient(options ...http.Option) helm.Client {
-// 	return mdc.HelmClient
-// }
+func (mdc *mockedDependencyContainer) GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error) {
+	return mdc.HelmClient, nil
+}
 
 func (mdc *mockedDependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
 	return mdc.HTTPClient
@@ -323,9 +335,11 @@ func (mdc *mockedDependencyContainer) SetK8sVersion(ver k8s.FakeClusterVersion) 
 func newMockedContainer() *mockedDependencyContainer {
 	// ctrl := minimock.NewController(ginkgo.GinkgoT()) // gingo panics cause of offset
 	ctrl := minimock.NewController(&testing.T{})
+
 	return &mockedDependencyContainer{
 		ctrl: ctrl,
 
+		HelmClient:    helm.NewClientMock(ctrl),
 		HTTPClient:    http.NewClientMock(ctrl),
 		EtcdClient:    etcd.NewClientMock(ctrl),
 		K8sClient:     fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client,
