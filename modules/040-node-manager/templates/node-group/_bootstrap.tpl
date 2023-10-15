@@ -1,9 +1,14 @@
 {{- define "bootstrap_script" }}
+  {{- $context := index . 0 }}
+  {{- $ng := index . 1 }}
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+BOOTSTRAP_DIR="/var/lib/bashible"
+mkdir -p ${BOOTSTRAP_DIR}
+
 function detect_bundle() {
-  {{- .Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
+  {{- $context.Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
 }
 
 function check_python() {
@@ -59,21 +64,52 @@ EOF
 }
 
 function get_phase2() {
-  bundle="$(detect_bundle)"
   check_python
-  bootstrap_bundle_name="$bundle.{{ .nodeGroupName }}"
+  bootstrap_bundle_name="${BUNDLE}.{{ $ng.name }}"
   token="$(</var/lib/bashible/bootstrap-token)"
   while true; do
-    for server in {{ .apiserverEndpoints | join " " }}; do
-      url="https://$server/apis/bashible.deckhouse.io/v1alpha1/bootstrap/$bootstrap_bundle_name"
-      if eval "$python_binary" - "$url" "$token" <<< "$script"; then
+    for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
+      url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_bundle_name}"
+      if eval "${python_binary}" - "${url}" "${token}" <<< "${script}"; then
         return 0
       fi
-      >&2 echo "failed to get bootstrap $bootstrap_bundle_name from $url"
+      >&2 echo "failed to get bootstrap ${bootstrap_bundle_name} from $url"
     done
     sleep 10
   done
 }
 
+function run_cloud_network_setup() {
+  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+    {{- if $bootstrap_script_common := $context.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type)  }}
+  cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-{{ $bundle }}.sh <<"EOF"
+      {{- tpl $bootstrap_script_common (list $context $ng) }}
+EOF
+    {{- else }}
+      {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}
+        {{- $bundle := (dir $path | base) }}
+  cat > $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-{{ $bundle }}.sh'
+        {{- tpl ($context.Files.Get $path) (list $context $ng)}}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- /*
+  # Execute cloud provider specific network bootstrap script. It will organize connectivity to kube-apiserver.
+  */}}
+  if [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh ]] ; then
+    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh; do
+      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
+      sleep 10
+    done
+  elif [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
+    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh; do
+      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
+      sleep 10
+    done
+  fi
+}
+
+BUNDLE="$(detect_bundle)"
+run_cloud_network_setup
 get_phase2 | bash
 {{- end }}

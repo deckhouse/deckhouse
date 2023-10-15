@@ -7,7 +7,7 @@
 mkdir -p /var/lib/bashible
 
 cat > /var/lib/bashible/bootstrap.sh <<"END"
-{{- include "bootstrap_script" (dict "Files" $context.Files "nodeGroupName" $ng.name "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) }}
+{{- include "bootstrap_script" (list $context $ng) }}
 END
 chmod +x /var/lib/bashible/bootstrap.sh
 
