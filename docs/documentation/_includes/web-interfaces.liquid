@@ -25,9 +25,7 @@ kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-control
 </div>
       </li>
     {% if iface.additionalSetupSteps %}<li>{{ iface.additionalSetupSteps[page.lang] }}</li>{% endif %}
-    <li>Веб интерфейс будет доступен по доменному имени <code>{{ iface.domain }}</code>{% if iface.location %} и адресу
-      <code>{{ iface.location }}</code>{% endif %},
-      согласно параметру <a href="deckhouse-configure-global.html#parameters-modules-publicdomaintemplate">publicDomainTemplate</a>.
+    <li>Веб интерфейс будет доступен по доменному имени <code>{{ iface.domain }}</code>{% if iface.location %} и адресу <code>{{ iface.location }}</code>{% endif %}, согласно параметру <a href="deckhouse-configure-global.html#parameters-modules-publicdomaintemplate">publicDomainTemplate</a>.
       Например <code>{{ iface.domain }}.example.com{% if iface.location %}{{ iface.location }}{% endif %}</code> для <i>publicDomainTemplate</i>
       <code>%s.example.com</code>.
     </li>
@@ -41,12 +39,8 @@ kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-control
 </div>
       </li>
     {% if iface.additionalSetupSteps %}<li>{{ iface.additionalSetupSteps[page.lang] }}</li>{% endif %}
-      <li>The web interface will be available on the <code>{{ iface.domain }}</code> domain {% if iface.location %} and
-        <code>{{ iface.location }}</code> location{% endif %}, according to the <a
-          href="deckhouse-configure-global.html#parameters-modules-publicdomaintemplate">publicDomainTemplate</a>
-        parameter. For example, on the <code>{{ iface.domain }}
-          .example.com{% if iface.location %}{{ iface.location }}{% endif %}</code> URL, if the
-        <i>publicDomainTemplate</i> is <code>%s.example.com</code>.
+      <li>The web interface will be available on the <code>{{ iface.domain }}</code> domain {% if iface.location %} and <code>{{ iface.location }}</code> location{% endif %}, according to the <a
+          href="deckhouse-configure-global.html#parameters-modules-publicdomaintemplate">publicDomainTemplate</a> parameter. For example, on the <code>{{ iface.domain }}.example.com{% if iface.location %}{{ iface.location }}{% endif %}</code> URL, if the <i>publicDomainTemplate</i> is <code>%s.example.com</code>.
       </li>
     </ul>
   {%- endif %}
