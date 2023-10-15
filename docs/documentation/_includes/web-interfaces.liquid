@@ -36,6 +36,8 @@ kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-control
       <li>Enable the <a href='{{ modules[iface.module].path }}'>{{ iface.module }}</a> module:
 <div markdown="1">
 ```shell
+kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module enable {{ iface.module }}
+```
 </div>
       </li>
     {% if iface.additionalSetupSteps %}<li>{{ iface.additionalSetupSteps[page.lang] }}</li>{% endif %}
