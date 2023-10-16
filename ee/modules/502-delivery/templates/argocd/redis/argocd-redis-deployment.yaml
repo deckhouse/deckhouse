@@ -61,14 +61,14 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" .Chart.Name)) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
         - args:
             - --save
             - ""
             - --appendonly
             - "no"
-          image: {{ include "helm_lib_module_image" (list . "redis") }}
+          image: {{ include "helm_lib_module_common_image" (list . "redisStatic") }}
           imagePullPolicy: IfNotPresent
           name: redis
           ports:
