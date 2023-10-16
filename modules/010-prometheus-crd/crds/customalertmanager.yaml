@@ -34,26 +34,27 @@ spec:
                   properties:
                     synced:
                       type: string
-                      description: True if last obseved version of the security policy was successfully applied in the cluster.
+                      description: True if last observed version of the resource was successfully applied in the cluster.
                     observed:
                       type: object
-                      description: Contains last timestamp when the security policy change was noted by the operator and its checksum.
+                      description: Contains last timestamp when the resource change was noted by the operator and its checksum.
                       properties:
                         lastTimestamp:
                           type: string
-                          description: Last timestamp when a change of the security policy was noted by the operator.
+                          description: Last timestamp when a change of the resource was noted by the operator.
                         checkSum:
                           type: string
-                          description: The checksum of last observed change of the security policy.
+                          description: The checksum of last observed resource.
                     processed:
                       type: object
-                      description: Contains last timestamp when the security policy was applied in the cluster by the operator and its checksum.
+                      description: Contains last timestamp when the resource was applied in the cluster by the operator and its checksum.
                       properties:
                         lastTimestamp:
                           type: string
-                          description: Last timestamp when the security policy was applied in the cluster.
+                          description: Last timestamp when a change of the resource was processed by the operator.
                         checkSum:
                           type: string
+                          description: The checksum of last processed resource.
             spec:
               type: object
               properties:
@@ -1282,7 +1283,7 @@ spec:
         - jsonPath: .status.deckhouse.synced
           name: Synced
           type: string
-          description: Status message if current version of the security policy was processed by the operator.
+          description: Status message if current version of the resource was processed by the operator.
         - name: Observed
           jsonPath: .status.deckhouse.observed.lastTimestamp
           type: string
