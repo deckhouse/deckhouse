@@ -136,6 +136,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"distroless":                "imageHash-common-distroless",
 		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
+		"nginxStatic":               "imageHash-common-nginxStatic",
 		"pause":                     "imageHash-common-pause",
 		"shellOperator":             "imageHash-common-shellOperator",
 	},

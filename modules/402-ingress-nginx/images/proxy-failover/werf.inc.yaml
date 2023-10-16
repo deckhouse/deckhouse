@@ -1,0 +1,46 @@
+---
+artifact: {{ .ModuleName }}/build-entrypoint-artifact
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-extldflags "-static" -s -w' -o entrypoint main.go
+  - chown -R 64535:64535 entrypoint
+  - chmod 0700 entrypoint
+---
+artifact: {{ .ModuleName }}/nginx-static-artifact
+fromImage: common/nginx-static
+git:
+- add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/conf/
+  to: /opt/nginx-static/conf
+  stageDependencies:
+    install:
+    - '**/*.tpl'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/build-entrypoint-artifact
+  add: /src/entrypoint
+  to: /entrypoint
+  before: setup
+- artifact: {{ .ModuleName }}/nginx-static-artifact
+  add: /opt/nginx-static/
+  before: setup
+docker:
+  ENTRYPOINT: ["/entrypoint"]
