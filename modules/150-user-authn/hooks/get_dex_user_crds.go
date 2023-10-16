@@ -138,9 +138,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 
 		dexUser.Spec.Groups = groups
 
-		if dexUser.Spec.UserID == "" {
-			dexUser.Spec.UserID = dexUser.Name
-		}
+		dexUser.Spec.UserID = dexUser.Name
 
 		var expireAt string
 
