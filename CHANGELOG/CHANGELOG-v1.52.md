@@ -46,6 +46,7 @@
  - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#5988](https://github.com/deckhouse/deckhouse/pull/5988)
  - **[ingress-nginx]** Fix controller preStop probe. [#5948](https://github.com/deckhouse/deckhouse/pull/5948)
     Ingress controller will restart.
+ - **[linstor]** Improved symlink handling for devices. [#6187](https://github.com/deckhouse/deckhouse/pull/6187)
  - **[linstor]** Removed alert about HA-controller absence. [#6166](https://github.com/deckhouse/deckhouse/pull/6166)
  - **[linstor]** Added an init container for LINSTOR satellite, that waits for DRBD v9.x to be loaded on the node. [#6151](https://github.com/deckhouse/deckhouse/pull/6151)
  - **[linstor]** Disabled usermode_helper param on LINSTOR nodes for more stable management. [#6137](https://github.com/deckhouse/deckhouse/pull/6137)
