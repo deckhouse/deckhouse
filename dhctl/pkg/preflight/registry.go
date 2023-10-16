@@ -51,7 +51,7 @@ func (pc *PreflightCheck) CheckRegistryAccessThroughProxy() error {
 		return nil
 	}
 	if slices.Contains(noProxyAddresses, pc.metaConfig.Registry.Address) {
-		log.DebugLn("Proxy address found in proxy.noProxy list, skipping check")
+		log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
 		return nil
 	}
 
