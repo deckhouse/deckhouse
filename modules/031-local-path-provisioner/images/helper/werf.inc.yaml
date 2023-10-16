@@ -1,5 +1,5 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 fromCacheVersion: "2023-10-16.1"
 git:
