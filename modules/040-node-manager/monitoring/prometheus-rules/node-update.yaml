@@ -208,6 +208,7 @@
       summary: The {{ $labels.node }} Node is stuck in draining.
       description: |
         There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.
+
         You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'`
 
   - alert: NodeStuckInDraining
