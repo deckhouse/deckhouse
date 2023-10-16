@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-
 )
 
 // hook for setting CR statuses
@@ -59,7 +58,7 @@ func updateAmStatus(input *go_hook.HookInput) error {
 	}
 
 	for _, am := range serviceDeclaredAlertmanagers {
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.ResourceName, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
 	}
 
 	for _, am := range internalDeclaredAlertmanagers {

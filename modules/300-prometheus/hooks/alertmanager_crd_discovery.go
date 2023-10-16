@@ -196,6 +196,7 @@ func parseServiceCR(am Alertmanager, k8 k8s.Client) (alertmanagerService, error)
 		return value, err
 	}
 
+	value.ResourceName = am.Name
 	value.Name = svc.Name
 	value.Namespace = svc.Namespace
 	if len(svc.Spec.Ports) > 0 {
@@ -297,10 +298,11 @@ type tlsConfig struct {
 }
 
 type alertmanagerService struct {
-	Name       string      `json:"name"`
-	Namespace  string      `json:"namespace"`
-	PathPrefix string      `json:"pathPrefix"`
-	Port       interface{} `json:"port"`
+	ResourceName string      `json:"resourceName"`
+	Name         string      `json:"name"`
+	Namespace    string      `json:"namespace"`
+	PathPrefix   string      `json:"pathPrefix"`
+	Port         interface{} `json:"port"`
 }
 
 type Alertmanager struct {
