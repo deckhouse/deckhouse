@@ -61,7 +61,7 @@ EOF
     return 0
   fi
 
-  if ([ "$operation" == "CREATE" ] || [ "$operation" == "UPDATE" ]) && [ "$userID" != ::]; then
+  if ([ "$operation" == "CREATE" ] || [ "$operation" == "UPDATE" ]) && [ "$userID" != "" ]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true, "message":"\".spec.userID\" is deprecated and shouldn't be set manually (if set, its value is ignored)" }
 EOF
