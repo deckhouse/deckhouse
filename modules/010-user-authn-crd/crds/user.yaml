@@ -43,7 +43,7 @@ spec:
                 password:
                   type: string
                   description: |
-                    User password hash in plaintext or Base64 encoded.
+                    User password hash in plaintext or Base64-encoded.
 
                     Use the following command to encode the password hash in Base64: `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
                   example: 'JDJ5JDEwJE9HN1lOOUhnOXU5NmY2cGp4R3NIcS56NWQuOVQxQ0VrdWIud3BRdVJ5Sy5QQU5INlpKNDguCgo='
@@ -57,7 +57,7 @@ spec:
                   description: |
                     Static user groups.
 
-                    Since the parameter has been deprecated, use the [Group](#group) resource to add users to groups.
+                    Deprecated. Use the [Group](#group) resource.
                   items:
                     type: string
                 ttl:
@@ -99,13 +99,6 @@ spec:
           format: date-time
     - name: v1
       served: true
-      storage: false
-      schema: *schema
-      subresources: *subresources
-      additionalPrinterColumns: *additionalPrinterColumns
-
-    - name: v2alpha1
-      served: true
       storage: true
       schema:
         openAPIV3Schema:
@@ -133,11 +126,26 @@ spec:
                 password:
                   type: string
                   description: |
-                    User password hash in plaintext or Base64 encoded.
+                    User password hash in plaintext or Base64-encoded.
 
                     Use the following command to encode the password hash in Base64: `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
-                  example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
-                  pattern: '^\$2[ayb]\$.{56}$'
+                  example: 'JDJ5JDEwJE9HN1lOOUhnOXU5NmY2cGp4R3NIcS56NWQuOVQxQ0VrdWIud3BRdVJ5Sy5QQU5INlpKNDguCgo='
+                userID:
+                  type: string
+                  x-doc-deprecated: true
+                  description: |
+                    Unique issuer user ID. It equals to .metadata.name.
+
+                    Deprecated and shouldn't be set manually.
+                groups:
+                  type: array
+                  x-doc-deprecated: true
+                  description: |
+                    Static user groups.
+
+                    Deprecated. Use the [Group](#group) resource.
+                  items:
+                    type: string
                 ttl:
                   type: string
                   pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
@@ -156,11 +164,11 @@ spec:
                     * It is shown only of the `.spec.ttl` field is set.
                     * The user account will be deleted at the specified date.
                     * This parameter is synchronized every 5 minutes. There may be a time lag between the moment specified in this field and the moment of actual deletion of the user account.
+                groups:
+                  type: array
+                  description: |
+                    Static user groups.
+                  items:
+                    type: string
       subresources: *subresources
-      additionalPrinterColumns:
-        - jsonPath: .spec.email
-          name: Email
-          type: string
-        - jsonPath: .status.expireAt
-          name: Expire_at
-          type: string
+      additionalPrinterColumns: &additionalPrinterColumns

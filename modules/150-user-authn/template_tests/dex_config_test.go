@@ -99,6 +99,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
     groups:
     - Everyone
     password: userPassword
+    userID: user
 - encodedName: encodedAdmin
   name: adminName
   spec:
@@ -107,6 +108,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
     - Everyone
     - Admins
     password: adminPassword
+    userID: admin
 `)
 			hec.HelmRender()
 		})
@@ -134,6 +136,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
     groups:
     - Everyone
     password: userPassword
+    userID: user
 - encodedName: encodedAdmin
   name: adminName
   spec:
@@ -142,6 +145,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
     - Everyone
     - Admins
     password: adminPassword
+    userID: admin
 `)
 			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
 - id: gitlabID

@@ -93,7 +93,8 @@ spec:
     "spec": {
       "email": "admin@example.com",
       "groups": ["Gods"],
-      "password": "password"
+      "password": "password",
+      "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
     "status": {}
@@ -172,7 +173,8 @@ spec:
   "name": "admin",
   "spec": {
     "email": "adminNext@example.com",
-    "password": "password"
+    "password": "password",
+    "userID": "admin"
   },
   "encodedName": "mfsg22lonzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji",
   "status": {}
@@ -211,7 +213,8 @@ spec:
     "name": "admin",
     "spec": {
       "email": "admin@example.com",
-      "password": "password"
+      "password": "password",
+      "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
     "status": {}
@@ -220,7 +223,8 @@ spec:
     "name": "user",
     "spec": {
       "email": "user@example.com",
-      "password": "passwordNext"
+      "password": "passwordNext",
+      "userID": "user"
     },
     "encodedName": "ovzwk4samv4gc3lqnrss4y3pnxf7fhheqqrcgji",
     "status": {}
@@ -250,7 +254,8 @@ spec:
     "name": "admin",
     "spec": {
       "email": "admin@example.com",
-      "password": "password"
+      "password": "password",
+      "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
     "status": {}
@@ -318,7 +323,8 @@ spec:
         "group-2",
         "group-3"
       ],
-      "password": "password"
+      "password": "password",
+      "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
     "status": {}
@@ -368,7 +374,8 @@ spec:
       "groups": [
         "group-1"
       ],
-      "password": "password"
+      "password": "password",
+      "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
     "status": {}
@@ -420,7 +427,8 @@ spec:
       "password": "password",
       "groups": [
         "group-1"
-      ]
+      ],
+      "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
     "status": {}
@@ -457,7 +465,8 @@ status:
     "name": "admin",
     "spec": {
       "email": "admin@example.com",
-      "password": "password"
+      "password": "password",
+      "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
     "status": {}

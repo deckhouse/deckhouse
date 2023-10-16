@@ -32,6 +32,7 @@ kubernetes:
       {
         "name": .metadata.name,
         "email": .spec.email,
+        "userID": .spec.userID,
         "groups": .spec.groups
       }
 kubernetesValidating:
@@ -50,11 +51,19 @@ function __main__() {
   operation=$(context::jq -r '.review.request.operation')
   userName=$(context::jq -r '.review.request.object.metadata.name')
   email=$(context::jq -r '.review.request.object.spec.email')
+  userID=$(context::jq -r '.review.request.object.spec.userID')
   groups=$(context::jq -r '.review.request.object.spec.groups // ""')
 
   if userWithTheSameEmail="$(context::jq -er --arg name "$userName" --arg email "$email" '.snapshots.users[].filterResult | select(.name != $name) | select(.email == $email) | .name' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"users.deckhouse.io \"$userName\", user \"$userWithTheSameEmail\" is already using email \"$email\"" }
+EOF
+    return 0
+  fi
+
+  if userWithTheSameUserID="$(context::jq -er --arg name "$userName" --arg userid "$userID" '.snapshots.users[].filterResult | select(.name != $name) | select(.userID == $userid) | .name' 2>&1)"; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"users.deckhouse.io \"$userName\", user \"$userWithTheSameUserID\" is already using userID '$userID'" }
 EOF
     return 0
   fi
