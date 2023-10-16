@@ -10,6 +10,13 @@ import:
   add: /builds/busybox-1.36.1/busybox
   to: /bin/busybox
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-builder-artifact
+  add: /builds/util-linux-2.39.2/.libs
+  to: /bin
+  before: setup
+  includePaths:
+  - findfs
+  - findmnt
 shell:
   setup:
     - /bin/busybox --install -s
@@ -56,3 +63,22 @@ shell:
     - make defconfig
     - sed 's/^.*CONFIG_STATIC .*$/CONFIG_STATIC=y/g' -i .config
     - make -j8
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-builder-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+    - apt update
+    - apt install -y wget bzip2 curl tar gcc make automake autopoint libtool gettext pkg-config bison gettext libexpat1 libexpat1-dev
+    - export AL_OPTS=-I/usr/share/aclocal
+  install:
+    - mkdir /builds
+    - cd /builds
+    - wget -qO- https://git.kernel.org/pub/scm/utils/util-linux/util-linux.git/snapshot/util-linux-2.39.2.tar.gz | tar -xzv
+    - cd util-linux-2.39.2
+    - ./autogen.sh
+    - autoconf
+    - automake
+    - automake --add-missing
+    - ./configure --enable-static --enable-static-programs=fdisk,sfdisk
+    - make
