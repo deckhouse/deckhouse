@@ -8,17 +8,16 @@ shopt -s extglob
 ip_addr_show_output=$(ip -json addr show)
 configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
 for mac in $configured_macs; do
-  ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$mac" '.[] | select(.address == $mac) | .ifname')|"
+  ifname="$(ip -o link show | grep "link/ether $mac" | cut -d ":" -f2 | tr -d " ")|"
   configured_ifnames_pattern+="$ifname"
 done
-
 for i in /sys/class/net/!(${configured_ifnames_pattern%?}); do
   if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)virtio.*' 1>/dev/null 2>&1; then
     continue
   fi
 
   ifname=$(basename "$i")
-  mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
+  mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
 
   cat > /etc/netplan/100-cim-"$ifname".yaml <<BOOTSTRAP_NETWORK_EOF
 network:
