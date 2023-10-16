@@ -18,13 +18,13 @@ git:
   - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
     stageDependencies:
-      setup:
+      install:
         - '**/*'
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
-  beforeInstall:
+  install:
     - apk add --no-cache git
     - export GOPROXY={{ $.GOPROXY }}
     - mkdir /src
