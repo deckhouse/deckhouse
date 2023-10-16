@@ -1,0 +1,30 @@
+---
+artifact: {{ .ModuleName }}/build-python-static-artifact
+from: {{ .Images.BASE_UBUNTU }}
+git:
+- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/Setup.local
+  to: /build/src/Modules/Setup.local
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - mkdir /build && cd /build
+  - apt update && apt install -y --no-install-recommends build-essential tar gdb lcov pkg-config libbz2-dev libffi-dev libgdbm-dev libgdbm-compat-dev liblzma-dev libncurses5-dev libreadline6-dev libsqlite3-dev libssl-dev lzma lzma-dev uuid-dev zlib1g-dev coreutils ca-certificates
+  - export PYTHON_VERSION=3.11.6 BUILD_THREADS=4 PYTHON_PREFIX=/opt/python-static
+  - git clone -b v${PYTHON_VERSION} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git ./src
+  - cd ./src
+  - ./configure LDFLAGS="-static" --disable-shared --prefix=${PYTHON_PREFIX} --enable-optimizations --with-ensurepip=install
+  - make LDFLAGS="-static" LINKFORSHARED=" " -j ${BUILD_THREADS}
+  - make install -j ${BUILD_THREADS}
+  - chown -R 64535:64535 ${PYTHON_PREFIX}
+  - chmod 0700 ${PYTHON_PREFIX}/bin/python3
+  - chmod 0700 ${PYTHON_PREFIX}/bin/pip3
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/build-python-static-artifact
+  add: /opt/python-static
+  to: /opt/python-static
+  before: setup
