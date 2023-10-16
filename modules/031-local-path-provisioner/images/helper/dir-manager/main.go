@@ -62,6 +62,7 @@ func main() {
 
 	if action == TEARDOWN {
 		err := os.RemoveAll(path)
+
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error. Cannot remove directory %s: %s", path, err)
 			os.Exit(4)
