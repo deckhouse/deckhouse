@@ -14,8 +14,7 @@ shell:
     - export "GOARCH=amd64"
     - cd /src
     - go build -o /tmp/manager main.go
-    - chown -R 64535:64535 /tmp/manager
-    - chmod 0700 /tmp/manager
+    - chmod 0777 /tmp/manager
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -24,5 +23,3 @@ import:
    add: /tmp/manager
    to: /manager
    before: setup
-docker:
-  USER: 64535
