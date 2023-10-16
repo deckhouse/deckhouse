@@ -5,10 +5,10 @@ git:
   - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/dir-manager
     to: /src
     stageDependencies:
-      setup:
+      install:
         - '**/*'
 shell:
-  setup:
+  install:
     - export "CGO_ENABLED=0"
     - export "GOOS=linux"
     - export "GOARCH=amd64"
