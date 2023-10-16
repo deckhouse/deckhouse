@@ -5,12 +5,11 @@
 */}}
 shopt -s extglob
 
-ip_addr_show_output=$(ip -json addr show)
 primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
-primary_ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$primary_mac" '.[] | select(.address == $mac) | .ifname')"
+primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
 
 if [ -z "$primary_ifname" ]; then
-  primary_ifname="$(cat /etc/netplan/50-cloud-init.yaml  | grep "^ *ens[0-9]*:$" | awk '{sub(/:/,"");print $1}')"
+  primary_ifname="$(cat /etc/netplan/50-cloud-init.yaml | grep "^ *ens[0-9]*:$" | awk '{sub(/:/,"");print $1}')"
 fi
 
 for i in /sys/class/net/!($primary_ifname); do
@@ -19,7 +18,7 @@ for i in /sys/class/net/!($primary_ifname); do
   fi
 
   ifname=$(basename "$i")
-  mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
+  mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
 
   cat > /etc/netplan/100-cim-"$ifname".yaml <<BOOTSTRAP_NETWORK_EOF
 network:

@@ -27,7 +27,9 @@ spec:
   numCPUs: 4
   memory: 8192
   rootDiskSize: 20
-  mainNetwork: DEVOPS_36
+  mainNetwork: msk3-k8s-1203
+  additionalNetworks:
+    - DEVOPS_36
   datastore: 3par_4_Lun105
 ---
 apiVersion: deckhouse.io/v1

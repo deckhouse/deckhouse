@@ -58,38 +58,8 @@ export no_proxy=${NO_PROXY}
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
 
-{{- if .cloudProviderType }}
-# generate cloud bootstrap network scripts
-  {{- if $bootstrap_script_common := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" .cloudProviderType) }}
-cat > $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh <<"EOF"
-    {{ tpl $bootstrap_script_common . | nindent 0}}
-EOF
-chmod +x $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh
-  {{- else }}
-    {{- if $bootstrap_script_bundle := .Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bundles/%s/bootstrap-networks.sh.tpl" .cloudProviderType .bundle) }}
-cat > $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-{{ .bundle }}.sh <<"EOF"
-      {{ tpl $bootstrap_script_bundle . | nindent 0}}
-EOF
-chmod +x $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-{{ .bundle }}.sh
-    {{- end }}
-  {{- end }}
-{{- end }}
-
-# Install necessary packages. Not in cloud config because cloud init do not retry installation and silently fails.
+# Install necessary packages.
 basic_bootstrap_${BUNDLE}
-
-# Execute cloud provider specific network bootstrap script. It will organize connectivity to kube-apiserver.
-if [[ -f $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh ]] ; then
-  until $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh; do
-    >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-    sleep 10
-  done
-elif [[ -f $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
-  until $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks-${BUNDLE}.sh; do
-    >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-    sleep 10
-  done
-fi
 
 bootstrap_job_log_pid=""
 
