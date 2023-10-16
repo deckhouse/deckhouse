@@ -29,7 +29,6 @@ import:
   before: setup
 shell:
   install:
-  -
   - cd /src
   - /opt/pythnon-static/bin/pip3 install -r requirements.txt
 docker:
