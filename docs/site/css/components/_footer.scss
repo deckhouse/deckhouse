@@ -1,5 +1,6 @@
 @import "components/common/_variables.scss";
 @import 'components/common/_mixins.scss';
+@import 'components/common/_breakpoints.scss';
 
 html,
 body {
@@ -12,6 +13,7 @@ body {
 }
 
 .content {
+  min-width: 1065px;
   flex: 1 0 auto;
 }
 
@@ -119,9 +121,18 @@ body {
 .footer {
   font-family: 'Noto Sans', sans-serif;
   margin-top: auto;
-  padding: 40px 0 32px;
+  padding: 24px 0;
   @include color($white);
   @include bg-color($dark-blue);
+  min-width: 1065px;
+
+  @include min-w(xs) {
+    padding: 32px 0;
+  }
+
+  @include min-w(s) {
+    padding: 40px 0 32px;
+  }
 
   &__cols {
     display: flex;
@@ -135,11 +146,17 @@ body {
 
   &__col {
     display: flex;
-    gap: 16px 64px;
+    gap: 12px 64px;
     flex-direction: column;
 
+    @include min-w(m) {
+      gap: 16px 64px;
+    }
+
     &:first-of-type {
-      margin-right: auto;
+      @include min-w(l) {
+        margin-right: auto;
+      }
     }
 
     .heading {
@@ -161,7 +178,7 @@ body {
 
   &__copyright {
     display: flex;
-    padding-top: 100px;
+    padding-top: 20px;
     align-items: center;
     flex-direction: row;
     justify-content: space-between;
@@ -169,6 +186,14 @@ body {
     flex-wrap: wrap;
     font-size: 14px;
     @include color($ntrl-300);
+
+    @include min-w(m) {
+      padding-top: 60px;
+    }
+
+    @include min-w(l) {
+      padding-top: 100px;
+    }
 
     .nav {
       display: flex;
@@ -242,6 +267,14 @@ body {
     svg, img {
       width: auto;
       max-height: 52px;
+
+      @include min-w(xxs) {
+        max-height: 46px;
+      }
+
+      @include min-w(s) {
+        max-height: 52px;
+      }
     }
 
     path {
@@ -267,4 +300,3 @@ body {
     transition: .2s;
   }
 }
-

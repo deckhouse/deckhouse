@@ -1,5 +1,6 @@
 @import "components/common/_variables.scss";
 @import 'components/common/_mixins.scss';
+@import 'components/common/_breakpoints.scss';
 
 html {
     scroll-padding-top: 80px;
@@ -24,16 +25,25 @@ html {
 
   &__content {
     display: flex;
-    padding-top: 24px;
-    padding-bottom: 24px;
+    padding-top: 12px;
+    padding-bottom: 12px;
     align-items: center;
     justify-content: space-between;
     font-size: 12px;
+
+    @include min-w(m) {
+      padding-top: 24px;
+      padding-bottom: 24px;
+    }
   }
 
   &__logo {
     overflow: hidden;
     transition: .2s;
+
+    @include min-w(xs) {
+      width: auto;
+    }
 
     body.sidebar-opened & {
       width: inherit;
@@ -41,8 +51,12 @@ html {
 
     img, svg {
       display: block;
-      height: 52px;
+      height: 40px;
       width: auto;
+
+      @include min-w(xl) {
+        height: 52px;
+      }
     }
   }
 
@@ -57,10 +71,21 @@ html {
     &.nav {
       font-family: 'Noto Sans', sans-serif;
       display: flex;
-      gap: 12px 32px;
       margin: 0;
       padding: 0;
       list-style: none;
+
+      @include min-w(l) {
+        gap: 12px 16px;
+      }
+
+      @include min-w(xl) {
+        gap: 12px 24px;
+      }
+
+      @include min-w(xxl) {
+        gap: 12px 32px;
+      }
     }
 
     .menu-item {
@@ -74,13 +99,16 @@ html {
     .sub-menu {
       display: flex;
       padding: 18px 16px 20px;
-      gap: 1rem;
+      gap: .6rem;
       flex-direction: column;
       @include bg-color($white);
       border-radius: 1px;
-      //@include box-shadow;
-      box-shadow: 0 0 4px rgba(0,0,0, .15);
+      @include box-shadow;
       list-style: none;
+
+      @include min-w(xl) {
+        gap: 1rem;
+      }
 
       &-container {
         position: absolute;
@@ -123,11 +151,17 @@ html {
         content: '';
         display: inline-block;
         margin-bottom: 2px;
-        margin-left: 8px;
-        width: 11px;
-        height: 7px;
+        margin-left: 4px;
+        width: 9px;
+        height: 6px;
         background: bottom / contain no-repeat url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSI4IiBmaWxsPSJub25lIj48cGF0aCBmaWxsPSIjMDA2NEZGIiBkPSJNNS42MSA3LjUyYy4yLjI1LjU4LjI1Ljc4IDBsNS4wMS02LjJhLjUuNSAwIDAgMC0uMzgtLjgySC45OGEuNS41IDAgMCAwLS4zOC44MWw1LjAxIDYuMloiLz48L3N2Zz4=");
         transition: .15s;
+
+        @include min-w(xl) {
+          margin-left: 8px;
+          width: 11px;
+          height: 7px;
+        }
       }
 
       > a:where(.button--primary) {
@@ -171,7 +205,11 @@ html {
   }
 
   a {
-    font-size: 14px;
+    font-size: 12px;
+
+    @include min-w(xl) {
+      font-size: 14px;
+    }
   }
 
   .language-button {
