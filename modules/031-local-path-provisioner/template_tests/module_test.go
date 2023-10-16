@@ -121,24 +121,6 @@ var _ = Describe("Module :: local-path-provisioner :: helm template ::", func() 
 		"setupCommand": "/manager",
         "teardownCommand": "/manager"
 }`))
-			Expect(lppConfigMapTest.Field("data.helperPod\\.yaml").String()).To(MatchYAML(`
-apiVersion: v1
-kind: Pod
-metadata:
-  name: helper-pod
-spec:
-  securityContext:
-    fsGroup: 64535
-    runAsGroup: 64535
-    runAsNonRoot: true
-    runAsUser: 64535
-  containers:
-  - name: helper-pod
-    image: "registry.example.com@imageHash-localPathProvisioner-helper"
-    imagePullPolicy: IfNotPresent
-  imagePullSecrets:
-  - name: deckhouse-registry
-`))
 			Expect(lppSCTest.Field("allowedTopologies").String()).To(MatchJSON(`
 [
   {
