@@ -30,6 +30,6 @@ import:
 shell:
   install:
   - cd /src
-  - /opt/pythnon-static/bin/pip3 install -r requirements.txt
+  - /opt/python-static/bin/pip3 install -r requirements.txt
 docker:
-  ENTRYPOINT: ["/opt/pythnon-static/bin/python3", "/src/monitoring-ping.py"]
+  ENTRYPOINT: ["/opt/python-static/bin/python3", "/src/monitoring-ping.py"]
