@@ -7,8 +7,9 @@ git:
     to: /src
     stageDependencies:
       install:
-        - '**/*'
+        - '**/*.go'
 shell:
+  beforeInstallCacheVersion: "2023-10-16.1"
   install:
     - export "CGO_ENABLED=0"
     - export "GOOS=linux"
