@@ -23,7 +23,6 @@ import (
 )
 
 var (
-	// flags
 	dirMode     string
 	path        string
 	sizeInBytes string
