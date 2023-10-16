@@ -192,8 +192,11 @@
 
   - alert: NodeStuckInDrainingForDisruptionDuringUpdate
     expr: |
-      max by (message, node) (d8_node_draining) == 1
-    for: 5m
+      max by (node,node_group) (
+        node_group_node_status{status="DrainingForDisruption"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition == 1)))
+      )> 0
+    for: 2h
     labels:
       tier: cluster
       severity_level: "6"
@@ -202,6 +205,23 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The {{ $labels.node }} Node is stuck in draining.
+      description: |
+        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.
+        You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'`
+
+  - alert: NodeStuckInDraining
+    expr: |
+      max by (message, node) (d8_node_draining) == 1
+    for: 5m
+    labels:
+      tier: cluster
+      severity_level: "6"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_nodes_stuck_in_draining: "ClusterHasNodesStuckInDraining,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_nodes_stuck_in_draining: "ClusterHasNodesStuckInDraining,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node is stuck in draining.
       description: |
         There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.
