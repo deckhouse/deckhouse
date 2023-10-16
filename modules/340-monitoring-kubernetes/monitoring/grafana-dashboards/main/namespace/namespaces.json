@@ -1984,14 +1984,14 @@
               "refId": "A"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__interval_sx3])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Requests",
               "refId": "B"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits{resource=\"cpu\",unit=\"core\",node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(kube_pod_container_resource_limits{resource=\"cpu\",unit=\"core\",node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__interval_sx3])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Limits",
