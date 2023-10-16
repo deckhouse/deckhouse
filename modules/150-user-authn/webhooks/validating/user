@@ -31,6 +31,7 @@ kubernetes:
     jqFilter: |
       {
         "name": .metadata.name,
+        "userID": .spec.userID,
         "email": .spec.email,
         "groups": .spec.groups
       }
@@ -49,12 +50,20 @@ EOF
 function __main__() {
   operation=$(context::jq -r '.review.request.operation')
   userName=$(context::jq -r '.review.request.object.metadata.name')
+  userID=$(context::jq -r '.review.request.object.spec.userID')
   email=$(context::jq -r '.review.request.object.spec.email')
   groups=$(context::jq -r '.review.request.object.spec.groups // ""')
 
   if userWithTheSameEmail="$(context::jq -er --arg name "$userName" --arg email "$email" '.snapshots.users[].filterResult | select(.name != $name) | select(.email == $email) | .name' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"users.deckhouse.io \"$userName\", user \"$userWithTheSameEmail\" is already using email \"$email\"" }
+EOF
+    return 0
+  fi
+
+  if ([ "$operation" == "CREATE" ] || [ "$operation" == "UPDATE" ]) && [ "$userID" != ::]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true, "message":"\".spec.userID\" is deprecated and shouldn't be set manually (if set, its value is ignored)" }
 EOF
     return 0
   fi
