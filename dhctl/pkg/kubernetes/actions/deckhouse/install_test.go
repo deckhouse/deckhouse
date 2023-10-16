@@ -40,23 +40,30 @@ func TestDeckhouseInstall(t *testing.T) {
 			func() error {
 				return CreateDeckhouseManifests(fakeClient, &Config{})
 			},
-			false,
+			true,
 		},
 		{
 			"Double install",
 			func() error {
-				err := CreateDeckhouseManifests(fakeClient, &Config{})
+				err := CreateDeckhouseManifests(fakeClient, &Config{
+					UUID: "aaaaa",
+				})
 				if err != nil {
 					return err
 				}
-				return CreateDeckhouseManifests(fakeClient, &Config{})
+				return CreateDeckhouseManifests(fakeClient, &Config{
+					UUID: "aaaaa",
+				})
 			},
 			false,
 		},
 		{
 			"With docker cfg",
 			func() error {
-				err := CreateDeckhouseManifests(fakeClient, &Config{Registry: config.RegistryData{DockerCfg: "YW55dGhpbmc="}})
+				err := CreateDeckhouseManifests(fakeClient, &Config{
+					UUID:     "aaaaa",
+					Registry: config.RegistryData{DockerCfg: "YW55dGhpbmc="},
+				})
 				if err != nil {
 					return err
 				}
@@ -81,6 +88,7 @@ func TestDeckhouseInstall(t *testing.T) {
 					ProviderClusterConfig: []byte(`test`),
 					TerraformState:        []byte(`test`),
 					DeckhouseConfig:       map[string]interface{}{"test": "test"},
+					UUID:                  "aaaaa",
 				}
 				err := CreateDeckhouseManifests(fakeClient, &conf)
 				if err != nil {
