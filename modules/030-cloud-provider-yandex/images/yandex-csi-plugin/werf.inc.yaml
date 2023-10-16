@@ -80,5 +80,5 @@ shell:
     - autoconf
     - automake
     - automake --add-missing
-    - ./configure --enable-static --enable-static-programs=fdisk,sfdisk
+    - ./configure --disable-all-programs --enable-static-programs=fdisk,sfdisk
     - make
