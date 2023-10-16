@@ -7,7 +7,8 @@ git:
     to: /src
     stageDependencies:
       install:
-        - '**/*.go'
+        - '*.go'
+        - 'go.mod'
 shell:
   beforeInstallCacheVersion: "2023-10-16.1"
   install:
