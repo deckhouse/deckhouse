@@ -17,7 +17,7 @@ git:
   - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
     stageDependencies:
-      beforeInstall:
+      setup:
         - '**/*'
 mount:
   - fromPath: ~/go-pkg-cache
