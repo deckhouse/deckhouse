@@ -23,7 +23,7 @@ import (
 )
 
 func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeaders http.Header, scanOpts types.ScanOptions) (types.Report, error) {
-	javadb.Init("/tmp/javadb", "ghcr.io/aquasecurity/trivy-java-db", false, false, false)
+	javadb.Init("/home/javadb", "ghcr.io/aquasecurity/trivy-java-db", false, false, false)
 	img, cleanup, err := image.NewContainerImage(ctx, imageName, ftypes.ImageOptions{
 		ImageSources: ftypes.ImageSources{ftypes.RemoteImageSource},
 	})
