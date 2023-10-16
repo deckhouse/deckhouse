@@ -163,9 +163,9 @@ spec:
                         mechanism:
                           description: Механизм аутентификации SASL. Поддерживаются только PLAIN и SCRAM-подобные механизмы.
                         username:
-                          description: Имя пользователя..
+                          description: Имя пользователя.
                         password:
-                          description: Пароль пользолвателя.
+                          description: Пароль пользователя.
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
