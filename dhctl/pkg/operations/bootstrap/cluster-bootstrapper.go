@@ -223,7 +223,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	printBanner()
 
-	showWarningAboutUsageDontUsePublicImagesFlagIfNeed()
+	clusterUUID, err := generateClusterUUID(stateCache)
+	if err != nil {
+		return err
+	}
+	metaConfig.UUID = clusterUUID
 
 	deckhouseInstallConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
@@ -237,12 +241,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	preflightCheck := preflight.NewPreflightCheck(sshClient, deckhouseInstallConfig)
 
 	bootstrapState := NewBootstrapState(stateCache)
-
-	clusterUUID, err := generateClusterUUID(stateCache)
-	if err != nil {
-		return err
-	}
-	metaConfig.UUID = clusterUUID
 
 	if shouldStop, err := b.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true); err != nil {
 		return err
@@ -447,17 +445,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 func printBanner() {
 	log.InfoLn(banner)
-}
-
-func showWarningAboutUsageDontUsePublicImagesFlagIfNeed() {
-	deprecationBanner := "" +
-		`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! DO NOT USE --dont-use-public-control-plane-images FLAG                               !
-! IT IS DEPRECATED AND WILL BE REMOVED IN THE FUTURE                                   !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`
-	if app.DontUsePublicControlPlaneImages {
-		log.ErrorLn(deprecationBanner)
-	}
 }
 
 func generateClusterUUID(stateCache state.Cache) (string, error) {

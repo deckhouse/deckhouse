@@ -325,6 +325,8 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				return err
 			},
 		})
+	} else {
+		return fmt.Errorf("Internal error. Cluster UUID is empty.")
 	}
 
 	if cfg.KubeDNSAddress != "" {
