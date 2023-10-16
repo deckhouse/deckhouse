@@ -5,7 +5,6 @@
 */}}
 shopt -s extglob
 
-ip_addr_show_output=$(ip -json addr show)
 configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
 for mac in $configured_macs; do
   ifname="$(ip -o link show | grep "link/ether $mac" | cut -d ":" -f2 | tr -d " ")|"
