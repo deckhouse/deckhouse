@@ -478,7 +478,6 @@ status:
 		})
 	})
 
-
 	Context("Cluster with User having userID set", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
