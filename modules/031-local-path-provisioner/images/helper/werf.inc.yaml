@@ -1,5 +1,5 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 fromCacheVersion: "2023-10-16.1"
 git:
@@ -7,8 +7,7 @@ git:
     to: /src
     stageDependencies:
       install:
-        - '*.go'
-        - 'go.mod'
+        - '**/*'
 shell:
   beforeInstallCacheVersion: "2023-10-16.1"
   install:
@@ -21,6 +20,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+fromCacheVersion: "2023-10-16.2"
 import:
  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
    add: /tmp/manager
