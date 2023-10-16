@@ -9,11 +9,11 @@ git:
     - '**/*'
 shell:
   install:
-  - mkdir /build && cd /build
+  - mkdir /build
   - apt update && apt install -y --no-install-recommends build-essential tar gdb lcov pkg-config libbz2-dev libffi-dev libgdbm-dev libgdbm-compat-dev liblzma-dev libncurses5-dev libreadline6-dev libsqlite3-dev libssl-dev lzma lzma-dev uuid-dev zlib1g-dev coreutils ca-certificates git
   - export PYTHON_VERSION=3.11.6 BUILD_THREADS=4 PYTHON_PREFIX=/opt/python-static
-  - git clone -b v${PYTHON_VERSION} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git ./src
-  - cd ./src
+  - git clone -b v${PYTHON_VERSION} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /build/src
+  - cd /build/src
   - ./configure LDFLAGS="-static" --disable-shared --prefix=${PYTHON_PREFIX} --enable-optimizations --with-ensurepip=install
   - make LDFLAGS="-static" LINKFORSHARED=" " -j ${BUILD_THREADS}
   - make install -j ${BUILD_THREADS}
