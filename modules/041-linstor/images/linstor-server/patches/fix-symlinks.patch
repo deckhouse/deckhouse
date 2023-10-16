@@ -1,4 +1,4 @@
-From 2f4e83bf4de23408a37621b10e6caf5f771c863c Mon Sep 17 00:00:00 2001
+From c72f5942bd665c245fcd51113764335a49046306 Mon Sep 17 00:00:00 2001
 From: Andrei Kvapil <kvapss@gmail.com>
 Date: Tue, 3 Oct 2023 13:32:21 +0200
 Subject: [PATCH] Automatically fix symlinks for devices
@@ -14,7 +14,8 @@ Signed-off-by: Andrei Kvapil <kvapss@gmail.com>
 ---
  .../linstor/layer/dmsetup/DmSetupUtils.java   | 79 ++++++++++++++++++-
  .../linbit/linstor/layer/drbd/DrbdLayer.java  | 13 +++
- 2 files changed, 91 insertions(+), 1 deletion(-)
+ .../linstor/layer/storage/utils/Commands.java | 14 ++++
+ 3 files changed, 105 insertions(+), 1 deletion(-)
 
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java b/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java
 index ba753577d..cc90ad898 100644
@@ -121,7 +122,7 @@ index ba753577d..cc90ad898 100644
      {
          Commands.genericExecutor(
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java b/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java
-index 16034c550..9fc09fa3e 100644
+index 16034c550..d44d2bc57 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java
 @@ -37,6 +37,7 @@ import com.linbit.linstor.core.objects.Volume;
@@ -151,6 +152,44 @@ index 16034c550..9fc09fa3e 100644
          MdSuperblockBuffer mdUtils = new MdSuperblockBuffer();
          try
          {
+diff --git a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
+index a63c78cba..1228cb74e 100644
+--- a/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
++++ b/satellite/src/main/java/com/linbit/linstor/layer/storage/utils/Commands.java
+@@ -8,6 +8,7 @@ import com.linbit.SizeConv.SizeUnit;
+ import com.linbit.extproc.ExtCmd;
+ import com.linbit.extproc.ExtCmd.OutputData;
+ import com.linbit.extproc.ExtCmdUtils;
++import com.linbit.linstor.layer.dmsetup.DmSetupUtils;
+ import com.linbit.linstor.storage.StorageException;
+ import com.linbit.utils.StringUtils;
+ 
+@@ -17,6 +18,11 @@ import java.util.Collection;
+ import java.util.Collections;
+ import java.util.List;
+ 
++import java.nio.file.Files;
++import java.nio.file.Paths;
++import java.time.LocalDateTime;
++import java.time.format.DateTimeFormatter;
++
+ public class Commands
+ {
+     public interface RetryHandler
+@@ -191,6 +197,14 @@ public class Commands
+     )
+         throws StorageException
+     {
++
++        if (!Files.exists(Paths.get(devicePath))) {
++          DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd/HH:mm:ss:SSS");
++          LocalDateTime now = LocalDateTime.now();
++          System.out.println(dtf.format(now) + " [GetBlockSizeInKib] WARN - Device path " + devicePath + " does not exist, fixing symlink");
++          DmSetupUtils.fixSymlinkForDevice(extCmd, devicePath);
++        }
++
+         OutputData output = genericExecutor(
+             extCmd,
+             new String[] {"blockdev", "--getsize64", devicePath},
 -- 
-2.32.0 (Apple Git-132)
-
+2.39.3 (Apple Git-145)
