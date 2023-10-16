@@ -78,7 +78,7 @@ spec:
         - mountPath: /.docker
           name: docker-config
           readOnly: true
-        - mountPath: /tmp
+        - mountPath: /tmp/javadb
           name: data
           readOnly: false
         resources:
