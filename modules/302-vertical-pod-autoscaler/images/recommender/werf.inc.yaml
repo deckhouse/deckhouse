@@ -12,9 +12,11 @@ shell:
     - apk add --no-cache git
     - mkdir -p /src
     - cd /src
-    - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 https://github.com/kubernetes/autoscaler.git .
+    - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git .
     - find /patches -name '*.patch' -exec git apply {} \;
     - cd vertical-pod-autoscaler/pkg/recommender
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /recommender
     - chown 64535:64535 /recommender
     - chmod 0700 /recommender
