@@ -49,7 +49,7 @@ func main() {
 	}
 
 	if path == "" {
-		os.Stderr.WriteString("Error. Empty string")
+		os.Stderr.WriteString("Error. Path is empty")
 		os.Exit(2)
 	}
 
