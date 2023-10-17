@@ -11,16 +11,6 @@ bb-is-redos-version?() {
   fi
 }
 
-bb-is-alteros-version?() {
-  local ALTEROS_VERSION=$1
-  source /etc/os-release
-  if [[ "${VERSION_ID}" =~ ^${ALTEROS_VERSION}.*$ ]] ; then
-    return 0
-  else
-    return 1
-  fi
-}
-
 bb-is-astra-version?() {
   local ASTRA_VERSION=$1
   source /etc/os-release

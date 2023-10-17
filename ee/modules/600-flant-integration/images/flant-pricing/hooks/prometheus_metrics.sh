@@ -329,7 +329,6 @@ function node_os_image_metrics() {
                 "(?:(rocky).*(8|9))",
                 "(?:(almalinux).*(7|8))",
                 "(?:(redos).*(7))",
-                "(?:(alteros).*(7))",
                 "(?:(astra))"
               ] | join("|")
             ).captures // [{string: "unknown"}] |

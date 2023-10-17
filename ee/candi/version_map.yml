@@ -1,8 +1,6 @@
 bashible:
   redos: &redos
     '7.3':
-  alteros: &alteros
-    '7':
   astra: &astra
     '1.7':
 k8s:
@@ -10,39 +8,29 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
       astra:
         !!merge <<: *astra
   '1.25':
     bashible:
       redos:
         !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
       astra:
         !!merge <<: *astra
   '1.26':
     bashible:
       redos:
         !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
       astra:
         !!merge <<: *astra
   '1.27':
     bashible:
       redos:
         !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
       astra:
         !!merge <<: *astra
   '1.28':
     bashible:
       redos:
         !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
       astra:
         !!merge <<: *astra

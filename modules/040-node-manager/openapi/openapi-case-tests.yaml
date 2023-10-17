@@ -40,4 +40,4 @@ positive:
 negative:
   configValues:
     # NOTE: bundles from EE
-    - allowedBundles: [ "alteros", "astra", "altlinux" ]
+    - allowedBundles: [ "astra", "altlinux" ]

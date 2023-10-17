@@ -172,7 +172,6 @@ volumeBindingMode: WaitForFirstConsumer
     "orel-vanilla-2.12.43-cloud-mg6.5.0",
     "centos-8-cloud-amd64",
     "deepin-desktop-community-20.4-amd64-iso",
-    "alteros-server-cloud",
     "alse-vanilla-1.7.1-cloud-mg6.4.0",
     "debian-9-cloud-amd64",
     "orel-vanilla-2.12.43-cloud-mg6",

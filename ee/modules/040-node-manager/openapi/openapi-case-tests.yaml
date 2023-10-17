@@ -4,4 +4,4 @@ positive:
   configValues:
     - {}
     - allowedKubernetesVersions: ["1.24"]
-    - allowedBundles: ["redos", "ubuntu-lts", "centos", "debian", "alteros", "astra", "altlinux"]
+    - allowedBundles: ["redos", "ubuntu-lts", "centos", "debian", "astra", "altlinux"]
