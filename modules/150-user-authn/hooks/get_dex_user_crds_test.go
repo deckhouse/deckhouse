@@ -478,4 +478,36 @@ status:
 		})
 	})
 
+	Context("Cluster with User having userID set", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@example.com
+  password: password
+  userID: myadmin
+`))
+			f.RunHook()
+		})
+		It("User's userID field should be overridden", func() {
+			Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchUnorderedJSON(`
+[
+  {
+    "name": "admin",
+    "spec": {
+      "email": "admin@example.com",
+      "password": "password",
+      "userID": "admin"
+    },
+    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
+    "status": {}
+  }
+]`))
+		})
+	})
+
 })
