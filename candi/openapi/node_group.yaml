@@ -445,7 +445,7 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
-                  x-examples:
+                  example:
                     - approvalMode: Automatic
                       automatic:
                         drainBeforeApproval: false
@@ -1079,7 +1079,7 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
-                  x-examples:
+                  example:
                     - approvalMode: Automatic
                       automatic:
                         drainBeforeApproval: false
@@ -1741,7 +1741,7 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
-                  x-examples:
+                  example:
                     - approvalMode: Automatic
                       automatic:
                         drainBeforeApproval: false
