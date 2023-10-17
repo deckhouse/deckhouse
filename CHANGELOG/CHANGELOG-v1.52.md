@@ -33,6 +33,7 @@
 ## Fixes
 
 
+ - **[candi]** Allow underscore in `httpProxy` and `httpsProxy` settings. [#6216](https://github.com/deckhouse/deckhouse/pull/6216)
  - **[candi]** Fix RedOS installation. [#6121](https://github.com/deckhouse/deckhouse/pull/6121)
  - **[candi]** Add creation of the `TMPDIR` directory in the `bashible.sh` script. [#6059](https://github.com/deckhouse/deckhouse/pull/6059)
  - **[candi]** Delete registrypackage files if it failed to install before retrying installation. [#5739](https://github.com/deckhouse/deckhouse/pull/5739)
@@ -46,6 +47,7 @@
  - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#5988](https://github.com/deckhouse/deckhouse/pull/5988)
  - **[ingress-nginx]** Fix controller preStop probe. [#5948](https://github.com/deckhouse/deckhouse/pull/5948)
     Ingress controller will restart.
+ - **[linstor]** Changes in controller liveness probe. [#6203](https://github.com/deckhouse/deckhouse/pull/6203)
  - **[linstor]** Improved symlink handling for devices. [#6187](https://github.com/deckhouse/deckhouse/pull/6187)
  - **[linstor]** Removed alert about HA-controller absence. [#6166](https://github.com/deckhouse/deckhouse/pull/6166)
  - **[linstor]** Added an init container for LINSTOR satellite, that waits for DRBD v9.x to be loaded on the node. [#6151](https://github.com/deckhouse/deckhouse/pull/6151)
