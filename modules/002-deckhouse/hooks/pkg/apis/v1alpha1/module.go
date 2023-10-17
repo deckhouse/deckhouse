@@ -44,9 +44,10 @@ type Module struct {
 }
 
 type ModuleProperties struct {
-	Weight int    `json:"weight"`
-	State  string `json:"state"`
-	Source string `json:"source"`
+	Weight      int    `json:"weight"`
+	State       string `json:"state"`
+	Source      string `json:"source"`
+	Description string `json:"description"`
 }
 
 type moduleKind struct{}
@@ -81,6 +82,10 @@ func (m *Module) SetTags(tags []string) {
 
 func (m *Module) SetSource(source string) {
 	m.Properties.Source = source
+}
+
+func (m *Module) SetDescription(description string) {
+	m.Properties.Description = description
 }
 
 func (m *Module) SetEnabledState(enabled bool) {
