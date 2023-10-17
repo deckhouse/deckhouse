@@ -9,7 +9,7 @@ git:
       install:
         - '**/*'
 shell:
-  beforeInstallCacheVersion: "2023-10-16.1"
+  installCacheVersion: "2023-10-16.2"
   install:
     - export "CGO_ENABLED=0"
     - export "GOOS=linux"
@@ -20,7 +20,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2023-10-16.2"
+fromCacheVersion: "2023-10-16.3"
 import:
  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
    add: /tmp/manager
