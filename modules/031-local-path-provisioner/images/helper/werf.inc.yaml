@@ -25,4 +25,4 @@ import:
  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
    add: /tmp/manager
    to: /manager
-   before: setup
+   after: install
