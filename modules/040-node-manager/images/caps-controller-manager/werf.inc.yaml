@@ -1,0 +1,49 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ .Images.BASE_ALPINE }}
+docker:
+  ENTRYPOINT: ["/caps-controller-manager"]
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /caps-controller-manager
+  to: /caps-controller-manager
+  before: setup
+shell:
+  beforeInstall:
+  - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
+  - echo "deckhouse:x:64535:" >> /etc/group
+  - echo "deckhouse:!::0:::::" >> /etc/shadow
+  - apk add --no-cache openssh-client
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+git:
+  - add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/src
+    to: /src
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+      - hack
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      setup:
+        - go.mod
+        - go.sum
+        - "**/*.go"
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apk add --no-cache git
+  install:
+    - cd /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - go mod download
+  setup:
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caps-controller-manager cmd/main.go
+    - chown 64535:64535 /caps-controller-manager
+    - chmod 0700 /caps-controller-manager

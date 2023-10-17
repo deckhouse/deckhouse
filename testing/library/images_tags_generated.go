@@ -295,6 +295,8 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"nodeManager": map[string]interface{}{
 		"bashibleApiserver":        "imageHash-nodeManager-bashibleApiserver",
+		"capiControllerManager":    "imageHash-nodeManager-capiControllerManager",
+		"capsControllerManager":    "imageHash-nodeManager-capsControllerManager",
 		"clusterAutoscaler124":     "imageHash-nodeManager-clusterAutoscaler124",
 		"clusterAutoscaler125":     "imageHash-nodeManager-clusterAutoscaler125",
 		"clusterAutoscaler126":     "imageHash-nodeManager-clusterAutoscaler126",

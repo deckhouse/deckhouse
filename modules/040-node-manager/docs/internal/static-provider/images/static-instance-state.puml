@@ -1,0 +1,45 @@
+@startuml
+title Figure 1: State diagram with a StaticInstance
+
+(*) --> [  StaticInstance Create  ] "Pending"
+
+note right
+- StaticInstance controller watches for new StaticInstances,
+  and sets //StaticInstance.status.phase// = "Pending".
+end note
+
+"Pending" --> "Bootstrapping"
+
+note right
+- StaticMachine controller watches for new StaticMachines and
+  starts bootstrapping StaticInstance which is matched by the StaticMachine.spec.labelSelector.
+- StaticMachine controller generates provider ID and
+  sets //StaticMachine.spec.providerID// = "static://{{ random uuid }}".
+- StaticMachine controller sets //StaticInstance.status.phase// = "Bootstrapping".
+- StaticMachine controller connects to the StaticInstance host via SSH and runs the bootstrap script.
+end note
+
+"Bootstrapping" --> "Running"
+
+note right
+- When a Node is registered with //Node.spec.providerID// = //StaticMachine.spec.providerID//
+  and Node has the //node.deckhouse.io/configuration-checksum// annotation
+  the bootstrapping is completed successfully.
+- StaticMachine controller sets //StaticInstance.status.phase// = "Running".
+end note
+
+"Running" --> "Cleaning"
+
+note right
+- When //NodeGroup.staticInstances.count// was scaled down
+  or when Instance associated with Machine was deleted,
+  the Machine controller deletes the StaticMachine
+  and StaticMachine controller starts cleaning the StaticInstance.
+- StaticMachine controller sets //StaticInstance.status.phase// = "Cleaning".
+- StaticMachine controller connects to the StaticInstance host via SSH and runs the cleanup script.
+end note
+
+"Cleaning" --> "Pending"
+
+hide footbox
+@enduml
