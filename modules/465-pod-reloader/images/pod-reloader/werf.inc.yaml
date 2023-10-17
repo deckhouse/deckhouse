@@ -6,7 +6,9 @@ shell:
     - apk add --no-cache git
     - mkdir -p /src
     - cd /src
-    - git clone --depth 1 -b v1.0.42 https://github.com/stakater/Reloader.git .
+    - git clone --depth 1 -b v1.0.42 {{ $.SOURCE_REPO }}/stakater/Reloader.git .
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /reloader main.go
     - chown 64535:64535 /reloader
     - chmod 0700 /reloader
