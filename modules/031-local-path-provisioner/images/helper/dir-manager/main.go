@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"syscall"
 )
 
 var (
@@ -70,7 +71,9 @@ func main() {
 		return
 	}
 
-	err := os.MkdirAll(path, 0o777)
+	syscall.Umask(0)
+
+	err := os.MkdirAll(path, 0777)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error. Cannot create directory %s: %s", path, err)
 		os.Exit(5)
