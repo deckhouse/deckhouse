@@ -13,7 +13,7 @@ Attach the `extended-monitoring.deckhouse.io/enabled` label to the Namespace to 
 - attaching it manually (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`).
 - configuring via [namespace-configurator](/documentation/v1/modules/600-namespace-configurator/) module.
 
-Any of the methods above would result in the emergence of the default metrics (+ any custom metrics with the `threshold.extended-monitoring.deckhouse.io/` prefix) for all supported Kubernetes objects in the target namespace. Note that monitoring and standard labels are enabled automatically for a number of [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes objects described below.
+Any of the methods above would result in the emergence of the default metrics (+ any custom metrics with the `threshold.extended-monitoring.deckhouse.io/` prefix) for all supported Kubernetes objects in the target namespace. Note that monitoring is enabled automatically for a number of [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes objects described below.
 
 You can also add custom labels with the specified value to `threshold.extended-monitoring.deckhouse.io/something` Kubernetes objects, e.g., `kubectl label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
 In this case, the label value will replace the default one.
@@ -24,13 +24,13 @@ You can disable monitoring on a per-object basis by adding the `extended-monitor
 
 Below is the list of labels used in Prometheus Rules and their default values.
 
-**Caution!** All labels:
-1. Start with a `threshold.extended-monitoring.deckhouse.io/` prefix;
-2. Have an integer value. The specified value defines the alert threshold.
+**Note,** that all the labels start with the `threshold.extended-monitoring.deckhouse.io/` prefix. The value specified in a label is a number that sets the alert trigger threshold.
+
+For example, the label `threshold.extended-monitoring.deck house.io/5xx-warning: "5"` on the Ingress resource changes the alert threshold from 10% (default) to 5%.
 
 #### Non-namespaced Kubernetes objects
 
-Do not require a namespace label and are enabled by default.
+Non-namespaced Kubernetes objects do not need labels on the namespace, and monitoring on them is enabled by default when the module is enabled.
 
 ##### Node
 
@@ -57,10 +57,6 @@ The default values are available [here](https://github.com/kubernetes/kubernetes
 | disk-bytes-critical                     | int (percent) | 95             |
 | disk-inodes-warning                     | int (percent) | 85             |
 | disk-inodes-critical                    | int (percent) | 90             |
-| container-throttling-warning            | int (percent) | 25             |
-| container-throttling-critical           | int (percent) | 50             |
-| container-cores-throttling-warning      | int (cores)   |                |
-| container-cores-throttling-critical     | int (cores)   |                |
 
 ##### Ingress
 
@@ -105,26 +101,20 @@ Using metrics that this module exports, you can, e.g., replace the "magic" const
 Before:
 
 ```text
-max by (namespace, pod, container) (
-  (
-    rate(container_cpu_cfs_throttled_periods_total[5m])
-    /
-    rate(container_cpu_cfs_periods_total[5m])
-  )
-  > 0.85
+(
+  kube_statefulset_status_replicas - kube_statefulset_status_replicas_ready
 )
+> 1
 ```
 
 After:
 
 ```text
-max by (namespace, pod, container) (
-  (
-    rate(container_cpu_cfs_throttled_periods_total[5m])
-    /
-    rate(container_cpu_cfs_periods_total[5m])
-  )
-  > on (namespace, pod) group_left
-    max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="container-throttling-critical"}) / 100
+(
+  kube_statefulset_status_replicas - kube_statefulset_status_replicas_ready
+)
+> on (namespace, statefulset)
+(
+  max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
 )
 ```
