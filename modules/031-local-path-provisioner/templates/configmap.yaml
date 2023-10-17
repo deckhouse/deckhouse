@@ -20,6 +20,7 @@ data:
             "teardownCommand": "/manager"
     }
 
+  # we do not use deckhouse user here because root of sc directory was created by root
   helperPod.yaml: |-
     apiVersion: v1
     kind: Pod
