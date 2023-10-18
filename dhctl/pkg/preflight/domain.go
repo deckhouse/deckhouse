@@ -48,6 +48,5 @@ func (pc *Checker) CheckLocalhostDomain() error {
 	}
 
 	log.DebugLn(string(out))
-	log.InfoLn("Checking resolving the localhost domain success")
 	return nil
 }

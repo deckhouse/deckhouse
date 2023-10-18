@@ -32,7 +32,11 @@ type Checker struct {
 	buildDigestProvider     buildDigestProvider
 }
 
-type preflightCheckFunc func() error
+type checkStep struct {
+	successMessage string
+	skipFlag       string
+	fun            func() error
+}
 
 func NewChecker(sshClient *ssh.Client, config *deckhouse.Config, metaConfig *config.MetaConfig) Checker {
 	return Checker{
@@ -45,11 +49,27 @@ func NewChecker(sshClient *ssh.Client, config *deckhouse.Config, metaConfig *con
 }
 
 func (pc *Checker) Static() error {
-	return pc.do("Preflight checks for static-cluster", []preflightCheckFunc{
-		pc.CheckSSHTunel,
-		pc.CheckRegistryAccessThroughProxy,
-		pc.CheckAvailabilityPorts,
-		pc.CheckLocalhostDomain,
+	return pc.do("Preflight checks for static-cluster", []checkStep{
+		{
+			fun:            pc.CheckSSHTunel,
+			successMessage: "ssh tunnel up",
+			skipFlag:       app.SSHForwardArgName,
+		},
+		{
+			fun:            pc.CheckRegistryAccessThroughProxy,
+			successMessage: "registry access through proxy",
+			skipFlag:       app.RegistryThroughProxyCheckArgName,
+		},
+		{
+			fun:            pc.CheckAvailabilityPorts,
+			successMessage: "required ports availability",
+			skipFlag:       app.PortsAvailabilityArgName,
+		},
+		{
+			fun:            pc.CheckLocalhostDomain,
+			successMessage: "resolving the localhost domain",
+			skipFlag:       app.ResolvingLocalhostArgName,
+		},
 	})
 }
 
@@ -58,24 +78,29 @@ func (pc *Checker) Cloud() error {
 }
 
 func (pc *Checker) Global() error {
-	return pc.do("Global preflight checks", []preflightCheckFunc{
-		pc.CheckDhctlVersionObsolescence,
+	return pc.do("Global preflight checks", []checkStep{
+		{
+			fun:            pc.CheckDhctlVersionObsolescence,
+			successMessage: "installer and deckhouse-controller version compatibility",
+			skipFlag:       app.DeckhouseVersionCheckArgName,
+		},
 	})
 }
 
-func (pc *Checker) do(title string, checks []preflightCheckFunc) error {
+func (pc *Checker) do(title string, checks []checkStep) error {
 	return log.Process("common", title, func() error {
 		if app.PreflightSkipAll {
 			log.InfoLn("Preflight checks were skipped")
 			return nil
 		}
 
-		for _, checkFunc := range checks {
-			if err := checkFunc(); err != nil {
-				return fmt.Errorf(`Installation aborted:
-%w
-Please fix this problem or skip if you're sure (please see help for find necessary flag)`, err)
+		for _, check := range checks {
+			if err := check.fun(); err != nil {
+				return fmt.Errorf("Installation aborted: %w\n"+
+					`Please fix this problem or skip it if you're sure with %s flag`, err, check.skipFlag)
 			}
+
+			log.Success(fmt.Sprintf("Checked %s successfully.\n", check.successMessage))
 		}
 
 		return nil

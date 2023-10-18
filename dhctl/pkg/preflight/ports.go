@@ -48,6 +48,5 @@ func (pc *Checker) CheckAvailabilityPorts() error {
 	}
 
 	log.DebugLn(string(out))
-	log.InfoLn("Checking availability ports success")
 	return nil
 }

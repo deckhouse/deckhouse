@@ -113,7 +113,6 @@ func (pc *Checker) CheckDhctlVersionObsolescence() error {
 		return fmt.Errorf(dhctlVersionMismatchError, ErrInstallerVersionMismatch)
 	}
 
-	log.InfoLn("Checked if dhctl version is compatible successfully")
 	return nil
 }
 

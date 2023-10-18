@@ -49,7 +49,6 @@ Please check connectivity to control-plane host or
 check that sshd config 'AllowTcpForwarding' set to 'yes' on control-plane node.`, err)
 	}
 
-	log.InfoLn("Checking ssh tunnel success")
 	tun.Stop()
 	return nil
 }

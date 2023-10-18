@@ -88,7 +88,6 @@ Please chech connectivity from control-plane node to proxy an from proxy to cont
 		return err
 	}
 
-	log.InfoLn("Checked registry access through proxy successfully")
 	return nil
 }
 
