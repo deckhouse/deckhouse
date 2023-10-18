@@ -146,35 +146,9 @@ func (r *Runner) converge() error {
 	var metaConfig *config.MetaConfig
 	var err error
 	if r.commanderMode {
-		if r.PhasedExecutionContext != nil {
-			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.InstallDeckhousePhase, false, r.stateCache); err != nil {
-				return err
-			} else if shouldStop {
-				return nil
-			}
-		}
-
 		metaConfig, err = commander.ParseMetaConfig(r.stateCache, r.commanderModeParams)
 		if err != nil {
 			return fmt.Errorf("unable to parse meta configuration: %w", err)
-		}
-
-		clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
-		if err != nil {
-			return fmt.Errorf("unable to get cluster config yaml: %w", err)
-		}
-		providerClusterConfigurationData, err := metaConfig.ProviderClusterConfigYAML()
-		if err != nil {
-			return fmt.Errorf("unable to get provider cluster config yaml: %w", err)
-		}
-		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, metaConfig.UUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
-			return fmt.Errorf("unable to update deckhouse configuration: %w", err)
-		}
-
-		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
-				return err
-			}
 		}
 	} else {
 		metaConfig, err = GetMetaConfig(r.kubeCl)
@@ -273,10 +247,40 @@ func (r *Runner) converge() error {
 	}
 
 	if r.PhasedExecutionContext != nil {
-		return r.PhasedExecutionContext.CompletePhase(r.stateCache)
-	} else {
-		return nil
+		if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+			return err
+		}
 	}
+
+	if r.commanderMode {
+		if r.PhasedExecutionContext != nil {
+			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.InstallDeckhousePhase, false, r.stateCache); err != nil {
+				return err
+			} else if shouldStop {
+				return nil
+			}
+		}
+
+		clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("unable to get cluster config yaml: %w", err)
+		}
+		providerClusterConfigurationData, err := metaConfig.ProviderClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("unable to get provider cluster config yaml: %w", err)
+		}
+		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, metaConfig.UUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
+			return fmt.Errorf("unable to update deckhouse configuration: %w", err)
+		}
+
+		if r.PhasedExecutionContext != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
