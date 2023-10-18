@@ -487,7 +487,7 @@ global:
 	})
 
 	// manual release creation, for testing in a cluster
-	Context("Generate release", func() {
+	XContext("Generate release", func() {
 		const releaseJSON = `
 			{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2},"beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"disruptions":{"1.36":["ingressNginx"]},"requirements":{"ingressNginx":"0.33","k8s":"1.19.0"},"version":"v1.666.0"}
 	`
@@ -507,9 +507,9 @@ global:
 		})
 		It("Manual release creation", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			// rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.666.0")
-			// fmt.Println("\n" + rl.ToYaml())
-			// time.Sleep(300 * time.Millisecond)
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1.666.0")
+			fmt.Println("\n" + rl.ToYaml())
+			time.Sleep(300 * time.Millisecond)
 		})
 	})
 
