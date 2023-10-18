@@ -194,7 +194,7 @@ func WaitForDeckhouseDeploymentDeletion(kubeCl *client.KubernetesClient) error {
 
 func WaitForMachinesDeletion(kubeCl *client.KubernetesClient) error {
 	resourceSchema := schema.GroupVersionResource{Group: "machine.sapcloud.io", Version: "v1alpha1", Resource: "machines"}
-	return retry.NewLoop("Wait for Machines deletion", 45, 15*time.Second).Run(func() error {
+	return retry.NewLoop("Wait for Machines deletion", 45, 15*time.Second).WithShowError(false).Run(func() error {
 		resources, err := kubeCl.Dynamic().Resource(resourceSchema).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
