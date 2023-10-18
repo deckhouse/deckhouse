@@ -1,0 +1,19 @@
+---
+artifact: {{ .ModuleName }}/metallb-artifact
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+shell:
+  install:
+    - apk add --no-cache git
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 -b v0.13.11 {{ $.SOURCE_REPO }}/metallb/metallb.git .
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd controller
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /controller
+    - chown 64535:64535 /controller
+    - chmod 0700 /controller
+    - cd ../speaker
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /speaker
+    - chown 64535:64535 /speaker
+    - chmod 0700 /speaker
