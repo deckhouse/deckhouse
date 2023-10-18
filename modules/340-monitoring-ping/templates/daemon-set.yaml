@@ -56,7 +56,9 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list . "monitoringPing") }}
         name: monitoring-ping
-        {{- /* UID: 0 GID:0 using for privilege access for fping because using hostNetwork */ }}
+        {{- /*
+          UID: 0 GID:0 using for privilege access for fping because using hostNetwork
+        */ }}
         securityContext:
           allowPrivilegeEscalation: true
           capabilities:
