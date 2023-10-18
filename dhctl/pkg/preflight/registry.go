@@ -57,7 +57,9 @@ func (pc *PreflightCheck) CheckRegistryAccessThroughProxy() error {
 
 	tun, err := setupSSHTunnelToProxyAddr(pc.sshClient, proxyUrl)
 	if err != nil {
-		return fmt.Errorf("setup tunnel to proxy: %w", err)
+		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
+Please check connectivity to control-plane host or
+check that sshd config 'AllowTcpForwarding' set to 'yes' on control-plane node`, err)
 	}
 	defer tun.Stop()
 
@@ -72,7 +74,8 @@ func (pc *PreflightCheck) CheckRegistryAccessThroughProxy() error {
 	httpCl := buildHTTPClientWithLocalhostProxy(proxyUrl)
 	resp, err := httpCl.Do(req)
 	if err != nil {
-		return fmt.Errorf("call container registry api: %w", err)
+		return fmt.Errorf(`Container registry api connectivity check was failed with error: %w.
+Please chech connectivity from control-plane node to proxy an from proxy to container registry.`, err)
 	}
 
 	if err = checkResponseIsFromDockerRegistry(resp); err != nil {

@@ -50,8 +50,8 @@ func (pc *PreflightCheck) StaticCheck() error {
 		type preflightCheckFunc func() error
 		checks := []preflightCheckFunc{
 			pc.CheckDhctlVersionObsolescence,
-			pc.CheckRegistryAccessThroughProxy,
 			pc.CheckSSHTunel,
+			pc.CheckRegistryAccessThroughProxy,
 			pc.CheckAvailabilityPorts,
 			pc.CheckLocalhostDomain,
 		}

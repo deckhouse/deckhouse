@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -43,8 +44,9 @@ func (pc *PreflightCheck) CheckSSHTunel() error {
 	tun := pc.sshClient.Tunnel("L", builder.String())
 	err := tun.Up()
 	if err != nil {
-		log.ErrorLn("Checking ssh tunnel fail")
-		return err
+		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
+Please check connectivity to control-plane host or
+check that sshd config 'AllowTcpForwarding' set to 'yes' on control-plane node.`, err)
 	}
 
 	log.InfoLn("Checking ssh tunnel success")
