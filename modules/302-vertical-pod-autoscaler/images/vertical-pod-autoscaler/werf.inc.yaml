@@ -20,11 +20,11 @@ shell:
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /admission-controller
     - chown 64535:64535 /admission-controller
     - chmod 0700 /admission-controller
-    - cd ../vertical-pod-autoscaler/pkg/recommender
+    - cd ../../../vertical-pod-autoscaler/pkg/recommender
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /recommender
     - chown 64535:64535 /recommender
     - chmod 0700 /recommender
-    - cd ../vertical-pod-autoscaler/pkg/updater
+    - cd ../../../vertical-pod-autoscaler/pkg/updater
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /updater
     - chown 64535:64535 /updater
     - chmod 0700 /updater
