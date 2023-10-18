@@ -507,6 +507,37 @@ spec:
                       properties:
                         criSocketPath:
                           description: Путь к сокету CRI.
+                staticInstances:
+                  description: |
+                    Параметры настройки машин статичных узлов кластера.
+                  properties:
+                    labelSelector:
+                      description: |
+                        Настройка фильтра меток (label) по ресурсам.
+
+                        Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (операция `И`).
+
+                         Пустое значение `labelSelector` соответствует всем объектам. Нулевое — никаким.
+                      properties:
+                        matchExpressions:
+                          description: |
+                            Список фильтров на основе выражений.
+
+                            Итоговый результат — результат пересечения множеств, определяемых всеми фильтрами в списке (операция `И`).
+                          items:
+                            properties:
+                              key:
+                                description: Имя метки.
+                              operator:
+                                description: Оператор сравнения.
+                              values:
+                                description: Значение метки.
+                        matchLabels:
+                          description: |
+                            Фильтр на основе совпадения/несовпадения меток.
+                    count:
+                      description: |
+                         Количество виртуальных машин, которые нужно создать.
                 cloudInstances:
                   description: |
                     Параметры заказа облачных виртуальных машин.
