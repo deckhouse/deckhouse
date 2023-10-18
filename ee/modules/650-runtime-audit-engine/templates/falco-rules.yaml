@@ -340,7 +340,7 @@ spec:
           kactivity and kcreate and serviceaccount and response_successful
         desc: Detect any attempt to create a service account
         output: K8s Serviceaccount Created (user=%ka.user.name serviceaccount=%ka.target.name ns=%ka.target.namespace resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Informational
+        priority: Notice
         tags:
           - fstec
           - rbac_drift
@@ -351,7 +351,7 @@ spec:
           kactivity and kdelete and serviceaccount and response_successful
         desc: Detect any attempt to delete a service account
         output: K8s Serviceaccount Deleted (user=%ka.user.name serviceaccount=%ka.target.name ns=%ka.target.namespace resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Informational
+        priority: Notice
         tags:
           - fstec
           - rbac_drift
@@ -362,7 +362,7 @@ spec:
           kactivity and kcreate and (clusterrole or role) and response_successful
         desc: Detect any attempt to create a cluster role/role
         output: K8s Cluster Role Created (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource rules=%ka.req.role.rules resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Informational
+        priority: Notice
         tags:
           - fstec
           - rbac_drift
@@ -372,7 +372,7 @@ spec:
         condition: kactivity and kdelete and (clusterrole or role) and response_successful
         desc: Detect any attempt to delete a cluster role/role
         output: K8s Cluster Role Deleted (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Informational
+        priority: Notice
         tags:
           - fstec
           - rbac_drift
@@ -383,7 +383,7 @@ spec:
           kactivity and kcreate and clusterrolebinding and response_successful
         desc: Detect any attempt to create a clusterrolebinding
         output: K8s Cluster Role Binding Created (user=%ka.user.name binding=%ka.target.name resource=%ka.target.resource subjects=%ka.req.binding.subjects role=%ka.req.binding.role resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Informational
+        priority: Notice
         tags:
           - fstec
           - rbac_drift
@@ -395,7 +395,7 @@ spec:
         desc: Detect any attempt to delete a clusterrolebinding
         output: |
           K8s Cluster Role Binding Deleted (user=%ka.user.name binding=%ka.target.name resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Informational
+        priority: Notice
         tags:
           - fstec
           - rbac_drift
@@ -407,7 +407,7 @@ spec:
         desc: An attempt to read container image file in the containerd directory
         output: |
           File below a known containerd directory opened for reading (user=%user.name user_loginuid=%user.loginuid command=%proc.cmdline pid=%proc.pid file=%fd.name parent=%proc.pname pcmdline=%proc.pcmdline gparent=%proc.aname[2] container_id=%container.id image=%container.image.repository)
-        priority: Informational
+        priority: Notice
         tags:
           - fstec
           - container_image_access
@@ -429,7 +429,7 @@ spec:
         desc: Not all pods are under integrity control in a system namespace
         output: |
           Not all containers are running with the sha256 sum as a tag in a system namespace, which is a potential integrity control mechanism misconfiguration (user=%ka.user.name binding=%ka.target.name resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason image=%ka.req.pod.containers.image)
-        priority: Informational
+        priority: Notice
         tags:
           - fstec
           - integrity_control
