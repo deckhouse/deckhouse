@@ -1,23 +1,8 @@
 ---
-artifact: {{ .ModuleName }}/admission-controller-artifact
-from: {{ .Images.BASE_GOLANG_19_ALPINE }}
-shell:
-  install:
-    - apk add --no-cache git
-    - mkdir -p /src
-    - cd /src
-    - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git .
-    - cd vertical-pod-autoscaler/pkg/admission-controller
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /admission-controller
-    - chown 64535:64535 /admission-controller
-    - chmod 0700 /admission-controller
----
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/admission-controller-artifact
+- artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
   add: /admission-controller
   to: /admission-controller
   before: setup
