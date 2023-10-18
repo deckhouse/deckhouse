@@ -52,7 +52,8 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
 
-      {{- /* UID: 0 GID:0 using for privilege access for fping because using hostNetwork */ -}}
+      {{- /* UID: 0 GID:0 using for privilege access for fping because using hostNetwork */ }}
+
       securityContext:
         allowPrivilegeEscalation: true
         capabilities:
