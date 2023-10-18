@@ -16,12 +16,14 @@ package preflight
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type Checker struct {
@@ -52,7 +54,7 @@ func (pc *Checker) Static() error {
 	return pc.do("Preflight checks for static-cluster", []checkStep{
 		{
 			fun:            pc.CheckSSHTunel,
-			successMessage: "ssh tunnel up",
+			successMessage: "ssh tunnel will up",
 			skipFlag:       app.SSHForwardArgName,
 		},
 		{
@@ -67,7 +69,7 @@ func (pc *Checker) Static() error {
 		},
 		{
 			fun:            pc.CheckLocalhostDomain,
-			successMessage: "resolving the localhost domain",
+			successMessage: "resolve the localhost domain",
 			skipFlag:       app.ResolvingLocalhostArgName,
 		},
 	})
@@ -90,17 +92,16 @@ func (pc *Checker) Global() error {
 func (pc *Checker) do(title string, checks []checkStep) error {
 	return log.Process("common", title, func() error {
 		if app.PreflightSkipAll {
-			log.InfoLn("Preflight checks were skipped")
+			log.WarnLn("Preflight checks were skipped")
 			return nil
 		}
 
 		for _, check := range checks {
-			if err := check.fun(); err != nil {
+			loop := retry.NewLoop(fmt.Sprintf("Checking %s", check.successMessage), 1, 10*time.Second)
+			if err := loop.Run(check.fun); err != nil {
 				return fmt.Errorf("Installation aborted: %w\n"+
 					`Please fix this problem or skip it if you're sure with %s flag`, err, check.skipFlag)
 			}
-
-			log.Success(fmt.Sprintf("Checked %s successfully.\n", check.successMessage))
 		}
 
 		return nil
