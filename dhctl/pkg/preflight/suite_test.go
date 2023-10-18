@@ -26,11 +26,11 @@ import (
 
 type PreflightChecksTestSuite struct {
 	suite.Suite
-	checker PreflightCheck
+	checker Checker
 }
 
 func (s *PreflightChecksTestSuite) SetupSuite() {
-	s.checker = NewPreflightCheck(nil, nil, nil)
+	s.checker = NewChecker(nil, nil, nil)
 }
 
 func (s *PreflightChecksTestSuite) SetupTest() {

@@ -15,6 +15,8 @@
 package preflight
 
 import (
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
@@ -22,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
-type PreflightCheck struct {
+type Checker struct {
 	sshClient               *ssh.Client
 	metaConfig              *config.MetaConfig
 	installConfig           *deckhouse.Config
@@ -30,8 +32,10 @@ type PreflightCheck struct {
 	buildDigestProvider     buildDigestProvider
 }
 
-func NewPreflightCheck(sshClient *ssh.Client, config *deckhouse.Config, metaConfig *config.MetaConfig) PreflightCheck {
-	return PreflightCheck{
+type preflightCheckFunc func() error
+
+func NewChecker(sshClient *ssh.Client, config *deckhouse.Config, metaConfig *config.MetaConfig) Checker {
+	return Checker{
 		sshClient:               sshClient,
 		metaConfig:              metaConfig,
 		installConfig:           config,
@@ -40,32 +44,40 @@ func NewPreflightCheck(sshClient *ssh.Client, config *deckhouse.Config, metaConf
 	}
 }
 
-func (pc *PreflightCheck) StaticCheck() error {
-	return log.Process("common", "Preflight Checks", func() error {
+func (pc *Checker) Static() error {
+	return pc.do("Preflight checks for static-cluster", []preflightCheckFunc{
+		pc.CheckSSHTunel,
+		pc.CheckRegistryAccessThroughProxy,
+		pc.CheckAvailabilityPorts,
+		pc.CheckLocalhostDomain,
+	})
+}
+
+func (pc *Checker) Cloud() error {
+	return nil
+}
+
+func (pc *Checker) Global() error {
+	return pc.do("Global preflight checks", []preflightCheckFunc{
+		pc.CheckDhctlVersionObsolescence,
+	})
+}
+
+func (pc *Checker) do(title string, checks []preflightCheckFunc) error {
+	return log.Process("common", title, func() error {
 		if app.PreflightSkipAll {
 			log.InfoLn("Preflight checks were skipped")
 			return nil
 		}
 
-		type preflightCheckFunc func() error
-		checks := []preflightCheckFunc{
-			pc.CheckDhctlVersionObsolescence,
-			pc.CheckSSHTunel,
-			pc.CheckRegistryAccessThroughProxy,
-			pc.CheckAvailabilityPorts,
-			pc.CheckLocalhostDomain,
-		}
-
 		for _, checkFunc := range checks {
 			if err := checkFunc(); err != nil {
-				return err
+				return fmt.Errorf(`Installation aborted:
+%w
+Please fix this problem or skip if you're sure (please see help for find necessary flag)`, err)
 			}
 		}
 
 		return nil
 	})
-}
-
-func (pc *PreflightCheck) CloudCheck() error {
-	return nil
 }

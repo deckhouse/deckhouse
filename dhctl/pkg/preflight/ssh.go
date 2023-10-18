@@ -28,7 +28,7 @@ const (
 	DefaultTunnelRemotePort = 22322
 )
 
-func (pc *PreflightCheck) CheckSSHTunel() error {
+func (pc *Checker) CheckSSHTunel() error {
 	if app.PreflightSkipSSHForword {
 		log.InfoLn("SSH forward preflight check was skipped")
 		return nil

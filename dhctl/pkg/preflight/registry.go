@@ -40,7 +40,7 @@ var (
 
 const ProxyTunnelPort = "22323"
 
-func (pc *PreflightCheck) CheckRegistryAccessThroughProxy() error {
+func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 	if app.PreflightSkipRegistryThroughProxy {
 		log.InfoLn("Checking if registry is accessible through proxy was skipped")
 		return nil

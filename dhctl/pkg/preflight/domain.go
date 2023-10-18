@@ -24,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-func (pc *PreflightCheck) CheckLocalhostDomain() error {
+func (pc *Checker) CheckLocalhostDomain() error {
 	if app.PreflightSkipResolvingLocalhost {
 		log.InfoLn("Resolving the localhost domain preflight check was skipped")
 		return nil

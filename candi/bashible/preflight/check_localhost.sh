@@ -15,6 +15,6 @@
 */}}
 
 if ! getent ahosts localhost; then
-  echo "FAIL localhost is unavailable"
+  echo "Localhost is unavailable. You should add record '127.0.0.1 localhost' to /etc/hosts file."
   exit 1
 fi
