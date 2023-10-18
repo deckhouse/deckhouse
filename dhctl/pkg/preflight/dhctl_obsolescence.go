@@ -129,7 +129,7 @@ func (pc *Checker) fetchAndValidateDeckhouseImageHashFromReleaseChannel(ctx cont
 
 	versionTagRef, err := name.ParseReference(pc.installConfig.GetImage(true))
 	if err != nil {
-		return nil, fmt.Errorf("parse image refernce: %w", err)
+		return nil, fmt.Errorf("parse image reference: %w", err)
 	}
 
 	updateChanManifest, err := pc.imageDescriptorProvider.Descriptor(channelRef, remote.WithContext(ctx), remote.WithAuth(creds))
