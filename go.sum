@@ -243,10 +243,8 @@ github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/felixge/httpsnoop v1.0.3 h1:s/nj+GCswXYzN5v2DpNMuMQYe+0DDwt5WVCU6CWBdXk=
-github.com/flant/addon-operator v1.2.3 h1:v+OCw9Pqz1rBJCTiD4eLNiLH+aQAd51LqlIxp+WEpBA=
-github.com/flant/addon-operator v1.2.3/go.mod h1:ESyT888iuDIGkP92R/Bqmr4+czMXi0u5UN8xXyIAwiA=
-github.com/flant/addon-operator v1.2.4-0.20231016154044-c0a848fc7d74 h1:L/rhsw9UKCtoPH39nmS4qWNef002aXVZCU6PBmuUv5w=
-github.com/flant/addon-operator v1.2.4-0.20231016154044-c0a848fc7d74/go.mod h1:gLoFjeIg7Ds3Sb/oYsmx1/Q6bcSQMj93k7pqGS/hmJg=
+github.com/flant/addon-operator v1.2.4-0.20231018214105-109415feaf09 h1:8s0qJKfTBzxxnRTOii5ZR9BvW4PJt7o9l4CKPjSLVGc=
+github.com/flant/addon-operator v1.2.4-0.20231018214105-109415feaf09/go.mod h1:cZ2KiUMs/48x6tSyf0LKIUdAIOMnRtM5iS5WtkG8S9g=
 github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbLR5vJOUzKAK8p3nrD7mDk=
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v0.26.1 h1:QIT/Skmdv5Mpu8OWBzncmZdtlKXDKzkyhte7wlXnbVE=
@@ -255,8 +253,6 @@ github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee h1:evii83J+/6QGNv
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
 github.com/flant/logboek v0.3.4 h1://0FHwS7hoLHTz7H+JlLheKlu298edC+qV61ca9OJBQ=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
-github.com/flant/shell-operator v1.3.2 h1:6sF2rxMCDfqZx9vAmmEg10RWNxsWZuDHeN+mbWXfyGM=
-github.com/flant/shell-operator v1.3.2/go.mod h1:0Sb2td567MG7qRrPMz5Mqx4Y/6JWot/pKJMYFUGlikU=
 github.com/flant/shell-operator v1.3.3-0.20231013105726-aa38dfcd70d1 h1:D1wwYq2/uzldvMWNKNwamRt8O9nwwWwXNCUnpJxlWwo=
 github.com/flant/shell-operator v1.3.3-0.20231013105726-aa38dfcd70d1/go.mod h1:0Sb2td567MG7qRrPMz5Mqx4Y/6JWot/pKJMYFUGlikU=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
@@ -713,6 +709,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8m
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
+github.com/nabokihms/mergemap v0.0.1 h1:ytuvBnRTiaGaHuQg/XaI+anqBErngo4mlm3qck47178=
+github.com/nabokihms/mergemap v0.0.1/go.mod h1:ckiwPyt9qm7yZEcdvNLy3dEwsi7zexyqo54pR4BMowM=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nkovacs/streamquote v0.0.0-20170412213628-49af9bddb229/go.mod h1:0aYXnNPJ8l7uZxf45rWW1a/uME32OF0rhiYGNQ2oF2E=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
