@@ -45,17 +45,17 @@ func init() {
 func main() {
 	flag.Parse()
 	if action != SETUP && action != TEARDOWN {
-		fmt.Fprintf(os.Stderr, "Error. Incorrect action: %s", action)
+		fmt.Fprintf(os.Stderr, "Error. Incorrect action: %s\n", action)
 		os.Exit(1)
 	}
 
 	if path == "" {
-		os.Stderr.WriteString("Error. Path is empty")
+		fmt.Fprintf(os.Stderr, "Error. Path is empty\n")
 		os.Exit(2)
 	}
 
 	if path == "/" {
-		os.Stderr.WriteString("Error. Path cannot be '/'")
+		fmt.Fprintf(os.Stderr, "Error. Path cannot be '/'\n")
 		os.Exit(3)
 	}
 
@@ -65,7 +65,7 @@ func main() {
 		err := os.RemoveAll(path)
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error. Cannot remove directory %s: %s", path, err)
+			fmt.Fprintf(os.Stderr, "Error. Cannot remove directory %s: %s\n", path, err)
 			os.Exit(4)
 		}
 		return
@@ -75,7 +75,7 @@ func main() {
 
 	err := os.MkdirAll(path, 0777)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error. Cannot create directory %s: %s", path, err)
+		fmt.Fprintf(os.Stderr, "Error. Cannot create directory %s: %s\n", path, err)
 		os.Exit(5)
 	}
 }
