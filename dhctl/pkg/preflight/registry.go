@@ -26,6 +26,7 @@ import (
 
 	"k8s.io/utils/strings/slices"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -40,6 +41,11 @@ var (
 const ProxyTunnelPort = "22323"
 
 func (pc *PreflightCheck) CheckRegistryAccessThroughProxy() error {
+	if app.PreflightSkipRegistryThroughProxy {
+		log.InfoLn("Checking if registry is accessible through proxy was skipped")
+		return nil
+	}
+
 	log.DebugLn("Checking if registry is accessible through proxy")
 
 	proxyUrl, noProxyAddresses, err := getProxyFromMetaConfig(pc.metaConfig)

@@ -22,6 +22,7 @@ var (
 	PreflightSkipAvailabilityPorts     = false
 	PreflightSkipResolvingLocalhost    = false
 	PreflightSkipDeckhouseVersionCheck = false
+	PreflightSkipRegistryThroughProxy  = false
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -40,4 +41,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag("preflight-skip-deckhouse-version-check", "Skip verifying deckhouse version").
 		Envar(configEnvName("PREFLIGHT_SKIP_INCOMPATIBLE_VERSION_CHECK")).
 		BoolVar(&PreflightSkipDeckhouseVersionCheck)
+	cmd.Flag("preflight-skip-registry-through-proxy", "Skip verifying deckhouse version").
+		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_THROUGH_PROXY")).
+		BoolVar(&PreflightSkipRegistryThroughProxy)
 }
