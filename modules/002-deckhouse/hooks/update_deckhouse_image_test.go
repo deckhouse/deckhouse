@@ -209,6 +209,72 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		})
 	})
 
+	Context("Manual approval mode with canary process", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
+			f.ValuesDelete("deckhouse.update.windows")
+
+			f.KubeStateSet("")
+			f.KubeStateSet(deckhousePodYaml + postponedMinorRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+		It("Should not upgrade deckhouse version", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
+		})
+		It("Should update release status", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			release := f.KubernetesGlobalResource("DeckhouseRelease", "v1.36.0")
+			Expect(release.Exists()).To(BeTrue())
+			Expect(release.Field("status.approved").String()).To(Equal("false"))
+			Expect(release.Field("status.message").String()).To(Equal("Waiting for manual approval"))
+			Expect(release.Field("status.phase").String()).To(Equal("Pending"))
+		})
+
+		Context("After setting manual approve", func() {
+			BeforeEach(func() {
+				f.KubeStateSet("")
+				f.KubeStateSet(deckhousePodYaml + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.35.0
+spec:
+  version: "v1.35.0"
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+approved: true
+metadata:
+  name: v1.36.0
+spec:
+  version: "v1.36.0"
+  applyAfter: "2222-11-11T23:23:23Z"
+`)
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+				f.RunHook()
+			})
+			It("Must upgrade deckhouse", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(Equal("my.registry.com/deckhouse:v1.36.0"))
+			})
+			It("Should update release status", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				release := f.KubernetesGlobalResource("DeckhouseRelease", "v1.36.0")
+				Expect(release.Exists()).To(BeTrue())
+				Expect(release.Field("status.approved").String()).To(Equal("true"))
+				Expect(release.Field("status.message").String()).To(Equal(""))
+				Expect(release.Field("status.phase").String()).To(Equal("Deployed"))
+			})
+		})
+	})
+
 	Context("DEV: No new deckhouse image", func() {
 		BeforeEach(func() {
 			dependency.TestDC.CRClient.DigestMock.Set(func(tag string) (s1 string, err error) {
@@ -755,7 +821,7 @@ metadata:
 	})
 })
 
-var (
+const (
 	deckhouseReadyPod = `
 ---
 apiVersion: v1
