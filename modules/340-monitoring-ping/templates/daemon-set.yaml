@@ -58,7 +58,7 @@ spec:
         name: monitoring-ping
         {{- /*
           UID: 0 GID:0 using for privilege access for fping because using hostNetwork
-        */ }}
+        */}}
         securityContext:
           allowPrivilegeEscalation: true
           capabilities:
