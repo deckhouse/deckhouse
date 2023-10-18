@@ -30,7 +30,7 @@ type PreflightChecksTestSuite struct {
 }
 
 func (s *PreflightChecksTestSuite) SetupSuite() {
-	s.checker = NewPreflightCheck(nil, &deckhouse.Config{})
+	s.checker = NewPreflightCheck(nil, nil, nil)
 }
 
 func (s *PreflightChecksTestSuite) SetupTest() {

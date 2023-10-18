@@ -238,7 +238,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	deckhouseInstallConfig.KubeadmBootstrap = true
 	deckhouseInstallConfig.MasterNodeSelector = true
 
-	preflightCheck := preflight.NewPreflightCheck(sshClient, deckhouseInstallConfig)
+	preflightCheck := preflight.NewPreflightCheck(sshClient, deckhouseInstallConfig, metaConfig)
 
 	bootstrapState := NewBootstrapState(stateCache)
 
