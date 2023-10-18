@@ -52,21 +52,21 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       serviceAccountName: monitoring-ping
-      securityContext:
-        allowPrivilegeEscalation: true
-        capabilities:
-          add:
-          - NET_RAW
-          - DAC_OVERRIDE
-          drop:
-          - ALL
-        readOnlyRootFilesystem: true
-        runAsGroup: 0
-        runAsNonRoot: false
-        runAsUser: 0
       containers:
       - image: {{ include "helm_lib_module_image" (list . "monitoringPing") }}
         name: monitoring-ping
+        securityContext:
+          allowPrivilegeEscalation: true
+          capabilities:
+            add:
+            - NET_RAW
+            - DAC_OVERRIDE
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
         env:
           - name: MY_NODE_NAME
             valueFrom:
