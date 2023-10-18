@@ -16,7 +16,7 @@ shell:
     - export "GOARCH=amd64"
     - cd /src
     - echo "Build manager"
-    - go build -o /tmp/manager main.go
+    - GOPROXY={{ $.GOPROXY }} go build -o /tmp/manager main.go
     - chmod 0777 /tmp/manager
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
