@@ -34,7 +34,7 @@ import (
 )
 
 const dhctlVersionMismatchError = "" +
-	"There is a possibility that you will not be able to install latest versions of Deckhouse correctly with this image.\n" +
+	"%w\nThere is a possibility that you will not be able to install latest versions of Deckhouse correctly with this image.\n" +
 	`To fix this add "--pull=always" flag to your "docker run" cmdline`
 
 var (

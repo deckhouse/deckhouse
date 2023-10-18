@@ -34,8 +34,8 @@ import (
 )
 
 var (
-	ErrBadProxyConfig      = errors.New("bad proxy config")
-	ErrRegistryUnreachable = errors.New("could not reach registry over proxy")
+	ErrBadProxyConfig      = errors.New("Bad proxy config")
+	ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
 )
 
 const ProxyTunnelPort = "22323"
@@ -138,7 +138,7 @@ func getProxyFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, []string, 
 
 	proxyUrl, err := url.Parse(proxyAddr)
 	if err != nil {
-		return nil, nil, fmt.Errorf(`%w: %w`, ErrBadProxyConfig, err)
+		return nil, nil, fmt.Errorf(`%s: %w`, ErrBadProxyConfig, err)
 	}
 
 	return proxyUrl, noProxyAddresses, nil
