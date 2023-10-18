@@ -11,12 +11,12 @@ import:
   to: /bin/busybox
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-builder-artifact
-  add: /builds/util-linux-2.39.2/.libs
+  add: /builds/binaries
   to: /bin
   before: setup
-  includePaths:
-  - findfs
-  - findmnt
+  # includePaths:
+  # - findfs
+  # - findmnt
 shell:
   setup:
     - /bin/busybox --install -s
@@ -69,16 +69,31 @@ from: {{ $.Images.BASE_UBUNTU }}
 shell:
   beforeInstall:
     - apt update
-    - apt install -y wget bzip2 curl tar gcc make automake autopoint libtool gettext pkg-config bison gettext libexpat1 libexpat1-dev
-    - export AL_OPTS=-I/usr/share/aclocal
+    - |
+      apt install -y wget bzip2 curl tar \
+        gcc make automake autopoint \
+        gettext pkg-config bison gettext \
+        libtool libexpat1 libexpat1-dev libblkid-dev libsmartcols-dev libutempter-dev \
+        build-essential
   install:
     - mkdir /builds
     - cd /builds
-    - wget -qO- https://git.kernel.org/pub/scm/utils/util-linux/util-linux.git/snapshot/util-linux-2.39.2.tar.gz | tar -xzv
-    - cd util-linux-2.39.2
+    - wget -qO- https://git.kernel.org/pub/scm/utils/util-linux/util-linux.git/snapshot/util-linux-2.39.2.tar.gz | tar -xzv --strip-components=1
+    - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
+    - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
+    - export SUID_CFLAGS=-static
+    - export SUID_LDFLAGS=-static
+    - export CPPFLAGS=-static
     - ./autogen.sh
     - autoconf
-    - automake
-    - automake --add-missing
-    - ./configure --enable-static-programs=fdisk,sfdisk
-    - make
+    - |
+      ./configure \
+        --enable-static \
+        --enable-static-programs=fdisk,sfdisk,findmnt \
+        --disable-pylibmount \
+        --without-python
+    - make LDFLAGS="--static" -j4 fdisk.static sfdisk.static findmnt
+    - mkdir -p binaries
+    - mv fdisk.static binaries/fdisk
+    - mv sfdisk.static binaries/sfdisk
+    - mv findmnt binaries/findmnt
