@@ -4,11 +4,6 @@ osDistributions:
     url: https://www.altlinux.org/
     ru_support: 'true'
     en_support: 'false'
-  alteros:
-    name: AlterOS
-    url: https://alter-os.ru/
-    ru_support: 'true'
-    en_support: 'false'
   astra:
     name: Astra Linux Special Edition
     url: https://astralinux.ru/products/astra-linux-special-edition/

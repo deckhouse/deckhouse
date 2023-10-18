@@ -3,8 +3,6 @@
   to: /deckhouse/candi/bashible/bashbooster/50_apt_rpm.sh
 - add: /ee/candi/bashible/bashbooster/55_ee_distro_version.sh
   to: /deckhouse/candi/bashible/bashbooster/55_ee_distro_version.sh
-- add: /ee/candi/bashible/bundles/alteros
-  to: /deckhouse/candi/bashible/bundles/alteros
 - add: /ee/candi/bashible/bundles/altlinux
   to: /deckhouse/candi/bashible/bundles/altlinux
 - add: /ee/candi/bashible/bundles/astra

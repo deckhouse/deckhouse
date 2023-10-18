@@ -33,12 +33,6 @@ case "$ID" in
     esac
     name_is_not_supported
   ;;
-  alteros)
-    case "$VERSION_ID" in 7|7.*)
-      echo "alteros" && exit 0 ;;
-    esac
-    name_is_not_supported
-  ;;
   ubuntu)
     case "$VERSION_ID" in 18.04|20.04|22.04)
       echo "ubuntu-lts" && exit 0 ;;
