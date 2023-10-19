@@ -1,5 +1,19 @@
+diff --git a/apis/apps/v1alpha1/daemonset_types.go b/apis/apps/v1alpha1/daemonset_types.go
+index aec3f7df..0fc45d6c 100644
+--- a/apis/apps/v1alpha1/daemonset_types.go
++++ b/apis/apps/v1alpha1/daemonset_types.go
+@@ -152,6 +152,9 @@ type DaemonSetSpec struct {
+ 	// The default value is 250
+ 	BurstReplicas *intstr.IntOrString `json:"burstReplicas,omitempty"`
+ 
++	// Replicas is the number of desired pods in accordance with the number matching nodes.
++	Replicas *int32 `json:"replicas,omitempty"`
++
+ 	// The number of old history to retain to allow rollback.
+ 	// This is a pointer to distinguish between explicit zero and not specified.
+ 	// Defaults to 10.
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 1934f145..1fb47fa1 100644
+index 1934f145..468ff884 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
 @@ -505,7 +505,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
@@ -15,7 +29,7 @@ index 1934f145..1fb47fa1 100644
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
  
-+	err = dsc.storeDaemonSetReplicas(ctx, ds)
++	err = dsc.storeDaemonSetReplicas(ds)
 +	if err != nil {
 +		return fmt.Errorf("error updating DaemonSet %v replicas: %v", ds.Name, err)
 +	}
@@ -27,8 +41,8 @@ index 1934f145..1fb47fa1 100644
  	return nil
  }
  
-+func (dsc *ReconcileDaemonSet) storeDaemonSetReplicas(ctx context.Context, ds *appsv1alpha1.DaemonSet) error {
-+	if ds.Replicas == ds.Status.DesiredNumberScheduled {
++func (dsc *ReconcileDaemonSet) storeDaemonSetReplicas(ds *appsv1alpha1.DaemonSet) error {
++	if *ds.Spec.Replicas == ds.Status.DesiredNumberScheduled {
 +		return nil
 +	}
 +	dsClient := dsc.kruiseClient.AppsV1alpha1().DaemonSets(ds.Namespace)
@@ -36,15 +50,15 @@ index 1934f145..1fb47fa1 100644
 +	var updateErr, getErr error
 +
 +	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-+		toUpdate.Spec.Replicas = ds.Status.ds.Status.DesiredNumberScheduled
-+		if _, updateErr = dsClient.Update(ctx, toUpdate, metav1.UpdateOptions{}); updateErr == nil {
++		toUpdate.Spec.Replicas = &ds.Status.DesiredNumberScheduled
++		if _, updateErr = dsClient.Update(context.TODO(), toUpdate, metav1.UpdateOptions{}); updateErr == nil {
 +			klog.Infof("Updated DaemonSet %s/%s replicas to %d", ds.Namespace, ds.Name, ds.Status.DesiredNumberScheduled)
 +			return nil
 +		}
 +
 +		klog.Errorf("Update DaemonSet replicas %v failed: %v", ds.Status, updateErr)
 +		// Update the set with the latest resource version for the next poll
-+		if toUpdate, getErr = dsClient.Get(ctx, ds.Name, metav1.GetOptions{}); getErr != nil {
++		if toUpdate, getErr = dsClient.Get(context.TODO(), ds.Name, metav1.GetOptions{}); getErr != nil {
 +			// If the GET fails we can't trust status.Replicas anymore. This error
 +			// is bound to be more interesting than the update failure.
 +			klog.Errorf("Get DaemonSet %v for replicas update failed: %v", ds.Name, getErr)
