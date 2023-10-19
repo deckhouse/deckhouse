@@ -87,12 +87,13 @@ shell:
     - |
       ./configure \
         --enable-static \
-        --enable-static-programs=fdisk,sfdisk,findmnt,lsblk \
+        --enable-static-programs=fdisk,sfdisk,findmnt,lsblk,mount \
         --disable-pylibmount \
         --without-python
-    - make LDFLAGS="--static" -j4 fdisk.static sfdisk.static findmnt lsblk
+    - make LDFLAGS="--static" -j4 fdisk.static sfdisk.static findmnt lsblk mount
     - mkdir -p binaries
     - mv fdisk.static binaries/fdisk
     - mv sfdisk.static binaries/sfdisk
     - mv findmnt binaries/findmnt
     - mv lsblk binaries/lsblk
+    - mv mount binaries/mount
