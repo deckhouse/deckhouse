@@ -55,8 +55,11 @@ func nodeNameHash(nodeName string) string {
 	return strconv.FormatInt(int64(h32.Sum32()), 16)
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano()) // TODO: remove this after moving to go 1.20, see https://pkg.go.dev/math/rand#Seed
+}
+
 func randomAlphaNum(count int) string {
-	rand.Seed(time.Now().UnixNano())
 	res := make([]byte, count)
 
 	for i := 0; i < count; i++ {

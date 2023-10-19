@@ -87,7 +87,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleChaosMonkey)
 
 func handleChaosMonkey(input *go_hook.HookInput) error {
-	random := time.Now().Unix()
+	random := time.Now().UnixNano()
 	testRandomSeed := os.Getenv("D8_TEST_RANDOM_SEED")
 	if testRandomSeed != "" {
 		res, _ := strconv.ParseInt(testRandomSeed, 10, 64)
