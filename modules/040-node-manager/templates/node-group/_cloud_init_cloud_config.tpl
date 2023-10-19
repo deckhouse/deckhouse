@@ -29,6 +29,4 @@ write_files:
 
 runcmd:
 - /var/lib/bashible/bootstrap.sh
-output:
-  all: "| tee -a /var/log/cloud-init-output.log"
 {{ end }}
