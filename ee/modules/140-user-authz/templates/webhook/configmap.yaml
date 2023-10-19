@@ -17,5 +17,8 @@ data:
     {{- if hasKey $crd.spec "limitNamespaces" }}
       {{- fail "You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources." }}
     {{- end }}
+    {{- if hasKey $crd.spec "namespaceSelector" }}
+      {{- fail "You must turn on userAuthz.enableMultiTenancy to use namespaceSelector option in your ClusterAuthorizationRule resources." }}
+    {{- end }}
   {{- end }}
 {{- end }}
