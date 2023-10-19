@@ -22,6 +22,7 @@ import (
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
@@ -136,6 +137,8 @@ func (s *SSH) Cmd() *exec.Cmd {
 		args = append(args, "--" /* cmd.Path */, s.CommandName)
 		args = append(args, s.CommandArgs...)
 	}
+
+	log.DebugF("SSH arguments %v\n", args)
 
 	sshCmd := exec.Command("ssh", args...)
 	sshCmd.Env = env
