@@ -128,10 +128,10 @@ function run_log_output() {
   # Start output bootstrap logs
   */}}
   if type socat >/dev/null 2>&1; then
-    socat -u FILE:/var/log/cloud-init-output.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
+    socat -u FILE:${TMPDIR}/bootstrap.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
     bootstrap_job_log_pid=$!
   else
-    while true; do cat /var/log/cloud-init-output.log | nc -l 8000; done &
+    while true; do cat ${TMPDIR}/bootstrap.log | nc -l 8000; done &
     bootstrap_job_log_pid=$!
   fi
 }
