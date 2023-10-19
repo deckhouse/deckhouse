@@ -74,9 +74,9 @@ func (s *SSH) Cmd() *exec.Cmd {
 		"-o", "ControlPersist=600s",
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "UserKnownHostsFile=.ssh_known_hosts",
-		"-o", "ServerAliveInterval=7",
-		"-o", "ServerAliveCountMax=2",
-		"-o", "ConnectTimeout=5",
+		"-o", "ServerAliveInterval=10",
+		"-o", "ServerAliveCountMax=3",
+		"-o", "ConnectTimeout=15",
 		"-o", "PasswordAuthentication=no",
 	}
 
