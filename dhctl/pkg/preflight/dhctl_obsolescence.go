@@ -26,7 +26,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -34,13 +34,13 @@ import (
 )
 
 const dhctlVersionMismatchError = "" +
-	"Installation aborted: %w.\n" +
-	"There is a possibility that you will not be able to install latest versions of Deckhouse correctly with this image.\n" +
-	`To fix this add "--pull=always" flag to your "docker run" cmdline or run dhctl with $DHCTL_CLI_PREFLIGHT_SKIP_INCOMPATIBLE_VERSION_CHECK env set to "1"`
+	"%w\nThere is a possibility that you will not be able to install latest versions of Deckhouse correctly with this image.\n" +
+	`To fix this add "--pull=always" flag to your "docker run" cmdline`
 
 var (
-	ErrInstallerVersionMismatch           = errors.New("your installer image is outdated")
-	ErrDeckhouseDigestFileHashAlgMismatch = errors.New("digest hash algorithm does not match")
+	ErrInstallerVersionMismatch                      = errors.New("Your installer image is outdated")
+	ErrDeckhouseDigestFileHashAlgMismatch            = errors.New("Digest hash algorithm does not match")
+	ErrDeckhouseUpdateChannelHasDiffirentReleaseOnIt = errors.New("Your installer version does not match latest release in selected release channel")
 )
 
 // imageDescriptorProvider returns image manifest data, mainly image digest.
@@ -76,28 +76,28 @@ func (p *dhctlBuildDigestProvider) ThisBuildDigest() (v1.Hash, error) {
 	}, nil
 }
 
-func (pc *PreflightCheck) CheckDhctlVersionObsolescence() error {
+func (pc *Checker) CheckDhctlVersionObsolescence() error {
 	log.DebugLn("Checking if dhctl version is compatible with release to be installed")
 	if app.AppVersion == "local" {
 		log.DebugLn("dhctl version check is skipped for local builds")
 		return nil
 	}
 	if app.PreflightSkipDeckhouseVersionCheck {
-		log.WarnLn("dhctl compatibility check is skipped")
+		log.WarnLn("Dhctl compatibility check is skipped")
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
 
-	currentDeckhouseImageDigest, err := pc.fetchDeckhouseImageHashFromReleaseChannel(ctx)
+	currentDeckhouseImageDigest, err := pc.fetchAndValidateDeckhouseImageHashFromReleaseChannel(ctx)
 	if err != nil {
-		return fmt.Errorf("fetch deckhouse image hash: %w", err)
+		return fmt.Errorf("Cannot fetch deckhouse image hash: %w. Please check connectivity to registry.", err)
 	}
 
 	dhctlImageDigest, err := pc.buildDigestProvider.ThisBuildDigest()
 	if err != nil {
-		return fmt.Errorf("read digest of this dhctl-compatible build: %w", err)
+		return fmt.Errorf("Internal error. Cannot read digest of this dhctl-compatible build: %w", err)
 	}
 
 	if currentDeckhouseImageDigest.Algorithm != dhctlImageDigest.Algorithm {
@@ -113,30 +113,43 @@ func (pc *PreflightCheck) CheckDhctlVersionObsolescence() error {
 		return fmt.Errorf(dhctlVersionMismatchError, ErrInstallerVersionMismatch)
 	}
 
-	log.InfoLn("Checked if dhctl version is compatible successfully")
 	return nil
 }
 
-func (pc *PreflightCheck) fetchDeckhouseImageHashFromReleaseChannel(ctx context.Context) (*v1.Hash, error) {
+func (pc *Checker) fetchAndValidateDeckhouseImageHashFromReleaseChannel(ctx context.Context) (*v1.Hash, error) {
 	creds, err := pc.findRegistryAuthCredentials()
 	if err != nil {
 		return nil, fmt.Errorf("parse ClusterConfiguration.deckhouse.registryDockerCfg: %w", err)
 	}
 
-	imageReference, err := name.ParseReference(pc.installConfig.GetImage())
+	channelRef, err := name.ParseReference(pc.installConfig.GetImage(false))
 	if err != nil {
 		return nil, fmt.Errorf("parse image refernce: %w", err)
 	}
 
-	descriptor, err := pc.imageDescriptorProvider.Descriptor(imageReference, remote.WithContext(ctx), remote.WithAuth(creds))
+	versionTagRef, err := name.ParseReference(pc.installConfig.GetImage(true))
+	if err != nil {
+		return nil, fmt.Errorf("parse image reference: %w", err)
+	}
+
+	updateChanManifest, err := pc.imageDescriptorProvider.Descriptor(channelRef, remote.WithContext(ctx), remote.WithAuth(creds))
 	if err != nil {
 		return nil, fmt.Errorf("pull deckhouse image manifest from registry: %w", err)
 	}
-	hash := descriptor.Digest
+	versionManifest, err := pc.imageDescriptorProvider.Descriptor(versionTagRef, remote.WithContext(ctx), remote.WithAuth(creds))
+	if err != nil {
+		return nil, fmt.Errorf("pull deckhouse image manifest from registry: %w", err)
+	}
+
+	if updateChanManifest.Digest != versionManifest.Digest {
+		return nil, ErrDeckhouseUpdateChannelHasDiffirentReleaseOnIt
+	}
+
+	hash := versionManifest.Digest
 	return &hash, nil
 }
 
-func (pc *PreflightCheck) findRegistryAuthCredentials() (authn.Authenticator, error) {
+func (pc *Checker) findRegistryAuthCredentials() (authn.Authenticator, error) {
 	buf, err := base64.StdEncoding.DecodeString(pc.installConfig.Registry.DockerCfg)
 	if err != nil {
 		return nil, fmt.Errorf("decode dockerCfg: %w", err)

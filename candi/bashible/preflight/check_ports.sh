@@ -57,7 +57,7 @@ do
     echo -n "Check port $port "
     check_port $port
     if [ $? -ne 0 ]; then
-        echo "FAIL"
+        echo "Cannot open port $port. Probably control-plane node protected with firewall rules or another software (like antivirus) does not allow to open port."
         has_error=true
         continue
     fi

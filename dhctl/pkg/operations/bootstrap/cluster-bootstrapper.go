@@ -238,7 +238,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	deckhouseInstallConfig.KubeadmBootstrap = true
 	deckhouseInstallConfig.MasterNodeSelector = true
 
-	preflightCheck := preflight.NewPreflightCheck(sshClient, deckhouseInstallConfig, metaConfig)
+	preflightChecker := preflight.NewChecker(sshClient, deckhouseInstallConfig, metaConfig)
+	if err := preflightChecker.Global(); err != nil {
+		return err
+	}
 
 	bootstrapState := NewBootstrapState(stateCache)
 
@@ -253,7 +256,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	var resourcesTemplateData map[string]interface{}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		err = preflightCheck.CloudCheck()
+		err = preflightChecker.Cloud()
 		if err != nil {
 			return err
 		}
@@ -315,7 +318,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return err
 		}
 	} else {
-		err = preflightCheck.StaticCheck()
+		err = preflightChecker.Static()
 		if err != nil {
 			return err
 		}

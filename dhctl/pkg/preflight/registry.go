@@ -34,13 +34,13 @@ import (
 )
 
 var (
-	ErrBadProxyConfig      = errors.New("bad proxy config")
-	ErrRegistryUnreachable = errors.New("could not reach registry over proxy")
+	ErrBadProxyConfig      = errors.New("Bad proxy config")
+	ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
 )
 
 const ProxyTunnelPort = "22323"
 
-func (pc *PreflightCheck) CheckRegistryAccessThroughProxy() error {
+func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 	if app.PreflightSkipRegistryThroughProxy {
 		log.InfoLn("Checking if registry is accessible through proxy was skipped")
 		return nil
@@ -88,7 +88,6 @@ Please chech connectivity from control-plane node to proxy an from proxy to cont
 		return err
 	}
 
-	log.InfoLn("Checked registry access through proxy successfully")
 	return nil
 }
 
@@ -138,7 +137,7 @@ func getProxyFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, []string, 
 
 	proxyUrl, err := url.Parse(proxyAddr)
 	if err != nil {
-		return nil, nil, fmt.Errorf(`%w: %w`, ErrBadProxyConfig, err)
+		return nil, nil, fmt.Errorf(`%s: %w`, ErrBadProxyConfig, err)
 	}
 
 	return proxyUrl, noProxyAddresses, nil
