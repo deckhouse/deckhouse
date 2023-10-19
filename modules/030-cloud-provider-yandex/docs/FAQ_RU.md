@@ -44,3 +44,19 @@ reserved: true
 При использовании опции `dhcpOptions` все DNS-запросы начнут идти через указанные DNS-серверы. Эти DNS-серверы **должны** разрешать внешние DNS-имена, а также при необходимости разрешать DNS-имена внутренних ресурсов.
 
 **Не используйте** эту опцию, если указанные рекурсивные DNS-серверы не могут разрешать тот же список зон, что сможет разрешать рекурсивный DNS-сервер в подсети Yandex Cloud.
+
+## Как назначить свой StorageClass по-умолчанию?
+
+Для установки кастомного StorageClass для использования по умолчанию:
+
+1. Добавить на него аннотацию:
+
+```shell
+kubectl annotate sc $STORAGECLASS storageclass.kubernetes.io/is-default-class='true'
+```
+
+2. Вставить имя нового StorageClass в [опцию](configuration.html#parameters-storageclass-default) `storageClass.default` в ModuleConfig `cloud-provider-yandex`. Это снимет аннотацию со предыдущего StorageClass по-умолчанию
+
+```shell
+kubectl edit mc cloud-provider-yandex
+```
