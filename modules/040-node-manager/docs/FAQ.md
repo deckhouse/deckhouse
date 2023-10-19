@@ -60,7 +60,7 @@ You can automate the bootstrap process with any automation platform you prefer. 
 
    Save the token you got and add it to the `token:` field of the Ansible playbook in the next steps.
 
-1. Get Kubernetes API token for special `ServiceAccount` that Deckhouse manages:
+1. If the version is smaller 1.25 Get Kubernetes API token for special `ServiceAccount` that Deckhouse manages:
 
    ```shell
    kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
