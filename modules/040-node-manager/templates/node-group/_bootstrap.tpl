@@ -131,7 +131,7 @@ function run_log_output() {
     socat -u FILE:/var/log/cloud-init-output.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
     bootstrap_job_log_pid=$!
   else
-    while true; do cat /var/log/cloud-init-output.log | nc -l "$tcp_endpoint" "$output_log_port"; done &
+    while true; do cat /var/log/cloud-init-output.log | nc -l "$output_log_port"; done &
     bootstrap_job_log_pid=$!
   fi
 }
