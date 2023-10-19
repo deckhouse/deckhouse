@@ -13,7 +13,7 @@ index aec3f7df..0fc45d6c 100644
  	// This is a pointer to distinguish between explicit zero and not specified.
  	// Defaults to 10.
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 1934f145..468ff884 100644
+index 1934f145..a989debe 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
 @@ -505,7 +505,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
@@ -42,7 +42,7 @@ index 1934f145..468ff884 100644
  }
  
 +func (dsc *ReconcileDaemonSet) storeDaemonSetReplicas(ds *appsv1alpha1.DaemonSet) error {
-+	if *ds.Spec.Replicas == ds.Status.DesiredNumberScheduled {
++	if ds.Spec.Replicas != nil && *ds.Spec.Replicas == ds.Status.DesiredNumberScheduled {
 +		return nil
 +	}
 +	dsClient := dsc.kruiseClient.AppsV1alpha1().DaemonSets(ds.Namespace)
