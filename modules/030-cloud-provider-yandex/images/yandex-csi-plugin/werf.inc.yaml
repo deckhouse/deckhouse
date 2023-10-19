@@ -29,7 +29,7 @@ import:
   - sbin/tune2fs
   - sbin/mklost+found
   - sbin/debugfs
-  - 'sbin/fsck*'
+  - 'sbin/fsc*'
   - sbin/resize2fs
 shell:
   setup:
@@ -103,7 +103,6 @@ shell:
         --disable-pylibmount \
         --without-python \
         --prefix="/build/staticbin"
-    - make -j8
     - make LDFLAGS="--static" -j8 install-strip
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-e2fsprogs-builder-artifact
