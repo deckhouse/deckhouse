@@ -131,7 +131,7 @@ function run_log_output() {
     socat -u FILE:${TMPDIR}/bootstrap.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
     bootstrap_job_log_pid=$!
   else
-    while true; do cat ${TMPDIR}/bootstrap.log | nc -l 8000; done &
+    tail -n 100 -f ${TMPDIR}/bootstrap.log | nc -l 8000 &
     bootstrap_job_log_pid=$!
   fi
 }
