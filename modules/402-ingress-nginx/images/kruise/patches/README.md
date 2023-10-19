@@ -18,6 +18,7 @@ and drop excessive pods from the list so as to obbey maxUnavailable setting.
 The thing is that having a pod marked as Unavailable from the Controller point of view doesn't mean that the pod doesn't work and
 should be updated ASAP.
 
-### Add .spec.replicas
-Adds an extra spec field `replicas` which is synced with .status.DesiredNumberScheduled field and is used for providing compatibility with `scale` subresource API.
+### Set .spec.replicas
+Sets an extra spec field `replicas` which is synced with .status.DesiredNumberScheduled field and is used for providing compatibility with `scale` subresource API.
 In its turn, having `scale` subresource allows applying PodDistruptionBudget constraints to advanved daemon sets.
+Also, extensive NoSchedule/NoExecute tolerations for daemonsets' pods are removed.
