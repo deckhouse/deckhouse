@@ -135,5 +135,5 @@ shell:
           --disable-uuidd         \
           --disable-fsck          \
           --disable-nls
-    - make -j4
-    - make -j4 install
+    - make -j8
+    - make -j8 install
