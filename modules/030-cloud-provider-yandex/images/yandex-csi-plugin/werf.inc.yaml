@@ -70,11 +70,9 @@ shell:
   beforeInstall:
     - apt update
     - |
-      apt install -y wget bzip2 curl tar \
-        gcc make automake autopoint \
+      apt install -y wget bzip2 curl tar gcc make automake autopoint \
         gettext pkg-config bison gettext \
-        libtool libexpat1 libexpat1-dev libblkid-dev libsmartcols-dev libutempter-dev \
-        build-essential
+        libtool build-essential
   install:
     - mkdir /builds
     - cd /builds
@@ -89,11 +87,12 @@ shell:
     - |
       ./configure \
         --enable-static \
-        --enable-static-programs=fdisk,sfdisk,findmnt \
+        --enable-static-programs=fdisk,sfdisk,findmnt,lsblk \
         --disable-pylibmount \
         --without-python
-    - make LDFLAGS="--static" -j4 fdisk.static sfdisk.static findmnt
+    - make LDFLAGS="--static" -j4 fdisk.static sfdisk.static findmnt lsblk
     - mkdir -p binaries
     - mv fdisk.static binaries/fdisk
     - mv sfdisk.static binaries/sfdisk
     - mv findmnt binaries/findmnt
+    - mv lsblk binaries/lsblk
