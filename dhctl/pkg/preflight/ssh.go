@@ -45,7 +45,7 @@ func (pc *Checker) CheckSSHTunel() error {
 	err := tun.Up()
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
-Please check connectivity to control-plane host or
+Please check connectivity to control-plane host or bastion or
 check that sshd config 'AllowTcpForwarding' set to 'yes' on control-plane node.`, err)
 	}
 
