@@ -45,9 +45,7 @@ func handleRolloutEpoch(input *go_hook.HookInput) error {
 	randomSource := rand.NewSource(int64(seed))
 	random := rand.New(randomSource) //nolint:gosec
 
-	// TODO ?? could not understand what is going on here as the result epoch can even be negative.
-	// Most likely this whole function has to be rewritten
-	epoch := ((random.Int63() * tenDaysInSeconds) + time.Now().Unix()) / tenDaysInSeconds
+	epoch := ((int64(random.Uint32()) * tenDaysInSeconds) + time.Now().Unix()) / tenDaysInSeconds
 
 	input.Values.Set("controlPlaneManager.internal.rolloutEpoch", epoch)
 
