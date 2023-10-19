@@ -369,7 +369,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 			Name:   istioPodMetadataMetricName,
 			Group:  metadataExporterMetricsGroup,
 			Action: "set",
-			Value:  pointer.Float64Ptr(1.0),
+			Value:  pointer.Float64(1.0),
 			Labels: map[string]string{
 				"namespace":            nsName,
 				"dataplane_pod":        podName,

@@ -28,9 +28,11 @@ import (
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addon-operator/kube-config/backend"
+	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
@@ -90,35 +92,42 @@ func main() {
 		Action(func(c *kingpin.ParseContext) error {
 			sh_app.AppStartMessage = version()
 
-			// Workaround to run AddonOperator with deprecated settings:
-			// - Init temporary Kubernetes client.
-			// - Parse config from ConfigMap or load from ModuleConfig resources.
-			// - Run conversions for sections.
-			loader := d8config.NewInitialConfigLoader(nil)
-			initialKubeConfig, err := loader.GetInitialKubeConfig(os.Getenv("ADDON_OPERATOR_CONFIG_MAP"))
+			ctx := context.Background()
+
+			operator := addon_operator.NewAddonOperator(ctx)
+
+			err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml")
 			if err != nil {
-				log.Error(err)
+				fmt.Println(err)
 				os.Exit(1)
 			}
 
-			operator := addon_operator.NewAddonOperator(context.Background())
-			operator.InitialKubeConfig = initialKubeConfig
+			operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), nil))
+
 			// TODO: remove deckhouse-config purge after release 1.56
 			operator.ExplicitlyPurgeModules = []string{"deckhouse-config"}
+			validation.RegisterAdmissionHandlers(operator)
+			// TODO: move this routes to the deckhouse-controller
 			module.SetupAdmissionRoutes(operator.AdmissionServer)
+
+			err = operator.Setup()
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			operator.ModuleManager.SetupModuleProducer(apis.NewModuleProducer())
 
 			err = operator.Start()
 			if err != nil {
 				os.Exit(1)
 			}
 
-			operator.ModuleManager.SetupModuleProducer(apis.NewModuleProducer())
 			// Init deckhouse-config service with ModuleManager instance.
 			d8config.InitService(operator.ModuleManager)
 
 			// Block main thread by waiting signals from OS.
 			utils_signal.WaitForProcessInterruption(func() {
-				operator.Shutdown()
+				operator.Stop()
 				os.Exit(1)
 			})
 

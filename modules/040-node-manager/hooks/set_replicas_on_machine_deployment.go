@@ -34,7 +34,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "mds",
 			ApiVersion:             "machine.sapcloud.io/v1alpha1",
 			Kind:                   "MachineDeployment",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-cloud-instance-manager"},
@@ -46,7 +46,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "ngs",
 			ApiVersion:             "deckhouse.io/v1",
 			Kind:                   "NodeGroup",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			FilterFunc:             setReplicasFilterNG,
 		},
 	},

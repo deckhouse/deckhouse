@@ -182,7 +182,7 @@ docker:
 ---
 image: dev-prebuild
 fromImage: common-base
-fromCacheVersion: "2023-10-09.0"
+fromCacheVersion: "2023-10-20.0"
 git:
 - add: /
   to: /deckhouse
@@ -193,6 +193,7 @@ git:
   - shell_lib.sh
   - shell_lib
   - deckhouse-controller/entrypoint.sh
+  - deckhouse-controller/crds/*.yaml
   - jq_lib
   - helm_lib
   - python_lib

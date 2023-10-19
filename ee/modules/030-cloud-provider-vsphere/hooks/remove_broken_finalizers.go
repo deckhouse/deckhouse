@@ -43,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "storage.k8s.io/v1",
 			Kind:                         "VolumeAttachment",
 			FilterFunc:                   applyVolumeAttachmentFilter,
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 		},
 	},
 }, handleVolumeAttachments)

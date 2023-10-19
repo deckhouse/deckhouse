@@ -45,8 +45,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "cpm_pods",
 			ApiVersion:                   "v1",
 			Kind:                         "Pod",
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -64,8 +64,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "cpm_ds",
 			ApiVersion:                   "apps/v1",
 			Kind:                         "DaemonSet",
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},

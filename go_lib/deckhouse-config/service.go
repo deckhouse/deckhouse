@@ -42,7 +42,6 @@ func InitService(mm ModuleManager) {
 	serviceInstance = &ConfigService{
 		moduleManager:        mm,
 		possibleNames:        possibleNames,
-		transformer:          NewTransformer(possibleNames),
 		configValidator:      NewConfigValidator(mm.GetValuesValidator()),
 		statusReporter:       NewModuleInfo(mm, possibleNames),
 		moduleNamesToSources: make(map[string]string),
@@ -59,7 +58,6 @@ func Service() *ConfigService {
 type ConfigService struct {
 	moduleManager   ModuleManager
 	possibleNames   set.Set
-	transformer     *Transformer
 	configValidator *ConfigValidator
 	statusReporter  *StatusReporter
 
@@ -69,10 +67,6 @@ type ConfigService struct {
 
 func (srv *ConfigService) PossibleNames() set.Set {
 	return srv.possibleNames
-}
-
-func (srv *ConfigService) Transformer() *Transformer {
-	return srv.transformer
 }
 
 func (srv *ConfigService) ConfigValidator() *ConfigValidator {

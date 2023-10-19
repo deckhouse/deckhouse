@@ -18,7 +18,13 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
+
 	klient "github.com/flant/kube-client/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
@@ -29,7 +35,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-type KubeClient = klient.Client
+type KubeClient interface {
+	kubernetes.Interface
+	Dynamic() dynamic.Interface
+	APIResourceList(apiVersion string) ([]*metav1.APIResourceList, error)
+	GroupVersionResource(apiVersion, kind string) (schema.GroupVersionResource, error)
+}
 
 // KubernetesClient connects to kubernetes API server through ssh tunnel and kubectl proxy.
 type KubernetesClient struct {
