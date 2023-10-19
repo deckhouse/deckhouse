@@ -1,0 +1,51 @@
+diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
+index 1934f145..62e9bbe5 100644
+--- a/pkg/controller/daemonset/daemonset_controller.go
++++ b/pkg/controller/daemonset/daemonset_controller.go
+@@ -560,6 +560,10 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
+                return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
+        }
+ 
++       err = dsc.storeDaemonSetReplicas(ctx, ds)
++       if err != nil {
++               return fmt.Errorf("error updating DaemonSet %v replicas: %v", ds.Name, err)
++
+        // Resync the DaemonSet after MinReadySeconds as a last line of defense to guard against clock-skew.
+        if ds.Spec.MinReadySeconds >= 0 && numberReady != numberAvailable {
+                durationStore.Push(keyFunc(ds), time.Duration(ds.Spec.MinReadySeconds)*time.Second)
+@@ -567,6 +571,35 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
+        return nil
+ }
+ 
++func (dsc *ReconcileDaemonSet) storeDaemonSetReplicas(ctx context.Context, ds *appsv1alpha1.DaemonSet) error {
++       if ds.Replicas == ds.Status.DesiredNumberScheduled {
++               return nil
++       }
++
++       dsClient := dsc.kruiseClient.AppsV1alpha1().DaemonSets(ds.Namespace)
++        toUpdate := ds.DeepCopy()
++       var updateErr, getErr error
++
++       return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
++               toUpdate.Spec.Replicas = ds.Status.ds.Status.DesiredNumberScheduled
++
++               if _, updateErr = dsClient.Update(ctx, toUpdate, metav1.UpdateOptions{}); updateErr == nil {
++                       klog.Infof("Updated DaemonSet %s/%s replicas to %d", ds.Namespace, ds.Name, ds.Status.DesiredNumberScheduled)
++                       return nil
++               }
++
++               klog.Errorf("Update DaemonSet replicas %v failed: %v", ds.Status, updateErr)
++               // Update the set with the latest resource version for the next poll
++               if toUpdate, getErr = dsClient.Get(ctx, ds.Name, metav1.GetOptions{}); getErr != nil {
++                       // If the GET fails we can't trust status.Replicas anymore. This error
++                       // is bound to be more interesting than the update failure.
++                       klog.Errorf("Get DaemonSet %v for replicas update failed: %v", ds.Name, getErr)
++                       return getErr
++               }
++               return updateErr
++       })
++}
++
+ func (dsc *ReconcileDaemonSet) storeDaemonSetStatus(ds *appsv1alpha1.DaemonSet, desiredNumberScheduled, currentNumberScheduled, numberMisscheduled, numberReady, updatedNumberScheduled, numberAvailable, numberUnavailable int, updateObservedGen bool, hash string) error {
+        if int(ds.Status.DesiredNumberScheduled) == desiredNumberScheduled &&
+                int(ds.Status.CurrentNumberScheduled) == currentNumberScheduled &&
