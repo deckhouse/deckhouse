@@ -29,7 +29,6 @@ shopt -s failglob
 BOOTSTRAP_DIR="/var/lib/bashible"
 TMPDIR="/opt/deckhouse/tmp"
 mkdir -p "$BOOTSTRAP_DIR" "$TMPDIR"
-exec >"$TMPDIR/bootstrap.log" 2>&1
 
 # Directory contains sensitive information
 chmod 0700 $BOOTSTRAP_DIR
@@ -97,16 +96,6 @@ while [ "$patch_pending" = true ] ; do
     fi
   done
 done
-
-# Start output bootstrap logs
-if type socat >/dev/null 2>&1; then
-  socat -u FILE:/var/log/cloud-init-output.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
-  bootstrap_job_log_pid=$!
-else
-  while true; do cat /var/log/cloud-init-output.log | nc -l "$tcp_endpoint" "$output_log_port"; done &
-  bootstrap_job_log_pid=$!
-fi
-
   {{- end }}
 
 # IMPORTANT !!! Centos/Redhat put jq in /usr/local/bin but it is not in PATH.
@@ -119,9 +108,4 @@ chmod +x $BOOTSTRAP_DIR/bashible.sh
 until /var/lib/bashible/bashible.sh; do
   echo "Error running bashible script. Retry in 10 seconds."
   sleep 10
-done;
-
-# Stop output bootstrap logs
-if [ -n "${bootstrap_job_log_pid-}" ] && kill -s 0 "${bootstrap_job_log_pid-}" 2>/dev/null; then
-  kill -9 "${bootstrap_job_log_pid-}"
-fi
+done
