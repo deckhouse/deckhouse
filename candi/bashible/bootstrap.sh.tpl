@@ -63,7 +63,6 @@ basic_bootstrap_${BUNDLE}
 
 bootstrap_job_log_pid=""
 
-  {{- if eq .nodeGroup.nodeType "CloudEphemeral" }}
 # Put bootstrap log information to Machine resource status
 patch_pending=true
 output_log_port=8000
@@ -85,18 +84,17 @@ while [ "$patch_pending" = true ] ; do
       --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"${tcp_endpoint}:${output_log_port}\"} }]" \
       "https://$server/apis/deckhouse.io/v1alpha1/instances/$(hostname -s)/status" ; then
 
-      echo "Successfully patched machine $(hostname -s) status."
+      echo "Successfully patched instance $(hostname -s) status."
       patch_pending=false
 
       break
     else
-      >&2 echo "Failed to patch machine $(hostname -s) status."
+      >&2 echo "Failed to patch instance $(hostname -s) status."
       sleep 10
       continue
     fi
   done
 done
-  {{- end }}
 
 # IMPORTANT !!! Centos/Redhat put jq in /usr/local/bin but it is not in PATH.
 export PATH="/opt/deckhouse/bin:$PATH"
