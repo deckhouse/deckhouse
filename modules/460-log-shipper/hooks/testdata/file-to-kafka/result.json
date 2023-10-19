@@ -44,6 +44,12 @@
       "tls": {
         "verify_hostname": true,
         "verify_certificate": true
+      },
+      "sasl": {
+        "username": "test",
+        "password": "test",
+        "mechanism": "PLAIN",
+        "enabled": true
       }
     }
   }

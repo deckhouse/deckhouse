@@ -371,6 +371,28 @@ spec:
                       items:
                         type: string
                         pattern: '^(.+)\:\d{1,5}$'
+                    sasl:
+                      type: object
+                      description: Configuration for SASL authentication when interacting with Kafka.
+                      required:
+                        - mechanism
+                        - username
+                        - password
+                      properties:
+                        mechanism:
+                          type: string
+                          description: The SASL mechanism to use. Only PLAIN and SCRAM-based mechanisms are supported.
+                          enum: ["PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"]
+                        username:
+                          type: string
+                          description: The SASL username.
+                          x-doc-examples:
+                            - "username"
+                        password:
+                          type: string
+                          description: The SASL password.
+                          x-doc-examples:
+                            - "qwerty"
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.

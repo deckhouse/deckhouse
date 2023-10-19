@@ -125,6 +125,22 @@ type KafkaSpec struct {
 	Topic string `json:"topic,omitempty"`
 
 	TLS CommonTLSSpec `json:"tls,omitempty"`
+
+	SASL KafkaSASL `json:"sasl,omitempty"`
+}
+
+type KafkaSASLMechanism string
+
+const (
+	KafkaSASLMechanismPLAIN  KafkaSASLMechanism = "PLAIN"
+	KafkaSASLMechanismSHA256 KafkaSASLMechanism = "SCRAM-SHA-256"
+	KafkaSASLMechanismSHA512 KafkaSASLMechanism = "SCRAM-SHA-512"
+)
+
+type KafkaSASL struct {
+	Username  string             `json:"username"`
+	Password  string             `json:"password"`
+	Mechanism KafkaSASLMechanism `json:"mechanism"`
 }
 
 type ElasticsearchSpec struct {

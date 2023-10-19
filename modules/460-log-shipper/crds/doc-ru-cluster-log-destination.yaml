@@ -156,6 +156,16 @@ spec:
                       type: array
                       description: |
                         Список пар адресов (хост:порт) Kafka-брокеров в кластере Kafka, к которым должны подключиться клиенты для получения метаданных (топиков и партиций).
+                    sasl:
+                      type: object
+                      description: Конфигурация аутентификации SASL для взаимодействия с Kafka.
+                      properties:
+                        mechanism:
+                          description: Механизм аутентификации SASL. Поддерживаются только PLAIN и SCRAM-подобные механизмы.
+                        username:
+                          description: Имя пользователя.
+                        password:
+                          description: Пароль пользователя.
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
