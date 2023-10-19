@@ -15,9 +15,12 @@
 import sys
 import linstor
 import argparse
-import pathlib
 import sched, time
 import logging
+from typing import List
+from pathlib import Path
+
+BASE_RES_PATH = "/var/lib/linstor.d/"
 
 def singleton(class_):
     instances = {}
@@ -32,7 +35,7 @@ def singleton(class_):
 @singleton
 class LinstorConnection:
     def __init__(self) -> None:
-        # In pod hardcoded.
+        # In pod hardcoded. TODO: we can use linstor.Config.get_section('global') instead
         self.__conn = linstor.Linstor("linstor+ssl://linstor.d8-linstor.svc:3371")
         self.__conn.keyfile = '/etc/linstor/client/tls.key'
         self.__conn.cafile = '/etc/linstor/client/ca.crt'
@@ -50,14 +53,23 @@ class LinstorConnection:
             else:
                 break
         else:
-            logger.error("couldnor request resource list from linstor")
+            logger.error("couldnot request resource list from linstor")
             result = None
         self.__conn.disconnect()
         return result
 
+def get_res_files() -> List[str]:
+    files_iter = Path(BASE_RES_PATH).glob("*.res")
+    return [f.name for f in files_iter]
 
 def process_res_files():
-    pass
+    logger = logging.getLogger()
+    res_files = get_res_files()
+    logging.debug(f"get {len(res_files)} *.res files in {BASE_RES_PATH}")
+
+    lin_con = LinstorConnection()
+    rest_reponse = lin_con.get_resource_list()
+
 
 def main(interval: int, debug: bool):
     log_level = logging.INFO
