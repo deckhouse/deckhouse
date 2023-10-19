@@ -55,3 +55,6 @@ index 1934f145..25a8ed72 100644
 +       })
 +}
 +
+ func (dsc *ReconcileDaemonSet) storeDaemonSetStatus(ds *appsv1alpha1.DaemonSet, desiredNumberScheduled, currentNumberScheduled, numberMisscheduled, numberReady, updatedNumberScheduled, numberAvailable, numberUnavailable int, updateObservedGen bool, hash string) error {
+        if int(ds.Status.DesiredNumberScheduled) == desiredNumberScheduled &&
+                int(ds.Status.CurrentNumberScheduled) == currentNumberScheduled &&
