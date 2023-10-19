@@ -51,12 +51,12 @@ reserved: true
 
 1. Добавить на него аннотацию:
 
-```shell
-kubectl annotate sc $STORAGECLASS storageclass.kubernetes.io/is-default-class='true'
-```
+   ```shell
+   kubectl annotate sc $STORAGECLASS storageclass.kubernetes.io/is-default-class='true'
+   ```
 
 2. Вставить имя нового StorageClass в [опцию](configuration.html#parameters-storageclass-default) `storageClass.default` в ModuleConfig `cloud-provider-yandex`. Это снимет аннотацию со предыдущего StorageClass по-умолчанию
 
-```shell
-kubectl edit mc cloud-provider-yandex
-```
+   ```shell
+   kubectl edit mc cloud-provider-yandex
+   ```
