@@ -21,6 +21,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
@@ -77,6 +78,10 @@ func (s *SSH) Cmd() *exec.Cmd {
 		"-o", "ServerAliveCountMax=2",
 		"-o", "ConnectTimeout=5",
 		"-o", "PasswordAuthentication=no",
+	}
+
+	if app.IsDebug {
+		args = append(args, "-vvv")
 	}
 
 	if s.Session.ExtraArgs != "" {

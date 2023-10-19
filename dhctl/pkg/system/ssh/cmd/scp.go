@@ -20,6 +20,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
@@ -88,6 +90,10 @@ func (s *SCP) SCP() *SCP {
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "UserKnownHostsFile=.ssh_known_hosts",
 		"-o", "PasswordAuthentication=no",
+	}
+
+	if app.IsDebug {
+		args = append(args, "-vvv")
 	}
 
 	if s.Session.ExtraArgs != "" {
