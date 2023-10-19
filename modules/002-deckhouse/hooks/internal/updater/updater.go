@@ -205,7 +205,7 @@ func (du *DeckhouseUpdater) checkMinorReleaseConditions(predictedRelease *Deckho
 	}
 
 	// check: canary settings
-	if predictedRelease.ApplyAfter != nil {
+	if predictedRelease.ApplyAfter != nil && !du.inManualMode {
 		if du.now.Before(*predictedRelease.ApplyAfter) {
 			du.input.LogEntry.Infof("Release %s is postponed by canary process. Waiting", predictedRelease.Name)
 			du.updateStatus(predictedRelease, fmt.Sprintf("Release is postponed until: %s", predictedRelease.ApplyAfter.Format(time.RFC822)), v1alpha1.PhasePending)
@@ -548,11 +548,9 @@ func (du *DeckhouseUpdater) patchManualRelease(release DeckhouseRelease) Deckhou
 
 	if !release.ManuallyApproved {
 		release.Status.Approved = false
-		release.Status.Message = waitingManualApprovalMsg
 		du.totalPendingManualReleases++
 	} else {
 		release.Status.Approved = true
-		release.Status.Message = ""
 	}
 
 	return release
