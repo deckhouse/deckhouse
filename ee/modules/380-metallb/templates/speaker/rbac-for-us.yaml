@@ -18,6 +18,7 @@ rules:
       - services
       - endpoints
       - nodes
+      - namespaces
     verbs:
       - get
       - list
@@ -77,6 +78,7 @@ rules:
       - ""
     resources:
       - secrets
+      - configmaps
     verbs:
       - get
       - list
