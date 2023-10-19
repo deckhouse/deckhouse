@@ -7,7 +7,7 @@ import:
   to: /bin/yandex-csi-driver
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-busybox-builder-artifact
-  add: /builds/busybox-1.36.1/busybox
+  add: /build/busybox-1.36.1/busybox
   to: /bin/busybox
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-builder-artifact
@@ -68,8 +68,8 @@ shell:
     - apt update
     - apt install -y wget bzip2 curl tar gcc make
   install:
-    - mkdir /builds
-    - cd /builds
+    - mkdir /build
+    - cd /build
     - wget -cO- https://busybox.net/downloads/busybox-1.36.1.tar.bz2 | tar -xjv 
     - cd busybox-1.36.1
     - make defconfig
@@ -102,7 +102,7 @@ shell:
         --enable-static \
         --disable-pylibmount \
         --without-python \
-        --prefix="/builds/staticbin"
+        --prefix="/build/staticbin"
     - make -j8
     - make LDFLAGS="--static" -j8 install-strip
 ---
