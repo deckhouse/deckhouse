@@ -13,7 +13,7 @@ index aec3f7df..0fc45d6c 100644
  	// This is a pointer to distinguish between explicit zero and not specified.
  	// Defaults to 10.
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 1934f145..934a8c1e 100644
+index 1934f145..ab81b88d 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
 @@ -505,7 +505,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
@@ -29,7 +29,7 @@ index 1934f145..934a8c1e 100644
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
  
-+	err = dsc.updateDaemonSetReplicas(ds)
++	err = dsc.updateDaemonSetReplicas(ds, desiredNumberScheduled)
 +	if err != nil {
 +		return fmt.Errorf("error updating DaemonSet %v replicas: %v", ds.Name, err)
 +	}
@@ -49,7 +49,7 @@ index 1934f145..934a8c1e 100644
 +	return int32(len(nodeCount.Items)), nil
 +}
 +
-+func (dsc *ReconcileDaemonSet) updateDaemonSetReplicas(ds *appsv1alpha1.DaemonSet) error {
++func (dsc *ReconcileDaemonSet) updateDaemonSetReplicas(ds *appsv1alpha1.DaemonSet, desiredNumberScheduled int) error {
 +	var nodeCount int32
 +	nodeCount, err := dsc.getEligibleNodesCount(ds.Spec.Template.Spec.NodeSelector)
 +	if err != nil {
@@ -70,7 +70,7 @@ index 1934f145..934a8c1e 100644
 +			klog.Infof("Updated DaemonSet %s/%s replicas to %d", ds.Namespace, ds.Name, nodeCount)
 +			// if there are more nodes than Desired (cordoned and drained nodes)
 +			// we need to resync DaemonSet after some time in case the cordoned/drained nodes get deleted
-+			if nodeCount > ds.Status.DesiredNumberScheduled {
++			if nodeCount > int32(desiredNumberScheduled) {
 +				durationStore.Push(keyFunc(ds), time.Duration(30)*time.Second)
 +			}
 +			return nil
