@@ -37,6 +37,7 @@ type kubeClient interface {
 	kubernetes.Interface
 	Dynamic() dynamic.Interface
 	ApiExt() apiextv1.ApiextensionsV1Interface
+	InvalidateDiscoveryCache()
 }
 
 // EnsureCRDs installs or update primary CRDs for deckhouse-controller
@@ -61,6 +62,9 @@ func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
 			return err
 		}
 	}
+
+	// it's not necessary, but it could speed up a bit further api discovery
+	client.InvalidateDiscoveryCache()
 
 	return nil
 }
