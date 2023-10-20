@@ -69,11 +69,12 @@ securityContext:
   allowPrivilegeEscalation: false
 {{- end }}
 
-{{- /* Usage: {{ include "helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux" . }} */ -}}
-{{- /* returns SecurityContext parameters for Container with allowPrivilegeEscalation false and options for SELinux compatibility*/ -}}
-{{- define "helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux" -}}
+{{- /* Usage: {{ include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . }} */ -}}
+{{- /* returns SecurityContext parameters for Container with read only root filesystem and options for SELinux compatibility*/ -}}
+{{- define "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" -}}
 {{- /* Template context with .Values, .Chart, etc */ -}}
 securityContext:
+  readOnlyRootFilesystem: true
   allowPrivilegeEscalation: false
   seLinuxOptions:
     level: 's0'
