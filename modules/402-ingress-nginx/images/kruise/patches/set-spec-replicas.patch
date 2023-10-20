@@ -13,23 +13,14 @@ index aec3f7df..0fc45d6c 100644
  	// This is a pointer to distinguish between explicit zero and not specified.
  	// Defaults to 10.
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 1934f145..a989debe 100644
+index 1934f145..26305094 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
-@@ -505,7 +505,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
- 	// newPod.Spec.NodeName = nodeName
- 
- 	// Added default tolerations for DaemonSet pods.
--	util.AddOrUpdateDaemonPodTolerations(&newPod.Spec)
-+	// util.AddOrUpdateDaemonPodTolerations(&newPod.Spec)
- 
- 	newPodForDSCache.Store(ds.UID, &newPodForDS{generation: ds.Generation, pod: newPod})
- 	return newPod
 @@ -560,6 +560,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
  
-+	err = dsc.storeDaemonSetReplicas(ds)
++	err = dsc.updateDaemonSetReplicas(ds)
 +	if err != nil {
 +		return fmt.Errorf("error updating DaemonSet %v replicas: %v", ds.Name, err)
 +	}
@@ -37,22 +28,37 @@ index 1934f145..a989debe 100644
  	// Resync the DaemonSet after MinReadySeconds as a last line of defense to guard against clock-skew.
  	if ds.Spec.MinReadySeconds >= 0 && numberReady != numberAvailable {
  		durationStore.Push(keyFunc(ds), time.Duration(ds.Spec.MinReadySeconds)*time.Second)
-@@ -567,6 +572,33 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
+@@ -567,6 +572,48 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  	return nil
  }
  
-+func (dsc *ReconcileDaemonSet) storeDaemonSetReplicas(ds *appsv1alpha1.DaemonSet) error {
-+	if ds.Spec.Replicas != nil && *ds.Spec.Replicas == ds.Status.DesiredNumberScheduled {
++func (dsc *ReconcileDaemonSet) getEligibleNodesCount(nodeSelector map[string]string) (int32, error) {
++	nodeCount, err := dsc.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(nodeSelector).String()})
++	if err != nil {
++		return 0, err
++	}
++	return int32(len(nodeCount.Items)), nil
++}
++
++func (dsc *ReconcileDaemonSet) updateDaemonSetReplicas(ds *appsv1alpha1.DaemonSet) error {
++	var nodeCount int32
++	nodeCount, err := dsc.getEligibleNodesCount(ds.Spec.Template.Spec.NodeSelector)
++	if err != nil {
++		return err
++	}
++
++	if ds.Spec.Replicas != nil && *ds.Spec.Replicas == nodeCount {
 +		return nil
 +	}
++
 +	dsClient := dsc.kruiseClient.AppsV1alpha1().DaemonSets(ds.Namespace)
 +	toUpdate := ds.DeepCopy()
 +	var updateErr, getErr error
 +
 +	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-+		toUpdate.Spec.Replicas = &ds.Status.DesiredNumberScheduled
++		toUpdate.Spec.Replicas = &nodeCount
 +		if _, updateErr = dsClient.Update(context.TODO(), toUpdate, metav1.UpdateOptions{}); updateErr == nil {
-+			klog.Infof("Updated DaemonSet %s/%s replicas to %d", ds.Namespace, ds.Name, ds.Status.DesiredNumberScheduled)
++			klog.Infof("Updated DaemonSet %s/%s replicas to %d", ds.Namespace, ds.Name, nodeCount)
 +			return nil
 +		}
 +
