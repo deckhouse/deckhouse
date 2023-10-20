@@ -20,6 +20,8 @@ import (
 	"os"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/flant/kube-client/client"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +55,8 @@ func start(_ *kingpin.ParseContext) error {
 		os.Exit(1)
 	}
 
-	err = waitForMe(ctx, operator.KubeClient())
+	// we have to lock the controller run if dhctl lock configmap exists
+	err = lockOnBootstrap(ctx, operator.KubeClient())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -92,11 +95,11 @@ func start(_ *kingpin.ParseContext) error {
 }
 
 const (
-	cmLockName  = "foobar"
+	cmLockName  = "deckhouse-bootstrap-lock"
 	cmNamespace = "d8-system"
 )
 
-func waitForMe(ctx context.Context, client *client.Client) error {
+func lockOnBootstrap(ctx context.Context, client *client.Client) error {
 	bk := wait.Backoff{
 		Duration: 1 * time.Second,
 		Factor:   1.2,
@@ -104,22 +107,22 @@ func waitForMe(ctx context.Context, client *client.Client) error {
 		Steps:    10,
 		Cap:      5 * time.Minute,
 	}
-	fmt.Println("RUN RETRY")
+
 	return retry.OnError(bk, func(err error) bool {
+		log.Errorf("An error occurred during the bootstrap lock: %s. Retrying", err)
+		// retry on any error
 		return true
 	}, func() error {
-		fmt.Println("CHECKING FOR MAP")
 		_, err := client.CoreV1().ConfigMaps(cmNamespace).Get(ctx, cmLockName, v1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				fmt.Println("MAP DOEST NOT EXIST")
 				return nil
 			}
 
 			return err
 		}
 
-		fmt.Println("MAP EXISTS. LOCKING")
+		log.Info("Bootstrap lock ConfigMap exists. Waiting for bootstrap process to be done")
 
 		listOpts := v1.ListOptions{
 			FieldSelector: "metadata.name=" + cmLockName,
@@ -129,16 +132,15 @@ func waitForMe(ctx context.Context, client *client.Client) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println("RUN WATCHER")
 
 		for event := range wch.ResultChan() {
 			if event.Type == watch.Deleted {
-				fmt.Println("MAP WAS DELETED")
 				break
 			}
 		}
-		fmt.Println("MAP STOP")
 		wch.Stop()
+
+		log.Info("Bootstrap lock has been released")
 
 		return nil
 	})
