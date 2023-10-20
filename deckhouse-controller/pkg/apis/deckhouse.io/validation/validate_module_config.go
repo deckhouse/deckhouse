@@ -21,16 +21,19 @@ import (
 	"fmt"
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
+	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
+// moduleConfigValidationHandler validations for ModuleConfig creation
 func moduleConfigValidationHandler() http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
 		switch review.Operation {
@@ -42,7 +45,7 @@ func moduleConfigValidationHandler() http.Handler {
 			return rejectResult(fmt.Sprintf("operation '%s' is not applicable", review.Operation))
 		}
 
-		cfg, ok := obj.(*d8v1alpha1.ModuleConfig)
+		cfg, ok := obj.(*v1alpha1.ModuleConfig)
 		if !ok {
 			return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 		}
@@ -63,13 +66,33 @@ func moduleConfigValidationHandler() http.Handler {
 		return allowResult(res.Warning)
 	})
 
+	logger := kwhlogrus.NewLogrus(log.NewEntry(log.StandardLogger()))
+
 	// Create webhook.
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
 		ID:        "module-config-operations",
 		Validator: vf,
-		Logger:    validationLogger,
-		Obj:       &d8v1alpha1.ModuleConfig{},
+		Logger:    logger,
+		Obj:       &v1alpha1.ModuleConfig{},
 	})
 
-	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: validationLogger})
+	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: logger})
+}
+
+func allowResult(warnMsg string) (*kwhvalidating.ValidatorResult, error) {
+	var warnings []string
+	if warnMsg != "" {
+		warnings = []string{warnMsg}
+	}
+	return &kwhvalidating.ValidatorResult{
+		Valid:    true,
+		Warnings: warnings,
+	}, nil
+}
+
+func rejectResult(msg string) (*kwhvalidating.ValidatorResult, error) {
+	return &kwhvalidating.ValidatorResult{
+		Valid:   false,
+		Message: msg,
+	}, nil
 }

@@ -4,7 +4,8 @@ metadata:
   name: moduleconfigs.deckhouse.io
   labels:
     heritage: deckhouse
-    module: deckhouse-config
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
 spec:
   group: deckhouse.io
   scope: Cluster
