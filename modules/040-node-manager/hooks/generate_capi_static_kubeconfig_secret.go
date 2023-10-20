@@ -52,6 +52,7 @@ var (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/modules/node-manager/capi",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "node_group",
@@ -59,6 +60,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "NodeGroup",
 			FilterFunc: staticInstancesNodeGroupFilter,
 		},
+	},
+	OnAfterHelm: &go_hook.OrderedConfig{
+		Order: 10,
 	},
 	Schedule: []go_hook.ScheduleConfig{
 		{
