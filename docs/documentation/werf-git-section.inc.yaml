@@ -14,6 +14,7 @@
   - '040-node-manager/crds/extension-config.yaml'
   - '040-node-manager/crds/machine.yaml'
   - '040-node-manager/crds/machine-*.yaml'
+  - '040-node-manager/crds/staticcluster.yaml'
   - '040-node-manager/crds/staticcontrolplane.yaml'
   - '040-node-manager/crds/staticmachine*.yaml'
   - '110-istio/crds/istio'
