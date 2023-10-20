@@ -820,12 +820,12 @@ github.com/fatih/structtag v1.2.0 h1:/OdNE99OxoI/PqaW/SuSK9uxxT3f/tcSZgon/ssNSx4
 github.com/fatih/structtag v1.2.0/go.mod h1:mBJUNpUnHmRKrKlQQlmCrh5PuhftFbNv8Ys4/aAZl94=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/flant/addon-operator v1.2.4-0.20231020112153-735851287d63/go.mod h1:vJVV+HataUNQyoq/HvSLfWlBdxmC2BzJ3BLA1M9B4PI=
+github.com/flant/addon-operator v1.2.4-0.20231020124959-72ef8e842e0e/go.mod h1:1vagzWsCAvQwxU5SGN+flU4LxGuUWZSzzC5jPqXykWY=
 github.com/flant/kube-client v1.0.1-0.20231019134437-4efe57b3a5c7/go.mod h1:YVcJ8PxomM0iYsK7nj2I3lmog2D0j/GloJfLYnhjlls=
 github.com/flant/kube-client v1.0.1/go.mod h1:YVcJ8PxomM0iYsK7nj2I3lmog2D0j/GloJfLYnhjlls=
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
-github.com/flant/shell-operator v1.3.3-0.20231020112117-1ed359ab329e/go.mod h1:C9QkCULMCFS3nzPBTSLu3udrJFW26fc4XVwxwcCTpfM=
+github.com/flant/shell-operator v1.3.3-0.20231020122727-9ee4d1c779ce/go.mod h1:C9QkCULMCFS3nzPBTSLu3udrJFW26fc4XVwxwcCTpfM=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/form3tech-oss/jwt-go v3.2.3+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
 github.com/frankban/quicktest v1.11.3/go.mod h1:wRf/ReqHper53s+kmmSZizM8NamnL3IM0I9ntUbOk+k=
