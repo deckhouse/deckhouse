@@ -17,9 +17,14 @@ package deckhouse
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -30,6 +35,15 @@ func TestDeckhouseInstall(t *testing.T) {
 	log.InitLogger("simple")
 	fakeClient := client.NewFakeKubernetesClient()
 
+	err := os.WriteFile("/deckhouse/version", []byte("1.54.1"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
+
 	tests := []struct {
 		name    string
 		test    func() error
@@ -38,25 +52,25 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"Empty config",
 			func() error {
-				return CreateDeckhouseManifests(fakeClient, &Config{})
+				return CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{})
 			},
 			false,
 		},
 		{
 			"Double install",
 			func() error {
-				err := CreateDeckhouseManifests(fakeClient, &Config{})
+				err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{})
 				if err != nil {
 					return err
 				}
-				return CreateDeckhouseManifests(fakeClient, &Config{})
+				return CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{})
 			},
 			false,
 		},
 		{
 			"With docker cfg",
 			func() error {
-				err := CreateDeckhouseManifests(fakeClient, &Config{
+				err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
 					Registry: config.RegistryData{DockerCfg: "YW55dGhpbmc="},
 				})
 				if err != nil {
@@ -78,11 +92,10 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"With secrets",
 			func() error {
-				conf := Config{
+				conf := config.DeckhouseInstaller{
 					ClusterConfig:         []byte(`test`),
 					ProviderClusterConfig: []byte(`test`),
 					TerraformState:        []byte(`test`),
-					DeckhouseConfig:       map[string]interface{}{"test": "test"},
 				}
 				err := CreateDeckhouseManifests(fakeClient, &conf)
 				if err != nil {
@@ -105,4 +118,120 @@ func TestDeckhouseInstall(t *testing.T) {
 			t.Errorf("%s: expected error, didn't get one", tc.name)
 		}
 	}
+}
+
+func TestDeckhouseInstallWithDevBranch(t *testing.T) {
+	fakeClient := client.NewFakeKubernetesClient()
+
+	err := os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
+
+	err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+		DevBranch: "pr1111",
+	})
+
+	require.NoError(t, err)
+}
+
+func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
+	err := os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
+
+	fakeClient := client.NewFakeKubernetesClient()
+
+	mc1 := &config.ModuleConfig{}
+	mc1.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   config.ModuleConfigGroup,
+		Version: config.ModuleConfigVersion,
+		Kind:    config.ModuleConfigKind,
+	})
+	mc1.SetName("global")
+	mc1.Spec.Enabled = pointer.Bool(true)
+	mc1.Spec.Version = 1
+	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
+		"ha": true,
+	})
+
+	err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+		DevBranch:     "pr1111",
+		ModuleConfigs: []*config.ModuleConfig{mc1},
+	})
+
+	require.NoError(t, err)
+
+	mc, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "global", metav1.GetOptions{})
+	require.NoError(t, err)
+
+	require.NotNil(t, mc)
+
+	// should be not found for unlock deckhouse queue
+	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
+	require.True(t, errors.IsNotFound(err))
+}
+
+func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
+	err := os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
+
+	fakeClient := client.NewFakeKubernetesClient()
+
+	mc1 := &config.ModuleConfig{}
+	mc1.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   config.ModuleConfigGroup,
+		Version: config.ModuleConfigVersion,
+		Kind:    config.ModuleConfigKind,
+	})
+	mc1.SetName("global")
+	mc1.Spec.Enabled = pointer.Bool(true)
+	mc1.Spec.Version = 1
+	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
+		"ha": true,
+	})
+
+	mc2 := &config.ModuleConfig{}
+	mc2.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   config.ModuleConfigGroup,
+		Version: config.ModuleConfigVersion,
+		Kind:    config.ModuleConfigKind,
+	})
+	mc2.SetName("deckhouse")
+	mc2.Spec.Enabled = pointer.Bool(true)
+	mc2.Spec.Version = 1
+	mc2.Spec.Settings = config.SettingsValues(map[string]interface{}{
+		"bundle": "Minimal",
+	})
+
+	err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+		DevBranch:     "pr1111",
+		ModuleConfigs: []*config.ModuleConfig{mc1, mc2},
+	})
+
+	require.NoError(t, err)
+
+	mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+	require.NoError(t, err)
+
+	require.Len(t, mcs.Items, 2)
+
+	// should be not found for unlock deckhouse queue
+	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
+	require.True(t, errors.IsNotFound(err))
 }

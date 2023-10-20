@@ -19,16 +19,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/iancoleman/strcase"
+	"k8s.io/apimachinery/pkg/runtime"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -41,65 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-type Config struct {
-	Registry              config.RegistryData
-	LogLevel              string
-	Bundle                string
-	ReleaseChannel        string
-	DevBranch             string
-	UUID                  string
-	KubeDNSAddress        string
-	ClusterConfig         []byte
-	ProviderClusterConfig []byte
-	StaticClusterConfig   []byte
-	TerraformState        []byte
-	NodesTerraformState   map[string][]byte
-	CloudDiscovery        []byte
-	DeckhouseConfig       map[string]interface{}
-
-	KubeadmBootstrap   bool
-	MasterNodeSelector bool
-}
-
-func (c *Config) GetImage(forceVersionTag bool) string {
-	registryNameTemplate := "%s%s:%s"
-	tag := c.DevBranch
-	if c.ReleaseChannel != "" {
-		tag = strcase.ToKebab(c.ReleaseChannel)
-	}
-	if forceVersionTag {
-		versionTag, foundValidTag := readVersionTagFromInstallerContainer()
-		if foundValidTag {
-			tag = versionTag
-		}
-	}
-
-	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
-}
-
-func (c *Config) IsRegistryAccessRequired() bool {
-	return c.Registry.DockerCfg != ""
-}
-
-func readVersionTagFromInstallerContainer() (string, bool) {
-	rawFile, err := os.ReadFile(app.VersionFile)
-	if err != nil {
-		log.WarnF(
-			"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
-			app.VersionFile, err,
-		)
-		return "", false
-	}
-
-	tag := string(rawFile)
-	if _, err = semver.NewVersion(tag); err != nil {
-		return "", false
-	}
-
-	return tag, true
-}
-
-func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *Config, manifestForUpdate *appsv1.Deployment) (*appsv1.Deployment, error) {
+func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller, manifestForUpdate *appsv1.Deployment) (*appsv1.Deployment, error) {
 	resDeployment := manifestForUpdate
 	err := retry.NewSilentLoop("get deployment", 10, 3*time.Second).Run(func() error {
 		currentManifestInCluster, err := kubeCl.AppsV1().Deployments(manifestForUpdate.GetNamespace()).Get(context.TODO(), manifestForUpdate.GetName(), metav1.GetOptions{})
@@ -125,7 +67,7 @@ func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *C
 	return resDeployment, err
 }
 
-func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *Config) actions.ManifestTask {
+func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) actions.ManifestTask {
 	return actions.ManifestTask{
 		Name: `Deployment "deckhouse"`,
 		Manifest: func() interface{} {
@@ -148,7 +90,14 @@ func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *Config) acti
 	}
 }
 
-func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) error {
+func UnLockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Unlock Deckhouse controller queue", 15, 5*time.Second).Run(func() error {
+		return kubeCl.CoreV1().ConfigMaps("d8-system").
+			Delete(context.TODO(), "deckhouse-bootstrap-lock", metav1.DeleteOptions{})
+	})
+}
+
+func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
 	tasks := []actions.ManifestTask{
 		{
 			Name:     `Namespace "d8-system"`,
@@ -199,20 +148,23 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			},
 		},
 		{
-			Name:     `ConfigMap "deckhouse"`,
-			Manifest: func() interface{} { return manifests.DeckhouseConfigMap(cfg.DeckhouseConfig) },
-			CreateFunc: func(manifest interface{}) error {
-				// check cm existing for prevent error
-				// deckhouse create manifests: create resource: admission webhook "validate-cm.deckhouse-config-webhook.deckhouse.io" denied the request:
-				// changing ConfigMap/deckhouse is not allowed for kubernetes-admin. Use ModuleConfig resources to configure Deckhouse.
-				// after restart bootstrap
-				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
-					Get(context.TODO(), "deckhouse-generated-config-do-not-edit", metav1.GetOptions{})
-				if k8serror.IsNotFound(err) {
-					_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
-						Create(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
-					return err
+			Name: `ConfigMap "deckhouse-bootstrap-lock"`,
+			Manifest: func() interface{} {
+				return &apiv1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "deckhouse-bootstrap-lock",
+						Namespace: "d8-system",
+					},
 				}
+			},
+			CreateFunc: func(manifest interface{}) error {
+				cm := manifest.(*apiv1.ConfigMap)
+				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
+					Create(context.TODO(), cm, metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -377,15 +329,56 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 
 	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
-	return log.Process("default", "Create Manifests", func() error {
+	if len(cfg.ModuleConfigs) > 0 {
+		createTask := func(mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
+			mcUnstructMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(mc)
+			if err != nil {
+				panic(err)
+			}
+			mcUnstruct := &unstructured.Unstructured{Object: mcUnstructMap}
+			return actions.ManifestTask{
+				Name: fmt.Sprintf(`ModuleConfig "%s"`, mc.GetName()),
+				Manifest: func() interface{} {
+					return mcUnstruct
+				},
+				CreateFunc: func(manifest interface{}) error {
+					if createMsg != "" {
+						log.InfoLn(createMsg)
+					}
+					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+						Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
+					return err
+				},
+				UpdateFunc: func(manifest interface{}) error {
+					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+						Update(context.TODO(), manifest.(*unstructured.Unstructured), metav1.UpdateOptions{})
+					return err
+				},
+			}
+		}
+
+		tasks = append(tasks, createTask(cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
+
+		for i := 1; i < len(cfg.ModuleConfigs); i++ {
+			tasks = append(tasks, createTask(cfg.ModuleConfigs[i], ""))
+		}
+	}
+
+	err := log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
-			err := task.CreateOrUpdate()
+			err := retry.NewSilentLoop(task.Name, 15, 5*time.Second).Run(task.CreateOrUpdate)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return UnLockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl)
 }
 
 func WaitForReadiness(kubeCl *client.KubernetesClient) error {
@@ -424,13 +417,13 @@ func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode stri
 	})
 }
 
-func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) error {
+func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
 	task := controllerDeploymentTask(kubeCl, cfg)
 
 	return log.Process("default", "Create Deployment", task.CreateOrUpdate)
 }
 
-func deckhouseDeploymentParamsFromCfg(cfg *Config) manifests.DeckhouseDeploymentParams {
+func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
 		Registry:           cfg.GetImage(true),
 		LogLevel:           cfg.LogLevel,
@@ -441,7 +434,7 @@ func deckhouseDeploymentParamsFromCfg(cfg *Config) manifests.DeckhouseDeployment
 	}
 }
 
-func CreateDeckhouseDeploymentManifest(cfg *Config) *appsv1.Deployment {
+func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) *appsv1.Deployment {
 	params := deckhouseDeploymentParamsFromCfg(cfg)
 
 	return manifests.DeckhouseDeployment(params)
@@ -455,37 +448,4 @@ func WaitForKubernetesAPI(kubeCl *client.KubernetesClient) error {
 		}
 		return fmt.Errorf("kubernetes API is not Ready: %w", err)
 	})
-}
-
-func PrepareDeckhouseInstallConfig(metaConfig *config.MetaConfig) (*Config, error) {
-	clusterConfig, err := metaConfig.ClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("marshal cluster config: %v", err)
-	}
-
-	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("marshal provider config: %v", err)
-	}
-
-	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("marshal static config: %v", err)
-	}
-
-	installConfig := Config{
-		UUID:                  metaConfig.UUID,
-		Registry:              metaConfig.Registry,
-		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
-		ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
-		Bundle:                metaConfig.DeckhouseConfig.Bundle,
-		LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
-		DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
-		KubeDNSAddress:        metaConfig.ClusterDNSAddress,
-		ProviderClusterConfig: providerClusterConfig,
-		StaticClusterConfig:   staticClusterConfig,
-		ClusterConfig:         clusterConfig,
-	}
-
-	return &installConfig, nil
 }

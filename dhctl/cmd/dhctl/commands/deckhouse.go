@@ -84,7 +84,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		installConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
+		installConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 		if err != nil {
 			return err
 		}

@@ -39,3 +39,21 @@ masterNodeGroup:
 provider:
   region: europe-west3
   serviceAccountJSON: '${SERVICE_ACCOUNT_JSON}'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: flant-integration
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.k8s.smoke.flant.com"
+  version: 1
