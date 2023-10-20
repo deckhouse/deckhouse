@@ -102,6 +102,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"common": map[string]interface{}{
 		"alpine":                    "imageHash-common-alpine",
+		"busyboxStatic":             "imageHash-common-busyboxStatic",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
 		"csiExternalAttacher124":    "imageHash-common-csiExternalAttacher124",
 		"csiExternalAttacher125":    "imageHash-common-csiExternalAttacher125",
@@ -134,12 +135,14 @@ var DefaultImagesDigests = map[string]interface{}{
 		"csiNodeDriverRegistrar127": "imageHash-common-csiNodeDriverRegistrar127",
 		"csiNodeDriverRegistrar128": "imageHash-common-csiNodeDriverRegistrar128",
 		"distroless":                "imageHash-common-distroless",
+		"e2fsprogsStatic":           "imageHash-common-e2fsprogsStatic",
 		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
 		"nginxStatic":               "imageHash-common-nginxStatic",
 		"pause":                     "imageHash-common-pause",
 		"pythonStatic":              "imageHash-common-pythonStatic",
 		"shellOperator":             "imageHash-common-shellOperator",
+		"utilLinuxStatic":           "imageHash-common-utilLinuxStatic",
 	},
 	"containerizedDataImporter": map[string]interface{}{
 		"cdiApiserver":    "imageHash-containerizedDataImporter-cdiApiserver",

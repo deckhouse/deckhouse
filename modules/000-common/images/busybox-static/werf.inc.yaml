@@ -1,0 +1,21 @@
+artifact: {{ $.ModuleName }}/busybox-builder-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+    - apt update
+    - apt install -y wget bzip2 curl tar gcc make
+  install:
+    - mkdir /build
+    - cd /build
+    - wget -cO- https://busybox.net/downloads/busybox-1.36.1.tar.bz2 | tar -xjv --strip-components=1
+    - make defconfig
+    - sed 's/^.*CONFIG_STATIC .*$/CONFIG_STATIC=y/g' -i .config
+    - make -j8
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/busybox-builder-artifact
+  add: /build/busybox
+  to: /build/busybox
+  before: setup

@@ -6,11 +6,13 @@ import:
   add: /go/bin/yandex-csi-driver
   to: /bin/yandex-csi-driver
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-busybox-builder-artifact
-  add: /build/busybox-1.36.1/busybox
+# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-busybox-static-artifact
+- image: common/busybox-static
+  add: /build/busybox
   to: /bin/busybox
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-builder-artifact
+# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-static-artifact
+- image: common/util-linux-static
   add: /build/staticbin
   to: /
   before: setup
@@ -28,7 +30,8 @@ import:
   - sbin/mkfs
   - sbin/sfdisk
   - sbin/wipefs
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-e2fsprogs-builder-artifact
+# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-e2fsprogs-static-artifact
+- image: common/e2fsprogs-static
   add: /build/staticbin
   to: /
   before: setup
@@ -87,79 +90,79 @@ shell:
     -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version=${VERSION}' \
     -o /go/bin/yandex-csi-driver \
     github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-busybox-builder-artifact
-from: {{ $.Images.BASE_UBUNTU }}
-shell:
-  beforeInstall:
-    - apt update
-    - apt install -y wget bzip2 curl tar gcc make
-  install:
-    - mkdir /build
-    - cd /build
-    - wget -cO- https://busybox.net/downloads/busybox-1.36.1.tar.bz2 | tar -xjv 
-    - cd busybox-1.36.1
-    - make defconfig
-    - sed 's/^.*CONFIG_STATIC .*$/CONFIG_STATIC=y/g' -i .config
-    - make -j8
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-builder-artifact
-from: {{ $.Images.BASE_UBUNTU }}
-shell:
-  beforeInstall:
-    - apt update
-    - |
-      apt install -y wget bzip2 curl tar gcc make automake autopoint \
-        gettext pkg-config bison gettext zlib1g zlib1g-dev\
-        asciidoctor po4a\
-        libcap-ng-utils libcap-ng-dev libtool libncurses5-dev libncursesw5-dev build-essential
-  install:
-    - mkdir /build
-    - cd /build
-    - wget -qO- https://git.kernel.org/pub/scm/utils/util-linux/util-linux.git/snapshot/util-linux-2.39.2.tar.gz | tar -xzv --strip-components=1
-    - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
-    - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
-    - export SUID_CFLAGS=-static
-    - export SUID_LDFLAGS=-static
-    - export CPPFLAGS=-static
-    - ./autogen.sh
-    - autoconf
-    - |
-      ./configure \
-        --enable-static \
-        --disable-pylibmount \
-        --without-python \
-        --prefix="/build/staticbin"
-    - make LDFLAGS="--static" -j8 install-strip
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-e2fsprogs-builder-artifact
-from: {{ $.Images.BASE_UBUNTU }}
-shell:
-  beforeInstall:
-    - apt update
-    - |
-      apt install --no-install-recommends -y wget git bzip2 curl tar \
-        gcc make automake autopoint \
-        gettext pkg-config bison gettext asciidoctor po4a \
-        libblkid-dev zlib1g zlib1g-dev \
-        uuid-dev libcap-ng-utils libcap-ng-dev libtool \
-        libncurses5-dev libncursesw5-dev build-essential
-  install:
-    - mkdir /build
-    - cd /build
-    - git clone --depth 1 --branch v1.47.0 https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git .
-    - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
-    - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s -flto=auto"
-    - export SUID_CFLAGS=-static
-    - export SUID_LDFLAGS=-static
-    - export CPPFLAGS=-static
-    - |
-      ./configure \
-          --prefix="/build/staticbin" \
-          --disable-libblkid      \
-          --disable-libuuid       \
-          --disable-uuidd         \
-          --disable-fsck          \
-          --disable-nls
-    - make -j8
-    - make -j8 install
+# ---
+# artifact: {{ $.ModuleName }}/{{ $.ImageName }}-busybox-builder-artifact
+# from: {{ $.Images.BASE_UBUNTU }}
+# shell:
+#   beforeInstall:
+#     - apt update
+#     - apt install -y wget bzip2 curl tar gcc make
+#   install:
+#     - mkdir /build
+#     - cd /build
+#     - wget -cO- https://busybox.net/downloads/busybox-1.36.1.tar.bz2 | tar -xjv --strip-components=1
+#     - cd busybox-1.36.1
+#     - make defconfig
+#     - sed 's/^.*CONFIG_STATIC .*$/CONFIG_STATIC=y/g' -i .config
+#     - make -j8
+# ---
+# artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-builder-artifact
+# from: {{ $.Images.BASE_UBUNTU }}
+# shell:
+#   beforeInstall:
+#     - apt update
+#     - |
+#       apt install -y wget bzip2 curl tar gcc make automake autopoint \
+#         gettext pkg-config bison gettext zlib1g zlib1g-dev\
+#         asciidoctor po4a\
+#         libcap-ng-utils libcap-ng-dev libtool libncurses5-dev libncursesw5-dev build-essential
+#   install:
+#     - mkdir /build
+#     - cd /build
+#     - wget -qO- https://git.kernel.org/pub/scm/utils/util-linux/util-linux.git/snapshot/util-linux-2.39.2.tar.gz | tar -xzv --strip-components=1
+#     - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
+#     - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
+#     - export SUID_CFLAGS=-static
+#     - export SUID_LDFLAGS=-static
+#     - export CPPFLAGS=-static
+#     - ./autogen.sh
+#     - autoconf
+#     - |
+#       ./configure \
+#         --enable-static \
+#         --disable-pylibmount \
+#         --without-python \
+#         --prefix="/build/staticbin"
+#     - make LDFLAGS="--static" -j8 install-strip
+# ---
+# artifact: {{ $.ModuleName }}/{{ $.ImageName }}-e2fsprogs-builder-artifact
+# from: {{ $.Images.BASE_UBUNTU }}
+# shell:
+#   beforeInstall:
+#     - apt update
+#     - |
+#       apt install --no-install-recommends -y wget git bzip2 curl tar \
+#         gcc make automake autopoint \
+#         gettext pkg-config bison gettext asciidoctor po4a \
+#         libblkid-dev zlib1g zlib1g-dev \
+#         uuid-dev libcap-ng-utils libcap-ng-dev libtool \
+#         libncurses5-dev libncursesw5-dev build-essential
+#   install:
+#     - mkdir /build
+#     - cd /build
+#     - git clone --depth 1 --branch v1.47.0 https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git .
+#     - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
+#     - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s -flto=auto"
+#     - export SUID_CFLAGS=-static
+#     - export SUID_LDFLAGS=-static
+#     - export CPPFLAGS=-static
+#     - |
+#       ./configure \
+#           --prefix="/build/staticbin" \
+#           --disable-libblkid      \
+#           --disable-libuuid       \
+#           --disable-uuidd         \
+#           --disable-fsck          \
+#           --disable-nls
+#     - make -j8
+#     - make -j8 install

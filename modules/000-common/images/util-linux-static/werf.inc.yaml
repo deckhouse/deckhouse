@@ -1,0 +1,36 @@
+artifact: {{ $.ModuleName }}/util-linux-builder-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+    - apt update
+    - |
+      apt install -y wget bzip2 curl tar gcc make automake autopoint \
+        gettext pkg-config bison gettext zlib1g zlib1g-dev\
+        asciidoctor po4a\
+        libcap-ng-utils libcap-ng-dev libtool libncurses5-dev libncursesw5-dev build-essential
+  install:
+    - mkdir /build
+    - cd /build
+    - wget -qO- https://git.kernel.org/pub/scm/utils/util-linux/util-linux.git/snapshot/util-linux-2.39.2.tar.gz | tar -xzv --strip-components=1
+    - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
+    - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
+    - export SUID_CFLAGS=-static
+    - export SUID_LDFLAGS=-static
+    - export CPPFLAGS=-static
+    - ./autogen.sh
+    - autoconf
+    - |
+      ./configure \
+        --enable-static \
+        --disable-pylibmount \
+        --without-python \
+        --prefix="/build/staticbin"
+    - make LDFLAGS="--static" -j8 install-strip
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/util-linux-builder-artifact
+  add: /build/staticbin
+  to: /build/staticbin
+  before: setup
