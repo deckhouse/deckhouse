@@ -47,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-provider-cluster-configuration"},
 			},
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			ExecuteHookOnEvents: pointer.Bool(false),
 			FilterFunc:          applyProviderClusterConfigurationSecretFilter,
 		},
 	},
