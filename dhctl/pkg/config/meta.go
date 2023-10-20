@@ -44,6 +44,7 @@ type MetaConfig struct {
 
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
+	ModuleConfigs     []*ModuleConfig            `json:"-"`
 
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`

@@ -16,6 +16,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,7 +32,8 @@ import (
 )
 
 type SchemaStore struct {
-	cache map[SchemaIndex]*spec.Schema
+	cache              map[SchemaIndex]*spec.Schema
+	moduleConfigsCache map[string]*spec.Schema
 }
 
 var once sync.Once
@@ -53,7 +55,11 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 }
 
 func newSchemaStore(schemasDir []string) *SchemaStore {
-	st := &SchemaStore{make(map[SchemaIndex]*spec.Schema)}
+	st := &SchemaStore{
+		cache:              make(map[SchemaIndex]*spec.Schema),
+		moduleConfigsCache: make(map[string]*spec.Schema),
+	}
+
 	walkFunc := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return nil
@@ -76,6 +82,43 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			panic(err)
 		}
 	}
+
+	entries, err := os.ReadDir(modulesDir)
+	if err != nil {
+		panic(err)
+	}
+
+	sep := string(os.PathSeparator)
+	g := func(path string, moduleName string) {
+		content, err := os.ReadFile(path)
+		if err == nil {
+			schema := new(spec.Schema)
+
+			if err := yaml.Unmarshal(content, schema); err != nil {
+				panic(err)
+			}
+
+			err = spec.ExpandSchema(schema, schema, nil)
+			if err != nil {
+				panic(err)
+			}
+			st.moduleConfigsCache[moduleName] = schema
+		} else if !errors.Is(err, os.ErrNotExist) {
+			panic(err)
+		}
+	}
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		moduleName := strings.TrimLeft(name, "01234567890-")
+		path := modulesDir + sep + name + sep + "openapi" + sep + "config-values.yaml"
+		g(path, moduleName)
+	}
+
+	g(globalHooksModule+sep+"openapi"+sep+"config-values.yaml", "global")
 
 	return st
 }
@@ -122,12 +165,34 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		)
 	}
 
-	schema := s.getV1alpha1CompatibilitySchema(index)
+	docForValidate := *doc
+
+	var schema *spec.Schema
+
+	if index.Kind == "ModuleConfig" {
+		mc := ModuleConfig{}
+		if err := yaml.Unmarshal(*doc, &mc); err != nil {
+			return err
+		}
+		var ok bool
+		schema, ok = s.moduleConfigsCache[mc.GetName()]
+		if !ok {
+			return fmt.Errorf("Schema for module config %s wasn't found.", mc.GetName())
+		}
+		var err error
+		docForValidate, err = yaml.Marshal(mc.Spec.Settings)
+		if err != nil {
+			return fmt.Errorf("Setting for validation module config failed: %v", err)
+		}
+	} else {
+		schema = s.getV1alpha1CompatibilitySchema(index)
+	}
+
 	if schema == nil {
 		return fmt.Errorf("Schema for %s wasn't found.", index.String())
 	}
 
-	isValid, err := openAPIValidate(doc, schema)
+	isValid, err := openAPIValidate(&docForValidate, schema)
 	if !isValid {
 		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)
 	}

@@ -136,6 +136,8 @@ provider:
        "public_key": "publicKey",
        "private_key": "privateKey"
     }
+---
+
 `
 	t := template.New("testconfig_template").Funcs(sprig.TxtFuncMap())
 	t, err := t.Parse(config)

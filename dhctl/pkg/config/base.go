@@ -33,6 +33,8 @@ import (
 
 const (
 	candiDir                 = "/deckhouse/candi"
+	modulesDir               = "/deckhouse/modules"
+	globalHooksModule        = "/deckhouse/global-hooks"
 	DefaultKubernetesVersion = "1.25"
 )
 
@@ -182,9 +184,21 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 
 		docData := []byte(doc)
 
-		index, err := schemaStore.Validate(&docData)
-		if err != nil {
-			return nil, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		var index *SchemaIndex
+		moduleConfig := &ModuleConfig{}
+		err := yaml.Unmarshal(docData, moduleConfig)
+		if err == nil && moduleConfig.GetName() != "" {
+			_, err = schemaStore.Validate(&docData)
+			if err != nil {
+				return nil, fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			}
+			metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, moduleConfig)
+			continue
+		} else {
+			index, err = schemaStore.Validate(&docData)
+			if err != nil {
+				return nil, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			}
 		}
 
 		var data map[string]json.RawMessage

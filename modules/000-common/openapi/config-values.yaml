@@ -1,0 +1,14 @@
+type: object
+properties:
+  testString:
+    type: string
+    description: Test string
+  testArray:
+    type: array
+    description: Test array
+    items:
+      type: string
+  testEnum:
+    type: string
+    enum: ["a", "b"]
+    description: testEnum
