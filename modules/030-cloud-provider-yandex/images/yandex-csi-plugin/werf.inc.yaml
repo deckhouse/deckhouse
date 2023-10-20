@@ -15,8 +15,19 @@ import:
   to: /
   before: setup
   includePaths:
-  - 'bin/*'
-  - 'sbin/*'
+  - bin/fdisk
+  - bin/findmnt
+  - bin/mount
+  - bin/umount
+  - bin/mountpoint
+  - bin/lsblk
+  - bin/mountpoint
+  - sbin/blkid
+  - sbin/fsck
+  - sbin/cfdisk
+  - sbin/mkfs
+  - sbin/sfdisk
+  - sbin/wipefs
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-e2fsprogs-builder-artifact
   add: /build/staticbin
   to: /
@@ -24,12 +35,28 @@ import:
   includePaths:
   - sbin/badblocks
   - sbin/dumpe2fs
-  - 'sbin/e2*'
-  - 'sbin/mk*'
-  - sbin/tune2fs
+  - sbin/e2fsck
+  - sbin/e2label
+  - sbin/e2scrub
+  - sbin/e2undo
+  - sbin/e4defrag
+  - sbin/fsck.ext2
+  - sbin/fsck.ext4
+  - sbin/mke2fs
   - sbin/mklost+found
+  - sbin/tune2fs
   - sbin/debugfs
-  - 'sbin/fsc*'
+  - sbin/e2freefrag
+  - sbin/e2image
+  - sbin/e2mmpstatus
+  - sbin/e2scrub_all
+  - sbin/e4crypt
+  - sbin/filefrag
+  - sbin/fsck.ext3
+  - sbin/logsave
+  - sbin/mkfs.ext2
+  - sbin/mkfs.ext3
+  - sbin/mkfs.ext4
   - sbin/resize2fs
 shell:
   setup:
