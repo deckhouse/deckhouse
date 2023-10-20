@@ -20,19 +20,17 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
+	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/kube-client/client"
+	sh_app "github.com/flant/shell-operator/pkg/app"
+	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/util/retry"
-
-	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
-	sh_app "github.com/flant/shell-operator/pkg/app"
-	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
-	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addon-operator/kube-config/backend"
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
