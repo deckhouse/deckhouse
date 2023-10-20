@@ -13,9 +13,18 @@ index aec3f7df..0fc45d6c 100644
  	// This is a pointer to distinguish between explicit zero and not specified.
  	// Defaults to 10.
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 1934f145..26305094 100644
+index 1934f145..c5948593 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
+@@ -505,7 +505,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
+ 	// newPod.Spec.NodeName = nodeName
+ 
+ 	// Added default tolerations for DaemonSet pods.
+-	util.AddOrUpdateDaemonPodTolerations(&newPod.Spec)
++	// util.AddOrUpdateDaemonPodTolerations(&newPod.Spec)
+ 
+ 	newPodForDSCache.Store(ds.UID, &newPodForDS{generation: ds.Generation, pod: newPod})
+ 	return newPod
 @@ -560,6 +560,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
