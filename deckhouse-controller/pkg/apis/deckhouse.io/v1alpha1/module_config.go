@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,6 +28,15 @@ const (
 	ModuleConfigGroup      = "deckhouse.io"
 	ModuleConfigVersion    = "v1alpha1"
 	ModuleConfigAPIVersion = "deckhouse.io/v1alpha1"
+)
+
+var (
+	// ModuleConfigGVR GroupVersionResource
+	ModuleConfigGVR = schema.GroupVersionResource{
+		Group:    ModuleConfigGroup,
+		Version:  ModuleConfigVersion,
+		Resource: ModuleConfigResource,
+	}
 )
 
 var _ runtime.Object = (*ModuleConfig)(nil)
@@ -86,6 +95,16 @@ type ModuleConfigStatus struct {
 	Status  string `json:"status"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModuleConfigList is a list of ModuleConfig resources
+type ModuleConfigList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleConfig `json:"items"`
+}
+
 type moduleConfigKind struct{}
 
 func (in *ModuleConfigStatus) GetObjectKind() schema.ObjectKind {
@@ -98,13 +117,5 @@ func (f *moduleConfigKind) GroupVersionKind() schema.GroupVersionKind {
 		Group:   ModuleConfigGroup,
 		Version: ModuleConfigVersion,
 		Kind:    ModuleConfigKind,
-	}
-}
-
-func GroupVersionResource() schema.GroupVersionResource {
-	return schema.GroupVersionResource{
-		Group:    ModuleConfigGroup,
-		Version:  ModuleConfigVersion,
-		Resource: ModuleConfigResource,
 	}
 }

@@ -55,36 +55,4 @@ webhooks:
         namespace: d8-system
         port: 9651
         path: /validate/v1alpha1/module-configs
-  - name: configmap.deckhouse-webhook.deckhouse.io
-    namespaceSelector:
-      matchExpressions:
-        - key: "kubernetes.io/metadata.name"
-          operator: "In"
-          values:
-            - "d8-system"
-    objectSelector:
-      matchLabels:
-        heritage: deckhouse
-    rules:
-      - apiGroups:
-          - ""
-        apiVersions:
-          - "v1"
-        resources:
-          - "configmaps"
-        operations:
-          - UPDATE
-          - DELETE
-    admissionReviewVersions:
-      - v1
-    matchPolicy: Equivalent
-    failurePolicy: Fail
-    sideEffects: None
-    clientConfig:
-      caBundle: {{ .Values.deckhouse.internal.admissionWebhookCert.ca | b64enc }}
-      service:
-        name: deckhouse
-        namespace: d8-system
-        port: 9651
-        path: /validate/core/v1/configmap
 {{- end }}
