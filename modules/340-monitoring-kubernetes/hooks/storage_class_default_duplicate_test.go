@@ -129,7 +129,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Action: "set",
 				Name:   "storage_class_default_duplicate",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "auxiliary",
 				},
@@ -137,7 +137,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Action: "set",
 				Name:   "storage_class_default_duplicate",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "main",
 				},

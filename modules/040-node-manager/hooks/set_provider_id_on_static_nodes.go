@@ -29,7 +29,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                   "nodes",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			FilterFunc:             setProviderIDNodeFilter,
