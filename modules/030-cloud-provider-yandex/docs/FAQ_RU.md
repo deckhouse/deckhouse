@@ -45,17 +45,17 @@ reserved: true
 
 **Не используйте** эту опцию, если указанные рекурсивные DNS-серверы не могут разрешать тот же список зон, что сможет разрешать рекурсивный DNS-сервер в подсети Yandex Cloud.
 
-## Как назначить свой StorageClass по-умолчанию?
+## Как назначить произвольный StorageClass используемым по умолчанию?
 
-Для установки кастомного StorageClass для использования по умолчанию:
+Для назначения произвольного StorageClass'а используемым по умолчанию, выполните следующие шаги:
 
-1. Добавить на него аннотацию:
+1. Добавьте на StorageClass аннотацию `storageclass.kubernetes.io/is-default-class='true'`:
 
    ```shell
    kubectl annotate sc $STORAGECLASS storageclass.kubernetes.io/is-default-class='true'
    ```
 
-2. Вставить имя нового StorageClass в [опцию](configuration.html#parameters-storageclass-default) `storageClass.default` в ModuleConfig `cloud-provider-yandex`. Это снимет аннотацию со предыдущего StorageClass по-умолчанию
+2. Укажите имя StorageClass'а в параметре [storageClass.default](configuration.html#parameters-storageclass-default) в настройках модуля `cloud-provider-yandex`. Обратите внимание, что после этого аннотация `storageclass.kubernetes.io/is-default-class='true'` снимется со StorageClass, который был указан в настройках модуля ранее как используемый по умолчанию.
 
    ```shell
    kubectl edit mc cloud-provider-yandex

@@ -47,15 +47,15 @@ If the dhcpOptions parameter is set, all DNS are routed to the DNS servers speci
 
 ## How to set custom StorageClass as default?
 
-Setting custom StorageClass as default:
+Do the following steps to set a custom StorageClass as default:
 
-1. Add following annotation to your new StorageClass:
+1. Add `storageclass.kubernetes.io/is-default-class='true'` annotation to the StorageClass:
 
    ```shell
    kubectl annotate sc $STORAGECLASS storageclass.kubernetes.io/is-default-class='true'
    ```
 
-2. Insert StorageClass name in [spec](configuration.html#parameters-storageclass-default) `storageClass.default` in ModuleConfig `cloud-provider-yandex`. This will remove the annotation from previous StorageClass:
+2. Specify the StorageClass name in the [storageClass.default](configuration.html#parameters-storageclass-default) parameter in the `cloud-provider-yandex` module settings. Note that after that, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass, which was previously specified in the module settings as the default.
 
    ```shell
    kubectl edit mc cloud-provider-yandex
