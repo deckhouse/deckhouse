@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
