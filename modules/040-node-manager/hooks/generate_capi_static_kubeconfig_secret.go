@@ -61,15 +61,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: staticInstancesNodeGroupFilter,
 		},
 	},
-	OnAfterHelm: &go_hook.OrderedConfig{
-		Order: 10,
-	},
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "capi_static_kubeconfig_secret",
 			Crontab: "0 1 * * *",
 		},
 	},
+	AllowFailure: true,
 }, dependency.WithExternalDependencies(generateStaticKubeconfigSecret))
 
 func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container) error {
