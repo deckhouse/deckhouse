@@ -147,10 +147,18 @@ index ea7633fe..b8b479da 100644
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 1934f145..58a2fb34 100644
+index 1934f145..c08122fc 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
-@@ -505,7 +505,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
+@@ -47,6 +47,7 @@ import (
+ 	v1helper "k8s.io/component-helpers/scheduling/corev1"
+ 	"k8s.io/component-helpers/scheduling/corev1/nodeaffinity"
+ 	"k8s.io/klog/v2"
++	policy "k8s.io/client-go/applyconfigurations/policy/v1"
+ 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
+ 	kubecontroller "k8s.io/kubernetes/pkg/controller"
+ 	"k8s.io/kubernetes/pkg/controller/daemon/util"
+@@ -505,7 +506,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
  	// newPod.Spec.NodeName = nodeName
  
  	// Added default tolerations for DaemonSet pods.
@@ -159,7 +167,7 @@ index 1934f145..58a2fb34 100644
  
  	newPodForDSCache.Store(ds.UID, &newPodForDS{generation: ds.Generation, pod: newPod})
  	return newPod
-@@ -560,6 +560,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
+@@ -560,6 +561,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
  
@@ -171,7 +179,7 @@ index 1934f145..58a2fb34 100644
  	// Resync the DaemonSet after MinReadySeconds as a last line of defense to guard against clock-skew.
  	if ds.Spec.MinReadySeconds >= 0 && numberReady != numberAvailable {
  		durationStore.Push(keyFunc(ds), time.Duration(ds.Spec.MinReadySeconds)*time.Second)
-@@ -567,6 +572,49 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
+@@ -567,6 +573,71 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  	return nil
  }
  
@@ -203,6 +211,7 @@ index 1934f145..58a2fb34 100644
 +	}
 +
 +	dsClient := dsc.kruiseClient.AppsV1alpha1().DaemonSets(ds.Namespace)
++	policyClient := dsc.kubeClient.PolicyV1().PodDisruptionBudgets(ds.Namespace)
 +
 +	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 +		if scale, err := dsClient.GetScale(context.TODO(), ds.Name, metav1.GetOptions{}); err == nil {
@@ -210,6 +219,27 @@ index 1934f145..58a2fb34 100644
 +			newScale.Spec.Replicas = nodeCount
 +			if _, err = dsClient.UpdateScale(context.TODO(), ds.Name, &newScale, metav1.UpdateOptions{}); err == nil {
 +				klog.Infof("Updated DaemonSet %s/%s replicas from %d to %d", ds.Namespace, ds.Name, *ds.Spec.Replicas, nodeCount)
++				if *ds.Spec.Replicas > nodeCount {
++					if pdb, err := policyClient.Get(context.TODO(), ds.Name, metav1.GetOptions{}); err == nil {
++						if pdb.Status.ExpectedPods != newScale.Spec.Replicas {
++							klog.Infof("Updating relevant PodDisruptionBudget %s/%s", ds.Namespace, ds.Name)
++							pdbApplyConfig := policy.PodDisruptionBudget(ds.Namespace, ds.Name).WithStatus(&policy.PodDisruptionBudgetStatusApplyConfiguration{
++								ObservedGeneration: &pdb.Status.ObservedGeneration,
++								DisruptedPods: pdb.Status.DisruptedPods,
++								DisruptionsAllowed: &pdb.Status.DisruptionsAllowed,
++								CurrentHealthy: &pdb.Status.CurrentHealthy,
++								DesiredHealthy: &pdb.Status.DesiredHealthy,
++								ExpectedPods: &nodeCount,
++							})
++							if _, err = policyClient.ApplyStatus(context.TODO(), pdbApplyConfig, metav1.ApplyOptions{}); err == nil {
++								klog.Infof("Updated relevant PodDisruptionBudget %s/%s with expected pods %d", ds.Namespace, ds.Name, nodeCount)
++								return nil
++							}
++							klog.Errorf("Couldn't update relevant PodDisruptionBudget status for DaemonSet %s/%s", ds.Namespace, ds.Name)
++						}
++						klog.Errorf("Couldn't get relevant PodDisruptionBudget for DaemonSet %s/%s: %v", ds.Namespace, ds.Name, err)
++					}
++				}
 +				return nil
 +			}
 +		}
