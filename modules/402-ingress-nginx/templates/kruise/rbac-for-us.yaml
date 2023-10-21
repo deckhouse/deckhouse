@@ -25,7 +25,6 @@ rules:
       - poddisruptionbudgets/status
     verbs:
       - update
-      - patch
   - apiGroups:
       - apps.kruise.io
     resources:
