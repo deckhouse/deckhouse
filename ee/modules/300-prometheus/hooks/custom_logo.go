@@ -16,7 +16,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 )
 
 const (
@@ -29,12 +28,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "logo-cm",
-			ApiVersion:                   "v1",
-			Kind:                         "ConfigMap",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   filterLogoCM,
+			Name:       "logo-cm",
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			FilterFunc: filterLogoCM,
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-system"},
