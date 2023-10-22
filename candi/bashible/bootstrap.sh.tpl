@@ -74,6 +74,12 @@ while [ "$patch_pending" = true ] ; do
       sleep 1
     done
 
+    machine_name="$(hostname -s)"
+    if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
+      machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
+      rm -f ${BOOTSTRAP_DIR}/machine-name
+    fi
+
     if curl -sS --fail -x "" \
       --max-time 10 \
       -XPATCH \
@@ -82,7 +88,7 @@ while [ "$patch_pending" = true ] ; do
       -H "Content-Type: application/json-patch+json" \
       --cacert "$BOOTSTRAP_DIR/ca.crt" \
       --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"${tcp_endpoint}:${output_log_port}\"} }]" \
-      "https://$server/apis/deckhouse.io/v1alpha1/instances/$(hostname -s)/status" ; then
+      "https://$server/apis/deckhouse.io/v1alpha1/instances/${machine_name}/status" ; then
 
       echo "Successfully patched instance $(hostname -s) status."
       patch_pending=false
