@@ -1,0 +1,162 @@
+candi:
+  features:
+    - summary: Remove AlterOS support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6212
+    - summary: Add Kubernetes 1.28 support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5894
+      impact: All control plane components will be restarted.
+    - summary: >-
+        Move rendering of the boostrap scripts to `bashible-apiserver` to reduce size of the
+        `cloud-init` data.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4907
+  fixes:
+    - summary: Add ALT Linux 10.0, 10.2 support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6215
+    - summary: Revert curl version pinning for Red OS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6210
+    - summary: Fix working of bootstrap cloud-networks setup scripts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6193
+    - summary: Allow underscore in `httpProxy` and `httpsProxy` settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6169
+cert-manager:
+  features:
+    - summary: Use distroless images in the module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6084
+cloud-provider-aws:
+  features:
+    - summary: '`cloud-data-discoverer` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6052
+    - summary: '`cloud-controller-manager` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5985
+cloud-provider-azure:
+  features:
+    - summary: '`cloud-data-discoverer` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6052
+    - summary: '`cloud-controller-manager` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5985
+cloud-provider-gcp:
+  features:
+    - summary: '`cloud-data-discoverer` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6052
+    - summary: '`cloud-controller-manager` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5985
+cloud-provider-openstack:
+  features:
+    - summary: '`cloud-data-discoverer` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6052
+    - summary: '`cloud-controller-manager` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5985
+cloud-provider-vsphere:
+  features:
+    - summary: '`cloud-controller-manager` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5985
+cloud-provider-yandex:
+  features:
+    - summary: '`cloud-controller-manager` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5985
+deckhouse:
+  features:
+    - summary: Add module description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6182
+  fixes:
+    - summary: Canary release disabled for manual update mode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6229
+    - summary: Fix bash completion.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6225
+    - summary: Restrict the webhook to validate only Deckhouse ConfigMaps.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5997
+descheduler:
+  features:
+    - summary: Use distroless images in the module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6105
+dhctl:
+  features:
+    - summary: Allow installing Deckhouse from tag. Refactor preflight checks code.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5955
+    - summary: Dhctl will check if container registry can be reached with provided HTTP\HTTPS proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5926
+  fixes:
+    - summary: FIX AWS install
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6207
+external-module-manager:
+  fixes:
+    - summary: Change the image export logic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6123
+ingress-nginx:
+  features:
+    - summary: '`proxy-failover` uses distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6028
+    - summary: Kruise controller image uses distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5993
+      impact: '`kruise-controller-manager` pod will restart.'
+  fixes:
+    - summary: Fix Ingress controller panic when an endpointslice doesn't have the `.conditions` field.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6111
+      impact: Ingress controller will restart.
+log-shipper:
+  features:
+    - summary: Add Kafka SASL auth settings to configure.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6171
+metallb:
+  features:
+    - summary: Use distroless images in the module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6125
+      impact: The metallb pods will restart.
+monitoring-kubernetes:
+  fixes:
+    - summary: <ONE-LINE of what effectively changes for a user>
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6191
+      impact: <what to expect for users, possibly MULTI-LINE>, required if impact_level is high ↓
+node-manager:
+  features:
+    - summary: Add Cluster API Provider Static.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5432
+  fixes:
+    - summary: >-
+        Do not show the 'Approve with reboot' button for nodes in the Deckhouse UI when the
+        `RollingUpdate` mode is selected.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5440
+operator-trivy:
+  features:
+    - summary: Add periodic updates of report-updater's dictionary.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5973
+      impact: '`report-updater` will restart.'
+pod-reloader:
+  features:
+    - summary: Use distroless images in the module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6126
+      impact: '`pod-reloader` pod will restart.'
+  fixes:
+    - summary: Run pod-reloader from deckhouse user.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6258
+prometheus:
+  fixes:
+    - summary: Fix settings source for external auth.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6103
+runtime-audit-engine:
+  fixes:
+    - summary: Set Notice priority for rules requiring notification of security officer
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6232
+    - summary: Fix events unbuffered output mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6124
+testing:
+  fixes:
+    - summary: Fix e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6266
+user-authn:
+  features:
+    - summary: Allow setting user password in Base64.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6030
+  fixes:
+    - summary: Return 401 instead of 200 if a password authentication attempt failed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6045
+user-authz:
+  fixes:
+    - summary: '`webhook` no longer crashes if called without data.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6066
+vertical-pod-autoscaler:
+  features:
+    - summary: '`admission-controller`, `recommender` and `updater` use distroless images.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6099
+      impact: '`admission-controller`, `recommender` and `updater` pods will restart.'
+
