@@ -174,7 +174,7 @@ func ReconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc 
 			NodeName:        nodeName,
 			ProviderKind:    lvmType,
 			Props: map[string]string{
-				"StorDriver/LvmVg": lvmVgForLinstor,
+				"StorDriver/LvmVg": lvmVgForLinstor, // TODO: change to const
 			},
 		}
 
@@ -218,6 +218,18 @@ func ReconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc 
 
 		if existedStoragePool.ProviderKind != newStoragePool.ProviderKind {
 			errMessage := fmt.Sprintf("Storage Pool %s on node %s on vg %s already exists but with different type %s. New type is %s. Type change is forbidden", drbdsp.Name, nodeName, lvmVgForLinstor, existedStoragePool.ProviderKind, newStoragePool.ProviderKind)
+			drbdsp.Status.Phase = "Failed"
+			drbdsp.Status.Reason = errMessage
+			err := UpdateDRBDOperatorStoragePool(ctx, cl, drbdsp)
+			if err != nil {
+				log.Error(nil, errMessage)
+				return fmt.Errorf("error UpdateDRBDOperatorStoragePool: %s", err.Error())
+			}
+			return fmt.Errorf(errMessage)
+		}
+
+		if existedStoragePool.Props["StorDriver/LvmVg"] != lvmVgForLinstor {
+			errMessage := fmt.Sprintf("Storage Pool %s on node %s already exists with vg \"%s\". New vg is \"%s\". VG change is forbidden", drbdsp.Name, nodeName, lvmVgForLinstor, existedStoragePool.Props["StorDriver/LvmVg"])
 			drbdsp.Status.Phase = "Failed"
 			drbdsp.Status.Reason = errMessage
 			err := UpdateDRBDOperatorStoragePool(ctx, cl, drbdsp)
@@ -357,7 +369,7 @@ func UpdateMapValue(m map[string]string, key string, additionalValue string) {
 func GetOrderedMapValuesAsString(m map[string]string) string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
-		keys = append(keys, k)
+		keys = append(keys, k) // TODO: change append
 	}
 	sort.Strings(keys)
 
