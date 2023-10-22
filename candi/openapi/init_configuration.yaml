@@ -73,6 +73,8 @@ apiVersions:
             enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
           devBranch:
             type: string
+            description: |
+              Parameter is used for development needs.
           bundle:
             type: string
             description: |

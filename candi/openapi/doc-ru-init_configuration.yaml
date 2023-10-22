@@ -28,6 +28,10 @@ apiVersions:
           releaseChannel:
             description: |
               Устанавливаемый в кластере [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse.
+          devBranch:
+            type: string
+            description: |
+              Параметр используется для нужд разработки.
           bundle:
             description: |
               Устанавливаемый в кластере [вариант поставки](../modules/002-deckhouse/configuration.html#parameters-bundle) Deckhouse.
