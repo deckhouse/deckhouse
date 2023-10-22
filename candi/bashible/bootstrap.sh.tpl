@@ -90,12 +90,12 @@ while [ "$patch_pending" = true ] ; do
       --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"${tcp_endpoint}:${output_log_port}\"} }]" \
       "https://$server/apis/deckhouse.io/v1alpha1/instances/${machine_name}/status" ; then
 
-      echo "Successfully patched instance $(hostname -s) status."
+      echo "Successfully patched instance ${machine_name} status."
       patch_pending=false
 
       break
     else
-      >&2 echo "Failed to patch instance $(hostname -s) status."
+      >&2 echo "Failed to patch instance ${machine_name} status."
       sleep 10
       continue
     fi
