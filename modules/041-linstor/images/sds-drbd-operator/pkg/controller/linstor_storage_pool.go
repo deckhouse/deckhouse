@@ -229,7 +229,7 @@ func ReconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc 
 		}
 
 		if existedStoragePool.Props["StorDriver/LvmVg"] != lvmVgForLinstor {
-			errMessage := fmt.Sprintf("Storage Pool %s on node %s already exists with vg \"%s\". New vg is \"%s\". VG change is forbidden", drbdsp.Name, nodeName, lvmVgForLinstor, existedStoragePool.Props["StorDriver/LvmVg"])
+			errMessage := fmt.Sprintf("Storage Pool %s on node %s already exists with vg \"%s\". New vg is \"%s\". VG change is forbidden", drbdsp.Name, nodeName, existedStoragePool.Props["StorDriver/LvmVg"], lvmVgForLinstor)
 			drbdsp.Status.Phase = "Failed"
 			drbdsp.Status.Reason = errMessage
 			err := UpdateDRBDOperatorStoragePool(ctx, cl, drbdsp)
