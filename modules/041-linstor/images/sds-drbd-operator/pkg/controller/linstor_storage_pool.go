@@ -98,7 +98,19 @@ func NewDRBDOperatorStoragePool(
 				oldDRBDSP := e.ObjectOld.(*v1alpha1.DRBDOperatorStoragePool)
 				newDRBDSP := e.ObjectNew.(*v1alpha1.DRBDOperatorStoragePool)
 				if reflect.DeepEqual(oldDRBDSP.Spec, newDRBDSP.Spec) {
-					log.Info("DRBDOperatorStoragePool spec not changed. Nothing to do")
+					log.Info("DRBDOperatorStoragePool spec not changed. Nothing to do") // TODO: change to debug
+					return
+				}
+
+				if oldDRBDSP.Spec.Type != newDRBDSP.Spec.Type {
+					errMessage := fmt.Sprintf("DRBDOperatorStoragePool spec changed. Type change is forbidden. Old type: %s, new type: %s", oldDRBDSP.Spec.Type, newDRBDSP.Spec.Type)
+					log.Error(nil, errMessage)
+					newDRBDSP.Status.Phase = "Failed"
+					newDRBDSP.Status.Reason = errMessage
+					err := UpdateDRBDOperatorStoragePool(ctx, cl, newDRBDSP)
+					if err != nil {
+						log.Error(err, "error UpdateDRBDOperatorStoragePool")
+					}
 					return
 				}
 
@@ -134,7 +146,7 @@ func ReconcileEvent(ctx context.Context, cl client.Client, request reconcile.Req
 	return false, nil
 }
 
-func ReconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc *lapi.Client, log logr.Logger, drbdsp *v1alpha1.DRBDOperatorStoragePool) error {
+func ReconcileDRBDOperatorStoragePool(ctx context.Context, cl client.Client, lc *lapi.Client, log logr.Logger, drbdsp *v1alpha1.DRBDOperatorStoragePool) error { // TODO: add shouldRequeue as returned value
 
 	ok, msg, lvmVolumeGroups := GetAndValidateVolumeGroups(ctx, cl, drbdsp.Namespace, drbdsp.Spec.Type, drbdsp.Spec.LvmVolumeGroups)
 	if !ok {
