@@ -74,7 +74,7 @@ apiVersions:
           devBranch:
             type: string
             description: |
-              Parameter is used for development needs.
+              The parameter is used for development needs.
           bundle:
             type: string
             description: |
