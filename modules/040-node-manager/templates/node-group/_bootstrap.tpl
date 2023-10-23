@@ -147,4 +147,5 @@ get_phase2 | bash
 if [ -n "${bootstrap_job_log_pid-}" ] && kill -s 0 "${bootstrap_job_log_pid-}" 2>/dev/null; then
   kill -9 "${bootstrap_job_log_pid-}"
 fi
+echo "Bootstrap finished"
 {{- end }}
