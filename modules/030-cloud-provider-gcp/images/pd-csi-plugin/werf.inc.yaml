@@ -94,12 +94,13 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
+  - apt-get update
   - |  
-    apt-get update && \
     apt-get install -y --no-install-recommends \
-    util-linux e2fsprogs mount ca-certificates udev xfsprogs nvme-cli xxd && \
-    apt-get clean -y && \
-    rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*
+      util-linux e2fsprogs mount ca-certificates udev \
+      xfsprogs nvme-cli xxd && \
+      apt-get clean -y && \
+      rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*
   install:
   - cd /src
   - GCE_PD_CSI_STAGING_VERSION=v1.3.3 make gce-pd-driver
@@ -115,7 +116,7 @@ shell:
   - apt update
   - |
     apt install --no-install-recommends -y \
-      git gcc make build-essential
+      ca-certificates git gcc make build-essential
   install:
   - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
   - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s -flto=auto"
