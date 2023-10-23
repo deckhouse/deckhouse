@@ -61,9 +61,8 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 # Install necessary packages.
 basic_bootstrap_${BUNDLE}
 
-bootstrap_job_log_pid=""
-
-# Put bootstrap log information to Machine resource status
+{{- if or (eq .nodeGroup.nodeType "CloudEphemeral") (hasKey .nodeGroup "staticInstances") }}
+# Put bootstrap log information to Machine resource status if it is a cloud installation or cluster-api static machine
 patch_pending=true
 output_log_port=8000
 while [ "$patch_pending" = true ] ; do
@@ -101,6 +100,7 @@ while [ "$patch_pending" = true ] ; do
     fi
   done
 done
+{{- end }}
 
 # IMPORTANT !!! Centos/Redhat put jq in /usr/local/bin but it is not in PATH.
 export PATH="/opt/deckhouse/bin:$PATH"
