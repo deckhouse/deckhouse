@@ -127,10 +127,7 @@ function run_log_output() {
   {{- /*
   # Start output bootstrap logs
   */}}
-  if type socat >/dev/null 2>&1; then
-    socat -u FILE:${TMPDIR}/bootstrap.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
-    bootstrap_job_log_pid=$!
-  else
+  if type nc >/dev/null 2>&1; then
     tail -n 100 -f ${TMPDIR}/bootstrap.log | nc -l 8000 &
     bootstrap_job_log_pid=$!
   fi
@@ -143,8 +140,7 @@ get_phase2 | bash
   {{- /*
 # Stop output bootstrap logs
   */}}
-echo "Killing pid ${bootstrap_job_log_pid}"
-if [ -n "${bootstrap_job_log_pid}" ] && kill -s 0 "${bootstrap_job_log_pid}" 2>/dev/null; then
+if [ -n "${bootstrap_job_log_pid}" ]; then
   kill -9 "${bootstrap_job_log_pid}"
 fi
 {{- end }}
