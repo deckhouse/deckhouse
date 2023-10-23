@@ -47,7 +47,7 @@ reserved: true
 
 ## Как назначить произвольный StorageClass используемым по умолчанию?
 
-Для назначения произвольного StorageClass'а используемым по умолчанию, выполните следующие шаги:
+Чтобы назначить произвольный StorageClass используемым по умолчанию, выполните следующие шаги:
 
 1. Добавьте на StorageClass аннотацию `storageclass.kubernetes.io/is-default-class='true'`:
 
@@ -55,7 +55,7 @@ reserved: true
    kubectl annotate sc $STORAGECLASS storageclass.kubernetes.io/is-default-class='true'
    ```
 
-2. Укажите имя StorageClass'а в параметре [storageClass.default](configuration.html#parameters-storageclass-default) в настройках модуля `cloud-provider-yandex`. Обратите внимание, что после этого аннотация `storageclass.kubernetes.io/is-default-class='true'` снимется со StorageClass, который был указан в настройках модуля ранее как используемый по умолчанию.
+2. Укажите имя StorageClass'а в параметре [storageClass.default](configuration.html#parameters-storageclass-default) в настройках модуля `cloud-provider-yandex`. Обратите внимание, что после этого аннотация `storageclass.kubernetes.io/is-default-class='true'` снимется со StorageClass'а, который ранее был указан в настройках модуля как используемый по умолчанию.
 
    ```shell
    kubectl edit mc cloud-provider-yandex
