@@ -16,7 +16,7 @@ RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch v1.1.5 ${SOURCE_REPO}/trickstercache/trickster.git /trickster
 WORKDIR /trickster/
 
-RUN go get -u golang.org/x/net
+RUN go mod edit -go 1.20 && go get -u golang.org/x/net
 RUN make build && \
     chown -R 64535:64535 /trickster/ && \
     chmod 0700 /trickster/OPATH/trickster
