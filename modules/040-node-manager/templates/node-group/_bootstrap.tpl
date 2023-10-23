@@ -135,7 +135,6 @@ function run_log_output() {
     bootstrap_job_log_pid=$!
   fi
 }
-
 BUNDLE="$(detect_bundle)"
 run_cloud_network_setup
 run_log_output
@@ -144,8 +143,8 @@ get_phase2 | bash
   {{- /*
 # Stop output bootstrap logs
   */}}
-if [ -n "${bootstrap_job_log_pid-}" ] && kill -s 0 "${bootstrap_job_log_pid-}" 2>/dev/null; then
-  kill -9 "${bootstrap_job_log_pid-}"
+echo "Killing pid ${bootstrap_job_log_pid}"
+if [ -n "${bootstrap_job_log_pid}" ] && kill -s 0 "${bootstrap_job_log_pid}" 2>/dev/null; then
+  kill -9 "${bootstrap_job_log_pid}"
 fi
-echo "Bootstrap finished"
 {{- end }}
