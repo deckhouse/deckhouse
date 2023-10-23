@@ -44,3 +44,19 @@ Pay attention to the following nuances:
 If the dhcpOptions parameter is set, all DNS are routed to the DNS servers specified. These DNS servers **must** serve DNS requests to the Internet and (if needed) resolve intranet resources.
 
 **Do not use** this option if the recursive DNSs specified cannot resolve the same list of zones that the recursive DNSs in the Yandex Cloud subnet can resolve.
+
+## How to set a custom StorageClass as default?
+
+Do the following to set a custom StorageClass as default:
+
+1. Add `storageclass.kubernetes.io/is-default-class='true'` annotation to the StorageClass:
+
+   ```shell
+   kubectl annotate sc $STORAGECLASS storageclass.kubernetes.io/is-default-class='true'
+   ```
+
+2. Specify the StorageClass name in the [storageClass.default](configuration.html#parameters-storageclass-default) parameter in the `cloud-provider-yandex` module settings. Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass that was previously listed in the module settings as the default one.
+
+   ```shell
+   kubectl edit mc cloud-provider-yandex
+   ```
