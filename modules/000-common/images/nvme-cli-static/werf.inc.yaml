@@ -19,6 +19,6 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/util-linux-builder-artifact
-  add: /build/nvme
+  add: /build/.build/nvme
   to: /build/nvme
   before: setup
