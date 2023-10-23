@@ -88,6 +88,11 @@ spec:
       fi
 
       if [ "${current_version}" == "${desired_version}" ]; then
+        if grep -q -E '^drbd$' /etc/modules; then
+          sed -i '/^drbd$/d' /etc/modules
+        fi
+        bb-sync-file /etc/modules-load.d/d8_drbd.conf - <<< "drbd"
+
         bb-log-info "Desired drbd version is already loaded, nothing to do"
         exit 0
       fi
@@ -134,7 +139,10 @@ spec:
     make install
     cd drbd
     cp *.ko /lib/modules/${kernel_version_in_use}/kernel/drivers/
-    echo 'drbd' | tee -a /etc/modules
+    if grep -q -E '^drbd$' /etc/modules; then
+      sed -i '/^drbd$/d' /etc/modules
+    fi
+    bb-sync-file /etc/modules-load.d/d8_drbd.conf - <<< "drbd"
     depmod
     modprobe drbd
     modprobe dm-thin-pool
