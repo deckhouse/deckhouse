@@ -42,11 +42,13 @@
  - **[cloud-provider-yandex]** Updated yandex-csi-driver. In the new version, the calculation of the limit of disks per node has been fixed. [#5679](https://github.com/deckhouse/deckhouse/pull/5679)
  - **[dhctl]** Fix restarting bootstrap process. [#5892](https://github.com/deckhouse/deckhouse/pull/5892)
  - **[dhctl]** Add `registryDockerCfg` validation. [#5829](https://github.com/deckhouse/deckhouse/pull/5829)
+ - **[extended-monitoring]** Fix extended monitoring rules for node disk usage. [#6227](https://github.com/deckhouse/deckhouse/pull/6227)
  - **[external-module-manager]** Handle deployed source modules with absent version directory. Avoid infinite deckhouse restart on absent module. [#5994](https://github.com/deckhouse/deckhouse/pull/5994)
  - **[flant-integration]** Fix `connect` response handling with respect of status code instead of error message. [#5765](https://github.com/deckhouse/deckhouse/pull/5765)
  - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#5988](https://github.com/deckhouse/deckhouse/pull/5988)
  - **[ingress-nginx]** Fix controller preStop probe. [#5948](https://github.com/deckhouse/deckhouse/pull/5948)
     Ingress controller will restart.
+ - **[linstor]** Changed the method of loading DRBD kernel module on the nodes with active LINSTOR satellites. [#6288](https://github.com/deckhouse/deckhouse/pull/6288)
  - **[linstor]** Changes in controller liveness probe. [#6203](https://github.com/deckhouse/deckhouse/pull/6203)
  - **[linstor]** Improved symlink handling for devices. [#6187](https://github.com/deckhouse/deckhouse/pull/6187)
  - **[linstor]** Removed alert about HA-controller absence. [#6166](https://github.com/deckhouse/deckhouse/pull/6166)
