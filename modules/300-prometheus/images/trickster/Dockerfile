@@ -17,9 +17,10 @@ RUN git clone --depth 1 --branch v1.1.5 ${SOURCE_REPO}/trickstercache/trickster.
 WORKDIR /trickster/
 
 RUN go mod edit -go 1.20 \
-    && go get -u golang.org/x/net \
-    && go get -u github.com/prometheus/client_golang \
-    && go get -u go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace \
+    && go get -u golang.org/x/net@v0.17.0 \
+    && go get -u github.com/prometheus/client_golang@v1.17.0 \
+    && go get -u go.opentelemetry.io/otel@v1.19.0 \
+    && go get -u go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace@v0.45.0 \
     && go mod tidy
 RUN make build && \
     chown -R 64535:64535 /trickster/ && \
