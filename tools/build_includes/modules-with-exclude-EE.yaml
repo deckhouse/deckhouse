@@ -239,6 +239,42 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/150-user-authn/hooks/common_test.go
+  to: /deckhouse/modules/150-user-authn/hooks/common_test.go
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/150-user-authn/hooks/custom_logo.go
+  to: /deckhouse/modules/150-user-authn/hooks/custom_logo.go
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/150-user-authn/hooks/custom_logo_test.go
+  to: /deckhouse/modules/150-user-authn/hooks/custom_logo_test.go
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/160-multitenancy-manager
   to: /deckhouse/modules/160-multitenancy-manager
   excludePaths:
