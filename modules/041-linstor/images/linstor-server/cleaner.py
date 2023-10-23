@@ -21,6 +21,7 @@ from typing import List
 from pathlib import Path
 
 BASE_RES_PATH = "/var/lib/linstor.d/"
+RES_FILES_MASK = "*.res"
 
 def singleton(class_):
     instances = {}
@@ -36,14 +37,19 @@ def singleton(class_):
 class LinstorConnection:
     def __init__(self) -> None:
         # In pod hardcoded. TODO: we can use linstor.Config.get_section('global') instead
-        self.__conn = linstor.Linstor("linstor+ssl://linstor.d8-linstor.svc:3371")
+        self.__conn = linstor.Linstor("linstor+ssl://linstor.d8-linstor.svc:3371", timeout=5)
         self.__conn.keyfile = '/etc/linstor/client/tls.key'
         self.__conn.cafile = '/etc/linstor/client/ca.crt'
         self.__conn.certfile =  '/etc/linstor/client/tls.crt'
 
     def get_resource_list(self, retries=5):
         logger = logging.getLogger()
-        self.__conn.connect()
+        try:
+            self.__conn.connect()
+        except Exception:
+            logger.error("error while connect linstor rest service linstor.d8-linstor.svc:3371")
+            return None
+        
         for i in range(retries):
             try:
                 result = self.__conn.resource_list()
@@ -59,9 +65,9 @@ class LinstorConnection:
         return result
 
 def get_res_files() -> List[str]:
-    files_iter = Path(BASE_RES_PATH).glob("*.res")
+    files_iter = Path(BASE_RES_PATH).glob("RES_FILES_MASK")
     return [f.name for f in files_iter]
-
+   
 def process_res_files():
     logger = logging.getLogger()
     res_files = get_res_files()
@@ -69,6 +75,22 @@ def process_res_files():
 
     lin_con = LinstorConnection()
     rest_reponse = lin_con.get_resource_list()
+    if rest_reponse.__class__ is list and rest_reponse[0].__class__ is linstor.responses.ResourceResponse:
+        rest_list = [r.name for r in rest_reponse[0].resources]
+        logging.debug(f"recived {len(rest_list)} from linstor rest api")
+    else:
+        rest_list = []
+        logging.debug("resource list from rest api is empty")
+
+    res_to_remove = [res for res in res_files if res.stem not in rest_list]
+    logging.info(f"founded {len(res_to_remove)} resources to remove")
+    for f in res_to_remove:
+        try:
+            f.unlink()
+        except:
+            logging.debug(f"coudnot remove {f.stem} file")
+            continue
+
 
 
 def main(interval: int, debug: bool):
