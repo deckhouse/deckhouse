@@ -22,6 +22,7 @@ import:
   - bin/mountpoint
   - bin/lsblk
   - bin/mountpoint
+  - sbin/blockdev
   - sbin/blkid
   - sbin/fsck
   - sbin/cfdisk

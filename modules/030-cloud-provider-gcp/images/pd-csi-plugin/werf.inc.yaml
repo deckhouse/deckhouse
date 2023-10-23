@@ -6,6 +6,77 @@ import:
   add: /src/bin/gce-pd-csi-driver
   to: /gce-pd-csi-driver
   before: setup
+- image: common/busybox-static
+  add: /build/busybox
+  to: /bin/busybox
+  before: setup
+- image: common/util-linux-static
+  add: /build/staticbin
+  to: /
+  before: setup
+  includePaths:
+  - bin/fdisk
+  - bin/findmnt
+  - bin/mount
+  - bin/umount
+  - bin/mountpoint
+  - bin/lsblk
+  - bin/mountpoint
+  - sbin/blockdev
+  - sbin/blkid
+  - sbin/fsck
+  - sbin/cfdisk
+  - sbin/mkfs
+  - sbin/sfdisk
+  - sbin/wipefs
+- image: common/e2fsprogs-static
+  add: /build/staticbin
+  to: /
+  before: setup
+  includePaths:
+  - sbin/badblocks
+  - sbin/dumpe2fs
+  - sbin/e2fsck
+  - sbin/e2label
+  - sbin/e2scrub
+  - sbin/e2undo
+  - sbin/e4defrag
+  - sbin/fsck.ext2
+  - sbin/fsck.ext4
+  - sbin/mke2fs
+  - sbin/mklost+found
+  - sbin/tune2fs
+  - sbin/debugfs
+  - sbin/e2freefrag
+  - sbin/e2image
+  - sbin/e2mmpstatus
+  - sbin/e2scrub_all
+  - sbin/e4crypt
+  - sbin/filefrag
+  - sbin/fsck.ext3
+  - sbin/logsave
+  - sbin/mkfs.ext2
+  - sbin/mkfs.ext3
+  - sbin/mkfs.ext4
+  - sbin/resize2fs
+- image: common/xfsprogs-static
+  add: /build/staticbin
+  to: /
+  before: setup
+  includePaths:
+  - 'sbin/xfs_*'
+  - 'sbin/*.xfs'
+- image: common/nvme-cli-static
+  add: /build/nvme
+  to: /bin/nvme
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-xdd-artifact
+  add: /build/src/xxd/xxd
+  to: /bin/xxd
+  before: setup
+shell:
+  setup:
+    - /bin/busybox --install -s
 docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
 ---
@@ -15,9 +86,9 @@ git:
 - url: https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver
   to: /src
   tag: v1.3.3
-  stageDependencies:
-    install:
-    - '**/*'
+  # stageDependencies:
+  #   install:
+  #   - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -32,5 +103,21 @@ shell:
   install:
   - cd /src
   - GCE_PD_CSI_STAGING_VERSION=v1.3.3 make gce-pd-driver
-  # - chown 64535:64535 /src/bin/gce-pd-csi-driver
-  # - chmod 0755 /src/bin/gce-pd-csi-driver
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-xdd-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+git:
+- url: https://github.com/vim/vim.git
+  to: /build
+  tag: v9.0.2063
+shell:
+  beforeInstall:
+  - apt update
+  - |
+    apt install --no-install-recommends -y \
+      git gcc make build-essential
+  install:
+  - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
+  - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s -flto=auto"
+  - cd /build/src/xxd/
+  - make
