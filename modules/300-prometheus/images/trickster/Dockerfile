@@ -18,7 +18,8 @@ WORKDIR /trickster/
 
 RUN go mod edit -go 1.20 \
     && go get -u golang.org/x/net \
-    && go get -u github.com/prometheus/client_golang
+    && go get -u github.com/prometheus/client_golang \
+    && go get -u go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace
 RUN make build && \
     chown -R 64535:64535 /trickster/ && \
     chmod 0700 /trickster/OPATH/trickster
