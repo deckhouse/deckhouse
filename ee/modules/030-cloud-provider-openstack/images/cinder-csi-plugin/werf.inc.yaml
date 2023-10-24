@@ -1,23 +1,46 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.csi.openstack }}
+# ---
+# image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+# from: {{ $.Images.BASE_UBUNTU }}
+# import:
+# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+#   add: /src/cinder-csi-plugin
+#   to: /bin/cinder-csi-plugin
+#   before: setup
+# shell:
+#   beforeInstall:
+#   - apt update
+#   - apt install ca-certificates e2fsprogs mount xfsprogs udev -y
+#   - rm -rf /var/lib/apt/lists/*
+# docker:
+#   ENV:
+#     DEBIAN_FRONTEND: noninteractive
+#     container: docker
+#   ENTRYPOINT: ["/bin/cinder-csi-plugin"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_UBUNTU }}
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/cinder-csi-plugin
   to: /bin/cinder-csi-plugin
   before: setup
-shell:
-  beforeInstall:
-  - apt update
-  - apt install ca-certificates e2fsprogs mount xfsprogs udev -y
-  - rm -rf /var/lib/apt/lists/*
+- image: common/busybox-static
+  add: /build/busybox
+  to: /bin/busybox
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - 'bin/*'
+  - 'sbin/*'
+  - 'lib64/*'
+  - 'lib/ld-linux-aarch64.so*'
 docker:
-  ENV:
-    DEBIAN_FRONTEND: noninteractive
-    container: docker
   ENTRYPOINT: ["/bin/cinder-csi-plugin"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
@@ -49,3 +72,13 @@ shell:
   - make cinder-csi-plugin
   {{- end }}
 {{- end }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
+from: {{ $.Images.BASE_ALT }}
+shell:
+  beforeInstall:
+    - apt-get update
+    - |
+      apt-get install -y ca-certificates \
+                       e2fsprogs xfsprogs \
+                       mount btrfs-progs udev

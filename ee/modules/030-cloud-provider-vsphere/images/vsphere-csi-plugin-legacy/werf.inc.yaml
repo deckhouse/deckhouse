@@ -1,0 +1,86 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
+  add: /src/vsphere-csi
+  to: /bin/vsphere-csi
+  before: setup
+- image: common/busybox-static
+  add: /build/busybox
+  to: /bin/busybox
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - 'bin/*'
+  - 'sbin/*'
+  - 'lib64/*'
+docker:
+  ENTRYPOINT: ["/bin/vsphere-csi"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
+from: {{ $.Images.BASE_ALPINE }}
+git:
+- url: https://github.com/flant/cloud-provider-vsphere
+  to: /src
+  tag: v0.2.1
+  stageDependencies:
+    install:
+      - '**/*'
+- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
+  to: /src
+  includePaths:
+  - 001-support-fcd-disk-resize.patch
+  - 002-find-by-converted-uuid.patch
+shell:
+  beforeInstall:
+  - |
+    apk upgrade --available --no-cache && \
+    apk add --no-cache git patch
+  install:
+  - cd /src
+  - patch -p1 < 001-support-fcd-disk-resize.patch
+  - patch -p1 < 002-find-by-converted-uuid.patch
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
+from: {{ $.Images.BASE_GOLANG_ALPINE }}
+import: 
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
+  add: /src
+  to: /cloud-provider-vsphere
+  before: setup
+git:
+- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/001-csi-metrics-and-volume-expansion.patch
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - |
+    apk upgrade --available --no-cache && \
+    apk add --no-cache git mercurial patch wget
+  install:
+  - cd /src
+  - |
+    wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C .
+    wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C .
+  - patch -p1 < 001-csi-metrics-and-volume-expansion.patch
+  - go mod edit -replace=k8s.io/cloud-provider-vsphere=/cloud-provider-vsphere
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
+from: {{ $.Images.BASE_ALT }}
+shell:
+  beforeInstall:
+    - apt-get update
+    - |
+      apt-get install -y ca-certificates \
+                       e2fsprogs xfsprogs \
+                       mount btrfs-progs

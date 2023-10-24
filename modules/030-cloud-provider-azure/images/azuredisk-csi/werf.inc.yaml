@@ -87,9 +87,9 @@ git:
 - url: https://github.com/kubernetes-sigs/azuredisk-csi-driver/
   to: /src
   tag: v1.17.0
-  stageDependencies:
-    install:
-    - '**/*'
+  # stageDependencies:
+  #   install:
+  #   - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
