@@ -1122,6 +1122,8 @@ jobs:
 
       - name: Prepare site structure
         env:
+          DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+          DOC_API_URL: "${{vars.DOC_API_URL}}"
 
           WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
         run: |
