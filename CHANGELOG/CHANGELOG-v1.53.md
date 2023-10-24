@@ -1,5 +1,10 @@
 # Changelog v1.53
 
+## [MALFORMED]
+
+
+ - #6214 invalid type "Fix"
+
 ## Features
 
 
@@ -39,16 +44,21 @@
 ## Fixes
 
 
+ - **[candi]** Send bootstrap logs from cluster-api static instances. [#6252](https://github.com/deckhouse/deckhouse/pull/6252)
+ - **[candi]** Fix CAPI kubeconfig hook, which cannot work on fresh installations. [#6252](https://github.com/deckhouse/deckhouse/pull/6252)
+ - **[candi]** Removed `shortNames` from CAPI CRDs. [#6252](https://github.com/deckhouse/deckhouse/pull/6252)
  - **[candi]** Add ALT Linux 10.0, 10.2 support. [#6215](https://github.com/deckhouse/deckhouse/pull/6215)
  - **[candi]** Revert curl version pinning for Red OS. [#6210](https://github.com/deckhouse/deckhouse/pull/6210)
  - **[candi]** Fix working of bootstrap cloud-networks setup scripts. [#6193](https://github.com/deckhouse/deckhouse/pull/6193)
  - **[candi]** Allow underscore in `httpProxy` and `httpsProxy` settings. [#6169](https://github.com/deckhouse/deckhouse/pull/6169)
+ - **[cloud-provider-vsphere]** Fix slugification datastore names containing hyphens. [#6286](https://github.com/deckhouse/deckhouse/pull/6286)
  - **[deckhouse]** Canary release disabled for manual update mode [#6229](https://github.com/deckhouse/deckhouse/pull/6229)
  - **[deckhouse]** Fix bash completion. [#6225](https://github.com/deckhouse/deckhouse/pull/6225)
  - **[deckhouse]** Restrict the webhook to validate only Deckhouse ConfigMaps. [#5997](https://github.com/deckhouse/deckhouse/pull/5997)
  - **[external-module-manager]** Change the image export logic. [#6123](https://github.com/deckhouse/deckhouse/pull/6123)
  - **[ingress-nginx]** Fix Ingress controller panic when an endpointslice doesn't have the `.conditions` field. [#6111](https://github.com/deckhouse/deckhouse/pull/6111)
     Ingress controller will restart.
+ - **[linstor]** Changed the method of loading DRBD kernel module on the nodes with active LINSTOR satellites. [#6278](https://github.com/deckhouse/deckhouse/pull/6278)
  - **[node-manager]** Do not show the 'Approve with reboot' button for nodes in the Deckhouse UI when the `RollingUpdate` mode is selected. [#5440](https://github.com/deckhouse/deckhouse/pull/5440)
  - **[pod-reloader]** Run pod-reloader from deckhouse user. [#6258](https://github.com/deckhouse/deckhouse/pull/6258)
  - **[prometheus]** Fix settings source for external auth. [#6103](https://github.com/deckhouse/deckhouse/pull/6103)
@@ -63,4 +73,5 @@
  - **[candi]** Disable the in-tree RBD plugin for Kubernetes >= 1.24. [#6134](https://github.com/deckhouse/deckhouse/pull/6134)
     Control plane pods will restart.
  - **[user-authn]** Make the `userID` parameter of the User resource deprecated. [#6106](https://github.com/deckhouse/deckhouse/pull/6106)
+ - **[user-authz]** Add missing multitenancy constraint for cluster authorization rules. Fixes user validation webhook. [#6256](https://github.com/deckhouse/deckhouse/pull/6256)
 
