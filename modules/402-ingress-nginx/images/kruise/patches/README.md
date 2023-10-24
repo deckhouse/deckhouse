@@ -18,7 +18,8 @@ and drop excessive pods from the list so as to obbey maxUnavailable setting.
 The thing is that having a pod marked as Unavailable from the Controller point of view doesn't mean that the pod doesn't work and
 should be updated ASAP.
 
-### Set .spec.replicas
-Sets an extra spec field `replicas` which is synced with .status.DesiredNumberScheduled field and is used for providing compatibility with `scale` subresource API.
-In its turn, having `scale` subresource allows applying PodDistruptionBudget constraints to advanved daemon sets.
-Also, extensive NoSchedule/NoExecute tolerations for daemonsets' pods are removed.
+### Add pdb
+Adds an extra spec field `.spec.replicas` which is set by the kruise controller every time an advanced daemonset set is reconcilied. The replicas value is calculated based on
+the number of nodes eligible for scheduling the advanced daemonset's pods (cordoned nodes are counted as eligible).
+Adds /scale subresource to advanced daemonset CRD so that a PDB could enforce its policy.
+Adds some extra logic to the kruise controller to deal with relevant PDB's (to make them resync when necessary) and timely update replicas' count in some conrner cases.
