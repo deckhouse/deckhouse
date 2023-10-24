@@ -1,0 +1,35 @@
+---
+artifact: {{ .ModuleName }}/build-fping-static-artifact
+from: {{ .Images.BASE_UBUNTU }}
+shell:
+  install:
+  - mkdir build && cd build
+  - apt update && apt install -y --no-install-recommends git build-essential ca-certificates autoconf autotools-dev automake
+  - git clone -b v5.1 --single-branch --depth=1 {{ $.SOURCE_REPO }}/schweikert/fping.git ./src
+  - cd ./src
+  - autoreconf -i
+  - ./configure LDFLAGS="-static" --prefix=/opt/fping-static
+  - make
+  - make install
+  - chown -R 64535:64535 /opt/fping-static
+  - chmod 0700 /opt/fping-static/sbin/fping
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/python-static
+git:
+- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- artifact: {{ $.ModuleName }}/build-fping-static-artifact
+  add: /opt/fping-static/sbin/fping
+  to: /usr/sbin/fping
+  before: setup
+shell:
+  install:
+  - cd /src
+  - /opt/python-static/bin/pip3 install -r requirements.txt
+docker:
+  ENTRYPOINT: ["/opt/python-static/bin/python3", "/src/monitoring-ping.py"]

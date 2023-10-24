@@ -138,6 +138,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
 		"nginxStatic":               "imageHash-common-nginxStatic",
 		"pause":                     "imageHash-common-pause",
+		"pythonStatic":              "imageHash-common-pythonStatic",
 		"shellOperator":             "imageHash-common-shellOperator",
 	},
 	"containerizedDataImporter": map[string]interface{}{
