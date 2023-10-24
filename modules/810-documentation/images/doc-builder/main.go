@@ -34,7 +34,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&listenAddress, "address", ":8080", "Address to listen on")
+	flag.StringVar(&listenAddress, "address", ":8081", "Address to listen on")
 	flag.StringVar(&uploadDir, "upload", "/tmp", "Directory to upload files")
 }
 
