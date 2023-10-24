@@ -17,7 +17,6 @@ package bootstrap
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
@@ -34,7 +33,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 		return err
 	}
 
-	installConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
+	installConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
 		return err
 	}

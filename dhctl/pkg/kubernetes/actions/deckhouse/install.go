@@ -19,12 +19,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/iancoleman/strcase"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -40,65 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-type Config struct {
-	Registry              config.RegistryData
-	LogLevel              string
-	Bundle                string
-	ReleaseChannel        string
-	DevBranch             string
-	UUID                  string
-	KubeDNSAddress        string
-	ClusterConfig         []byte
-	ProviderClusterConfig []byte
-	StaticClusterConfig   []byte
-	TerraformState        []byte
-	NodesTerraformState   map[string][]byte
-	CloudDiscovery        []byte
-	DeckhouseConfig       map[string]interface{}
-
-	KubeadmBootstrap   bool
-	MasterNodeSelector bool
-}
-
-func (c *Config) GetImage(forceVersionTag bool) string {
-	registryNameTemplate := "%s%s:%s"
-	tag := c.DevBranch
-	if c.ReleaseChannel != "" {
-		tag = strcase.ToKebab(c.ReleaseChannel)
-	}
-	if forceVersionTag {
-		versionTag, foundValidTag := readVersionTagFromInstallerContainer()
-		if foundValidTag {
-			tag = versionTag
-		}
-	}
-
-	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
-}
-
-func (c *Config) IsRegistryAccessRequired() bool {
-	return c.Registry.DockerCfg != ""
-}
-
-func readVersionTagFromInstallerContainer() (string, bool) {
-	rawFile, err := os.ReadFile(app.VersionFile)
-	if err != nil {
-		log.WarnF(
-			"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
-			app.VersionFile, err,
-		)
-		return "", false
-	}
-
-	tag := string(rawFile)
-	if _, err = semver.NewVersion(tag); err != nil {
-		return "", false
-	}
-
-	return tag, true
-}
-
-func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *Config, manifestForUpdate *appsv1.Deployment) (*appsv1.Deployment, error) {
+func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller, manifestForUpdate *appsv1.Deployment) (*appsv1.Deployment, error) {
 	resDeployment := manifestForUpdate
 	err := retry.NewSilentLoop("get deployment", 10, 3*time.Second).Run(func() error {
 		currentManifestInCluster, err := kubeCl.AppsV1().Deployments(manifestForUpdate.GetNamespace()).Get(context.TODO(), manifestForUpdate.GetName(), metav1.GetOptions{})
@@ -124,7 +63,7 @@ func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *C
 	return resDeployment, err
 }
 
-func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *Config) actions.ManifestTask {
+func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) actions.ManifestTask {
 	return actions.ManifestTask{
 		Name: `Deployment "deckhouse"`,
 		Manifest: func() interface{} {
@@ -147,7 +86,7 @@ func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *Config) acti
 	}
 }
 
-func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) error {
+func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
 	tasks := []actions.ManifestTask{
 		{
 			Name:     `Namespace "d8-system"`,
@@ -426,13 +365,13 @@ func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode stri
 	})
 }
 
-func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) error {
+func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
 	task := controllerDeploymentTask(kubeCl, cfg)
 
 	return log.Process("default", "Create Deployment", task.CreateOrUpdate)
 }
 
-func deckhouseDeploymentParamsFromCfg(cfg *Config) manifests.DeckhouseDeploymentParams {
+func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
 		Registry:           cfg.GetImage(true),
 		LogLevel:           cfg.LogLevel,
@@ -443,7 +382,7 @@ func deckhouseDeploymentParamsFromCfg(cfg *Config) manifests.DeckhouseDeployment
 	}
 }
 
-func CreateDeckhouseDeploymentManifest(cfg *Config) *appsv1.Deployment {
+func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) *appsv1.Deployment {
 	params := deckhouseDeploymentParamsFromCfg(cfg)
 
 	return manifests.DeckhouseDeployment(params)
@@ -457,37 +396,4 @@ func WaitForKubernetesAPI(kubeCl *client.KubernetesClient) error {
 		}
 		return fmt.Errorf("kubernetes API is not Ready: %w", err)
 	})
-}
-
-func PrepareDeckhouseInstallConfig(metaConfig *config.MetaConfig) (*Config, error) {
-	clusterConfig, err := metaConfig.ClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("marshal cluster config: %v", err)
-	}
-
-	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("marshal provider config: %v", err)
-	}
-
-	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("marshal static config: %v", err)
-	}
-
-	installConfig := Config{
-		UUID:                  metaConfig.UUID,
-		Registry:              metaConfig.Registry,
-		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
-		ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
-		Bundle:                metaConfig.DeckhouseConfig.Bundle,
-		LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
-		DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
-		KubeDNSAddress:        metaConfig.ClusterDNSAddress,
-		ProviderClusterConfig: providerClusterConfig,
-		StaticClusterConfig:   staticClusterConfig,
-		ClusterConfig:         clusterConfig,
-	}
-
-	return &installConfig, nil
 }

@@ -17,7 +17,10 @@ package deckhouse
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -29,6 +32,15 @@ import (
 func TestDeckhouseInstall(t *testing.T) {
 	log.InitLogger("simple")
 	fakeClient := client.NewFakeKubernetesClient()
+
+	err := os.WriteFile("/deckhouse/version", []byte("1.54.1"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
 
 	tests := []struct {
 		name    string
@@ -82,7 +94,6 @@ func TestDeckhouseInstall(t *testing.T) {
 					ClusterConfig:         []byte(`test`),
 					ProviderClusterConfig: []byte(`test`),
 					TerraformState:        []byte(`test`),
-					DeckhouseConfig:       map[string]interface{}{"test": "test"},
 				}
 				err := CreateDeckhouseManifests(fakeClient, &conf)
 				if err != nil {
@@ -105,4 +116,23 @@ func TestDeckhouseInstall(t *testing.T) {
 			t.Errorf("%s: expected error, didn't get one", tc.name)
 		}
 	}
+}
+
+func TestDeckhouseInstallWithDevBranch(t *testing.T) {
+	fakeClient := client.NewFakeKubernetesClient()
+
+	err := os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
+
+	err = CreateDeckhouseManifests(fakeClient, &Config{
+		DevBranch: "pr1111",
+	})
+
+	require.NoError(t, err)
 }

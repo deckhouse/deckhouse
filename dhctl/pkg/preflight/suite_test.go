@@ -41,8 +41,7 @@ func (s *PreflightChecksTestSuite) SetupTest() {
 			Path:      "/deckhouse/ce",
 			DockerCfg: "ewogICJhdXRocyI6IHsKICAgICJyZWdpc3RyeS5kZWNraG91c2UuaW8iOiB7CiAgICAgICJhdXRoIjogIiIKICAgIH0KICB9Cn0=",
 		},
-		ReleaseChannel: "stable",
-		DevBranch:      "",
+		DevBranch: "",
 	}
 }
 

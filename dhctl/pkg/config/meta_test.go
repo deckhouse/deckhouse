@@ -62,8 +62,7 @@ func TestGetDNSAddress(t *testing.T) {
 	}
 }
 
-func renderTestConfig(data map[string]interface{}) string {
-	config := `
+const metaConfigTestsTemplate = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
@@ -137,8 +136,9 @@ provider:
        "private_key": "privateKey"
     }
 ---
-
 `
+
+func renderTestConfig(data map[string]interface{}, config string) string {
 	t := template.New("testconfig_template").Funcs(sprig.TxtFuncMap())
 	t, err := t.Parse(config)
 	if err != nil {
@@ -193,8 +193,8 @@ func generateOldDockerCfg(host string, username, password *string) string {
 	return string(auth)
 }
 
-func generateMetaConfig(t *testing.T, data map[string]interface{}) *MetaConfig {
-	configData := renderTestConfig(data)
+func generateMetaConfig(t *testing.T, template string, data map[string]interface{}) *MetaConfig {
+	configData := renderTestConfig(data, template)
 
 	cfg, err := ParseConfigFromData(configData)
 	require.NoError(t, err)
@@ -202,9 +202,13 @@ func generateMetaConfig(t *testing.T, data map[string]interface{}) *MetaConfig {
 	return cfg
 }
 
+func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface{}) *MetaConfig {
+	return generateMetaConfig(t, metaConfigTestsTemplate, data)
+}
+
 func TestPrepareRegistry(t *testing.T) {
 	t.Run("Has imagesRepo and dockerCfg", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
 			"imagesRepo": "r.example.com/deckhouse/ce/",
 		})
@@ -227,7 +231,7 @@ func TestPrepareRegistry(t *testing.T) {
 	})
 
 	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {
-		cfg := generateMetaConfig(t, make(map[string]interface{}))
+		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 
 		t.Run("Registry object for CE edition", func(t *testing.T) {
 			expectedData := RegistryData{
@@ -299,7 +303,7 @@ func TestParseRegistryData(t *testing.T) {
 	t.Run("dockerCfg in current format (has auth)", func(t *testing.T) {
 		t.Run("sets auth key from auth string", func(t *testing.T) {
 			user, password := "user", "password"
-			cfg := generateMetaConfig(t, map[string]interface{}{
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 				"dockerCfg":  generateDockerCfg("r.example.com", user, password),
 				"imagesRepo": "r.example.com/deckhouse/ce/",
 			})
@@ -315,7 +319,7 @@ func TestParseRegistryData(t *testing.T) {
 		t.Run("correct", func(t *testing.T) {
 			t.Run("sets auth key as base64 concatenation username and password with ':' separator", func(t *testing.T) {
 				user, password := "old_user", "old_password"
-				cfg := generateMetaConfig(t, map[string]interface{}{
+				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, &password),
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
@@ -330,7 +334,7 @@ func TestParseRegistryData(t *testing.T) {
 		t.Run("does not have username", func(t *testing.T) {
 			t.Run("sets empty auth key", func(t *testing.T) {
 				password := "old_password"
-				cfg := generateMetaConfig(t, map[string]interface{}{
+				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 					"dockerCfg":  generateOldDockerCfg("r.example.com", nil, &password),
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
@@ -345,7 +349,7 @@ func TestParseRegistryData(t *testing.T) {
 		t.Run("does not have password", func(t *testing.T) {
 			t.Run("sets empty auth key", func(t *testing.T) {
 				user := "old_user"
-				cfg := generateMetaConfig(t, map[string]interface{}{
+				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, nil),
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
@@ -360,7 +364,7 @@ func TestParseRegistryData(t *testing.T) {
 
 	t.Run("default dockerCfg", func(t *testing.T) {
 		t.Run("sets empty auth key", func(t *testing.T) {
-			cfg := generateMetaConfig(t, make(map[string]interface{}))
+			cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 
 			m, err := cfg.ParseRegistryData()
 			require.NoError(t, err)
@@ -372,7 +376,7 @@ func TestParseRegistryData(t *testing.T) {
 
 func TestEnrichProxyData(t *testing.T) {
 	t.Run("proxy config is absent", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{})
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
 
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
@@ -381,7 +385,7 @@ func TestEnrichProxyData(t *testing.T) {
 	})
 
 	t.Run("proxy config is present, httpProxy is set", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"proxy": map[string]interface{}{
 				"httpProxy": "http://1.2.3.4",
 			},
@@ -397,7 +401,7 @@ func TestEnrichProxyData(t *testing.T) {
 	})
 
 	t.Run("proxy config is present, httpsProxy is set", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"proxy": map[string]interface{}{
 				"httpsProxy": "https://2.3.4.5",
 			},
@@ -413,7 +417,7 @@ func TestEnrichProxyData(t *testing.T) {
 	})
 
 	t.Run("proxy config is present, all options is set", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"proxy": map[string]interface{}{
 				"httpProxy":  "http://1.2.3.4",
 				"httpsProxy": "https://2.3.4.5",

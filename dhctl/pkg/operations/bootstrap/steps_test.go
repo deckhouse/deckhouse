@@ -120,10 +120,9 @@ func TestInstallDeckhouse(t *testing.T) {
 	clusterUUID := "848c3b2c-eda6-11ec-9289-dff550c719eb"
 
 	conf := &deckhouse.Config{
-		ReleaseChannel: "Stable",
-		Bundle:         "minimal",
-		LogLevel:       "Info",
-		UUID:           clusterUUID,
+		Bundle:   "minimal",
+		LogLevel: "Info",
+		UUID:     clusterUUID,
 	}
 
 	assertDeploymentAndUUIDCmCreated := func(t *testing.T, fakeClient *client.KubernetesClient) {

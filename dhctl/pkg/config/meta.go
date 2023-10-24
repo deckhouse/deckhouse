@@ -25,7 +25,6 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/peterbourgon/mergemap"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -182,38 +181,6 @@ func validateRegistryDockerCfg(cfg string) error {
 	}
 
 	return nil
-}
-
-// MergeDeckhouseConfig returns deckhouse config merged from different sources
-func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interface{} {
-	deckhouseModuleConfig := map[string]interface{}{
-		"logLevel": m.DeckhouseConfig.LogLevel,
-		"bundle":   m.DeckhouseConfig.Bundle,
-	}
-
-	if m.DeckhouseConfig.ReleaseChannel != "" {
-		deckhouseModuleConfig["releaseChannel"] = m.DeckhouseConfig.ReleaseChannel
-	}
-
-	baseDeckhouseConfig := map[string]interface{}{"deckhouse": deckhouseModuleConfig}
-	if len(configs) == 0 {
-		return mergemap.Merge(baseDeckhouseConfig, m.DeckhouseConfig.ConfigOverrides)
-	}
-
-	var firstConfig map[string]interface{}
-	_ = json.Unmarshal(configs[0], &firstConfig)
-
-	for _, configRaw := range configs[1:] {
-		var config map[string]interface{}
-		_ = json.Unmarshal(configRaw, &config)
-
-		firstConfig = mergemap.Merge(firstConfig, config)
-	}
-
-	firstConfig = mergemap.Merge(firstConfig, m.DeckhouseConfig.ConfigOverrides)
-	firstConfig = mergemap.Merge(firstConfig, baseDeckhouseConfig)
-
-	return firstConfig
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {

@@ -80,6 +80,7 @@ kind: ModuleConfig
 metadata:
   name: common
 spec:
+  enabled: true
   settings:
     testString: true
     testArray: 1
@@ -93,11 +94,36 @@ kind: ModuleConfig
 metadata:
   name: common
 spec:
+  enabled: false
   settings:
     testString: "aaaaa"
     testArray: ["1", "2"]
     testEnum: a
   version: 1
+`
+
+	moduleConfigCommonWithoutEnabled := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: common
+spec:
+  settings:
+    testString: "aaaaa"
+    testArray: ["1", "2"]
+    testEnum: a
+  version: 1
+`
+
+	moduleConfigCommonWithoutSettings := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: common
+spec:
+  enabled: false
 `
 
 	t.Run("Standard Static", func(t *testing.T) {
@@ -156,6 +182,16 @@ spec:
 		t.Run("Module invalid", func(t *testing.T) {
 			_, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigCommonInvalid)
 			require.Error(t, err)
+		})
+
+		t.Run("Module without enabled field", func(t *testing.T) {
+			_, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigCommonWithoutEnabled)
+			require.Error(t, err)
+		})
+
+		t.Run("Module without settings", func(t *testing.T) {
+			_, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigCommonWithoutSettings)
+			require.NoError(t, err)
 		})
 	})
 }

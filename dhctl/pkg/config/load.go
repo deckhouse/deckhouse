@@ -134,6 +134,21 @@ func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {
 	return s.cache[*index]
 }
 
+func (s *SchemaStore) GetModuleConfigVersion(name string) int {
+	schema, ok := s.moduleConfigsCache[name]
+	if ok {
+		if len(schema.VendorExtensible.Extensions) > 0 {
+			v, ok := schema.VendorExtensible.Extensions["x-config-version"]
+			if ok {
+				return int(v.(float64))
+			}
+		}
+		return 1
+	}
+
+	return 1
+}
+
 func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
 	var index SchemaIndex
 
@@ -175,9 +190,16 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 			return err
 		}
 		var ok bool
-		schema, ok = s.moduleConfigsCache[mc.GetName()]
+		mcName := mc.GetName()
+		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
 			return fmt.Errorf("Schema for module config %s wasn't found.", mc.GetName())
+		}
+		if mc.Spec.Enabled == nil && mcName != "global" {
+			return fmt.Errorf("enabled field for module config %s shoud set to true or false", mcName)
+		}
+		if len(mc.Spec.Settings) == 0 {
+			return nil
 		}
 		var err error
 		docForValidate, err = yaml.Marshal(mc.Spec.Settings)
