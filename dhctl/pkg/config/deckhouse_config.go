@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	initConfigurationError = `%s field in InitConfiguration is deprecated.
+	initConfigurationError = `%s fields in InitConfiguration are deprecated.
 Please use ModuleConfig 'deckhouse' section in configuration. Example:
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -91,6 +91,9 @@ func readVersionTagFromInstallerContainer() (string, bool) {
 }
 
 func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller, error) {
+	if metaConfig == nil {
+		return nil, fmt.Errorf("Internal error. Metaconfig is nil")
+	}
 	clusterConfig, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
 		return nil, fmt.Errorf("marshal cluster config: %v", err)
@@ -135,7 +138,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
 		log.WarnLn(`
-Config overrides is deprecated. Please use module config:
+Config overrides are deprecated. Please use module config:
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration

@@ -201,6 +201,12 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		if len(mc.Spec.Settings) == 0 {
 			return nil
 		}
+
+		if mc.Spec.Version == 0 {
+			return fmt.Errorf("version field for module config %s shoud set", mcName)
+
+		}
+
 		var err error
 		docForValidate, err = yaml.Marshal(mc.Spec.Settings)
 		if err != nil {

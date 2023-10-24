@@ -19,8 +19,12 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   devBranch: aaaa
-{{- if .releaseChannel }}
-  releaseChannel: {{ .proxy.releaseChannel }}
+{{- if .bundle }}
+  bundle: {{ .bundle }}
+{{- end }}
+
+{{- if .logLevel }}
+  logLevel: {{ .logLevel }}
 {{- end }}
 
 {{- if .configOverrides}}
@@ -40,7 +44,14 @@ internalNetworkCIDRs:
 `
 
 func generateMetaConfigForConfigOverridesTest(t *testing.T, data map[string]interface{}) *MetaConfig {
-	return generateMetaConfig(t, configOverridesTemplate, data)
+	return generateMetaConfig(t, configOverridesTemplate, data, false)
+}
+
+func assertModuleConfig(t *testing.T, mc *ModuleConfig, enabled bool, version int, setting map[string]interface{}) {
+	require.NotNil(t, mc.Spec.Enabled)
+	require.Equal(t, *mc.Spec.Enabled, enabled)
+	require.Equal(t, mc.Spec.Version, version)
+	require.Equal(t, mc.Spec.Settings, SettingsValues(setting))
 }
 
 func TestModuleConfigOverridesToModuleConfig(t *testing.T) {
@@ -63,17 +74,9 @@ configOverrides:
 		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig)
 		require.NoError(t, err)
 
-		assertModuleConfig := func(t *testing.T, mc *ModuleConfig, enabled bool, version int, setting map[string]interface{}) {
-			require.NotNil(t, mc.Spec.Enabled)
-			require.Equal(t, *mc.Spec.Enabled, enabled)
-			require.Equal(t, mc.Spec.Version, version)
-			require.Equal(t, mc.Spec.Settings, SettingsValues(setting))
-
-		}
-
 		for _, mc := range mcs {
 			switch mc.GetName() {
-			case "flantIntegration":
+			case "istioEnabled":
 				assertModuleConfig(t, mc, false, 1, nil)
 			case "global":
 				assertModuleConfig(t, mc, true, 1, map[string]interface{}{

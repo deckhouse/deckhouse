@@ -193,17 +193,22 @@ func generateOldDockerCfg(host string, username, password *string) string {
 	return string(auth)
 }
 
-func generateMetaConfig(t *testing.T, template string, data map[string]interface{}) *MetaConfig {
+func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
 
 	cfg, err := ParseConfigFromData(configData)
-	require.NoError(t, err)
+	f := require.NoError
+	if hasErr {
+		f = require.Error
+	}
+
+	f(t, err)
 
 	return cfg
 }
 
 func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface{}) *MetaConfig {
-	return generateMetaConfig(t, metaConfigTestsTemplate, data)
+	return generateMetaConfig(t, metaConfigTestsTemplate, data, false)
 }
 
 func TestPrepareRegistry(t *testing.T) {
