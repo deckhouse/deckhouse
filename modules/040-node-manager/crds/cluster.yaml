@@ -17,8 +17,6 @@ spec:
     kind: Cluster
     listKind: ClusterList
     plural: clusters
-    shortNames:
-      - cl
     singular: cluster
   scope: Namespaced
   versions:

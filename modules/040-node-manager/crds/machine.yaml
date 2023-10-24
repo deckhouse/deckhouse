@@ -15,8 +15,6 @@ spec:
     kind: Machine
     listKind: MachineList
     plural: machines
-    shortNames:
-      - ma
     singular: machine
   scope: Namespaced
   versions:
