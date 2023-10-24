@@ -7,8 +7,8 @@ import:
   to: /gce-pd-csi-driver
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/deploy/kubernetes/udev/google_nvme_id
-  to: /lib/udev_containerized/google_nvme_id
+  add: /lib/udev/scsi_id
+  to: /lib/udev_containerized/scsi_id
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
