@@ -23,68 +23,27 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/hashicorp/go-multierror"
-	yamlv3 "gopkg.in/yaml.v3"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/yaml"
+	apimachineryYaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 func RegisterEnsureCRDsHook(crdsGlob string) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnStartup: &go_hook.OrderedConfig{Order: 5},
 	}, dependency.WithExternalDependencies(EnsureCRDsHandler(crdsGlob)))
-}
-
-func EnsureCRDs(crdsGlob string, input *go_hook.HookInput, dc dependency.Container) *multierror.Error {
-	result := new(multierror.Error)
-
-	crds, err := filepath.Glob(crdsGlob)
-	if err != nil {
-		result = multierror.Append(result, err)
-		return result
-	}
-
-	for _, crdFilePath := range crds {
-		if match := strings.HasPrefix(filepath.Base(crdFilePath), "doc-"); match {
-			continue
-		}
-
-		content, err := loadCRDsFromFile(crdFilePath)
-		if err != nil {
-			result = multierror.Append(result, err)
-			continue
-		}
-
-		crdYAMLs, err := splitYAML(content)
-		if err != nil {
-			result = multierror.Append(result, err)
-			continue
-		}
-
-		for _, crdYAML := range crdYAMLs {
-			if len(crdYAML) == 0 {
-				continue
-			}
-			err = putCRDToCluster(input, dc, crdYAML)
-			if err != nil {
-				result = multierror.Append(result, err)
-				continue
-			}
-		}
-	}
-	return result
 }
 
 func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc dependency.Container) error {
@@ -99,76 +58,115 @@ func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc depend
 	}
 }
 
-func putCRDToCluster(input *go_hook.HookInput, dc dependency.Container, crdYAML []byte) error {
-	var (
-		crd            interface{}
-		specConversion *apiextensions.CustomResourceConversion
-	)
+func EnsureCRDs(crdsGlob string, input *go_hook.HookInput, dc dependency.Container) *multierror.Error {
+	result := new(multierror.Error)
 
-	res := &unstructured.Unstructured{}
-	err := yaml.Unmarshal(crdYAML, &res)
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		result = multierror.Append(result, err)
+		return result
+	}
+
+	crds, err := filepath.Glob(crdsGlob)
+	if err != nil {
+		result = multierror.Append(result, err)
+		return result
+	}
+
+	cp := newCRDsProcessor(client, crds)
+
+	return cp.Run(input)
+}
+
+type crdsProcessor struct {
+	k8sClient    k8s.Client
+	crdFilesPath []string
+	buffer       []byte
+}
+
+func (cp *crdsProcessor) Run(input *go_hook.HookInput) *multierror.Error {
+	result := new(multierror.Error)
+
+	for _, crdFilePath := range cp.crdFilesPath {
+		if match := strings.HasPrefix(filepath.Base(crdFilePath), "doc-"); match {
+			continue
+		}
+
+		err := cp.processCRD(input, crdFilePath)
+		if err != nil {
+			result = multierror.Append(result, err)
+			continue
+		}
+	}
+
+	return result
+}
+
+func (cp *crdsProcessor) processCRD(input *go_hook.HookInput, crdFilePath string) error {
+	crdFileReader, err := os.Open(crdFilePath)
 	if err != nil {
 		return err
 	}
+	defer crdFileReader.Close()
 
-	c, err := getCRDFromCluster(dc, res.GetName())
-	if err == nil && c.Spec.Conversion != nil {
-		sc := &apiextensions.CustomResourceConversion{}
-		err := v1.Convert_v1_CustomResourceConversion_To_apiextensions_CustomResourceConversion(c.Spec.Conversion, sc, nil)
+	crdReader := apimachineryYaml.NewDocumentDecoder(crdFileReader)
+
+	for {
+		n, err := crdReader.Read(cp.buffer)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return err
+		}
+
+		rd := bytes.NewReader(cp.buffer[:n])
+		err = putCRDToCluster(cp.k8sClient, input, rd, n)
 		if err != nil {
 			return err
 		}
-		specConversion = sc
+
 	}
 
-	switch res.GetAPIVersion() {
-	case v1.SchemeGroupVersion.String():
-		crdv1 := &v1.CustomResourceDefinition{}
-		err = sdk.FromUnstructured(res, crdv1)
-		if err != nil {
-			return err
+	return nil
+}
+
+func putCRDToCluster(client k8s.Client, input *go_hook.HookInput, crdReader io.Reader, bufferSize int) error {
+	var (
+		crd *v1.CustomResourceDefinition
+	)
+
+	err := apimachineryYaml.NewYAMLOrJSONDecoder(crdReader, bufferSize).Decode(&crd)
+	if err != nil {
+		return err
+	}
+	if crd == nil || crd.APIVersion != v1.SchemeGroupVersion.String() {
+		return fmt.Errorf("invalid CRD: %v", crd)
+	}
+
+	existCRD, err := getCRDFromCluster(client, crd.GetName())
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			input.PatchCollector.Create(crd, object_patch.UpdateIfExists())
+			return nil
 		}
-		if specConversion != nil {
-			c := &v1.CustomResourceConversion{}
-			err := v1.Convert_apiextensions_CustomResourceConversion_To_v1_CustomResourceConversion(specConversion, c, nil)
-			if err != nil {
-				return err
-			}
-			crdv1.Spec.Conversion = c
-		}
-		crd = crdv1
-	case v1beta1.SchemeGroupVersion.String():
-		crdv1beta1 := &v1beta1.CustomResourceDefinition{}
-		err = sdk.FromUnstructured(res, crdv1beta1)
-		if err != nil {
-			return err
-		}
-		if specConversion != nil {
-			c := &v1beta1.CustomResourceConversion{}
-			err := v1beta1.Convert_apiextensions_CustomResourceConversion_To_v1beta1_CustomResourceConversion(specConversion, c, nil)
-			if err != nil {
-				return err
-			}
-			crdv1beta1.Spec.Conversion = c
-		}
-		crd = crdv1beta1
-	default:
-		return fmt.Errorf("unsupported crd apiversion: %v", res.GetAPIVersion())
+
+		return err
+	}
+
+	if reflect.DeepEqual(existCRD.Spec, crd.Spec) {
+		return nil
 	}
 
 	input.PatchCollector.Create(crd, object_patch.UpdateIfExists())
 	return nil
 }
 
-func getCRDFromCluster(dc dependency.Container, crdName string) (*v1.CustomResourceDefinition, error) {
+func getCRDFromCluster(client k8s.Client, crdName string) (*v1.CustomResourceDefinition, error) {
 	crd := &v1.CustomResourceDefinition{}
 
-	k8sClient, err := dc.GetK8sClient()
-	if err != nil {
-		return nil, err
-	}
-
-	o, err := k8sClient.Dynamic().Resource(schema.GroupVersionResource{
+	o, err := client.Dynamic().Resource(schema.GroupVersionResource{
 		Group:    "apiextensions.k8s.io",
 		Version:  "v1",
 		Resource: "customresourcedefinitions",
@@ -185,43 +183,13 @@ func getCRDFromCluster(dc dependency.Container, crdName string) (*v1.CustomResou
 	return crd, nil
 }
 
-func splitYAML(resources []byte) ([][]byte, error) {
-	dec := yamlv3.NewDecoder(bytes.NewReader(resources))
-
-	var res [][]byte
-	for {
-		var value interface{}
-		err := dec.Decode(&value)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		if value == nil {
-			continue
-		}
-		valueBytes, err := yamlv3.Marshal(value)
-		if err != nil {
-			return nil, err
-		}
-		res = append(res, valueBytes)
+func newCRDsProcessor(client k8s.Client, paths []string) *crdsProcessor {
+	return &crdsProcessor{
+		k8sClient:    client,
+		crdFilesPath: paths,
+		// 1Mb - maximum size of kubernetes object
+		// if we take less, we have to handle io.ErrShortBuffer error and increase the buffer
+		// take more does not make any sense due to kubernetes limitations
+		buffer: make([]byte, 1*1024*1024),
 	}
-	return res, nil
-}
-
-func loadCRDsFromFile(crdFilePath string) ([]byte, error) {
-	crdFile, err := os.Open(crdFilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	defer crdFile.Close()
-
-	content, err := io.ReadAll(crdFile)
-	if err != nil {
-		return nil, err
-	}
-
-	return content, nil
 }
