@@ -50,7 +50,7 @@ spec:
       - name: doc-builder
         image: {{ include "helm_lib_module_image" (list $ "docBuilder") }}
         ports:
-          - containerPort: 8080
+          - containerPort: 8081
             name: http
             protocol: TCP
       volumes:
