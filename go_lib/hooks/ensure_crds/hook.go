@@ -155,6 +155,10 @@ func putCRDToCluster(client k8s.Client, input *go_hook.HookInput, crdReader io.R
 		return err
 	}
 
+	if existCRD.Spec.Conversion != nil {
+		crd.Spec.Conversion = existCRD.Spec.Conversion
+	}
+
 	if reflect.DeepEqual(existCRD.Spec, crd.Spec) {
 		return nil
 	}

@@ -71,16 +71,3 @@ func TestEnsureCRDs(t *testing.T) {
 	sort.Strings(result)
 	assert.Equal(t, expected, result)
 }
-
-func BenchmarkEnsureCRDs(b *testing.B) {
-	path := "./test_data/**"
-	dc := dependency.TestDC
-	in := &go_hook.HookInput{PatchCollector: object_patch.NewPatchCollector()}
-	//b.Run("old", func(b *testing.B) {
-	//	_ = EnsureCRDs(path, in, dc)
-	//})
-
-	b.Run("new", func(b *testing.B) {
-		_ = EnsureCRDs(path, in, dc)
-	})
-}
