@@ -29,11 +29,6 @@ if [[ "${old_kubelet_hash}" != "${new_kubelet_hash}" ]]; then
   bb-flag-set kubelet-need-restart
 fi
 
-mkdir -p /etc/kubernetes/manifests
-mkdir -p /etc/systemd/system/kubelet.service.d
-mkdir -p /etc/kubernetes/pki
-mkdir -p /var/lib/kubelet
-
 # Add kubectl completion
 if grep -qF '# "\e[5~": history-search-backward' /etc/inputrc; then
   sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc

@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .runType "Normal" }}
-if [ ! -f /etc/kubernetes/pki/ca.crt ] ; then
-  cp /var/lib/bashible/ca.crt /etc/kubernetes/pki/
-fi
-{{- end }}
+mkdir -p /etc/kubernetes/manifests
+mkdir -p /etc/systemd/system/kubelet.service.d
+mkdir -p /etc/kubernetes/pki
+mkdir -p /var/lib/kubelet
