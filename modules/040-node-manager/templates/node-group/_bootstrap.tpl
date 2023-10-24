@@ -13,7 +13,9 @@
 set -Eeuo pipefail
 
 BOOTSTRAP_DIR="/var/lib/bashible"
-mkdir -p ${BOOTSTRAP_DIR}
+TMPDIR="/opt/deckhouse/tmp"
+mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
+exec >"${TMPDIR}/bootstrap.log" 2>&1
 
 function detect_bundle() {
   {{- $context.Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
@@ -121,7 +123,24 @@ EOF
   fi
 }
 
+function run_log_output() {
+  {{- /*
+  # Start output bootstrap logs
+  */}}
+  if type nc >/dev/null 2>&1; then
+    tail -n 100 -f ${TMPDIR}/bootstrap.log | nc -l 8000 &
+    bootstrap_job_log_pid=$!
+  fi
+}
 BUNDLE="$(detect_bundle)"
 run_cloud_network_setup
+run_log_output
 get_phase2 | bash
+
+  {{- /*
+# Stop output bootstrap logs
+  */}}
+if [ -n "${bootstrap_job_log_pid}" ]; then
+  kill -9 "${bootstrap_job_log_pid}"
+fi
 {{- end }}
