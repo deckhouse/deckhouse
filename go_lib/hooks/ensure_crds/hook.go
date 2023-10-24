@@ -126,7 +126,6 @@ func (cp *crdsProcessor) processCRD(input *go_hook.HookInput, crdFilePath string
 		if err != nil {
 			return err
 		}
-
 	}
 
 	return nil

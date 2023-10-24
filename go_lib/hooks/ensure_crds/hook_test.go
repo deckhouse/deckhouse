@@ -21,17 +21,13 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/kube-client/fake"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/stretchr/testify/assert"
-
+	"github.com/stretchr/testify/require"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/flant/kube-client/fake"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
