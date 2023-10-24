@@ -22,12 +22,14 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -175,7 +177,17 @@ data:
 
 		BeforeEach(func() {
 
-			st := f.KubeStateSet("")
+			st := f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: foo-1
+  labels:
+    node.deckhouse.io/group: "master"
+  annotations:
+    update.node.deckhouse.io/draining: "bashible"
+`)
 			f.BindingContexts.Set(st)
 
 			dnode := drainedNodeRes{
@@ -187,6 +199,8 @@ data:
 			event = dnode.buildEvent()
 			unst, _ := sdk.ToUnstructured(event)
 			_, _ = f.BindingContextController.FakeCluster().Client.Dynamic().Resource(schema.GroupVersionResource{Resource: "events", Group: "events.k8s.io", Version: "v1"}).Namespace("default").Create(context.Background(), unst, v1.CreateOptions{})
+			testMoveNodesToStaticClient(f)
+			f.RunHook()
 		})
 
 		It("Should generate event", func() {
@@ -196,6 +210,29 @@ data:
 			Expect(ev.Field("type").String()).To(Equal("Warning"))
 			Expect(ev.Field("regarding.kind").String()).To(Equal("Node"))
 			Expect(ev.Field("regarding.name").String()).To(Equal("foo-1"))
+		})
+
+		It("Should generate metrics", func() {
+			k8sClient := f.BindingContextController.FakeCluster().Client
+			node1Core, _ := k8sClient.CoreV1().Nodes().Get(context.Background(), "foo-1", v1.GetOptions{})
+			Expect(node1Core.Spec.Unschedulable).To(BeTrue())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_node_draining",
+				Action: "expire",
+			}))
+
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_node_draining",
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"messages": "foo-bar-error",
+					"node":     "foo-1",
+				},
+			}))
 		})
 	})
 })
