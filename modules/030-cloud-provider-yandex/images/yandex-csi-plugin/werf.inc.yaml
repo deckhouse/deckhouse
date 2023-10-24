@@ -20,7 +20,6 @@ import:
   to: /bin/busybox
   before: setup
 
-
 # - image: common/util-linux-static
 #   add: /build/staticbin
 #   to: /
@@ -69,9 +68,9 @@ import:
 #   - sbin/mkfs.ext3
 #   - sbin/mkfs.ext4
 #   - sbin/resize2fs
-shell:
-  setup:
-    - /bin/busybox
+# shell:
+#   setup:
+#     - /bin/busybox
     # - /bin/busybox --install -s
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
