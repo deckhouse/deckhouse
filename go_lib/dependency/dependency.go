@@ -46,7 +46,7 @@ type Container interface {
 	MustGetK8sClient(options ...k8s.Option) k8s.Client
 	GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error)
 	GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error)
-	GetHelmClient(options ...helm.Option) (helm.Client, error)
+	GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error)
 	GetClientConfig() (*rest.Config, error)
 }
 
