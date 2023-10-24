@@ -47,6 +47,12 @@ spec:
             mountPath: /app/config
           - name: tmp
             mountPath: /tmp
+      - name: doc-builder
+        image: {{ include "helm_lib_module_image" (list $ "doc-builder") }}
+        ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
       volumes:
         - name: config
           configMap:
