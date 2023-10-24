@@ -48,7 +48,7 @@ spec:
           - name: tmp
             mountPath: /tmp
       - name: doc-builder
-        image: {{ include "helm_lib_module_image" (list $ "doc-builder") }}
+        image: {{ include "helm_lib_module_image" (list $ "docBuilder") }}
         ports:
           - containerPort: 8080
             name: http
