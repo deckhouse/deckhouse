@@ -10,6 +10,39 @@ import:
   add: /src/deploy/kubernetes/udev/google_nvme_id
   to: /lib/udev_containerized/google_nvme_id
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - lib/udev/scsi_id
+  - 'lib/x86_64-linux-gnu/libpcre.so.*'
+  - 'lib/x86_64-linux-gnu/libselinux.so.*'
+  - 'lib/x86_64-linux-gnu/libtinfo.so.*'
+  - 'lib/x86_64-linux-gnu/libe2p.so.*'
+  - 'lib/x86_64-linux-gnu/libcom_err.so.*'
+  - 'lib/x86_64-linux-gnu/libdevmapper.so.*'
+  - 'lib/x86_64-linux-gnu/libext2fs.so.*'
+  - 'lib/x86_64-linux-gnu/libgcc_s.so.*'
+  - 'lib/x86_64-linux-gnu/liblzma.so.*'
+  - 'lib/x86_64-linux-gnu/libreadline.so.*'
+  - 'lib/x86_64-linux-gnu/libz.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libblkid.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libbsd.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libinih.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libmount.so.*'         
+  - 'usr/lib/x86_64-linux-gnu/libudev.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libuuid.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libacl.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libattr.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libedit.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libicudata.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libicui18n.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libicuuc.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libkmod.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libmd.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libpcre2-8.so.*'
+  - 'usr/lib/x86_64-linux-gnu/libstdc++.so.*'
 - image: common/busybox-static
   add: /build/busybox
   to: /bin/busybox
