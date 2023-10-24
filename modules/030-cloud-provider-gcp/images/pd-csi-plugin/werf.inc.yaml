@@ -6,6 +6,10 @@ import:
   add: /src/bin/gce-pd-csi-driver
   to: /gce-pd-csi-driver
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/deploy/kubernetes/udev/google_nvme_id
+  to: /lib/udev_containerized/google_nvme_id
+  before: setup
 - image: common/busybox-static
   add: /build/busybox
   to: /bin/busybox
