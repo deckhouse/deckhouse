@@ -17,8 +17,6 @@ spec:
     kind: MachinePool
     listKind: MachinePoolList
     plural: machinepools
-    shortNames:
-      - mp
     singular: machinepool
   scope: Namespaced
   versions:

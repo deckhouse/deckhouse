@@ -52,6 +52,7 @@ var (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/modules/node-manager/capi",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "node_group",
@@ -66,6 +67,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "0 1 * * *",
 		},
 	},
+	AllowFailure: true,
 }, dependency.WithExternalDependencies(generateStaticKubeconfigSecret))
 
 func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container) error {

@@ -17,8 +17,6 @@ spec:
     kind: ExtensionConfig
     listKind: ExtensionConfigList
     plural: extensionconfigs
-    shortNames:
-    - ext
     singular: extensionconfig
   scope: Cluster
   versions:

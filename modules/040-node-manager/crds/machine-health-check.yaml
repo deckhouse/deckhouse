@@ -17,9 +17,6 @@ spec:
     kind: MachineHealthCheck
     listKind: MachineHealthCheckList
     plural: machinehealthchecks
-    shortNames:
-      - mhc
-      - mhcs
     singular: machinehealthcheck
   scope: Namespaced
   versions:
