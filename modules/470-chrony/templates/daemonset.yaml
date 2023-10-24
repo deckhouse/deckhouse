@@ -51,7 +51,7 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-      - containerName: "chrony"
+      - containerName: "chrony-mas"
         minAllowed:
           {{- include "chrony_resources" . | nindent 8 }}
         maxAllowed:
@@ -66,15 +66,6 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
 spec:
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-        - matchExpressions:
-          - key: node.deckhouse.io/group
-            operator: NotIn
-            values:
-            - master
   updateStrategy:
     type: RollingUpdate
   selector:
@@ -86,6 +77,15 @@ spec:
         tier: node
         app: chrony
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node.deckhouse.io/group
+                operator: NotIn
+                values:
+                - master
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       imagePullSecrets:
@@ -178,15 +178,6 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
 spec:
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-        - matchExpressions:
-          - key: node.deckhouse.io/group
-            operator: In
-            values:
-            - master
   updateStrategy:
     type: RollingUpdate
   selector:
@@ -198,6 +189,15 @@ spec:
         tier: node
         app: chrony-master
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node.deckhouse.io/group
+                operator: NotIn
+                values:
+                - master
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       imagePullSecrets:
