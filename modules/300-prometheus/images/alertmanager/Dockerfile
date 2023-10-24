@@ -1,7 +1,7 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_18_ALPINE
+ARG BASE_GOLANG_20_ALPINE
 
-FROM $BASE_GOLANG_18_ALPINE as artifact
+FROM $BASE_GOLANG_20_ALPINE as artifact
 
 ARG GOPROXY
 ARG SOURCE_REPO
@@ -15,6 +15,9 @@ ENV GOPROXY=${GOPROXY} \
 RUN apk add --no-cache git
 RUN git clone --depth 1 --branch v0.25.0 ${SOURCE_REPO}/prometheus/alertmanager.git /alertmanager
 WORKDIR /alertmanager/
+
+RUN go mod edit -go 1.20 \
+    && go get -u golang.org/x/net@v0.17.0
 
 RUN go build -ldflags="-s -w" -o alertmanager cmd/alertmanager/main.go && \
     chown -R 64535:64535 /alertmanager/ && \
