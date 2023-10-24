@@ -191,7 +191,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"descheduler": "imageHash-descheduler-descheduler",
 	},
 	"documentation": map[string]interface{}{
-		"web": "imageHash-documentation-web",
+		"docBuilder": "imageHash-documentation-docBuilder",
+		"web":        "imageHash-documentation-web",
 	},
 	"extendedMonitoring": map[string]interface{}{
 		"certExporter":               "imageHash-extendedMonitoring-certExporter",
