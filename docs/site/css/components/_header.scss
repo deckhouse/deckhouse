@@ -177,6 +177,7 @@ html {
   &__right-box {
     display: flex;
     gap: 1.5rem;
+    position: relative;
     align-items: center;
 
     .icon--home {
