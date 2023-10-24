@@ -40,7 +40,7 @@
                             {%- else %}
                               href="#"
                             {% endif %}
-                              target="_blank"
+                            {%- if subitem.target.size > 0 %} target="{{ subitem.target }}"{% endif %}
                             >
                               {{ subitem.title }}
                             </a>
