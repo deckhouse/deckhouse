@@ -51,6 +51,7 @@ func TestEnsureCRDs(t *testing.T) {
 		Version:  "v1",
 		Resource: "customresourcedefinitions",
 	}).List(context.TODO(), apimachineryv1.ListOptions{})
+	require.NoError(t, err)
 	require.Len(t, list.Items, 4)
 
 	expected := []string{
