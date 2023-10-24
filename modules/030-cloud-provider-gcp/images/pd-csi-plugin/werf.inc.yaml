@@ -6,114 +6,131 @@ import:
   add: /src/bin/gce-pd-csi-driver
   to: /gce-pd-csi-driver
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /lib/udev/scsi_id
-  to: /lib/udev_containerized/scsi_id
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /
-  to: /
-  before: setup
-  includePaths:
-  - lib/udev/scsi_id
-  - 'lib/x86_64-linux-gnu/libpcre.so.*'
-  - 'lib/x86_64-linux-gnu/libselinux.so.*'
-  - 'lib/x86_64-linux-gnu/libtinfo.so.*'
-  - 'lib/x86_64-linux-gnu/libe2p.so.*'
-  - 'lib/x86_64-linux-gnu/libcom_err.so.*'
-  - 'lib/x86_64-linux-gnu/libdevmapper.so.*'
-  - 'lib/x86_64-linux-gnu/libext2fs.so.*'
-  - 'lib/x86_64-linux-gnu/libgcc_s.so.*'
-  - 'lib/x86_64-linux-gnu/liblzma.so.*'
-  - 'lib/x86_64-linux-gnu/libreadline.so.*'
-  - 'lib/x86_64-linux-gnu/libz.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libblkid.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libbsd.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libinih.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libmount.so.*'         
-  - 'usr/lib/x86_64-linux-gnu/libudev.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libuuid.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libacl.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libattr.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libedit.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libicudata.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libicui18n.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libicuuc.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libkmod.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libmd.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libpcre2-8.so.*'
-  - 'usr/lib/x86_64-linux-gnu/libstdc++.so.*'
 - image: common/busybox-static
   add: /build/busybox
   to: /bin/busybox
   before: setup
-- image: common/util-linux-static
-  add: /build/staticbin
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
+  add: /
   to: /
   before: setup
   includePaths:
-  - bin/fdisk
-  - bin/findmnt
-  - bin/mount
-  - bin/umount
-  - bin/mountpoint
-  - bin/lsblk
-  - bin/mountpoint
-  - sbin/blockdev
-  - sbin/blkid
-  - sbin/fsck
-  - sbin/cfdisk
-  - sbin/mkfs
-  - sbin/sfdisk
-  - sbin/wipefs
-- image: common/e2fsprogs-static
-  add: /build/staticbin
-  to: /
+  - 'bin/*'
+  - 'sbin/*'
+  - 'lib64/*'
+  - 'lib/ld-linux-aarch64.so*'
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-mad-hack
+  add: /lib/udev/scsi_id
+  to: /lib/udev_containerized/scsi_id
   before: setup
-  includePaths:
-  - sbin/badblocks
-  - sbin/dumpe2fs
-  - sbin/e2fsck
-  - sbin/e2label
-  - sbin/e2scrub
-  - sbin/e2undo
-  - sbin/e4defrag
-  - sbin/fsck.ext2
-  - sbin/fsck.ext4
-  - sbin/mke2fs
-  - sbin/mklost+found
-  - sbin/tune2fs
-  - sbin/debugfs
-  - sbin/e2freefrag
-  - sbin/e2image
-  - sbin/e2mmpstatus
-  - sbin/e2scrub_all
-  - sbin/e4crypt
-  - sbin/filefrag
-  - sbin/fsck.ext3
-  - sbin/logsave
-  - sbin/mkfs.ext2
-  - sbin/mkfs.ext3
-  - sbin/mkfs.ext4
-  - sbin/resize2fs
-- image: common/xfsprogs-static
-  add: /build/staticbin
-  to: /
-  before: setup
-  includePaths:
-  - 'sbin/xfs_*'
-  - 'sbin/*.xfs'
-- image: common/nvme-cli-static
-  add: /build/nvme
-  to: /bin/nvme
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-xdd-artifact
-  add: /build/src/xxd/xxd
-  to: /bin/xxd
-  before: setup
-shell:
-  setup:
-    - /bin/busybox --install -s
+# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+#   add: /lib/udev/scsi_id
+#   to: /lib/udev_containerized/scsi_id
+#   before: setup
+# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+#   add: /
+#   to: /
+#   before: setup
+#   includePaths:
+#   - lib/udev/scsi_id
+#   - 'lib/x86_64-linux-gnu/libpcre.so.*'
+#   - 'lib/x86_64-linux-gnu/libselinux.so.*'
+#   - 'lib/x86_64-linux-gnu/libtinfo.so.*'
+#   - 'lib/x86_64-linux-gnu/libe2p.so.*'
+#   - 'lib/x86_64-linux-gnu/libcom_err.so.*'
+#   - 'lib/x86_64-linux-gnu/libdevmapper.so.*'
+#   - 'lib/x86_64-linux-gnu/libext2fs.so.*'
+#   - 'lib/x86_64-linux-gnu/libgcc_s.so.*'
+#   - 'lib/x86_64-linux-gnu/liblzma.so.*'
+#   - 'lib/x86_64-linux-gnu/libreadline.so.*'
+#   - 'lib/x86_64-linux-gnu/libz.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libblkid.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libbsd.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libinih.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libmount.so.*'         
+#   - 'usr/lib/x86_64-linux-gnu/libudev.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libuuid.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libacl.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libattr.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libedit.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libicudata.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libicui18n.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libicuuc.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libkmod.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libmd.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libpcre2-8.so.*'
+#   - 'usr/lib/x86_64-linux-gnu/libstdc++.so.*'
+# - image: common/busybox-static
+#   add: /build/busybox
+#   to: /bin/busybox
+#   before: setup
+# - image: common/util-linux-static
+#   add: /build/staticbin
+#   to: /
+#   before: setup
+#   includePaths:
+#   - bin/fdisk
+#   - bin/findmnt
+#   - bin/mount
+#   - bin/umount
+#   - bin/mountpoint
+#   - bin/lsblk
+#   - bin/mountpoint
+#   - sbin/blockdev
+#   - sbin/blkid
+#   - sbin/fsck
+#   - sbin/cfdisk
+#   - sbin/mkfs
+#   - sbin/sfdisk
+#   - sbin/wipefs
+# - image: common/e2fsprogs-static
+#   add: /build/staticbin
+#   to: /
+#   before: setup
+#   includePaths:
+#   - sbin/badblocks
+#   - sbin/dumpe2fs
+#   - sbin/e2fsck
+#   - sbin/e2label
+#   - sbin/e2scrub
+#   - sbin/e2undo
+#   - sbin/e4defrag
+#   - sbin/fsck.ext2
+#   - sbin/fsck.ext4
+#   - sbin/mke2fs
+#   - sbin/mklost+found
+#   - sbin/tune2fs
+#   - sbin/debugfs
+#   - sbin/e2freefrag
+#   - sbin/e2image
+#   - sbin/e2mmpstatus
+#   - sbin/e2scrub_all
+#   - sbin/e4crypt
+#   - sbin/filefrag
+#   - sbin/fsck.ext3
+#   - sbin/logsave
+#   - sbin/mkfs.ext2
+#   - sbin/mkfs.ext3
+#   - sbin/mkfs.ext4
+#   - sbin/resize2fs
+# - image: common/xfsprogs-static
+#   add: /build/staticbin
+#   to: /
+#   before: setup
+#   includePaths:
+#   - 'sbin/xfs_*'
+#   - 'sbin/*.xfs'
+# - image: common/nvme-cli-static
+#   add: /build/nvme
+#   to: /bin/nvme
+#   before: setup
+# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-xdd-artifact
+#   add: /build/src/xxd/xxd
+#   to: /bin/xxd
+#   before: setup
+# shell:
+#   setup:
+#     - /bin/busybox --install -s
 docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
 ---
@@ -142,20 +159,39 @@ shell:
   - cd /src
   - GCE_PD_CSI_STAGING_VERSION=v1.3.3 make gce-pd-driver
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-xdd-artifact
-from: {{ $.Images.BASE_UBUNTU }}
-git:
-- url: https://github.com/vim/vim.git
-  to: /build
-  tag: v9.0.2063
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
+from: {{ $.Images.BASE_ALT }}
 shell:
   beforeInstall:
-  - apt update
-  - |
-    apt install --no-install-recommends -y \
-      ca-certificates git gcc make build-essential
-  install:
-  - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
-  - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s -flto=auto"
-  - cd /build/src/xxd/
-  - make
+    - apt-get update
+    - |
+      apt-get install -y ca-certificates \
+                       e2fsprogs xfsprogs \
+                       mount btrfs-progs udev
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-mad-hack
+from: {{ $.Images.BASE_ALT }}
+shell:
+  beforeInstall:
+    - apt-get update
+    - |
+      ln -fs /bin/rm /usr/sbin/rm \
+        && apt-get install -y udev
+# ---
+# artifact: {{ $.ModuleName }}/{{ $.ImageName }}-xdd-artifact
+# from: {{ $.Images.BASE_UBUNTU }}
+# git:
+# - url: https://github.com/vim/vim.git
+#   to: /build
+#   tag: v9.0.2063
+# shell:
+#   beforeInstall:
+#   - apt update
+#   - |
+#     apt install --no-install-recommends -y \
+#       ca-certificates git gcc make build-essential
+#   install:
+#   - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
+#   - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s -flto=auto"
+#   - cd /build/src/xxd/
+#   - make
