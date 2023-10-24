@@ -70,8 +70,8 @@ class LinstorConnection:
         return result
 
 def get_res_files() -> List[str]:
-    files_iter = Path(BASE_RES_PATH).glob("RES_FILES_MASK")
-    return [f.name for f in files_iter]
+    files_iter = Path(BASE_RES_PATH).glob(RES_FILES_MASK)
+    return list(files_iter)
    
 def process_res_files(log_level):
     logger = logging.getLogger()
