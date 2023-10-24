@@ -14,6 +14,7 @@
 
 {{- if eq .runType "Normal" }}
 if [ ! -f /etc/kubernetes/pki/ca.crt ] ; then
+  mkdir -p /etc/kubernetes/pki/
   cp /var/lib/bashible/ca.crt /etc/kubernetes/pki/
 fi
 {{- end }}
