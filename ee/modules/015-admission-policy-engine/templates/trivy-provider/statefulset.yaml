@@ -3,6 +3,8 @@ cpu: 100m
 memory: 128Mi
 {{- end }}
 
+{{ $JavaDbRepository := printf "%s/security/trivy-java-db:1" .Values.global.modulesImages.registry.base | quote }}
+
 {{- if include "trivy.provider.enabled" $ }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -65,6 +67,8 @@ spec:
         env:
         - name: TRIVY_REMOTE_URL
           value: "http://trivy-server.d8-operator-trivy:4954"
+        - name: TRIVY_JAVA_DB_IMAGE
+          value: {{ $JavaDbRepository }}
         ports:
         - containerPort: 8443
           protocol: TCP
