@@ -51,12 +51,12 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-      - containerName: "chrony"
-        minAllowed:
-          {{- include "chrony_resources" . | nindent 8 }}
-        maxAllowed:
-          cpu: 25m
-          memory: 50Mi
+    - containerName: "chrony"
+      minAllowed:
+        {{- include "chrony_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
 {{- end }}
 ---
 apiVersion: apps/v1
