@@ -22,6 +22,10 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -84,6 +88,13 @@ func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			return err
 		},
 	}
+}
+
+func UnLockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Unlock Deckhouse controller queue", 15, 5*time.Second).Run(func() error {
+		return kubeCl.CoreV1().ConfigMaps("d8-system").
+			Delete(context.TODO(), "deckhouse-bootstrap-lock", metav1.DeleteOptions{})
+	})
 }
 
 func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
@@ -318,15 +329,56 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 
 	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
-	return log.Process("default", "Create Manifests", func() error {
+	if len(cfg.ModuleConfigs) > 0 {
+		createTask := func(mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
+			mcUnstructMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(mc)
+			if err != nil {
+				panic(err)
+			}
+			mcUnstruct := &unstructured.Unstructured{Object: mcUnstructMap}
+			return actions.ManifestTask{
+				Name: fmt.Sprintf(`ModuleConfig "%s"`, mc.GetName()),
+				Manifest: func() interface{} {
+					return mcUnstruct
+				},
+				CreateFunc: func(manifest interface{}) error {
+					if createMsg != "" {
+						log.InfoLn(createMsg)
+					}
+					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+						Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
+					return err
+				},
+				UpdateFunc: func(manifest interface{}) error {
+					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+						Update(context.TODO(), manifest.(*unstructured.Unstructured), metav1.UpdateOptions{})
+					return err
+				},
+			}
+		}
+
+		tasks = append(tasks, createTask(cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
+
+		for i := 1; i < len(cfg.ModuleConfigs); i++ {
+			tasks = append(tasks, createTask(cfg.ModuleConfigs[i], ""))
+		}
+	}
+
+	err := log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
-			err := task.CreateOrUpdate()
+			err := retry.NewSilentLoop(task.Name, 15, 5*time.Second).Run(task.CreateOrUpdate)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return UnLockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl)
 }
 
 func WaitForReadiness(kubeCl *client.KubernetesClient) error {
