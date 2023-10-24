@@ -51,7 +51,7 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-      - containerName: "chrony-mas"
+      - containerName: "chrony"
         minAllowed:
           {{- include "chrony_resources" . | nindent 8 }}
         maxAllowed:
