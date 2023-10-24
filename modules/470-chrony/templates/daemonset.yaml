@@ -195,7 +195,7 @@ spec:
             nodeSelectorTerms:
             - matchExpressions:
               - key: node.deckhouse.io/group
-                operator: NotIn
+                operator: In
                 values:
                 - master
       dnsPolicy: ClusterFirstWithHostNet
