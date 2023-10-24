@@ -190,6 +190,52 @@ function changeHandler(e) {
   }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+  let header = document.querySelector('header');
+  let lastScrollTop = 0;
+  let topOffsetToTransform = 25;
+
+  const headerTransforms = () => {
+    let top = window.scrollY
+
+    changeShadow(top)
+    changeOffset(top)
+
+    lastScrollTop = top
+  }
+
+  window.onscroll = headerTransforms
+
+  const changeShadow = (top) => {
+    if (!header.classList.contains('header_float') && top >=
+      topOffsetToTransform) {
+      header.classList.add('header_float')
+    }
+    else if (header.classList.contains('header_float') && top <
+      topOffsetToTransform) {
+      header.classList.remove('header_float')
+    }
+  }
+
+  const changeOffset = (top) => {
+    const notificationBar = header.querySelector('.notification-bar')
+
+    if (notificationBar === null) {
+      return
+    }
+
+    if (lastScrollTop < top && !header.classList.contains('header_small') && top >
+      topOffsetToTransform) {
+      header.classList.add('header_small')
+      header.style.transform = `translateY(-${notificationBar.offsetHeight}px)`
+    }
+    else if (lastScrollTop > top && header.classList.contains('header_small')) {
+      header.classList.remove('header_small')
+      header.removeAttribute('style')
+    }
+  }
+})
+
 window.addEventListener("load", function() {
   openDiagram()
 });
