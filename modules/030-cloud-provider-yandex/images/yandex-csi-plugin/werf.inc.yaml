@@ -107,7 +107,7 @@ shell:
     - apt-get update
     - |
       apt-get install -y ca-certificates \
-                       e2fsprogs \
-                       xfsprogs
+                       e2fsprogs xfsprogs \
+                       mount
 
 
