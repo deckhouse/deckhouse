@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -36,21 +35,12 @@ func TestEnsureCRDs(t *testing.T) {
 	cluster := fake.NewFakeCluster(fake.ClusterVersionV125)
 	dependency.TestDC.K8sClient = cluster.Client
 
-	patcher := object_patch.NewObjectPatcher(cluster.Client)
-
 	pc := object_patch.NewPatchCollector()
 	merr := EnsureCRDs("./test_data/**", &go_hook.HookInput{PatchCollector: pc}, dependency.TestDC)
 	require.NoError(t, merr.ErrorOrNil())
 
-	err := patcher.ExecuteOperations(pc.Operations())
-	require.NoError(t, err)
-
 	//
-	list, err := cluster.Client.Dynamic().Resource(schema.GroupVersionResource{
-		Group:    "apiextensions.k8s.io",
-		Version:  "v1",
-		Resource: "customresourcedefinitions",
-	}).List(context.TODO(), apimachineryv1.ListOptions{})
+	list, err := cluster.Client.Dynamic().Resource(crdGVR).List(context.TODO(), apimachineryv1.ListOptions{})
 	require.NoError(t, err)
 	require.Len(t, list.Items, 4)
 
