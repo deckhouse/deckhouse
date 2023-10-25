@@ -53,7 +53,7 @@ import:
   to: /cloud-provider-vsphere
   before: setup
 git:
-- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/001-csi-metrics-and-volume-expansion.patch
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/001-csi-metrics-and-volume-expansion.patch
   to: /src
   stageDependencies:
     install:
