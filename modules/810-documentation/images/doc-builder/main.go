@@ -55,10 +55,15 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			klog.Fatalf("listen: %s\n", err)
+			klog.Fatalf("listen: %s", err)
 		}
 	}()
 	klog.Info("Server Started")
+
+	err := createSyncConfigMap()
+	if err != nil {
+		klog.Fatalf("create sync config map: %s", err)
+	}
 
 	<-ctx.Done()
 	klog.Info("Server Stopped")
