@@ -30,7 +30,7 @@ git:
   stageDependencies:
     install:
       - '**/*'
-- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
   to: /src
   includePaths:
   - 001-support-fcd-disk-resize.patch
