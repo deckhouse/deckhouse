@@ -527,7 +527,7 @@ ansible:
 ---
 image: dev/install
 from: {{ .Images.BASE_ALPINE }}
-fromCacheVersion: "20231025.1"
+fromCacheVersion: "20231025.2"
 git:
 - add: /
   to: /deckhouse
@@ -567,6 +567,16 @@ import:
   - modules/**/applications
   - modules/**/monitoring_test
   - modules/**/rules
+  - modules/**/scripts
+  - modules/**/cloud-providers
+  - modules/**/kubeadm
+  - modules/**/module.yaml
+  - modules/README.md
+  - modules/global-values.yaml
+  - modules/values-default.yaml
+  - modules/values-managed.yaml
+  - modules/values-minimal.yaml
+  - modules/values.yaml
   {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
   after: setup
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml

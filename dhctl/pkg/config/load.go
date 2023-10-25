@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -88,7 +89,6 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		panic(err)
 	}
 
-	sep := string(os.PathSeparator)
 	g := func(path string, moduleName string) {
 		content, err := os.ReadFile(path)
 		if err == nil {
@@ -114,11 +114,11 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		}
 		name := e.Name()
 		moduleName := strings.TrimLeft(name, "01234567890-")
-		path := modulesDir + sep + name + sep + "openapi" + sep + "config-values.yaml"
-		g(path, moduleName)
+		p := path.Join(modulesDir, name, "openapi", "config-values.yaml")
+		g(p, moduleName)
 	}
 
-	g(globalHooksModule+sep+"openapi"+sep+"config-values.yaml", "global")
+	g(path.Join(globalHooksModule, "openapi", "config-values.yaml"), "global")
 
 	return st
 }
