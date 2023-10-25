@@ -232,7 +232,7 @@ spec:
           runAsGroup: 0
           runAsNonRoot: false
           runAsUser: 0
-      image: {{ include "helm_lib_module_image" (list . "chrony") }}
+        image: {{ include "helm_lib_module_image" (list . "chrony") }}
         env:
           - name: NTP_ROLE
             value: source
