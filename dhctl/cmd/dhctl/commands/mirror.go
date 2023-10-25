@@ -33,7 +33,7 @@ func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		if app.MirrorRegistryHost != "" {
-			return log.Process("mirror", "Push mirrored Deckhouse Registry images to private registry", func() error {
+			return log.Process("mirror", "Push mirrored Deckhouse images from local filesystem to private registry", func() error {
 				return mirrorPushDeckhouseToPrivateRegistry()
 			})
 		}
