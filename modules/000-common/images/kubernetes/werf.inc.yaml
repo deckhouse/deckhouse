@@ -46,5 +46,9 @@ shell:
   - find /patches/kube-apiserver/{{ $version }} -name '*.patch' -exec git apply {} \;
   - find /patches/kube-controller-manager/{{ $version }} -name '*.patch' -exec git apply {} \;
   - find /patches/kubeadm/{{ $version }} -name '*.patch' -exec git apply {} \;
+  {{- if semverCompare "<=1.27" $version }}
+  - go get -u github.com/docker/distribution@v2.8.2-beta.1
+  - go mod vendor
+  {{- end }}
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
 {{- end }}
