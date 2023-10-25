@@ -105,6 +105,7 @@ func (cp *crdsProcessor) Run() *multierror.Error {
 
 		err := cp.processCRD(crdFilePath)
 		if err != nil {
+			err = fmt.Errorf("error occured during processing %q file: %w", crdFilePath, err)
 			result = multierror.Append(result, err)
 			continue
 		}
@@ -137,7 +138,12 @@ func (cp *crdsProcessor) processCRD(crdFilePath string) error {
 			return err
 		}
 
-		rd := bytes.NewReader(cp.buffer[:n])
+		data := cp.buffer[:n]
+		if len(data) == 0 {
+			// some empty yaml document, or empty string before separator
+			continue
+		}
+		rd := bytes.NewReader(data)
 		err = cp.putCRDToCluster(rd, n)
 		if err != nil {
 			return err
