@@ -15,7 +15,7 @@ shell:
     - go get -u golang.org/x/net@v0.17.0
     - go get -u gopkg.in/yaml.v3@v3.0.1
     - go get -u github.com/prometheus/client_golang@v1.17.0
-    - go get -u golang.org/x/crypto@0.14.0
+    - go get -u golang.org/x/crypto@v0.14.0
     - go mod tidy
     - go mod ventor
     - GOPROXY={{ $.GOPROXY }} go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go
