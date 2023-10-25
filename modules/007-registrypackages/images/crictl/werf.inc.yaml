@@ -34,6 +34,19 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - git clone --depth 1 --branch v{{ $version }}.{{ $value.criToolsPatch }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
   - cd /cri-tools
+  {{- if semverCompare "=1.24" $version }}
+  - go get -u golang.org/x/net@v0.17.0
+  - go mod download golang.org/x/crypto
+  - go get github.com/kubernetes-sigs/cri-tools/pkg/validate
+  - go get github.com/sirupsen/logrus@v1.8.1
+  - go get k8s.io/client-go/plugin/pkg/client/auth/exec@v1.5.2
+  - go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.4
+  - go get golang.org/x/net/idna@v0.17.0
+  - go get golang.org/x/net/html/charset@v0.17.0
+  - go mod edit -go=1.20
+  - go mod tidy
+  - go mod vendor
+  {{- end }}
   - make install crictl
   - mv /usr/local/bin/crictl /crictl
   - chmod +x /crictl /install /uninstall
