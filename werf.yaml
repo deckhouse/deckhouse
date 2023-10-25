@@ -543,8 +543,16 @@ import:
   add: /deckhouse
   to: /deckhouse
   includePaths:
-  -  modules/**/openapi/config-values.yaml
+  - modules/**/openapi/config-values.yaml
   excludePaths:
+  - modules/**/Chart.yaml
+  - modules/**/charts
+  - modules/**/enabled
+  - modules/**/monitoring
+  - modules/**/oss.yaml
+  - modules/**/templates
+  - modules/**/crds
+  - modules/**/hack
   {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
   after: setup
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
