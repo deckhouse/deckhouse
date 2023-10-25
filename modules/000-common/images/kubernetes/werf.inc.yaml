@@ -48,6 +48,11 @@ shell:
   - find /patches/kubeadm/{{ $version }} -name '*.patch' -exec git apply {} \;
   {{- if semverCompare "=1.24" $version }}
   - go get -u github.com/docker/distribution@v2.8.2-beta.1
+  {{- else if semverCompare "=1.25" $version }}
+  - go get -u github.com/docker/distribution@v2.8.2-beta.1
+  - go mod vendor
+  - git reset -- vendor/k8s.io
+  - git checkout -- vendor/k8s.io
   {{- else if semverCompare "=1.26" $version }}
   - go get -u github.com/docker/distribution@v2.8.2-beta.1
   - go mod vendor
