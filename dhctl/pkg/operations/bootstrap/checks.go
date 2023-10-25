@@ -21,12 +21,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
-func CheckPreventBreakAnotherBootstrappedCluster(kubeCl *client.KubernetesClient, config *deckhouse.Config) error {
+func CheckPreventBreakAnotherBootstrappedCluster(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) error {
 	var uuidInCluster string
 	cmInCluster, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(context.TODO(), manifests.ClusterUUIDCm, metav1.GetOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
