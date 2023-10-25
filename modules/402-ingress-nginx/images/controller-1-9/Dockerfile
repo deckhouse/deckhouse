@@ -114,7 +114,8 @@ RUN apk update \
   && patch -p1 < /nginx-tmpl.patch \
   && patch -p1 < /auth-cookie-always.patch \
   && rm -rf /*.patch \
-  && touch /etc/nginx/opentelemetry.toml
+  && touch /etc/nginx/opentelemetry.toml \
+  && chown -R www-data.www-data /etc/nginx/opentelemetry.toml
 WORKDIR /
 USER www-data
 EXPOSE 80 443
