@@ -43,6 +43,32 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
+          volumeMounts:
+            - mountPath: /tmp/todo-b
+              name: modules-docs
+        - name: builder
+          command: ["server"]
+          image: {{ index .Values.werf.image "docs-builder" }}
+          {{- include "resources" . | nindent 10 }}
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          volumeMounts:
+            - mountPath: "/tmp/todo-a"
+              name: modules-docs
+      volumes:
+        - name: modules-docs
+          emptyDir: {}
+
 ---
 apiVersion: v1
 kind: Service
