@@ -17,17 +17,22 @@ package main
 import (
 	"context"
 	"fmt"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func createSyncConfigMap() error {
-	kclient, err := k8s.NewClient()
+	config, err := rest.InClusterConfig()
 	if err != nil {
-		return fmt.Errorf("new k8s client: %w", err)
+		return fmt.Errorf("create rest config: %w", err)
+	}
+
+	kclient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("new client set: %w", err)
 	}
 
 	const (
