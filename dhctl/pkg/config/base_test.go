@@ -98,7 +98,7 @@ spec:
   settings:
     testString: "aaaaa"
     testArray: ["1", "2"]
-    testEnum: a
+    testEnum: Aa
   version: 1
 `
 
@@ -112,7 +112,7 @@ spec:
   settings:
     testString: "aaaaa"
     testArray: ["1", "2"]
-    testEnum: a
+    testEnum: Aa
   version: 1
 `
 
