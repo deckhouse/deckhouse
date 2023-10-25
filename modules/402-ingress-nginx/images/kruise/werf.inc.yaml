@@ -26,6 +26,7 @@ shell:
     - go get -u github.com/opencontainers/runc@v1.1.5
     - go get -u gopkg.in/yaml.v3@v3.0.1
     - go mod tidy
+    - go mod vendor
     - GOPROXY={{ $.GOPROXY }} go build -a -mod=vendor -o /tmp/manager main.go
     - chown -R 64535:64535 /tmp/manager
     - chmod 0700 /tmp/manager
