@@ -30,6 +30,8 @@ import (
 	"github.com/go-openapi/validate/post"
 	"github.com/hashicorp/go-multierror"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type SchemaStore struct {
@@ -103,7 +105,9 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 				panic(err)
 			}
 			st.moduleConfigsCache[moduleName] = schema
-		} else if !errors.Is(err, os.ErrNotExist) {
+		} else if errors.Is(err, os.ErrNotExist) {
+			log.DebugF("open api spec not found for module %s", moduleName)
+		} else {
 			panic(err)
 		}
 	}

@@ -527,7 +527,7 @@ ansible:
 ---
 image: dev/install
 from: {{ .Images.BASE_ALPINE }}
-fromCacheVersion: "20231025.2"
+fromCacheVersion: "20231025.3"
 git:
 - add: /
   to: /deckhouse
@@ -544,6 +544,7 @@ import:
   to: /deckhouse
   includePaths:
   - modules/**/openapi/config-values.yaml
+  - modules/global-hooks/openapi/config-values.yaml
   excludePaths:
   - modules/**/Chart.yaml
   - modules/**/charts
