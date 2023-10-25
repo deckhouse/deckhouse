@@ -50,6 +50,7 @@ shell:
   - go get -u github.com/docker/distribution@v2.8.2-beta.1
   {{- else if semverCompare "=1.26" $version }}
   - go get -u github.com/docker/distribution@v2.8.2-beta.1
+  - go mod vendor
   {{- else if semverCompare "=1.27" $version }}
   - go get -u github.com/docker/distribution@v2.8.2-beta.1
   - go mod vendor
