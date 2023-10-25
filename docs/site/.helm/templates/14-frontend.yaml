@@ -50,6 +50,16 @@ spec:
           command: ["server"]
           image: {{ index .Values.werf.image "docs-builder" }}
           {{- include "resources" . | nindent 10 }}
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
           ports:
           - containerPort: 8080
             name: http
