@@ -54,7 +54,7 @@ import:
   before: setup
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/001-csi-metrics-and-volume-expansion.patch
-  to: /src
+  to: /src/001-csi-metrics-and-volume-expansion.patch
   stageDependencies:
     install:
       - '**/*'
