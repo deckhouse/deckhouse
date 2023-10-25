@@ -2,7 +2,7 @@
 
 ---
 artifact: kruise
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
 git:
   - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}
     to: /
@@ -19,6 +19,13 @@ shell:
     - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/openkruise/kruise.git
     - cd kruise
     - find /patches -name '*.patch' -exec git apply {} \;
+    - go mod edit -go 1.20
+    - go get -u golang.org/x/net@v0.17.0
+    - go get -u github.com/docker/distribution@v2.8.3
+    - go get -u github.com/docker/docker@v20.10.24
+    - go get -u github.com/opencontainers/runc@v1.1.5
+    - go get -u gopkg.in/yaml.v3@v3.0.1
+    - go mod tidy
     - GOPROXY={{ $.GOPROXY }} go build -a -mod=vendor -o /tmp/manager main.go
     - chown -R 64535:64535 /tmp/manager
     - chmod 0700 /tmp/manager
