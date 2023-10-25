@@ -32,7 +32,7 @@ shell:
   - go mod edit -go 1.20
   - go get -u golang.org/x/net@v0.17.0
   - go get -u github.com/prometheus/client_golang@v1.17.0
-  - go get -u github.com/gogo/protobuf@1.3.2
+  - go get -u github.com/gogo/protobuf@v1.3.2
   - go mod tidy
   - make build
   - cp /src/_output/kube-rbac-proxy-linux-$(go env GOARCH) /kube-rbac-proxy
