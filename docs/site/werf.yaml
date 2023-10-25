@@ -85,7 +85,7 @@ git:
   - docker-compose*.yml
   - .werf
   - .helm
-  - backend
+  - backends
   - Makefile
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
