@@ -105,7 +105,7 @@ func (cp *crdsProcessor) Run() *multierror.Error {
 
 		err := cp.processCRD(crdFilePath)
 		if err != nil {
-			err = fmt.Errorf("error occured during processing %q file: %w", crdFilePath, err)
+			err = fmt.Errorf("error occurred during processing %q file: %w", crdFilePath, err)
 			result = multierror.Append(result, err)
 			continue
 		}
