@@ -11,7 +11,7 @@ properties:
       type: string
   testEnum:
     type: string
-    enum: ["a", "b"]
+    enum: ["Aa", "Bb"]
     description: testEnum
   https:
     type: object
