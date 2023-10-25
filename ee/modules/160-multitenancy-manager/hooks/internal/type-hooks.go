@@ -6,7 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package internal
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -80,7 +79,5 @@ func GetProjectTypeSnapshots(input *go_hook.HookInput) map[string]ProjectTypeSna
 		SetProjectTypeStatusReady(input.PatchCollector, pt.Name)
 	}
 
-	pt, _ := json.Marshal(projectTypesValues)
-	input.LogEntry.Infof("project types from snap %s", string(pt))
 	return projectTypesValues
 }

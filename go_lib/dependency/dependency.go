@@ -70,8 +70,8 @@ func NewDependencyContainer() Container {
 }
 
 type clients struct {
-	clients map[string]helm.Client
 	m       sync.Mutex
+	clients map[string]helm.Client
 }
 
 type dependencyContainer struct {

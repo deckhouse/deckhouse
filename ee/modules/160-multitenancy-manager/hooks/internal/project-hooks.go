@@ -34,7 +34,7 @@ var (
 		Name:       ProjectsSecrets,
 		ApiVersion: "v1",
 		Kind:       "Secret",
-		FilterFunc: filterOldValuesSecret,
+		FilterFunc: filterProjectReleaseSecret,
 		NamespaceSelector: &types.NamespaceSelector{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{D8MultitenancyManager},
@@ -84,7 +84,7 @@ func filterProjectsWithStatus(obj *unstructured.Unstructured) (go_hook.FilterRes
 	return projectSnapshotFromUnstructed(obj)
 }
 
-func filterOldValuesSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func filterProjectReleaseSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	if projecName, ok := obj.GetLabels()["name"]; ok {
 		return projecName, nil
 	}
@@ -177,7 +177,5 @@ func GetProjectSnapshotsWithStatus(input *go_hook.HookInput, projectTypes map[st
 		SetProjectStatusDeploying(input.PatchCollector, project.Snapshot.ProjectName)
 	}
 
-	pj, _ := json.Marshal(projectSnapshots)
-	input.LogEntry.Infof("projects with status from snap %s", string(pj))
 	return projectSnapshots
 }

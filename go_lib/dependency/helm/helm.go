@@ -42,6 +42,10 @@ type helmClient struct {
 	options      helmOptions
 }
 
+// NewClient initializes helm client with secret backend storage in `namespace` arg namespace.
+// Possible options:
+// WithHistoryMax - set maximum stored releases. Default: 3
+// WithTimeout - timeout for helm upgrade/delete. Default: 15 seconds
 func NewClient(namespace string, options ...Option) (Client, error) {
 	opts := &helmOptions{
 		Namespace:  namespace,
