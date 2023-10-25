@@ -32,7 +32,7 @@ shell:
   - apk add --no-cache git make
   setup:
   - export GOPROXY={{ $.GOPROXY }}
-  - git clone --depth 1 --branch v{{ $version }}.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
+  - git clone --depth 1 --branch v{{ $version }}.{{ $value.criToolsPatch }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
   - cd /cri-tools
   - make install crictl
   - mv /usr/local/bin/crictl /crictl

@@ -21,6 +21,7 @@ k8s:
     status: available
     patch: 17
     bashible: *bashible
+    criToolsPatch: 2
     clusterAutoscalerPatch: 3
     ccm:
       openstack: v1.24.2
@@ -41,6 +42,7 @@ k8s:
     status: available
     patch: 14
     bashible: *bashible
+    criToolsPatch: '0'
     clusterAutoscalerPatch: 3
     ccm:
       openstack: v1.25.3
@@ -59,8 +61,9 @@ k8s:
       livenessprobe: v2.9.0
   '1.26':
     status: available
-    patch: 9
+    patch: 10
     bashible: *bashible
+    criToolsPatch: 1
     clusterAutoscalerPatch: 2
     ccm:
       openstack: v1.26.1
@@ -79,8 +82,9 @@ k8s:
       livenessprobe: v2.9.0
   '1.27':
     status: available
-    patch: 6
+    patch: 7
     bashible: *bashible
+    criToolsPatch: 1
     clusterAutoscalerPatch: '0'
     ccm:
       openstack: v1.27.1
@@ -101,6 +105,7 @@ k8s:
     status: preview
     patch: 2
     bashible: *bashible
+    criToolsPatch: '0'
     clusterAutoscalerPatch: '0'
     ccm:
       openstack: v1.28.0
