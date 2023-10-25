@@ -1,4 +1,4 @@
-From c72f5942bd665c245fcd51113764335a49046306 Mon Sep 17 00:00:00 2001
+From 4b43e38076ab073198d06f81a26ebed18834b2d4 Mon Sep 17 00:00:00 2001
 From: Andrei Kvapil <kvapss@gmail.com>
 Date: Tue, 3 Oct 2023 13:32:21 +0200
 Subject: [PATCH] Automatically fix symlinks for devices
@@ -12,13 +12,13 @@ fixes: https://github.com/LINBIT/linstor-server/issues/326
 
 Signed-off-by: Andrei Kvapil <kvapss@gmail.com>
 ---
- .../linstor/layer/dmsetup/DmSetupUtils.java   | 79 ++++++++++++++++++-
- .../linbit/linstor/layer/drbd/DrbdLayer.java  | 13 +++
+ .../linstor/layer/dmsetup/DmSetupUtils.java   | 77 +++++++++++++++++++
+ .../linbit/linstor/layer/drbd/DrbdLayer.java  | 13 ++++
  .../linstor/layer/storage/utils/Commands.java | 14 ++++
- 3 files changed, 105 insertions(+), 1 deletion(-)
+ 3 files changed, 104 insertions(+)
 
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java b/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java
-index ba753577d..cc90ad898 100644
+index b4867c463..cc90ad898 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/dmsetup/DmSetupUtils.java
 @@ -18,6 +18,8 @@ import com.linbit.utils.StringUtils;
@@ -30,15 +30,6 @@ index ba753577d..cc90ad898 100644
  import java.util.HashSet;
  import java.util.Set;
  import java.util.regex.Matcher;
-@@ -29,7 +31,7 @@ public class DmSetupUtils
-     private static final String DM_SETUP_MESSAGE_FLUSH_ON_SUSPEND = "flush_on_suspend";
- 
-     private static final Pattern DM_SETUP_LS_PATTERN = Pattern.compile(
--        "^([^\\s]+)\\s+\\(([0-9]+)(?::\\s|,\\s)([0-9]+)\\)$",
-+        "^([^\\s]+)\\s+\\(([0-9]+)[:,]\\s*([0-9]+)\\)$",
-         Pattern.MULTILINE
-     );
- 
 @@ -187,6 +189,81 @@ public class DmSetupUtils
          return ret;
      }
@@ -122,7 +113,7 @@ index ba753577d..cc90ad898 100644
      {
          Commands.genericExecutor(
 diff --git a/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java b/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java
-index 16034c550..d44d2bc57 100644
+index 7a537a30b..2d4cf272c 100644
 --- a/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java
 +++ b/satellite/src/main/java/com/linbit/linstor/layer/drbd/DrbdLayer.java
 @@ -37,6 +37,7 @@ import com.linbit.linstor.core.objects.Volume;
@@ -130,9 +121,9 @@ index 16034c550..d44d2bc57 100644
  import com.linbit.linstor.dbdrivers.DatabaseException;
  import com.linbit.linstor.layer.DeviceLayer;
 +import com.linbit.linstor.layer.dmsetup.DmSetupUtils;
+ import com.linbit.linstor.layer.drbd.drbdstate.DiskState;
  import com.linbit.linstor.layer.drbd.drbdstate.DrbdConnection;
  import com.linbit.linstor.layer.drbd.drbdstate.DrbdEventPublisher;
- import com.linbit.linstor.layer.drbd.drbdstate.DrbdResource;
 @@ -1143,6 +1144,18 @@ public class DrbdLayer implements DeviceLayer
              metaDiskPath = drbdVlmData.getDataDevice();
          }
