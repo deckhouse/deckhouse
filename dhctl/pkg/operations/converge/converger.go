@@ -46,6 +46,9 @@ type Params struct {
 type Converger struct {
 	*Params
 	*phases.PhasedExecutionContext
+
+	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
+	lastState phases.DhctlState
 }
 
 func NewConverger(params *Params) *Converger {
@@ -70,6 +73,15 @@ func (c *Converger) applyParams() error {
 }
 
 func (c *Converger) Converge() error {
+	{
+		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
+		state, err := phases.ExtractDhctlState(cache.Global())
+		if err != nil {
+			return fmt.Errorf("unable to extract dhctl state: %w", err)
+		}
+		c.lastState = state
+	}
+
 	if err := c.applyParams(); err != nil {
 		return err
 	}
@@ -110,6 +122,7 @@ func (c *Converger) Converge() error {
 	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
+	c.lastState = nil
 	defer c.PhasedExecutionContext.Finalize(stateCache)
 
 	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache).
@@ -162,4 +175,12 @@ func (c *Converger) AutoConverge() error {
 
 	converger := NewAutoConverger(runner, app.AutoConvergeListenAddress, app.ApplyInterval)
 	return converger.Start()
+}
+
+func (c *Converger) GetLastState() phases.DhctlState {
+	if c.lastState != nil {
+		return c.lastState
+	} else {
+		return c.PhasedExecutionContext.GetLastState()
+	}
 }

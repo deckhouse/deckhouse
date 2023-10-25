@@ -17,12 +17,11 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -65,10 +64,10 @@ func getSSHClient(initializeNewAgent bool) (*ssh.Client, error) {
 	sshClient := ssh.NewClientFromFlags()
 	sshClient.InitializeNewAgent = initializeNewAgent
 	if _, err := sshClient.Start(); err != nil {
-		return fmt.Errorf("unable to start ssh client: %w", err)
+		return nil, fmt.Errorf("unable to start ssh client: %w", err)
 	}
 
-	return nil
+	return sshClient, nil
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
@@ -126,7 +125,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			log.DebugF(fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache))
 			if metaConfig.ClusterType == config.CloudClusterType {
 				terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
-				destroyer = infrastructure.NewClusterInfra(terraStateLoader, stateCache)
+				destroyer = infrastructure.NewClusterInfraWithOptions(terraStateLoader, stateCache, infrastructure.ClusterInfraOptions{
+					PhasedExecutionContext: b.PhasedExecutionContext,
+				})
 			} else {
 				sshClient, err := getSSHClient(b.initializeNewAgent)
 				if err != nil {
@@ -161,10 +162,10 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		}
 
 		destroyParams := &destroy.Params{
-			SSHClient:     sshClient,
-			StateCache:    cache.Global(),
-			OnPhaseFunc:   b.OnPhaseFunc,
-			SkipResources: app.SkipResources,
+			SSHClient:              sshClient,
+			StateCache:             cache.Global(),
+			PhasedExecutionContext: b.PhasedExecutionContext,
+			SkipResources:          app.SkipResources,
 		}
 
 		if b.CommanderMode {
@@ -197,9 +198,20 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		return fmt.Errorf("Destroyer not initialized")
 	}
 
-	if err := destroyer.DestroyCluster(app.SanityCheck); err != nil {
+	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
+	defer b.PhasedExecutionContext.Finalize(stateCache)
+
+	if err := destroyer.DestroyCluster(app.SanityCheck); err != nil {
+		b.lastState = b.PhasedExecutionContext.GetLastState()
+		return err
+	}
+	if err := b.PhasedExecutionContext.CompletePipeline(stateCache); err != nil {
+		b.lastState = b.PhasedExecutionContext.GetLastState()
+		return err
+	}
+	b.lastState = b.PhasedExecutionContext.GetLastState()
 
 	stateCache.Clean()
 	// Allow to reuse cache because cluster will be bootstrapped again (probably)

@@ -38,9 +38,10 @@ type Destroyer interface {
 }
 
 type Params struct {
-	SSHClient   *ssh.Client
-	StateCache  dhctlstate.Cache
-	OnPhaseFunc phases.OnPhaseFunc
+	SSHClient              *ssh.Client
+	StateCache             dhctlstate.Cache
+	OnPhaseFunc            phases.OnPhaseFunc
+	PhasedExecutionContext *phases.PhasedExecutionContext
 
 	SkipResources bool
 
@@ -65,7 +66,14 @@ type ClusterDestroyer struct {
 
 func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
-	pec := phases.NewPhasedExecutionContext(params.OnPhaseFunc)
+
+	var pec *phases.PhasedExecutionContext
+	if params.PhasedExecutionContext != nil {
+		pec = params.PhasedExecutionContext
+	} else {
+		pec = phases.NewPhasedExecutionContext(params.OnPhaseFunc)
+	}
+
 	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state)
 
 	var terraStateLoader terraform.StateLoader

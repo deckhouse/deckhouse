@@ -96,12 +96,16 @@ type ClusterBootstrapper struct {
 	*Params
 	*phases.PhasedExecutionContext
 	initializeNewAgent bool
+
+	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
+	lastState phases.DhctlState
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 	return &ClusterBootstrapper{
 		Params:                 params,
 		PhasedExecutionContext: phases.NewPhasedExecutionContext(params.OnPhaseFunc),
+		lastState:              params.InitialState,
 	}
 }
 
@@ -216,6 +220,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
+	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
+	b.lastState = nil
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
 	sshClient := ssh.NewClientFromFlags()
@@ -468,6 +474,15 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	return b.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache)
+}
+
+// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this method will be unneeded then
+func (c *ClusterBootstrapper) GetLastState() phases.DhctlState {
+	if c.lastState != nil {
+		return c.lastState
+	} else {
+		return c.PhasedExecutionContext.GetLastState()
+	}
 }
 
 func printBanner() {
