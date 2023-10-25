@@ -23,6 +23,9 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src
+    - go get -u golang.org/x/net@v0.17.0
+    - go get -u google.golang.org/grpc@v1.57.2
+    - go mod vendor
     - make build
     - cp bin/csi-attacher /csi-attacher
     - chown 64535:64535 /csi-attacher
