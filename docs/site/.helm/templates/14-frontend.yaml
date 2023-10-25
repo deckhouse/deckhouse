@@ -47,7 +47,7 @@ spec:
             - mountPath: /tmp/todo-b
               name: modules-docs
         - name: builder
-          command: ["server"]
+          command: ["/app/server"]
           image: {{ index .Values.werf.image "docs-builder" }}
           {{- include "resources" . | nindent 10 }}
           env:
