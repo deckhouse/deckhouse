@@ -46,6 +46,7 @@ RUN adduser -S -D -H -u 101 -h /usr/local/nginx \
 COPY --from=controller_image /usr/local /usr/local
 COPY --from=controller_image /opt /opt
 COPY --from=controller_image --chown=www-data:www-data /etc /etc
+COPY --from=artifact --chown=www-data:www-data /src/rootfs/etc/nginx/template /etc/nginx/template
 COPY --from=controller_image --chown=www-data:www-data /dbg /dbg
 COPY --from=controller_image --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
 COPY --from=controller_image --chown=www-data:www-data /wait-shutdown /wait-shutdown
