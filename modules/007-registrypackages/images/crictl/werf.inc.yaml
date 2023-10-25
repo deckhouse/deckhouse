@@ -38,13 +38,18 @@ shell:
   - go get -u golang.org/x/net@v0.17.0
   - go get -u gopkg.in/yaml.v3@v3.0.1
   - go get -u github.com/docker/docker@v20.10.26
-  - go mod download golang.org/x/crypto
-  - go get github.com/kubernetes-sigs/cri-tools/pkg/validate
-  - go get github.com/sirupsen/logrus@v1.8.1
-  - go get k8s.io/client-go/plugin/pkg/client/auth/exec@v1.5.2
-  - go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.4
-  - go get golang.org/x/net/idna@v0.17.0
-  - go get golang.org/x/net/html/charset@v0.17.0
+  - go mod edit -go=1.20
+  - go mod tidy
+  - go mod vendor
+  {{- else if semverCompare "=1.25" $version }}
+  - go get -u golang.org/x/net@v0.17.0
+  - go get -u github.com/docker/docker@v20.10.26
+  - go get -u golang.org/x/text@v0.3.8
+  - go mod edit -go=1.20
+  - go mod tidy
+  - go mod vendor
+  {{- else if semverCompare "=1.26" $version }}
+  - go get -u github.com/docker/docker@v20.10.26
   - go mod edit -go=1.20
   - go mod tidy
   - go mod vendor
