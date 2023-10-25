@@ -204,7 +204,7 @@ from: {{ .Images.BASE_ALPINE }}
 docker:
   WORKDIR: /app
 import:
-  - artifact: docs-builder-artifact
+  - image: docs-builder-artifact
     add: /go/src/app/server
     to: /app/server
     before: setup
