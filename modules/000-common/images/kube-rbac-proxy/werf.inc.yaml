@@ -31,6 +31,7 @@ shell:
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go mod edit -go 1.20
   - go get -u golang.org/x/net@v0.17.0
+  - go mod tidy
   - make build
   - cp /src/_output/kube-rbac-proxy-linux-$(go env GOARCH) /kube-rbac-proxy
   - chown 64535:64535 /kube-rbac-proxy
