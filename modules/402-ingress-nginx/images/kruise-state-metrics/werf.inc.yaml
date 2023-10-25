@@ -17,7 +17,7 @@ shell:
     - go get -u github.com/prometheus/client_golang@v1.17.0
     - go get -u golang.org/x/crypto@v0.14.0
     - go mod tidy
-    - go mod ventor
+    - go mod vendor
     - GOPROXY={{ $.GOPROXY }} go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go
     - chown -R 64535:64535 /tmp/kruise-state-metrics
     - chmod 0700 /tmp/kruise-state-metrics
