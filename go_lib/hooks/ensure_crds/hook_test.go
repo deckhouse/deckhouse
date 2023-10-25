@@ -21,9 +21,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/kube-client/fake"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,8 +33,7 @@ func TestEnsureCRDs(t *testing.T) {
 	cluster := fake.NewFakeCluster(fake.ClusterVersionV125)
 	dependency.TestDC.K8sClient = cluster.Client
 
-	pc := object_patch.NewPatchCollector()
-	merr := EnsureCRDs("./test_data/**", &go_hook.HookInput{PatchCollector: pc}, dependency.TestDC)
+	merr := EnsureCRDs("./test_data/**", dependency.TestDC)
 	require.NoError(t, merr.ErrorOrNil())
 
 	//

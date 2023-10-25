@@ -26,8 +26,6 @@ import (
 	"reflect"
 	"strings"
 
-	"k8s.io/client-go/util/retry"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/hashicorp/go-multierror"
@@ -36,6 +34,7 @@ import (
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apimachineryYaml "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -57,7 +56,7 @@ func RegisterEnsureCRDsHook(crdsGlob string) bool {
 
 func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc dependency.Container) error {
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		result := EnsureCRDs(crdsGlob, input, dc)
+		result := EnsureCRDs(crdsGlob, dc)
 
 		if result.ErrorOrNil() != nil {
 			input.LogEntry.WithError(result).Error("ensure_crds failed")
@@ -67,7 +66,7 @@ func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc depend
 	}
 }
 
-func EnsureCRDs(crdsGlob string, input *go_hook.HookInput, dc dependency.Container) *multierror.Error {
+func EnsureCRDs(crdsGlob string, dc dependency.Container) *multierror.Error {
 	result := new(multierror.Error)
 
 	client, err := dc.GetK8sClient()
