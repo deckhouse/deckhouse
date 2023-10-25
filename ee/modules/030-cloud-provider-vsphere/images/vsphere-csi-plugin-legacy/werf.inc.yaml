@@ -51,7 +51,7 @@ import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
   add: /src
   to: /cloud-provider-vsphere
-  before: setup
+  before: install
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/001-csi-metrics-and-volume-expansion.patch
   to: /src/001-csi-metrics-and-volume-expansion.patch
