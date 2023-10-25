@@ -149,7 +149,9 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 		os.Remove("/deckhouse/version")
 	}()
 
-	fakeClient := client.NewFakeKubernetesClient()
+	fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+		config.ModuleConfigGVR: "ModuleConfigList",
+	})
 
 	mc1 := &config.ModuleConfig{}
 	mc1.SetGroupVersionKind(schema.GroupVersionKind{
@@ -191,7 +193,9 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		os.Remove("/deckhouse/version")
 	}()
 
-	fakeClient := client.NewFakeKubernetesClient()
+	fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+		config.ModuleConfigGVR: "ModuleConfigList",
+	})
 
 	mc1 := &config.ModuleConfig{}
 	mc1.SetGroupVersionKind(schema.GroupVersionKind{

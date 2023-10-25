@@ -224,6 +224,9 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	if !isValid {
 		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)
 	}
+
+	*doc = docForValidate
+
 	return nil
 }
 

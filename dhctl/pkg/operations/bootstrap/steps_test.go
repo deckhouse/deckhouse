@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -119,10 +118,11 @@ func TestInstallDeckhouse(t *testing.T) {
 
 	clusterUUID := "848c3b2c-eda6-11ec-9289-dff550c719eb"
 
-	conf := &deckhouse.Config{
-		Bundle:   "minimal",
-		LogLevel: "Info",
-		UUID:     clusterUUID,
+	conf := &config.DeckhouseInstaller{
+		Bundle:    "minimal",
+		LogLevel:  "Info",
+		UUID:      clusterUUID,
+		DevBranch: "pr1111",
 	}
 
 	assertDeploymentAndUUIDCmCreated := func(t *testing.T, fakeClient *client.KubernetesClient) {
