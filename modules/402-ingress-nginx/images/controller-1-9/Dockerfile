@@ -46,11 +46,11 @@ RUN adduser -S -D -H -u 101 -h /usr/local/nginx \
 COPY --from=controller_image /usr/local /usr/local
 COPY --from=controller_image /opt /opt
 COPY --from=controller_image --chown=www-data:www-data /etc /etc
-COPY --from=artifact --chown=www-data:www-data /src/rootfs/etc/nginx/template /etc/nginx/template
 COPY --from=controller_image --chown=www-data:www-data /dbg /dbg
 COPY --from=controller_image --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
 COPY --from=controller_image --chown=www-data:www-data /wait-shutdown /wait-shutdown
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
+COPY --from=artifact --chown=www-data:www-data /src/rootfs/etc/nginx/template /etc/nginx/template
 # We use 0.26 controller image to copy lua libraries because is easier to install them on ubuntu
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
 COPY patches/balancer-lua.patch /
@@ -113,7 +113,8 @@ RUN apk update \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
   && patch -p1 < /auth-cookie-always.patch \
-  && rm -rf /*.patch
+  && rm -rf /*.patch \
+  && touch /etc/nginx/opentelemetry.toml
 WORKDIR /
 USER www-data
 EXPOSE 80 443
