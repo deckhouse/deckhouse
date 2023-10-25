@@ -17,6 +17,10 @@ metadata:
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 data:
+  # User snippets are disabled by default since v1.9 due to substantial security concerns
+  {{- if eq $crd.spec.controllerVersion "1.9" }}
+  allow-snippet-annotations: "true"
+  {{- end }}
   # Additional headers config map name in format namespace/name
   proxy-set-headers: "d8-ingress-nginx/{{ $crd.name }}-custom-headers"
   proxy-connect-timeout: "2"

@@ -50,6 +50,7 @@ COPY --from=controller_image --chown=www-data:www-data /dbg /dbg
 COPY --from=controller_image --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
 COPY --from=controller_image --chown=www-data:www-data /wait-shutdown /wait-shutdown
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
+# Get nginx config template from the repository as controller_image containts an invalid one by the time of testing
 COPY --from=artifact --chown=www-data:www-data /src/rootfs/etc/nginx/template /etc/nginx/template
 # We use 0.26 controller image to copy lua libraries because is easier to install them on ubuntu
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
@@ -114,6 +115,7 @@ RUN apk update \
   && patch -p1 < /nginx-tmpl.patch \
   && patch -p1 < /auth-cookie-always.patch \
   && rm -rf /*.patch \
+# Create opentelemetry.toml file as it doesn't present in controller_image
   && touch /etc/nginx/opentelemetry.toml \
   && chown -R www-data.www-data /etc/nginx/opentelemetry.toml
 WORKDIR /
