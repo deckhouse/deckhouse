@@ -61,10 +61,34 @@ spec:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
       - name: chrony
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_TIME" "CHOWN" "DAC_OVERRIDE" "FOWNER" "FSETID" "KILL" "SETGID" "SETUID" "SETPCAP" "NET_BIND_SERVICE" "NET_RAW" "SYS_CHROOT" "MKNOD" "AUDIT_WRITE" "SETFCAP")) | nindent 8 }}
+        securityContext:
+          allowPrivilegeEscalation: true
+          capabilities:
+            add:
+              - SYS_TIME
+              - CHOWN
+              - DAC_OVERRIDE
+              - FOWNER
+              - FSETID
+              - KILL
+              - SETGID
+              - SETUID
+              - SETPCAP
+              - NET_BIND_SERVICE
+              - NET_RAW
+              - SYS_CHROOT
+              - MKNOD
+              - AUDIT_WRITE
+              - SETFCAP
+            drop:
+              - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
         image: {{ include "helm_lib_module_image" (list . "chrony") }}
         env:
           - name: NTP_ROLE
@@ -80,7 +104,7 @@ spec:
         livenessProbe:
           exec:
             command:
-            - chronyc
+            - /opt/chrony-static/bin/chronyc
             - tracking
           initialDelaySeconds: 30
           periodSeconds: 60
@@ -93,7 +117,10 @@ spec:
           mountPath: /etc/timezone
           readOnly: true
         - name: chrony
-          mountPath: /run/chrony
+          mountPath: /var/run/chrony
+        - name: config
+          mountPath: /var/run/chrony/chrony.conf.tpl
+          subPath: chrony.conf.tpl
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -109,3 +136,6 @@ spec:
           path: /etc/timezone
       - name: chrony
         emptyDir: {}
+      - name: config
+        configMap:
+          name: chrony
