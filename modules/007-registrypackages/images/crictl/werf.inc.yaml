@@ -36,6 +36,8 @@ shell:
   - cd /cri-tools
   {{- if semverCompare "=1.24" $version }}
   - go get -u golang.org/x/net@v0.17.0
+  - go get -u gopkg.in/yaml.v3@v3.0.1
+  - go get -u github.com/docker/docker@v20.10.26
   - go mod download golang.org/x/crypto
   - go get github.com/kubernetes-sigs/cri-tools/pkg/validate
   - go get github.com/sirupsen/logrus@v1.8.1
