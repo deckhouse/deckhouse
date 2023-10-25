@@ -17,7 +17,6 @@ package mirror
 import (
 	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
@@ -28,10 +27,14 @@ type Module struct {
 	Releases     []string
 }
 
-func Modules(mirrorCtx *Context) ([]Module, error) {
+func GetExternalModules(mirrorCtx *Context) ([]Module, error) {
 	nameOpts := []name.Option{}
+	remoteOpts := []remote.Option{}
 	if mirrorCtx.Insecure {
 		nameOpts = append(nameOpts, name.Insecure)
+	}
+	if mirrorCtx.RegistryAuth != nil {
+		remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
 	}
 
 	modulesRepo, err := name.NewRepository(mirrorCtx.RegistryRepo+"/modules", nameOpts...)
@@ -51,7 +54,12 @@ func Modules(mirrorCtx *Context) ([]Module, error) {
 			RegistryPath: fmt.Sprintf("%s/modules/%s", mirrorCtx.RegistryRepo, module),
 			Releases:     []string{},
 		}
-		m.Releases, err = crane.ListTags(m.RegistryPath + "/release")
+
+		repo, err := name.NewRepository(m.RegistryPath+"/release", nameOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("parsing repo: %v", err)
+		}
+		m.Releases, err = remote.List(repo, remoteOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("get releases for module %q: %w", m.RegistryPath, err)
 		}

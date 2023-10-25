@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
@@ -53,11 +52,20 @@ func VersionsToCopy(mirrorCtx *Context) ([]*semver.Version, error) {
 }
 
 func getTagsFromRegistry(mirrorCtx *Context) ([]string, error) {
-	craneOpts := []crane.Option{}
-	if mirrorCtx.RegistryAuth != nil {
-		craneOpts = append(craneOpts, crane.WithAuth(mirrorCtx.RegistryAuth))
+	nameOpts := []name.Option{}
+	remoteOpts := []remote.Option{}
+	if mirrorCtx.Insecure {
+		nameOpts = append(nameOpts, name.Insecure)
 	}
-	tags, err := crane.ListTags(mirrorCtx.RegistryRepo+"/release-channel", craneOpts...)
+	if mirrorCtx.RegistryAuth != nil {
+		remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
+	}
+
+	repo, err := name.NewRepository(mirrorCtx.RegistryRepo+"/release-channel", nameOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("parsing repo: %v", err)
+	}
+	tags, err := remote.List(repo, remoteOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("get tags from Deckhouse registry: %w", err)
 	}

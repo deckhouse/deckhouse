@@ -60,8 +60,8 @@ func CreateOCIImageLayouts(
 
 	fsPaths := map[*layout.Path]string{
 		&layouts.Deckhouse:      filepath.Join(rootFolder, registryRepo),
-		&layouts.Install:        filepath.Join(rootFolder, registryRepo+"/install"),
-		&layouts.ReleaseChannel: filepath.Join(rootFolder, registryRepo+"/release-channel"),
+		&layouts.Install:        filepath.Join(rootFolder, registryRepo, "install"),
+		&layouts.ReleaseChannel: filepath.Join(rootFolder, registryRepo, "release-channel"),
 	}
 	for layoutPtr, fsPath := range fsPaths {
 		if err := createEmptyImageLayoutAtPath(fsPath); err != nil {
@@ -74,7 +74,7 @@ func CreateOCIImageLayouts(
 	}
 
 	for _, module := range modules {
-		path := filepath.Join(rootFolder, registryRepo+"/modules/"+module.Name)
+		path := filepath.Join(rootFolder, registryRepo, "modules", module.Name)
 		if err := createEmptyImageLayoutAtPath(path); err != nil {
 			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)
 		}
@@ -83,7 +83,7 @@ func CreateOCIImageLayouts(
 			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", err)
 		}
 
-		path = filepath.Join(rootFolder, registryRepo+"/modules/"+module.Name+"/release")
+		path = filepath.Join(rootFolder, registryRepo, "modules", module.Name, "release")
 		if err := createEmptyImageLayoutAtPath(path); err != nil {
 			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)
 		}

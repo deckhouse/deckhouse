@@ -80,12 +80,13 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("validation", "Validation of mirrored indexes and images. "+
 		`Defaults to "fast" validation, which only checks if manifests and indexes are compliant with OCI specs, `+
 		`"full" validation also checks images contents for corruption`).
+		Hidden().
 		Default(mirrorFastValidation).
 		Envar(configEnvName("MIRROR_VALIDATION")).
 		EnumVar(&MirrorValidationMode, mirrorNoValidation, mirrorFastValidation, mirrorFullValidation)
 	cmd.Flag("images", "Directory for pulled images.").
 		Short('i').
-		Default("/tmp/d8-images").
+		Required().
 		Envar(configEnvName("MIRROR_IMAGES_PATH")).
 		StringVar(&MirrorImagesPath)
 	cmd.Flag("insecure", "Skip TLS checks.").
@@ -100,8 +101,8 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 
 		if MirrorRegistryHost != "" && MirrorDHLicenseToken != "" {
 			return errors.New("You have specified both --license and --registry flags. This is not how it works.\n\n" +
-				"Leave only --license if you want to pull Deckhouse from public registry.\n" +
-				"Leave only --registry if you already pulled Deckhouse and want to push it to your private registry.")
+				"Leave only --license if you want to pull Deckhouse images from public registry.\n" +
+				"Leave only --registry if you already pulled Deckhouse images and want to push it to your private registry.")
 		}
 
 		if mirrorMinVersionString != "" {

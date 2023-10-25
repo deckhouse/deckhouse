@@ -25,8 +25,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	// "github.com/google/go-containerregistry/pkg/v1"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/mirror"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
@@ -36,8 +34,8 @@ func MirrorRegistryToLocalFS(
 	mirrorCtx *mirror.Context,
 	versions []*semver.Version,
 ) error {
-	log.InfoF("Fetching Deckhouse Modules list...\t")
-	modules, err := mirror.Modules(mirrorCtx)
+	log.InfoF("Fetching Deckhouse modules list...\t")
+	modules, err := mirror.GetExternalModules(mirrorCtx)
 	if err != nil {
 		log.InfoLn("❌")
 		return fmt.Errorf("get Deckhouse modules: %w", err)

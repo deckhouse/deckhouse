@@ -28,7 +28,7 @@ import (
 )
 
 func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
-	cmd := parent.Command("mirror", "Copy Deckhouse registry for air-gaped installation.")
+	cmd := parent.Command("mirror", "Copy Deckhouse images from Deckhouse registry to local filesystem and to third-party registry")
 	app.DefineMirrorFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -38,7 +38,7 @@ func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			})
 		}
 
-		return log.Process("mirror", "Pull Deckhouse to local filesystem", func() error {
+		return log.Process("mirror", "Pull Deckhouse images from registry to local filesystem", func() error {
 			return mirrorPullDeckhouseToLocalFilesystem()
 		})
 	})
