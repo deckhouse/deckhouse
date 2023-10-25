@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"vector/internal"
@@ -94,6 +95,31 @@ func reloadOnce() {
 	log.Println("Vector config has been reloaded")
 }
 
+// Vector sets lock for each buffer, but doesn't clean them if the process was killed.
+// If locks are left, after restart Vector will not be able to load the config.
+func cleanLocks() {
+	_ = filepath.Walk("/vector-data/", func(path string, f os.FileInfo, err error) error {
+		if os.IsNotExist(err) {
+			return filepath.SkipDir
+		}
+		if err != nil {
+			return err
+		}
+		if f == nil {
+			return nil
+		}
+
+		if filepath.Ext(f.Name()) == "buffer.lock" {
+			if err := os.Remove(path); err != nil {
+				log.Println(err.Error())
+			} else {
+				log.Printf("lock file %s has been successfully removed\n", path)
+			}
+		}
+		return nil
+	})
+}
+
 // Config represents Vector configuration file.
 // https://vector.dev/docs/reference/configuration/
 type Config struct {
@@ -150,6 +176,8 @@ func compareConfigs(c1, c2 *Config) bool {
 }
 
 func main() {
+	cleanLocks()
+
 	if err := LoadConfig(sampleConfigPath).SaveTo(dynamicConfigPath); err != nil {
 		log.Fatal(err)
 		return
@@ -189,7 +217,7 @@ func main() {
 			}
 
 		case err := <-watcher.Errors:
-			log.Printf("watch files error: %s", err)
+			log.Printf("watch files error: %s\n", err)
 		}
 	}
 }
