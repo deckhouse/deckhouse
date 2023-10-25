@@ -92,7 +92,7 @@ RUN git clone ${K8S_AWAIT_ELECTION_GITREPO} /usr/local/go/k8s-await-election/ \
 FROM $BASE_UBUNTU as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.26.0-rc.2
+ARG UTILS_VERSION=9.25.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
