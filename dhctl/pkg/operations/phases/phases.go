@@ -41,12 +41,13 @@ var (
 )
 
 type PhasedExecutionContext struct {
-	onPhaseFunc            OnPhaseFunc
-	lastState              DhctlState
-	completedPhase         OperationPhase
-	failedPhase            OperationPhase
-	currentPhase           OperationPhase
-	stopOperationCondition bool
+	onPhaseFunc               OnPhaseFunc
+	lastState                 DhctlState
+	completedPhase            OperationPhase
+	failedPhase               OperationPhase
+	currentPhase              OperationPhase
+	stopOperationCondition    bool
+	pipelineCompletionCounter int
 }
 
 func NewPhasedExecutionContext(onPhaseFunc OnPhaseFunc) *PhasedExecutionContext {
@@ -89,7 +90,11 @@ func (pec *PhasedExecutionContext) callOnPhase(completedPhase OperationPhase, co
 // InitPipeline initializes PhasedExecutionContext before usage.
 // It is not possible to use PhasedExecutionContext before InitPipeline called.
 func (pec *PhasedExecutionContext) InitPipeline(stateCache dstate.Cache) error {
-	return pec.setLastState(stateCache)
+	if err := pec.setLastState(stateCache); err != nil {
+		return err
+	}
+	pec.pipelineCompletionCounter++
+	return nil
 }
 
 // Finalize supposed to always be called when errors or no errors have occured (use defer pec.Finalize() for example).
@@ -134,6 +139,7 @@ func (pec *PhasedExecutionContext) commitState(stateCache dstate.Cache) error {
 // CompletePipeline or CompletePhaseAndPipeline could be called only once for a given PhasedExecutionContext.
 // CompletePipeline or CompletePhaseAndPipeline should be called in the same scope where InitPipeline has been called.
 func (pec *PhasedExecutionContext) CompletePipeline(stateCache dstate.Cache) error {
+	pec.pipelineCompletionCounter--
 	if pec.stopOperationCondition {
 		return nil
 	}
@@ -141,8 +147,11 @@ func (pec *PhasedExecutionContext) CompletePipeline(stateCache dstate.Cache) err
 	if pec.completedPhase == "" {
 		return nil
 	}
-	_, err := pec.callOnPhase(pec.completedPhase, pec.lastState, "", false, stateCache)
-	return err
+	if pec.pipelineCompletionCounter == 0 {
+		_, err := pec.callOnPhase(pec.completedPhase, pec.lastState, "", false, stateCache)
+		return err
+	}
+	return nil
 }
 
 // SwitchPhase is a shortcut to complete current phase & start next phase in one-step.
