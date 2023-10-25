@@ -81,6 +81,10 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 			Expect(chronyMasterDaemonsetTest.Exists()).To(BeTrue())
 			Expect(chronyDaemonSetTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
         [
+		  {
+            "name": "PATH",
+            "value": "/opt/chrony-static/bin"
+          },
           {
             "name": "NTP_ROLE",
             "value": "sink"
@@ -97,6 +101,10 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 `))
 			Expect(chronyMasterDaemonsetTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
         [
+          {
+            "name": "PATH",
+            "value": "/opt/chrony-static/bin"
+          },
           {
             "name": "NTP_ROLE",
             "value": "source"
