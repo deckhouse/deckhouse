@@ -553,6 +553,20 @@ import:
   - modules/**/templates
   - modules/**/crds
   - modules/**/hack
+  - modules/**/openapi/doc-ru-config-values.yaml
+  - modules/**/openapi/openapi-case-tests.yaml
+  - modules/**/openapi/values.yaml
+  - modules/**/webhooks
+  - modules/**/cloud-instance-manager
+  - modules/**/hooks
+  - modules/**/candi
+  - modules/**/migrate-pvc.sh
+  - modules/**/tools
+  - modules/**/create-d8-cluster-configuration.sh
+  - modules/**/files
+  - modules/**/applications
+  - modules/**/monitoring_test
+  - modules/**/rules
   {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
   after: setup
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
