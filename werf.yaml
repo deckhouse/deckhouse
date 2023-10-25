@@ -544,7 +544,7 @@ import:
   to: /deckhouse
   includePaths:
   - modules/**/openapi/config-values.yaml
-  - modules/global-hooks/openapi/config-values.yaml
+  - global-hooks/openapi/config-values.yaml
   excludePaths:
   - modules/**/Chart.yaml
   - modules/**/charts
