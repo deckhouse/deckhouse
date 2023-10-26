@@ -58,7 +58,7 @@ webhooks:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
 
   {{/* Increase timeout for trivy-provider */}}
-  timeoutSeconds: 15
+  timeoutSeconds: 30
 
   {{- include "validating.webhook.config" . | nindent 2 }}
   {{- end }}
