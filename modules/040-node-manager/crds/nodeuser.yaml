@@ -45,7 +45,7 @@ spec:
                     Node user ID.
 
                     This parameter does not change during the entire resource life.
-                  x-doc-examples: '1001'
+                  x-doc-examples: ['1001']
                   minimum: 1001
                   x-doc-required: true
                 sshPublicKey:
@@ -55,7 +55,7 @@ spec:
                     Node user SSH public key.
 
                     Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
-                  x-doc-examples: 'ssh-rsa AAABBB'
+                  x-doc-examples: ['ssh-rsa AAABBB']
                 sshPublicKeys:
                   type: array
                   items:
@@ -72,11 +72,11 @@ spec:
                     Hashed user password.
 
                     The format corresponds to the password hashes in `/etc/shadow`. Yoou can get it using the following command: `openssl passwd -6`.
-                  x-doc-examples: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
+                  x-doc-examples: ['$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC']
                 isSudoer:
                   type: boolean
                   description: 'Persistence of node user in sudo group.'
-                  x-doc-examples: 'true'
+                  x-doc-examples: ['true']
                   default: false
                 extraGroups:
                   type: array

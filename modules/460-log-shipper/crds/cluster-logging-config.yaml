@@ -87,7 +87,7 @@ spec:
                             matchLabels:
                               type: object
                               description: List of labels which a namespace should have.
-                              x-doc-examples: { "foo": "bar", "baz": "who" }
+                              x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                               additionalProperties:
                                 type: string
                             matchExpressions:
@@ -136,7 +136,7 @@ spec:
                         matchLabels:
                           type: object
                           description: List of labels which Pod should have.
-                          x-doc-examples: { "foo": "bar", "baz": "who" }
+                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                           additionalProperties:
                             type: string
                         matchExpressions:
@@ -191,14 +191,13 @@ spec:
                     exclude:
                       type: array
                       description: Array of file patterns to exclude.
-                      x-doc-examples:
-                        ["/var/log/nginx/error.log", "/var/log/audit.log"]
+                      x-doc-examples: ["/var/log/nginx/error.log", "/var/log/audit.log"]
                       items:
                         type: string
                     lineDelimiter:
                       type: string
                       description: String sequence used to separate one file line from another.
-                      x-doc-examples: \r\n
+                      x-doc-examples: ['\r\n']
                 labelFilter:
                   type: array
                   description: |

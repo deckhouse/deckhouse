@@ -206,7 +206,7 @@ spec:
                             matchLabels:
                               type: object
                               description: List of labels which a namespace should have.
-                              x-doc-examples: { "foo": "bar", "baz": "who" }
+                              x-doc-examples: [{ "foo": "bar", "baz": "who"}]
                               additionalProperties:
                                 type: string
                             matchExpressions:
@@ -255,7 +255,7 @@ spec:
                         matchLabels:
                           type: object
                           description: List of labels which Pod should have.
-                          x-doc-examples: { "foo": "bar", "baz": "who" }
+                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                           additionalProperties:
                             type: string
                         matchExpressions:

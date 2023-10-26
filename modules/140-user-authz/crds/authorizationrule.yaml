@@ -40,7 +40,7 @@ spec:
                     * `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`);
 
                   enum: [User,PrivilegedUser,Editor,Admin]
-                  x-doc-examples: 'PrivilegedUser'
+                  x-doc-examples: ['PrivilegedUser']
                 portForwarding:
                   type: boolean
                   default: false
@@ -71,11 +71,11 @@ spec:
                         type: string
                         enum: [User, Group, ServiceAccount]
                         description: 'Type of user identification resource.'
-                        x-doc-examples: 'Group'
+                        x-doc-examples: ['Group']
                       name:
                         type: string
                         description: 'Resource name.'
-                        x-doc-examples: 'some-group-name'
+                        x-doc-examples: ['some-group-name']
                       namespace:
                         type: string
                         minLength: 1

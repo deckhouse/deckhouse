@@ -34,7 +34,7 @@ spec:
                     Using this option, you can create several controllers to use with a single ingress
 
                     **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
-                  x-doc-examples: 'nginx'
+                  x-doc-examples: ['nginx']
                   default: 'nginx'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 inlet:
@@ -162,7 +162,7 @@ spec:
                         Sets the header field for identifying the originating IP address of a client.
 
                         This option works only if `behindL7Proxy` is enabled.
-                      x-doc-examples: 'CF-Connecting-IP'
+                      x-doc-examples: ['CF-Connecting-IP']
                       default: 'X-Forwarded-For'
                 loadBalancerWithProxyProtocol:
                   type: object
@@ -205,7 +205,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: '80'
+                      x-doc-examples: ['80']
                     httpsPort:
                       type: integer
                       description: |
@@ -214,7 +214,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: '443'
+                      x-doc-examples: ['443']
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -228,7 +228,7 @@ spec:
 
                         This option works only if `behindL7Proxy` is enabled.
                       default: 'X-Forwarded-For'
-                      x-doc-examples: 'CF-Connecting-IP'
+                      x-doc-examples: ['CF-Connecting-IP']
                 hostPortWithProxyProtocol:
                   type: object
                   description: |
@@ -245,7 +245,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: '80'
+                      x-doc-examples: ['80']
                     httpsPort:
                       type: integer
                       description: |
@@ -254,7 +254,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: '443'
+                      x-doc-examples: ['443']
                 acceptRequestsFrom:
                   type: array
                   description: |
@@ -281,7 +281,7 @@ spec:
                       type: string
                       description: 'The time, in seconds, that the browser should remember that a site is only to be accessed using HTTPS.'
                       pattern: '^[1-9][0-9]*$'
-                      x-doc-examples: "31536000"
+                      x-doc-examples: ["31536000"]
                       x-doc-default: "31536000"
                     preload:
                       type: boolean
@@ -439,12 +439,12 @@ spec:
                       type: string
                       description: |
                         Name of kubernetes service that leads to custom errors backend.
-                      x-doc-examples: 'custom-errors-backend-service'
+                      x-doc-examples: ['custom-errors-backend-service']
                     namespace:
                       type: string
                       description: |
                         Namespace of custom errors backend.
-                      x-doc-examples: 'default'
+                      x-doc-examples: ['default']
                     codes:
                       type: array
                       description: |

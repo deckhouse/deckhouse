@@ -43,14 +43,14 @@ spec:
 
                     A mandatory parameter, however, it isn't used currently since Istio cannot match TrustDomain with the root CA.
                   pattern: '^[0-9a-zA-Z._-]+$'
-                  x-doc-examples: 'cluster.local'
+                  x-doc-examples: ['cluster.local']
                 metadataEndpoint:
                   type: string
                   x-doc-d8Revision: ee
                   description: |
                     HTTPS endpoint with remote cluster metadata.
                   pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
-                  x-doc-examples: 'https://istio.k8s.example.com/metadata/'
+                  x-doc-examples: ['https://istio.k8s.example.com/metadata/']
             status:
               type: object
               properties:

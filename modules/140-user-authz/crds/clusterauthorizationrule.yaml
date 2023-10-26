@@ -44,7 +44,7 @@ spec:
                       **Caution!** since `ClusterAdmin` can edit `ClusterRoleBindings`, he can broader his privileges within the cluster;
                     * `SuperAdmin` — can perform any actions with any objects (note that `limitNamespaces` (see below) restrictions remain valid).
                   enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
-                  x-doc-examples: 'PrivilegedUser'
+                  x-doc-examples: ['PrivilegedUser']
                 portForwarding:
                   type: boolean
                   default: false
@@ -104,11 +104,11 @@ spec:
                         type: string
                         enum: [User, Group, ServiceAccount]
                         description: 'Type of user identification resource.'
-                        x-doc-examples: 'Group'
+                        x-doc-examples: ['Group']
                       name:
                         type: string
                         description: 'Resource name.'
-                        x-doc-examples: 'some-group-name'
+                        x-doc-examples: ['some-group-name']
                       namespace:
                         type: string
                         minLength: 1
@@ -142,18 +142,18 @@ spec:
                       apiGroup:
                         type: string
                         description: 'apiGroup for users.'
-                        x-doc-examples: 'rbac.authorization.k8s.io'
+                        x-doc-examples: ['rbac.authorization.k8s.io']
                         minLength: 1
                       kind:
                         type: string
                         description: 'Kind of the role.'
                         enum: [ClusterRole]
-                        x-doc-examples: 'ClusterRole'
+                        x-doc-examples: ['ClusterRole']
                       name:
                         type: string
                         description: 'Name of the role.'
                         minLength: 1
-                        x-doc-examples: 'cluster-admin'
+                        x-doc-examples: ['cluster-admin']
     - name: v1
       served: true
       storage: true
@@ -184,7 +184,7 @@ spec:
                       **Caution!** since `ClusterAdmin` can edit `ClusterRoleBindings`, he can broader his privileges within the cluster;
                     * `SuperAdmin` — can perform any actions with any objects (note that `limitNamespaces` and `namespaceSelector` (see below) restrictions remain valid).
                   enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
-                  x-doc-examples: 'PrivilegedUser'
+                  x-doc-examples: ['PrivilegedUser']
                 portForwarding:
                   type: boolean
                   default: false
@@ -267,7 +267,7 @@ spec:
                         matchLabels:
                           type: object
                           description: A set of labels a namespace must have to match.
-                          x-doc-examples: { "foo": "bar", "baz": "who" }
+                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                           additionalProperties:
                             type: string
                             pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
@@ -311,11 +311,11 @@ spec:
                         type: string
                         enum: [User, Group, ServiceAccount]
                         description: 'Type of user identification resource.'
-                        x-doc-examples: 'Group'
+                        x-doc-examples: ['Group']
                       name:
                         type: string
                         description: 'Resource name.'
-                        x-doc-examples: 'some-group-name'
+                        x-doc-examples: ['some-group-name']
                       namespace:
                         type: string
                         minLength: 1
@@ -349,15 +349,15 @@ spec:
                       apiGroup:
                         type: string
                         description: 'apiGroup for users.'
-                        x-doc-examples: 'rbac.authorization.k8s.io'
+                        x-doc-examples: ['rbac.authorization.k8s.io']
                         minLength: 1
                       kind:
                         type: string
                         description: 'Kind of the role.'
                         enum: [ClusterRole]
-                        x-doc-examples: 'ClusterRole'
+                        x-doc-examples: ['ClusterRole']
                       name:
                         type: string
                         description: 'Name of the role.'
                         minLength: 1
-                        x-doc-examples: 'cluster-admin'
+                        x-doc-examples: ['cluster-admin']

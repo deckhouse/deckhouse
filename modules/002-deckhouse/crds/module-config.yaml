@@ -34,12 +34,12 @@ spec:
                   type: boolean
                   description: |
                     Enables or disables a module.
-                  x-doc-examples: 'false'
+                  x-doc-examples: ['false']
                 version:
                   type: number
                   description: |
                     Version of settings schema.
-                  x-doc-examples: '1'
+                  x-doc-examples: ['1']
                 settings:
                   type: object
                   description: |

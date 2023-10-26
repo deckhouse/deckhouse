@@ -44,7 +44,7 @@ spec:
                     repo:
                       type: string
                       description: URL of the container registry.
-                      x-doc-examples: 'registry.example.io/deckhouse/modules'
+                      x-doc-examples: ['registry.example.io/deckhouse/modules']
                     dockerCfg:
                       type: string
                       description: Container registry access token in Base64.

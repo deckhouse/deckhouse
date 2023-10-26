@@ -41,7 +41,7 @@ spec:
                 type: string
                 description: |
                   Node root path for PV's.
-                x-doc-examples: "/opt/local-path-provisioner"
+                x-doc-examples: ["/opt/local-path-provisioner"]
               reclaimPolicy:
                 type: string
                 enum: ["Retain", "Delete"]
