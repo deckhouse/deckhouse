@@ -1,0 +1,22 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: fix-start-containerd-deckhouse.sh
+spec:
+  weight: 32
+  bundles:
+    - "*"
+  nodeGroups:
+    - "*"
+  content: |
+    #!/bin/bash
+    if ! systemctl -q is-enabled containerd-deckhouse.service; then
+      exit 0
+    fi
+
+    if systemctl -q is-active containerd-deckhouse.service; then
+      exit 0
+    fi
+    bb-log-info "Trying to start containerd-deckhouse service."
+    systemctl start containerd-deckhouse.service
