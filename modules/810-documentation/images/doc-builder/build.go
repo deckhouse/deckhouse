@@ -15,19 +15,25 @@
 package main
 
 import (
+	"fmt"
 	"github.com/flant/doc_builder/pkg/hugo"
+	"github.com/flant/doc_builder/pkg/k8s"
 	"k8s.io/klog/v2"
 	"net/http"
 )
 
-func newBuildHandler(contentDir string) *buildHandler {
+func newBuildHandler(src string, dst string, cmManager *k8s.ConfigmapManager) *buildHandler {
 	return &buildHandler{
-		rootDir: contentDir,
+		src:       src,
+		dst:       dst,
+		cmManager: cmManager,
 	}
 }
 
 type buildHandler struct {
-	rootDir string
+	src       string
+	dst       string
+	cmManager *k8s.ConfigmapManager
 }
 
 func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -43,9 +49,18 @@ func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reque
 
 func (b *buildHandler) build() error {
 	flags := hugo.Flags{
-		Quiet:  true,
-		Source: b.rootDir,
+		//TODO: Quiet:  true,
+		Source: b.src,
 	}
 
-	return hugo.Build(flags)
+	err := hugo.Build(flags)
+	if err != nil {
+		return fmt.Errorf("hugo build: %w", err)
+	}
+
+	err = b.cmManager.Remove()
+	if err != nil {
+		return fmt.Errorf("remove cm: %w", err)
+	}
+	return nil
 }

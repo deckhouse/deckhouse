@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"github.com/flant/doc_builder/pkg/k8s"
 	"net/http"
 	"os"
 	"os/signal"
@@ -30,12 +31,14 @@ import (
 // flags
 var (
 	listenAddress string
-	uploadDir     string
+	src           string
+	dst           string
 )
 
 func init() {
 	flag.StringVar(&listenAddress, "address", ":8081", "Address to listen on")
-	flag.StringVar(&uploadDir, "upload", "/tmp", "Directory to upload files")
+	flag.StringVar(&src, "src", "/tmp/src", "Directory to load source files")
+	flag.StringVar(&dst, "dst", "/tmp/dst", "Directory for compiled files")
 }
 
 func main() {
@@ -44,9 +47,14 @@ func main() {
 	ctx, stopNotify := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stopNotify()
 
+	cmManager, err := k8s.NewConfigmapManager()
+	if err != nil {
+		klog.Fatalf("new cm manager: %s", err)
+	}
+
 	mux := http.NewServeMux()
-	mux.Handle("/loadDocArchive", newLoadHandler(uploadDir))
-	mux.Handle("/build", newBuildHandler(uploadDir))
+	mux.Handle("/loadDocArchive", newLoadHandler(src)) //TODO: path and query args
+	mux.Handle("/build", newBuildHandler(src, dst, cmManager))
 
 	srv := &http.Server{
 		Addr:    listenAddress,
@@ -60,7 +68,7 @@ func main() {
 	}()
 	klog.Info("Server Started")
 
-	err := createSyncConfigMap()
+	err = cmManager.Create(ctx)
 	if err != nil {
 		klog.Fatalf("create sync config map: %s", err)
 	}
