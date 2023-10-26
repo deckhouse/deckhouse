@@ -70,7 +70,7 @@ apiVersions:
             type: string
             deprecated: true
             description: |
-              **Deprecated!** Use ModuleConfig 'deckhouse' for configure release channel.
+              **Deprecated!** Use ModuleConfig 'deckhouse' to configure release channel.
 
               The [release channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) to use in the cluster.
             enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
@@ -78,14 +78,14 @@ apiVersions:
             type: string
             deprecated: true
             description: |
-              **Deprecated!** This field will be remove in the future and will be replaced on command-line argument.
+              **Deprecated!** This field will be removed in the future and is replaced with command-line argument.
 
               The parameter is used for development needs.
           bundle:
             type: string
             deprecated: true
             description: |
-              **Deprecated!** Use ModuleConfig 'deckhouse' for configure bundle.
+              **Deprecated!** Use ModuleConfig 'deckhouse' to configure bundle.
 
               The [Deckhouse bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) to use in the cluster.
             enum: [Minimal, Managed, Default]
@@ -94,7 +94,7 @@ apiVersions:
             type: string
             deprecated: true
             description: |
-              **Deprecated!** Use ModuleConfig 'deckhouse' for Deckhouse controller log level.
+              **Deprecated!** Use ModuleConfig 'deckhouse' to Deckhouse controller log level.
 
               Deckhouse [logging Level](../modules/002-deckhouse/configuration.html#parameters-loglevel).
             enum: [Debug, Info, Error]
@@ -103,7 +103,7 @@ apiVersions:
             type: object
             deprecated: true
             description: |
-              **Deprecated!** Use ModuleConfig's resources in config.yaml for configure modules.
+              **Deprecated!** Use ModuleConfig's resources in config.yaml to configure modules.
 
               Initial [Deckhouse configuration](/documentation/v1/#deckhouse-configuration).
 
