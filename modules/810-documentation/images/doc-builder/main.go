@@ -45,7 +45,7 @@ func main() {
 	defer stopNotify()
 
 	mux := http.NewServeMux()
-	mux.Handle("/loadDocArchive", newUploadHandler(uploadDir))
+	mux.Handle("/loadDocArchive", newLoadHandler(uploadDir))
 	mux.Handle("/build", newBuildHandler(uploadDir))
 
 	srv := &http.Server{

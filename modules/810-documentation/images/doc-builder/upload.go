@@ -34,7 +34,7 @@ type loadHandler struct {
 	baseDir string
 }
 
-// TODO: path
+// TODO: path /module-name/version?chans=alfa,beta
 // TODO: generate json
 func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	err := u.upload(request.Body)
