@@ -22,14 +22,13 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -90,11 +89,37 @@ func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *config.Deckh
 	}
 }
 
-func UnLockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl *client.KubernetesClient) error {
+func UnlockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Unlock Deckhouse controller queue", 15, 5*time.Second).Run(func() error {
 		return kubeCl.CoreV1().ConfigMaps("d8-system").
 			Delete(context.TODO(), "deckhouse-bootstrap-lock", metav1.DeleteOptions{})
 	})
+}
+
+func AddReleaseChannelToDeckhouseModuleConfig(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
+	if cfg.ReleaseChannel == "" {
+		return nil
+	}
+	return retry.NewLoop("Set release channel", 15, 5*time.Second).
+		BreakIf(apierrors.IsNotFound).
+		Run(func() error {
+			cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			err = unstructured.SetNestedField(cm.Object, cfg.ReleaseChannel, "spec", "settings", "releaseChannel")
+			if err != nil {
+				return err
+			}
+
+			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Update(context.TODO(), cm, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
 }
 
 func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
@@ -378,7 +403,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 		return err
 	}
 
-	return UnLockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl)
+	return UnlockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl)
 }
 
 func WaitForReadiness(kubeCl *client.KubernetesClient) error {

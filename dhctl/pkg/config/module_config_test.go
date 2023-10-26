@@ -87,9 +87,10 @@ configOverrides:
 `,
 		})
 
-		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig)
+		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig, NewSchemaStore(), "Minimal", "Debug")
 		require.NoError(t, err)
 
+		foundDeckhouseCm := false
 		for _, mc := range mcs {
 			switch mc.GetName() {
 			case "istioEnabled":
@@ -110,8 +111,16 @@ configOverrides:
 					"testString": "aaaaa",
 				})
 
+			case "deckhouse":
+				foundDeckhouseCm = true
+				assertModuleConfig(t, mc, true, 1, map[string]interface{}{
+					"bundle":   "Minimal",
+					"logLevel": "Debug",
+				})
 			}
 		}
+
+		require.True(t, foundDeckhouseCm)
 	})
 
 	t.Run("Invalid overrides", func(t *testing.T) {
@@ -123,7 +132,7 @@ configOverrides:
 `,
 		})
 
-		_, err := ConvertInitConfigurationToModuleConfigs(metaConfig)
+		_, err := ConvertInitConfigurationToModuleConfigs(metaConfig, NewSchemaStore(), "Minimal", "Debug")
 		require.Error(t, err)
 	})
 }

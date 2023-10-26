@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -413,6 +414,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	} else if shouldStop {
 		return nil
+	}
+
+	if err := deckhouse.AddReleaseChannelToDeckhouseModuleConfig(kubeCl, deckhouseInstallConfig); err != nil {
+		return err
 	}
 
 	if !b.DisableBootstrapClearCache {

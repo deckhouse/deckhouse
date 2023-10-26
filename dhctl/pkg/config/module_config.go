@@ -67,19 +67,17 @@ type ModuleConfigSpec struct {
 // then it checks for any module configuration overrides within InitConfiguration.configOverrides.
 // If it detects such overrides, it converts them into ModuleConfig resources as well.
 // Finally, it unlocks further bootstrap by allowing modules hooks to run with created ModuleConfig's.
-func ConvertInitConfigurationToModuleConfigs(metaConfig *MetaConfig) ([]*ModuleConfig, error) {
+func ConvertInitConfigurationToModuleConfigs(metaConfig *MetaConfig, schemasStore *SchemaStore, bundle string, level string) ([]*ModuleConfig, error) {
 	initConfiguration := metaConfig.DeckhouseConfig
 	// "deckhouse" ModuleConfig is mandatory.
 	dhSettings := maputil.Filter(
 		map[string]any{
-			"bundle":         initConfiguration.Bundle,
-			"logLevel":       initConfiguration.LogLevel,
-			"registryCA":     initConfiguration.RegistryCA,
-			"releaseChannel": initConfiguration.ReleaseChannel,
+			"bundle":   bundle,
+			"logLevel": level,
 		},
 		filterNonZeroValues[string, any],
 	)
-	schemasStore := NewSchemaStore()
+
 	dhModuleConfig, err := buildModuleConfigWithOverrides(schemasStore, "deckhouse", true, dhSettings)
 	if err != nil {
 		return nil, err

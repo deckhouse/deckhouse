@@ -81,7 +81,14 @@ spec:
 		require.Equal(t, iCfg.LogLevel, "Info")
 		require.Equal(t, iCfg.Bundle, "Default")
 
-		require.Len(t, iCfg.ModuleConfigs, 1)
+		// helm and deckhouseCm
+		require.Len(t, iCfg.ModuleConfigs, 2)
+
+		require.Contains(t, iCfg.ModuleConfigs[1].Spec.Settings, "bundle")
+		require.Equal(t, iCfg.ModuleConfigs[1].Spec.Settings["bundle"], "Default")
+
+		require.Contains(t, iCfg.ModuleConfigs[1].Spec.Settings, "logLevel")
+		require.Equal(t, iCfg.ModuleConfigs[1].Spec.Settings["logLevel"], "Info")
 	})
 
 	t.Run("Use bundle and logLevel from module config", func(t *testing.T) {
@@ -107,6 +114,33 @@ spec:
 		require.Equal(t, iCfg.Bundle, "Minimal")
 
 		require.Len(t, iCfg.ModuleConfigs, 1)
+	})
+
+	t.Run("Remove releaseChannel from module config and set to installer cfg for adding after bootstrap", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"moduleConfigs": `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    releaseChannel: RockSolid
+  version: 1
+`,
+		})
+
+		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.NoError(t, err)
+
+		require.Equal(t, iCfg.LogLevel, "Info")
+		require.Equal(t, iCfg.Bundle, "Default")
+
+		require.Len(t, iCfg.ModuleConfigs, 1)
+
+		require.NotContains(t, iCfg.ModuleConfigs[0].Spec.Settings, "releaseChannel")
+		require.Equal(t, iCfg.ReleaseChannel, "RockSolid")
 	})
 
 	t.Run("Use bundle and logLevel from module config", func(t *testing.T) {

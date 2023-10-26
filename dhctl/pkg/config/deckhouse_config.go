@@ -65,6 +65,8 @@ type DeckhouseInstaller struct {
 
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
+
+	ReleaseChannel string
 }
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
@@ -136,13 +138,13 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		deprecatedFieldsExamples = append(deprecatedFieldsExamples, "releaseChannel: Stable")
 	}
 
-	if metaConfig.DeckhouseConfig.Bundle != "" {
+	if metaConfig.DeckhouseConfig.Bundle != bundle {
 		bundle = metaConfig.DeckhouseConfig.Bundle
 		deprecatedFields = append(deprecatedFields, "bundle")
 		deprecatedFieldsExamples = append(deprecatedFieldsExamples, "bundle: Default")
 	}
 
-	if metaConfig.DeckhouseConfig.LogLevel != "" {
+	if metaConfig.DeckhouseConfig.LogLevel != logLevel {
 		logLevel = metaConfig.DeckhouseConfig.LogLevel
 		deprecatedFields = append(deprecatedFields, "logLevel")
 		deprecatedFieldsExamples = append(deprecatedFieldsExamples, "logLevel: Info")
@@ -151,6 +153,8 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	if len(deprecatedFields) > 0 {
 		log.WarnF(initConfigurationError, strings.Join(deprecatedFields, ","), strings.Join(deprecatedFieldsExamples, "\n    "))
 	}
+
+	schemasStore := NewSchemaStore()
 
 	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
 		log.WarnLn(`
@@ -186,7 +190,8 @@ spec:
 		if len(metaConfig.ModuleConfigs) > 0 {
 			return nil, fmt.Errorf("Cannot use ModuleConfig's and configOverrides. Please use ModuleConfig's")
 		}
-		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig)
+
+		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig, schemasStore, bundle, logLevel)
 		if err != nil {
 			return nil, err
 		}
@@ -194,11 +199,15 @@ spec:
 		metaConfig.ModuleConfigs = mcs
 	}
 
+	var deckhouseCm *ModuleConfig
 	// find deckhouse module config for extract release
 	for _, mc := range metaConfig.ModuleConfigs {
 		if mc.GetName() != "deckhouse" {
 			continue
 		}
+
+		deckhouseCm = mc
+
 		logLevelRaw, ok := mc.Spec.Settings["logLevel"]
 		if ok {
 			logLevel = logLevelRaw.(string)
@@ -206,6 +215,27 @@ spec:
 		bundleRaw, ok := mc.Spec.Settings["bundle"]
 		if ok {
 			bundle = bundleRaw.(string)
+		}
+	}
+
+	releaseChannel := ""
+
+	if deckhouseCm == nil {
+		deckhouseCm, err = buildModuleConfigWithOverrides(schemasStore, "deckhouse", true, map[string]any{
+			"bundle":   bundle,
+			"logLevel": logLevel,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)
+		}
+		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, deckhouseCm)
+	} else {
+		releaseChannelRaw, hasReleaseChannelKey := deckhouseCm.Spec.Settings["releaseChannel"]
+		if rc, ok := releaseChannelRaw.(string); hasReleaseChannelKey && ok {
+			// we need set releaseChannel after bootstrapping process done
+			// to prevent update during bootstrap
+			delete(deckhouseCm.Spec.Settings, "releaseChannel")
+			releaseChannel = rc
 		}
 	}
 
@@ -220,6 +250,7 @@ spec:
 		StaticClusterConfig:   staticClusterConfig,
 		ClusterConfig:         clusterConfig,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
+		ReleaseChannel:        releaseChannel,
 	}
 
 	return &installConfig, nil
