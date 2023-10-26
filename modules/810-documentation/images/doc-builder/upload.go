@@ -17,6 +17,7 @@ package main
 import (
 	"archive/tar"
 	"fmt"
+	"github.com/gorilla/mux"
 	"io"
 	"net/http"
 	"os"
@@ -37,7 +38,10 @@ type loadHandler struct {
 // TODO: path /module-name/version?chans=alfa,beta
 // TODO: generate json
 func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	err := u.upload(request.Body)
+	pathVars := mux.Vars(request)
+	channels := strings.Split(request.URL.Query().Get("channels"), ",")
+
+	err := u.upload(request.Body, pathVars["moduleName"], pathVars["version"], channels)
 	if err != nil {
 		klog.Error(err)
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
@@ -47,7 +51,7 @@ func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 	writer.WriteHeader(http.StatusCreated)
 }
 
-func (u *loadHandler) upload(body io.ReadCloser) error {
+func (u *loadHandler) upload(body io.ReadCloser, moduleName, version string, channels []string) error {
 	reader := tar.NewReader(body)
 
 	for {
@@ -64,7 +68,7 @@ func (u *loadHandler) upload(body io.ReadCloser) error {
 			return fmt.Errorf("path traversal detected in the module archive: malicious path %v", header.Name)
 		}
 
-		path := filepath.Join(u.baseDir, header.Name)
+		path := filepath.Join(u.baseDir, moduleName, version, header.Name)
 		switch header.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(path, 0700); err != nil {

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"flag"
 	"github.com/flant/doc_builder/pkg/k8s"
+	"github.com/gorilla/mux"
 	"net/http"
 	"os"
 	"os/signal"
@@ -52,13 +53,13 @@ func main() {
 		klog.Fatalf("new cm manager: %s", err)
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/loadDocArchive", newLoadHandler(src)) //TODO: path and query args
-	mux.Handle("/build", newBuildHandler(src, dst, cmManager))
+	r := mux.NewRouter()
+	r.Handle("/loadDocArchive/{moduleName}/{version}", newLoadHandler(src)).Methods(http.MethodPost)
+	r.Handle("/build", newBuildHandler(src, dst, cmManager)).Methods(http.MethodPost)
 
 	srv := &http.Server{
 		Addr:    listenAddress,
-		Handler: mux,
+		Handler: r,
 	}
 
 	go func() {
