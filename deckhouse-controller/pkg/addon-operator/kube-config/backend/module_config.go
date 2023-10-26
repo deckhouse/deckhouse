@@ -57,7 +57,9 @@ func (mc ModuleConfig) StartInformer(ctx context.Context, eventC chan config.Eve
 	informer := externalversions.NewSharedInformerFactory(mc.mcKubeClient, resyncPeriod)
 	mcInformer := informer.Deckhouse().V1alpha1().ModuleConfigs().Informer()
 
-	_, err := mcInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	// we can ignore the error here because we have only 1 error case here:
+	//   if mcInformer was stopped already. But we are controlling its behavior
+	_, _ = mcInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			mconfig := obj.(*v1alpha1.ModuleConfig)
 			mc.handleEvent(mconfig, eventC)
@@ -70,10 +72,6 @@ func (mc ModuleConfig) StartInformer(ctx context.Context, eventC chan config.Eve
 			mc.handleEvent(obj.(*v1alpha1.ModuleConfig), eventC)
 		},
 	})
-	if err != nil {
-		// TODO: return err
-		panic(err)
-	}
 
 	go func() {
 		mcInformer.Run(ctx.Done())
