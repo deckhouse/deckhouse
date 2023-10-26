@@ -26,15 +26,17 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func newUploadHandler(baseDir string) *uploadHandler {
-	return &uploadHandler{baseDir}
+func newLoadHandler(baseDir string) *loadHandler {
+	return &loadHandler{baseDir}
 }
 
-type uploadHandler struct {
+type loadHandler struct {
 	baseDir string
 }
 
-func (u *uploadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+// TODO: path
+// TODO: generate json
+func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	err := u.upload(request.Body)
 	if err != nil {
 		klog.Error(err)
@@ -45,7 +47,7 @@ func (u *uploadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	writer.WriteHeader(http.StatusCreated)
 }
 
-func (u *uploadHandler) upload(body io.ReadCloser) error {
+func (u *loadHandler) upload(body io.ReadCloser) error {
 	reader := tar.NewReader(body)
 
 	for {
