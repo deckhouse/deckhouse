@@ -72,15 +72,19 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", "d8-chrony", "deckhouse-registry")
 
 			chronyDaemonSetTest := f.KubernetesResource("DaemonSet", "d8-chrony", "chrony")
-			chronyMasterDeploymentTest := f.KubernetesResource("Deployment", "d8-chrony", "chrony-master")
+			chronyMasterDaemonsetTest := f.KubernetesResource("DaemonSet", "d8-chrony", "chrony-master")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(chronyDaemonSetTest.Exists()).To(BeTrue())
-			Expect(chronyMasterDeploymentTest.Exists()).To(BeTrue())
+			Expect(chronyMasterDaemonsetTest.Exists()).To(BeTrue())
 			Expect(chronyDaemonSetTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
         [
+		  {
+            "name": "PATH",
+            "value": "/opt/chrony-static/bin"
+          },
           {
             "name": "NTP_ROLE",
             "value": "sink"
@@ -95,8 +99,12 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
           }
         ]
 `))
-			Expect(chronyMasterDeploymentTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
+			Expect(chronyMasterDaemonsetTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
         [
+          {
+            "name": "PATH",
+            "value": "/opt/chrony-static/bin"
+          },
           {
             "name": "NTP_ROLE",
             "value": "source"
