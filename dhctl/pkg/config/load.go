@@ -108,7 +108,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			}
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
-			log.DebugF("open api spec not found for module %s", moduleName)
+			log.DebugF("openapi spec not found for module %s", moduleName)
 		} else {
 			panic(err)
 		}
@@ -195,22 +195,21 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		if err := yaml.Unmarshal(*doc, &mc); err != nil {
 			return err
 		}
-		var ok bool
 		mcName := mc.GetName()
-		schema, ok = s.moduleConfigsCache[mcName]
-		if !ok {
-			return fmt.Errorf("Schema for module config %s wasn't found.", mc.GetName())
-		}
 		if mc.Spec.Enabled == nil && mcName != "global" {
 			return fmt.Errorf("enabled field for module config %s shoud set to true or false", mcName)
 		}
 		if len(mc.Spec.Settings) == 0 {
 			return nil
 		}
+		var ok bool
+		schema, ok = s.moduleConfigsCache[mcName]
+		if !ok {
+			return fmt.Errorf("Schema for module config %s wasn't found.", mc.GetName())
+		}
 
 		if mc.Spec.Version == 0 {
 			return fmt.Errorf("version field for module config %s shoud set", mcName)
-
 		}
 
 		var err error
