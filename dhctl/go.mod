@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/BurntSushi/toml v0.3.1
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/alessio/shellescape v1.4.1
@@ -49,6 +50,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/containerd/stargz-snapshotter/estargz v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/cli v0.0.0-20191017083524-a8ff7f821017 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
