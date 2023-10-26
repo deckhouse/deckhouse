@@ -35,22 +35,30 @@ shell:
   - git clone --depth 1 --branch v{{ $version }}.{{ $value.criToolsPatch }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
   - cd /cri-tools
   {{- if semverCompare "=1.24" $version }}
+  - go mod edit -go=1.20
   - go get -u golang.org/x/net@v0.17.0
   - go get -u gopkg.in/yaml.v3@v3.0.1
   - go get -u github.com/docker/docker@v20.10.26
-  - go mod edit -go=1.20
+  - go get -u google.golang.org/grpc@v1.56.3
   - go mod tidy
   - go mod vendor
   {{- else if semverCompare "=1.25" $version }}
+  - go mod edit -go=1.20
   - go get -u golang.org/x/net@v0.17.0
   - go get -u github.com/docker/docker@v20.10.26
   - go get -u golang.org/x/text@v0.3.8
-  - go mod edit -go=1.20
+  - go get -u google.golang.org/grpc@v1.56.3
   - go mod tidy
   - go mod vendor
   {{- else if semverCompare "=1.26" $version }}
-  - go get -u github.com/docker/docker@v20.10.26
   - go mod edit -go=1.20
+  - go get -u github.com/docker/docker@v20.10.26
+  - go get -u google.golang.org/grpc@v1.56.3
+  - go mod tidy
+  - go mod vendor
+  {{- else if semverCompare ">=1.27" $version }}
+  - go mod edit -go=1.20
+  - go get -u google.golang.org/grpc@v1.56.3
   - go mod tidy
   - go mod vendor
   {{- end }}
