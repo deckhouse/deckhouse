@@ -480,7 +480,7 @@ function bootstrap_static() {
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
        apt-get update
        apt-get install -y docker.io
-       docker run -d --network host vimagick/tinyproxy
+       docker run -d --network host ajoergensen/tinyproxy -e "ALLOWED=192.168.199.0/24"
 ENDSSH
       initial_setup_failed=""
       break
