@@ -3,6 +3,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
   name: fix-start-containerd-deckhouse.sh
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   weight: 32
   bundles:
