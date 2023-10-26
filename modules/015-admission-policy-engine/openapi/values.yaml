@@ -9,6 +9,11 @@ properties:
       bootstrapped:
         type: boolean
         default: false
+      effectiveStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
       webhook:
         type: object
         default: {}
