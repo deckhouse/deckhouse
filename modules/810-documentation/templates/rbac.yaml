@@ -23,7 +23,6 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: doc-builder
-    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
   name: configmap-write
