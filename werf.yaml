@@ -180,6 +180,25 @@ docker:
   ENV:
     PATH: /usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin
 ---
+{{- define "exclude_modules_dir_from_images" }}
+- docs
+- modules/*/docs
+- modules/*/README.md
+- modules/*/images
+- modules/*/hooks/**/*.go
+- modules/*/template_tests
+- modules/*/.namespace
+- modules/*/values_matrix_test.yaml
+- modules/*/apis/**/*.go
+- modules/*/requirements/**/*.go
+- modules/*/settings-conversion/**/*.go
+- modules/*/hack/**/*.go
+- global-hooks/**/*.go
+- candi/cloud-providers/*/layouts
+- candi/cloud-providers/*/terraform-modules
+- '**/testdata'
+{{- end}}
+---
 image: dev-prebuild
 fromImage: common-base
 fromCacheVersion: "2023-10-20.0"
@@ -198,22 +217,7 @@ git:
   - helm_lib
   - python_lib
   excludePaths:
-  - docs
-  - modules/*/docs
-  - modules/*/README.md
-  - modules/*/images
-  - modules/*/hooks/**/*.go
-  - modules/*/template_tests
-  - modules/*/.namespace
-  - modules/*/values_matrix_test.yaml
-  - modules/*/apis/**/*.go
-  - modules/*/requirements/**/*.go
-  - modules/*/settings-conversion/**/*.go
-  - modules/*/hack/**/*.go
-  - global-hooks/**/*.go
-  - candi/cloud-providers/*/layouts
-  - candi/cloud-providers/*/terraform-modules
-  - '**/testdata'
+{{- include "exclude_modules_dir_from_images" .  | nindent 2}}
 - url: https://github.com/flant/shell-operator
   tag: v1.1.3
   add: /frameworks/shell
@@ -523,7 +527,7 @@ ansible:
 ---
 image: dev/install
 from: {{ .Images.BASE_ALPINE }}
-fromCacheVersion: "20230315"
+fromCacheVersion: "20231025.3"
 git:
 - add: /
   to: /deckhouse
@@ -534,6 +538,13 @@ import:
 - artifact: dhctl
   add: /dhctl/bin/dhctl
   to: /usr/bin/dhctl
+  after: setup
+- image: dev-prebuild
+  add: /deckhouse
+  to: /deckhouse
+  includePaths:
+  - modules/*/openapi/config-values.yaml
+  - global-hooks/openapi/config-values.yaml
   after: setup
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform

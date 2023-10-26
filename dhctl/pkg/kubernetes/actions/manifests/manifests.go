@@ -18,11 +18,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -503,49 +501,6 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 	}
 
 	return ret
-}
-
-func DeckhouseConfigMap(deckhouseConfig map[string]interface{}) *apiv1.ConfigMap {
-	configMap := apiv1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "deckhouse",
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
-		},
-	}
-
-	var allErrs *multierror.Error
-
-	configMapData := make(map[string]string, len(deckhouseConfig))
-	for setting, data := range deckhouseConfig {
-		if strings.HasSuffix(setting, "Enabled") {
-			boolData, ok := data.(bool)
-			if !ok {
-				allErrs = multierror.Append(allErrs,
-					fmt.Errorf("deckhouse config map validation: %q must be bool, option will be skipped", setting),
-				)
-			} else {
-				configMapData[setting] = strconv.FormatBool(boolData)
-			}
-			continue
-		}
-
-		convertedData, err := yaml.Marshal(data)
-		if err != nil {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("preparing deckhouse config map error (probably validation bug): %v", err))
-			continue
-		}
-		configMapData[setting] = string(convertedData)
-	}
-
-	err := allErrs.ErrorOrNil()
-	if err != nil {
-		log.ErrorLn(err)
-	}
-
-	configMap.Data = configMapData
-	return &configMap
 }
 
 func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {

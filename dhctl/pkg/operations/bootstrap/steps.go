@@ -264,7 +264,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 	})
 }
 
-func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config) error {
+func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) error {
 	return log.Process("bootstrap", "Install Deckhouse", func() error {
 		err := CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
 		if err != nil {

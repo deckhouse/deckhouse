@@ -64,6 +64,10 @@ func NewFakeKubernetesClient() *KubernetesClient {
 	return &KubernetesClient{KubeClient: klient.NewFake(nil)}
 }
 
+func NewFakeKubernetesClientWithListGVR(gvr map[schema.GroupVersionResource]string) *KubernetesClient {
+	return &KubernetesClient{KubeClient: klient.NewFake(gvr)}
+}
+
 func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {
 	k.SSHClient = client
 	return k

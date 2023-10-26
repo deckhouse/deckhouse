@@ -16,8 +16,6 @@
 
 source /shell_lib.sh
 
-DECKHOUSE_CONFIG_MAP=${DECKHOUSE_CONFIG_MAP:-deckhouse}
-
 function __config__(){
   cat <<EOF
 configVersion: v1

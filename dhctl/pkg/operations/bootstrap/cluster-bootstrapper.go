@@ -229,7 +229,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 	metaConfig.UUID = clusterUUID
 
-	deckhouseInstallConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
+	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
 		return err
 	}
@@ -414,6 +414,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	} else if shouldStop {
 		return nil
+	}
+
+	if err := deckhouse.AddReleaseChannelToDeckhouseModuleConfig(kubeCl, deckhouseInstallConfig); err != nil {
+		return err
 	}
 
 	if !b.DisableBootstrapClearCache {

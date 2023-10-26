@@ -68,28 +68,43 @@ apiVersions:
             default: HTTPS
           releaseChannel:
             type: string
+            deprecated: true
             description: |
+              **Deprecated!** Use ModuleConfig 'deckhouse' to configure release channel.
+
               The [release channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) to use in the cluster.
             enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
           devBranch:
             type: string
+            deprecated: true
             description: |
+              **Deprecated!** This field will be removed in the future and is replaced with command-line argument.
+
               The parameter is used for development needs.
           bundle:
             type: string
+            deprecated: true
             description: |
+              **Deprecated!** Use ModuleConfig 'deckhouse' to configure bundle.
+
               The [Deckhouse bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) to use in the cluster.
             enum: [Minimal, Managed, Default]
             default: Default
           logLevel:
             type: string
+            deprecated: true
             description: |
+              **Deprecated!** Use ModuleConfig 'deckhouse' to Deckhouse controller log level.
+
               Deckhouse [logging Level](../modules/002-deckhouse/configuration.html#parameters-loglevel).
             enum: [Debug, Info, Error]
             default: Info
           configOverrides:
             type: object
+            deprecated: true
             description: |
+              **Deprecated!** Use ModuleConfig's resources in config.yaml to configure modules.
+
               Initial [Deckhouse configuration](/documentation/v1/#deckhouse-configuration).
 
               Specify here Deckhouse configuration parameters with which it should start after installation.
