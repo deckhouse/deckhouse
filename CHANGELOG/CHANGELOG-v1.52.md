@@ -33,6 +33,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix deckhouse containerd start after installing new containerd-deckhouse package. [#6329](https://github.com/deckhouse/deckhouse/pull/6329)
  - **[candi]** Allow underscore in `httpProxy` and `httpsProxy` settings. [#6216](https://github.com/deckhouse/deckhouse/pull/6216)
  - **[candi]** Fix RedOS installation. [#6121](https://github.com/deckhouse/deckhouse/pull/6121)
  - **[candi]** Add creation of the `TMPDIR` directory in the `bashible.sh` script. [#6059](https://github.com/deckhouse/deckhouse/pull/6059)
