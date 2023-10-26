@@ -112,7 +112,7 @@ spec:
   sidecars:
   - name: res-file-cleaner
     image: {{ include "helm_lib_module_image" (list . "linstorServer") }}
-    command: "python3 /cleaner.py"
+    command: ["python3", "/cleaner.py"]
     volumeMounts:
       - name: res-files
         mountPath: /var/lib/linstor.d
