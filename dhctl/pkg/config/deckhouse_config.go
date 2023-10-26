@@ -80,7 +80,7 @@ func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	}
 
 	if tag == "" {
-		panic("Probably you use development image. please use devBranch")
+		panic("You are probably using a development image. please use devBranch")
 	}
 
 	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
