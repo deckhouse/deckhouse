@@ -545,6 +545,8 @@ import:
   includePaths:
   - modules/**/openapi/config-values.yaml
   - global-hooks/openapi/config-values.yaml
+  excludePaths:
+  - modules/**
   after: setup
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
