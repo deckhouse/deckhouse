@@ -84,6 +84,11 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 		return nil, err
 	}
 
+	if ms.Spec.Registry.Scheme == "" {
+		// fallback to default https protocol
+		ms.Spec.Registry.Scheme = "HTTPS"
+	}
+
 	// remove unused fields
 	newms := v1alpha1.ModuleSource{
 		TypeMeta: ms.TypeMeta,
@@ -133,6 +138,10 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 
 		if ex.Spec.Registry.CA != "" {
 			opts = append(opts, cr.WithCA(ex.Spec.Registry.CA))
+		}
+
+		if ex.Spec.Registry.Scheme == "HTTP" {
+			opts = append(opts, cr.WithInsecureSchema(true))
 		}
 
 		regCli, err := dc.GetRegistryClient(ex.Spec.Registry.Repo, opts...)
