@@ -64,6 +64,9 @@ var (
 			// http and https
 			"properties.modulesImages.properties.registry.properties.scheme",
 		},
+		//"modules/005-external-module-manager/crds/module-source.yaml": {
+		//// http and https should not be capitalized
+		//},
 		"modules/010-user-authn-crd/crds/dex-provider.yaml": {
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField",
@@ -184,6 +187,12 @@ var (
 	}
 
 	arrayPathRegex = regexp.MustCompile(`\[\d+\]`)
+
+	// some keys, that must not be capitalized anywhere
+	enumKeyExcludes = map[string]struct{}{
+		"http":  {},
+		"https": {},
+	}
 )
 
 type EnumValidator struct {
@@ -252,6 +261,10 @@ func (en EnumValidator) validateEnumValues(enumKey string, values []string) *mul
 
 func (en EnumValidator) validateEnumValue(value string) error {
 	if len(value) == 0 {
+		return nil
+	}
+
+	if _, ok := enumKeyExcludes[value]; ok {
 		return nil
 	}
 
