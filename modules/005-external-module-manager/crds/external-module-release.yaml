@@ -38,7 +38,7 @@ spec:
                 version:
                   type: string
                   description: Module version.
-                  example: 'v1.0.0'
+                  x-doc-examples: 'v1.0.0'
                 weight:
                   type: integer
                   description: Module weight.

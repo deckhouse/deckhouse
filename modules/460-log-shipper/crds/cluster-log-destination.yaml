@@ -419,7 +419,7 @@ spec:
                     endpoint:
                       type: string
                       description: Base URL of the Splunk instance.
-                      x-examples:
+                      x-doc-examples:
                       - "https://http-inputs-hec.splunkcloud.com"
                     token:
                       type: string
@@ -534,7 +534,7 @@ spec:
                         List of excludes for keyField.
 
                         Only NOT matched log entries would be rate limited.
-                      example: |
+                      x-doc-examples: |
                         ```yaml
                         excludes:
                         - field: tier
@@ -619,7 +619,7 @@ spec:
                     - pod_owner
 
                     [More about field path notation...](https://vector.dev/docs/reference/configuration/field-path-notation/)
-                  example: |
+                  x-doc-examples: |
                     ```yaml
                     extraLabels:
                       forwarder: vector

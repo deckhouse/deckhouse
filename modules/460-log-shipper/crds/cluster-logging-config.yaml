@@ -87,13 +87,13 @@ spec:
                             matchLabels:
                               type: object
                               description: List of labels which a namespace should have.
-                              example: { "foo": "bar", "baz": "who" }
+                              x-doc-examples: { "foo": "bar", "baz": "who" }
                               additionalProperties:
                                 type: string
                             matchExpressions:
                               type: array
                               description: List of label expressions for namespaces.
-                              example: |
+                              x-doc-examples: |
                                 ```yaml
                                 matchExpressions:
                                 - key: tier
@@ -136,13 +136,13 @@ spec:
                         matchLabels:
                           type: object
                           description: List of labels which Pod should have.
-                          example: { "foo": "bar", "baz": "who" }
+                          x-doc-examples: { "foo": "bar", "baz": "who" }
                           additionalProperties:
                             type: string
                         matchExpressions:
                           type: array
                           description: List of label expressions for Pods.
-                          example: |
+                          x-doc-examples: |
                             ```yaml
                             matchExpressions:
                             - key: tier
@@ -185,25 +185,25 @@ spec:
                     include:
                       type: array
                       description: Array of file patterns to include.
-                      example: ["/var/log/*.log", "/var/log/nginx/*.log"]
+                      x-doc-examples: ["/var/log/*.log", "/var/log/nginx/*.log"]
                       items:
                         type: string
                     exclude:
                       type: array
                       description: Array of file patterns to exclude.
-                      example:
+                      x-doc-examples:
                         ["/var/log/nginx/error.log", "/var/log/audit.log"]
                       items:
                         type: string
                     lineDelimiter:
                       type: string
                       description: String sequence used to separate one file line from another.
-                      example: \r\n
+                      x-doc-examples: \r\n
                 labelFilter:
                   type: array
                   description: |
                     Rules to filter log lines by their labels.
-                  example: |
+                  x-doc-examples: |
                     ```yaml
                     labelFilter:
                     - field: container
@@ -273,7 +273,7 @@ spec:
                     List of filter for logs.
 
                     Only matched lines would be stored to log destination.
-                  example: |
+                  x-doc-examples: |
                     ```yaml
                     logFilter:
                     - field: tier

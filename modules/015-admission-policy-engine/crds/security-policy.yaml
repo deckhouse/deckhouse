@@ -48,7 +48,7 @@ spec:
                     allowedHostPaths:
                       type: array
                       description: "The list of allowed hostpath prefixes. An empty list means any path can be used."
-                      example: [{"pathPrefix":"/dev", "readOnly": true}]
+                      x-doc-examples: [{"pathPrefix":"/dev", "readOnly": true}]
                       items:
                         type: object
                         required: ["pathPrefix"]
@@ -95,7 +95,7 @@ spec:
                     allowedProcMount:
                       type: string
                       description: "The allowed `/proc` mount type for containers."
-                      example: "Unmasked."
+                      x-doc-examples: "Unmasked."
                       enum:
                         - Default
                         - Unmasked
@@ -105,7 +105,7 @@ spec:
                         List of capabilities that containers are able to use.
 
                         To allow all capabilities you may use `ALL`.
-                      example: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
+                      x-doc-examples: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
                         description: "Allowed linux capabilities."
@@ -154,7 +154,7 @@ spec:
                         The set of capabilities that have to be dropped from containers.
 
                         To exclude all capabilities you may use `ALL`'.
-                      example: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
+                      x-doc-examples: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
                         description: "Linux capabilities to drop from containers' specs."
@@ -163,7 +163,7 @@ spec:
                       type: array
                       description: |
                         List of allowed AppArmor profiles for use by containers.
-                      example: ["runtime/default", "unconfined"]
+                      x-doc-examples: ["runtime/default", "unconfined"]
                       items:
                         type: string
                         description: "AppArmor profile."
@@ -182,7 +182,7 @@ spec:
                         The list of explicitly allowed unsafe sysctls.
 
                         To allow all unsafe sysctls you may use `*`.
-                      example: ["kernel.msg*", "net.core.somaxconn"]
+                      x-doc-examples: ["kernel.msg*", "net.core.somaxconn"]
                       items:
                         type: string
                     forbiddenSysctls:
@@ -191,7 +191,7 @@ spec:
                         The list of forbidden sysctls.
 
                         Takes precedence over allowed unsafe sysctls ([allowedUnsafeSysctls](#securitypolicy-v1alpha1-spec-policies-allowedunsafesysctls)).
-                      example: ["kernel.msg*", "net.core.somaxconn"]
+                      x-doc-examples: ["kernel.msg*", "net.core.somaxconn"]
                       items:
                         type: string
                     fsGroup:
@@ -331,7 +331,7 @@ spec:
                     allowedVolumes:
                       type: array
                       description: "The set of volume plugins allowed to use."
-                      example: ["hostPath", "persistentVolumeClaim"]
+                      x-doc-examples: ["hostPath", "persistentVolumeClaim"]
                       items:
                         type: string
                         enum:
@@ -400,13 +400,13 @@ spec:
                             matchLabels:
                               type: object
                               description: List of labels which a namespace should have.
-                              example: { "foo": "bar", "baz": "who" }
+                              x-doc-examples: { "foo": "bar", "baz": "who" }
                               additionalProperties:
                                 type: string
                             matchExpressions:
                               type: array
                               description: List of label expressions for namespaces.
-                              example: |
+                              x-doc-examples: |
                                 ```yaml
                                 matchExpressions:
                                 - key: tier
@@ -449,13 +449,13 @@ spec:
                         matchLabels:
                           type: object
                           description: List of labels which Pod should have.
-                          example: { "foo": "bar", "baz": "who" }
+                          x-doc-examples: { "foo": "bar", "baz": "who" }
                           additionalProperties:
                             type: string
                         matchExpressions:
                           type: array
                           description: List of label expressions for Pods.
-                          example: |
+                          x-doc-examples: |
                             ```yaml
                             matchExpressions:
                             - key: tier

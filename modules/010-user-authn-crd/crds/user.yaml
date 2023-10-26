@@ -39,18 +39,18 @@ spec:
                     User E-mail.
 
                     **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/documentation/v1/modules/140-user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
-                  example: 'user@domain.com'
+                  x-doc-examples: 'user@domain.com'
                 password:
                   type: string
                   description: |
                     User password hash in plaintext or Base64-encoded.
 
                     Use the following command to encode the password hash in Base64: `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
-                  example: 'JDJ5JDEwJE9HN1lOOUhnOXU5NmY2cGp4R3NIcS56NWQuOVQxQ0VrdWIud3BRdVJ5Sy5QQU5INlpKNDguCgo='
+                  x-doc-examples: 'JDJ5JDEwJE9HN1lOOUhnOXU5NmY2cGp4R3NIcS56NWQuOVQxQ0VrdWIud3BRdVJ5Sy5QQU5INlpKNDguCgo='
                 userID:
                   type: string
                   description: 'Unique issuer user ID. It equals to .metadata.name by default.'
-                  example: '08a8684b-db88-4b73-90a9-3cd1661f5466'
+                  x-doc-examples: '08a8684b-db88-4b73-90a9-3cd1661f5466'
                 groups:
                   type: array
                   x-doc-deprecated: true
@@ -67,7 +67,7 @@ spec:
                     Static user TTL.
                     * It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
                     * You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
-                  example: '24h'
+                  x-doc-examples: '24h'
             status:
               type: object
               properties:

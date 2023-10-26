@@ -46,13 +46,13 @@ spec:
                     matchLabels:
                       type: object
                       description: List of labels which Pod should have.
-                      example: {"foo": "bar", "baz": "who"}
+                      x-doc-examples: {"foo": "bar", "baz": "who"}
                       additionalProperties:
                         type: string
                     matchExpressions:
                       type: array
                       description: List of label expressions for Pods.
-                      example: |
+                      x-doc-examples: |
                         ```yaml
                         matchExpressions:
                         - key: tier
@@ -93,7 +93,7 @@ spec:
                   type: array
                   description: |
                     Rules to filter log lines by their labels.
-                  example: |
+                  x-doc-examples: |
                     ```yaml
                     labelFilter:
                     - field: container
@@ -163,7 +163,7 @@ spec:
                     List of filter for logs.
 
                     Only matched lines would be stored to log destination.
-                  example: |
+                  x-doc-examples: |
                     ```yaml
                     logFilter:
                     - field: tier

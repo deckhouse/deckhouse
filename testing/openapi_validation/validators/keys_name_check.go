@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	bannedNames = []string{"x-examples", "examples"}
+	bannedNames = []string{"x-examples", "examples", "example"}
 )
 
 type KeyNameValidator struct {
