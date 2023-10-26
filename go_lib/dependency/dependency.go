@@ -31,6 +31,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/helm"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/vsphere"
@@ -45,6 +46,7 @@ type Container interface {
 	MustGetK8sClient(options ...k8s.Option) k8s.Client
 	GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error)
 	GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error)
+	GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error)
 	GetClientConfig() (*rest.Config, error)
 }
 
@@ -60,7 +62,16 @@ func init() {
 
 // NewDependencyContainer creates new Dependency container with external clients
 func NewDependencyContainer() Container {
-	return &dependencyContainer{}
+	return &dependencyContainer{
+		helmClient: clients{
+			clients: make(map[string]helm.Client),
+		},
+	}
+}
+
+type clients struct {
+	m       sync.Mutex
+	clients map[string]helm.Client
 }
 
 type dependencyContainer struct {
@@ -72,6 +83,7 @@ type dependencyContainer struct {
 	m          sync.RWMutex
 	isTestEnv  *bool
 	httpClient http.Client
+	helmClient clients
 }
 
 func (dc *dependencyContainer) isTestEnvironment() bool {
@@ -89,6 +101,28 @@ func (dc *dependencyContainer) isTestEnvironment() bool {
 	dc.m.Unlock()
 
 	return *dc.isTestEnv
+}
+
+func (dc *dependencyContainer) GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error) {
+	if dc.isTestEnvironment() {
+		return TestDC.GetHelmClient(namespace, options...)
+	}
+
+	dc.helmClient.m.Lock()
+	defer dc.helmClient.m.Unlock()
+
+	if hc, ok := dc.helmClient.clients[namespace]; ok {
+		return hc, nil
+	}
+
+	hc, err := helm.NewClient(namespace, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	dc.helmClient.clients[namespace] = hc
+
+	return hc, nil
 }
 
 func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
@@ -228,11 +262,16 @@ func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) err
 type mockedDependencyContainer struct {
 	ctrl *minimock.Controller // maybe we need it somewhere in tests
 
+	HelmClient    *helm.ClientMock
 	HTTPClient    *http.ClientMock
 	EtcdClient    *etcd.ClientMock
 	K8sClient     k8s.Client
 	CRClient      *cr.ClientMock
 	VsphereClient *vsphere.ClientMock
+}
+
+func (mdc *mockedDependencyContainer) GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error) {
+	return mdc.HelmClient, nil
 }
 
 func (mdc *mockedDependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
@@ -296,9 +335,11 @@ func (mdc *mockedDependencyContainer) SetK8sVersion(ver k8s.FakeClusterVersion) 
 func newMockedContainer() *mockedDependencyContainer {
 	// ctrl := minimock.NewController(ginkgo.GinkgoT()) // gingo panics cause of offset
 	ctrl := minimock.NewController(&testing.T{})
+
 	return &mockedDependencyContainer{
 		ctrl: ctrl,
 
+		HelmClient:    helm.NewClientMock(ctrl),
 		HTTPClient:    http.NewClientMock(ctrl),
 		EtcdClient:    etcd.NewClientMock(ctrl),
 		K8sClient:     fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client,
