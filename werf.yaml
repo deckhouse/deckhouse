@@ -546,7 +546,39 @@ import:
   - modules/**/openapi/config-values.yaml
   - global-hooks/openapi/config-values.yaml
   excludePaths:
-  - modules/**
+  - modules/**/Chart.yaml
+  - modules/**/charts
+  - modules/**/enabled
+  - modules/**/monitoring
+  - modules/**/oss.yaml
+  - modules/**/templates
+  - modules/**/crds
+  - modules/**/hack
+  - modules/**/openapi/doc-ru-config-values.yaml
+  - modules/**/openapi/openapi-case-tests.yaml
+  - modules/**/openapi/values.yaml
+  - modules/**/webhooks
+  - modules/**/cloud-instance-manager
+  - modules/**/hooks
+  - modules/**/candi
+  - modules/**/migrate-pvc.sh
+  - modules/**/tools
+  - modules/**/create-d8-cluster-configuration.sh
+  - modules/**/files
+  - modules/**/applications
+  - modules/**/monitoring_test
+  - modules/**/rules
+  - modules/**/scripts
+  - modules/**/cloud-providers
+  - modules/**/kubeadm
+  - modules/**/module.yaml
+  - modules/README.md
+  - modules/global-values.yaml
+  - modules/values-default.yaml
+  - modules/values-managed.yaml
+  - modules/values-minimal.yaml
+  - modules/values.yaml
+  {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
   after: setup
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
