@@ -160,8 +160,14 @@ func (cp *crdsProcessor) putCRDToCluster(crdReader io.Reader, bufferSize int) er
 	if err != nil {
 		return err
 	}
-	if crd == nil || crd.APIVersion != v1.SchemeGroupVersion.String() {
-		return fmt.Errorf("invalid CRD: %v", crd)
+
+	// it could be a comment or some other peace of yaml file, skip it
+	if crd == nil {
+		return nil
+	}
+
+	if crd.APIVersion != v1.SchemeGroupVersion.String() && crd.Kind != "CustomResourceDefinition" {
+		return fmt.Errorf("invalid CRD document apiversion/kind: '%s/%s'", crd.APIVersion, crd.Kind)
 	}
 
 	cp.k8sTasks.Go(func() error {
