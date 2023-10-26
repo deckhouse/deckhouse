@@ -106,7 +106,7 @@ spec:
                     Additional labels.
 
                     [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels)
-                  x-doc-x-doc-examples: |
+                  x-doc-examples: |
                     ```yaml
                     project: cms-production
                     severity: critical

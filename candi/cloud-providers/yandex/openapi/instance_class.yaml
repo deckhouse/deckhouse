@@ -114,7 +114,7 @@ spec:
                   type: object
                   description: |
                     Additional labels.
-                  x-doc-x-doc-examples: |
+                  x-doc-examples: |
                     ```yaml
                     project: cms-production
                     severity: critical
@@ -233,7 +233,7 @@ spec:
                   type: object
                   description: |
                     Additional labels.
-                  x-doc-x-doc-examples: |
+                  x-doc-examples: |
                     ```yaml
                     project: cms-production
                     severity: critical
