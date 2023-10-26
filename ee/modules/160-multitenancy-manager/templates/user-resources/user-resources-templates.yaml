@@ -37,6 +37,7 @@ metadata:
   {{- print $newName }}
 {{- end }}
 
+{{/* TODO need to remove add.prefix.yaml.value */}} 
 {{- define "add.prefix.yaml.value" }}
   {{- $string := index . 0 }}
   {{- $metadataField := index . 1 }}
@@ -133,21 +134,14 @@ spec:
   {{- end }}
 {{- end }}
 
-{{- $moduleValues := $.Values.multitenancyManager }}
-{{- range $projectValues := $moduleValues.internal.projects }}
+{{- $projectValues := $.Values.project }}
+{{- $projectTypeValues := $.Values.projectType }}
 
-    {{- $_ := set $projectValues "Template" $.Template }}
-    {{- $projectTypeValues := index $moduleValues.internal.projectTypes $projectValues.projectTypeName }}
+{{- $_ := set $projectValues "Template" $.Template }}
 
-    {{- if not $projectTypeValues }}
-      {{- printf "No ProjectType with name '%s' found for Project '%s'." $projectValues.projectTypeName $projectValues.projectName | fail }}
-    {{- end }}
+{{- include "project.namespace" ( list $projectValues.projectName $projectTypeValues.namespaceMetadata ) }}
 
-    {{- include "project.namespace" ( list $projectValues.projectName $projectTypeValues.namespaceMetadata ) }}
+{{- $templates := include "prepare.templates" ( list $projectTypeValues.resourcesTemplate $projectValues.projectName $) }}
+{{- tpl $templates $projectValues }}
 
-    {{- $templates := include "prepare.templates" ( list $projectTypeValues.resourcesTemplate $projectValues.projectName $) }}
-    {{- tpl $templates $projectValues }}
-
-    {{- include "authorization.rules" (list $projectValues.projectName $projectTypeValues.subjects $)}}
-
-{{- end }}
+{{- include "authorization.rules" (list $projectValues.projectName $projectTypeValues.subjects $)}}

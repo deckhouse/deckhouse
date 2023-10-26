@@ -15,11 +15,11 @@ func ProjectStatusIsDeploying(status v1alpha1.ProjectStatus) bool {
 	return status.State == "Deploying"
 }
 
-func SetErrorStatusProject(patcher *object_patch.PatchCollector, projectName, errMsg string) {
+func SetProjectStatusError(patcher *object_patch.PatchCollector, projectName, errMsg string) {
 	setProjectStatus(patcher, projectName, "Error", errMsg, false)
 }
 
-func SetDeployingStatusProject(patcher *object_patch.PatchCollector, projectName string) {
+func SetProjectStatusDeploying(patcher *object_patch.PatchCollector, projectName string) {
 	setProjectStatus(patcher, projectName, "Deploying", "Deckhouse is creating the project, see deckhouse logs for more details.", false)
 }
 
