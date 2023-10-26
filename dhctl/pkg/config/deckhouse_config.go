@@ -188,7 +188,7 @@ spec:
 ...
 `)
 		if len(metaConfig.ModuleConfigs) > 0 {
-			return nil, fmt.Errorf("Cannot use ModuleConfig's and configOverrides. Please use ModuleConfig's")
+			return nil, fmt.Errorf("Cannot use ModuleConfig's and configOverrides at the same time. Please use ModuleConfig's")
 		}
 
 		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig, schemasStore, bundle, logLevel)
