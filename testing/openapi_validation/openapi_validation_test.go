@@ -76,3 +76,27 @@ func TestValidators(t *testing.T) {
 		assert.Contains(t, res.validationError.Error(), "properties.highAvailability is invalid: must have no default value")
 	}
 }
+
+func TestCRDValidators(t *testing.T) {
+	apiFiles := []string{deckhousePath + "testing/openapi_validation/openapi_testdata/crd.yaml"}
+
+	filesC := make(chan fileValidation, len(apiFiles))
+	resultC := RunOpenAPIValidator(filesC)
+
+	for _, apiFile := range apiFiles {
+		filesC <- fileValidation{
+			filePath: apiFile,
+		}
+	}
+	close(filesC)
+
+	for res := range resultC {
+		assert.Error(t, res.validationError)
+		err, ok := res.validationError.(*multierror.Error)
+		require.True(t, ok)
+		require.Len(t, err.Errors, 1)
+
+		// we can't guarantee order here, thats why test contains
+		assert.Contains(t, res.validationError.Error(), "file validation error: wrong property")
+	}
+}

@@ -45,7 +45,7 @@ spec:
                     Node user ID.
 
                     This parameter does not change during the entire resource life.
-                  example: '1001'
+                  x-doc-examples: ['1001']
                   minimum: 1001
                   x-doc-required: true
                 sshPublicKey:
@@ -55,7 +55,7 @@ spec:
                     Node user SSH public key.
 
                     Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
-                  example: 'ssh-rsa AAABBB'
+                  x-doc-examples: ['ssh-rsa AAABBB']
                 sshPublicKeys:
                   type: array
                   items:
@@ -64,7 +64,7 @@ spec:
                     Node user SSH public keys.
 
                     Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
-                  example: [ 'ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC' ]
+                  x-doc-examples: [ 'ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC' ]
                 passwordHash:
                   type: string
                   x-doc-required: true
@@ -72,25 +72,25 @@ spec:
                     Hashed user password.
 
                     The format corresponds to the password hashes in `/etc/shadow`. Yoou can get it using the following command: `openssl passwd -6`.
-                  example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
+                  x-doc-examples: ['$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC']
                 isSudoer:
                   type: boolean
                   description: 'Persistence of node user in sudo group.'
-                  example: 'true'
+                  x-doc-examples: ['true']
                   default: false
                 extraGroups:
                   type: array
                   description: 'Node user additional system groups.'
                   items:
                     type: string
-                  x-examples:
+                  x-doc-examples:
                   - [ 'docker' ]
                   - [ 'docker', 'ftp' ]
                 nodeGroups:
                   type: array
                   default: [ '*' ]
                   description: List of NodeGroups to apply the user for.
-                  x-examples:
+                  x-doc-examples:
                   - [ 'master', 'worker' ]
                   - [ 'worker' ]
                   - [ '*' ]

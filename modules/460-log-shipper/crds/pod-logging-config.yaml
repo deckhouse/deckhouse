@@ -46,21 +46,18 @@ spec:
                     matchLabels:
                       type: object
                       description: List of labels which Pod should have.
-                      example: {"foo": "bar", "baz": "who"}
+                      x-doc-examples: [{"foo": "bar", "baz": "who"}]
                       additionalProperties:
                         type: string
                     matchExpressions:
                       type: array
                       description: List of label expressions for Pods.
-                      example: |
-                        ```yaml
-                        matchExpressions:
-                        - key: tier
+                      x-doc-examples:
+                      - - key: tier
                           operator: In
                           values:
                           - production
                           - staging
-                        ```
                       items:
                         oneOf:
                           - properties:
@@ -93,10 +90,8 @@ spec:
                   type: array
                   description: |
                     Rules to filter log lines by their labels.
-                  example: |
-                    ```yaml
-                    labelFilter:
-                    - field: container
+                  x-doc-examples:
+                  - - field: container
                       operator: In
                       values:
                       - nginx
@@ -105,7 +100,6 @@ spec:
                       values:
                       - prod-.+
                       - stage-.+
-                    ```
                   items:
                     type: object
                     required:
@@ -163,10 +157,8 @@ spec:
                     List of filter for logs.
 
                     Only matched lines would be stored to log destination.
-                  example: |
-                    ```yaml
-                    logFilter:
-                    - field: tier
+                  x-doc-examples:
+                  - - field: tier
                       operator: Exists
                     - field: foo
                       operator: NotIn
@@ -180,7 +172,6 @@ spec:
                       values:
                       - ^abc
                       - ^\d.+$
-                    ```
                   items:
                     type: object
                     required:

@@ -32,7 +32,7 @@ spec:
                     Ingress gateway class is used by application [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) resources for identifying the right Ingress gateway setup.
                     
                     The identification is organized by setting the spec.selector: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`.
-                  example: 'istio'
+                  x-doc-examples: ['istio']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                 inlet:
                   type: string
@@ -109,7 +109,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      example: '80'
+                      x-doc-examples: ['80']
                     httpsPort:
                       type: integer
                       description: |
@@ -118,7 +118,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      example: '443'
+                      x-doc-examples: ['443']
                 nodePort:
                   type: object
                   description: |
@@ -135,7 +135,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      example: '30080'
+                      x-doc-examples: ['30080']
                     httpsPort:
                       type: integer
                       description: |
@@ -144,7 +144,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      example: '30443'
+                      x-doc-examples: ['30443']
                 resourcesRequests:
                   required: ['mode']
                   type: object

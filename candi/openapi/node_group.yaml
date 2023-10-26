@@ -186,7 +186,7 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  example: "1.24"
+                  x-doc-examples: ["1.24"]
                   enum:
                     - "1.24"
                     - "1.25"
@@ -238,7 +238,7 @@ spec:
                         List of availability zones to create instances in.
 
                         The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
-                      x-doc-example: [[Helsinki, Espoo, Tampere]]
+                      x-doc-x-doc-examples: [[Helsinki, Espoo, Tampere]]
                       type: array
                       items:
                         type: string
@@ -328,9 +328,8 @@ spec:
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
-                  x-doc-example: |
-                    ```yaml
-                    labels:
+                  x-doc-examples:
+                  - labels:
                       environment: production
                       app: warp-drive-ai
                     annotations:
@@ -339,7 +338,6 @@ spec:
                     - effect: NoExecute
                       key: ship-class
                       value: frigate
-                    ```
                   type: object
                   properties:
                     labels:
@@ -349,12 +347,9 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-example: |
-                        ```yaml
-                        labels:
-                          environment: production
+                      x-doc-examples:
+                        - environment: production
                           app: warp-drive-ai
-                        ```
                     annotations:
                       type: object
                       additionalProperties:
@@ -362,24 +357,18 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-example: |
-                        ```yaml
-                        annotations:
-                          ai.fleet.com/discombobulate: "true"
-                        ```
+                      x-doc-examples:
+                        - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
-                      x-doc-example: |
-                        ```yaml
-                        taints:
-                        - effect: NoExecute
+                      x-doc-examples:
+                      - - effect: NoExecute
                           key: ship-class
                           value: frigate
-                        ```
                       items:
                         type: object
                         properties:
@@ -406,11 +395,9 @@ spec:
                 chaos:
                   description: |
                     Chaos monkey settings.
-                  x-doc-example: |
-                    ```yaml
-                    mode: DrainAndDelete
+                  x-doc-examples:
+                  - mode: DrainAndDelete
                     period: 24h
-                    ```
                   type: object
                   properties:
                     mode:
@@ -445,7 +432,7 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
-                  x-examples:
+                  x-doc-examples:
                     - approvalMode: Automatic
                       automatic:
                         drainBeforeApproval: false
@@ -497,20 +484,20 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "13:00"
+                                x-doc-examples: ["13:00"]
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "18:30"
+                                x-doc-examples: ["18:30"]
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
                                 type: array
                                 description: |
                                   Days of the week when node could be updated.
-                                example: [Mon, Wed]
+                                x-doc-examples: [Mon, Wed]
                                 items:
                                   type: string
                                   description: Day of the week.
@@ -540,20 +527,20 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "13:00"
+                                x-doc-examples: ["13:00"]
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "18:30"
+                                x-doc-examples: ["18:30"]
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
                                 type: array
                                 description: |
                                   Days of the week when node could be updated.
-                                example: [Mon, Wed]
+                                x-doc-examples: [Mon, Wed]
                                 items:
                                   type: string
                                   description: Day of the week.
@@ -886,7 +873,7 @@ spec:
                         List of availability zones to create instances in.
 
                         The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
-                      x-doc-example: [[Helsinki, Espoo, Tampere]]
+                      x-doc-examples: [[Helsinki, Espoo, Tampere]]
                       type: array
                       items:
                         type: string
@@ -974,9 +961,8 @@ spec:
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
-                  x-doc-example: |
-                    ```yaml
-                    labels:
+                  x-doc-examples:
+                  - labels:
                       environment: production
                       app: warp-drive-ai
                     annotations:
@@ -985,7 +971,6 @@ spec:
                     - effect: NoExecute
                       key: ship-class
                       value: frigate
-                    ```
                   type: object
                   properties:
                     labels:
@@ -995,12 +980,9 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-example: |
-                        ```yaml
-                        labels:
-                          environment: production
+                      x-doc-examples:
+                        - environment: production
                           app: warp-drive-ai
-                        ```
                     annotations:
                       type: object
                       additionalProperties:
@@ -1008,24 +990,18 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-example: |
-                        ```yaml
-                        annotations:
-                          ai.fleet.com/discombobulate: "true"
-                        ```
+                      x-doc-examples:
+                        - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
-                      x-doc-example: |
-                        ```yaml
-                        taints:
-                        - effect: NoExecute
+                      x-doc-examples:
+                      - - effect: NoExecute
                           key: ship-class
                           value: frigate
-                        ```
                       items:
                         type: object
                         properties:
@@ -1042,11 +1018,9 @@ spec:
                 chaos:
                   description: |
                     Chaos monkey settings.
-                  x-doc-example: |
-                    ```yaml
-                    mode: DrainAndDelete
+                  x-doc-examples:
+                  - mode: DrainAndDelete
                     period: 24h
-                    ```
                   type: object
                   properties:
                     mode:
@@ -1079,7 +1053,7 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
-                  x-examples:
+                  x-doc-examples:
                     - approvalMode: Automatic
                       automatic:
                         drainBeforeApproval: false
@@ -1131,20 +1105,20 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "13:00"
+                                x-doc-examples: ["13:00"]
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "18:30"
+                                x-doc-examples: ["18:30"]
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
                                 type: array
                                 description: |
                                   Days of the week when node could be updated.
-                                example: [Mon, Wed]
+                                x-doc-examples: [Mon, Wed]
                                 items:
                                   type: string
                                   description: Day of the week.
@@ -1174,20 +1148,20 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "13:00"
+                                x-doc-examples: ["13:00"]
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "18:30"
+                                x-doc-examples: ["18:30"]
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
                                 type: array
                                 description: |
                                   Days of the week when node could be updated.
-                                example: [Mon, Wed]
+                                x-doc-examples: [Mon, Wed]
                                 items:
                                   type: string
                                   description: Day of the week.
@@ -1586,7 +1560,7 @@ spec:
                         List of availability zones to create instances in.
 
                         The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
-                      x-doc-example: [[Helsinki, Espoo, Tampere]]
+                      x-doc-examples: [[Helsinki, Espoo, Tampere]]
                       type: array
                       items:
                         type: string
@@ -1693,9 +1667,8 @@ spec:
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
-                  x-doc-example: |
-                    ```yaml
-                    labels:
+                  x-doc-examples:
+                  - labels:
                       environment: production
                       app: warp-drive-ai
                     annotations:
@@ -1704,7 +1677,6 @@ spec:
                     - effect: NoExecute
                       key: ship-class
                       value: frigate
-                    ```
                   type: object
                   properties:
                     labels:
@@ -1714,12 +1686,9 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-example: |
-                        ```yaml
-                        labels:
-                          environment: production
-                          app: warp-drive-ai
-                        ```
+                      x-doc-examples:
+                      - environment: production
+                        app: warp-drive-ai
                     annotations:
                       type: object
                       additionalProperties:
@@ -1727,24 +1696,18 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-example: |
-                        ```yaml
-                        annotations:
-                          ai.fleet.com/discombobulate: "true"
-                        ```
+                      x-doc-examples:
+                      - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
-                      x-doc-example: |
-                        ```yaml
-                        taints:
-                        - effect: NoExecute
+                      x-doc-examples:
+                      - - effect: NoExecute
                           key: ship-class
                           value: frigate
-                        ```
                       items:
                         type: object
                         properties:
@@ -1761,11 +1724,9 @@ spec:
                 chaos:
                   description: |
                     Chaos monkey settings.
-                  x-doc-example: |
-                    ```yaml
-                    mode: DrainAndDelete
+                  x-doc-examples:
+                  - mode: DrainAndDelete
                     period: 24h
-                    ```
                   type: object
                   properties:
                     mode:
@@ -1801,7 +1762,7 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
-                  x-examples:
+                  x-doc-examples:
                     - approvalMode: Automatic
                       automatic:
                         drainBeforeApproval: false
@@ -1853,20 +1814,20 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "13:00"
+                                x-doc-examples: ["13:00"]
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "18:30"
+                                x-doc-examples: ["18:30"]
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
                                 type: array
                                 description: |
                                   Days of the week when node could be updated.
-                                example: [Mon, Wed]
+                                x-doc-examples: [Mon, Wed]
                                 items:
                                   type: string
                                   description: Day of the week.
@@ -1896,20 +1857,20 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "13:00"
+                                x-doc-examples: ["13:00"]
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: "18:30"
+                                x-doc-examples: ["18:30"]
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
                                 type: array
                                 description: |
                                   Days of the week when node could be updated.
-                                example: [Mon, Wed]
+                                x-doc-examples: [Mon, Wed]
                                 items:
                                   type: string
                                   description: Day of the week.

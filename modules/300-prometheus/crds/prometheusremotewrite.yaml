@@ -35,7 +35,7 @@ spec:
                 url:
                   description: The URL of the endpoint to send samples to.
                   type: string
-                  example: https://victoriametrics-test.domain.com/api/v1/write
+                  x-doc-examples: ['https://victoriametrics-test.domain.com/api/v1/write']
                 basicAuth:
                   description: BasicAuth for the URL.
                   properties:

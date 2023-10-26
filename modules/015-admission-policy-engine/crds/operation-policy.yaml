@@ -51,7 +51,7 @@ spec:
                         The list of prefixes a container image is allowed to have.
                       items:
                         type: string
-                        example: ["registry.deckhouse.io"]
+                        x-doc-examples: ["registry.deckhouse.io"]
                     requiredResources:
                       type: object
                       description: |
@@ -78,7 +78,7 @@ spec:
                     disallowedImageTags:
                       type: array
                       description: "Requires container images to have an image tag different from the ones in the specified list."
-                      example: ["latest"]
+                      x-doc-examples: ["latest"]
                       items:
                         type: string
                     requiredLabels:
@@ -110,7 +110,7 @@ spec:
                           items:
                             type: string
                             pattern: '^[a-z]*/[a-zA-Z]+$'
-                            example: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
+                            x-doc-examples: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
                     requiredAnnotations:
                       type: object
                       description: |
@@ -140,10 +140,10 @@ spec:
                           items:
                             type: string
                             pattern: '^[a-z]*/[a-zA-Z]+$'
-                            example: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
+                            x-doc-examples: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
                     requiredProbes:
                       type: array
-                      example: ["livenessProbe", "readinessProbe"]
+                      x-doc-examples: ["livenessProbe", "readinessProbe"]
                       description: "The list of probes that are required (e.g. `readinessProbe`)"
                       items:
                         type: string
@@ -206,21 +206,18 @@ spec:
                             matchLabels:
                               type: object
                               description: List of labels which a namespace should have.
-                              example: { "foo": "bar", "baz": "who" }
+                              x-doc-examples: [{ "foo": "bar", "baz": "who"}]
                               additionalProperties:
                                 type: string
                             matchExpressions:
                               type: array
                               description: List of label expressions for namespaces.
-                              example: |
-                                ```yaml
-                                matchExpressions:
-                                - key: tier
+                              x-doc-examples:
+                              - - key: tier
                                   operator: In
                                   values:
                                   - production
                                   - staging
-                                ```
                               items:
                                 type: object
                                 required:
@@ -255,21 +252,18 @@ spec:
                         matchLabels:
                           type: object
                           description: List of labels which Pod should have.
-                          example: { "foo": "bar", "baz": "who" }
+                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                           additionalProperties:
                             type: string
                         matchExpressions:
                           type: array
                           description: List of label expressions for Pods.
-                          example: |
-                            ```yaml
-                            matchExpressions:
-                            - key: tier
+                          x-doc-examples:
+                          - - key: tier
                               operator: In
                               values:
                               - production
                               - staging
-                            ```
                           items:
                             type: object
                             required:

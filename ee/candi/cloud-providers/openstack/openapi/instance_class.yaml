@@ -37,7 +37,7 @@ spec:
 
                     Flavor create example: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
 
-                  example: m1.medium
+                  x-doc-examples: ['m1.medium']
                   type: string
                 capacity:
                   deprecated: true
@@ -59,12 +59,12 @@ spec:
                       pattern: '^[0-9]+m?$'
                       description: Node vCPU resources.
                       x-kubernetes-int-or-string: true
-                      example: "1000m"
+                      x-doc-examples: ["1000m"]
                     memory:
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                       description: Node memory resources.
                       x-kubernetes-int-or-string: true
-                      example: "1500Mi"
+                      x-doc-examples: ["1500Mi"]
                 imageName:
                   description: |
                     Image to use while provisioning OpenStack servers.
@@ -75,13 +75,13 @@ spec:
 
                     **By default:** either `OpenStackCloudDiscoveryData` value or `instances.imageName` is used.
                   x-doc-required: false
-                  example: ubuntu-18-04-cloud-amd64
+                  x-doc-examples: ['ubuntu-18-04-cloud-amd64']
                   type: string
                 rootDiskSize:
                   description: |
                     The size of a root disk (in gigabytes).
                     This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
-                  example: 20
+                  x-doc-examples: [20]
                   type: integer
                   x-doc-required: false
                 mainNetwork:
@@ -89,7 +89,7 @@ spec:
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
 
                     **By default:** the value from `OpenStackCloudDiscoveryData` is used.
-                  example: k8s-msk-178
+                  x-doc-examples: ['k8s-msk-178']
                   type: string
                   x-doc-required: false
                 additionalNetworks:
@@ -97,7 +97,7 @@ spec:
                     Paths to networks that VirtualMachines' secondary NICs will connect to.
 
                     **By default:** the value from `OpenStackCloudDiscoveryData` is used.
-                  example:
+                  x-doc-examples:
                     - "BGP-network-VLAN-3894"
                     - "External-VLAN-3699"
                   type: array
@@ -110,7 +110,7 @@ spec:
                     They allow you to set firewall rules for provisioned instances.
 
                     The `SecurityGroups` may not be supported by the cloud provider.
-                  example:
+                  x-doc-examples:
                   - "security-group-1"
                   - "security-group-2"
                   type: array
@@ -119,8 +119,8 @@ spec:
                 additionalTags:
                   description: |
                     The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
-                  example:
-                    project: cms-production
+                  x-doc-examples:
+                  - project: cms-production
                     severity: critical
                   type: object
                   additionalProperties:
