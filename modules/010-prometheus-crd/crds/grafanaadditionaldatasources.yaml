@@ -44,7 +44,7 @@ spec:
                 url:
                   type: string
                   description: Datasource URL.
-                  example: http://localhost:8080
+                  x-doc-examples: ['http://localhost:8080']
                 user:
                   type: string
                   description: Database username.
@@ -97,7 +97,7 @@ spec:
                 url:
                   type: string
                   description: Datasource URL.
-                  example: http://localhost:8080
+                  x-doc-examples: ['http://localhost:8080']
                 user:
                   type: string
                   description: Database username.

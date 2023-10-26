@@ -191,7 +191,9 @@ module Jekyll
         exampleObject = nil
 
         begin
-          if attributes.has_key?('x-doc-example')
+          if attributes.has_key?('x-doc-examples')
+              exampleKeyToUse = 'x-doc-examples'
+          elsif attributes.has_key?('x-doc-example')
               exampleKeyToUse = 'x-doc-example'
           elsif attributes.has_key?('example')
               exampleKeyToUse = 'example'
@@ -206,7 +208,7 @@ module Jekyll
 
         if exampleObject != nil
             exampleObjectIsArrayOfExamples =  false
-            if exampleKeyToUse == 'x-examples' then
+            if exampleKeyToUse == 'x-examples' or exampleKeyToUse == 'x-doc-examples' then
                 exampleObjectIsArrayOfExamples =  true
             end
             if exampleKeyToUse == 'x-doc-example' then
@@ -499,7 +501,7 @@ module Jekyll
                 result.push('</ul>')
             else
                 # Array of non-objects (string, integer, etc.)
-                keysToShow = ['description', 'example', 'x-examples', 'x-doc-example', 'enum', 'default', 'x-doc-default', 'minimum', 'maximum', 'pattern', 'minLength', 'maxLength']
+                keysToShow = ['description', 'example', 'x-examples', 'x-doc-example', 'x-doc-examples', 'enum', 'default', 'x-doc-default', 'minimum', 'maximum', 'pattern', 'minLength', 'maxLength']
                 if (attributes['items'].keys & keysToShow).length > 0
                     lang = @context.registers[:page]["lang"]
                     i18n = @context.registers[:site].data["i18n"]["common"]

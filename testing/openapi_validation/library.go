@@ -188,6 +188,14 @@ func isDechkouseCRD(data map[interface{}]interface{}) bool {
 	return false
 }
 
+func (fp fileParser) parseForWrongKeys(m map[interface{}]interface{}) {
+	keysValidator := validators.NewKeyNameValidator()
+	err := keysValidator.Run(fp.fileName, "allfile", m)
+	if err != nil {
+		fp.resultC <- err
+	}
+}
+
 func runFileParser(fileName string, data map[interface{}]interface{}, resultC chan error) {
 	// exclude external CRDs
 	if isCRD(data) && !isDechkouseCRD(data) {
@@ -204,7 +212,9 @@ func runFileParser(fileName string, data map[interface{}]interface{}, resultC ch
 		},
 		resultC: resultC,
 	}
-
+	if isDechkouseCRD(data) {
+		fileParser.parseForWrongKeys(data)
+	}
 	go fileParser.startParsing(data, resultC)
 }
 

@@ -34,7 +34,7 @@ spec:
                     **Caution!** Make sure that this type is present in all zones specified in the `zones` parameter.
 
                     GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
-                  example: n1-standard-4
+                  x-doc-examples: ['n1-standard-4']
                   type: string
                 capacity:
                   deprecated: true
@@ -56,12 +56,12 @@ spec:
                       pattern: '^[0-9]+m?$'
                       description: Node vCPU resources.
                       x-kubernetes-int-or-string: true
-                      example: "1000m"
+                      x-doc-examples: ["1000m"]
                     memory:
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                       description: Node memory resources.
                       x-kubernetes-int-or-string: true
-                      example: "1500Mi"
+                      x-doc-examples: ["1500Mi"]
                 image:
                   description: |
                     Image to use while provisioning GCP servers.
@@ -69,7 +69,7 @@ spec:
                     You can find a list of available images in the [provider documentation](https://cloud.google.com/compute/docs/images#ubuntu).
 
                     The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
-                  example: "https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"
+                  x-doc-examples: ["https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"]
                   x-doc-required: false
                   type: string
                 preemptible:
@@ -78,7 +78,7 @@ spec:
                   x-doc-default: false
                 diskType:
                   description: Instance's disk type.
-                  example: "pd-ssd"
+                  x-doc-examples: ["pd-ssd"]
                   x-doc-default: "pd-standard"
                   type: string
                   enum:
@@ -86,7 +86,7 @@ spec:
                   - "pd-ssd"
                 diskSizeGb:
                   description: Instance's root disk size in gibibytes.
-                  example: 20
+                  x-doc-examples: [20]
                   x-doc-default: 50
                   type: integer
                 disableExternalIP:
@@ -106,11 +106,9 @@ spec:
                     Additional labels.
 
                     [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels)
-                  x-doc-example: |
-                    ```yaml
-                    project: cms-production
+                  x-doc-examples:
+                  - project: cms-production
                     severity: critical
-                    ```
                   x-kubernetes-preserve-unknown-fields: true
                   additionalProperties:
                     type: string

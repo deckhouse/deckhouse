@@ -106,12 +106,9 @@ spec:
                   x-kubernetes-preserve-unknown-fields: true
                   description: |
                     Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                  x-doc-example: |
-                    ```yaml
-                    labels:
-                      alertname: "NginxIngressSslExpired"
-                      class: "ingress-nginx.deckhouse.io/nginx"
-                    ```
+                  x-doc-examples:
+                  - alertname: "NginxIngressSslExpired"
+                    class: "ingress-nginx.deckhouse.io/nginx"
                 annotations:
                   type: object
                   additionalProperties:
@@ -119,8 +116,5 @@ spec:
                   x-kubernetes-preserve-unknown-fields: true
                   description: |
                     Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                  x-doc-example: |
-                    ```yaml
-                    annotations:
-                      summary: "Certificate has expired."
-                    ```
+                  x-doc-examples:
+                  - summary: "Certificate has expired."

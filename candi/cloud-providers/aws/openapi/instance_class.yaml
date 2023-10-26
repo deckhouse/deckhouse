@@ -32,7 +32,7 @@ spec:
                     Instance type of AWS instance.
 
                     **Caution!** Ensure that this type is present in all zones specified in the `zones` parameter.
-                  example: t3.large
+                  x-doc-examples: [t3.large]
                   type: string
                 capacity:
                   deprecated: true
@@ -54,12 +54,12 @@ spec:
                       pattern: '^[0-9]+m?$'
                       description: Node vCPU resources.
                       x-kubernetes-int-or-string: true
-                      example: "1000m"
+                      x-doc-examples: ["1000m"]
                     memory:
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                       description: Node memory resources.
                       x-kubernetes-int-or-string: true
-                      example: "1500Mi"
+                      x-doc-examples: ["1500Mi"]
                 ami:
                   description: |
                     The Amazon Machine Image (AMI ID) to use in provisioned instances.
@@ -72,23 +72,23 @@ spec:
                     --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
                     jq '.Images[].ImageId'
                     ```
-                  example: ami-040a1551f9c9d11ad
+                  x-doc-examples: [ami-040a1551f9c9d11ad]
                   type: string
                 spot:
                   description: Whether to create Spot Instances with minimum hourly price with which Instances will run.
                   type: boolean
                 diskType:
                   description: Instance EBS disk type.
-                  example: "gp2"
+                  x-doc-examples: ["gp2"]
                   type: string
                   x-doc-default: "gp2"
                 iops:
                   description: IOPS rate for io1 diskType
-                  example: "500"
+                  x-doc-examples: ["500"]
                   type: string
                 diskSizeGb:
                   description: Instance root disk size in gibibytes.
-                  example: 20
+                  x-doc-examples: [20]
                   type: integer
                   x-doc-default: 20
                 additionalTags:

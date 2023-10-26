@@ -48,7 +48,7 @@ spec:
                   description: |
                     HTTPS endpoint with remote cluster metadata.
                   pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
-                  example: 'https://istio.k8s.example.com/metadata/'
+                  x-doc-examples: ['https://istio.k8s.example.com/metadata/']
             status:
               type: object
               properties:

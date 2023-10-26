@@ -223,23 +223,17 @@ apiVersions:
                     The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
-                  x-doc-example: |
-                    ```yaml
-                    labels:
-                      environment: production
+                  x-doc-examples:
+                    - environment: production
                       app: warp-drive-ai
-                    ```
                   type: object
                   additionalProperties:
                     type: string
                 annotations:
                   description: |
                     The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                  x-doc-example: |
-                      ```yaml
-                      annotations:
-                        ai.fleet.com/discombobulate: "true"
-                      ```
+                  x-doc-examples:
+                    - ai.fleet.com/discombobulate: "true"
                   type: object
                   additionalProperties:
                     type: string
@@ -248,13 +242,10 @@ apiVersions:
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                     **Caution!** Only the `effect`, `key`, `values`  fields are available.
-                  x-doc-example: |
-                    ```yaml
-                    taints:
-                    - effect: NoExecute
+                  x-doc-examples:
+                  - - effect: NoExecute
                       key: ship-class
                       value: frigate
-                    ```
                   type: array
                   items:
                     type: object
@@ -529,14 +520,15 @@ apiVersions:
             type: string
             description: |
               Specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate. Certificate should be passed in PEM format as multiline string.
-            x-doc-example: |
-              ```yaml
-              caCert: |
-                -----BEGIN CERTIFICATE-----
-                MIIFyDCCBLCgAwIBAgIQBwDIWH1asdaKNaALUa4NUzANBgkqhkiG9w0BAQsFADBc
-                ...
-                -----END CERTIFICATE-----
-              ```
+            x-doc-examples:
+              - |
+                ```yaml
+                caCert:
+                  -----BEGIN CERTIFICATE-----
+                  MIIFyDCCBLCgAwIBAgIQBwDIWH1asdaKNaALUa4NUzANBgkqhkiG9w0BAQsFADBc
+                  ...
+                  -----END CERTIFICATE-----
+                ```
           domainName:
             type: string
             description: |
