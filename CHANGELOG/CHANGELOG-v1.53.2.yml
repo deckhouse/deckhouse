@@ -2,4 +2,7 @@ candi:
   fixes:
     - summary: Improve bashible steps running order.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6307
+    - summary: fix big time drift on nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6297
+      impact: all chrony pods should be restarted
 

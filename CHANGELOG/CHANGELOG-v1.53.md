@@ -40,6 +40,8 @@
 
 
  - **[candi]** Improve bashible steps running order. [#6307](https://github.com/deckhouse/deckhouse/pull/6307)
+ - **[candi]** fix big time drift on nodes [#6297](https://github.com/deckhouse/deckhouse/pull/6297)
+    all chrony pods should be restarted
  - **[candi]** Send bootstrap logs from cluster-api static instances. [#6252](https://github.com/deckhouse/deckhouse/pull/6252)
  - **[candi]** Fix CAPI kubeconfig hook, which cannot work on fresh installations. [#6252](https://github.com/deckhouse/deckhouse/pull/6252)
  - **[candi]** Removed `shortNames` from CAPI CRDs. [#6252](https://github.com/deckhouse/deckhouse/pull/6252)
