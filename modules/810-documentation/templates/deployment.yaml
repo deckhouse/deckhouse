@@ -61,6 +61,9 @@ spec:
             {{- include "web_resources" . | nindent 12 }}
   {{- end }}
       volumes:
+        - name: config
+          configMap:
+            name: d8-deckhouse-version-info
         - name: tmp
           emptyDir: {}
 {{- end }}
