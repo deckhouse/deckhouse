@@ -6,10 +6,6 @@ import:
   add: /src/bin/gce-pd-csi-driver
   to: /gce-pd-csi-driver
   before: setup
-- image: common/busybox-static
-  add: /build/busybox
-  to: /bin/busybox
-  before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
   add: /
   to: /
@@ -31,9 +27,9 @@ git:
 - url: https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver
   to: /src
   tag: v1.3.3
-  # stageDependencies:
-  #   install:
-  #   - '**/*'
+  stageDependencies:
+    install:
+    - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

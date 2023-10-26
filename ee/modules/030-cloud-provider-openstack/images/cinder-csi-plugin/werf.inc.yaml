@@ -1,24 +1,6 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.csi.openstack }}
-# ---
-# image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-# from: {{ $.Images.BASE_UBUNTU }}
-# import:
-# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-#   add: /src/cinder-csi-plugin
-#   to: /bin/cinder-csi-plugin
-#   before: setup
-# shell:
-#   beforeInstall:
-#   - apt update
-#   - apt install ca-certificates e2fsprogs mount xfsprogs udev -y
-#   - rm -rf /var/lib/apt/lists/*
-# docker:
-#   ENV:
-#     DEBIAN_FRONTEND: noninteractive
-#     container: docker
-#   ENTRYPOINT: ["/bin/cinder-csi-plugin"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
@@ -26,10 +8,6 @@ import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/cinder-csi-plugin
   to: /bin/cinder-csi-plugin
-  before: setup
-- image: common/busybox-static
-  add: /build/busybox
-  to: /bin/busybox
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
   add: /
@@ -39,7 +17,6 @@ import:
   - 'bin/*'
   - 'sbin/*'
   - 'lib64/*'
-  - 'lib/ld-linux-aarch64.so*'
 docker:
   ENTRYPOINT: ["/bin/cinder-csi-plugin"]
 ---

@@ -6,10 +6,6 @@ import:
   add: /src/_output/amd64/azurediskplugin
   to: /azurediskplugin
   before: setup
-- image: common/busybox-static
-  add: /build/busybox
-  to: /bin/busybox
-  before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
   add: /
   to: /
@@ -27,9 +23,9 @@ git:
 - url: https://github.com/kubernetes-sigs/azuredisk-csi-driver/
   to: /src
   tag: v1.17.0
-  # stageDependencies:
-  #   install:
-  #   - '**/*'
+  stageDependencies:
+    install:
+    - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

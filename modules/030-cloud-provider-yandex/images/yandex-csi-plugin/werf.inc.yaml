@@ -14,10 +14,6 @@ import:
   - 'bin/*'
   - 'sbin/*'
   - 'lib64/*'
-- image: common/busybox-static
-  add: /build/busybox
-  to: /bin/busybox
-  before: setup
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
@@ -27,9 +23,9 @@ git:
 - url: https://github.com/deckhouse/yandex-csi-driver
   to: /go/src/app
   tag: v0.10.0
-  # stageDependencies:
-  #   install:
-  #   - '**/*'
+  stageDependencies:
+    install:
+    - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

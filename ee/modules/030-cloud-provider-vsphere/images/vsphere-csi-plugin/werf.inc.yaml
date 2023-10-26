@@ -6,10 +6,6 @@ import:
   add: /src/vsphere-csi
   to: /bin/vsphere-csi
   before: setup
-- image: common/busybox-static
-  add: /build/busybox
-  to: /bin/busybox
-  before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
   add: /
   to: /
@@ -27,6 +23,9 @@ git:
 - url: https://github.com/kubernetes-sigs/vsphere-csi-driver
   to: /src
   tag: v2.5.4
+  stageDependencies:
+  install:
+  - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
