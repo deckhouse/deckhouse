@@ -254,4 +254,43 @@ spec:
 		_, err := PrepareDeckhouseInstallConfig(metaConfig)
 		require.Error(t, err)
 	})
+
+	t.Run("Module without spec file should ok without settings", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"moduleConfigs": `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: operator-prometheus-crd
+spec:
+  enabled: true
+`,
+		})
+
+		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.NoError(t, err)
+
+		require.Len(t, iCfg.ModuleConfigs, 2)
+
+		assertModuleConfig(t, iCfg.ModuleConfigs[0], true, 0, nil)
+	})
+
+	t.Run("Module without spec file should fail with settings", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+			"moduleConfigs": `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: operator-prometheus-crd
+spec:
+  enabled: true
+  version: 1
+  settings:
+    invalid: true
+`,
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
 }
