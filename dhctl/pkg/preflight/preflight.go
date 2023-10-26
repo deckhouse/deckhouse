@@ -15,47 +15,95 @@
 package preflight
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-type PreflightCheck struct {
-	sshClient *ssh.Client
+type Checker struct {
+	sshClient               *ssh.Client
+	metaConfig              *config.MetaConfig
+	installConfig           *deckhouse.Config
+	imageDescriptorProvider imageDescriptorProvider
+	buildDigestProvider     buildDigestProvider
 }
 
-func NewPreflightCheck(sshClient *ssh.Client) PreflightCheck {
-	return PreflightCheck{
-		sshClient: sshClient,
+type checkStep struct {
+	successMessage string
+	skipFlag       string
+	fun            func() error
+}
+
+func NewChecker(sshClient *ssh.Client, config *deckhouse.Config, metaConfig *config.MetaConfig) Checker {
+	return Checker{
+		sshClient:               sshClient,
+		metaConfig:              metaConfig,
+		installConfig:           config,
+		imageDescriptorProvider: remoteDescriptorProvider{},
+		buildDigestProvider:     &dhctlBuildDigestProvider{DigestFilePath: app.DeckhouseImageDigestFile},
 	}
 }
 
-func (pc *PreflightCheck) StaticCheck() error {
-	return log.Process("common", "Preflight Checks", func() error {
-		if app.PreflightSkipAll {
-			log.InfoLn("Preflight checks were skipped")
-			return nil
-		}
-		err := pc.CheckSSHTunel()
-		if err != nil {
-			return err
-		}
-
-		err = pc.CheckAvailabilityPorts()
-		if err != nil {
-			return err
-		}
-
-		err = pc.CheckLocalhostDomain()
-		if err != nil {
-			return err
-		}
-
-
-		return nil
+func (pc *Checker) Static() error {
+	return pc.do("Preflight checks for static-cluster", []checkStep{
+		{
+			fun:            pc.CheckSSHTunel,
+			successMessage: "ssh tunnel will up",
+			skipFlag:       app.SSHForwardArgName,
+		},
+		{
+			fun:            pc.CheckRegistryAccessThroughProxy,
+			successMessage: "registry access through proxy",
+			skipFlag:       app.RegistryThroughProxyCheckArgName,
+		},
+		{
+			fun:            pc.CheckAvailabilityPorts,
+			successMessage: "required ports availability",
+			skipFlag:       app.PortsAvailabilityArgName,
+		},
+		{
+			fun:            pc.CheckLocalhostDomain,
+			successMessage: "resolve the localhost domain",
+			skipFlag:       app.ResolvingLocalhostArgName,
+		},
 	})
 }
 
-func (pc *PreflightCheck) CloudCheck() error {
+func (pc *Checker) Cloud() error {
 	return nil
+}
+
+func (pc *Checker) Global() error {
+	return pc.do("Global preflight checks", []checkStep{
+		{
+			fun:            pc.CheckDhctlVersionObsolescence,
+			successMessage: "installer and deckhouse-controller version compatibility",
+			skipFlag:       app.DeckhouseVersionCheckArgName,
+		},
+	})
+}
+
+func (pc *Checker) do(title string, checks []checkStep) error {
+	return log.Process("common", title, func() error {
+		if app.PreflightSkipAll {
+			log.WarnLn("Preflight checks were skipped")
+			return nil
+		}
+
+		for _, check := range checks {
+			loop := retry.NewLoop(fmt.Sprintf("Checking %s", check.successMessage), 1, 10*time.Second)
+			if err := loop.Run(check.fun); err != nil {
+				return fmt.Errorf("Installation aborted: %w\n"+
+					`Please fix this problem or skip it if you're sure with %s flag`, err, check.skipFlag)
+			}
+		}
+
+		return nil
+	})
 }

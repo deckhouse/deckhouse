@@ -39,21 +39,31 @@ func init() {
 	defaultLogger = &DummyLogger{}
 }
 
+type LoggerOptions struct {
+	OutStream io.Writer
+	Width     int
+	IsDebug   bool
+}
+
 func InitLogger(loggerType string) {
+	InitLoggerWithOptions(loggerType, LoggerOptions{IsDebug: app.IsDebug})
+}
+
+func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	switch loggerType {
 	case "pretty":
-		defaultLogger = NewPrettyLogger()
+		defaultLogger = NewPrettyLogger(opts)
 	case "simple":
-		defaultLogger = NewSimpleLogger()
+		defaultLogger = NewSimpleLogger(opts)
 	case "json":
-		defaultLogger = NewJSONLogger()
+		defaultLogger = NewJSONLogger(opts)
 	default:
 		panic("unknown logger type: " + app.LoggerType)
 	}
 
 	// Mute Shell-Operator logs
 	logrus.SetLevel(logrus.PanicLevel)
-	if app.IsDebug {
+	if opts.IsDebug {
 		// Enable shell-operator log, because it captures klog output
 		// todo: capture output of klog with default logger instead
 		logrus.SetLevel(logrus.DebugLevel)
@@ -114,18 +124,33 @@ type styleEntry struct {
 
 type PrettyLogger struct {
 	processTitles map[string]styleEntry
+	isDebug       bool
 }
 
-func NewPrettyLogger() *PrettyLogger {
+func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	err := logboek.Init()
 	if err != nil {
 		panic(fmt.Errorf("can't start logging system: %w", err))
 	}
 	logboek.SetLevel(logboek.Info)
-	logboek.SetWidth(logboek.DefaultWidth)
+
+	if opts.Width != 0 {
+		logboek.SetWidth(opts.Width)
+	} else {
+		logboek.SetWidth(logboek.DefaultWidth)
+	}
+
 	// Adds fixed width ↵ , but breaks copy-pasta and tabs
-	if !app.IsDebug {
+	if !opts.IsDebug {
 		logboek.EnableFitMode()
+	}
+
+	if opts.OutStream != nil {
+		logboek.Error.SetStream(opts.OutStream)
+		logboek.Warn.SetStream(opts.OutStream)
+		logboek.Default.SetStream(opts.OutStream)
+		logboek.Info.SetStream(opts.OutStream)
+		logboek.Debug.SetStream(opts.OutStream)
 	}
 
 	return &PrettyLogger{
@@ -136,6 +161,7 @@ func NewPrettyLogger() *PrettyLogger {
 			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions()},
 			"default":   {"%s", BoldOptions()},
 		},
+		isDebug: opts.IsDebug,
 	}
 }
 
@@ -168,13 +194,13 @@ func (d *PrettyLogger) LogErrorLn(a ...interface{}) {
 }
 
 func (d *PrettyLogger) LogDebugF(format string, a ...interface{}) {
-	if app.IsDebug {
+	if d.isDebug {
 		logboek.LogInfoF(format, a...)
 	}
 }
 
 func (d *PrettyLogger) LogDebugLn(a ...interface{}) {
-	if app.IsDebug {
+	if d.isDebug {
 		logboek.LogInfoLn(a...)
 	}
 }
@@ -216,12 +242,12 @@ func prettyJSON(content []byte) string {
 }
 
 type SimpleLogger struct {
-	logger *logrus.Entry
+	logger  *logrus.Entry
+	isDebug bool
 }
 
-func NewSimpleLogger() *SimpleLogger {
+func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
 	l := &logrus.Logger{
-		Out:   os.Stdout,
 		Level: logrus.DebugLevel,
 		Formatter: &logrus.TextFormatter{
 			DisableColors:   true,
@@ -229,14 +255,22 @@ func NewSimpleLogger() *SimpleLogger {
 			FullTimestamp:   true,
 		},
 	}
+
+	if opts.OutStream != nil {
+		l.Out = opts.OutStream
+	} else {
+		l.Out = os.Stdout
+	}
+
 	// l.Formatter = &logrus.JSONFormatter{}
 	return &SimpleLogger{
-		logger: logrus.NewEntry(l),
+		logger:  logrus.NewEntry(l),
+		isDebug: opts.IsDebug,
 	}
 }
 
-func NewJSONLogger() *SimpleLogger {
-	simpleLogger := NewSimpleLogger()
+func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
+	simpleLogger := NewSimpleLogger(opts)
 	simpleLogger.logger.Logger.Formatter = &logrus.JSONFormatter{}
 
 	return simpleLogger
@@ -270,13 +304,13 @@ func (d *SimpleLogger) LogErrorLn(a ...interface{}) {
 }
 
 func (d *SimpleLogger) LogDebugF(format string, a ...interface{}) {
-	if app.IsDebug {
+	if d.isDebug {
 		d.logger.Debugf(format, a...)
 	}
 }
 
 func (d *SimpleLogger) LogDebugLn(a ...interface{}) {
-	if app.IsDebug {
+	if d.isDebug {
 		d.logger.Debugln(a...)
 	}
 }

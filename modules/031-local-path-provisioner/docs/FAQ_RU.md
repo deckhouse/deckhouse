@@ -4,7 +4,7 @@ title: "Модуль local-path-provisioner: FAQ"
 
 ## Как настроить Prometheus на использование локального хранилища?
 
-Применить CR `LocalPathProvisioner`:
+Применить custom resource `LocalPathProvisioner`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -17,8 +17,8 @@ spec:
   path: "/opt/local-path-provisioner"
 ```
 
-- `spec.nodeGroups` должен совпадать с NodeGroup prometheus'ов.
-- `spec.path` - путь на узле где будут лежать данные.
+- `spec.nodeGroups` должен совпадать с NodeGroup, где запущен под Prometheus’а.
+- `spec.path` - путь на узле, где будут лежать данные.
 
 Добавить в конфигурацию модуля `prometheus` следующие параметры:
 
@@ -27,4 +27,4 @@ longtermStorageClass: localpath-system
 storageClass: localpath-system
 ```
 
-Дождаться переката Pod'ов Prometheus.
+Дождаться переката подов Prometheus.

@@ -6,7 +6,47 @@ properties:
     type: object
     default: {}
     properties:
+      capiControllerManagerWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
+      capsControllerManagerWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
       machineControllerManagerEnabled:
+        type: boolean
+      capiControllerManagerEnabled:
+        type: boolean
+      capsControllerManagerEnabled:
         type: boolean
 
       clusterMasterAddresses:
@@ -217,7 +257,7 @@ properties:
               description: |
                 Major.Minor of the Kubernetes version used in cluster.
               x-examples:
-                - "1.23"
+                - "1.24"
             updateEpoch:
               type: [integer, string]
               x-examples:
@@ -227,6 +267,10 @@ properties:
               type: string
               enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
             cri:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            staticInstances:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
@@ -280,7 +324,7 @@ properties:
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.23"
+              kubernetesVersion: "1.24"
               cri:
                 type: "Docker"
               cloudInstances:

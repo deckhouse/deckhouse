@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Improve bashible steps running order.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6307
+

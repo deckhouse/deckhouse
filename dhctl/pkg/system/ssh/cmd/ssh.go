@@ -21,6 +21,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
@@ -73,10 +75,14 @@ func (s *SSH) Cmd() *exec.Cmd {
 		"-o", "ControlPersist=600s",
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "UserKnownHostsFile=.ssh_known_hosts",
-		"-o", "ServerAliveInterval=7",
-		"-o", "ServerAliveCountMax=2",
-		"-o", "ConnectTimeout=5",
+		"-o", "ServerAliveInterval=10",
+		"-o", "ServerAliveCountMax=3",
+		"-o", "ConnectTimeout=15",
 		"-o", "PasswordAuthentication=no",
+	}
+
+	if app.IsDebug {
+		args = append(args, "-vvv")
 	}
 
 	if s.Session.ExtraArgs != "" {
@@ -131,6 +137,8 @@ func (s *SSH) Cmd() *exec.Cmd {
 		args = append(args, "--" /* cmd.Path */, s.CommandName)
 		args = append(args, s.CommandArgs...)
 	}
+
+	log.DebugF("SSH arguments %v\n", args)
 
 	sshCmd := exec.Command("ssh", args...)
 	sshCmd.Env = env

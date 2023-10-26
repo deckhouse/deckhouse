@@ -315,6 +315,9 @@ containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 allowedUnsafeSysctls:  ["net.*"]
 shutdownGracePeriod: ${shutdownGracePeriod}
 shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
+{{- if hasKey .nodeGroup "staticInstances" }}
+providerID: $(cat /var/lib/bashible/node-spec-provider-id)
+{{- end }}
 EOF
 
 # CIS becnhmark purposes

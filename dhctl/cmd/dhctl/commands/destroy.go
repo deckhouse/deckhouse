@@ -31,7 +31,6 @@ const (
 	destroyApprovalsMessage = `You will be asked for approve multiple times.
 If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
 `
-
 	destroyCacheErrorMessage = `Create cache:
 	Error: %v
 
@@ -39,29 +38,6 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 	If you want to continue, please delete the cache folder manually.
 `
 )
-
-func InitClusterDestroyer() (*destroy.ClusterDestroyer, error) {
-	sshClient, err := ssh.NewClientFromFlags().Start()
-	if err != nil {
-		return nil, err
-	}
-	if err := terminal.AskBecomePassword(); err != nil {
-		return nil, err
-	}
-
-	if err = cache.Init(sshClient.Check().String()); err != nil {
-		return nil, fmt.Errorf(destroyCacheErrorMessage, err)
-	}
-
-	destroyParams := &destroy.Params{
-		SSHClient:  sshClient,
-		StateCache: cache.Global(),
-
-		SkipResources: app.SkipResources,
-	}
-
-	return destroy.NewClusterDestroyer(destroyParams), nil
-}
 
 func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd := parent.Command("destroy", "Destroy Kubernetes cluster.")
@@ -76,12 +52,26 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			log.WarnLn(destroyApprovalsMessage)
 		}
 
-		destroyer, err := InitClusterDestroyer()
+		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
 		}
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+
+		if err = cache.Init(sshClient.Check().String()); err != nil {
+			return fmt.Errorf(destroyCacheErrorMessage, err)
+		}
+
+		destroyer := destroy.NewClusterDestroyer(&destroy.Params{
+			SSHClient:     sshClient,
+			StateCache:    cache.Global(),
+			SkipResources: app.SkipResources,
+		})
 
 		return destroyer.DestroyCluster(app.SanityCheck)
 	})
+
 	return cmd
 }

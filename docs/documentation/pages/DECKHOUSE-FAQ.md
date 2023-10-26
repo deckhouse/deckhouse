@@ -188,7 +188,7 @@ Every minute Deckhouse checks a new release appeared in the release channel spec
 
 When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
 
-After creating a `DeckhouseRelease` CR in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/002-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
+After creating a `DeckhouseRelease` custom resource in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/002-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
 
 To get list and status of all releases use the following command:
 
@@ -282,7 +282,7 @@ Deckhouse can be configured to work with a third-party registry (e.g., a proxy r
 
 Define the following parameters in the `InitConfiguration` resource:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. The path to the Deckhouse image in the third-party registry matching the edition used (CE/EE), for example `imagesRepo: registry.deckhouse.io/deckhouse/ce`;
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee`. The path to the Deckhouse EE image in the third-party registry, for example `imagesRepo: registry.deckhouse.io/deckhouse/ee`;
 * `registryDockerCfg: <BASE64>`. Base64-encoded auth credentials of the third-party registry.
 
 Use the following `registryDockerCfg` if anonymous access to Deckhouse images is allowed in the third-party registry:
@@ -367,7 +367,7 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
   * `Provider`: `Docker Registry`.
   * `Name` — specify any of your choice.
   * `Endpoint URL`: `https://registry.deckhouse.io`.
-  * Specify the `Access ID` and `Access Secret` if you use Deckhouse Enterprise Edition; otherwise, leave them blank.
+  * Specify the `Access ID` and `Access Secret` for Deckhouse Enterprise Edition.
 
   ![Create a Registry](images/registry/harbor/harbor1.png)
 
@@ -379,7 +379,7 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
 
   ![Create a new Project](images/registry/harbor/harbor2.png)
 
-Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
+Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
 ### Manually upload images to an air-gapped registry
 
@@ -404,8 +404,6 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    ```shell
    ./d8-pull.sh --license <DECKHOUSE_LICENSE_KEY> --release v1.45.5 --output-dir /your/output-dir/
    ```
-
-   > For Deckhouse CE specify the `--edition ce` parameter and omit the `--license` parameter.
 
 1. Upload the directory from the previous step to a host with access to an air-gapped registry.
 

@@ -19,9 +19,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/iancoleman/strcase"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -59,17 +61,42 @@ type Config struct {
 	MasterNodeSelector bool
 }
 
-func (c *Config) GetImage() string {
+func (c *Config) GetImage(forceVersionTag bool) string {
 	registryNameTemplate := "%s%s:%s"
 	tag := c.DevBranch
 	if c.ReleaseChannel != "" {
 		tag = strcase.ToKebab(c.ReleaseChannel)
 	}
+	if forceVersionTag {
+		versionTag, foundValidTag := readVersionTagFromInstallerContainer()
+		if foundValidTag {
+			tag = versionTag
+		}
+	}
+
 	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
 }
 
 func (c *Config) IsRegistryAccessRequired() bool {
 	return c.Registry.DockerCfg != ""
+}
+
+func readVersionTagFromInstallerContainer() (string, bool) {
+	rawFile, err := os.ReadFile(app.VersionFile)
+	if err != nil {
+		log.WarnF(
+			"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
+			app.VersionFile, err,
+		)
+		return "", false
+	}
+
+	tag := string(rawFile)
+	if _, err = semver.NewVersion(tag); err != nil {
+		return "", false
+	}
+
+	return tag, true
 }
 
 func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *Config, manifestForUpdate *appsv1.Deployment) (*appsv1.Deployment, error) {
@@ -405,7 +432,7 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) err
 
 func deckhouseDeploymentParamsFromCfg(cfg *Config) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
-		Registry:           cfg.GetImage(),
+		Registry:           cfg.GetImage(true),
 		LogLevel:           cfg.LogLevel,
 		Bundle:             cfg.Bundle,
 		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),

@@ -104,7 +104,6 @@ In a hyperconverged infrastructure you may want your Pods to run on the same nod
 
 The linstor module provides a custom kube-scheduler `linstor` for such tasks, that takes into account the placement of data in storage and tries to place Pod first on those nodes where data is available locally.
 
-The linstor scheduler considers the placement of data in storage and tries to place Pods on nodes where data is available locally first.  
 Any Pod using linstor volumes will be automatically configured to use the `linstor` scheduler.
 
 ### Application reschedule in case of node problem (storage-based fencing)

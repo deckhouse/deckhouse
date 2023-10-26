@@ -127,3 +127,31 @@
   font-display: swap;
   src: url('{{ assets["source-code-pro/sourcecodepro-black.ttf"].digest_path }}') format('truetype');
 }
+@font-face {
+  font-family: 'Ubuntu';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('{{ assets["ubuntu/Ubuntu-Bold.ttf"].digest_path }}') format('truetype');
+}
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('{{ assets["noto-sans/NotoSans.ttf"].digest_path }}') format('truetype');
+}
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('{{ assets["noto-sans/NotoSans-Bold.ttf"].digest_path }}') format('truetype');
+}
+@font-face {
+  font-family: 'Noto Sans Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('{{ assets["noto-sans-display/Noto-Sans-Display-SemiBold.ttf.woff"].digest_path }}') format('woff');
+}

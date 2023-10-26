@@ -52,6 +52,7 @@ type Loop struct {
 	breakPredicate   BreakPredicate
 	logger           log.Logger
 	interruptable    bool
+	showError        bool
 }
 
 // NewLoop create Loop with features:
@@ -64,6 +65,7 @@ func NewLoop(name string, attemptsQuantity int, wait time.Duration) *Loop {
 		waitTime:         wait,
 		logger:           log.GetDefaultLogger(),
 		interruptable:    true,
+		showError:        true,
 	}
 }
 
@@ -78,6 +80,7 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 		logger:           log.GetSilentLogger(),
 		// - this loop is not interruptable by the signal watcher in tomb package.
 		interruptable: false,
+		showError:     true,
 	}
 }
 
@@ -88,6 +91,11 @@ func (l *Loop) BreakIf(pred BreakPredicate) *Loop {
 
 func (l *Loop) WithInterruptable(flag bool) *Loop {
 	l.interruptable = flag
+	return l
+}
+
+func (l *Loop) WithShowError(flag bool) *Loop {
+	l.showError = flag
 	return l
 }
 
@@ -116,7 +124,11 @@ func (l *Loop) Run(task func() error) error {
 			}
 
 			l.logger.LogFail(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
-			l.logger.LogInfoF("\tError: %v\n\n", err)
+			errorMsg := "\t%v\n\n"
+			if l.showError {
+				errorMsg = "\tError: %v\n\n"
+			}
+			l.logger.LogInfoF(errorMsg, err)
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {

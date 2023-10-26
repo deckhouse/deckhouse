@@ -281,7 +281,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
 Установите следующие параметры в ресурсе `InitConfiguration`:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>` — адрес образа Deckhouse в стороннем registry с учетом используемой редакции — CE или EE. Пример: `imagesRepo: registry.deckhouse.io/deckhouse/ce`;
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — адрес образа Deckhouse EE в стороннем registry. Пример: `imagesRepo: registry.deckhouse.io/deckhouse/ee`;
 * `registryDockerCfg: <BASE64>` — права доступа к стороннему registry, зашифрованные в Base64.
 
 Если разрешен анонимный доступ к образам Deckhouse в стороннем registry, `registryDockerCfg` должен выглядеть следующим образом:
@@ -368,7 +368,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
   * `Provider`: `Docker Registry`.
   * `Name` — укажите любое, на ваше усмотрение.
   * `Endpoint URL`: `https://registry.deckhouse.io`.
-  * Укажите `Access ID` и `Access Secret`, если используете Deckhouse Enterprise Edition, иначе оставьте пустыми.
+  * Укажите `Access ID` и `Access Secret` для Deckhouse Enterprise Edition.
 
   ![Настройка Registry](images/registry/harbor/harbor1.png)
 
@@ -380,7 +380,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
   ![Создание нового проекта](images/registry/harbor/harbor2.png)
 
-В результате образы Deckhouse будут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
+В результате образы Deckhouse будут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
 ### Ручная загрузка образов в изолированный приватный registry
 
@@ -405,8 +405,6 @@ Deckhouse поддерживает работу только с Bearer token-с�
    ```shell
    ./d8-pull.sh --license <DECKHOUSE_LICENSE_KEY> --release v1.45.5 --output-dir /your/output-dir/
    ```
-
-   > Для Deckhouse CE укажите параметр `--edition ce` и опустите параметр `--license`.
 
 1. Загрузите директорию с образами на хост, с которого есть доступ до изолированного приватного registry.
 

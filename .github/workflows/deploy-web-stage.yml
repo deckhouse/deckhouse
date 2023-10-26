@@ -264,6 +264,8 @@ jobs:
           WERF_SET_WEB_ENV: "web.env=web-stage"
           WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLnN0YWdlLmZsYW50LmNvbSIsICJydSIgOiAiZGVja2hvdXNlLnJ1LnN0YWdlLmZsYW50LmNvbSJ9"
           WERF_SET_DCNAME: "web.dc_name=dev"
+          DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+          DOC_API_URL: "${{vars.DOC_API_URL}}"
       # </template: deploy_site_template>
 
       # <template: doc_version_template>

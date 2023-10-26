@@ -13,7 +13,7 @@ force_searchable: true
 - поставить руками (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`);
 - настроить через [namespace-configurator](/documentation/v1/modules/600-namespace-configurator/) модуль.
 
-Сразу же после этого для всех поддерживаемых Kubernetes-объектов в данном namespace в Prometheus появятся default-метрики + любые кастомные с префиксом `threshold.extended-monitoring.deckhouse.io/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes-объектов, описанных ниже, мониторинг и стандартные аннотации включаются автоматически.
+Сразу же после этого для всех поддерживаемых Kubernetes-объектов в данном namespace в Prometheus появятся default-метрики + любые кастомные с префиксом `threshold.extended-monitoring.deckhouse.io/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes-объектов, описанных ниже, мониторинг включается автоматически.
 
 К Kubernetes-объектам `threshold.extended-monitoring.deckhouse.io/что-то свое` можно добавить любые другие лейблы с указанным значением. Пример: `kubectl label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
 В таком случае значение из лейбла заменит значение по умолчанию.
@@ -24,13 +24,13 @@ force_searchable: true
 
 Далее приведен список используемых в Prometheus Rules лейблов, а также их стандартные значения.
 
-**Внимание!** Все лейблы:
-- начинаются с префикса `threshold.extended-monitoring.deckhouse.io/`;
-- имеют целочисленное значение в качестве value. Указанное в value значение устанавливает порог срабатывания алерта.
+**Обратите внимание,** что все лейблы начинаются с префикса `threshold.extended-monitoring.deckhouse.io/`. Указанное в лейбле значение — число, которое устанавливает порог срабатывания алерта.
+
+Например, лейбл `threshold.extended-monitoring.deckhouse.io/5xx-warning: "5"` на Ingress-ресурсе изменяет порог срабатывания алерта с 10% (по умолчанию) на 5%.
 
 #### Non-namespaced Kubernetes-объекты
 
-Не нуждаются в лейблах на namespace. Включены по умолчанию.
+Non-namespaced Kubernetes-объекты не нуждаются в лейблах на namespace и мониторинг на них включается по умолчанию при включении модуля.
 
 ##### Node
 
@@ -57,10 +57,6 @@ force_searchable: true
 | disk-bytes-critical                     | int (percent) | 95             |
 | disk-inodes-warning                     | int (percent) | 85             |
 | disk-inodes-critical                    | int (percent) | 90             |
-| container-throttling-warning            | int (percent) | 25             |
-| container-throttling-critical           | int (percent) | 50             |
-| container-cores-throttling-warning      | int (cores)   |                |
-| container-cores-throttling-critical     | int (cores)   |                |
 
 ##### Ingress
 
@@ -105,26 +101,20 @@ force_searchable: true
 До:
 
 ```text
-max by (namespace, pod, container) (
-  (
-    rate(container_cpu_cfs_throttled_periods_total[5m])
-    /
-    rate(container_cpu_cfs_periods_total[5m])
-  )
-  > 0.85
+(
+  kube_statefulset_status_replicas - kube_statefulset_status_replicas_ready
 )
+> 1
 ```
 
 После:
 
 ```text
-max by (namespace, pod, container) (
-  (
-    rate(container_cpu_cfs_throttled_periods_total[5m])
-    /
-    rate(container_cpu_cfs_periods_total[5m])
-  )
-  > on (namespace, pod) group_left
-    max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="container-throttling-critical"}) / 100
+(
+  kube_statefulset_status_replicas - kube_statefulset_status_replicas_ready
+)
+> on (namespace, statefulset)
+(
+  max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
 )
 ```

@@ -40,6 +40,9 @@ spec:
                 source:
                   type: string
                   description: 'ModuleSource name of the module if provided by one (otherwise empty).'
+                description:
+                  type: string
+                  description: 'Module description.'
       additionalPrinterColumns:
         - name: weight
           jsonPath: .properties.weight

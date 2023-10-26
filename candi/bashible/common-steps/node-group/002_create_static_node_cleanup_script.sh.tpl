@@ -14,12 +14,16 @@
 {{- if or (eq .nodeGroup.nodeType "Static") (eq .runType "ClusterBootstrap") }}
 bb-sync-file /var/lib/bashible/cleanup_static_node.sh - << "EOF"
 #!/bin/bash
+
 if [ -z $1 ] || [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ];  then
   >&2 echo "Needed flag isn't passed, exit without any action"
   exit 1
 fi
 
 systemctl stop bashible.service bashible.timer
+for pid in $(ps ax | grep "bash /var/lib/bashible/bashible" | grep -v grep | awk '{print $1}'); do
+  kill $pid
+done
 systemctl stop sysctl-tuner.service sysctl-tuner.timer
 systemctl stop old-csi-mount-cleaner.service old-csi-mount-cleaner.timer
 systemctl stop d8-containerd-cgroup-migration.service
@@ -37,7 +41,6 @@ rm -rf /etc/systemd/system/d8-containerd-cgroup-migration.*
 rm -rf /etc/systemd/system/containerd-deckhouse.service /etc/systemd/system/containerd-deckhouse.service.d
 rm -rf /etc/systemd/system/kubelet.service /etc/systemd/system/kubelet.service.d
 
-rm -rf /var/lib/bashible
 rm -rf /var/cache/registrypackages
 rm -rf /etc/kubernetes
 rm -rf /var/lib/kubelet
@@ -47,6 +50,9 @@ rm -rf /var/lib/cni
 rm -rf /var/lib/etcd
 rm -rf /opt/cni
 rm -rf /opt/deckhouse
-reboot
+rm -rf /var/lib/bashible
+
+# run reboot in the background to normally ends cleanup script and ssh session from client
+(sleep 5 && shutdown -r now) &
 EOF
 {{- end }}

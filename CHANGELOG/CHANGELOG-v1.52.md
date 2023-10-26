@@ -33,6 +33,8 @@
 ## Fixes
 
 
+ - **[candi]** Allow underscore in `httpProxy` and `httpsProxy` settings. [#6216](https://github.com/deckhouse/deckhouse/pull/6216)
+ - **[candi]** Fix RedOS installation. [#6121](https://github.com/deckhouse/deckhouse/pull/6121)
  - **[candi]** Add creation of the `TMPDIR` directory in the `bashible.sh` script. [#6059](https://github.com/deckhouse/deckhouse/pull/6059)
  - **[candi]** Delete registrypackage files if it failed to install before retrying installation. [#5739](https://github.com/deckhouse/deckhouse/pull/5739)
  - **[chrony]** Run chrony pods in host network namespace. [#6007](https://github.com/deckhouse/deckhouse/pull/6007)
@@ -40,11 +42,17 @@
  - **[cloud-provider-yandex]** Updated yandex-csi-driver. In the new version, the calculation of the limit of disks per node has been fixed. [#5679](https://github.com/deckhouse/deckhouse/pull/5679)
  - **[dhctl]** Fix restarting bootstrap process. [#5892](https://github.com/deckhouse/deckhouse/pull/5892)
  - **[dhctl]** Add `registryDockerCfg` validation. [#5829](https://github.com/deckhouse/deckhouse/pull/5829)
+ - **[extended-monitoring]** Fix extended monitoring rules for node disk usage. [#6227](https://github.com/deckhouse/deckhouse/pull/6227)
  - **[external-module-manager]** Handle deployed source modules with absent version directory. Avoid infinite deckhouse restart on absent module. [#5994](https://github.com/deckhouse/deckhouse/pull/5994)
  - **[flant-integration]** Fix `connect` response handling with respect of status code instead of error message. [#5765](https://github.com/deckhouse/deckhouse/pull/5765)
  - **[ingress-nginx]** Add postpone updates for main controller of `HostWithFailover` inlet. [#5988](https://github.com/deckhouse/deckhouse/pull/5988)
  - **[ingress-nginx]** Fix controller preStop probe. [#5948](https://github.com/deckhouse/deckhouse/pull/5948)
     Ingress controller will restart.
+ - **[linstor]** Changed the method of loading DRBD kernel module on the nodes with active LINSTOR satellites. [#6288](https://github.com/deckhouse/deckhouse/pull/6288)
+ - **[linstor]** Changes in controller liveness probe. [#6203](https://github.com/deckhouse/deckhouse/pull/6203)
+ - **[linstor]** Improved symlink handling for devices. [#6187](https://github.com/deckhouse/deckhouse/pull/6187)
+ - **[linstor]** Removed alert about HA-controller absence. [#6166](https://github.com/deckhouse/deckhouse/pull/6166)
+ - **[linstor]** Added an init container for LINSTOR satellite, that waits for DRBD v9.x to be loaded on the node. [#6151](https://github.com/deckhouse/deckhouse/pull/6151)
  - **[linstor]** Disabled usermode_helper param on LINSTOR nodes for more stable management. [#6137](https://github.com/deckhouse/deckhouse/pull/6137)
  - **[linstor]** Removed HA controller because of harmful behavior. [#6132](https://github.com/deckhouse/deckhouse/pull/6132)
  - **[linstor]** Automatically fix symlinks for devices. [#6026](https://github.com/deckhouse/deckhouse/pull/6026)
@@ -58,6 +66,8 @@
  - **[multitenancy-manager]** When trying to delete a projectType used in a project, an error with project name displayed. [#5744](https://github.com/deckhouse/deckhouse/pull/5744)
  - **[prometheus]** fix fix-permissions init-container to run under kesl security. [#6082](https://github.com/deckhouse/deckhouse/pull/6082)
  - **[prometheus]** Clarify description and formula for the oldest metrics panel on the starting page of Grafana. [#5712](https://github.com/deckhouse/deckhouse/pull/5712)
+ - **[registrypackages]** Fix disabling the old `containerd` service in Ubuntu `18.04`. [#6172](https://github.com/deckhouse/deckhouse/pull/6172)
+    `containerd` on Ubuntu 18.04 will restart.
  - **[user-authn]** Fix generation a self signed certificate for `crowd-basic-auth-proxy`. [#6074](https://github.com/deckhouse/deckhouse/pull/6074)
  - **[user-authz]** Add matchAny parameter to namespaceSelector for granting access to all namespaces. [#6014](https://github.com/deckhouse/deckhouse/pull/6014)
 

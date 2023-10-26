@@ -21,7 +21,7 @@ spec:
       value: example
 ```
 
-## Пример минимального CR `VerticalPodAutoscaler`
+## Пример минимального custom resource `VerticalPodAutoscaler`
 
 ```yaml
 apiVersion: autoscaling.k8s.io/v1
@@ -35,7 +35,7 @@ spec:
     name: my-app
 ```
 
-## Пример полного CR `VerticalPodAutoscaler`
+## Пример полного custom resource `VerticalPodAutoscaler`
 
 ```yaml
 apiVersion: autoscaling.k8s.io/v1

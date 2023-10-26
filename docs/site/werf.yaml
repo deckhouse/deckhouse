@@ -28,6 +28,29 @@ gitWorktree:
     {{- end }}
   {{- end }}
 ---
+image: site-tools
+from: {{ .Images.BASE_ALPINE }}
+shell:
+  install: apk add jq curl
+---
+{{- if and (ne $.Env "development") (ne $.Env "local") }}
+artifact: site-external-artifacts
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60 24) }}
+fromImage: site-tools
+shell:
+  install:
+    - mkdir -p /data
+  setup:
+    - echo "Getting data from the API server..."
+    - curl --retry-delay 5 --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
+    - |
+      jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
+    - |
+      jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
+    - |
+      jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
+{{- end }}
+---
 artifact: web-static
 from: {{ .Images.BASE_JEKYLL }}
 ansible:
@@ -41,7 +64,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/site/
-  beforeSetup:
+  setup:
     - name: "Build static files"
       shell: |
         export JEKYLL_ENV=production
@@ -66,7 +89,22 @@ git:
   - Makefile
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
-    beforeSetup: '**/*'
+    setup: '**/*'
+{{- if and (ne $.Env "development") (ne $.Env "local") }}
+import:
+  - artifact: site-external-artifacts
+    add: /data/topnav.json
+    to: /srv/jekyll-data/site/_data/topnav.json
+    before: setup
+  - artifact: site-external-artifacts
+    add: /data/footer.json
+    to: /srv/jekyll-data/site/_data/footer.json
+    before: setup
+  - artifact: site-external-artifacts
+    add: /data/copyright.json
+    to: /srv/jekyll-data/site/_data/copyright.json
+    before: setup
+{{- end }}
 ---
 artifact: web-backend-srv
 from: {{ .Images.BASE_GOLANG_16_ALPINE }}

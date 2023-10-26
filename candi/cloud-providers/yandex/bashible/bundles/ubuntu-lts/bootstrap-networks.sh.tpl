@@ -32,24 +32,23 @@ if ! metadata="$(curl -sH Metadata-Flavor:Google 169.254.169.254/computeMetadata
   exit 1
 fi
 
-network_cidr=$(echo "$metadata" | jq -er '.attributes."node-network-cidr"')
+network_cidr=$(echo "$metadata" | python3 -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["attributes"]["node-network-cidr"])')
 if [ -z "$network_cidr" ]; then
   echo "network cidr is empty"
   exit 1
 fi
 
-ip_addr_show_output=$(ip -json addr show)
 primary_mac="$(grep -m 1 -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
-primary_ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$primary_mac" '.[] | select(.address == $mac) | .ifname')"
+primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
 for i in /sys/class/net/!($primary_ifname); do
   if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)virtio_net.*' 1>/dev/null 2>&1; then
     continue
   fi
 
   ifname=$(basename "$i")
-  mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
+  mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
 
-  ip="$(echo "$metadata" | jq --arg m "$mac" -er '.networkInterfaces[] | select(.mac == $m) | .ip')"
+  ip="$(echo "$metadata" | python3 -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc);[print(iface["ip"]) for iface in parsed["networkInterfaces"] if iface["mac"]==sys.argv[1]]' "$mac")"
   route_settings=""
   if ip_in_subnet "$ip" "$network_cidr"; then
     read -r -d '' route_settings <<ROUTE_EOF

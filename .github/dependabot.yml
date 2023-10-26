@@ -169,6 +169,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/031-local-path-provisioner/images/helper/dir-manager"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/035-cni-flannel/images/flanneld/entrypoint"
   labels:
   - "type/dependencies"
@@ -206,6 +215,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/bashible-apiserver"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/caps-controller-manager/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -386,6 +404,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/460-log-shipper/images/vector/reloader"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/470-chrony/images/chrony"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

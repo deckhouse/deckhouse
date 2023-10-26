@@ -2,7 +2,7 @@
 RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
-{{- $featureGates := list "EndpointSliceTerminatingCondition=true" "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
+{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
 {{- if semverCompare "< 1.25" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "CustomResourceValidationExpressions=true" | join "," }}
 {{- end }}
@@ -10,6 +10,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
 {{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "EndpointSliceTerminatingCondition=true" | join "," }}
     {{- $featureGates = list $featureGates "InTreePluginRBDUnregister=true" | join "," }}
 {{- end }}
 

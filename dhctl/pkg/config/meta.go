@@ -616,7 +616,7 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", string(clusterDomain), string(podSubnetCIDR), string(serviceSubnetCIDR))
+	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
 
 	ret := make(map[string]interface{})
 	if p.HttpProxy != "" {

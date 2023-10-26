@@ -13,7 +13,7 @@ descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the 
 * Pods that are associated with a DaemonSet or aren't covered by a controller are never evicts;
 * Pods with local storage enabled are never evicts;
 * The Best effort Pods are evicted before Burstable and Guaranteed ones;
-* descheduler takes into account the [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/):  the Pod will not be evicted if descheduling violates the PDB.
+* descheduler takes into account the [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/): the Pod will not be evicted if descheduling violates the PDB.
 
 ## Strategies
 

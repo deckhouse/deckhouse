@@ -12,10 +12,10 @@ spec:
               properties:
                 enforcementAction:
                   description: |
-                    Действие, которое будет выполнено по результатам проверки ограничений.
-                    - `Deny` — Запрет.
-                    - `Dryrun` — Отсутствие действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или в консоли с помощью kubectl.
-                    - `Warn` — Аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
+                    Действие, которое будет выполнено по результатам проверки ограничений:
+                    - `Deny` — запрет;
+                    - `Dryrun` — отсутствие действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или консоли с помощью kubectl;
+                    - `Warn` — аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
                 policies:
                   type: object
                   properties:
@@ -32,7 +32,7 @@ spec:
                               Например, префикс `/foo` разрешает пути `/foo`, `/foo/` и `/foo/bar`. Напротив, пути `/food` или `/etc/foo` будут недоступны.
                           readOnly:
                             description: |
-                              Включает проверку на то, что все `volumeMount` попадающие в префикс (параметр [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix)), монтируются только на чтение (readOnly: true).
+                              Включает проверку на то, что все `volumeMount`, попадающие в префикс (параметр [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix)), монтируются только на чтение (readOnly: true).
                     allowHostIPC:
                       description: "Разрешает контейнерам доступ к IPC-пространству имен хоста."
                     allowHostPID:
@@ -50,17 +50,17 @@ spec:
                     allowPrivileged:
                       description: "Разрешает запуск контейнеров в привилегированном режиме."
                     allowPrivilegeEscalation:
-                      description: "Разрешает процессам в контейнере запрашивать более широкий, относительно родительского процесса, список привилегий."
+                      description: "Разрешает процессам в контейнере запрашивать более широкий относительно родительского процесса список привилегий."
                     allowedProcMount:
                       description: "Определяет допустимые значения монтирования `/proc` для контейнера."
                     allowedCapabilities:
                       description: |
-                        Список привилегий (linux capabilities) доступных контейнеру.
+                        Список привилегий (linux capabilities), доступных контейнеру.
 
                         Используйте `ALL` для разрешения всех привилегий.
                     requiredDropCapabilities:
                       description: |
-                        Список привилегий (linux capabilities) обязательных к исключению.
+                        Список привилегий (linux capabilities), обязательных к исключению.
 
                         Используйте `ALL` для исключения всех привилегий.
                     allowedAppArmor:
@@ -148,7 +148,7 @@ spec:
                           description: "Список seccomp-профилей, доступных к использованию."
                         allowedLocalhostFiles:
                           description: |
-                            Определяет локальные профили seccomp (в формате JSON) доступные к использованию, в случае указания `Localhost` в поле `allowedProfiles`.
+                            Определяет локальные профили seccomp (в формате JSON), доступные к использованию, в случае указания `Localhost` в поле `allowedProfiles`.
 
                             Пустой список запрещает использование любых локальных профилей.
                     seLinux:
@@ -186,11 +186,11 @@ spec:
                               description: Список выражений лейблов для пространств имен.
                     labelSelector:
                       description: |
-                        Указывает селектор лейблов для фильтрации Pod'ов.
+                        Указывает селектор лейблов для фильтрации подов.
 
                         Больше информации [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
                         matchLabels:
-                          description: Список лейблов, которые должен иметь Pod.
+                          description: Список лейблов, которые должен иметь под.
                         matchExpressions:
-                          description: Список выражений лейблов для Pod'ов.
+                          description: Список выражений лейблов для подов.

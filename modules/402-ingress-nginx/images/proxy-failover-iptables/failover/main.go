@@ -38,9 +38,9 @@ var (
 	saveMarkRule         = strings.Fields("-j CONNMARK --save-mark")
 	restoreHttpMarkRule  = strings.Fields("-p tcp --dport 80 -j CONNMARK --restore-mark")
 	restoreHttpsMarkRule = strings.Fields("-p tcp --dport 443 -j CONNMARK --restore-mark")
-	dnatHttpRule         = strings.Fields("-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:81")
-	dnatHttpsRule        = strings.Fields("-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:444")
-	inputAcceptRule      = strings.Fields("-p tcp -m multiport --dport 81,444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT")
+	dnatHttpRule         = strings.Fields("-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:1081")
+	dnatHttpsRule        = strings.Fields("-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:1444")
+	inputAcceptRule      = strings.Fields("-p tcp -m multiport --dport 1081,1444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT")
 
 	linkName = "ingressfailover"
 )
@@ -51,6 +51,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	migrationRemoveOldRules(iptablesMgr)
+
 	err = addLinkAndAddress()
 	if err != nil {
 		log.Fatal(err)
@@ -60,7 +62,7 @@ func main() {
 	_ = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...)
 	// do nothing on error, since ingress-failover chain may not exist yet
 
-	// check 81/444 ports accepted
+	// check 1081/1444 ports accepted
 	err = insertUnique(iptablesMgr, "filter", "INPUT", inputAcceptRule, 1)
 	if err != nil {
 		log.Fatal(err)
@@ -134,7 +136,6 @@ func main() {
 
 func loop(iptablesMgr *iptables.IPTables) error {
 	resp, err := http.Get("http://127.0.0.1:10254/healthz")
-
 	if err != nil {
 		log.Println(err)
 		return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
@@ -191,4 +192,48 @@ func addLinkAndAddress() error {
 	}
 
 	return nil
+}
+
+type rulespec struct {
+	table string
+	chain string
+	rule  []string
+}
+
+// TODO: remove in 1.54 remove old rules after change ports 81->1081, 444->1444
+func migrationRemoveOldRules(iptablesMgr *iptables.IPTables) {
+	rules := []rulespec{
+		{
+			table: "nat",
+			chain: chainName,
+			rule:  strings.Fields("-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:81"),
+		},
+		{
+			table: "nat",
+			chain: chainName,
+			rule:  strings.Fields("-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:444"),
+		},
+		{
+			table: "filter",
+			chain: "INPUT",
+			rule:  strings.Fields("-p tcp -m multiport --dport 81,444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT"),
+		},
+	}
+
+	for _, rule := range rules {
+		ok, err := iptablesMgr.Exists(rule.table, rule.chain, rule.rule...)
+		if err != nil {
+			log.Printf("migrationRemoveOldRules error: %v", err)
+			continue
+		}
+
+		if !ok {
+			continue
+		}
+
+		err = iptablesMgr.Delete(rule.table, rule.chain, rule.rule...)
+		if err != nil {
+			log.Printf("migrationRemoveOldRules error: %v", err)
+		}
+	}
 }

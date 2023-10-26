@@ -4,7 +4,7 @@ ARG BASE_GOLANG_20_ALPINE
 FROM $BASE_GOLANG_20_ALPINE as builder
 WORKDIR /src/report-updater
 COPY main.go go.mod go.sum /src/report-updater/
-COPY vulndb /src/report-updater/vulndb/
+COPY cache /src/report-updater/cache/
 COPY web /src/report-updater/web/
 
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...

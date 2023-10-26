@@ -34,8 +34,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(createModuleCRD))
 
-func createModuleCRD(input *go_hook.HookInput, dc dependency.Container) error {
-	ensureRes := ensure_crds.EnsureCRDs("/deckhouse/modules/005-external-module-manager/crds/module-*.yaml", input, dc)
+func createModuleCRD(_ *go_hook.HookInput, dc dependency.Container) error {
+	ensureRes := ensure_crds.EnsureCRDs("/deckhouse/modules/005-external-module-manager/crds/module-*.yaml", dc)
 	if err := ensureRes.ErrorOrNil(); err != nil {
 		return err
 	}

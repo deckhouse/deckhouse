@@ -1,0 +1,24 @@
+---
+artifact: {{ .ModuleName }}/reloader-artifact
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+shell:
+  install:
+    - apk add --no-cache git
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 -b v1.0.42 {{ $.SOURCE_REPO }}/stakater/Reloader.git .
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /reloader main.go
+    - chown 64535:64535 /reloader
+    - chmod 0700 /reloader
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/reloader-artifact
+  add: /reloader
+  to: /reloader
+  before: setup
+docker:
+  ENTRYPOINT: ["/reloader"]

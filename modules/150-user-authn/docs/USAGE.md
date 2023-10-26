@@ -220,7 +220,7 @@ spec:
 
 {% endraw %}
 
-After the DexClient CR is created, Dex will register a client with a `dex-client-myname@mynamespace` ID (**clientID**).
+After the `DexClient` custom resource is created, Dex will register a client with a `dex-client-myname@mynamespace` ID (**clientID**).
 
 The client access password (**clientSecret**) will be stored in the secret object:
 {% raw %}
@@ -260,7 +260,6 @@ metadata:
 spec:
   email: admin@yourcompany.com
   password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
-  userID: some-unique-user-id
   groups:
   - Everyone
   - admins

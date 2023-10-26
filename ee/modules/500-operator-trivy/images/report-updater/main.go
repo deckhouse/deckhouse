@@ -6,20 +6,40 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
+	"time"
 
 	"report-updater/web"
 )
 
-func main() {
+var config web.ServerConfig
+
+func init() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	newServer, err := web.NewServer(logger)
+	var renewInterval string
+
+	flag.StringVar(&renewInterval, "renewInterval", "6h", "Bdu dictionary renew interval (e.g. \"30m\")")
+
+	flag.Parse()
+
+	duration, err := time.ParseDuration(renewInterval)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatalf("couldn't parse renew interval value: %v", err)
+	}
+
+	config.Logger = logger
+	config.HandlerSettings.DictRenewInterval = duration
+}
+
+func main() {
+	newServer, err := web.NewServer(&config)
+	if err != nil {
+		config.Logger.Fatal(err)
 	}
 	if err := newServer.Run(); err != nil {
-		logger.Fatal(err)
+		config.Logger.Fatal(err)
 	}
 }

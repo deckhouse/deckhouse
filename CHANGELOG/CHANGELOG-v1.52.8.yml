@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - summary: Allow underscore in `httpProxy` and `httpsProxy` settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6216
+linstor:
+  fixes:
+    - summary: Changes in controller liveness probe.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6203
+

@@ -781,9 +781,7 @@ jobs:
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
-
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
-
 
     # </template: web_build_template>
 
@@ -841,9 +839,9 @@ jobs:
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
-
+          DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+          DOC_API_URL: "${{vars.DOC_API_URL}}"
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
-
 
     # </template: web_build_template>
 
@@ -1363,6 +1361,8 @@ jobs:
 
       - name: Prepare site structure
         env:
+          DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+          DOC_API_URL: "${{vars.DOC_API_URL}}"
 
           WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
         run: |

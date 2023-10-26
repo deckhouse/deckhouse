@@ -58,6 +58,9 @@ spec:
         app: grafana
         threshold.extended-monitoring.deckhouse.io/container-throttling-warning: "40"
       annotations:
+        {{- if (dig "grafana" "customLogo" "enabled" false .Values.prometheus.internal) }}
+        checksum/custom-logo: {{ .Values.prometheus.internal.grafana.customLogo.checksum | quote }}
+        {{- end }}
         checksum/datasources: {{ include (print $.Template.BasePath "/grafana/secret-datasources-list.yaml") . | sha256sum }}
         checksum/dashboards-list-custom: {{ include (print $.Template.BasePath "/grafana/cm-dashboards-list-custom.yaml") . | sha256sum }}
         checksum/alerts-channels: {{ include (print $.Template.BasePath "/grafana/grafana-alerts-channels.yaml") . | sha256sum }}
@@ -159,6 +162,11 @@ spec:
           mountPath: /etc/grafana/plugins
         - name: tmp
           mountPath: /tmp
+        {{- if (dig "grafana" "customLogo" "enabled" false .Values.prometheus.internal) }}
+        - mountPath: /usr/share/grafana/public/img/deckhouse-logo.svg
+          name: whitelabel-logo
+          subPath: deckhouse-logo.svg
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
@@ -277,3 +285,12 @@ spec:
         emptyDir: {}
       - name: plugins
         emptyDir: {}
+      {{- if (dig "grafana" "customLogo" "enabled" false .Values.prometheus.internal) }}
+      - name: whitelabel-logo
+        configMap:
+          defaultMode: 292
+          name: whitelabel-custom-logo
+          items:
+            - key: grafanaLogo
+              path: deckhouse-logo.svg
+      {{- end }}

@@ -23,7 +23,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            CR for setting remote cluster as trusted one.
+            Custom resource for setting remote cluster as trusted one.
           x-doc-d8Revision: ee
           required:
           - spec

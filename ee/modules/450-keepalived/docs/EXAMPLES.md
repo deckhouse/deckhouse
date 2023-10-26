@@ -12,19 +12,19 @@ kind: KeepalivedInstance
 metadata:
   name: front
 spec:
-  nodeSelector: # mandatory
+  nodeSelector: # Mandatory.
     node-role.deckhouse.io/frontend: ""
-  tolerations:  # optional
+  tolerations:  # Optional.
   - key: dedicated.deckhouse.io
     operator: Equal
     value: frontend
   vrrpInstances:
-  - id: 1 # the unique cluster ID
+  - id: 1 # The unique cluster ID.
     interface:
-      detectionStrategy: DefaultRoute # the card with the default route is used as a service network one
+      detectionStrategy: DefaultRoute # The card with the default route is used as a service network one.
     virtualIPAddresses:
     - address: 42.43.44.101/32
-      # the interface parameter is omitted since IP addresses are based on the cards that service VRRP traffic
+      # The interface parameter is omitted since IP addresses are based on the cards that service VRRP traffic.
   - id: 2
     interface:
       detectionStrategy: DefaultRoute
@@ -51,13 +51,13 @@ spec:
   - key: node-role.deckhouse.io/mygateway
     operator: Exists
   vrrpInstances:
-  - id: 4 # since "1", "2", "3" IDs are used in the "front" KeepalivedInstance above
+  - id: 4 # Since "1", "2", "3" IDs are used in the "front" KeepalivedInstance above.
     interface:
       detectionStrategy: NetworkAddress
       networkAddress: 192.168.42.0/24
     virtualIPAddresses:
     - address: 192.168.42.1/24
-      # in this case, we have already detected the local network (above); thus, the interface parameter can be safely omitted
+      # In this case, we have already detected the local network (above); thus, the interface parameter can be safely omitted.
     - address: 42.43.44.1/28
       interface:
         detectionStrategy: Name

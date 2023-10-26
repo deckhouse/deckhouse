@@ -8,11 +8,11 @@ title: "Модуль user-authz: FAQ"
 
 ## Как ограничить права пользователю конкретными namespace?
 
-Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в CR [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
+Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
 
-## Что если два ClusterAuthorizationRules подходят для одного пользователя?
+## Что, если два ClusterAuthorizationRules подходят для одного пользователя?
 
-Представьте что пользователь `jane.doe@example.com` состоит в группе `administrators`. Созданы два cluster authorization rules:
+Представьте, что пользователь `jane.doe@example.com` состоит в группе `administrators`. Созданы два ClusterAuthorizationRules:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -53,6 +53,6 @@ spec:
 
 Так как для `Jane Doe` подходят два правила, необходимо провести вычисления:
 * Она будет иметь самый сильный accessLevel среди всех подходящих правил — `ClusterAdmin`.
-* Опции `namespaceSelector` будут объединены так, что Jane будет иметь доступ в namespace'ы, помеченные меткой `env` со значением `review`, `stage` или `prod`.
+* Опции `namespaceSelector` будут объединены так, что `Jane Doe` будет иметь доступ в namespace'ы, помеченные меткой `env` со значением `review`, `stage` или `prod`.
 
-> **Note!** Если есть правило без опции `namespaceSelector` и без опции `limitNamespaces` (устаревшая), это значит, что доступ разрешен во все namespace'ы, кроме системных, что повлияет на результат вычисления доступных namespace для пользователя.
+> **Note!** Если есть правило без опции `namespaceSelector` и без опции `limitNamespaces` (устаревшая), это значит, что доступ разрешен во все namespace'ы, кроме системных, что повлияет на результат вычисления доступных namespace'ов для пользователя.

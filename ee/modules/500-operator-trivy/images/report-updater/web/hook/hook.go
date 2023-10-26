@@ -11,8 +11,9 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
-	"report-updater/vulndb"
+	"report-updater/cache"
 
 	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -22,8 +23,13 @@ var _ http.Handler = (*Handler)(nil)
 
 // Handler is a main entrypoint for the webhook
 type Handler struct {
-	logger *log.Logger
-	bdu    vulndb.Cache
+	logger     *log.Logger
+	dictionary cache.Cache
+	settings   *HandlerSettings
+}
+
+type HandlerSettings struct {
+	DictRenewInterval time.Duration
 }
 
 type patchOperation struct {
@@ -32,20 +38,28 @@ type patchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func NewHandler(logger *log.Logger, bdu vulndb.Cache) (*Handler, error) {
+func NewHandler(logger *log.Logger, dict cache.Cache, settings *HandlerSettings) (*Handler, error) {
 	return &Handler{
-		logger: logger,
-		bdu:    bdu,
+		logger:     logger,
+		dictionary: dict,
+		settings:   settings,
 	}, nil
 }
 
-func (h *Handler) StartRenewBduCache(ch chan struct{}) error {
-	ch <- struct{}{}
-	return nil
+func (h *Handler) StartRenewCacheLoop() {
+	ticker := time.NewTicker(h.settings.DictRenewInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			h.logger.Println("Starting periodic dictionary update")
+			h.dictionary.RenewBduDictionary()
+		}
+	}
 }
 
 func (h *Handler) CheckBDU() error {
-	return h.bdu.Check()
+	return h.dictionary.Check()
 }
 
 func (h *Handler) createPatch(req *admissionv1.AdmissionReview) ([]patchOperation, error) {
@@ -59,12 +73,12 @@ func (h *Handler) createPatch(req *admissionv1.AdmissionReview) ([]patchOperatio
 
 	for k, v := range report.Report.Vulnerabilities {
 		if !strings.HasPrefix(v.VulnerabilityID, "BDU") {
-			entry, found := h.bdu.Get(v.VulnerabilityID)
-			if found && len(entry.IDs) > 0 {
+			entry, found := h.dictionary.Get(v.VulnerabilityID)
+			if found && len(entry) > 0 {
 				patches = append(patches, patchOperation{
 					Op:    "replace",
 					Path:  fmt.Sprintf("/report/vulnerabilities/%d/vulnerabilityID", k),
-					Value: strings.Replace(entry.IDs[0], "BDU:", "BDU-", 1),
+					Value: strings.Replace(entry[0], "BDU:", "BDU-", 1),
 				})
 			} else {
 				h.logger.Printf("BDU match not found for %s\n", v.VulnerabilityID)

@@ -71,7 +71,7 @@ Allows you to configure JWT authentication for requests.
 
 [Reference](https://istio.io/latest/docs/reference/config/security/authorization-policy/).
 
-Enables and defines access control to the workload. The AuthorizationPolicy CR supports both ALLOW and DENY rules. The following decision-making algorithm is used if at least one policy is defined for a workload:
+Enables and defines access control to the workload. The `AuthorizationPolicy` custom resource supports both ALLOW and DENY rules. The following decision-making algorithm is used if at least one policy is defined for a workload:
 
 * Reject the request if there is a DENY policy for it;
 * Allow the request if there is no ALLOW policy for it;
