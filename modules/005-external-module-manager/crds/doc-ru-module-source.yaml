@@ -13,6 +13,8 @@ spec:
                   description: Желаемый канал обновлений по-умолчанию для модулей данного container registry.
                 registry:
                   properties:
+                    scheme:
+                      description: Протокол для доступа к репозиторию контейнеров.
                     repo:
                       type: string
                       description: Адрес репозитория образов контейнеров.

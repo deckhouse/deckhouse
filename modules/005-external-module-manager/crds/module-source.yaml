@@ -41,6 +41,13 @@ spec:
                   required:
                     - repo
                   properties:
+                    scheme:
+                      type: string
+                      default: "https"
+                      description: Protocol to access the registry.
+                      enum:
+                        - http
+                        - https
                     repo:
                       type: string
                       description: URL of the container registry.
