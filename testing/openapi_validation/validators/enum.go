@@ -64,9 +64,6 @@ var (
 			// http and https
 			"properties.modulesImages.properties.registry.properties.scheme",
 		},
-		//"modules/005-external-module-manager/crds/module-source.yaml": {
-		//// http and https should not be capitalized
-		//},
 		"modules/010-user-authn-crd/crds/dex-provider.yaml": {
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField",
