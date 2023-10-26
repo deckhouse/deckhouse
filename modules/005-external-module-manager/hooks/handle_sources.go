@@ -457,6 +457,16 @@ func copyLayersToFS(rootPath string, rc io.ReadCloser) error {
 			if err != nil {
 				return fmt.Errorf("chmod: %w", err)
 			}
+		case tar.TypeSymlink:
+			link := path.Join(rootPath, hdr.Name)
+			if err := os.Symlink(hdr.Linkname, link); err != nil {
+				return fmt.Errorf("create symlink: %w", err)
+			}
+		case tar.TypeLink:
+			err := os.Link(path.Join(rootPath, hdr.Linkname), path.Join(rootPath, hdr.Name))
+			if err != nil {
+				return fmt.Errorf("create hardlink: %w", err)
+			}
 
 		default:
 			return errors.New("unknown tar type")
