@@ -184,12 +184,6 @@ var (
 	}
 
 	arrayPathRegex = regexp.MustCompile(`\[\d+\]`)
-
-	// some keys, that must not be capitalized anywhere
-	enumKeyExcludes = map[string]struct{}{
-		"http":  {},
-		"https": {},
-	}
 )
 
 type EnumValidator struct {
@@ -258,10 +252,6 @@ func (en EnumValidator) validateEnumValues(enumKey string, values []string) *mul
 
 func (en EnumValidator) validateEnumValue(value string) error {
 	if len(value) == 0 {
-		return nil
-	}
-
-	if _, ok := enumKeyExcludes[value]; ok {
 		return nil
 	}
 

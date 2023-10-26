@@ -86,7 +86,7 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 
 	if ms.Spec.Registry.Scheme == "" {
 		// fallback to default https protocol
-		ms.Spec.Registry.Scheme = "https"
+		ms.Spec.Registry.Scheme = "HTTPS"
 	}
 
 	// remove unused fields
@@ -140,7 +140,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 			opts = append(opts, cr.WithCA(ex.Spec.Registry.CA))
 		}
 
-		if ex.Spec.Registry.Scheme == "http" {
+		if ex.Spec.Registry.Scheme == "HTTP" {
 			opts = append(opts, cr.WithInsecureSchema(true))
 		}
 

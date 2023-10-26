@@ -43,11 +43,11 @@ spec:
                   properties:
                     scheme:
                       type: string
-                      default: "https"
+                      default: "HTTPS"
                       description: Protocol to access the registry.
                       enum:
-                        - http
-                        - https
+                        - HTTP
+                        - HTTPS
                     repo:
                       type: string
                       description: URL of the container registry.
