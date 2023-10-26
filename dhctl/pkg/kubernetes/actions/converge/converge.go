@@ -652,7 +652,8 @@ func (c *NodeGroupController) deleteRedundantNodes(nodeGroup *NodeGroupGroupOpti
 			WithName(name).
 			WithAllowedCachedState(true).
 			WithSkipChangesOnDeny(true).
-			WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive)
+			WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive).
+			WithAutoApprove(c.changeSettings.AutoApprove)
 		if !c.commanderMode {
 			nodeRunner = nodeRunner.WithState(state)
 		}
