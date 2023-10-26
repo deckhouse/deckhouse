@@ -287,11 +287,13 @@ spec:
                       type: string
                       description: |
                         A CA chain to validate the provider in PEM format.
-                      x-doc-examples: |
-                        ```
-                        -----BEGIN CERTIFICATE-----
-                        MIIFaDC...
-                        -----END CERTIFICATE-----
+                      x-doc-examples:
+                      - |
+                        ```yaml
+                        rootCAData: |
+                          -----BEGIN CERTIFICATE-----
+                          MIIFaDC...
+                          -----END CERTIFICATE-----
                         ```
                     insecureSkipVerify:
                       type: boolean
@@ -337,11 +339,13 @@ spec:
                       type: string
                       description: |
                         A CA chain to validate the provider in PEM format.
-                      x-doc-examples: |
-                        ```
-                        -----BEGIN CERTIFICATE-----
-                        MIIFaDC...
-                        -----END CERTIFICATE-----
+                      x-doc-examples:
+                      - |
+                        ```yaml
+                        rootCAData: |
+                          -----BEGIN CERTIFICATE-----
+                          MIIFaDC...
+                          -----END CERTIFICATE-----
                         ```
                     insecureSkipVerify:
                       type: boolean

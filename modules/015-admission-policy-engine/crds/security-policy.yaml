@@ -406,15 +406,12 @@ spec:
                             matchExpressions:
                               type: array
                               description: List of label expressions for namespaces.
-                              x-doc-examples: |
-                                ```yaml
-                                matchExpressions:
-                                - key: tier
+                              x-doc-examples:
+                              - - key: tier
                                   operator: In
                                   values:
                                   - production
                                   - staging
-                                ```
                               items:
                                 type: object
                                 required:
@@ -455,15 +452,12 @@ spec:
                         matchExpressions:
                           type: array
                           description: List of label expressions for Pods.
-                          x-doc-examples: |
-                            ```yaml
-                            matchExpressions:
-                            - key: tier
+                          x-doc-examples:
+                          - - key: tier
                               operator: In
                               values:
                               - production
                               - staging
-                            ```
                           items:
                             type: object
                             required:

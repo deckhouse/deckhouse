@@ -114,11 +114,9 @@ spec:
                   type: object
                   description: |
                     Additional labels.
-                  x-doc-examples: |
-                    ```yaml
-                    project: cms-production
+                  x-doc-examples:
+                  - project: cms-production
                     severity: critical
-                    ```
                   x-kubernetes-preserve-unknown-fields: true
                   additionalProperties:
                     type: string
@@ -233,11 +231,9 @@ spec:
                   type: object
                   description: |
                     Additional labels.
-                  x-doc-examples: |
-                    ```yaml
-                    project: cms-production
+                  x-doc-examples:
+                  - project: cms-production
                     severity: critical
-                    ```
                   x-kubernetes-preserve-unknown-fields: true
                   additionalProperties:
                     type: string

@@ -328,9 +328,8 @@ spec:
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
-                  x-doc-examples: |
-                    ```yaml
-                    labels:
+                  x-doc-examples:
+                  - labels:
                       environment: production
                       app: warp-drive-ai
                     annotations:
@@ -339,7 +338,6 @@ spec:
                     - effect: NoExecute
                       key: ship-class
                       value: frigate
-                    ```
                   type: object
                   properties:
                     labels:
@@ -349,12 +347,9 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-examples: |
-                        ```yaml
-                        labels:
-                          environment: production
+                      x-doc-examples:
+                        - environment: production
                           app: warp-drive-ai
-                        ```
                     annotations:
                       type: object
                       additionalProperties:
@@ -362,24 +357,18 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-examples: |
-                        ```yaml
-                        annotations:
-                          ai.fleet.com/discombobulate: "true"
-                        ```
+                      x-doc-examples:
+                        - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
-                      x-doc-examples: |
-                        ```yaml
-                        taints:
-                        - effect: NoExecute
+                      x-doc-examples:
+                      - - effect: NoExecute
                           key: ship-class
                           value: frigate
-                        ```
                       items:
                         type: object
                         properties:
@@ -406,11 +395,9 @@ spec:
                 chaos:
                   description: |
                     Chaos monkey settings.
-                  x-doc-examples: |
-                    ```yaml
-                    mode: DrainAndDelete
+                  x-doc-examples:
+                  - mode: DrainAndDelete
                     period: 24h
-                    ```
                   type: object
                   properties:
                     mode:
@@ -974,9 +961,8 @@ spec:
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
-                  x-doc-examples: |
-                    ```yaml
-                    labels:
+                  x-doc-examples:
+                  - labels:
                       environment: production
                       app: warp-drive-ai
                     annotations:
@@ -985,7 +971,6 @@ spec:
                     - effect: NoExecute
                       key: ship-class
                       value: frigate
-                    ```
                   type: object
                   properties:
                     labels:
@@ -995,12 +980,9 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-examples: |
-                        ```yaml
-                        labels:
-                          environment: production
+                      x-doc-examples:
+                        - environment: production
                           app: warp-drive-ai
-                        ```
                     annotations:
                       type: object
                       additionalProperties:
@@ -1008,24 +990,18 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-examples: |
-                        ```yaml
-                        annotations:
-                          ai.fleet.com/discombobulate: "true"
-                        ```
+                      x-doc-examples:
+                        - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
-                      x-doc-examples: |
-                        ```yaml
-                        taints:
-                        - effect: NoExecute
+                      x-doc-examples:
+                      - - effect: NoExecute
                           key: ship-class
                           value: frigate
-                        ```
                       items:
                         type: object
                         properties:
@@ -1042,11 +1018,9 @@ spec:
                 chaos:
                   description: |
                     Chaos monkey settings.
-                  x-doc-examples: |
-                    ```yaml
-                    mode: DrainAndDelete
+                  x-doc-examples:
+                  - mode: DrainAndDelete
                     period: 24h
-                    ```
                   type: object
                   properties:
                     mode:
@@ -1693,9 +1667,8 @@ spec:
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
-                  x-doc-examples: |
-                    ```yaml
-                    labels:
+                  x-doc-examples:
+                  - labels:
                       environment: production
                       app: warp-drive-ai
                     annotations:
@@ -1704,7 +1677,6 @@ spec:
                     - effect: NoExecute
                       key: ship-class
                       value: frigate
-                    ```
                   type: object
                   properties:
                     labels:
@@ -1714,12 +1686,9 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-examples: |
-                        ```yaml
-                        labels:
-                          environment: production
-                          app: warp-drive-ai
-                        ```
+                      x-doc-examples:
+                      - environment: production
+                        app: warp-drive-ai
                     annotations:
                       type: object
                       additionalProperties:
@@ -1727,24 +1696,18 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                      x-doc-examples: |
-                        ```yaml
-                        annotations:
-                          ai.fleet.com/discombobulate: "true"
-                        ```
+                      x-doc-examples:
+                      - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
-                      x-doc-examples: |
-                        ```yaml
-                        taints:
-                        - effect: NoExecute
+                      x-doc-examples:
+                      - - effect: NoExecute
                           key: ship-class
                           value: frigate
-                        ```
                       items:
                         type: object
                         properties:
@@ -1761,11 +1724,9 @@ spec:
                 chaos:
                   description: |
                     Chaos monkey settings.
-                  x-doc-examples: |
-                    ```yaml
-                    mode: DrainAndDelete
+                  x-doc-examples:
+                  - mode: DrainAndDelete
                     period: 24h
-                    ```
                   type: object
                   properties:
                     mode:

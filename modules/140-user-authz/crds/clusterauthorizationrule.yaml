@@ -122,16 +122,13 @@ spec:
 
                     This parameter is reserved for emergencies. Please, use the `accessLevel` parameter instead.
 
-                  x-doc-x-doc-examples: |
-                    ```yaml
-                    additionalRoles:
-                    - apiGroup: rbac.authorization.k8s.io
+                  x-doc-examples:
+                  - - apiGroup: rbac.authorization.k8s.io
                       kind: ClusterRole
                       name: cluster-write-all
                     - apiGroup: rbac.authorization.k8s.io
                       kind: ClusterRole
                       name: cluster-read-all
-                    ```
                   items:
                     type: object
                     required:
@@ -329,16 +326,13 @@ spec:
 
                     This parameter is reserved for emergencies. Please, use the `accessLevel` parameter instead.
 
-                  x-doc-x-doc-examples: |
-                    ```yaml
-                    additionalRoles:
-                    - apiGroup: rbac.authorization.k8s.io
+                  x-doc-examples:
+                  - - apiGroup: rbac.authorization.k8s.io
                       kind: ClusterRole
                       name: cluster-write-all
                     - apiGroup: rbac.authorization.k8s.io
                       kind: ClusterRole
                       name: cluster-read-all
-                    ```
                   items:
                     type: object
                     required:
