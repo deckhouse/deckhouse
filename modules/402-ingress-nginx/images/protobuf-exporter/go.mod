@@ -7,5 +7,5 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/common v0.26.0
-	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
+	gopkg.in/yaml.v3 v3.0.1
 )
