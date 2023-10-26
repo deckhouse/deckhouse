@@ -116,6 +116,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 			return nil
+
 		})
 		if err != nil {
 			return err
