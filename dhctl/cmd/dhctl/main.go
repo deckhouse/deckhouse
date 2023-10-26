@@ -64,6 +64,7 @@ func main() {
 
 	commands.DefineConvergeCommand(kpApp)
 	commands.DefineAutoConvergeCommand(kpApp)
+	commands.DefineMirrorCommand(kpApp)
 
 	lockCmd := kpApp.Command("lock", "Converge cluster lock")
 	{

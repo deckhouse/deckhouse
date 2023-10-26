@@ -96,3 +96,44 @@ func TestExcludeKeys(t *testing.T) {
 		})
 	}
 }
+
+func TestJoin(t *testing.T) {
+	type args[K comparable, V any] struct {
+		dst     map[K]V
+		sources []map[K]V
+	}
+	type testCase[K comparable, V any] struct {
+		name string
+		args args[K, V]
+		want map[K]V
+	}
+	tests := []testCase[string, string]{
+		{
+			name: "Basic join",
+			args: args[string, string]{
+				dst: map[string]string{"key1": "val1", "key2": "val2"},
+				sources: []map[string]string{
+					{"key3": "val3"},
+					{"key4": "val4"},
+				},
+			},
+			want: map[string]string{"key1": "val1", "key2": "val2", "key3": "val3", "key4": "val4"},
+		},
+		{
+			name: "Overlapping keys",
+			args: args[string, string]{
+				dst: map[string]string{"key1": "val1", "key2": "val2", "key3": "val3"},
+				sources: []map[string]string{
+					{"key3": "Deckhouse!"},
+					{"key4": "val4"},
+				},
+			},
+			want: map[string]string{"key1": "val1", "key2": "val2", "key3": "Deckhouse!", "key4": "val4"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			Join(tt.args.dst, tt.args.sources...)
+		})
+	}
+}
