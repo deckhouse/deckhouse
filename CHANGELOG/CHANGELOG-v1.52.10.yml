@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Fix deckhouse containerd start after installing new containerd-deckhouse package.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6329
+
