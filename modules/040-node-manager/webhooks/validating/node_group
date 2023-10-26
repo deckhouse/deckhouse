@@ -16,8 +16,6 @@
 
 source /shell_lib.sh
 
-DECKHOUSE_CONFIG_MAP=${DECKHOUSE_CONFIG_MAP:-deckhouse}
-
 function __config__(){
   cat <<EOF
 configVersion: v1
@@ -63,8 +61,8 @@ kubernetes:
     executeHookOnSynchronization: false
     keepFullObjectsInMemory: false
     nameSelector:
-      matchNames: ["deckhouse"]
-    jqFilter: '.spec.settings.global // ""'
+      matchNames: ["global"]
+    jqFilter: '.spec.settings // ""'
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io
   group: main

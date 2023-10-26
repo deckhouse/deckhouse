@@ -46,6 +46,39 @@ spec:
   settings:
     %s
 `
+	configOverridesWarn = `
+Config overrides are deprecated. Please use module config:
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+...
+apiVersion: deckhouse.io/v1alpha1
+kind: InitConfiguration
+...
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  settings:
+    highAvailability: false
+    modules:
+      publicDomainTemplate: '%s.example.com'
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-flannel
+spec:
+  enabled: true
+---
+...
+`
+
+	DefaultBundle   = "Default"
+	DefaultLogLevel = "Info"
 )
 
 type DeckhouseInstaller struct {
@@ -127,8 +160,8 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		return nil, fmt.Errorf("marshal static config: %v", err)
 	}
 
-	bundle := "Default"
-	logLevel := "Info"
+	bundle := DefaultBundle
+	logLevel := DefaultLogLevel
 
 	// todo after release 1.55 remove it and from openapi schema
 	deprecatedFields := make([]string, 0, 3)
@@ -157,36 +190,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	schemasStore := NewSchemaStore()
 
 	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
-		log.WarnLn(`
-Config overrides are deprecated. Please use module config:
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterConfiguration
-...
-apiVersion: deckhouse.io/v1alpha1
-kind: InitConfiguration
-...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: global
-spec:
-  settings:
-    highAvailability: false
-    modules:
-      publicDomainTemplate: '%s.example.com'
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-flannel
-spec:
-  enabled: true
----
-...
-`)
+		log.WarnLn(configOverridesWarn)
 		if len(metaConfig.ModuleConfigs) > 0 {
 			return nil, fmt.Errorf("Cannot use ModuleConfig's and configOverrides at the same time. Please use ModuleConfig's")
 		}

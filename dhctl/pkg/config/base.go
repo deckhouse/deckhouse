@@ -185,20 +185,30 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 		docData := []byte(doc)
 
 		var index *SchemaIndex
-		moduleConfig := &ModuleConfig{}
-		err := yaml.Unmarshal(docData, moduleConfig)
-		if err == nil && moduleConfig.GetName() != "" {
+		err := yaml.Unmarshal(docData, index)
+		if err != nil {
+			return nil, err
+		}
+
+		if index.Kind == ModuleConfigKind {
 			_, err = schemaStore.Validate(&docData)
 			if err != nil {
 				return nil, fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 			}
+
+			moduleConfig := &ModuleConfig{}
+			err = yaml.Unmarshal(docData, moduleConfig)
+			if err != nil {
+				return nil, err
+			}
+
 			metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, moduleConfig)
 			continue
-		} else {
-			index, err = schemaStore.Validate(&docData)
-			if err != nil {
-				return nil, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
-			}
+		}
+
+		index, err = schemaStore.Validate(&docData)
+		if err != nil {
+			return nil, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		var data map[string]json.RawMessage

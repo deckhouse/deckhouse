@@ -93,25 +93,27 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		return st
 	}
 
-	g := func(path string, moduleName string) {
+	loadConfigValuesSchema := func(path string, moduleName string) error {
 		content, err := os.ReadFile(path)
 		if err == nil {
 			schema := new(spec.Schema)
 
 			if err := yaml.Unmarshal(content, schema); err != nil {
-				panic(err)
+				return err
 			}
 
 			err = spec.ExpandSchema(schema, schema, nil)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
 			log.DebugF("openapi spec not found for module %s", moduleName)
 		} else {
-			panic(err)
+			return err
 		}
+
+		return nil
 	}
 
 	for _, e := range entries {
@@ -121,10 +123,17 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		name := e.Name()
 		moduleName := strings.TrimLeft(name, "01234567890-")
 		p := path.Join(modulesDir, name, "openapi", "config-values.yaml")
-		g(p, moduleName)
+		if err := loadConfigValuesSchema(p, moduleName); err != nil {
+			// We don't expect panic here our logger does not support log.Fatal
+			panic(err)
+		}
 	}
 
-	g(path.Join(globalHooksModule, "openapi", "config-values.yaml"), "global")
+	err = loadConfigValuesSchema(path.Join(globalHooksModule, "openapi", "config-values.yaml"), "global")
+	if err != nil {
+		// We don't expect panic here our logger does not support log.Fatal
+		panic(err)
+	}
 
 	return st
 }
