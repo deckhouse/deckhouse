@@ -24,7 +24,7 @@ type selectByPVC struct {
 	pvcs []snapshot.PvcTermination
 }
 
-func (s *selectByPVC) Select(state State) (string, error) {
+func (s *selectByPVC) Select(_ State) (string, error) {
 	for _, pvc := range s.pvcs {
 		if pvc.IsTerminating {
 			return pvc.Index().String(), nil

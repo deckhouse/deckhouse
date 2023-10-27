@@ -47,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleValidationKinds))
 
-func handleValidationKinds(input *go_hook.HookInput, dc dependency.Container) error {
+func handleValidationKinds(input *go_hook.HookInput, _ dependency.Container) error {
 	snap := input.Snapshots["constraint-exporter-cm"]
 	if len(snap) == 0 {
 		input.LogEntry.Info("no exporter cm found")

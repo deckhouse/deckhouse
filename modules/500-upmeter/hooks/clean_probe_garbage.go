@@ -261,7 +261,7 @@ type upmeterHookProbeRepo struct {
 	k k8s.Client
 }
 
-func (r *upmeterHookProbeRepo) List(ctx context.Context) ([]metav1.Object, error) {
+func (r *upmeterHookProbeRepo) List(_ context.Context) ([]metav1.Object, error) {
 	obj := &unstructured.Unstructured{}
 	obj.SetName("35d78cbb") // empty NODE_NAME results in this hash, fixing the bug
 	obj.SetCreationTimestamp(metav1.NewTime(time.Now().Add(-1 * time.Hour)))

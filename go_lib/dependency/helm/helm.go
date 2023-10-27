@@ -89,7 +89,7 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-func (client *helmClient) Upgrade(releaseName string, templates, values map[string]interface{}, debug bool) error {
+func (client *helmClient) Upgrade(releaseName string, templates, values map[string]interface{}, _ bool) error {
 	ch := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,

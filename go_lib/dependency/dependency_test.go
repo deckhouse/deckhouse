@@ -98,7 +98,7 @@ func ExampleEtcdClient() {
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
 }
 
-func TestRace(t *testing.T) {
+func TestRace(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	dc := dependency.NewDependencyContainer()
