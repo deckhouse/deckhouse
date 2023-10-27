@@ -11,15 +11,15 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.2.4-0.20231026142938-c40574de30a7
+	github.com/flant/addon-operator v1.3.0
 	github.com/flant/kube-client v1.0.1
-	github.com/flant/shell-operator v1.3.3-0.20231020122727-9ee4d1c779ce
+	github.com/flant/shell-operator v1.4.1
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/golang/protobuf v1.5.3
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/google/go-containerregistry v0.5.1
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
@@ -30,7 +30,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.28.0
+	github.com/onsi/gomega v1.28.1
 	github.com/otiai10/copy v1.0.2
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
