@@ -69,10 +69,13 @@ spec:
     namespaceSelector:
       {{- if eq $standard "baseline" }}
       matchExpressions:
-        - { key: security.deckhouse.io/pod-policy, operator: In, values: [ baseline,restricted ] }
+        - { key: security.deckhouse.io/pod-policy, operator: In, values: [ baseline, restricted ] }
+      matchLabels:
+        security.deckhouse.io/pod-policy-action: {{ $policyAction }}
       {{- else if eq $standard "restricted" }}
       matchLabels:
         security.deckhouse.io/pod-policy: restricted
+        security.deckhouse.io/pod-policy-action: {{ $policyAction }}
       {{- else}}
         {{ cat "Unknown policy standard" | fail }}
       {{- end }}

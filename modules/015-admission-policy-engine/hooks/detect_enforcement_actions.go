@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const enforcementActionLabel = "pod-security.kubernetes.io/pod-policy-action"
+const enforcementActionLabel = "security.deckhouse.io/pod-policy-action"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -63,7 +63,7 @@ func handleActions(input *go_hook.HookInput) error {
 		lbl := strings.ToLower(label.(string))
 		if !hasItem(actions, lbl) {
 			actions = append(actions, lbl)
-			// all possible actions were found, there is no sense in proceeding
+			// all possible actions were found, it doesn't make sense to proceed
 			if len(actions) == 3 {
 				break
 			}
