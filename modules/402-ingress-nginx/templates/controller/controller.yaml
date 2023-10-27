@@ -57,6 +57,19 @@ spec:
     {{- end }}
 {{- end }}
 ---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: controller
+      name: {{ $name }}
+---
 apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
