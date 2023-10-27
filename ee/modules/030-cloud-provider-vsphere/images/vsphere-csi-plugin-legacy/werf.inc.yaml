@@ -93,6 +93,7 @@ shell:
     apk upgrade --available --no-cache && \
     apk add --no-cache git patch wget
   install:
+  - mkdir -p /src
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
