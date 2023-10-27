@@ -36,6 +36,7 @@ shell:
     - go get -u github.com/prometheus/client_golang@v1.17.0
     - go get -u golang.org/x/crypto@v0.14.0
     - go mod tidy
+    - go mod vendor
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner
     - chown -R 64535:64535 /local-path-provisioner
     - chmod 0700 /local-path-provisioner
