@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"deckhouse"},
 			},
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			ExecuteHookOnEvents: pointer.Bool(false),
 			FilterFunc:          getDeploymentImage,
 		},
 	},

@@ -17,6 +17,8 @@ deckhouse:
   devBranch: '${DEV_BRANCH}'
   imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
+# todo remove after 1.55
+# keep it for testing configOverrides to Moduleconfig in e2e
   configOverrides:
     flantIntegrationEnabled: false
     global:

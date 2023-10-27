@@ -553,7 +553,7 @@ func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.Storage
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
-		AllowVolumeExpansion: pointer.BoolPtr(true),
+		AllowVolumeExpansion: pointer.Bool(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 sp.StoragePoolName,

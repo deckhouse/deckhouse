@@ -117,7 +117,7 @@ spec:
 			expectedMetric := operation.MetricOperation{
 				Name:   "reserved_domain_nodes",
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "stateful",
 				},
@@ -146,7 +146,7 @@ spec:
 			expectedMetric := operation.MetricOperation{
 				Name:   "reserved_domain_nodes",
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "database",
 				},

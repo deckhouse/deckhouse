@@ -16,8 +16,6 @@
 
 source /shell_lib.sh
 
-DECKHOUSE_CONFIG_MAP=${DECKHOUSE_CONFIG_MAP:-deckhouse}
-
 function __config__(){
   cat <<EOF
 configVersion: v1
@@ -56,18 +54,15 @@ kubernetes:
         "clusterType": (.data."cluster-configuration.yaml" // "" | @base64d | match("clusterType:[ ]+(.*)\n").captures[0].string)
       }
   - name: deckhouse_config
-    apiVersion: v1
-    kind: ConfigMap
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
     group: main
     executeHookOnEvent: []
     executeHookOnSynchronization: false
     keepFullObjectsInMemory: false
-    namespace:
-      nameSelector:
-        matchNames: ["d8-system"]
     nameSelector:
-      matchNames: ["${DECKHOUSE_CONFIG_MAP}"]
-    jqFilter: '.data.global // ""'
+      matchNames: ["global"]
+    jqFilter: '.spec.settings // ""'
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io
   group: main

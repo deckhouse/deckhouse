@@ -17,7 +17,7 @@ package debug
 import (
 	"fmt"
 
-	shell_operator "github.com/flant/shell-operator/pkg/shell-operator"
+	"github.com/flant/kube-client/client"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -30,30 +30,37 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application) {
 	var moduleName string
 	moduleEnableCmd := moduleCmd.Command("enable", "Enable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
 		Action(func(c *kingpin.ParseContext) error {
-			return moduleSwitch(moduleName, true, "enable")
+			log.SetLevel(log.ErrorLevel)
+			cli := client.New()
+			err := cli.Init()
+			if err != nil {
+				return err
+			}
+
+			return moduleSwitch(cli, moduleName, true, "enable")
 		})
 	moduleEnableCmd.Arg("module_name", "").Required().StringVar(&moduleName)
 
 	moduleDisableCmd := moduleCmd.Command("disable", "Disable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
 		Action(func(c *kingpin.ParseContext) error {
-			return moduleSwitch(moduleName, false, "disable")
+			log.SetLevel(log.ErrorLevel)
+			cli := client.New()
+			err := cli.Init()
+			if err != nil {
+				return err
+			}
+
+			return moduleSwitch(cli, moduleName, false, "disable")
 		})
 	moduleDisableCmd.Arg("module_name", "").Required().StringVar(&moduleName)
 }
 
-func moduleSwitch(moduleName string, enabled bool, actionDesc string) error {
+func moduleSwitch(kubeClient *client.Client, moduleName string, enabled bool, actionDesc string) error {
 	// Init logging for console output.
 	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true, ForceColors: true})
 	log.SetLevel(log.ErrorLevel)
 
-	// Init Kubernetes client.
-	kubeClient := shell_operator.DefaultMainKubeClient(nil, nil)
-	err := kubeClient.Init()
-	if err != nil {
-		return err
-	}
-
-	err = deckhouse_config.SetModuleConfigEnabledFlag(kubeClient, moduleName, enabled)
+	err := deckhouse_config.SetModuleConfigEnabledFlag(kubeClient, moduleName, enabled)
 	if err != nil {
 		return fmt.Errorf("%s module failed: %v", actionDesc, err)
 	}

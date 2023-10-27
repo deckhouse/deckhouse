@@ -1,0 +1,28 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      deployDexAuthenticator:
+        type: boolean
+      testSubPath:
+        type: object
+        properties:
+          effectiveStorageClass:
+            default: false
+            oneOf:
+              - type: string
+              - type: boolean
+                enum: [ false ]
+      cniSecretData:
+        type: string
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+

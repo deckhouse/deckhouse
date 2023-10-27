@@ -208,7 +208,7 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
-		AllowVolumeExpansion: pointer.BoolPtr(true),
+		AllowVolumeExpansion: pointer.Bool(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
@@ -235,7 +235,7 @@ func TestAllParametersAreSet(t *testing.T) {
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
-		AllowVolumeExpansion: pointer.BoolPtr(true),
+		AllowVolumeExpansion: pointer.Bool(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":    "ssd",
@@ -252,7 +252,7 @@ func TestAllParametersAreSet(t *testing.T) {
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
-		AllowVolumeExpansion: pointer.BoolPtr(true),
+		AllowVolumeExpansion: pointer.Bool(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
@@ -291,7 +291,7 @@ func TestAppendOldParameters(t *testing.T) {
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &oldVolBindMode,
-		AllowVolumeExpansion: pointer.BoolPtr(true),
+		AllowVolumeExpansion: pointer.Bool(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":    "ssd",
@@ -309,7 +309,7 @@ func TestAppendOldParameters(t *testing.T) {
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
-		AllowVolumeExpansion: pointer.BoolPtr(true),
+		AllowVolumeExpansion: pointer.Bool(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
@@ -334,7 +334,7 @@ func TestAppendOldParameters(t *testing.T) {
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
-		AllowVolumeExpansion: pointer.BoolPtr(true),
+		AllowVolumeExpansion: pointer.Bool(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 "ssd",

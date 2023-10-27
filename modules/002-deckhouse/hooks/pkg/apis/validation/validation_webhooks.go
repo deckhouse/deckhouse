@@ -30,8 +30,6 @@ var (
 
 func init() {
 	module.RegisterValidationHandler("/validate/v1alpha1/modules", moduleValidationHandler())
-	module.RegisterValidationHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler())
-	module.RegisterValidationHandler("/validate/core/v1/configmap", deckhouseCMValidationHandler())
 }
 
 func allowResult(warnMsg string) (*kwhvalidating.ValidatorResult, error) {

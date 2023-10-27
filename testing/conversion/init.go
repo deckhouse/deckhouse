@@ -25,10 +25,10 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager/test/mock"
-	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/testing/library"
 )
 
@@ -158,7 +158,7 @@ func (c *ConversionTester) ConvertToLatest(fromVersion int, input string) ConvTe
 		return res
 	}
 
-	cfg := &d8v1alpha1.ModuleConfig{
+	cfg := &v1alpha1.ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ModuleConfig",
 			APIVersion: "deckhouse.io/v1alpha1",
@@ -166,7 +166,7 @@ func (c *ConversionTester) ConvertToLatest(fromVersion int, input string) ConvTe
 		ObjectMeta: metav1.ObjectMeta{
 			Name: c.moduleName,
 		},
-		Spec: d8v1alpha1.ModuleConfigSpec{
+		Spec: v1alpha1.ModuleConfigSpec{
 			Version:  fromVersion,
 			Settings: specSettingsMap,
 		},

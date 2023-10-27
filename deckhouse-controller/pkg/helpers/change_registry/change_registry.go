@@ -165,16 +165,16 @@ func newTransport(ctx context.Context, repo name.Repository, authConfig authn.Au
 	return transport.NewWithContext(ctx, repo.Registry, authorizer, caTransport, scopes)
 }
 
-func newKubeClient() (kclient.KubeClient, error) {
+func newKubeClient() (*kclient.KubernetesClient, error) {
 	kubeCl := kclient.NewKubernetesClient()
 	if err := kubeCl.Init(kclient.AppKubernetesInitParams()); err != nil {
 		return nil, err
 	}
-	return kubeCl.KubeClient, nil
+	return kubeCl, nil
 }
 
-func modifyPullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecretData map[string]string) (*v1.Secret, error) {
-	secretClient := kubeCl.CoreV1().Secrets(d8SystemNS)
+func modifyPullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient, newSecretData map[string]string) (*v1.Secret, error) {
+	secretClient := kubeCl.KubeClient.CoreV1().Secrets(d8SystemNS)
 	deckhouseRegSecret, err := secretClient.Get(ctx, "deckhouse-registry", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -186,8 +186,8 @@ func modifyPullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecretD
 	return deckhouseRegSecret, nil
 }
 
-func updateImagePullSecret(ctx context.Context, kubeCl kclient.KubeClient, newSecret *v1.Secret) error {
-	secretClient := kubeCl.CoreV1().Secrets(d8SystemNS)
+func updateImagePullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient, newSecret *v1.Secret) error {
+	secretClient := kubeCl.KubeClient.CoreV1().Secrets(d8SystemNS)
 
 	updateOpts := metav1.UpdateOptions{FieldValidation: metav1.FieldValidationStrict}
 	if _, err := secretClient.Update(ctx, newSecret, updateOpts); err != nil {
@@ -247,8 +247,8 @@ func getCAContent(caFile string) (string, error) {
 	return strings.TrimSpace(string(caBytes)), nil
 }
 
-func deckhouseDeployment(ctx context.Context, kubeCl kclient.KubeClient) (*appsv1.Deployment, error) {
-	deployClient := kubeCl.AppsV1().Deployments(d8SystemNS)
+func deckhouseDeployment(ctx context.Context, kubeCl *kclient.KubernetesClient) (*appsv1.Deployment, error) {
+	deployClient := kubeCl.KubeClient.AppsV1().Deployments(d8SystemNS)
 	return deployClient.Get(ctx, "deckhouse", metav1.GetOptions{})
 }
 
@@ -273,8 +273,8 @@ func updateDeployContainersImagesToNewRepo(deploy *appsv1.Deployment, newRepo na
 	return nil
 }
 
-func updateDeployment(ctx context.Context, kubeCl kclient.KubeClient, deploy *appsv1.Deployment) error {
-	deployClient := kubeCl.AppsV1().Deployments(deploy.Namespace)
+func updateDeployment(ctx context.Context, kubeCl *kclient.KubernetesClient, deploy *appsv1.Deployment) error {
+	deployClient := kubeCl.KubeClient.AppsV1().Deployments(deploy.Namespace)
 	updateOpts := metav1.UpdateOptions{FieldValidation: metav1.FieldValidationStrict}
 	if _, err := deployClient.Update(ctx, deploy, updateOpts); err != nil {
 		return err

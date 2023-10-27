@@ -349,7 +349,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-0",
 					"endpoint":          "https://proper-hostname-0/metadata/public/public.json",
@@ -359,7 +359,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-0",
 					"endpoint":          "https://proper-hostname-0/metadata/private/multicluster.json",
@@ -369,7 +369,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-1",
 					"endpoint":          "https://proper-hostname-1/metadata/public/public.json",
@@ -379,7 +379,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-1",
 					"endpoint":          "https://proper-hostname-1/metadata/private/multicluster.json",
@@ -389,7 +389,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-2",
 					"endpoint":          "https://proper-hostname-2/metadata/public/public.json",
@@ -399,7 +399,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-2",
 					"endpoint":          "https://proper-hostname-2/metadata/private/multicluster.json",
@@ -590,7 +590,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-bad-json",
 					"endpoint":          "https://private-bad-json/metadata/public/public.json",
@@ -600,7 +600,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-bad-json",
 					"endpoint":          "https://private-bad-json/metadata/private/multicluster.json",
@@ -610,7 +610,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-internal-error",
 					"endpoint":          "https://private-internal-error/metadata/public/public.json",
@@ -620,7 +620,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-internal-error",
 					"endpoint":          "https://private-internal-error/metadata/private/multicluster.json",
@@ -630,7 +630,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-wrong-format",
 					"endpoint":          "https://private-wrong-format/metadata/public/public.json",
@@ -640,7 +640,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-wrong-format",
 					"endpoint":          "https://private-wrong-format/metadata/private/multicluster.json",
@@ -650,7 +650,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "public-bad-json",
 					"endpoint":          "https://public-bad-json/metadata/public/public.json",
@@ -660,7 +660,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "public-internal-error",
 					"endpoint":          "https://public-internal-error/metadata/public/public.json",
@@ -670,7 +670,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "public-wrong-format",
 					"endpoint":          "https://public-wrong-format/metadata/public/public.json",
