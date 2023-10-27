@@ -139,11 +139,12 @@ func PushMirrorToRegistry(mirrorCtx *mirror.Context) error {
 			return err
 		}
 
+		pushCount := 1
 		for _, manifest := range indexManifest.Manifests {
 			repo := mirrorCtx.RegistryHost + registryURL.Path
 			tag := manifest.Annotations["io.deckhouse.image.short_tag"]
 
-			log.InfoF("Pushing image %s...\t", repo+":"+tag)
+			log.InfoF("[%d / %d] Pushing image %s...\t", pushCount, len(indexManifest.Manifests), repo+":"+tag)
 			img, err := index.Image(manifest.Digest)
 			if err != nil {
 				log.InfoLn("❌")
@@ -169,6 +170,7 @@ func PushMirrorToRegistry(mirrorCtx *mirror.Context) error {
 				return fmt.Errorf("write %s to registry: %w", ref.String(), err)
 			}
 			log.InfoLn("✅")
+			pushCount++
 		}
 		log.InfoF("Repo %s is mirrored ✅\n", originalRepo)
 	}
