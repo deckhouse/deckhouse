@@ -24,9 +24,10 @@
 {{- define "pod_security_standard_baseline" }}
   {{- $context := index . 0 }}
   {{- $policyCRDName := index . 1 }}
+  {{- $policyAction := index . 2 }}
   {{- $parameters := dict }}
-  {{- if gt (len .) 2 }}
-  {{- $parameters = index . 2}}
+  {{- if gt (len .) 3 }}
+  {{- $parameters = index . 3}}
   {{- end}}
 
 {{- include "pod_security_standard_base" (list $context "baseline" $policyCRDName $parameters ) }}
@@ -35,9 +36,10 @@
 {{- define "pod_security_standard_restricted" }}
   {{- $context := index . 0 }}
   {{- $policyCRDName := index . 1 }}
+  {{- $policyAction := index . 2 }}
   {{- $parameters := dict }}
-  {{- if gt (len .) 2 }}
-  {{- $parameters = index . 2}}
+  {{- if gt (len .) 3 }}
+  {{- $parameters = index . 3}}
   {{- end}}
 
 {{- include "pod_security_standard_base" (list $context "restricted" $policyCRDName $parameters ) }}
@@ -47,7 +49,8 @@
   {{- $context := index . 0 }}
   {{- $standard := index . 1 }}
   {{- $policyCRDName := index . 2 }}
-  {{- $parameters := index . 3 }}
+  {{- $policyAction := index . 3 }}
+  {{- $parameters := index . 4 }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
@@ -57,7 +60,7 @@ metadata:
   name: d8-pod-security-{{$standard}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
 spec:
-  enforcementAction: {{ $context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower }}
+  enforcementAction: {{ $policyAction | lower }}
   match:
     scope: Namespaced
     kinds:

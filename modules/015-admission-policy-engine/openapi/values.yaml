@@ -9,6 +9,11 @@ properties:
       bootstrapped:
         type: boolean
         default: false
+      enforcementActions:
+        type: array
+        default: []
+        items:
+          type: string
       effectiveStorageClass:
         default: false
         oneOf:
