@@ -48,14 +48,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                "ngs",
 			ApiVersion:          "deckhouse.io/v1",
 			Kind:                "NodeGroup",
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			ExecuteHookOnEvents: pointer.Bool(false),
 			FilterFunc:          bootstrapTokenFilterNodeGroup,
 		},
 		{
 			Name:                "bootstrap_tokens",
 			ApiVersion:          "v1",
 			Kind:                "Secret",
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			ExecuteHookOnEvents: pointer.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},

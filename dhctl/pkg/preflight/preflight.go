@@ -20,7 +20,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -29,7 +28,7 @@ import (
 type Checker struct {
 	sshClient               *ssh.Client
 	metaConfig              *config.MetaConfig
-	installConfig           *deckhouse.Config
+	installConfig           *config.DeckhouseInstaller
 	imageDescriptorProvider imageDescriptorProvider
 	buildDigestProvider     buildDigestProvider
 }
@@ -40,7 +39,7 @@ type checkStep struct {
 	fun            func() error
 }
 
-func NewChecker(sshClient *ssh.Client, config *deckhouse.Config, metaConfig *config.MetaConfig) Checker {
+func NewChecker(sshClient *ssh.Client, config *config.DeckhouseInstaller, metaConfig *config.MetaConfig) Checker {
 	return Checker{
 		sshClient:               sshClient,
 		metaConfig:              metaConfig,

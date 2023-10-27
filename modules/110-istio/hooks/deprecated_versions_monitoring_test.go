@@ -122,7 +122,7 @@ internal:
 				Name:   "d8_istio_deprecated_version_installed",
 				Group:  versionsMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"version":        "1.1.1",
 					"alert_severity": "4",
@@ -163,7 +163,7 @@ internal:
 				Name:   "d8_istio_deprecated_version_installed",
 				Group:  versionsMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"version":        "1.2.0",
 					"alert_severity": "8",
@@ -173,7 +173,7 @@ internal:
 				Name:   "d8_istio_deprecated_version_installed",
 				Group:  versionsMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"version":        "1.3.0",
 					"alert_severity": "9",

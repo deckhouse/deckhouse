@@ -33,7 +33,7 @@ type ConfigurationChecksum map[string]string
 func ConfigurationChecksumHookConfig() go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:                   "configuration_checksums_secret",
-		WaitForSynchronization: pointer.BoolPtr(false),
+		WaitForSynchronization: pointer.Bool(false),
 		ApiVersion:             "v1",
 		Kind:                   "Secret",
 		NamespaceSelector: &types.NamespaceSelector{

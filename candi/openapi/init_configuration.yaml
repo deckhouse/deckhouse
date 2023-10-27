@@ -68,28 +68,41 @@ apiVersions:
             default: HTTPS
           releaseChannel:
             type: string
+            deprecated: true
             description: |
-              The [release channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) to use in the cluster.
+              Instead of this parameter, use the [releaseChannel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter of the ModuleConfig 'deckhouse'.
+
+              The release channel to use in the cluster.
             enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
           devBranch:
             type: string
+            deprecated: true
             description: |
-              The parameter is used for development needs.
+              The parameter is used for development needs. Will be replaced with the CLI-tools.
           bundle:
             type: string
+            deprecated: true
             description: |
-              The [Deckhouse bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) to use in the cluster.
+              Instead of this parameter, use the [bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) parameter of the ModuleConfig 'deckhouse'.
+
+              The Deckhouse bundle to use in the cluster.
             enum: [Minimal, Managed, Default]
             default: Default
           logLevel:
             type: string
+            deprecated: true
             description: |
-              Deckhouse [logging Level](../modules/002-deckhouse/configuration.html#parameters-loglevel).
+              Instead of this parameter, use the [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) parameter of the ModuleConfig 'deckhouse'.
+
+              Deckhouse logging Level.
             enum: [Debug, Info, Error]
             default: Info
           configOverrides:
             type: object
+            deprecated: true
             description: |
+              Instead of this parameter, use ModuleConfig resources to configure modules.
+
               Initial [Deckhouse configuration](/documentation/v1/#deckhouse-configuration).
 
               Specify here Deckhouse configuration parameters with which it should start after installation.

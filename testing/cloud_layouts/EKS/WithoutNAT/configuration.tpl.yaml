@@ -6,19 +6,71 @@ deckhouse:
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
   bundle: Minimal
-  configOverrides:
-    global:
-      modules:
-        # Template that will be used for system apps domains within the cluster.
-        # E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
-        # You can change it to your own or follow the steps in the guide and change it after installation.
-        publicDomainTemplate: "%s.k8s.smoke.flant.com"
-      storageClass: localpath-all
-    certManagerEnabled: true
-    documentationEnabled: true
-    upmeterEnabled: true
-    prometheusCrdEnabled: true
-    operatorPrometheusCrdEnabled: true
-    operatorPrometheusEnabled: true
-    prometheusEnabled: true
-    localPathProvisionerEnabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: documentation
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: local-path-provisioner
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: upmeter
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus-crd
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: operator-prometheus-crd
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: operator-prometheus
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.k8s.smoke.flant.com"
+    storageClass: localpath-all
+  version: 1

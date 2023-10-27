@@ -451,12 +451,12 @@ func (du *DeckhouseUpdater) PredictedReleaseIsPatch() bool {
 	}
 
 	if du.currentDeployedReleaseIndex == -1 {
-		du.predictedReleaseIsPatch = pointer.BoolPtr(false)
+		du.predictedReleaseIsPatch = pointer.Bool(false)
 		return false
 	}
 
 	if du.predictedReleaseIndex == -1 {
-		du.predictedReleaseIsPatch = pointer.BoolPtr(false)
+		du.predictedReleaseIsPatch = pointer.Bool(false)
 		return false
 	}
 
@@ -464,16 +464,16 @@ func (du *DeckhouseUpdater) PredictedReleaseIsPatch() bool {
 	predicted := du.releases[du.predictedReleaseIndex]
 
 	if current.Version.Major() != predicted.Version.Major() {
-		du.predictedReleaseIsPatch = pointer.BoolPtr(false)
+		du.predictedReleaseIsPatch = pointer.Bool(false)
 		return false
 	}
 
 	if current.Version.Minor() != predicted.Version.Minor() {
-		du.predictedReleaseIsPatch = pointer.BoolPtr(false)
+		du.predictedReleaseIsPatch = pointer.Bool(false)
 		return false
 	}
 
-	du.predictedReleaseIsPatch = pointer.BoolPtr(true)
+	du.predictedReleaseIsPatch = pointer.Bool(true)
 	return true
 }
 

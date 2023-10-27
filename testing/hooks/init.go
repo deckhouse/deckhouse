@@ -163,7 +163,7 @@ type HookExecutionConfig struct {
 	fakeCluster        *fake.Cluster
 }
 
-func (hec *HookExecutionConfig) KubeClient() klient.Client {
+func (hec *HookExecutionConfig) KubeClient() *klient.Client {
 	return hec.fakeCluster.Client
 }
 
@@ -609,7 +609,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 }
 
-func (hec *HookExecutionConfig) getFakeClient() klient.Client {
+func (hec *HookExecutionConfig) getFakeClient() *klient.Client {
 	f := hec.fakeCluster
 	if f == nil {
 		f = fake.NewFakeCluster(hec.fakeClusterVersion)

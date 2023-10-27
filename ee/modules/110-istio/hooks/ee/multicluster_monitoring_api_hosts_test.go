@@ -138,7 +138,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(0.0),
+				Value:  pointer.Float64(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-mc",
 					"api_host":          "proper-hostname",
@@ -148,7 +148,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "improper-mc-bad-code",
 					"api_host":          "improper-hostname-bad-code",
@@ -158,7 +158,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "improper-mc-bad-json",
 					"api_host":          "improper-hostname-bad-json",
@@ -168,7 +168,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "improper-mc-wrong-format",
 					"api_host":          "improper-hostname-wrong-format",

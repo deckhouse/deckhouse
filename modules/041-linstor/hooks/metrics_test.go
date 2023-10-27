@@ -36,7 +36,7 @@ var _ = Describe("Modules :: linstor :: hooks :: metrics ", func() {
 		metricIndex := -1
 		for i, m := range metrics {
 			if m.Name == name {
-				Expect(m.Value).To(Equal(pointer.Float64Ptr(value)))
+				Expect(m.Value).To(Equal(pointer.Float64(value)))
 				metricIndex = i
 				break
 			}
@@ -50,7 +50,7 @@ var _ = Describe("Modules :: linstor :: hooks :: metrics ", func() {
 		metricIndex := -1
 		for i, m := range metrics {
 			if m.Name == "d8_telemetry_linstor_storage_pools" && m.Labels["driver"] == driver {
-				Expect(m.Value).To(Equal(pointer.Float64Ptr(value)))
+				Expect(m.Value).To(Equal(pointer.Float64(value)))
 				metricIndex = i
 				break
 			}

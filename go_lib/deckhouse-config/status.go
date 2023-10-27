@@ -23,9 +23,9 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 type Status struct {
@@ -47,7 +47,7 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForConfig(cfg *d8v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string) Status {
+func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string) Status {
 	// Special case: unknown module name.
 	moduleType, fromSource := modulesToSource[cfg.GetName()]
 

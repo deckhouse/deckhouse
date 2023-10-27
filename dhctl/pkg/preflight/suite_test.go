@@ -21,7 +21,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 )
 
 type PreflightChecksTestSuite struct {
@@ -35,14 +34,13 @@ func (s *PreflightChecksTestSuite) SetupSuite() {
 
 func (s *PreflightChecksTestSuite) SetupTest() {
 	app.AppVersion = "v1.50.6"
-	s.checker.installConfig = &deckhouse.Config{
+	s.checker.installConfig = &config.DeckhouseInstaller{
 		Registry: config.RegistryData{
 			Address:   "registry.deckhouse.io",
 			Path:      "/deckhouse/ce",
 			DockerCfg: "ewogICJhdXRocyI6IHsKICAgICJyZWdpc3RyeS5kZWNraG91c2UuaW8iOiB7CiAgICAgICJhdXRoIjogIiIKICAgIH0KICB9Cn0=",
 		},
-		ReleaseChannel: "stable",
-		DevBranch:      "",
+		DevBranch: "pr1111",
 	}
 }
 
