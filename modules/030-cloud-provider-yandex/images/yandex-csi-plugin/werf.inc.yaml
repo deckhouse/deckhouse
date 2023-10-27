@@ -22,19 +22,27 @@ import:
   - sbin/dumpe2fs
   - 'sbin/e2*'
   - 'sbin/fsck*'
-  # - sbin/glibc
+  - 'sbin/fsfreeze'
+  - 'sbin/fstrim'
   - sbin/mke2fs
   - 'sbin/mkfs*'
   - sbin/resize2fs
   - sbin/tune2fs
   - sbin/xfs_repair
+  - sbin/wipefs
   - usr/bin/chattr
   - usr/bin/lsattr
   - usr/sbin/e2freefrag
   - usr/sbin/e4crypt
   - usr/sbin/e4defrag
   - usr/sbin/filefrag
+  - usr/sbin/nvme
   - usr/sbin/xfs*
+  - 'lib64/libb*'
+  - 'lib64/libc*'
+  - 'lib64/libm*'
+  - 'lib64/libp*'
+  - 'lib64/libu*'
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
@@ -45,12 +53,12 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache ca-certificates e2fsprogs findmnt xfsprogs blkid e2fsprogs-extra
+  - apk add --no-cache ca-certificates git e2fsprogs findmnt xfsprogs blkid e2fsprogs-extra
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /go/src/app
-  - git clone --depth 1 --branch v0.10.0 https://github.com/deckhouse/yandex-csi-driver.git
+  - git clone --depth 1 --branch v0.10.0 https://github.com/deckhouse/yandex-csi-driver.git /go/src/app
   - cd /go/src/app
   - |
     VERSION=$(cat VERSION)
