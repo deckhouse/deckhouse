@@ -11,21 +11,35 @@ import:
   to: /
   before: setup
   includePaths:
-  - 'bin/*'
-  - 'sbin/*'
-  - 'lib64/*'
+  - etc/mke2fs.conf
+  - bin/mount
+  - bin/umount
+  - bin/findmnt
+  - bin/dmesg
+  - sbin/badblocks
+  - 'sbin/blk*'
+  - sbin/debugfs
+  - sbin/dumpe2fs
+  - 'sbin/e2*'
+  - 'sbin/fsck*'
+  # - sbin/glibc
+  - sbin/mke2fs
+  - 'sbin/mkfs*'
+  - sbin/resize2fs
+  - sbin/tune2fs
+  - sbin/xfs_repair
+  - usr/bin/chattr
+  - usr/bin/lsattr
+  - usr/sbin/e2freefrag
+  - usr/sbin/e4crypt
+  - usr/sbin/e4defrag
+  - usr/sbin/filefrag
+  - usr/sbin/xfs*
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-git:
-- url: https://github.com/deckhouse/yandex-csi-driver
-  to: /go/src/app
-  tag: v0.10.0
-  stageDependencies:
-    install:
-    - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -33,6 +47,10 @@ shell:
   beforeInstall:
   - apk add --no-cache ca-certificates e2fsprogs findmnt xfsprogs blkid e2fsprogs-extra
   install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /go/src/app
+  - git clone --depth 1 --branch v0.10.0 https://github.com/deckhouse/yandex-csi-driver.git
   - cd /go/src/app
   - |
     VERSION=$(cat VERSION)
