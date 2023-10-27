@@ -75,7 +75,8 @@ shell:
     - apt-get update
     - |
       apt-get install -y ca-certificates \
-                       e2fsprogs xfsprogs \
-                       mount
+                        util-linux \
+                        e2fsprogs xfsprogs \
+                        mount
 
 

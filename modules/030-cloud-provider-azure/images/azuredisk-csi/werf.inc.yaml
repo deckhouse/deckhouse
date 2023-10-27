@@ -77,5 +77,6 @@ shell:
     - apt-get update
     - |
       apt-get install -y ca-certificates \
-                       e2fsprogs xfsprogs \
-                       mount btrfs-progs
+                      util-linux \
+                      e2fsprogs xfsprogs \
+                      mount btrfs-progs

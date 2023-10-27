@@ -58,7 +58,7 @@ shell:
   beforeInstall:
   - apk upgrade --available --no-cache 
   - apk add --no-cache ca-certificates make git \
-      util-linux findmnt blkid udev\
+      util-linux findmnt blkid udev \
       e2fsprogs e2fsprogs-extra \
       xfsprogs xfsprogs-extra \
       btrfs-progs btrfs-progs-extra
@@ -77,5 +77,6 @@ shell:
     - apt-get update
     - |
       apt-get install -y ca-certificates \
-                       e2fsprogs xfsprogs \
-                       mount btrfs-progs
+                        util-linux \
+                        e2fsprogs xfsprogs \
+                        mount btrfs-progs udev

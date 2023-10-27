@@ -92,5 +92,6 @@ shell:
     - apt-get update
     - |
       apt-get install -y ca-certificates \
-                       e2fsprogs xfsprogs \
-                       mount btrfs-progs udev
+                        util-linux \
+                        e2fsprogs xfsprogs \
+                        mount btrfs-progs udev
