@@ -16,7 +16,6 @@ package backend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -136,7 +135,22 @@ func (mc ModuleConfig) LoadConfig(ctx context.Context) (*config.KubeConfig, erro
 	return cfg, nil
 }
 
-func (mc ModuleConfig) SaveConfigValues(_ context.Context, key string, value utils.Values) ( /*checksum*/ string, error) {
-	fmt.Println("TRY TO update", key, value)
-	return "", errors.New("saving patch values in ModuleConfig is forbidden")
+func (mc ModuleConfig) SaveConfigValues(ctx context.Context, moduleName string, values utils.Values) ( /*checksum*/ string, error) {
+	fmt.Println("TRY TO update", moduleName, values)
+	obj, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(ctx, moduleName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	// values are stored like: map[prometheus:map[longtermRetentionDays:0 retentionDays:7]]
+	// we have to extract top level key
+	if values.HasKey(moduleName) {
+		values = values.SectionByKey(moduleName)
+	}
+
+	obj.Spec.Settings = v1alpha1.SettingsValues(values)
+
+	_, err = mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(ctx, obj, metav1.UpdateOptions{})
+
+	return values.Checksum(), err
 }
