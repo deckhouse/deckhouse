@@ -46,6 +46,7 @@ import:
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
+{{ $csiBuildPath := "/go/src/app" }}
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
@@ -57,9 +58,9 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /go/src/app
-  - git clone --depth 1 --branch v0.10.0 https://github.com/deckhouse/yandex-csi-driver.git /go/src/app
-  - cd /go/src/app
+  - mkdir -p {{ $csiBuildPath }}
+  - git clone --depth 1 --branch v0.10.0 https://github.com/deckhouse/yandex-csi-driver.git {{ $csiBuildPath }}
+  - cd {{ $csiBuildPath }}
   - |
     VERSION=$(cat VERSION)
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \

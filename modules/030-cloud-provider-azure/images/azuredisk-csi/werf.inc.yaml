@@ -48,6 +48,7 @@ import:
 docker:
   ENTRYPOINT: ["/azurediskplugin"]
 ---
+{{ $csiBuildPath := "/src" }}
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
@@ -64,9 +65,9 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - git clone --depth 1 --branch v1.17.0 https://github.com/kubernetes-sigs/azuredisk-csi-driver.git /src
-  - cd /src
+  - mkdir -p {{ $csiBuildPath }}
+  - git clone --depth 1 --branch v1.17.0 https://github.com/kubernetes-sigs/azuredisk-csi-driver.git {{ $csiBuildPath }}
+  - cd {{ $csiBuildPath }}
   - make azuredisk
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact

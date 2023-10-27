@@ -52,6 +52,7 @@ import:
 docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
 ---
+{{ $csiBuildPath := "/src" }}
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
 mount:
@@ -69,9 +70,9 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - git clone --depth 1 --branch v1.3.3 https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git /src
-  - cd /src
+  - mkdir -p {{ $csiBuildPath }}
+  - git clone --depth 1 --branch v1.3.3 https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git {{ $csiBuildPath }}
+  - cd {{ $csiBuildPath }}
   - GCE_PD_CSI_STAGING_VERSION=v1.3.3 make gce-pd-driver
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
