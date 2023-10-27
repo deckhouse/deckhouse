@@ -135,8 +135,11 @@ func (mc ModuleConfig) LoadConfig(ctx context.Context) (*config.KubeConfig, erro
 	return cfg, nil
 }
 
+// SaveConfigValues saving patches in ModuleConfig. Used for settings-conversions
 func (mc ModuleConfig) SaveConfigValues(ctx context.Context, moduleName string, values utils.Values) ( /*checksum*/ string, error) {
 	fmt.Println("TRY TO update", moduleName, values)
+	mc.logger.Debugf("Saving config values %v for %s", values, moduleName)
+
 	obj, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(ctx, moduleName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
@@ -144,8 +147,12 @@ func (mc ModuleConfig) SaveConfigValues(ctx context.Context, moduleName string, 
 
 	// values are stored like: map[prometheus:map[longtermRetentionDays:0 retentionDays:7]]
 	// we have to extract top level key
+	fmt.Println("TRY TO 0", values.HasKey(moduleName))
+	fmt.Println("TRY TO 01", values[moduleName])
 	if values.HasKey(moduleName) {
+		fmt.Println("TRY TO1 HAS KEY", moduleName)
 		values = values.SectionByKey(moduleName)
+		fmt.Println("TRY TO2 AFTER", values)
 	}
 
 	obj.Spec.Settings = v1alpha1.SettingsValues(values)
