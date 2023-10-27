@@ -17,10 +17,13 @@ import:
   - bin/findmnt
   - bin/dmesg
   - sbin/badblocks
+  - sbin/blockdev
   - 'sbin/blk*'
+  - 'sbin/btrfs*'
   - sbin/debugfs
   - sbin/dumpe2fs
   - 'sbin/e2*'
+  - sbin/findfs
   - 'sbin/fsck*'
   - 'sbin/fsfreeze'
   - 'sbin/fstrim'

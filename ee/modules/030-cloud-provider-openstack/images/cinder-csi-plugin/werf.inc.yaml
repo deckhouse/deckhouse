@@ -15,16 +15,18 @@ import:
   before: setup
   includePaths:
   - etc/mke2fs.conf
-  - 'bin/btrfs*'
   - bin/mount
   - bin/umount
   - bin/findmnt
   - bin/dmesg
   - sbin/badblocks
+  - sbin/blockdev
   - 'sbin/blk*'
+  - 'sbin/btrfs*'
   - sbin/debugfs
   - sbin/dumpe2fs
   - 'sbin/e2*'
+  - sbin/findfs
   - 'sbin/fsck*'
   - 'sbin/fsfreeze'
   - 'sbin/fstrim'
@@ -42,7 +44,6 @@ import:
   - usr/sbin/filefrag
   - usr/sbin/nvme
   - usr/sbin/xfs*
-  - usr/bin/xxd
   - 'lib64/libb*'
   - 'lib64/libc*'
   - 'lib64/libm*'
