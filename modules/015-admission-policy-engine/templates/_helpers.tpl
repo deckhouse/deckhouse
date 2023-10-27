@@ -30,7 +30,7 @@
   {{- $parameters = index . 3}}
   {{- end}}
 
-{{- include "pod_security_standard_base" (list $context "baseline" $policyCRDName $parameters ) }}
+{{- include "pod_security_standard_base" (list $context "baseline" $policyCRDName $policyAction $parameters) }}
 {{- end }}
 
 {{- define "pod_security_standard_restricted" }}
@@ -42,7 +42,7 @@
   {{- $parameters = index . 3}}
   {{- end}}
 
-{{- include "pod_security_standard_base" (list $context "restricted" $policyCRDName $parameters ) }}
+{{- include "pod_security_standard_base" (list $context "restricted" $policyCRDName $policyAction $parameters) }}
 {{- end }}
 
 {{- define "pod_security_standard_base" }}
@@ -57,10 +57,10 @@
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: {{ $policyCRDName }}
 metadata:
-  name: d8-pod-security-{{$standard}}
+  name: d8-pod-security-{{$standard}}-{{$policyAction}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
 spec:
-  enforcementAction: {{ $policyAction | lower }}
+  enforcementAction: {{ $policyAction }}
   match:
     scope: Namespaced
     kinds:
