@@ -1,7 +1,7 @@
 {{- if . }}
       <table>
       {{- range . }}
-        <tr class="group-header"><th colspan="6">{{ escapeXML .Type }}</th></tr>
+        <tr class="group-header"><th colspan="6">Source type: {{ escapeXML .Type }}<br>Source: {{ escapeXML .Target }}</br></th></tr>
         {{- if (eq (len .Vulnerabilities) 0) }}
         <tr><th colspan="6">No Vulnerabilities found</th></tr>
         {{- else }}
@@ -9,6 +9,8 @@
           <th>Package</th>
           <th>Vulnerability ID</th>
           <th>Severity</th>
+          <th>Installed Version</th>
+          <th>Fixed Version</th>
         </tr>
           {{- range .Vulnerabilities }}
         <tr class="severity-{{ escapeXML .Vulnerability.Severity }}">
@@ -17,6 +19,8 @@
             <a href={{ escapeXML (index .Vulnerability.References 0) | printf "%q" }}>{{ escapeXML .VulnerabilityID }}</a>
           </td>
           <td class="severity">{{ escapeXML .Vulnerability.Severity }}</td>
+          <td class="pkg-version">{{ escapeXML .InstalledVersion }}</td>
+          <td>{{ escapeXML .FixedVersion }}</td>
         </tr>
           {{- end }}
         {{- end }}
