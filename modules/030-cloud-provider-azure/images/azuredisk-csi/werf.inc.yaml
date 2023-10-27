@@ -11,28 +11,61 @@ import:
   to: /
   before: setup
   includePaths:
-  - 'bin/*'
-  - 'sbin/*'
-  - 'lib64/*'
+  - etc/mke2fs.conf
+  - 'bin/btrfs*'
+  - bin/mount
+  - bin/umount
+  - bin/findmnt
+  - bin/dmesg
+  - sbin/badblocks
+  - 'sbin/blk*'
+  - sbin/debugfs
+  - sbin/dumpe2fs
+  - 'sbin/e2*'
+  - 'sbin/fsck*'
+  - 'sbin/fsfreeze'
+  - 'sbin/fstrim'
+  - sbin/mke2fs
+  - 'sbin/mkfs*'
+  - sbin/resize2fs
+  - sbin/tune2fs
+  - sbin/xfs_repair
+  - sbin/wipefs
+  - usr/bin/chattr
+  - usr/bin/lsattr
+  - usr/sbin/e2freefrag
+  - usr/sbin/e4crypt
+  - usr/sbin/e4defrag
+  - usr/sbin/filefrag
+  - usr/sbin/nvme
+  - usr/sbin/xfs*
+  - usr/bin/xxd
+  - 'lib64/libb*'
+  - 'lib64/libc*'
+  - 'lib64/libm*'
+  - 'lib64/libp*'
+  - 'lib64/libu*'
 docker:
   ENTRYPOINT: ["/azurediskplugin"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-git:
-- url: https://github.com/kubernetes-sigs/azuredisk-csi-driver/
-  to: /src
-  tag: v1.17.0
-  stageDependencies:
-    install:
-    - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk upgrade --available --no-cache && apk add --no-cache util-linux e2fsprogs e2fsprogs-extra ca-certificates udev xfsprogs xfsprogs-extra btrfs-progs btrfs-progs-extra make git
+  - apk upgrade --available --no-cache 
+  - apk add --no-cache ca-certificates make git \
+      util-linux udev\
+      e2fsprogs e2fsprogs-extra \
+      xfsprogs xfsprogs-extra \
+      btrfs-progs btrfs-progs-extra
   install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /src
+  - git clone --depth 1 --branch v1.17.0 https://github.com/kubernetes-sigs/azuredisk-csi-driver.git /src
   - cd /src
   - make azuredisk
 ---
