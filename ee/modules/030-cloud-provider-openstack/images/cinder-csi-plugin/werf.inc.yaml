@@ -68,7 +68,10 @@ mount:
 shell:
   beforeInstall:
   - apt update
-  - apt install git mercurial rsync patch -y
+  - |  
+    apt-get install -y --no-install-recommends git make \
+      util-linux e2fsprogs mount ca-certificates udev \
+      xfsprogs
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}

@@ -56,8 +56,8 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk upgrade --available --no-cache 
-  - apk add --no-cache ca-certificates make git \
+  - |
+    apk add --no-cache ca-certificates make git \
       util-linux udev\
       e2fsprogs e2fsprogs-extra \
       xfsprogs xfsprogs-extra \
