@@ -16,7 +16,7 @@ package backend
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	logger "github.com/docker/distribution/context"
@@ -150,8 +150,9 @@ func (mc ModuleConfig) LoadConfig(ctx context.Context) (*config.KubeConfig, erro
 //func (mc ModuleConfig)
 
 // SaveConfigValues saving patches in ModuleConfig. Used for settings-conversions
-func (mc ModuleConfig) SaveConfigValues(ctx context.Context, moduleName string, values utils.Values) ( /*checksum*/ string, error) {
-	return "", fmt.Errorf("not implemented")
+func (mc ModuleConfig) SaveConfigValues(_ context.Context, moduleName string, values utils.Values) ( /*checksum*/ string, error) {
+	mc.logger.Errorf("module %s tries to save values in ModuleConfig: %s", moduleName, values.DebugString())
+	return "", errors.New("saving patch values in ModuleConfig is forbidden")
 	//fmt.Println("TRY TO update", moduleName, values)
 	//mc.logger.Debugf("Saving config values %v for %s", values, moduleName)
 	//
