@@ -17,6 +17,7 @@ package backend
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	logger "github.com/docker/distribution/context"
@@ -135,6 +136,7 @@ func (mc ModuleConfig) LoadConfig(ctx context.Context) (*config.KubeConfig, erro
 	return cfg, nil
 }
 
-func (mc ModuleConfig) SaveConfigValues(_ context.Context, _ string, _ utils.Values) ( /*checksum*/ string, error) {
+func (mc ModuleConfig) SaveConfigValues(_ context.Context, key string, value utils.Values) ( /*checksum*/ string, error) {
+	fmt.Println("TRY TO update", key, value)
 	return "", errors.New("saving patch values in ModuleConfig is forbidden")
 }
