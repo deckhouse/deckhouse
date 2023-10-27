@@ -41,12 +41,15 @@ import:
   - usr/sbin/filefrag
   - usr/sbin/nvme
   - usr/sbin/xfs*
-  - usr/bin/xxd
-  - 'lib64/libb*'
-  - 'lib64/libc*'
-  - 'lib64/libm*'
-  - 'lib64/libp*'
-  - 'lib64/libu*'
+  # - 'lib64/libb*'
+  # - 'lib64/libc*'
+  # - 'lib64/libd*'
+  # - 'lib64/libe*'
+  # - 'lib64/libm*'
+  # - 'lib64/libp*'
+  # - 'lib64/libu*'
+  - 'lib64/lib*'
+  - 'lib64/ld*'
 docker:
   ENTRYPOINT: ["/azurediskplugin"]
 ---
