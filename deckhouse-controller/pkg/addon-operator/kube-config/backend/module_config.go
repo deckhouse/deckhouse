@@ -54,7 +54,7 @@ func New(config *rest.Config, logger logger.Logger) *ModuleConfigBackend {
 
 func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan config.Event) {
 	// define resyncPeriod for informer
-	resyncPeriod := time.Duration(15) * time.Minute
+	resyncPeriod := time.Duration(0) * time.Minute
 
 	informer := externalversions.NewSharedInformerFactory(mc.mcKubeClient, resyncPeriod)
 	mcInformer := informer.Deckhouse().V1alpha1().ModuleConfigs().Informer()
@@ -83,7 +83,11 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC chan config.Event) {
 	cfg := config.NewConfig()
 
-	values := mc.fetchValuesFromModuleConfig(obj)
+	values, err := mc.fetchValuesFromModuleConfig(obj)
+	if err != nil {
+		eventC <- config.Event{Key: obj.Name, Config: cfg, Err: err}
+		return
+	}
 
 	switch obj.Name {
 	case "global":
@@ -113,7 +117,10 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context) (*config.KubeConfi
 	}
 
 	for _, item := range list.Items {
-		values := mc.fetchValuesFromModuleConfig(&item)
+		values, err := mc.fetchValuesFromModuleConfig(&item)
+		if err != nil {
+			return nil, err
+		}
 
 		if item.Name == "global" {
 			cfg.Global = &config.GlobalKubeConfig{
@@ -133,56 +140,32 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context) (*config.KubeConfi
 	return cfg, nil
 }
 
-func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleConfig) utils.Values {
+func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleConfig) (utils.Values, error) {
 	if item.DeletionTimestamp != nil {
 		// ModuleConfig was deleted
-		return utils.Values{}
+		return utils.Values{}, nil
 	}
 
 	if item.Spec.Version == 0 {
 		// spec version not set explicitly
-		return utils.Values(item.Spec.Settings)
+		return utils.Values(item.Spec.Settings), nil
 	}
 
 	chain := conversion.Registry().Chain(item.Name)
 	if chain.LatestVersion() != item.Spec.Version {
 		newVersion, newSettings, err := chain.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
 		if err != nil {
-			// TODO: handle panic
-			panic(err)
+			return utils.Values{}, err
 		}
 		item.Spec.Version = newVersion
 		item.Spec.Settings = newSettings
 	}
 
-	return utils.Values(item.Spec.Settings)
+	return utils.Values(item.Spec.Settings), nil
 }
 
 // SaveConfigValues saving patches in ModuleConfigBackend. Used for settings-conversions
 func (mc ModuleConfigBackend) SaveConfigValues(_ context.Context, moduleName string, values utils.Values) ( /*checksum*/ string, error) {
 	mc.logger.Errorf("module %s tries to save values in ModuleConfig: %s", moduleName, values.DebugString())
 	return "", errors.New("saving patch values in ModuleConfig is forbidden")
-	//fmt.Println("TRY TO update", moduleName, values)
-	//mc.logger.Debugf("Saving config values %v for %s", values, moduleName)
-	//
-	//obj, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(ctx, moduleName, metav1.GetOptions{})
-	//if err != nil {
-	//	return "", err
-	//}
-	//
-	//// values are stored like: map[prometheus:map[longtermRetentionDays:0 retentionDays:7]]
-	//// we have to extract top level key
-	//fmt.Println("TRY TO 0", values.HasKey(moduleName))
-	//fmt.Println("TRY TO 01", values[moduleName])
-	//if values.HasKey(moduleName) {
-	//	fmt.Println("TRY TO1 HAS KEY", moduleName)
-	//	values = values.SectionByKey(moduleName)
-	//	fmt.Println("TRY TO2 AFTER", values)
-	//}
-	//
-	//obj.Spec.Settings = v1alpha1.SettingsValues(values)
-	//
-	//_, err = mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(ctx, obj, metav1.UpdateOptions{})
-	//
-	//return values.Checksum(), err
 }
