@@ -11,12 +11,44 @@ import:
   to: /
   before: setup
   includePaths:
-  - 'bin/*'
-  - 'sbin/*'
-  - 'lib64/*'
+  - etc/mke2fs.conf
+  - 'bin/btrfs*'
+  - bin/mount
+  - bin/umount
+  - bin/findmnt
+  - bin/dmesg
+  - sbin/badblocks
+  - 'sbin/blk*'
+  - sbin/debugfs
+  - sbin/dumpe2fs
+  - 'sbin/e2*'
+  - 'sbin/fsck*'
+  - 'sbin/fsfreeze'
+  - 'sbin/fstrim'
+  - sbin/mke2fs
+  - 'sbin/mkfs*'
+  - sbin/resize2fs
+  - sbin/tune2fs
+  - sbin/xfs_repair
+  - sbin/wipefs
+  - usr/bin/chattr
+  - usr/bin/lsattr
+  - usr/sbin/e2freefrag
+  - usr/sbin/e4crypt
+  - usr/sbin/e4defrag
+  - usr/sbin/filefrag
+  - usr/sbin/nvme
+  - usr/sbin/xfs*
+  - usr/bin/xxd
+  - 'lib64/libb*'
+  - 'lib64/libc*'
+  - 'lib64/libm*'
+  - 'lib64/libp*'
+  - 'lib64/libu*'
 docker:
   ENTRYPOINT: ["/bin/vsphere-csi"]
 ---
+{{ $csiBuildPath := "/src" }}
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
 git:
@@ -31,9 +63,18 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk upgrade --available --no-cache && apk add --no-cache util-linux e2fsprogs e2fsprogs-extra ca-certificates udev xfsprogs xfsprogs-extra btrfs-progs btrfs-progs-extra make git
+  - apk upgrade --available --no-cache 
+  - apk add --no-cache ca-certificates make git \
+      util-linux findmnt blkid udev\
+      e2fsprogs e2fsprogs-extra \
+      xfsprogs xfsprogs-extra \
+      btrfs-progs btrfs-progs-extra
   install:
-  - cd /src
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p {{ $csiBuildPath }}
+  - git clone --depth 1 --branch v2.5.4 https://github.com/kubernetes-sigs/vsphere-csi-driver.git {{ $csiBuildPath }}
+  - cd {{ $csiBuildPath }}
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact

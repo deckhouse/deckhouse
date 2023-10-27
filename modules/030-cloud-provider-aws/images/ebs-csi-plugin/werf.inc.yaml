@@ -60,6 +60,8 @@ shell:
       xfsprogs xfsprogs-extra \
       btrfs-progs btrfs-progs-extra
   install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p {{ $csiBuildPath }}
   - git clone --depth 1 --branch v1.3.0 https://github.com/kubernetes-sigs/aws-ebs-csi-driver.git {{ $csiBuildPath }}
   - cd {{ $csiBuildPath }}

@@ -70,6 +70,8 @@ shell:
   - apt update
   - apt install git mercurial rsync patch -y
   install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p {{ $csiBuildPath }}
   - git clone https://github.com/kubernetes/cloud-provider-openstack.git {{ $csiBuildPath }}
   - cd {{ $csiBuildPath }}
