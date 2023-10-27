@@ -17,7 +17,10 @@ package backend
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
+
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 
 	logger "github.com/docker/distribution/context"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
@@ -80,11 +83,24 @@ func (mc ModuleConfig) StartInformer(ctx context.Context, eventC chan config.Eve
 
 func (mc ModuleConfig) handleEvent(obj *v1alpha1.ModuleConfig, eventC chan config.Event) {
 	cfg := config.NewConfig()
-	values := utils.Values(obj.Spec.Settings)
+	values := utils.Values{}
 
-	if obj.DeletionTimestamp != nil {
-		// ModuleConfig was deleted
-		values = utils.Values{}
+	// if ModuleConfig was deleted - values are empty
+	if obj.DeletionTimestamp == nil {
+		// convert values on the fly
+		chain := conversion.Registry().Chain(obj.Name)
+		fmt.Println("CHAIN VERSION", chain.LatestVersion(), obj.Spec.Version)
+		if chain.LatestVersion() != obj.Spec.Version {
+			newVersion, newSettings, err := chain.ConvertToLatest(obj.Spec.Version, obj.Spec.Settings)
+			if err != nil {
+				// TODO: handle panic
+				panic(err)
+			}
+			obj.Spec.Version = newVersion
+			obj.Spec.Settings = newSettings
+		}
+
+		values = utils.Values(obj.Spec.Settings)
 	}
 
 	switch obj.Name {
@@ -115,19 +131,20 @@ func (mc ModuleConfig) LoadConfig(ctx context.Context) (*config.KubeConfig, erro
 	}
 
 	for _, item := range list.Items {
-		values := utils.Values(item.Spec.Settings)
+		// convert values on the fly
+		chain := conversion.Registry().Chain(item.Name)
+		fmt.Println("CHAIN VERSION2", chain.LatestVersion(), item.Spec.Version)
+		if chain.LatestVersion() != item.Spec.Version {
+			newVersion, newSettings, err := chain.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
+			if err != nil {
+				// TODO: handle panic
+				panic(err)
+			}
+			item.Spec.Version = newVersion
+			item.Spec.Settings = newSettings
+		}
 
-		//// convert values on the fly
-		//chain := conversion.Registry().Chain(item.Name)
-		//if chain.LatestVersion() != item.Spec.Version {
-		//	newVersion, newSettings, err := chain.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
-		//	if err != nil {
-		//		// TODO: handle panic
-		//		panic(err)
-		//	}
-		//	item.Spec.Version = newVersion
-		//	item.Spec.Settings = newSettings
-		//}
+		values := utils.Values(item.Spec.Settings)
 
 		if item.Name == "global" {
 			cfg.Global = &config.GlobalKubeConfig{
