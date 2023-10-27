@@ -72,7 +72,7 @@ shell:
   - find /patches -name '*.patch' -exec git apply {} \;
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
-from: {{ $.Images.BASE_GOLANG_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 import: 
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
   add: /src
@@ -94,8 +94,10 @@ shell:
     apk add --no-cache git patch wget
   install:
   - mkdir -p /src
+  - ls -la /patches
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
+  beforeSetup:
   - cd /src
   - wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C /src
   - find /patches -name '*.patch' -exec git apply {} \;
