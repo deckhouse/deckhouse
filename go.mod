@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.3.1-0.20231027163048-d7840f025240
+	github.com/flant/addon-operator v1.3.1-0.20231027165300-2a721d8d125e
 	github.com/flant/kube-client v1.0.1
 	github.com/flant/shell-operator v1.4.1
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -132,6 +132,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lib/pq v1.10.6 // indirect
