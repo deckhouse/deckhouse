@@ -17,8 +17,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 const namespace = "d8-delivery"
@@ -132,7 +130,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterDockerConfigJSON,
 		},
 	},
-}, dependency.WithExternalDependencies(applyWerfSources))
+}, applyWerfSources)
 
 type internalValues struct {
 	ArgoCD             internalArgoCDValues  `json:"argocd"`
@@ -147,7 +145,7 @@ type internalUpdaterValues struct {
 	Registries []imageUpdaterRegistry `json:"registries"`
 }
 
-func applyWerfSources(input *go_hook.HookInput, dc dependency.Container) error {
+func applyWerfSources(input *go_hook.HookInput) error {
 	// Input
 	werfSources, err := parseWerfSources(input.Snapshots["werf_sources"])
 	if err != nil {

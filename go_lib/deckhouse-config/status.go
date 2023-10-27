@@ -174,9 +174,9 @@ func mergeEnabled(enabledFlags ...*bool) bool {
 	for _, enabled := range enabledFlags {
 		if enabled == nil {
 			continue
-		} else {
-			result = *enabled
 		}
+
+		result = *enabled
 	}
 
 	return result

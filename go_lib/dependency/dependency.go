@@ -270,23 +270,23 @@ type mockedDependencyContainer struct {
 	VsphereClient *vsphere.ClientMock
 }
 
-func (mdc *mockedDependencyContainer) GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error) {
+func (mdc *mockedDependencyContainer) GetHelmClient(_ string, _ ...helm.Option) (helm.Client, error) {
 	return mdc.HelmClient, nil
 }
 
-func (mdc *mockedDependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
+func (mdc *mockedDependencyContainer) GetHTTPClient(_ ...http.Option) http.Client {
 	return mdc.HTTPClient
 }
 
-func (mdc *mockedDependencyContainer) GetEtcdClient(endpoints []string, options ...etcd.Option) (etcd.Client, error) {
+func (mdc *mockedDependencyContainer) GetEtcdClient(_ []string, _ ...etcd.Option) (etcd.Client, error) {
 	return mdc.EtcdClient, nil
 }
 
-func (mdc *mockedDependencyContainer) MustGetEtcdClient(endpoints []string, options ...etcd.Option) etcd.Client {
+func (mdc *mockedDependencyContainer) MustGetEtcdClient(_ []string, _ ...etcd.Option) etcd.Client {
 	return mdc.EtcdClient
 }
 
-func (mdc *mockedDependencyContainer) GetK8sClient(options ...k8s.Option) (k8s.Client, error) {
+func (mdc *mockedDependencyContainer) GetK8sClient(_ ...k8s.Option) (k8s.Client, error) {
 	if mdc.K8sClient != nil {
 		return mdc.K8sClient, nil
 	}
@@ -305,7 +305,7 @@ func (mdc *mockedDependencyContainer) GetRegistryClient(string, ...cr.Option) (c
 	return nil, fmt.Errorf("no CR client")
 }
 
-func (mdc *mockedDependencyContainer) GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error) {
+func (mdc *mockedDependencyContainer) GetVsphereClient(_ *vsphere.ProviderClusterConfiguration) (vsphere.Client, error) {
 	if mdc.VsphereClient != nil {
 		return mdc.VsphereClient, nil
 	}
@@ -333,7 +333,6 @@ func (mdc *mockedDependencyContainer) SetK8sVersion(ver k8s.FakeClusterVersion) 
 }
 
 func newMockedContainer() *mockedDependencyContainer {
-	// ctrl := minimock.NewController(ginkgo.GinkgoT()) // gingo panics cause of offset
 	ctrl := minimock.NewController(&testing.T{})
 
 	return &mockedDependencyContainer{

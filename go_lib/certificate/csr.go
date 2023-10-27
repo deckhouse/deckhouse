@@ -53,6 +53,6 @@ func GenerateCSR(logger *logrus.Entry, cn string, options ...Option) (csrPEM, ke
 
 // Validator does nothing and will never return an error. It exists because creating a
 // csr.Generator requires a Validator.
-func Validator(req *csr.CertificateRequest) error {
+func Validator(_ *csr.CertificateRequest) error {
 	return nil
 }
