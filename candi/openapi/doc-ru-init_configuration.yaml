@@ -27,18 +27,26 @@ apiVersions:
             description: Протокол доступа к container registry (HTTP или HTTPS).
           releaseChannel:
             description: |
-              Устанавливаемый в кластере [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse.
+              Используйте параметр [releaseChannel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Устанавливаемый в кластере канал обновлений Deckhouse.
           devBranch:
             description: |
-              Параметр используется для нужд разработки.
+              Параметр используется для нужд разработки. Будет заменен на аргумент CLI-команды.
           bundle:
             description: |
-              Устанавливаемый в кластере [вариант поставки](../modules/002-deckhouse/configuration.html#parameters-bundle) Deckhouse.
+              Используйте параметр [bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Устанавливаемый в кластере вариант поставки Deckhouse.
           logLevel:
             description: |
-              [Уровень логирования](../modules/002-deckhouse/configuration.html#parameters-loglevel) Deckhouse.
+              Используйте параметр [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Уровень логирования Deckhouse.
           configOverrides:
             description: |
+              Вместо этого параметра, используйте ресурсы ModuleConfig для настройки модулей.
+
               Начальная [конфигурация Deckhouse](/documentation/v1/#конфигурация-deckhouse).
 
               Укажите здесь параметры конфигурации Deckhouse, с которыми он должен запуститься после установки.
