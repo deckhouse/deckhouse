@@ -72,7 +72,7 @@ shell:
   - find /patches -name '*.patch' -exec git apply {} \;
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_ALPINE }}
 import: 
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
   add: /src
