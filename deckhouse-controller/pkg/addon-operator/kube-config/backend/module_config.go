@@ -117,7 +117,19 @@ func (mc ModuleConfig) LoadConfig(ctx context.Context) (*config.KubeConfig, erro
 	for _, item := range list.Items {
 		values := utils.Values(item.Spec.Settings)
 
-		if item.GetName() == "global" {
+		//// convert values on the fly
+		//chain := conversion.Registry().Chain(item.Name)
+		//if chain.LatestVersion() != item.Spec.Version {
+		//	newVersion, newSettings, err := chain.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
+		//	if err != nil {
+		//		// TODO: handle panic
+		//		panic(err)
+		//	}
+		//	item.Spec.Version = newVersion
+		//	item.Spec.Settings = newSettings
+		//}
+
+		if item.Name == "global" {
 			cfg.Global = &config.GlobalKubeConfig{
 				Values:   values,
 				Checksum: values.Checksum(),
@@ -135,29 +147,32 @@ func (mc ModuleConfig) LoadConfig(ctx context.Context) (*config.KubeConfig, erro
 	return cfg, nil
 }
 
+//func (mc ModuleConfig)
+
 // SaveConfigValues saving patches in ModuleConfig. Used for settings-conversions
 func (mc ModuleConfig) SaveConfigValues(ctx context.Context, moduleName string, values utils.Values) ( /*checksum*/ string, error) {
-	fmt.Println("TRY TO update", moduleName, values)
-	mc.logger.Debugf("Saving config values %v for %s", values, moduleName)
-
-	obj, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(ctx, moduleName, metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-
-	// values are stored like: map[prometheus:map[longtermRetentionDays:0 retentionDays:7]]
-	// we have to extract top level key
-	fmt.Println("TRY TO 0", values.HasKey(moduleName))
-	fmt.Println("TRY TO 01", values[moduleName])
-	if values.HasKey(moduleName) {
-		fmt.Println("TRY TO1 HAS KEY", moduleName)
-		values = values.SectionByKey(moduleName)
-		fmt.Println("TRY TO2 AFTER", values)
-	}
-
-	obj.Spec.Settings = v1alpha1.SettingsValues(values)
-
-	_, err = mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(ctx, obj, metav1.UpdateOptions{})
-
-	return values.Checksum(), err
+	return "", fmt.Errorf("not implemented")
+	//fmt.Println("TRY TO update", moduleName, values)
+	//mc.logger.Debugf("Saving config values %v for %s", values, moduleName)
+	//
+	//obj, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(ctx, moduleName, metav1.GetOptions{})
+	//if err != nil {
+	//	return "", err
+	//}
+	//
+	//// values are stored like: map[prometheus:map[longtermRetentionDays:0 retentionDays:7]]
+	//// we have to extract top level key
+	//fmt.Println("TRY TO 0", values.HasKey(moduleName))
+	//fmt.Println("TRY TO 01", values[moduleName])
+	//if values.HasKey(moduleName) {
+	//	fmt.Println("TRY TO1 HAS KEY", moduleName)
+	//	values = values.SectionByKey(moduleName)
+	//	fmt.Println("TRY TO2 AFTER", values)
+	//}
+	//
+	//obj.Spec.Settings = v1alpha1.SettingsValues(values)
+	//
+	//_, err = mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(ctx, obj, metav1.UpdateOptions{})
+	//
+	//return values.Checksum(), err
 }
