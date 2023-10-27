@@ -27,6 +27,6 @@ const (
 	gv                     = "deckhouse.io/v1alpha1"
 )
 
-func applyCRDExistenseFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyCRDExistenseFilter(_ *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return true, nil
 }

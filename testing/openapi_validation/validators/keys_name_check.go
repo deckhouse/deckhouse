@@ -68,7 +68,7 @@ func checkMapForBannedKey(m map[interface{}]interface{}, banned []string) error 
 	return nil
 }
 
-func (knv KeyNameValidator) Run(file, absoluteKey string, value interface{}) error {
+func (knv KeyNameValidator) Run(file, _ string, value interface{}) error {
 	object, ok := value.(map[interface{}]interface{})
 	if !ok {
 		fmt.Println("Possible Bug? Have to be a map", reflect.TypeOf(value))

@@ -377,11 +377,7 @@ func processD8VM(input *go_hook.HookInput, d8vm *v1alpha1.VirtualMachine) error 
 	}
 
 	// handle KubeVirt VirtualMachine
-	if err := processKubevirtVM(input, d8vm, ipAddress); err != nil {
-		return err
-	}
-
-	return nil
+	return processKubevirtVM(input, d8vm, ipAddress)
 }
 
 func checkAndCleanupDisk(input *go_hook.HookInput, disk *VirtualMachineDiskSnapshot) {
