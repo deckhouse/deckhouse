@@ -19,8 +19,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-
 	logger "github.com/docker/distribution/context"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -31,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions"
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 )
 
 type ModuleConfigBackend struct {
