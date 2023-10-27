@@ -4,30 +4,17 @@ ARG BASE_GOLANG_19_BULLSEYE
 FROM $BASE_UBUNTU as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
-ARG LINSTOR_VERSION=1.24.2
+ARG LINSTOR_VERSION=1.23.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
- && apt-get -y install build-essential debhelper git default-jdk-headless gradle python3-all wget zip \
+ && apt-get -y install build-essential debhelper git default-jdk-headless gradle python3-all \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# We are using Gradle version 6.9.3 because building Linstor Controller with version 7+ completes unsuccesfully.
-RUN mkdir /opt/gradle && cd /opt/gradle \
- && wget -q https://services.gradle.org/distributions/gradle-6.9.3-bin.zip \
- && unzip gradle-6.9.3-bin.zip \
- && ln -s /opt/gradle/gradle-6.9.3/bin/gradle /usr/local/bin/gradle
-
-# Copy patches
-COPY ./patches /patches
-
 RUN git clone ${LINSTOR_GITREPO} /linstor-server
 WORKDIR /linstor-server
-RUN git checkout v${LINSTOR_VERSION} \
- && git config --global user.email "builder@deckhouse.io" \
- && git config --global user.name "deckhouse" \
- && git am /patches/*.patch \
- && git tag -f v${LINSTOR_VERSION}
+RUN git checkout v${LINSTOR_VERSION}
 
 RUN git config --global url."https://github.com/".insteadOf git://github.com/ \
  && make debrelease \
@@ -43,9 +30,9 @@ RUN dpkg-buildpackage -us -uc
 FROM $BASE_UBUNTU as client-builder
 
 ARG API_GITREPO=https://github.com/LINBIT/linstor-api-py
-ARG API_VERSION=1.19.0
+ARG API_VERSION=1.18.0
 ARG CLIENT_GITREPO=https://github.com/LINBIT/linstor-client
-ARG CLIENT_VERSION=1.19.0
+ARG CLIENT_VERSION=1.18.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -92,7 +79,7 @@ RUN git clone ${K8S_AWAIT_ELECTION_GITREPO} /usr/local/go/k8s-await-election/ \
 FROM $BASE_UBUNTU as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.25.0
+ARG UTILS_VERSION=9.24.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -134,7 +121,7 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_UBUNTU
 ARG PIRAEUS_GITREPO=https://github.com/piraeusdatastore/piraeus
-ARG PIRAEUS_COMMIT_REF=20e96f83f52631dc06d011b7f96293d4026236a1
+ARG PIRAEUS_COMMIT_REF=4fce0345892e4cefa906cbb09b8a9bb87ef956f3
 
 COPY --from=linstor-builder /linstor-common_*.deb /linstor-controller_*.deb /linstor-satellite_*.deb /packages/
 COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages/
