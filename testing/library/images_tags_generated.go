@@ -102,7 +102,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"common": map[string]interface{}{
 		"alpine":                    "imageHash-common-alpine",
-		"busyboxStatic":             "imageHash-common-busyboxStatic",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
 		"csiExternalAttacher124":    "imageHash-common-csiExternalAttacher124",
 		"csiExternalAttacher125":    "imageHash-common-csiExternalAttacher125",
