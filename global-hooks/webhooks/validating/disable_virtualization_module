@@ -20,7 +20,7 @@ function __config__(){
   cat <<EOF
 configVersion: v1
 kubernetesValidating:
-- name: disable.virtualization.module.deckhouse.io
+- name: disable.modules.deckhouse.io
   group: main
   rules:
   - apiGroups:   ["deckhouse.io"]
@@ -34,10 +34,13 @@ EOF
 function __main__() {
   mcName=$(context::jq -r '.review.request.object.metadata.name')
   if [[ "$mcName" == "virtualization" ]]; then
+    virtualizationModuleEnabled="$(context::jq -r '.review.request.object.spec.enabled')"
+    if [[ "virtualizationModuleEnabled" == "true" ]]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"moduleconfigs.deckhouse.io \"virtualization\" is temporary deprecated, a new version will be published soon." }
 EOF
     return 0
+    fi
   fi
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
