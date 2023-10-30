@@ -79,36 +79,65 @@ RUN apk update \
     tzdata \
     diffutils \
     libcap \
+    util-linux \
   && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && bash -eu -c ' \
   writeDirs=( \
-    /var/lib/nginx/body \
-    /var/lib/nginx/fastcgi \
-    /var/lib/nginx/proxy \
-    /var/lib/nginx/scgi \
-    /var/lib/nginx/uwsgi \
-    /etc/ingress-controller \
-    /etc/ingress-controller/ssl \
-    /etc/ingress-controller/auth \
-    /var/log/audit \
-    /var/log \
-    /var/log/nginx \
+      /chroot/etc/nginx \
+      /chroot/usr/local/ \
+      /chroot/etc/ingress-controller \
+      /chroot/etc/ingress-controller/ssl \
+      /chroot/etc/ingress-controller/auth \
+      /chroot/opt/modsecurity/var/log \
+      /chroot/opt/modsecurity/var/upload \
+      /chroot/opt/modsecurity/var/audit \
+      /chroot/var/log/audit \
+      /chroot/var/lib/nginx \
+      /chroot/var/log/nginx \
+      /chroot/var/lib/nginx/body \
+      /chroot/var/lib/nginx/fastcgi \
+      /chroot/var/lib/nginx/proxy \
+      /chroot/var/lib/nginx/scgi \
+      /chroot/var/lib/nginx/uwsgi \
+      /chroot/tmp/nginx \
   ); \
   for dir in "${writeDirs[@]}"; do \
     mkdir -p ${dir}; \
     chown -R www-data.www-data ${dir}; \
   done' \
-  && echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /etc/ld-musl-x86_64.path \
-  && setcap    cap_net_bind_service=+ep /nginx-ingress-controller \
-  && setcap -v cap_net_bind_service=+ep /nginx-ingress-controller \
-  && setcap    cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
-  && setcap -v cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
-  && setcap    cap_net_bind_service=+ep /usr/bin/dumb-init \
-  && setcap -v cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run \
+  && cp /etc/passwd /etc/group /chroot/etc/ \
+  && cp -a /usr/* /chroot/usr/ \
+  && cp -a /etc/nginx/* /chroot/etc/nginx/ \
+  && cp /lib/ld-musl-* /lib/libcrypto* /lib/libssl* /lib/libz* /chroot/lib/ \
+  && echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
+  && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
+  && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
+  && setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx \
+  && setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && ln -sf /chroot/etc/nginx /etc/nginx \
+  && ln -sf /chroot/tmp/nginx /tmp/nginx \
+  && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
+  && ln -sf /chroot/var/log/nginx /var/log/nginx \
+  && echo "" > /chroot/etc/resolv.conf \
+  && mknod -m 0666 /chroot/dev/null c 1 3 \
+  && mknod -m 0666 /chroot/dev/random c 1 8 \
+  && mknod -m 0666 /chroot/dev/urandom c 1 9 \
+  && mknod -m 0666 /chroot/dev/full c 1 7 \
+  && mknod -m 0666 /chroot/dev/ptmx c 5 2 \
+  && mknod -m 0666 /chroot/dev/zero c 1 5 \
+  && mknod -m 0666 /chroot/dev/tty c 5 0 \
+  && mkdir -p /chroot/modules_mount \
+  && mkdir -p modules_mount \
+  && ln -s /modules_mount /chroot/modules_mount \
 # Create symlinks to redirect nginx logs to stdout and stderr docker log collector
-  && ln -sf /dev/stdout /var/log/nginx/access.log \
-  && ln -sf /dev/stderr /var/log/nginx/error.log \
-  && ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx \
+  && ln -sf /dev/stdout /chroot/var/log/nginx/access.log \
+  && ln -sf /dev/stderr /chroot/var/log/nginx/error.log \
+  && ln -sf /usr/local/nginx/sbin/nginx /chroot/usr/bin/nginx \
   && apk del libcap \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
