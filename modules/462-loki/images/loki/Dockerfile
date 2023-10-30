@@ -16,7 +16,7 @@ RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch v2.7.3 ${SOURCE_REPO}/grafana/loki.git /loki
 WORKDIR /loki/
 RUN go get -u golang.org/x/net@v0.17.0 \
-    && go get -u google.golang.org/grpc@v1.58.3 \
+    && go get -u google.golang.org/grpc@v1.59.0 \
     && go mod tidy \
     && go mod vendor \
     && go build -ldflags="-s -w" -o loki cmd/loki/main.go && \
