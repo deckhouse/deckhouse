@@ -13,7 +13,6 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-fromCacheVersion: "2023-10-16.0"
 git:
   - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
