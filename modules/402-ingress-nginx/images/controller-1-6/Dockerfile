@@ -45,11 +45,9 @@ ENV LUA_CPATH=$LUA_CPATH;/usr/local/openresty/site/lualib/?.so;/usr/local/openre
 RUN adduser -S -D -H -u 101 -h /usr/local/nginx \
     -s /sbin/nologin -G www-data -g www-data www-data
 
-COPY --from=controller_image /usr/local /chroot/usr/local
+COPY --from=controller_image /usr/local /usr/local
 COPY --from=controller_image /opt /opt
-COPY --from=controller_image --chown=www-data:www-data /etc /chroot/etc
-#COPY --from=controller_image --chown=www-data:www-data /dbg /dbg
-#COPY --from=controller_image --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
+COPY --from=controller_image --chown=www-data:www-data /etc /etc
 COPY --from=controller_image --chown=www-data:www-data /wait-shutdown /wait-shutdown
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
 # We use 0.26 controller image to copy lua libraries because is easier to install them on ubuntu
@@ -57,7 +55,6 @@ COPY --from=controller_0_26_1 /usr/local/openresty/luajit /chroot/usr/local/open
 COPY patches/balancer-lua.patch /
 COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
-COPY rootfs /chroot/
 COPY nginx-chroot-wrapper.sh /usr/bin/nginx
 
 RUN apk update \
@@ -84,7 +81,6 @@ RUN apk update \
   && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && bash -eu -c ' \
   writeDirs=( \
-      /chroot/etc/nginx \
       /chroot/usr/local/ \
       /chroot/etc/ingress-controller \
       /chroot/etc/ingress-controller/ssl \
@@ -107,9 +103,9 @@ RUN apk update \
     chown -R www-data.www-data ${dir}; \
   done' \
   && mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run \
-  && cp /chroot/etc/passwd /chroot/etc/group /etc/ \
-  && cp -a /chroot/usr/* /usr/ \
-#  && cp -a /etc/nginx/* /chroot/etc/nginx/ \
+  && cp /etc/passwd /etc/group /chroot/etc/ \
+  && cp -a /usr/* /chroot/usr/ \
+  && mv /etc/nginx /chroot/etc/ \
   && cp /lib/ld-musl-* /lib/libcrypto* /lib/libssl* /lib/libz* /chroot/lib/ \
   && echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
@@ -124,7 +120,11 @@ RUN apk update \
   && ln -sf /chroot/tmp/nginx /tmp/nginx \
   && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
   && ln -sf /chroot/var/log/nginx /var/log/nginx \
+# Create symlinks to redirect nginx logs to stdout and stderr docker log collector
+  && ln -sf /dev/stdout /chroot/var/log/nginx/access.log \
+  && ln -sf /dev/stderr /chroot/var/log/nginx/error.log \
   && echo "" > /chroot/etc/resolv.conf \
+  && chown -R www-data.www-data /var/log /chroot/var/log /chroot/etc/resolv.conf \
   && mknod -m 0666 /chroot/dev/null c 1 3 \
   && mknod -m 0666 /chroot/dev/random c 1 8 \
   && mknod -m 0666 /chroot/dev/urandom c 1 9 \
@@ -135,15 +135,14 @@ RUN apk update \
   && mkdir -p /chroot/modules_mount \
   && mkdir -p modules_mount \
   && ln -s /modules_mount /chroot/modules_mount \
-# Create symlinks to redirect nginx logs to stdout and stderr docker log collector
-  && ln -sf /dev/stdout /chroot/var/log/nginx/access.log \
-  && ln -sf /dev/stderr /chroot/var/log/nginx/error.log \
   && apk del libcap \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
   && patch -p1 < /auth-cookie-always.patch \
   && rm -rf /*.patch
+
+COPY rootfs /chroot/
 WORKDIR /
 USER www-data
 EXPOSE 80 443
