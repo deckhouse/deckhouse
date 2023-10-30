@@ -16,9 +16,12 @@ import:
   includePaths:
   - etc/mke2fs.conf
   - bin/mount
+  - bin/mkdir
+  - bin/rmdir
   - bin/umount
   - bin/findmnt
   - bin/dmesg
+  - bin/lsblk
   - sbin/badblocks
   - sbin/blockdev
   - 'sbin/blk*'
