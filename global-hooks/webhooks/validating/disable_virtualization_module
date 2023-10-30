@@ -20,7 +20,7 @@ function __config__(){
   cat <<EOF
 configVersion: v1
 kubernetesValidating:
-- name: disable.modules.deckhouse.io
+- name: disable-virtualization.modules.deckhouse.io
   group: main
   rules:
   - apiGroups:   ["deckhouse.io"]
