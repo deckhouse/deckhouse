@@ -373,6 +373,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: params.LogLevel,
 		},
 		{
+			Name:  "LOG_TYPE",
+			Value: "json",
+		},
+		{
 			Name:  "DECKHOUSE_BUNDLE",
 			Value: params.Bundle,
 		},
