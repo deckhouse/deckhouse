@@ -46,6 +46,7 @@ import:
   - usr/sbin/e4defrag
   - usr/sbin/filefrag
   - usr/sbin/nvme
+  - usr/sbin/parted
   - usr/sbin/xfs*
   - 'lib64/lib*'
   - 'lib64/ld*'
@@ -98,4 +99,4 @@ shell:
       apt-get install -y ca-certificates \
                         util-linux \
                         e2fsprogs xfsprogs \
-                        mount btrfs-progs udev
+                        mount btrfs-progs udev parted
