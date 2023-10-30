@@ -7,7 +7,7 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /local-path-provisioner
     to: /usr/bin/local-path-provisioner
-    before: setup
+    after: install
 docker:
   ENTRYPOINT: ["/usr/bin/local-path-provisioner"]
 ---
