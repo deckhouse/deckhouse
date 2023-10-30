@@ -241,8 +241,8 @@ github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYF
 github.com/fatih/structs v1.1.0 h1:Q7juDM0QtcnhCpeyLGQKyg4TOIghuNXrkL32pHAUMxo=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
 github.com/felixge/httpsnoop v1.0.3 h1:s/nj+GCswXYzN5v2DpNMuMQYe+0DDwt5WVCU6CWBdXk=
-github.com/flant/addon-operator v1.3.2-0.20231030102441-bc1f8930b026 h1:2QNO79vNMJoNPlW2xBvJY2swr7202Scuv/HW0TiwL/E=
-github.com/flant/addon-operator v1.3.2-0.20231030102441-bc1f8930b026/go.mod h1:gs2O9pvkHgatAPUA4gr2sPgGSdAaBI0U8Dz9Xax5XCw=
+github.com/flant/addon-operator v1.3.2-0.20231030110333-9aa956bff433 h1:3t99l4/4IkIG/WtKt5buWac4YiLJv1FJ+ZHH7Rx/fKs=
+github.com/flant/addon-operator v1.3.2-0.20231030110333-9aa956bff433/go.mod h1:gs2O9pvkHgatAPUA4gr2sPgGSdAaBI0U8Dz9Xax5XCw=
 github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbLR5vJOUzKAK8p3nrD7mDk=
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.0.1 h1:W2cUtu07VF8eWpdv49FomTJzREBHprkFzZgz/UbVp5A=
