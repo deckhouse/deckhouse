@@ -22,6 +22,7 @@ spec:
       imagePullSecrets:
         - name: deckhouse-registry-site
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
+      serviceAccountName: docs-builder
       containers:
         - name: frontend
           command: ["nginx", "-g", "daemon off;"]
