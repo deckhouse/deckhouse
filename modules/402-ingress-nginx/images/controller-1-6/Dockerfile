@@ -58,6 +58,7 @@ COPY patches/balancer-lua.patch /
 COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
 COPY rootfs /chroot/
+COPY nginx-chroot-wrapper.sh /usr/bin/nginx
 
 RUN apk update \
   && apk upgrade \
@@ -80,6 +81,7 @@ RUN apk update \
     diffutils \
     libcap \
     util-linux \
+  && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && bash -eu -c ' \
   writeDirs=( \
       /chroot/etc/nginx \
@@ -136,7 +138,6 @@ RUN apk update \
 # Create symlinks to redirect nginx logs to stdout and stderr docker log collector
   && ln -sf /dev/stdout /chroot/var/log/nginx/access.log \
   && ln -sf /dev/stderr /chroot/var/log/nginx/error.log \
-  && ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx \
   && apk del libcap \
   && cd / \
   && patch -p1 < /balancer-lua.patch \

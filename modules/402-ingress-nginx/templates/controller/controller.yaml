@@ -273,9 +273,9 @@ spec:
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
-        - mountPath: /chroot//var/lib/nginx/fastcgi
+        - mountPath: /chroot/var/lib/nginx/fastcgi
           name: fastcgi-temp-path
-        - mountPath: /chroot//var/lib/nginx/proxy
+        - mountPath: /chroot/var/lib/nginx/proxy
           name: proxy-temp-path
         - mountPath: /chroot/var/lib/nginx/scgi
           name: scgi-temp-path
