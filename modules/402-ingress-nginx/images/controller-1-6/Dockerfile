@@ -137,7 +137,7 @@ RUN apk update \
 # Create symlinks to redirect nginx logs to stdout and stderr docker log collector
   && ln -sf /dev/stdout /chroot/var/log/nginx/access.log \
   && ln -sf /dev/stderr /chroot/var/log/nginx/error.log \
-  && ln -sf /usr/local/nginx/sbin/nginx /chroot/usr/bin/nginx \
+  && ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx \
   && apk del libcap \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
