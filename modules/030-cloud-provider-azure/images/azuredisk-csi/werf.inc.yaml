@@ -12,6 +12,7 @@ import:
   before: setup
   includePaths:
   - etc/mke2fs.conf
+  - bin/chmod
   - bin/mount
   - bin/mkdir
   - bin/rmdir
