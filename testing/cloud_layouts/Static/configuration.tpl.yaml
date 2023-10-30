@@ -10,6 +10,8 @@ clusterDomain: "cluster.local"
 proxy:
   httpProxy: http://192.168.199.254:8888
   httpsProxy: http://192.168.199.254:8888
+  noProxy:
+  - 192.168.199.0/24
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
