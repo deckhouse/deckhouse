@@ -127,6 +127,8 @@ spec:
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
+            - name: LOG_TYPE
+              value: "json"
             - name: DECKHOUSE_BUNDLE
               value: {{ .Values.deckhouse.bundle }}
             - name: DECKHOUSE_POD
@@ -143,6 +145,10 @@ spec:
               value: "30"
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
               value: "60"
+            - name: KUBE_CLIENT_QPS
+              value: "20"
+            - name: KUBE_CLIENT_BURST
+              value: "40"
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
               value: deckhouse_
             - name: ADDON_OPERATOR_NAMESPACE

@@ -50,21 +50,11 @@ func version() string {
 const (
 	AppName        = "deckhouse"
 	AppDescription = "controller for Kubernetes platform from Flant"
-
-	DefaultLogType         = "json"
-	DefaultKubeClientQPS   = "20"
-	DefaultKubeClientBurst = "40"
 )
 
 func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
-	// Set default log type as json
-	sh_app.LogType = DefaultLogType
-	sh_app.KubeClientQpsDefault = DefaultKubeClientQPS
-	sh_app.KubeClientBurstDefault = DefaultKubeClientBurst
-	fmt.Println("FLAGS SET", sh_app.LogType)
-	fmt.Println("FLAGS SET2", sh_app.KubeClientQpsDefault)
 
 	FileName := filepath.Base(os.Args[0])
 
