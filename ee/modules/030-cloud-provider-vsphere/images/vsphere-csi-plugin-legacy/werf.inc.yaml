@@ -175,7 +175,6 @@ from: {{ $.Images.BASE_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
   to: /patches
-  # to: /src
   stageDependencies:
     install:
       - '**/*'
@@ -191,8 +190,6 @@ shell:
   - mkdir -p /src
   - git clone --depth 1 --branch v0.2.1 https://github.com/flant/cloud-provider-vsphere.git /src
   - cd /src
-  - cp -r /patches/ .
-  - find . -name '*.patch' -exec git apply {} \;
   - find /patches -name '*.patch' -exec git apply {} \;
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
