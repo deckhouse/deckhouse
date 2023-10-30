@@ -39,6 +39,7 @@
 ## Fixes
 
 
+ - **[candi]** Send bootstrap logs to console in case of manual bootstrap. [#6332](https://github.com/deckhouse/deckhouse/pull/6332)
  - **[candi]** Improve bashible steps running order. [#6307](https://github.com/deckhouse/deckhouse/pull/6307)
  - **[candi]** Send bootstrap logs from cluster-api static instances. [#6252](https://github.com/deckhouse/deckhouse/pull/6252)
  - **[candi]** Fix CAPI kubeconfig hook, which cannot work on fresh installations. [#6252](https://github.com/deckhouse/deckhouse/pull/6252)
