@@ -1227,7 +1227,7 @@ entries:
                 ru: Настройки
               url: /modules/450-network-gateway/configuration.html
         - title: virtualization
-          featureStatus: experimental
+          featureStatus: temporaryDeprecated
           folders:
             - title:
                 en: Description

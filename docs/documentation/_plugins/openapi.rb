@@ -330,6 +330,8 @@ module Jekyll
             result.push(CONVERTER.convert('**' + @context.registers[:site].data['i18n']['features']['proprietaryOkmeter'][lang].capitalize + '**'))
           when "experimental"
             result.push(CONVERTER.convert('**' + @context.registers[:site].data['i18n']['features']['experimental'][lang].capitalize + '**'))
+          when "temporaryDeprecated"
+            result.push(CONVERTER.convert('**' + @context.registers[:site].data['i18n']['features']['temporaryDeprecated'][lang].capitalize + '**'))
           end
         end
 

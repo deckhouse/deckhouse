@@ -400,6 +400,7 @@
 .sidebar .sidebar__item_ee > a:before,
 .sidebar .sidebar__item_proprietaryOkmeter > a:before,
 .sidebar .sidebar__item_experimental > a:before,
+.sidebar .sidebar__item_temporaryDeprecated > a:before,
 a.comparison-table__module:after {
     font-size: 8px;
     color: #fff;
@@ -426,11 +427,18 @@ a.comparison-table__module {
     content: 'NEW!';
 }
 
-.sidebar .sidebar__item_experimental > a:before, a.comparison-table__module-experimental:after {
+.sidebar .sidebar__item_experimental > a:before,
+a.comparison-table__module-experimental:after {
     content: 'Experimental';
 }
 
-.sidebar .sidebar__item_proprietaryOkmeter > a:before, a.comparison-table__module-proprietaryOkmeter:after {
+.sidebar .sidebar__item_temporaryDeprecated > a:before,
+a.comparison-table__module-temporaryDeprecated:after {
+    content: 'Temporary deprecated';
+}
+
+.sidebar .sidebar__item_proprietaryOkmeter > a:before,
+a.comparison-table__module-proprietaryOkmeter:after {
     content: 'Proprietary';
 }
 
