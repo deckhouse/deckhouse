@@ -190,6 +190,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
+	if app.ResourcesPath != "" {
+		err := template.OnlyExternalModuleConfigsInResources(app.ResourcesPath)
+		if err != nil {
+			return err
+		}
+	}
+
 	// next init cache
 	cachePath := metaConfig.CachePath()
 	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState}); err != nil {
