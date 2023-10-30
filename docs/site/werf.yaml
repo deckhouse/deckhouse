@@ -208,3 +208,6 @@ import:
     add: /go/src/app/server
     to: /app/server
     before: setup
+git:
+  - add: /docs/site/backends/docs-builder-template
+    to: /app/hugo

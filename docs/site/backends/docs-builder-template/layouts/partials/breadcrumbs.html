@@ -1,0 +1,9 @@
+{{/*
+{{ range .Ancestors.Reverse }}
+  <li class="breadcrumbs__item">
+    <a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>
+  </li>
+{{ end }}
+*/}}
+  <li class="breadcrumbs__item">{{ humanize (T "modules") }}</li>
+  <li class="breadcrumbs__item">{{ .Title }}</li>
