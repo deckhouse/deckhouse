@@ -1,0 +1,16 @@
+info:
+  - code: alpha
+    title: Alpha
+    stability: 1
+  - code: beta
+    title: Beta
+    stability: 2
+  - code: early-access
+    title: Early Access
+    stability: 3
+  - code: stable
+    title: Stable
+    stability: 4
+  - code: rock-solid
+    title: Rock Solid
+    stability: 5
