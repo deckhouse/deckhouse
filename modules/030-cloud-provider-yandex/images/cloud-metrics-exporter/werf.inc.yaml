@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/exporter
