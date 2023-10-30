@@ -169,7 +169,7 @@ defaults:
       path: "*/490-virtualization"
       type: "pages"
     values:
-      featureStatus: experimental
+      featureStatus: temporaryDeprecated
   - scope:
       path: "*/160-multitenancy-manager"
       type: "pages"
