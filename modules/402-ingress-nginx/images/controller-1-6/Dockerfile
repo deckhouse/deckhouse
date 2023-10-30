@@ -45,19 +45,19 @@ ENV LUA_CPATH=$LUA_CPATH;/usr/local/openresty/site/lualib/?.so;/usr/local/openre
 RUN adduser -S -D -H -u 101 -h /usr/local/nginx \
     -s /sbin/nologin -G www-data -g www-data www-data
 
-COPY --from=controller_image /usr/local /usr/local
+COPY --from=controller_image /usr/local /chroot/usr/local
 COPY --from=controller_image /opt /opt
-COPY --from=controller_image --chown=www-data:www-data /etc /etc
-COPY --from=controller_image --chown=www-data:www-data /dbg /dbg
-COPY --from=controller_image --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
+COPY --from=controller_image --chown=www-data:www-data /etc /chroot/etc
+#COPY --from=controller_image --chown=www-data:www-data /dbg /dbg
+#COPY --from=controller_image --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
 COPY --from=controller_image --chown=www-data:www-data /wait-shutdown /wait-shutdown
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
 # We use 0.26 controller image to copy lua libraries because is easier to install them on ubuntu
-COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
+COPY --from=controller_0_26_1 /usr/local/openresty/luajit /chroot/usr/local/openresty/luajit
 COPY patches/balancer-lua.patch /
 COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
-COPY rootfs /
+COPY rootfs /chroot/
 
 RUN apk update \
   && apk upgrade \
@@ -80,7 +80,6 @@ RUN apk update \
     diffutils \
     libcap \
     util-linux \
-  && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && bash -eu -c ' \
   writeDirs=( \
       /chroot/etc/nginx \
@@ -106,9 +105,9 @@ RUN apk update \
     chown -R www-data.www-data ${dir}; \
   done' \
   && mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run \
-  && cp /etc/passwd /etc/group /chroot/etc/ \
-  && cp -a /usr/* /chroot/usr/ \
-  && cp -a /etc/nginx/* /chroot/etc/nginx/ \
+  && cp /chroot/etc/passwd /chroot/etc/group /etc/ \
+  && cp -a /chroot/usr/* /usr/ \
+#  && cp -a /etc/nginx/* /chroot/etc/nginx/ \
   && cp /lib/ld-musl-* /lib/libcrypto* /lib/libssl* /lib/libz* /chroot/lib/ \
   && echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
