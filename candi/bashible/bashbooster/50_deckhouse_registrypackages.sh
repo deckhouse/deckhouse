@@ -89,27 +89,27 @@ bb-rp-install() {
     local DIGESTS=""
     DIGESTS="$(bb-rp-get-digests "${DIGEST}")"
 
-    local TMPDIR=""
-    TMPDIR="$(mktemp -d)"
+    local TMP_DIR=""
+    TMP_DIR="$(mktemp -d)"
 
     # Get digests
-    for TMPDIGEST in ${DIGESTS}; do
-      local TMPFILE=""
-      TMPFILE="$(mktemp -u)"
-      bb-rp-fetch-digest "${TMPDIGEST}" "${TMPFILE}"
-      tar -xf "${TMPFILE}" -C "${TMPDIR}"
-      rm -f "${TMPFILE}"
+    for TMP_DIGEST in ${DIGESTS}; do
+      local TMP_FILE=""
+      TMP_FILE="$(mktemp -u)"
+      bb-rp-fetch-digest "${TMP_DIGEST}" "${TMP_FILE}"
+      tar -xf "${TMP_FILE}" -C "${TMP_DIR}"
+      rm -f "${TMP_FILE}"
     done
 
     bb-log-info "Installing package '${PACKAGE}'"
     # run install script
     # shellcheck disable=SC2164
-    pushd "${TMPDIR}" >/dev/null
+    pushd "${TMP_DIR}" >/dev/null
     ./install
     if bb-error?
     then
         popd >/dev/null
-        rm -rf "${TMPDIR}"
+        rm -rf "${TMP_DIR}"
         bb-log-error "Failed to install package '${PACKAGE}'"
         return $BB_ERROR
     fi
@@ -119,9 +119,9 @@ bb-rp-install() {
     mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
     echo "${DIGEST}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}/digest"
     # copy install/uninstall scripts to hold dir
-    cp "${TMPDIR}/install" "${TMPDIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
+    cp "${TMP_DIR}/install" "${TMP_DIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
     # cleanup
-    rm -rf "${TMPDIR}"
+    rm -rf "${TMP_DIR}"
 
     bb-event-fire "bb-package-installed" "${PACKAGE}"
     trap - ERR
