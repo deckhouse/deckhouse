@@ -217,9 +217,10 @@ function main() {
   fi
 
 {{ if eq .runType "Normal" }}
-  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
+  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
+    current_uptime > $UPTIME_FILE
     exit 0
   fi
   rm -f "$CONFIGURATION_CHECKSUM_FILE"
