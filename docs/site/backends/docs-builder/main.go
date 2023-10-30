@@ -25,7 +25,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/flant/docs_builder/pkg/k8s"
+	"github.com/flant/docs-builder/pkg/k8s"
 
 	"k8s.io/klog/v2"
 )
