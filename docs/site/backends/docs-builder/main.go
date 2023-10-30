@@ -39,7 +39,7 @@ var (
 
 func init() {
 	flag.StringVar(&listenAddress, "address", ":8081", "Address to listen on")
-	flag.StringVar(&src, "src", "/tmp/src", "Directory to load source files")
+	flag.StringVar(&src, "src", "/app/hugo/", "Directory to load source files")
 	flag.StringVar(&dst, "dst", "/tmp/dst", "Directory for compiled files")
 }
 

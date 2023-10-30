@@ -16,9 +16,9 @@ package main
 
 import (
 	"archive/tar"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
 	"os"
@@ -40,15 +40,18 @@ type loadHandler struct {
 func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	pathVars := mux.Vars(request)
 	channels := strings.Split(request.URL.Query().Get("channels"), ",")
+	if len(channels) == 0 {
+		channels = []string{"stable"}
+	}
 
-	err := u.upload(request.Body, pathVars["moduleName"], pathVars["version"])
+	err := u.upload(request.Body, pathVars["moduleName"], channels)
 	if err != nil {
 		klog.Error(err)
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	err = u.generateChannelMapping(pathVars["version"], channels)
+	err = u.generateChannelMapping(pathVars["moduleName"], pathVars["version"], channels)
 	if err != nil {
 		klog.Error(err)
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
@@ -58,7 +61,7 @@ func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 	writer.WriteHeader(http.StatusCreated)
 }
 
-func (u *loadHandler) upload(body io.ReadCloser, moduleName, version string) error {
+func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []string) error {
 	reader := tar.NewReader(body)
 
 	for {
@@ -75,25 +78,38 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName, version string) err
 			return fmt.Errorf("path traversal detected in the module archive: malicious path %v", header.Name)
 		}
 
-		path := filepath.Join(u.baseDir, moduleName, version, header.Name)
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path, 0700); err != nil {
-				return fmt.Errorf("mkdir %q failed: %w", path, err)
+			for _, channel := range channels {
+				path := filepath.Join(u.baseDir, "content", moduleName, channel, header.Name)
+				if err := os.MkdirAll(path, 0700); err != nil {
+					return fmt.Errorf("mkdir %q failed: %w", path, err)
+				}
 			}
 		case tar.TypeReg:
-			outFile, err := os.OpenFile(
-				path,
-				os.O_RDWR|os.O_CREATE|os.O_TRUNC,
-				os.FileMode(header.Mode)&0700, // remove only 'user' permission bit, E.x.: 644 => 600, 755 => 700
-			)
-			if err != nil {
-				return fmt.Errorf("create %q failed: %w", path, err)
+			files := make([]io.Writer, 0, len(channels))
+
+			for _, channel := range channels {
+				path := filepath.Join(u.baseDir, "content", moduleName, channel, header.Name)
+				outFile, err := os.OpenFile(
+					path,
+					os.O_RDWR|os.O_CREATE|os.O_TRUNC,
+					os.FileMode(header.Mode)&0700, // keep only 'user' permission bit, E.x.: 644 => 600, 755 => 700
+				)
+				if err != nil {
+					return fmt.Errorf("create %q failed: %w", path, err)
+				}
+
+				files = append(files, outFile)
 			}
-			if _, err := io.Copy(outFile, reader); err != nil {
-				return fmt.Errorf("copy to %q failed: %w", path, err)
+
+			if _, err := io.Copy(io.MultiWriter(files...), reader); err != nil {
+				return fmt.Errorf("copy failed: %w", err)
 			}
-			outFile.Close()
+
+			for _, f := range files {
+				f.(*os.File).Close()
+			}
 
 		default:
 			return fmt.Errorf("extract uknown type: %v in %s", header.Typeflag, header.Name)
@@ -103,26 +119,32 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName, version string) err
 	return nil
 }
 
-func (u *loadHandler) generateChannelMapping(version string, channels []string) error {
-	if len(channels) == 0 {
-		return nil
-	}
-
-	path := filepath.Join(u.baseDir, "channels.json")
+func (u *loadHandler) generateChannelMapping(moduleName, version string, channels []string) error {
+	path := filepath.Join(u.baseDir, "data/modules.yaml")
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return fmt.Errorf("open %q: %w", path, err)
 	}
 
-	var m = make(map[string]string)
+	type nameVersion struct {
+		Name    string `json:"name"    yaml:"name"`
+		Version string `json:"version" yaml:"version"`
+	}
 
-	err = json.NewDecoder(f).Decode(&m)
+	var m = make(map[string]map[string][]nameVersion)
+
+	err = yaml.NewDecoder(f).Decode(&m)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("decode json: %w", err)
 	}
 
+	versions := make([]nameVersion, 0, len(channels))
 	for _, ch := range channels {
-		m[ch] = version
+		versions = append(versions, nameVersion{ch, version})
+	}
+
+	m[moduleName] = map[string][]nameVersion{
+		"channels": versions,
 	}
 
 	err = f.Truncate(0)
@@ -135,7 +157,7 @@ func (u *loadHandler) generateChannelMapping(version string, channels []string) 
 		return fmt.Errorf("seek %q: %w", path, err)
 	}
 
-	err = json.NewEncoder(f).Encode(m)
+	err = yaml.NewEncoder(f).Encode(m)
 	if err != nil {
 		return fmt.Errorf("encode json: %w", err)
 	}
