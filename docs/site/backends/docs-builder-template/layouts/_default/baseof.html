@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  {{ "<!--#include virtual=\"/includes/head-site.html\" -->"  | safeHTML }}
+  </head>
+  <body>
+    <div class="content">
+     {{ "<!--#include virtual=\"/includes/header.html\" -->"  | safeHTML }}
+
+     {{ "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
+     <div class="container">
+
+       <div class="breadcrumbs-container">
+          <ol class="breadcrumbs">
+             {{ partial "breadcrumbs" . }}
+          </ol>
+          <div id="doc-versions-menu" class="channel-menu submenu-parent">
+          {{ if .IsPage }}
+            {{ $_pathElements := index ( findRESubmatch  `^([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+            {{ $module := index $_pathElements 1 }}
+            {{ $channel := index $_pathElements 2 }}
+            {{ if and $module $channel }}
+              {{ partial "module-version-menu" (dict "ctx" $ "module" $module "channel" $channel ) }}
+            {{ end }}
+          {{ end }}
+          </div>
+       </div>
+
+       <div class="layout-sidebar">
+         <div class="layout-sidebar__sidebar">
+           {{ partial "sidebar" . }}
+         </div>
+         <div class="layout-sidebar__content">
+           {{ block "main" . }}
+           {{ end }}
+         </div>
+       </div>
+     </div>
+
+     </div>
+     {{ "<!--#include virtual=\"/includes/footer.html\" -->"  | safeHTML }}
+  </body>
+</html>

@@ -1,0 +1,15 @@
+{{ define "main" }}
+<div class="docs">
+
+    <h1 class="docs__title">{{ .Title }}</h1>
+
+    <div class="post-content">
+
+        <!-- Maybe TOC will be generated in other way -->
+        {{ partial "toc" . }}
+
+        {{.Content}}
+
+    </div>
+</div>
+{{ end }}
