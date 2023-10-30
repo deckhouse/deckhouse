@@ -50,15 +50,12 @@ func version() string {
 const (
 	AppName        = "deckhouse"
 	AppDescription = "controller for Kubernetes platform from Flant"
-
-	DefaultLogType         = "json"
-	DefaultKubeClientQPS   = "20"
-	DefaultKubeClientBurst = "40"
 )
 
 func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
+
 	FileName := filepath.Base(os.Args[0])
 
 	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
@@ -83,10 +80,6 @@ func main() {
 		Command("start", "Start deckhouse.").
 		Action(start)
 
-	// Set default log type as json
-	sh_app.LogType = DefaultLogType
-	sh_app.KubeClientQpsDefault = DefaultKubeClientQPS
-	sh_app.KubeClientBurstDefault = DefaultKubeClientBurst
 	ad_app.DefineStartCommandFlags(kpApp, startCmd)
 
 	// Add debug commands from shell-operator and addon-operator
