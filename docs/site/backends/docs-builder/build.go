@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/flant/docs_builder/pkg/hugo"
+	"github.com/flant/docs-builder/pkg/hugo"
 	"k8s.io/klog/v2"
 )
 
