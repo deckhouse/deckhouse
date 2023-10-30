@@ -60,8 +60,8 @@ git:
     install:
       - '**/*'
   includePaths:
-  - '**/001-support-fcd-disk-resize.patch'
-  - '**/002-find-by-converted-uuid.patch'
+  - 001-support-fcd-disk-resize.patch
+  - 002-find-by-converted-uuid.patch
 shell:
   beforeInstall:
   - |
