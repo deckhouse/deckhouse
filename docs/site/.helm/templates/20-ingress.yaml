@@ -86,6 +86,13 @@ spec:
             name: frontend
             port:
               name: http
+      - path: /modules
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
       - path: /license_request_expired.html
         pathType: Prefix
         backend:
