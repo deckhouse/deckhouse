@@ -27,7 +27,6 @@ import (
 
 	"github.com/flant/docs_builder/pkg/k8s"
 
-	"golang.org/x/sync/errgroup"
 	"k8s.io/klog/v2"
 )
 
@@ -88,12 +87,14 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	var wg errgroup.Group
 
-	wg.Go(func() error { return lManager.Remove(ctx) })
-	wg.Go(func() error { return srv.Shutdown(ctx) })
+	err = lManager.Remove(ctx)
+	if err != nil {
+		klog.Errorf("lease removing failed: %v", err)
+	}
 
-	if err := wg.Wait(); err != nil {
-		klog.Fatalf("Shutdown failed: %v", err)
+	err = srv.Shutdown(ctx)
+	if err != nil {
+		klog.Errorf("shutdown failed: %v", err)
 	}
 }
