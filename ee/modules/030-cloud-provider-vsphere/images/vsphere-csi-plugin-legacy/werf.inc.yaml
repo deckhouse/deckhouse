@@ -1,127 +1,3 @@
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
-  add: /src/vsphere-csi
-  to: /bin/vsphere-csi
-  before: setup
-- image: common/busybox-static
-  add: /build/busybox
-  to: /bin/busybox
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
-  add: /
-  to: /
-  before: setup
-  includePaths:
-  - etc/mke2fs.conf
-  - bin/mount
-  - bin/umount
-  - bin/findmnt
-  - bin/dmesg
-  - sbin/badblocks
-  - sbin/blockdev
-  - 'sbin/blk*'
-  - 'sbin/btrfs*'
-  - sbin/debugfs
-  - sbin/dumpe2fs
-  - 'sbin/e2*'
-  - sbin/findfs
-  - 'sbin/fsck*'
-  - 'sbin/fsfreeze'
-  - 'sbin/fstrim'
-  - sbin/mke2fs
-  - 'sbin/mkfs*'
-  - sbin/resize2fs
-  - sbin/tune2fs
-  - sbin/xfs_repair
-  - sbin/wipefs
-  - usr/bin/chattr
-  - usr/bin/lsattr
-  - usr/sbin/e2freefrag
-  - usr/sbin/e4crypt
-  - usr/sbin/e4defrag
-  - usr/sbin/filefrag
-  - usr/sbin/nvme
-  - usr/sbin/xfs*
-  # - 'lib64/libb*'
-  # - 'lib64/libc*'
-  # - 'lib64/libd*'
-  # - 'lib64/libe*'
-  # - 'lib64/libm*'
-  # - 'lib64/libp*'
-  # - 'lib64/libu*'
-  - 'lib64/lib*'
-  - 'lib64/ld*'
-docker:
-  ENTRYPOINT: ["/bin/vsphere-csi"]
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
-from: {{ $.Images.BASE_ALPINE }}
-git:
-- url: https://github.com/flant/cloud-provider-vsphere
-  to: /src
-  tag: v0.2.1
-  stageDependencies:
-    install:
-      - '**/*'
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
-  to: /src
-  includePaths:
-  - 001-support-fcd-disk-resize.patch
-  - 002-find-by-converted-uuid.patch
-shell:
-  beforeInstall:
-  - |
-    apk upgrade --available --no-cache && \
-    apk add --no-cache git patch
-  install:
-  - cd /src
-  - patch -p1 < 001-support-fcd-disk-resize.patch
-  - patch -p1 < 002-find-by-converted-uuid.patch
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
-from: {{ $.Images.BASE_GOLANG_ALPINE }}
-import: 
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
-  add: /src
-  to: /cloud-provider-vsphere
-  before: install
-git:
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/001-csi-metrics-and-volume-expansion.patch
-  to: /src/001-csi-metrics-and-volume-expansion.patch
-  stageDependencies:
-    install:
-      - '**/*'
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - |
-    apk upgrade --available --no-cache && \
-    apk add --no-cache git mercurial patch wget
-  install:
-  - cd /src
-  - |
-    wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C .
-    wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C .
-  - patch -p1 < 001-csi-metrics-and-volume-expansion.patch
-  - go mod edit -replace=k8s.io/cloud-provider-vsphere=/cloud-provider-vsphere
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
-from: {{ $.Images.BASE_ALT }}
-shell:
-  beforeInstall:
-    - apt-get update
-    - |
-      apt-get install -y ca-certificates \
-                       e2fsprogs xfsprogs \
-                       mount btrfs-progs
-
-
 # ---
 # image: {{ $.ModuleName }}/{{ $.ImageName }}
 # fromImage: common/distroless
@@ -129,6 +5,10 @@ shell:
 # - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
 #   add: /src/vsphere-csi
 #   to: /bin/vsphere-csi
+#   before: setup
+# - image: common/busybox-static
+#   add: /build/busybox
+#   to: /bin/busybox
 #   before: setup
 # - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
 #   add: /
@@ -165,22 +45,29 @@ shell:
 #   - usr/sbin/filefrag
 #   - usr/sbin/nvme
 #   - usr/sbin/xfs*
-#   - 'lib64/libb*'
-#   - 'lib64/libc*'
-#   - 'lib64/libm*'
-#   - 'lib64/libp*'
-#   - 'lib64/libu*'
+#   # - 'lib64/libb*'
+#   # - 'lib64/libc*'
+#   # - 'lib64/libd*'
+#   # - 'lib64/libe*'
+#   # - 'lib64/libm*'
+#   # - 'lib64/libp*'
+#   # - 'lib64/libu*'
+#   - 'lib64/lib*'
+#   - 'lib64/ld*'
 # docker:
 #   ENTRYPOINT: ["/bin/vsphere-csi"]
 # ---
 # artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
 # from: {{ $.Images.BASE_ALPINE }}
 # git:
-# - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
-#   to: /patches
+# - url: https://github.com/flant/cloud-provider-vsphere
+#   to: /src
+#   tag: v0.2.1
 #   stageDependencies:
 #     install:
 #       - '**/*'
+# - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
+#   to: /src
 #   includePaths:
 #   - 001-support-fcd-disk-resize.patch
 #   - 002-find-by-converted-uuid.patch
@@ -188,25 +75,22 @@ shell:
 #   beforeInstall:
 #   - |
 #     apk upgrade --available --no-cache && \
-#     apk add --no-cache git
+#     apk add --no-cache git patch
 #   install:
-#   - mkdir -p /src
-#   - git clone --depth 1 --branch v0.2.1 https://github.com/flant/cloud-provider-vsphere.git /src
 #   - cd /src
-#   - find /patches -name '*.patch' -exec git apply {} \;
+#   - patch -p1 < 001-support-fcd-disk-resize.patch
+#   - patch -p1 < 002-find-by-converted-uuid.patch
 # ---
 # artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
-# from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+# from: {{ $.Images.BASE_GOLANG_ALPINE }}
 # import: 
 # - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
 #   add: /src
 #   to: /cloud-provider-vsphere
 #   before: install
 # git:
-# - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}
-#   to: /patches
-#   includePaths:
-#   - 001-csi-metrics-and-volume-expansion.patch
+# - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/001-csi-metrics-and-volume-expansion.patch
+#   to: /src/001-csi-metrics-and-volume-expansion.patch
 #   stageDependencies:
 #     install:
 #       - '**/*'
@@ -215,14 +99,15 @@ shell:
 #   to: /go/pkg
 # shell:
 #   beforeInstall:
-#   - apk add --no-cache git wget
+#   - |
+#     apk upgrade --available --no-cache && \
+#     apk add --no-cache git mercurial patch wget
 #   install:
-#   - mkdir -p /src
-#   - export GO_VERSION=${GOLANG_VERSION}
-#   - export GOPROXY={{ $.GOPROXY }}
-#   - wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C /src
 #   - cd /src
-#   - find /patches -name '*.patch' -exec git apply {} \;
+#   - |
+#     wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C .
+#     wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C .
+#   - patch -p1 < 001-csi-metrics-and-volume-expansion.patch
 #   - go mod edit -replace=k8s.io/cloud-provider-vsphere=/cloud-provider-vsphere
 #   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
 # ---
@@ -235,3 +120,119 @@ shell:
 #       apt-get install -y ca-certificates \
 #                        e2fsprogs xfsprogs \
 #                        mount btrfs-progs
+
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
+  add: /src/vsphere-csi
+  to: /bin/vsphere-csi
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - etc/mke2fs.conf
+  - bin/mount
+  - bin/umount
+  - bin/findmnt
+  - bin/dmesg
+  - sbin/badblocks
+  - sbin/blockdev
+  - 'sbin/blk*'
+  - 'sbin/btrfs*'
+  - sbin/debugfs
+  - sbin/dumpe2fs
+  - 'sbin/e2*'
+  - sbin/findfs
+  - 'sbin/fsck*'
+  - 'sbin/fsfreeze'
+  - 'sbin/fstrim'
+  - sbin/mke2fs
+  - 'sbin/mkfs*'
+  - sbin/resize2fs
+  - sbin/tune2fs
+  - sbin/xfs_repair
+  - sbin/wipefs
+  - usr/bin/chattr
+  - usr/bin/lsattr
+  - usr/sbin/e2freefrag
+  - usr/sbin/e4crypt
+  - usr/sbin/e4defrag
+  - usr/sbin/filefrag
+  - usr/sbin/nvme
+  - usr/sbin/xfs*
+  - 'lib64/lib*'
+  - 'lib64/ld*'
+docker:
+  ENTRYPOINT: ["/bin/vsphere-csi"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
+from: {{ $.Images.BASE_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
+  to: /patches
+  # to: /src
+  stageDependencies:
+    install:
+      - '**/*'
+  includePaths:
+  - '**/001-support-fcd-disk-resize.patch'
+  - '**/002-find-by-converted-uuid.patch'
+shell:
+  beforeInstall:
+  - |
+    apk upgrade --available --no-cache && \
+    apk add --no-cache git
+  install:
+  - mkdir -p /src
+  - git clone --depth 1 --branch v0.2.1 https://github.com/flant/cloud-provider-vsphere.git /src
+  - cd /src
+  - cp -r /patches/ .
+  - find . -name '*.patch' -exec git apply {} \;
+  - find /patches -name '*.patch' -exec git apply {} \;
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+import: 
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
+  add: /src
+  to: /cloud-provider-vsphere
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /patches
+  includePaths:
+  - 001-csi-metrics-and-volume-expansion.patch
+  stageDependencies:
+    install:
+      - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache git wget
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /src
+  - cd /src
+  - wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C .
+  - find /patches -name '*.patch' -exec git apply {} \;
+  # - go mod edit -replace=bitbucket.org/ww/goautoneg=github.com/munnerz/goautoneg
+  - go mod edit -replace=k8s.io/cloud-provider-vsphere=/cloud-provider-vsphere
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
+from: {{ $.Images.BASE_ALT }}
+shell:
+  beforeInstall:
+    - apt-get update
+    - |
+      apt-get install -y ca-certificates \
+                       e2fsprogs xfsprogs \
+                       mount btrfs-progs
