@@ -26,8 +26,8 @@ shell:
     - go get -u golang.org/x/net@v0.17.0
     - go get -u google.golang.org/grpc@v1.56.3
     - go mod tidy
-    - go mod vendor
     - go mod edit -dropreplace golang.org/x/net
+    - go mod vendor
     - make build
     - cp bin/csi-snapshotter /csi-snapshotter
     - chown 64535:64535 /csi-snapshotter
