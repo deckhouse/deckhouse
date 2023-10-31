@@ -26,7 +26,9 @@ shell:
     - go get -u golang.org/x/net@v0.17.0
     - go get -u google.golang.org/grpc@v1.56.3
     - go mod tidy
+    {{- if semverCompare ">=1.27" $version }}
     - go mod edit -dropreplace golang.org/x/net
+    {{- end }}
     - go mod vendor
     - make build
     - cp bin/csi-snapshotter /csi-snapshotter
