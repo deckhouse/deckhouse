@@ -213,7 +213,7 @@ git:
     to: /app/hugo
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
-image: registry-scanner-artifact
+image: registry-modules-watcher-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 ansible:
   install:
@@ -224,25 +224,25 @@ ansible:
         executable: /bin/sh
         chdir: /go/src/app/server
   setup:
-    - name: Build registry-scanner
+    - name: Build registry-modules-watcher
       shell: |
-        go build -ldflags "-w -s" -v -o /go/src/app/registry-scanner /go/src/app/
+        go build -ldflags "-w -s" -v -o /go/src/app/registry-modules-watcher /go/src/app/
       args:
         executable: /bin/sh
-        chdir: /go/src/app/registry-scanner
+        chdir: /go/src/app/registry-modules-watcher
 git:
-  - add: /docs/site/backends/registry-scanner
+  - add: /docs/site/backends/registry-modules-watcher
     to: /go/src/app
     stageDependencies:
       install: 'go.mod'
       setup: '**/*'
 ---
-image: registry-scanner
+image: registry-modules-watcher
 from: {{ .Images.BASE_ALPINE }}
 docker:
   WORKDIR: /app
 import:
-  - image: registry-scanner-artifact
-    add: /go/src/app/registry-scanner
-    to: /app/registry-scanner
+  - image: registry-modules-watcher-artifact
+    add: /go/src/app/registry-modules-watcher
+    to: /app/registry-modules-watcher
     before: setup
