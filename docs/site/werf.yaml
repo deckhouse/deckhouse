@@ -213,7 +213,7 @@ git:
     to: /app/hugo
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
-image: registr-scanner-artifact
+image: registry-scanner-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 ansible:
   install:
