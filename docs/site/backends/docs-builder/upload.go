@@ -83,7 +83,7 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			for _, channel := range channels {
 				path, ok := u.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping %v in %s", header.Typeflag, header.Name)
+					klog.Infof("skipping %v in %s", header.Name, moduleName)
 					continue
 				}
 
@@ -97,10 +97,10 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			for _, channel := range channels {
 				path, ok := u.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping %v in %s", header.Typeflag, header.Name)
+					klog.Infof("skipping %v in %s", header.Name, moduleName)
 					continue
 				}
-				klog.Infof("creating %s", header.Name)
+				klog.Infof("creating %s", path)
 
 				outFile, err := os.OpenFile(
 					path,
@@ -123,7 +123,7 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			}
 
 		default:
-			return fmt.Errorf("extract uknown type: %v in %s", header.Typeflag, header.Name)
+			return fmt.Errorf("extract uknown type: %d in %s", header.Typeflag, header.Name)
 		}
 	}
 
