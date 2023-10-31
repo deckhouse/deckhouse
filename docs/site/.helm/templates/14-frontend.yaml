@@ -50,7 +50,7 @@ spec:
             - mountPath: /app/ru/modules
               name: modules-docs-ru
         - name: builder
-          command: ["/app/server"]
+          command: ["/app/server", "-highAvailability"]
           image: {{ index .Values.werf.image "docs-builder" }}
           {{- include "resources" . | nindent 10 }}
           env:

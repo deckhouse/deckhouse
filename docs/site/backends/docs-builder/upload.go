@@ -24,34 +24,40 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
 )
 
 func newLoadHandler(baseDir string) *loadHandler {
-	return &loadHandler{baseDir}
+	return &loadHandler{baseDir: baseDir}
 }
 
 type loadHandler struct {
 	baseDir string
+
+	channelMappingMu sync.Mutex
 }
 
 func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	pathVars := mux.Vars(request)
 	channels := strings.Split(request.URL.Query().Get("channels"), ",")
+	moduleName := pathVars["moduleName"]
+	version := pathVars["version"]
 	if len(channels) == 0 {
 		channels = []string{"stable"}
 	}
 
-	err := u.upload(request.Body, pathVars["moduleName"], channels)
+	klog.Infof("loading %s %s: %s", moduleName, version, channels)
+	err := u.upload(request.Body, moduleName, channels)
 	if err != nil {
 		klog.Error(err)
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	err = u.generateChannelMapping(pathVars["moduleName"], pathVars["version"], channels)
+	err = u.generateChannelMapping(moduleName, version, channels)
 	if err != nil {
 		klog.Error(err)
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
@@ -83,10 +89,11 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			for _, channel := range channels {
 				path, ok := u.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping %v in %s", header.Typeflag, header.Name)
+					klog.Infof("skipping %v in %s", header.Name, moduleName)
 					continue
 				}
 
+				klog.Infof("creating dir %q", path)
 				if err := os.MkdirAll(path, 0700); err != nil {
 					return fmt.Errorf("mkdir %q failed: %w", path, err)
 				}
@@ -97,10 +104,10 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			for _, channel := range channels {
 				path, ok := u.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping %v in %s", header.Typeflag, header.Name)
+					klog.Infof("skipping %v in %s", header.Name, moduleName)
 					continue
 				}
-				klog.Infof("creating %s", header.Name)
+				klog.Infof("creating %s", path)
 
 				outFile, err := os.OpenFile(
 					path,
@@ -123,7 +130,7 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			}
 
 		default:
-			return fmt.Errorf("extract uknown type: %v in %s", header.Typeflag, header.Name)
+			return fmt.Errorf("extract uknown type: %d in %s", header.Typeflag, header.Name)
 		}
 	}
 
@@ -131,6 +138,9 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 }
 
 func (u *loadHandler) generateChannelMapping(moduleName, version string, channels []string) error {
+	u.channelMappingMu.Lock()
+	defer u.channelMappingMu.Unlock()
+
 	path := filepath.Join(u.baseDir, "data/modules.yaml")
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -178,6 +188,10 @@ func (u *loadHandler) generateChannelMapping(moduleName, version string, channel
 
 func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string, bool) {
 	fileName, _ = strings.CutPrefix(fileName, "./")
+
+	if strings.HasSuffix(fileName, "_RU.md") {
+		fileName = strings.Replace(fileName, "_RU.md", ".ru.md", 1)
+	}
 
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
 		return filepath.Join(u.baseDir, "content", moduleName, channel, fileName), true
