@@ -381,40 +381,44 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
 
 Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
-### Manually upload images to an air-gapped registry
+### Manually uploading images to an air-gapped registry
 
-1. Download and run Deckhouse installer container image. Installer should be of at least v1.54:
+1. If necessary, log in to the container registry `registry.deckhouse.io` using your license key.
 
    ```shell
-   docker run --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ce/install:v1.54.0 bash
+   docker login -u license-token registry.deckhouse.io
    ```
 
-   > Note the volume we mount into container here, this is where we will store the downloaded Deckhouse images.
+1. Run the Deckhouse installer version 1.54.0 or higher.
+
+   ```shell
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.0 bash
+   ```
+
+   Note that a directory is mounted in the installer container. This directory will contain the downloaded Deckhouse images.
 
 1. Pull Deckhouse images using the `dhctl mirror` command.
 
-   This command will pull images required to install and run any of the current Deckhouse release channels and switch between them.
+   `dhctl mirror` downloads only the latest available patch version of the minor Deckhouse release. For example, for Deckhouse 1.52, only one version `1.52.10` will be downloaded, as this is enough to update Deckhouse from version 1.51.
+
+   The following command will download Deckhouse images of those versions that are on the release channels (you can get the current status of release channels at [flow.deckhouse.io](https://flow.deckhouse.io)):
 
    ```shell
    dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --images /tmp/d8-images
    ```
 
-   If you already have running Deckhouse installations and wish to update them,
-   you can add `--min-version=""` flag specifying your current Deckhouse release to the above command
-   to download all of Deckhouse releases that came out since you last updated.
+   To download all Deckhouse versions starting from a specific version, specify it in the `--min-version` parameter in the `X.Y` or `X.Y.Z` format.
 
-   For example, this command will download all Deckhouse releases starting from v1.45:
+   Example of downloading all Deckhouse versions starting from version 1.45:
 
    ```shell
-   dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --images /tmp/d8-images --min-version="1.45"
+   dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --images /tmp/d8-images --min-version=1.45
    ```
 
-1. Upload the directory with downloaded Deckhouse images from the previous step to a host with access to an air-gapped registry.
+1. Upload the directory with downloaded Deckhouse images to a host with access to an air-gapped registry.
 
-1. (FIXME This should be rewritten when we figure out how to deliver dhctl mirror without container)
-   Download and run Deckhouse installer container image as you did before on the host with access to an air-gapped registry.
-
-   Make sure you have your directory with downloaded Deckhouse images mounted into the container.
+1. **(FIXME This should be rewritten when we figure out how to deliver dhctl mirror without container)**
+   Run the Deckhouse installer in the same way as steps 1 and 2 on the host with access to an air-gapped registry. Make sure you have your directory with downloaded Deckhouse images mounted into the container.
 
 1. Push the images using the `dhctl mirror` command to an air-gapped registry.
 
@@ -424,14 +428,13 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    dhctl mirror --images /tmp/d8-images --registry="your.private.registry.com:5000" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
    ```
 
-   > Note! Images will be pushed to the `/deckhouse/ee` repository in your registry,
-   > make sure it is created and registry user has write access to it before pushing.
+   > Note that images will be pushed to the `/deckhouse/ee` repository in your registry. Before running the command, make sure the path `/deckhouse/ee` exists, and the account you are using has write permissions.
 
-1. After pushing images to an isolated private registry, you are ready to install Deckhouse from it, follow the quick start guide for Enterprise Edition.
+1. After pushing images to an isolated private registry, you are ready to install Deckhouse from it. Use the [Getting started](/gs/bm-private/step2.html) guide.
 
-   Make sure you specified your private registry in `InitConfiguration` resource during setup configuration and it's credentials in step #4.
-   When running the installer container, pull its image from your private registry by replacing
-   `registry.deckhouse.io/deckhouse/ee/install:stable` with `your.private.registry.com:5000/deckhouse/ee/install:stable`.
+   When starting the installer, use its image from the registry, into which Deckhouse images were previously pushed, and not from the public registry. For example, use an address like `your.private.registry.com:5000/deckhouse/ee/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
+
+   During installation use the address of your registry and authorization data in the `InitConfiguration` resource (parameters [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) or [step 3](/gs/bm-private/step3.html) of the Getting started guide).
 
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
