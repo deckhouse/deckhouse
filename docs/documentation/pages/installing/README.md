@@ -37,8 +37,7 @@ The YAML installation config contains multiple resource configurations (manifest
 
   This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-related parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
 
-  Warning! The `configOverrides` option is deprecated and will be removed. Use the [ModuleConfig](../DECKHOUSE_CONFIGURE.md) to set parameters for built-in Deckhouse modules.
-  For other modules, use [installation resource file](#installation-resource-config).  
+  **Caution!** The [configOverrides](configuration.html#initconfiguration-deckhouse-configoverrides) parameter is deprecated and will be removed. Use the [ModuleConfig](../#configuring-the-module) in the installation config to set parameters for **built-in** Deckhouse modules. For other modules, use [installation resource file](#installation-resource-config).  
 
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — general cluster parameters, such as network parameters, CRI parameters, control plane version, etc.
   
@@ -60,7 +59,7 @@ The YAML installation config contains multiple resource configurations (manifest
   - [VsphereInstanceClass](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere
   - [YandexInstanceClass](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud
 
-- `ModuleConfig` - a set of resources containing [Deckhouse configuration](../DECKHOUSE_CONFIGURE.md) parameters.
+- `ModuleConfig` — a set of resources containing [Deckhouse configuration](../) parameters.
 
 {% offtopic title="An example of the installation config..." %}
 
@@ -141,8 +140,7 @@ The optional YAML installation resource config contains the Kubernetes resource 
 
 This file can help you with the additional cluster configuration once Deckhouse is installed: deploying the Ingress controller, creating additional node groups and configuration resources, assigning permissions and managing users, etc.
 
-Warning! You cannot use [ModuleConfig](../DECKHOUSE_CONFIGURE.md) for built-in modules in the installation resource file.
-To configure built-in modules, use [configuration file](#installation-config).
+**Caution!** You cannot use [ModuleConfig](../) for **built-in** modules in the installation resource file. To configure built-in modules, use [configuration file](#installation-config).
 
 {% offtopic title="An example of the resource config... " %}
 
