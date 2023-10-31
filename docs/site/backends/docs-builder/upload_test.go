@@ -9,12 +9,12 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 		wantOK   bool
 	}{
 		{
-			"docs/install.md",
+			"./docs/install.md",
 			"/app/hugo/content/moduleName/stable/install.md",
 			true,
 		},
 		{
-			"docs",
+			"./docs",
 			"/app/hugo/content/moduleName/stable",
 			true,
 		},
