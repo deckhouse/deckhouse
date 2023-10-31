@@ -1,8 +1,16 @@
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index 5575009ea..5ad6ca0e6 100644
+index 5575009ea..c93635ba7 100644
 --- a/internal/ingress/controller/nginx.go
 +++ b/internal/ingress/controller/nginx.go
-@@ -416,14 +416,44 @@ func (n *NGINXController) Stop() error {
+@@ -22,6 +22,7 @@ import (
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
++	"io"
+ 	"net"
+ 	"net/http"
+ 	"os"
+@@ -416,14 +417,44 @@ func (n *NGINXController) Stop() error {
  }
  
  func (n *NGINXController) start(cmd *exec.Cmd) {
