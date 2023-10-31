@@ -9,8 +9,6 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /csi-snapshotter
     to: /csi-snapshotter
-    includePaths:
-      - csi-snapshotter
     before: setup
 docker:
   ENTRYPOINT: ["/csi-snapshotter"]

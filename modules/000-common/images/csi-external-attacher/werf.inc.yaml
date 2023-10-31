@@ -9,8 +9,6 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /csi-attacher
     to: /csi-attacher
-    includePaths:
-      - csi-attacher
     before: setup
 docker:
   ENTRYPOINT: ["/csi-attacher"]
