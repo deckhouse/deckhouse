@@ -48,6 +48,16 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			true,
 		},
 		{
+			"docs/install.md",
+			"/app/hugo/content/moduleName/stable/install.md",
+			true,
+		},
+		{
+			"docs",
+			"/app/hugo/content/moduleName/stable",
+			true,
+		},
+		{
 			"not-docs/file.ext",
 			"",
 			false,
