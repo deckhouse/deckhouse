@@ -184,14 +184,14 @@ ansible:
         go mod tidy
       args:
         executable: /bin/sh
-        chdir: /go/src/app
+        chdir: /go/src/app/server
   setup:
     - name: Build docs-builder
       shell: |
         go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/
       args:
         executable: /bin/sh
-        chdir: /go/src/app
+        chdir: /go/src/app/server
 git:
   - add: /docs/site/backends/docs-builder
     to: /go/src/app
