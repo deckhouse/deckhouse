@@ -70,7 +70,7 @@ lang: ru
 
 Может быть полезно:
 - [Как добавить мастер-узлы в облачном кластере...](/documentation/v1/modules/040-control-plane-manager/faq.html#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master)
-- [Как добавить статичный узел в кластер...](/documentation/v1/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер)
+- [Работа со статическими узлами...](/documentation/latest/modules/040-node-manager/#работа-со-статическими-узлами)
 
 ### Frontend-узлы
 

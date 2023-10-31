@@ -22,8 +22,7 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: StaticControlPlane is the Schema for the staticcontrolplanes
-            API
+          description: StaticControlPlane is the Schema for the Cluster API Provider Static
           properties:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation
@@ -44,6 +43,9 @@ spec:
               description: StaticControlPlaneStatus defines the observed state of StaticControlPlane
               properties:
                 externalManagedControlPlane:
+                  description: |
+                    ExternalManagedControlPlane tells cluster-api
+                    that the control plane is managed by an external service.
                   type: boolean
                 initialized:
                   description: Initialized is true when the control plane is available
@@ -51,6 +53,7 @@ spec:
                     fully ready.
                   type: boolean
                 ready:
+                  description: Ready is true when the control plane is ready.
                   type: boolean
               type: object
           type: object

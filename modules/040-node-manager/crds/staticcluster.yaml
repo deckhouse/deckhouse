@@ -22,7 +22,7 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: StaticCluster is the Schema for the staticclusters API
+          description: StaticCluster is the Schema for the Cluster API Provider Static
           properties:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation
@@ -58,10 +58,20 @@ spec:
               description: StaticClusterStatus defines the observed state of StaticCluster
               properties:
                 failureMessage:
+                  description: |
+                    FailureMessage will be set in the event that there is a terminal problem
+                    reconciling the StaticCluster and will contain a more verbose string suitable
+                    for logging and human consumption.
                   type: string
                 failureReason:
+                  description: |
+                    FailureReason will be set in the event that there is a terminal problem
+                    reconciling the StaticCluster and will contain a succinct value suitable
+                    for machine interpretation.
                   type: string
                 ready:
+                  description: |
+                    Ready denotes that the static cluster (infrastructure) is ready.
                   type: boolean
               type: object
           type: object
