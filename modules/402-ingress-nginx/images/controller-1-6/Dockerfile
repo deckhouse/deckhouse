@@ -8,6 +8,7 @@ COPY patches/makefile.patch /
 COPY patches/healthcheck.patch /
 COPY patches/metrics-SetSSLExpireTime.patch /
 COPY patches/endpointslice-missing-conditions.patch /
+COPY patches/util.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch controller-v1.6.4 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
@@ -16,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git mercurial p
     patch -p1 < /healthcheck.patch && \
     patch -p1 < /metrics-SetSSLExpireTime.patch && \
     patch -p1 < /endpointslice-missing-conditions.patch && \
+    patch -p1 < /util.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
 # luarocks assets for luajit artifact
@@ -48,16 +50,14 @@ RUN adduser -S -D -H -u 101 -h /usr/local/nginx \
 COPY --from=controller_image /usr/local /usr/local
 COPY --from=controller_image /opt /opt
 COPY --from=controller_image --chown=www-data:www-data /etc /etc
-COPY --from=controller_image --chown=www-data:www-data /dbg /dbg
-COPY --from=controller_image --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
 COPY --from=controller_image --chown=www-data:www-data /wait-shutdown /wait-shutdown
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
 # We use 0.26 controller image to copy lua libraries because is easier to install them on ubuntu
-COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
+COPY --from=controller_0_26_1 /usr/local/openresty/luajit /chroot/usr/local/openresty/luajit
 COPY patches/balancer-lua.patch /
 COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
-COPY rootfs /
+COPY --chown=www-data:www-data nginx-chroot-wrapper.sh /usr/bin/nginx
 
 RUN apk update \
   && apk upgrade \
@@ -79,42 +79,69 @@ RUN apk update \
     tzdata \
     diffutils \
     libcap \
+    util-linux \
   && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && bash -eu -c ' \
   writeDirs=( \
-    /var/lib/nginx/body \
-    /var/lib/nginx/fastcgi \
-    /var/lib/nginx/proxy \
-    /var/lib/nginx/scgi \
-    /var/lib/nginx/uwsgi \
-    /etc/ingress-controller \
-    /etc/ingress-controller/ssl \
-    /etc/ingress-controller/auth \
-    /var/log/audit \
-    /var/log \
-    /var/log/nginx \
+      /chroot/usr/local/ \
+      /chroot/opt/modsecurity/var/log \
+      /chroot/opt/modsecurity/var/upload \
+      /chroot/opt/modsecurity/var/audit \
+      /chroot/var/log/audit \
+      /chroot/var/lib/nginx \
+      /chroot/var/log/nginx \
+      /chroot/var/lib/nginx/body \
+      /chroot/var/lib/nginx/fastcgi \
+      /chroot/var/lib/nginx/proxy \
+      /chroot/var/lib/nginx/scgi \
+      /chroot/var/lib/nginx/uwsgi \
+      /chroot/tmp/nginx \
   ); \
   for dir in "${writeDirs[@]}"; do \
     mkdir -p ${dir}; \
     chown -R www-data.www-data ${dir}; \
   done' \
-  && echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /etc/ld-musl-x86_64.path \
-  && setcap    cap_net_bind_service=+ep /nginx-ingress-controller \
-  && setcap -v cap_net_bind_service=+ep /nginx-ingress-controller \
-  && setcap    cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
-  && setcap -v cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
-  && setcap    cap_net_bind_service=+ep /usr/bin/dumb-init \
-  && setcap -v cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && mkdir -p /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/etc \
+  && cp /etc/passwd /etc/group /chroot/etc/ \
+  && cp -a /usr/* /chroot/usr/ \
+  && mv /etc/nginx /chroot/etc/ \
+  && mv /etc/ingress-controller /chroot/etc/ \
+  && cp /lib/ld-musl-* /lib/libcrypto* /lib/libssl* /lib/libz* /chroot/lib/ \
+  && echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
+  && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
+  && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
+  && setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx \
+  && setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && ln -sf /chroot/etc/nginx /etc/nginx \
+  && ln -sf /chroot/tmp/nginx /tmp/nginx \
+  && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
 # Create symlinks to redirect nginx logs to stdout and stderr docker log collector
-  && ln -sf /dev/stdout /var/log/nginx/access.log \
-  && ln -sf /dev/stderr /var/log/nginx/error.log \
-  && ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx \
+  && ln -sf /chroot/var/log/nginx /var/log/nginx \
+  && touch /chroot/var/log/nginx/access.log \
+  && echo "" > /chroot/etc/resolv.conf \
+  && chown -R www-data.www-data /var/log /chroot/var/log /chroot/etc/resolv.conf \
+  && mknod -m 0666 /chroot/dev/null c 1 3 \
+  && mknod -m 0666 /chroot/dev/random c 1 8 \
+  && mknod -m 0666 /chroot/dev/urandom c 1 9 \
+  && mknod -m 0666 /chroot/dev/full c 1 7 \
+  && mknod -m 0666 /chroot/dev/ptmx c 5 2 \
+  && mknod -m 0666 /chroot/dev/zero c 1 5 \
+  && mknod -m 0666 /chroot/dev/tty c 5 0 \
+  && mkdir -p /chroot/modules_mount \
+  && mkdir -p modules_mount \
+  && ln -s /modules_mount /chroot/modules_mount \
   && apk del libcap \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
   && patch -p1 < /auth-cookie-always.patch \
   && rm -rf /*.patch
+
+COPY --chown=www-data:www-data rootfs/etc /chroot/etc/
 WORKDIR /
 USER www-data
 EXPOSE 80 443

@@ -1,6 +1,6 @@
-diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
---- a/etc/nginx/template/nginx.tmpl
-+++ b/etc/nginx/template/nginx.tmpl
+diff --git a/chroot/etc/nginx/template/nginx.tmpl b/chroot/etc/nginx/template/nginx.tmpl
+--- a/chroot/etc/nginx/template/nginx.tmpl
++++ b/chroot/etc/nginx/template/nginx.tmpl
 @@ -1316,11 +1316,7 @@
              {{ else }}
              auth_request        {{ $authPath }};
