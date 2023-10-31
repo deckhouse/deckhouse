@@ -100,6 +100,7 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 					klog.Infof("skipping %v in %s", header.Typeflag, header.Name)
 					continue
 				}
+				klog.Infof("creating %s", header.Name)
 
 				outFile, err := os.OpenFile(
 					path,
