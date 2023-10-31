@@ -45,7 +45,7 @@ spec:
               path: /healthz
               port: 8080
           volumeMounts:
-            - mountPath: /tmp/todo-b
+            - mountPath: /app
               name: modules-docs
         - name: builder
           command: ["/app/server"]
@@ -74,7 +74,7 @@ spec:
               path: /healthz
               port: 8081
           volumeMounts:
-            - mountPath: "/tmp/todo-a"
+            - mountPath: "/tmp/dst"
               name: modules-docs
       volumes:
         - name: modules-docs
