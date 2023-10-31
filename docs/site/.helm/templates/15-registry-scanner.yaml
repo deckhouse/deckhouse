@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-scanner
+  annotations:
+    "werf.io/replicas-on-creation": "1"
+  labels:
+    service: registry-scanner
+spec:
+  replicas: 1
+  minReadySeconds: 5
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      service: registry-scanner
+  template:
+    metadata:
+      labels:
+        service: registry-scanner
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry-site
+      priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
+      serviceAccountName: docs-builder
+      containers:
+        - name: registry-scanner
+          command:
+            - /app/registry-scanner
+            - --watch-registries=setme
+            - --scan-interval=30s
+          image: {{ index .Values.werf.image "registry-scanner" }}
+          {{- include "resources" . | nindent 10 }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: registry-scanner
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: registry-scanner
+  updatePolicy:
+    updateMode: "Auto"
