@@ -45,8 +45,10 @@ spec:
               path: /healthz
               port: 8080
           volumeMounts:
-            - mountPath: /app
-              name: modules-docs
+            - mountPath: /app/en/modules
+              name: modules-docs-en
+            - mountPath: /app/ru/modules
+              name: modules-docs-ru
         - name: builder
           command: ["/app/server"]
           image: {{ index .Values.werf.image "docs-builder" }}
@@ -74,10 +76,14 @@ spec:
               path: /healthz
               port: 8081
           volumeMounts:
-            - mountPath: "/tmp/dst"
-              name: modules-docs
+            - mountPath: "/app/hugo/public/en"
+              name: modules-docs-en
+            - mountPath: "/app/hugo/public/ru"
+              name: modules-docs-ru
       volumes:
-        - name: modules-docs
+        - name: modules-docs-en
+          emptyDir: {}
+        - name: modules-docs-ru
           emptyDir: {}
 
 ---
