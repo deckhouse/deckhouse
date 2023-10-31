@@ -17,23 +17,20 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 
 	"github.com/flant/docs-builder/pkg/hugo"
 	"k8s.io/klog/v2"
 )
 
-func newBuildHandler(src string, dst string) *buildHandler {
+func newBuildHandler(src string) *buildHandler {
 	return &buildHandler{
 		src: src,
-		dst: dst,
 	}
 }
 
 type buildHandler struct {
 	src string
-	dst string
 }
 
 func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -52,17 +49,12 @@ func (b *buildHandler) build() error {
 		//TODO: Quiet:  true,
 		Source: filepath.Join(b.src, "content"),
 		CfgDir: filepath.Join(b.src, "config"),
+		GC:     true,
 	}
 
 	err := hugo.Build(flags)
 	if err != nil {
 		return fmt.Errorf("hugo build: %w", err)
-	}
-
-	path := filepath.Join(b.src, "static")
-	err = os.Rename(path, b.dst)
-	if err != nil {
-		return fmt.Errorf("move: %w", err)
 	}
 
 	return nil
