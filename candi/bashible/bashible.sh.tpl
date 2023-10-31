@@ -141,12 +141,17 @@ function get_bundle() {
   fi
 }
 
+function current_uptime() {
+  cat /proc/uptime | cut -d " " -f1
+}
+
 function main() {
   export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
   export BOOTSTRAP_DIR="/var/lib/bashible"
   export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
   export BUNDLE="{{ .bundle }}"
-  export CONFIGURATION_CHECKSUM_FILE="/var/lib/bashible/configuration_checksum"
+  export CONFIGURATION_CHECKSUM_FILE="$BOOTSTRAP_DIR/configuration_checksum"
+  export UPTIME_FILE="$BOOTSTRAP_DIR/uptime"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
   export FIRST_BASHIBLE_RUN="no"
   export NODE_GROUP="{{ .nodeGroup.name }}"
@@ -212,9 +217,10 @@ function main() {
   fi
 
 {{ if eq .runType "Normal" }}
-  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] 2>/dev/null; then
+  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
+    current_uptime > $UPTIME_FILE
     exit 0
   fi
   rm -f "$CONFIGURATION_CHECKSUM_FILE"
@@ -268,6 +274,7 @@ function main() {
   annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
 
   echo "$CONFIGURATION_CHECKSUM" > $CONFIGURATION_CHECKSUM_FILE
+  current_uptime > $UPTIME_FILE
 {{ end }}
 }
 
