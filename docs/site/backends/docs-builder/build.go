@@ -49,7 +49,7 @@ func (b *buildHandler) build() error {
 		LogLevel: "debug",
 		Source:   b.src,
 		CfgDir:   filepath.Join(b.src, "config"),
-		GC:       true,
+		//GC:       true,
 	}
 
 	err := hugo.Build(flags)
