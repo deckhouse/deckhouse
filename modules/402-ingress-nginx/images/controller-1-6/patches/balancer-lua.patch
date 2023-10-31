@@ -1,7 +1,7 @@
-diff --git a/chroot/etc/nginx/lua/balancer.lua b/chroot/etc/nginx/lua/balancer.lua
+diff --git a/etc/nginx/lua/balancer.lua b/etc/nginx/lua/balancer.lua
 index 00104c89d..b9d1f3573 100644
---- a/chroot/etc/nginx/lua/balancer.lua
-+++ b/chroot/etc/nginx/lua/balancer.lua
+--- a/etc/nginx/lua/balancer.lua
++++ b/etc/nginx/lua/balancer.lua
 @@ -120,6 +120,13 @@ local function sync_backend(backend)
  
    if not balancer then

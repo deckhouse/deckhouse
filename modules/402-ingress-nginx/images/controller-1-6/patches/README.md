@@ -46,7 +46,3 @@ https://github.com/kubernetes/ingress-nginx/pull/8213
 Ingress controller panics if there is an ingress, pointing to a service with the endpointslice lacking 'condtitions.ready' field. Fixex in 1.7.
 
 https://github.com/kubernetes/ingress-nginx/pull/9550/files
-
-### Util patch
-
-Adds "-e /dev/null" flags to the "nginx -t" invocations so that "nginx -t" logs aren't got saved to /var/log/nginx/error.log file, preventing fs bloating.
