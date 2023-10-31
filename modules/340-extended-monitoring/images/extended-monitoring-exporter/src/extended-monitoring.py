@@ -222,8 +222,8 @@ class AnnotatedNode(Annotated):
     default_thresholds = {
         "disk-bytes-warning": 70,
         "disk-bytes-critical": 80,
-        "disk-inodes-warning": 85,
-        "disk-inodes-critical": 90,
+        "disk-inodes-warning": 90,
+        "disk-inodes-critical": 95,
         "load-average-per-core-warning": 3,
         "load-average-per-core-critical": 10,
     }

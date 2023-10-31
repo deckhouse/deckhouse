@@ -38,8 +38,8 @@ Non-namespaced Kubernetes-объекты не нуждаются в лейбла
 |-----------------------------------------|---------------|----------------|
 | disk-bytes-warning                      | int (percent) | 70             |
 | disk-bytes-critical                     | int (percent) | 80             |
-| disk-inodes-warning                     | int (percent) | 85             |
-| disk-inodes-critical                    | int (percent) | 90             |
+| disk-inodes-warning                     | int (percent) | 90             |
+| disk-inodes-critical                    | int (percent) | 95             |
 | load-average-per-core-warning           | int           | 3              |
 | load-average-per-core-critical          | int           | 10             |
 
