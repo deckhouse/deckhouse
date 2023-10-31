@@ -9,8 +9,6 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /csi-resizer
     to: /csi-resizer
-    includePaths:
-      - csi-resizer
     before: setup
 docker:
   ENTRYPOINT: ["/csi-resizer"]

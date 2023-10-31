@@ -9,8 +9,6 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /csi-provisioner
     to: /csi-provisioner
-    includePaths:
-      - csi-provisioner
     before: setup
 docker:
   ENTRYPOINT: ["/csi-provisioner"]
