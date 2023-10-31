@@ -98,14 +98,10 @@ spec:
   volumeMounts:
     - name: res-files
       mountPath: /var/lib/linstor.d
-    - name: etc-configs
-      mountPath: /etc/linstor
   extraVolumes:
   - name: spaas-certs
     secret:
       secretName: spaas-certs
-  - name: res-files
-    readOnly: false
   - name: etc-configs
     readOnly: false
   logLevel: info
@@ -116,8 +112,8 @@ spec:
     volumeMounts:
       - name: res-files
         mountPath: /var/lib/linstor.d
-      - name: etc-configs
-        mountPath: /etc/linstor
+      - name: linstor-client
+        mountPath: /etc/linstor/client
   - name: kube-rbac-proxy
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 4 }}
     image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
