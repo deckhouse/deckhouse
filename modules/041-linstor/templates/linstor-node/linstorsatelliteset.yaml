@@ -102,6 +102,8 @@ spec:
   - name: spaas-certs
     secret:
       secretName: spaas-certs
+  - name: res-files
+    readOnly: false
   - name: etc-configs
     readOnly: false
   logLevel: info
