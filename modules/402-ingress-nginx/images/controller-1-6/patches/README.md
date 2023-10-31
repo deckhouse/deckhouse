@@ -50,3 +50,7 @@ https://github.com/kubernetes/ingress-nginx/pull/9550/files
 ### Util patch
 
 Adds "-e /dev/null" flags to the "nginx -t" invocations so that "nginx -t" logs aren't got saved to /var/log/nginx/error.log file, preventing fs bloating.
+
+### Startup logs
+
+Adds some additional logs from nginx binary on startup. May contain useful warnings.
