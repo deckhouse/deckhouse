@@ -17,7 +17,7 @@ data:
     }
 
     http {
-      include       mime.types;
+      include       /opt/nginx-static/conf/mime.types;
       default_type  application/octet-stream;
 
       log_format json_combined escape=json
@@ -66,9 +66,9 @@ data:
           {{- if hasKey $location "users" }}
           auth_basic "Authentication Required!";
             {{- if eq $location.location "/" }}
-          auth_basic_user_file /etc/nginx/htpasswd/htpasswd;
+          auth_basic_user_file /opt/nginx-static/htpasswd/htpasswd;
             {{- else }}
-          auth_basic_user_file /etc/nginx/htpasswd/{{ $location.location | trimPrefix "/" }};
+          auth_basic_user_file /opt/nginx-static/htpasswd/{{ $location.location | trimPrefix "/" }};
             {{- end }}
           {{- end }}
 
