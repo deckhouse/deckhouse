@@ -1,18 +1,33 @@
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index 5575009ea..567881cf6 100644
+index 5575009ea..47a0acfc1 100644
 --- a/internal/ingress/controller/nginx.go
 +++ b/internal/ingress/controller/nginx.go
-@@ -418,10 +418,12 @@ func (n *NGINXController) Stop() error {
+@@ -416,12 +416,22 @@ func (n *NGINXController) Stop() error {
+ }
+ 
  func (n *NGINXController) start(cmd *exec.Cmd) {
- 	cmd.Stdout = os.Stdout
- 	cmd.Stderr = os.Stderr
+-	cmd.Stdout = os.Stdout
+-	cmd.Stderr = os.Stderr
 -	if err := cmd.Start(); err != nil {
-+	if out, err := cmd.CombinedOutput(); err != nil {
- 		klog.Fatalf("NGINX error: %v", err)
- 		n.ngxErrCh <- err
- 		return
+-		klog.Fatalf("NGINX error: %v", err)
+-		n.ngxErrCh <- err
+-		return
++	if n.cfg.IsChroot {
++		if out, err := cmd.CombinedOutput(); err != nil {
++			klog.Fatalf("NGINX error: %v", err)
++			n.ngxErrCh <- err
++			return
++		} else {
++			klog.Infof("%v\n", string(out))
++		}
 +	} else {
-+		klog.Infof("%v\n", string(out))
++		cmd.Stdout = os.Stdout
++		cmd.Stderr = os.Stderr
++		if err := cmd.Start(); err != nil {
++			klog.Fatalf("NGINX error: %v", err)
++			n.ngxErrCh <- err
++			return
++		}
  	}
  
  	go func() {
