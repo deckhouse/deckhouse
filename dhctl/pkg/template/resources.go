@@ -188,7 +188,7 @@ func validateModuleConfigs(resources Resources) error {
 	return nil
 }
 
-func OnlyExternalModuleConfigsInResources(path string) error {
+func OnlyModulesFromSourcesConfigsInResources(path string) error {
 	resources, err := loadResources(path, nil)
 	if err != nil {
 		return err

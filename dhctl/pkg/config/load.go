@@ -219,7 +219,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
-			return fmt.Errorf("Schema for module config %s wasn't found. Check module name or use resources file for external modules", mc.GetName())
+			return fmt.Errorf("Schema for module config %s wasn't found. Check module name or use resources file for modules from sources", mc.GetName())
 		}
 
 		if mc.Spec.Version == 0 {

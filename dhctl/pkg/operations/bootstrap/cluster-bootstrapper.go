@@ -191,7 +191,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	if app.ResourcesPath != "" {
-		err := template.OnlyExternalModuleConfigsInResources(app.ResourcesPath)
+		err := template.OnlyModulesFromSourcesConfigsInResources(app.ResourcesPath)
 		if err != nil {
 			return err
 		}

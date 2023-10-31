@@ -37,7 +37,7 @@ The YAML installation config contains multiple resource configurations (manifest
 
   This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-related parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
 
-  Warning! The `configOverrides` option is deprecated and will be removed in Deckhouse version 1.55. Use the [ModuleConfig](../DECKHOUSE_CONFIGURE.md) to set parameters for built-in Deckhouse modules.
+  Warning! The `configOverrides` option is deprecated and will be removed. Use the [ModuleConfig](../DECKHOUSE_CONFIGURE.md) to set parameters for built-in Deckhouse modules.
   For other modules, use [installation resource file](#installation-resource-config).  
 
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — general cluster parameters, such as network parameters, CRI parameters, control plane version, etc.
