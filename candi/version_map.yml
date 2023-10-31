@@ -35,7 +35,7 @@ k8s:
       attacher: v4.2.0
       resizer: v1.7.0
       registrar: v2.7.0
-      snapshotter: v6.2.1
+      snapshotter: v6.3.1
       livenessprobe: v2.9.0
   '1.25':
     status: available
@@ -55,7 +55,7 @@ k8s:
       attacher: v4.2.0
       resizer: v1.7.0
       registrar: v2.7.0
-      snapshotter: v6.2.1
+      snapshotter: v6.3.1
       livenessprobe: v2.9.0
   '1.26':
     status: available
@@ -75,7 +75,7 @@ k8s:
       attacher: v4.2.0
       resizer: v1.7.0
       registrar: v2.7.0
-      snapshotter: v6.2.1
+      snapshotter: v6.3.1
       livenessprobe: v2.9.0
   '1.27':
     status: available
@@ -95,7 +95,7 @@ k8s:
       attacher: v4.3.0
       resizer: v1.8.0
       registrar: v2.8.0
-      snapshotter: v6.2.1
+      snapshotter: v6.3.1
       livenessprobe: v2.10.0
   '1.28':
     status: preview
@@ -115,5 +115,5 @@ k8s:
       attacher: v4.4.0
       resizer: v1.9.0
       registrar: v2.9.0
-      snapshotter: v6.3.0
+      snapshotter: v6.3.1
       livenessprobe: v2.11.0
