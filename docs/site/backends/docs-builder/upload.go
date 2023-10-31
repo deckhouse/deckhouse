@@ -81,7 +81,12 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 		switch header.Typeflag {
 		case tar.TypeDir:
 			for _, channel := range channels {
-				path := filepath.Join(u.baseDir, "content", moduleName, channel, header.Name)
+				path, ok := u.getLocalPath(moduleName, channel, header.Name)
+				if !ok {
+					klog.Infof("skipping %v in %s", header.Typeflag, header.Name)
+					continue
+				}
+
 				if err := os.MkdirAll(path, 0700); err != nil {
 					return fmt.Errorf("mkdir %q failed: %w", path, err)
 				}
@@ -90,7 +95,13 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			files := make([]io.Writer, 0, len(channels))
 
 			for _, channel := range channels {
-				path := filepath.Join(u.baseDir, "content", moduleName, channel, header.Name)
+				path, ok := u.getLocalPath(moduleName, channel, header.Name)
+				if !ok {
+					klog.Infof("skipping %v in %s", header.Typeflag, header.Name)
+					continue
+				}
+				klog.Infof("creating %s", header.Name)
+
 				outFile, err := os.OpenFile(
 					path,
 					os.O_RDWR|os.O_CREATE|os.O_TRUNC,
@@ -163,4 +174,14 @@ func (u *loadHandler) generateChannelMapping(moduleName, version string, channel
 	}
 
 	return nil
+}
+
+func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string, bool) {
+	fileName, _ = strings.CutPrefix(fileName, "./")
+
+	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
+		return filepath.Join(u.baseDir, "content", moduleName, channel, fileName), true
+	}
+
+	return "", false
 }
