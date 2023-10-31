@@ -47,7 +47,7 @@ func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reque
 func (b *buildHandler) build() error {
 	flags := hugo.Flags{
 		//TODO: Quiet:  true,
-		Source: filepath.Join(b.src, "content"),
+		Source: b.src,
 		CfgDir: filepath.Join(b.src, "config"),
 		GC:     true,
 	}
