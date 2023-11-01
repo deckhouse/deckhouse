@@ -51,6 +51,11 @@ spec:
                 validationEnabled:
                   description: |
                     Включить валидацию Ingress-правил.
+                annotationValidationEnabled:
+                  description: |
+                    Включить валидацию аннотаций Ingress-правил.
+
+                    Требуется версия контроллера 1.9.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у подов.
