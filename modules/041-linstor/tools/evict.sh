@@ -249,7 +249,7 @@ linstor_change_replicas_count() {
         echo "Warning! The total number of diskfull replicas for resource ${resource_name} (${current_diskful_replicas_count}) does not equal the desired number of replicas(${desired_diskful_replicas_count}) even after changing the replica count. The following command was executed: \"linstor resource-definition auto-place --place-count ${desired_diskful_replicas_count} $resource_name\". Manual action required."
         exit_function
       fi
-      changed_resources=$((var + 1))
+      changed_resources=$((changed_resources + 1))
     else
       echo "The total number of diskfull replicas for resource ${resource_name} (${current_diskful_replicas_count}) equals the desired number of diskfull replicas(${desired_diskful_replicas_count}). Skipping changing the count of diskful replicas for this resource"
     fi

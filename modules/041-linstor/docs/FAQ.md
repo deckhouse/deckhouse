@@ -176,15 +176,15 @@ However, sometimes this operation may not proceed as expected. In such cases, yo
 
   > Note! After the script is finished, the node will be removed from both Kubernetes and LINSTOR.
 
-*  Clean up the node as follows:
+* Clean up the node as follows:
 
   * remove all logical volumes and volume groups from the node that was used for LINSTOR storage pools:
+
     ```shell
     vgremove -y <vg_name>
     ```
 
   * follow [this instruction](https://deckhouse.io/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster), starting from the second point for further cleanup.
-
 
 ## Troubleshooting
 
