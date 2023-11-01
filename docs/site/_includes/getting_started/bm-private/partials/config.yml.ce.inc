@@ -43,6 +43,9 @@ deckhouse:
             # [<en>] Use self-signed certificates for Deckhouse modules.
             # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
             clusterIssuerName: selfsigned
+      # [<en>] The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
+      # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
+      storageClass: localpath-deckhouse-system
     certManager:
       disableLetsencrypt: true
     userAuthn:
