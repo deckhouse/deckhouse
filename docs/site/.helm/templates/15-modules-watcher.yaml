@@ -32,12 +32,12 @@ spec:
             - --scan-interval={{ pluck .Values.werf.env .Values.moduleWatcher.scanInterval | first | default .Values.moduleWatcher.scanInterval._default | quote }}
           image: {{ index .Values.werf.image "registry-modules-watcher" }}
           {{- include "resources" . | nindent 10 }}
-          env:
-            - name: "REGISTRY_AUTHS"
-              valueFrom:
-                secretKeyRef:
-                  key: .dockerconfigjson
-                  name: watch-registry-auths
+{{/*          env:*/}}
+{{/*            - name: "REGISTRY_AUTHS"*/}}
+{{/*              valueFrom:*/}}
+{{/*                secretKeyRef:*/}}
+{{/*                  key: .dockerconfigjson*/}}
+{{/*                  name: watch-registry-auths*/}}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -48,6 +48,8 @@ metadata:
 data:
   .dockerconfigjson: |
     {{ .Values.global.moduleWatcherAuths }}
+  test: |
+    {{ .Values.global.test }}
 {{/*---*/}}
 {{/*apiVersion: v1*/}}
 {{/*kind: Secret*/}}
