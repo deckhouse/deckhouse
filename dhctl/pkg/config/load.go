@@ -149,6 +149,11 @@ func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {
 	return s.cache[*index]
 }
 
+func (s *SchemaStore) HasSchemaForModuleConfig(name string) bool {
+	_, ok := s.moduleConfigsCache[name]
+	return ok
+}
+
 func (s *SchemaStore) GetModuleConfigVersion(name string) int {
 	schema, ok := s.moduleConfigsCache[name]
 	if ok {
@@ -206,7 +211,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		}
 		mcName := mc.GetName()
 		if mc.Spec.Enabled == nil && mcName != "global" {
-			return fmt.Errorf("enabled field for module config %s shoud set to true or false", mcName)
+			return fmt.Errorf("Enabled field for module config %s shoud set to true or false", mcName)
 		}
 		if len(mc.Spec.Settings) == 0 {
 			return nil
@@ -214,11 +219,11 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
-			return fmt.Errorf("Schema for module config %s wasn't found.", mc.GetName())
+			return fmt.Errorf("Schema for module config %s wasn't found. Check module name or use resources file for modules from sources", mc.GetName())
 		}
 
 		if mc.Spec.Version == 0 {
-			return fmt.Errorf("version field for module config %s shoud set", mcName)
+			return fmt.Errorf("Version field for module config %s shoud set", mcName)
 		}
 
 		var err error
