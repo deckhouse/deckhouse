@@ -36,6 +36,30 @@ deckhouse:
         # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
         # [<ru>] Например, Grafana для %s.example.com будет доступна на домене grafana.example.com.
         publicDomainTemplate: "%s.example.com"
+        # [<en>] The HTTPS implementation used by the Deckhouse modules.
+        # [<ru>] Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+        https:
+          certManager:
+            # [<en>] Name of a ClusterIssuer to use for Deckhouse modules.
+            # [<en>] For a closed environment, self-signed certificates are set.
+            # [<ru>] Имя ClusterIssuer, используемого модулями Deckhouse.
+            # [<ru>] Для закрытого окружения задаются самоподписанные сертификаты.
+            clusterIssuerName: selfsigned
+    certManager:
+      # [<en>] Disable letsencrypt and letsencrypt-staging ClusterIssuer objects (if set to true).
+      # [<en>] It is necessary to prevent attempts to access outside to Let's Encrypt.
+      # [<ru>] Не создавать ClusterIssuer letsencrypt и letsencrypt-staging в кластере.
+      # [<ru>] Необходимо для предовтвращения попыток доступа наружу к Let's Encrypt.
+      disableLetsencrypt: true
+    userAuthn:
+      controlPlaneConfigurator:
+        # [<en>] How to determine the CA that will be used when configuring kube-apiserver.
+        # [<en>] Extract the CA of certificate from the Secret that is used in the Ingress.
+        # [<en>] Used with self-signed certificates in Ingress resources.
+        # [<ru>] Способ определения CA, который будет использован при настройке kube-apiserver.
+        # [<ru>] Извлекает CA или сам сертификат из Secret’а, который используется в Ingress-ресурсе.
+        # [<ru>] Используется с самоподписанными сертификатами в Ingress-ресурсах.
+        dexCAMode: FromIngressSecret
     # [<en>] Enable the cni-flannel module.
     # [<ru>] Включить модуль cni-flannel.
     # [<en>] You might consider changing this.
