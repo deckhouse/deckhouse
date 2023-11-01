@@ -40,3 +40,7 @@ Without always option toggled, ingress-nginx does not set the cookie in case if 
 Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. Anyway, we can't use it, because we need this behavior for all ingresses.
 
 https://github.com/kubernetes/ingress-nginx/pull/8213
+
+### Util patch
+
+Adds "-e /dev/null" flags to the "nginx -t" invocations so that "nginx -t" logs aren't got saved to /var/log/nginx/error.log file, preventing fs bloating.

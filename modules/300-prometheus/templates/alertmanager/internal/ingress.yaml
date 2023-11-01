@@ -36,7 +36,6 @@ metadata:
       proxy_ssl_session_reuse on;
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/rewrite-target: "/$2"
-    nginx.ingress.kubernetes.io/app-root: {{ printf "alertmanager/%s" .name  | quote }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" $ | quote }}
     {{- if (include "helm_lib_module_https_ingress_tls_enabled" $) }}

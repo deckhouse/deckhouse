@@ -89,6 +89,13 @@ spec:
                   default: true
                   description: |
                     Enable ingress validation admission.
+                annotationValidationEnabled:
+                  type: boolean
+                  default: false
+                  description: |
+                    Enables the annotation validation feature.
+
+                    Requires a controller of 1.9 version.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -522,6 +529,9 @@ spec:
                     inlet:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
+              x-kubernetes-validations:
+              - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
+                rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.ingressClass
           name: Ingress Class
