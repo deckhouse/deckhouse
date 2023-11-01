@@ -40,7 +40,7 @@ k8s:
       livenessprobe: v2.9.0
   '1.25':
     status: available
-    patch: 15
+    patch: 14
     bashible: *bashible
     criToolsPatch: '0'
     clusterAutoscalerPatch: 3
@@ -61,7 +61,7 @@ k8s:
       livenessprobe: v2.9.0
   '1.26':
     status: available
-    patch: 10
+    patch: 9
     bashible: *bashible
     criToolsPatch: 1
     clusterAutoscalerPatch: 2
@@ -82,7 +82,7 @@ k8s:
       livenessprobe: v2.9.0
   '1.27':
     status: available
-    patch: 7
+    patch: 6
     bashible: *bashible
     criToolsPatch: 1
     clusterAutoscalerPatch: '0'
