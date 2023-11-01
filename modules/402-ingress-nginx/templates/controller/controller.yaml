@@ -215,6 +215,9 @@ spec:
         {{- if eq "nginx" $crd.spec.ingressClass }}
         - --watch-ingress-without-class=true
         {{- end }}
+        {{- if and $crd.spec.annotationValidationEnabled (eq $controllerVersion "1.9") }}
+        - --enable-annotation-validation=true
+        {{- end }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}

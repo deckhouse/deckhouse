@@ -89,6 +89,13 @@ spec:
                   default: true
                   description: |
                     Enable ingress validation admission.
+                annotationValidationEnabled:
+                  type: boolean
+                  default: false
+                  description: |
+                    Enables the annotation validation feature.
+
+                    Requires a controller of 1.9 version.
                 nodeSelector:
                   type: object
                   additionalProperties:
