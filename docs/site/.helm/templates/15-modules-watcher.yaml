@@ -17,8 +17,8 @@ spec:
     metadata:
       labels:
         app: registry-modules-watcher
-      annotations:
-        checksum/auths: {{ .Values.global.moduleWatcherAuths | quote | sha256sum }}
+{{/*      annotations:*/}}
+{{/*        checksum/auths: {{ .Values.global.moduleWatcherAuths | quote | sha256sum }}*/}}
     spec:
       imagePullSecrets:
         - name: deckhouse-registry-site
@@ -40,16 +40,25 @@ spec:
                   name: watch-registry-auths
 ---
 apiVersion: v1
-kind: Secret
-type: kubernetes.io/dockerconfigjson
+kind: ConfigMap
 metadata:
   name: watch-registry-auths
   labels:
     app: registry-modules-watcher
 data:
   .dockerconfigjson: |
-    {{ .Values.global.moduleWatcherAuths | quote | b64dec }}
-
+    {{ .Values.global.moduleWatcherAuths }}
+{{/*---*/}}
+{{/*apiVersion: v1*/}}
+{{/*kind: Secret*/}}
+{{/*type: kubernetes.io/dockerconfigjson*/}}
+{{/*metadata:*/}}
+{{/*  name: watch-registry-auths*/}}
+{{/*  labels:*/}}
+{{/*    app: registry-modules-watcher*/}}
+{{/*data:*/}}
+{{/*  .dockerconfigjson: |*/}}
+{{/*    {{ .Values.global.moduleWatcherAuths | quote | b64dec }}*/}}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
