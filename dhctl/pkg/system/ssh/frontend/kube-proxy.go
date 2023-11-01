@@ -159,7 +159,11 @@ func (k *KubeProxy) tryToRestartFully(startID int) {
 }
 
 func (k *KubeProxy) proxyCMD(startID int) *Command {
-	command := fmt.Sprintf("PATH=$PATH:%s/; kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", app.DeckhouseNodeBinPath, k.port)
+	kubectlProxy := fmt.Sprintf("kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", k.port)
+	if v := os.Getenv("KUBE_PROXY_ACCEPT_HOSTS"); v != "" {
+		kubectlProxy += fmt.Sprintf(" --accept-hosts='%s'", v)
+	}
+	command := fmt.Sprintf("PATH=$PATH:%s/; %s", app.DeckhouseNodeBinPath, kubectlProxy)
 
 	log.DebugF("[%d] Proxy command for start: %s\n", startID, command)
 
