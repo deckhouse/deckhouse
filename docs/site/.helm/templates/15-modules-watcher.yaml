@@ -17,8 +17,8 @@ spec:
     metadata:
       labels:
         app: registry-modules-watcher
-{{/*      annotations:*/}}
-{{/*        checksum/auths: {{ .Values.global.moduleWatcherAuths | quote | sha256sum }}*/}}
+        annotations:
+          checksum/auths: {{ .Values.global.moduleWatcherAuths | quote | sha256sum }}
     spec:
       imagePullSecrets:
         - name: deckhouse-registry-site
@@ -32,35 +32,23 @@ spec:
             - --scan-interval={{ pluck .Values.werf.env .Values.moduleWatcher.scanInterval | first | default .Values.moduleWatcher.scanInterval._default | quote }}
           image: {{ index .Values.werf.image "registry-modules-watcher" }}
           {{- include "resources" . | nindent 10 }}
-{{/*          env:*/}}
-{{/*            - name: "REGISTRY_AUTHS"*/}}
-{{/*              valueFrom:*/}}
-{{/*                secretKeyRef:*/}}
-{{/*                  key: .dockerconfigjson*/}}
-{{/*                  name: watch-registry-auths*/}}
+          env:
+            - name: "REGISTRY_AUTHS"
+              valueFrom:
+                secretKeyRef:
+                  key: .dockerconfigjson
+                  name: watch-registry-auths
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
+type: kubernetes.io/dockerconfigjson
 metadata:
   name: watch-registry-auths
   labels:
     app: registry-modules-watcher
 data:
   .dockerconfigjson: |
-    {{ .Values.global.moduleWatcherAuths }}
-  test: |
-    {{ .Values.global.test }}
-{{/*---*/}}
-{{/*apiVersion: v1*/}}
-{{/*kind: Secret*/}}
-{{/*type: kubernetes.io/dockerconfigjson*/}}
-{{/*metadata:*/}}
-{{/*  name: watch-registry-auths*/}}
-{{/*  labels:*/}}
-{{/*    app: registry-modules-watcher*/}}
-{{/*data:*/}}
-{{/*  .dockerconfigjson: |*/}}
-{{/*    {{ .Values.global.moduleWatcherAuths | quote | b64dec }}*/}}
+    {{ .Values.global.moduleWatcherAuths | quote | b64dec }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler

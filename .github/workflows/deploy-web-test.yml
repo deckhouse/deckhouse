@@ -266,12 +266,7 @@ jobs:
           WERF_SET_DCNAME: "web.dc_name=dev"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
-      #    WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
-          WERF_SET_MODULE_WATCHER_TEST: "global.test=${{ secrets.MODULE_WATCHER_AUTHS }}"
-          WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=XXXXYUZ"
-          WERF_LOG_VERBOSE: "on"
-          WERF_LOG_DEBUG: "on"
-        # </template: deploy_site_template>
+      # </template: deploy_site_template>
 
       # <template: doc_version_template>
       - name: Set documentation version
