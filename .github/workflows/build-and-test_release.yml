@@ -2480,6 +2480,7 @@ jobs:
           WERF_SET_DCNAME: "web.dc_name=prod-sel"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
+          WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{secrets.MODULE_WATCHER_AUTHS}}"
       # </template: deploy_site_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
