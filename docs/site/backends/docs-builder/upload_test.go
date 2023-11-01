@@ -53,6 +53,11 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			true,
 		},
 		{
+			"docs/README_RU.md",
+			"/app/hugo/content/moduleName/stable/README.ru.md",
+			true,
+		},
+		{
 			"docs",
 			"/app/hugo/content/moduleName/stable",
 			true,

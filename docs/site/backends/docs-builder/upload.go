@@ -159,6 +159,10 @@ func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string
 		fileName = strings.Replace(fileName, "_RU.md", ".ru.md", 1)
 	}
 
+	if strings.HasSuffix(fileName, "_RU.md") {
+		fileName = strings.Replace(fileName, "_RU.md", ".ru.md", 1)
+	}
+
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
 		return filepath.Join(u.baseDir, "content/modules", moduleName, channel, fileName), true
 	}
