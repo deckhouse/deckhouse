@@ -160,7 +160,7 @@ metadata:
 spec:
   enabled: true
   settings:
-    longtermStorageClass: localpath-system
+    longtermStorageClass: localpath-monitoring
     storageClass: localpath-monitoring
   version: 2
 EOF
