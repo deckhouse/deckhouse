@@ -44,10 +44,6 @@ deckhouse:
             # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
             clusterIssuerName: selfsigned
     certManager:
-      # [<en>] Disable letsencrypt and letsencrypt-staging ClusterIssuer objects (if set to true).
-      # [<en>] It is necessary to prevent attempts to access outside to Let's Encrypt.
-      # [<ru>] Не создавать ClusterIssuer letsencrypt и letsencrypt-staging в кластере.
-      # [<ru>] Необходимо для предовтвращения попыток доступа наружу к Let's Encrypt.
       disableLetsencrypt: true
     userAuthn:
       controlPlaneConfigurator:
