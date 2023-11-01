@@ -41,14 +41,14 @@ spec:
 ---
 apiVersion: v1
 kind: Secret
-type: kubernetes.io/dockerconfigjson
+type: Opaque
 metadata:
   name: watch-registry-auths
   labels:
     app: registry-modules-watcher
 data:
   .dockerconfigjson: |
-    {{ .Values.global.moduleWatcherAuths | quote | b64dec }}
+    {{ .Values.global.moduleWatcherAuths | b64dec }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
