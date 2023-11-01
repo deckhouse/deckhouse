@@ -119,7 +119,7 @@ func (m *LeasesManager) Remove(ctx context.Context) error {
 
 func (m *LeasesManager) newLease() *coordination.Lease {
 	address := fmt.Sprintf(
-		"%s.%s.pod.cluster.local",
+		"%s.%s.pod.cluster.local:8081",
 		strings.ReplaceAll(m.podIP, ".", "-"),
 		m.podNamespace,
 	)
