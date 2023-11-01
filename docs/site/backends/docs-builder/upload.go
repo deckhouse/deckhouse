@@ -24,17 +24,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
 )
 
 func newLoadHandler(baseDir string) *loadHandler {
-	return &loadHandler{baseDir}
+	return &loadHandler{baseDir: baseDir}
 }
 
 type loadHandler struct {
 	baseDir string
+
+	channelMappingMu sync.Mutex
 }
 
 func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -131,6 +134,9 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 }
 
 func (u *loadHandler) generateChannelMapping(moduleName, version string, channels []string) error {
+	u.channelMappingMu.Lock()
+	defer u.channelMappingMu.Unlock()
+
 	path := filepath.Join(u.baseDir, "data/modules.yaml")
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
