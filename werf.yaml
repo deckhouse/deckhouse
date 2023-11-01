@@ -35,6 +35,18 @@ gitWorktree:
 
 ---
 {{- define "base components" }}
+  - name: "Install openssl"
+    apk:
+      name:
+      - openssl
+      update_cache: yes
+
+  - name: "Install libcrypto1.1"
+    apk:
+      name:
+      - libcrypto1.1
+      update_cache: yes
+
   - name: "Install jo"
     apk:
       name:
