@@ -1,6 +1,6 @@
 diff --git a/lib/codecs/src/encoding/format/cef.rs b/lib/codecs/src/encoding/format/cef.rs
 new file mode 100644
-index 0000000000000..b808b059948da
+index 000000000..b808b0599
 --- /dev/null
 +++ b/lib/codecs/src/encoding/format/cef.rs
 @@ -0,0 +1,483 @@
@@ -488,7 +488,7 @@ index 0000000000000..b808b059948da
 +    }
 +}
 diff --git a/lib/codecs/src/encoding/format/mod.rs b/lib/codecs/src/encoding/format/mod.rs
-index 1d4e008380516..63e4c86d51171 100644
+index 1d4e00838..63e4c86d5 100644
 --- a/lib/codecs/src/encoding/format/mod.rs
 +++ b/lib/codecs/src/encoding/format/mod.rs
 @@ -4,6 +4,7 @@
@@ -508,7 +508,7 @@ index 1d4e008380516..63e4c86d51171 100644
  pub use gelf::{GelfSerializer, GelfSerializerConfig};
  pub use json::{JsonSerializer, JsonSerializerConfig};
 diff --git a/lib/codecs/src/encoding/mod.rs b/lib/codecs/src/encoding/mod.rs
-index d798e8d7bf9d9..237f83d95ef1e 100644
+index f95164117..eadbc9fa7 100644
 --- a/lib/codecs/src/encoding/mod.rs
 +++ b/lib/codecs/src/encoding/mod.rs
 @@ -8,11 +8,11 @@ use std::fmt::Debug;
@@ -528,7 +528,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
  };
  pub use framing::{
      BoxedFramer, BoxedFramingError, BytesEncoder, BytesEncoderConfig, CharacterDelimitedEncoder,
-@@ -197,6 +197,13 @@ pub enum SerializerConfig {
+@@ -185,6 +185,13 @@ pub enum SerializerConfig {
          avro: AvroSerializerOptions,
      },
 
@@ -542,7 +542,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
      /// Encodes an event as a CSV message.
      ///
      /// This codec must be configured with fields to encode.
-@@ -269,6 +276,12 @@ impl From<AvroSerializerConfig> for SerializerConfig {
+@@ -248,6 +255,12 @@ impl From<AvroSerializerConfig> for SerializerConfig {
      }
  }
 
@@ -555,7 +555,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
  impl From<CsvSerializerConfig> for SerializerConfig {
      fn from(config: CsvSerializerConfig) -> Self {
          Self::Csv(config)
-@@ -324,6 +337,7 @@ impl SerializerConfig {
+@@ -303,6 +316,7 @@ impl SerializerConfig {
              SerializerConfig::Avro { avro } => Ok(Serializer::Avro(
                  AvroSerializerConfig::new(avro.schema.clone()).build()?,
              )),
@@ -563,7 +563,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
              SerializerConfig::Csv(config) => Ok(Serializer::Csv(config.build()?)),
              SerializerConfig::Gelf => Ok(Serializer::Gelf(GelfSerializerConfig::new().build())),
              SerializerConfig::Json(config) => Ok(Serializer::Json(config.build())),
-@@ -356,7 +370,8 @@ impl SerializerConfig {
+@@ -335,7 +349,8 @@ impl SerializerConfig {
              SerializerConfig::Avro { .. } | SerializerConfig::Native => {
                  FramingConfig::LengthDelimited
              }
@@ -573,7 +573,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
              | SerializerConfig::Gelf
              | SerializerConfig::Json(_)
              | SerializerConfig::Logfmt
-@@ -372,6 +387,7 @@ impl SerializerConfig {
+@@ -351,6 +366,7 @@ impl SerializerConfig {
              SerializerConfig::Avro { avro } => {
                  AvroSerializerConfig::new(avro.schema.clone()).input_type()
              }
@@ -581,7 +581,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
              SerializerConfig::Csv(config) => config.input_type(),
              SerializerConfig::Gelf { .. } => GelfSerializerConfig::input_type(),
              SerializerConfig::Json(config) => config.input_type(),
-@@ -389,6 +405,7 @@ impl SerializerConfig {
+@@ -368,6 +384,7 @@ impl SerializerConfig {
              SerializerConfig::Avro { avro } => {
                  AvroSerializerConfig::new(avro.schema.clone()).schema_requirement()
              }
@@ -589,7 +589,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
              SerializerConfig::Csv(config) => config.schema_requirement(),
              SerializerConfig::Gelf { .. } => GelfSerializerConfig::schema_requirement(),
              SerializerConfig::Json(config) => config.schema_requirement(),
-@@ -406,6 +423,8 @@ impl SerializerConfig {
+@@ -385,6 +402,8 @@ impl SerializerConfig {
  pub enum Serializer {
      /// Uses an `AvroSerializer` for serialization.
      Avro(AvroSerializer),
@@ -598,7 +598,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
      /// Uses a `CsvSerializer` for serialization.
      Csv(CsvSerializer),
      /// Uses a `GelfSerializer` for serialization.
-@@ -430,6 +449,7 @@ impl Serializer {
+@@ -409,6 +428,7 @@ impl Serializer {
          match self {
              Serializer::Json(_) | Serializer::NativeJson(_) | Serializer::Gelf(_) => true,
              Serializer::Avro(_)
@@ -606,7 +606,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
              | Serializer::Csv(_)
              | Serializer::Logfmt(_)
              | Serializer::Text(_)
-@@ -450,6 +470,7 @@ impl Serializer {
+@@ -429,6 +449,7 @@ impl Serializer {
              Serializer::Json(serializer) => serializer.to_json_value(event),
              Serializer::NativeJson(serializer) => serializer.to_json_value(event),
              Serializer::Avro(_)
@@ -614,7 +614,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
              | Serializer::Csv(_)
              | Serializer::Logfmt(_)
              | Serializer::Text(_)
-@@ -467,6 +488,12 @@ impl From<AvroSerializer> for Serializer {
+@@ -446,6 +467,12 @@ impl From<AvroSerializer> for Serializer {
      }
  }
 
@@ -627,7 +627,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
  impl From<CsvSerializer> for Serializer {
      fn from(serializer: CsvSerializer) -> Self {
          Self::Csv(serializer)
-@@ -521,6 +548,7 @@ impl tokio_util::codec::Encoder<Event> for Serializer {
+@@ -500,6 +527,7 @@ impl tokio_util::codec::Encoder<Event> for Serializer {
      fn encode(&mut self, event: Event, buffer: &mut BytesMut) -> Result<(), Self::Error> {
          match self {
              Serializer::Avro(serializer) => serializer.encode(event, buffer),
@@ -636,7 +636,7 @@ index d798e8d7bf9d9..237f83d95ef1e 100644
              Serializer::Gelf(serializer) => serializer.encode(event, buffer),
              Serializer::Json(serializer) => serializer.encode(event, buffer),
 diff --git a/src/codecs/encoding/config.rs b/src/codecs/encoding/config.rs
-index 97096de1e0f3d..b1d970e8e1d26 100644
+index 97096de1e..b1d970e8e 100644
 --- a/src/codecs/encoding/config.rs
 +++ b/src/codecs/encoding/config.rs
 @@ -109,7 +109,8 @@ impl EncodingConfigWithFraming {
@@ -650,7 +650,7 @@ index 97096de1e0f3d..b1d970e8e1d26 100644
                  | Serializer::Logfmt(_)
                  | Serializer::NativeJson(_)
 diff --git a/src/codecs/encoding/encoder.rs b/src/codecs/encoding/encoder.rs
-index 3f9970fb961a2..09b8241999297 100644
+index 3f9970fb9..09b824199 100644
 --- a/src/codecs/encoding/encoder.rs
 +++ b/src/codecs/encoding/encoder.rs
 @@ -116,6 +116,7 @@ impl Encoder<Framer> {
@@ -662,19 +662,19 @@ index 3f9970fb961a2..09b8241999297 100644
                  | Serializer::Gelf(_)
                  | Serializer::Json(_)
 diff --git a/src/components/validation/resources/mod.rs b/src/components/validation/resources/mod.rs
-index b6427bd7f6ab5..961e19385da6f 100644
+index 2b9fc3c54..f8ab26834 100644
 --- a/src/components/validation/resources/mod.rs
 +++ b/src/components/validation/resources/mod.rs
-@@ -182,6 +182,7 @@ fn decoder_framing_to_encoding_framer(framing: &decoding::FramingConfig) -> enco
+@@ -180,6 +180,7 @@ fn decoder_framing_to_encoding_framer(framing: &decoding::FramingConfig) -> enco
  fn serializer_config_to_deserializer(config: &SerializerConfig) -> decoding::Deserializer {
      let deserializer_config = match config {
          SerializerConfig::Avro { .. } => todo!(),
 +        SerializerConfig::Cef { .. } => todo!(),
          SerializerConfig::Csv { .. } => todo!(),
-         SerializerConfig::Gelf => DeserializerConfig::Gelf,
-         SerializerConfig::Json(_) => DeserializerConfig::Json,
+         SerializerConfig::Gelf => DeserializerConfig::Gelf(Default::default()),
+         SerializerConfig::Json(_) => DeserializerConfig::Json(Default::default()),
 diff --git a/website/cue/reference/components/sinks/base/amqp.cue b/website/cue/reference/components/sinks/base/amqp.cue
-index cd201bb517f08..4ea9e0b87b8cd 100644
+index cd201bb51..4ea9e0b87 100644
 --- a/website/cue/reference/components/sinks/base/amqp.cue
 +++ b/website/cue/reference/components/sinks/base/amqp.cue
 @@ -57,6 +57,91 @@ base: components: sinks: amqp: configuration: {
@@ -778,10 +778,10 @@ index cd201bb517f08..4ea9e0b87b8cd 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue b/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
-index 91f6204765875..d4e2da9c79511 100644
+index e5ea22305..68adbc7c0 100644
 --- a/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
 +++ b/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
-@@ -214,6 +214,91 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
+@@ -219,6 +219,91 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -873,7 +873,7 @@ index 91f6204765875..d4e2da9c79511 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -223,6 +308,7 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
+@@ -228,6 +313,7 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -882,10 +882,10 @@ index 91f6204765875..d4e2da9c79511 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue b/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
-index 966082ca84f99..902546c9ef179 100644
+index 19a708606..03f26bd96 100644
 --- a/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
 +++ b/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
-@@ -193,6 +193,91 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
+@@ -198,6 +198,91 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -977,7 +977,7 @@ index 966082ca84f99..902546c9ef179 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -202,6 +287,7 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
+@@ -207,6 +292,7 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -986,10 +986,10 @@ index 966082ca84f99..902546c9ef179 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue b/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
-index 50a8a22d90a4f..5613e082e8d93 100644
+index 40164b9d0..5d7cfc2ee 100644
 --- a/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
 +++ b/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
-@@ -193,6 +193,91 @@ base: components: sinks: aws_kinesis_streams: configuration: {
+@@ -198,6 +198,91 @@ base: components: sinks: aws_kinesis_streams: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1081,7 +1081,7 @@ index 50a8a22d90a4f..5613e082e8d93 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -202,6 +287,7 @@ base: components: sinks: aws_kinesis_streams: configuration: {
+@@ -207,6 +292,7 @@ base: components: sinks: aws_kinesis_streams: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -1090,10 +1090,10 @@ index 50a8a22d90a4f..5613e082e8d93 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/aws_s3.cue b/website/cue/reference/components/sinks/base/aws_s3.cue
-index 542f8c0ceab1e..3ead76bad8081 100644
+index 11265897c..f5f6a74ed 100644
 --- a/website/cue/reference/components/sinks/base/aws_s3.cue
 +++ b/website/cue/reference/components/sinks/base/aws_s3.cue
-@@ -302,6 +302,91 @@ base: components: sinks: aws_s3: configuration: {
+@@ -307,6 +307,91 @@ base: components: sinks: aws_s3: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1185,7 +1185,7 @@ index 542f8c0ceab1e..3ead76bad8081 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -311,6 +396,7 @@ base: components: sinks: aws_s3: configuration: {
+@@ -316,6 +401,7 @@ base: components: sinks: aws_s3: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -1194,7 +1194,7 @@ index 542f8c0ceab1e..3ead76bad8081 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/aws_sqs.cue b/website/cue/reference/components/sinks/base/aws_sqs.cue
-index 403beb674ba3e..a7f57cc28fbf9 100644
+index 403beb674..a7f57cc28 100644
 --- a/website/cue/reference/components/sinks/base/aws_sqs.cue
 +++ b/website/cue/reference/components/sinks/base/aws_sqs.cue
 @@ -134,6 +134,91 @@ base: components: sinks: aws_sqs: configuration: {
@@ -1298,10 +1298,10 @@ index 403beb674ba3e..a7f57cc28fbf9 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/azure_blob.cue b/website/cue/reference/components/sinks/base/azure_blob.cue
-index 9046389be1a57..eade9d8c463b1 100644
+index 5c2568145..05b998055 100644
 --- a/website/cue/reference/components/sinks/base/azure_blob.cue
 +++ b/website/cue/reference/components/sinks/base/azure_blob.cue
-@@ -165,6 +165,91 @@ base: components: sinks: azure_blob: configuration: {
+@@ -170,6 +170,91 @@ base: components: sinks: azure_blob: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1393,7 +1393,7 @@ index 9046389be1a57..eade9d8c463b1 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -174,6 +259,7 @@ base: components: sinks: azure_blob: configuration: {
+@@ -179,6 +264,7 @@ base: components: sinks: azure_blob: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -1402,7 +1402,7 @@ index 9046389be1a57..eade9d8c463b1 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/console.cue b/website/cue/reference/components/sinks/base/console.cue
-index c4deb39c4ce1d..693ebc0dea837 100644
+index c4deb39c4..693ebc0de 100644
 --- a/website/cue/reference/components/sinks/base/console.cue
 +++ b/website/cue/reference/components/sinks/base/console.cue
 @@ -41,6 +41,91 @@ base: components: sinks: console: configuration: {
@@ -1506,7 +1506,7 @@ index c4deb39c4ce1d..693ebc0dea837 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/file.cue b/website/cue/reference/components/sinks/base/file.cue
-index 383b9d2086f37..5aa831dbecb0e 100644
+index 383b9d208..5aa831dbe 100644
 --- a/website/cue/reference/components/sinks/base/file.cue
 +++ b/website/cue/reference/components/sinks/base/file.cue
 @@ -61,6 +61,91 @@ base: components: sinks: file: configuration: {
@@ -1610,7 +1610,7 @@ index 383b9d2086f37..5aa831dbecb0e 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue b/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
-index 82d963fc5da3a..aa50423601fc5 100644
+index 82d963fc5..aa5042360 100644
 --- a/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
 +++ b/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
 @@ -110,6 +110,91 @@ base: components: sinks: gcp_chronicle_unstructured: configuration: {
@@ -1714,10 +1714,10 @@ index 82d963fc5da3a..aa50423601fc5 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue b/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
-index 3b636da3f16ab..b6c0710c1284e 100644
+index 89b2f3761..f50a7ec06 100644
 --- a/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
 +++ b/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
-@@ -189,6 +189,91 @@ base: components: sinks: gcp_cloud_storage: configuration: {
+@@ -194,6 +194,91 @@ base: components: sinks: gcp_cloud_storage: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1809,7 +1809,7 @@ index 3b636da3f16ab..b6c0710c1284e 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -198,6 +283,7 @@ base: components: sinks: gcp_cloud_storage: configuration: {
+@@ -203,6 +288,7 @@ base: components: sinks: gcp_cloud_storage: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -1818,7 +1818,7 @@ index 3b636da3f16ab..b6c0710c1284e 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/gcp_pubsub.cue b/website/cue/reference/components/sinks/base/gcp_pubsub.cue
-index 9c45e6195401c..8219f4c6da2a4 100644
+index 9c45e6195..8219f4c6d 100644
 --- a/website/cue/reference/components/sinks/base/gcp_pubsub.cue
 +++ b/website/cue/reference/components/sinks/base/gcp_pubsub.cue
 @@ -108,6 +108,91 @@ base: components: sinks: gcp_pubsub: configuration: {
@@ -1922,10 +1922,10 @@ index 9c45e6195401c..8219f4c6da2a4 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/http.cue b/website/cue/reference/components/sinks/base/http.cue
-index 7eefce772c920..55dd53c275dbc 100644
+index c737b39f5..354535237 100644
 --- a/website/cue/reference/components/sinks/base/http.cue
 +++ b/website/cue/reference/components/sinks/base/http.cue
-@@ -144,6 +144,91 @@ base: components: sinks: http: configuration: {
+@@ -149,6 +149,91 @@ base: components: sinks: http: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2017,7 +2017,7 @@ index 7eefce772c920..55dd53c275dbc 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -153,6 +238,7 @@ base: components: sinks: http: configuration: {
+@@ -158,6 +243,7 @@ base: components: sinks: http: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -2026,10 +2026,10 @@ index 7eefce772c920..55dd53c275dbc 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/humio_logs.cue b/website/cue/reference/components/sinks/base/humio_logs.cue
-index e7967257dc81e..d69421658bf70 100644
+index 8d8253417..566c4c99d 100644
 --- a/website/cue/reference/components/sinks/base/humio_logs.cue
 +++ b/website/cue/reference/components/sinks/base/humio_logs.cue
-@@ -97,6 +97,91 @@ base: components: sinks: humio_logs: configuration: {
+@@ -102,6 +102,91 @@ base: components: sinks: humio_logs: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2121,7 +2121,7 @@ index e7967257dc81e..d69421658bf70 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -106,6 +191,7 @@ base: components: sinks: humio_logs: configuration: {
+@@ -111,6 +196,7 @@ base: components: sinks: humio_logs: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -2130,7 +2130,7 @@ index e7967257dc81e..d69421658bf70 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/kafka.cue b/website/cue/reference/components/sinks/base/kafka.cue
-index 97de9c94750e9..994fc76c73138 100644
+index 97de9c947..994fc76c7 100644
 --- a/website/cue/reference/components/sinks/base/kafka.cue
 +++ b/website/cue/reference/components/sinks/base/kafka.cue
 @@ -96,6 +96,91 @@ base: components: sinks: kafka: configuration: {
@@ -2234,10 +2234,10 @@ index 97de9c94750e9..994fc76c73138 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/loki.cue b/website/cue/reference/components/sinks/base/loki.cue
-index 829bad773dd74..befc1ad04d37e 100644
+index 0071c5b2a..9317f72f2 100644
 --- a/website/cue/reference/components/sinks/base/loki.cue
 +++ b/website/cue/reference/components/sinks/base/loki.cue
-@@ -148,6 +148,91 @@ base: components: sinks: loki: configuration: {
+@@ -153,6 +153,91 @@ base: components: sinks: loki: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2329,7 +2329,7 @@ index 829bad773dd74..befc1ad04d37e 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -157,6 +242,7 @@ base: components: sinks: loki: configuration: {
+@@ -162,6 +247,7 @@ base: components: sinks: loki: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -2338,7 +2338,7 @@ index 829bad773dd74..befc1ad04d37e 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/nats.cue b/website/cue/reference/components/sinks/base/nats.cue
-index 2708c111c08cc..d128faa1c3ec7 100644
+index 2708c111c..d128faa1c 100644
 --- a/website/cue/reference/components/sinks/base/nats.cue
 +++ b/website/cue/reference/components/sinks/base/nats.cue
 @@ -141,6 +141,91 @@ base: components: sinks: nats: configuration: {
@@ -2442,7 +2442,7 @@ index 2708c111c08cc..d128faa1c3ec7 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/papertrail.cue b/website/cue/reference/components/sinks/base/papertrail.cue
-index 8b4cce6d5c019..d782f06d25b62 100644
+index 8b4cce6d5..d782f06d2 100644
 --- a/website/cue/reference/components/sinks/base/papertrail.cue
 +++ b/website/cue/reference/components/sinks/base/papertrail.cue
 @@ -41,6 +41,91 @@ base: components: sinks: papertrail: configuration: {
@@ -2546,10 +2546,10 @@ index 8b4cce6d5c019..d782f06d25b62 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/pulsar.cue b/website/cue/reference/components/sinks/base/pulsar.cue
-index cd55deaf6093c..5c2369125e188 100644
+index cc62959b4..69a4b1b28 100644
 --- a/website/cue/reference/components/sinks/base/pulsar.cue
 +++ b/website/cue/reference/components/sinks/base/pulsar.cue
-@@ -128,6 +128,91 @@ base: components: sinks: pulsar: configuration: {
+@@ -135,6 +135,91 @@ base: components: sinks: pulsar: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2641,7 +2641,7 @@ index cd55deaf6093c..5c2369125e188 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -137,6 +222,7 @@ base: components: sinks: pulsar: configuration: {
+@@ -144,6 +229,7 @@ base: components: sinks: pulsar: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -2650,7 +2650,7 @@ index cd55deaf6093c..5c2369125e188 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/redis.cue b/website/cue/reference/components/sinks/base/redis.cue
-index 774370ce58a00..03d7c52220bbf 100644
+index 774370ce5..03d7c5222 100644
 --- a/website/cue/reference/components/sinks/base/redis.cue
 +++ b/website/cue/reference/components/sinks/base/redis.cue
 @@ -94,6 +94,91 @@ base: components: sinks: redis: configuration: {
@@ -2754,7 +2754,7 @@ index 774370ce58a00..03d7c52220bbf 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/socket.cue b/website/cue/reference/components/sinks/base/socket.cue
-index c0b0c62ad106e..07d65c1d7a63f 100644
+index c0b0c62ad..07d65c1d7 100644
 --- a/website/cue/reference/components/sinks/base/socket.cue
 +++ b/website/cue/reference/components/sinks/base/socket.cue
 @@ -53,6 +53,91 @@ base: components: sinks: socket: configuration: {
@@ -2858,10 +2858,10 @@ index c0b0c62ad106e..07d65c1d7a63f 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/splunk_hec_logs.cue b/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
-index 00872c584d409..47f827aeb2d0e 100644
+index 184db1386..1e7c6e417 100644
 --- a/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
 +++ b/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
-@@ -147,6 +147,91 @@ base: components: sinks: splunk_hec_logs: configuration: {
+@@ -152,6 +152,91 @@ base: components: sinks: splunk_hec_logs: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2953,7 +2953,7 @@ index 00872c584d409..47f827aeb2d0e 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -156,6 +241,7 @@ base: components: sinks: splunk_hec_logs: configuration: {
+@@ -161,6 +246,7 @@ base: components: sinks: splunk_hec_logs: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -2962,10 +2962,10 @@ index 00872c584d409..47f827aeb2d0e 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/webhdfs.cue b/website/cue/reference/components/sinks/base/webhdfs.cue
-index 006b33156564b..bf03814c5205a 100644
+index b07f00ae7..0373e26ee 100644
 --- a/website/cue/reference/components/sinks/base/webhdfs.cue
 +++ b/website/cue/reference/components/sinks/base/webhdfs.cue
-@@ -97,6 +97,91 @@ base: components: sinks: webhdfs: configuration: {
+@@ -102,6 +102,91 @@ base: components: sinks: webhdfs: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -3057,7 +3057,7 @@ index 006b33156564b..bf03814c5205a 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -106,6 +191,7 @@ base: components: sinks: webhdfs: configuration: {
+@@ -111,6 +196,7 @@ base: components: sinks: webhdfs: configuration: {
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -3066,7 +3066,7 @@ index 006b33156564b..bf03814c5205a 100644
  						Encodes an event as a CSV message.
 
 diff --git a/website/cue/reference/components/sinks/base/websocket.cue b/website/cue/reference/components/sinks/base/websocket.cue
-index ad51d78f9a46f..4358337af0c51 100644
+index ad51d78f9..4358337af 100644
 --- a/website/cue/reference/components/sinks/base/websocket.cue
 +++ b/website/cue/reference/components/sinks/base/websocket.cue
 @@ -88,6 +88,91 @@ base: components: sinks: websocket: configuration: {
@@ -3169,29 +3169,3 @@ index ad51d78f9a46f..4358337af0c51 100644
  					csv: """
  						Encodes an event as a CSV message.
 
-diff --git a/website/cue/reference/components/transforms/base/sample.cue b/website/cue/reference/components/transforms/base/sample.cue
-index 3e0d7aaba7f06..16b7fe370dff5 100644
---- a/website/cue/reference/components/transforms/base/sample.cue
-+++ b/website/cue/reference/components/transforms/base/sample.cue
-@@ -12,7 +12,7 @@ base: components: transforms: sample: configuration: {
- 			sampled.
-
- 			Each unique value for the key creates a bucket of related events to be sampled together
--			and the rate is applied to the buckets themselves to sample `1/N` buckets. Overall rate
-+			and the rate is applied to the buckets themselves to sample `1/N` buckets.  The overall rate
- 			of sampling may differ from the configured one if values in the field are not uniformly
- 			distributed. If left unspecified, or if the event doesn’t have `key_field`, then the
- 			event is sampled independently.
-diff --git a/website/cue/reference/components/transforms/base/throttle.cue b/website/cue/reference/components/transforms/base/throttle.cue
-index 710aeeb858ec7..608b43cef1c8c 100644
---- a/website/cue/reference/components/transforms/base/throttle.cue
-+++ b/website/cue/reference/components/transforms/base/throttle.cue
-@@ -8,7 +8,7 @@ base: components: transforms: throttle: configuration: {
- 	}
- 	key_field: {
- 		description: """
--			The value to group events into a separate buckets to be rate limited independently.
-+			The value to group events into separate buckets to be rate limited independently.
-
- 			If left unspecified, or if the event doesn't have `key_field`, then the event is not rate
- 			limited separately.
