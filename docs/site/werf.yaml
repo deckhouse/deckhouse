@@ -222,7 +222,7 @@ ansible:
         go mod tidy
       args:
         executable: /bin/sh
-        chdir: /go/src/app/server
+        chdir: /go/src/app/registry-modules-watcher
   setup:
     - name: Build registry-modules-watcher
       shell: |
