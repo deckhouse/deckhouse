@@ -36,7 +36,9 @@ lang: ru
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 - [InitConfiguration](configuration.html#initconfiguration) — начальные параметры [конфигурации Deckhouse](../#конфигурация-deckhouse). С этой конфигурацией Deckhouse запустится после установки.
 
-  В этом ресурсе, в частности, указываются параметры, без которых Deckhouse не запустится или будет работать некорректно. Например, параметры [размещения компонентов Deckhouse](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.  
+  В этом ресурсе, в частности, указываются параметры, без которых Deckhouse не запустится или будет работать некорректно. Например, параметры [размещения компонентов Deckhouse](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.
+
+  **Внимание!** Параметр [configOverrides](configuration.html#initconfiguration-deckhouse-configoverrides) устарел и будет удален. Для установки параметров **встроенных модулей** Deckhouse используйте набор ресурсов [ModuleConfig](../#настройка-модуля) в файле конфигурации установки. Для остальных модулей используйте [файл ресурсов установки](#файл-ресурсов-установки).
   
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т. д.
   
@@ -57,6 +59,8 @@ YAML-файл конфигурации установки содержит па�
   - [OpenStackClusterConfiguration](../modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
   - [VsphereInstanceClass](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
   - [YandexInstanceClass](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud.
+
+- `ModuleConfig` — набор ресурсов, содержащих параметры конфигурации [встроенных модулей Deckhouse](../).
 
 {% offtopic title="Пример файла конфигурации установки..." %}
 
@@ -99,6 +103,34 @@ provider:
   clientSecret: <CLIENT_SECRET>
   tenantId: <TENANT_ID>
   location: westeurope
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-flannel
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.k8s.example.com"
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: node-manager
+spec:
+  version: 1
+  enabled: true
+  settings:
+    allowedBundles: ["ubuntu-lts"]
 ```
 
 {% endofftopic %}
@@ -108,6 +140,8 @@ provider:
 Необязательный YAML-файл ресурсов установки содержит манифесты ресурсов Kubernetes, которые инсталлятор применит после успешной установки Deckhouse.
 
 Файл ресурсов может быть полезен для дополнительной настройки кластера после установки Deckhouse: развертывание Ingress-контроллера, создание дополнительных групп узлов, ресурсов конфигурации, настройки прав и пользователей и т. д.
+
+**Внимание!** В файле ресурсов установки нельзя использовать [ModuleConfig](../) для **встроенных** модулей. Для конфигурирования встроенных модулей используйте [файл конфигурации](#файл-конфигурации-установки).
 
 {% offtopic title="Пример файла ресурсов..." %}
 
@@ -162,6 +196,13 @@ metadata:
 spec:
   email: admin@deckhouse.io
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse-admin
+spec:
+  enabled: true
 ```
 
 {% endofftopic %}

@@ -23,6 +23,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
@@ -161,7 +163,7 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 	return resources, nil
 }
 
-func ParseResources(path string, data map[string]interface{}) (Resources, error) {
+func loadResources(path string, data map[string]interface{}) (Resources, error) {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading resources file: %v", err)
@@ -170,6 +172,42 @@ func ParseResources(path string, data map[string]interface{}) (Resources, error)
 	content := string(fileContent)
 
 	return ParseResourcesContent(content, data)
+}
+
+func validateModuleConfigs(resources Resources) error {
+	store := config.NewSchemaStore()
+	for _, r := range resources {
+		if r.GVK.Kind == config.ModuleConfigKind && r.GVK.Group == config.ModuleConfigGroup {
+			// in resources should be none build in modules only
+			if store.HasSchemaForModuleConfig(r.Object.GetName()) {
+				return fmt.Errorf("Deny using build-in ModuleConfig in the resources config. Using config file for build-in ModuleConfig's")
+			}
+		}
+	}
+
+	return nil
+}
+
+func OnlyModulesFromSourcesConfigsInResources(path string) error {
+	resources, err := loadResources(path, nil)
+	if err != nil {
+		return err
+	}
+
+	return validateModuleConfigs(resources)
+}
+
+func ParseResources(path string, data map[string]interface{}) (Resources, error) {
+	resources, err := loadResources(path, data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateModuleConfigs(resources); err != nil {
+		return nil, err
+	}
+
+	return resources, nil
 }
 
 func BigFileSplit(content string) []string {
