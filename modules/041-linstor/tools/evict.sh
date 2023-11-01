@@ -393,6 +393,9 @@ linstor_check_faulty
 linstor_check_connection
 linstor_wait_sync 0
 
+echo "List of storage pools and nodes in LINSTOR:"
+exec_linstor_with_exit_code_check storage-pool list
+
 while true; do
   while true; do
     echo -n "Enter the name of the node from which LINSTOR resources need to be evicted: "
