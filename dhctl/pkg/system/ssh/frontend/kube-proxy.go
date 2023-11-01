@@ -17,6 +17,7 @@ package frontend
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"regexp"
 	"time"
 
@@ -229,7 +230,13 @@ func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelError
 		}
 
 		// try to start tunnel from localPort to proxy port
-		tunnelAddress := fmt.Sprintf("%d:localhost:%s", localPort, kubeProxyPort)
+		var tunnelAddress string
+		if v := os.Getenv("KUBE_PROXY_BIND_ADDR"); v != "" {
+			tunnelAddress = fmt.Sprintf("%s:%d:localhost:%s", v, localPort, kubeProxyPort)
+		} else {
+			tunnelAddress = fmt.Sprintf("%d:localhost:%s", localPort, kubeProxyPort)
+		}
+
 		log.DebugF("[%d] Try up tunnel on %v\n", startID, tunnelAddress)
 		tun = NewTunnel(k.Session, "L", tunnelAddress)
 		err := tun.Up()
