@@ -32,13 +32,15 @@ import (
 
 // flags
 var (
-	listenAddress string
-	src           string
+	listenAddress    string
+	src              string
+	highAvailability bool
 )
 
 func init() {
 	flag.StringVar(&listenAddress, "address", ":8081", "Address to listen on")
 	flag.StringVar(&src, "src", "/app/hugo/", "Directory to load source files")
+	flag.BoolVar(&highAvailability, "highAvailability", false, "high availability mod")
 }
 
 func main() {
@@ -47,9 +49,15 @@ func main() {
 	ctx, stopNotify := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stopNotify()
 
-	lManager, err := k8s.NewLeasesManager()
-	if err != nil {
-		klog.Fatalf("new leases manager: %s", err)
+	var (
+		lManager *k8s.LeasesManager
+		err      error
+	)
+	if highAvailability {
+		lManager, err = k8s.NewLeasesManager()
+		if err != nil {
+			klog.Fatalf("new leases manager: %s", err)
+		}
 	}
 
 	r := mux.NewRouter()
@@ -69,16 +77,18 @@ func main() {
 	}()
 	klog.Info("Server started")
 
-	if err := lManager.Create(ctx); err != nil {
-		klog.Fatalf("create leases: %v", err)
-	}
-
-	go func() {
-		err = lManager.Run(ctx)
-		if !errors.Is(err, context.Canceled) && err != nil {
-			klog.Fatalf("lease manager run: %s", err)
+	if highAvailability {
+		if err := lManager.Create(ctx); err != nil {
+			klog.Fatalf("create leases: %v", err)
 		}
-	}()
+
+		go func() {
+			err = lManager.Run(ctx)
+			if !errors.Is(err, context.Canceled) && err != nil {
+				klog.Fatalf("lease manager run: %s", err)
+			}
+		}()
+	}
 
 	<-ctx.Done()
 	klog.Info("Server stopped")
@@ -86,9 +96,11 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err = lManager.Remove(ctx)
-	if err != nil {
-		klog.Errorf("lease removing failed: %v", err)
+	if highAvailability {
+		err = lManager.Remove(ctx)
+		if err != nil {
+			klog.Errorf("lease removing failed: %v", err)
+		}
 	}
 
 	err = srv.Shutdown(ctx)
