@@ -49,6 +49,8 @@
  - **[candi]** Fix working of bootstrap cloud-networks setup scripts. [#6193](https://github.com/deckhouse/deckhouse/pull/6193)
  - **[candi]** Allow underscore in `httpProxy` and `httpsProxy` settings. [#6169](https://github.com/deckhouse/deckhouse/pull/6169)
  - **[cloud-provider-vsphere]** Fix slugification datastore names containing hyphens. [#6286](https://github.com/deckhouse/deckhouse/pull/6286)
+ - **[common]** Fix build of `csi-external-*` images. [#6378](https://github.com/deckhouse/deckhouse/pull/6378)
+    `csi-controller` pod will restart.
  - **[deckhouse]** Canary release disabled for manual update mode [#6229](https://github.com/deckhouse/deckhouse/pull/6229)
  - **[deckhouse]** Fix bash completion. [#6225](https://github.com/deckhouse/deckhouse/pull/6225)
  - **[deckhouse]** Restrict the webhook to validate only Deckhouse ConfigMaps. [#5997](https://github.com/deckhouse/deckhouse/pull/5997)
