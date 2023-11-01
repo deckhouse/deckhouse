@@ -40,10 +40,8 @@ deckhouse:
         # [<ru>] Способ реализации протокола HTTPS, используемый модулями Deckhouse.
         https:
           certManager:
-            # [<en>] Name of a ClusterIssuer to use for Deckhouse modules.
-            # [<en>] For a closed environment, self-signed certificates are set.
-            # [<ru>] Имя ClusterIssuer, используемого модулями Deckhouse.
-            # [<ru>] Для закрытого окружения задаются самоподписанные сертификаты.
+            # [<en>] Use self-signed certificates for Deckhouse modules.
+            # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
             clusterIssuerName: selfsigned
     certManager:
       # [<en>] Disable letsencrypt and letsencrypt-staging ClusterIssuer objects (if set to true).
