@@ -51,12 +51,6 @@ deckhouse:
       disableLetsencrypt: true
     userAuthn:
       controlPlaneConfigurator:
-        # [<en>] How to determine the CA that will be used when configuring kube-apiserver.
-        # [<en>] Extract the CA of certificate from the Secret that is used in the Ingress.
-        # [<en>] Used with self-signed certificates in Ingress resources.
-        # [<ru>] Способ определения CA, который будет использован при настройке kube-apiserver.
-        # [<ru>] Извлекает CA или сам сертификат из Secret’а, который используется в Ingress-ресурсе.
-        # [<ru>] Используется с самоподписанными сертификатами в Ingress-ресурсах.
         dexCAMode: FromIngressSecret
     # [<en>] Enable the cni-flannel module.
     # [<ru>] Включить модуль cni-flannel.
