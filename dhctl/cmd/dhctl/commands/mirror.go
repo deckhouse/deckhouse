@@ -15,7 +15,11 @@
 package commands
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -48,11 +52,12 @@ func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 func mirrorPushDeckhouseToPrivateRegistry() error {
 	mirrorCtx := &mirror.Context{
-		Insecure:       app.MirrorInsecure,
-		RegistryHost:   app.MirrorRegistryHost,
-		RegistryRepo:   app.MirrorDeckhouseRegistryRepo,
-		ImagesPath:     app.MirrorImagesPath,
-		ValidationMode: mirror.ValidationMode(app.MirrorValidationMode),
+		Insecure:           app.MirrorInsecure,
+		RegistryHost:       app.MirrorRegistryHost,
+		RegistryRepo:       app.MirrorDeckhouseRegistryRepo,
+		TarBundlePath:      app.MirrorTarBundle,
+		UnpackedImagesPath: filepath.Join(app.TmpDirName, time.Now().Format("mirror_tmp_02-01-2006_15-04-05")),
+		ValidationMode:     mirror.ValidationMode(app.MirrorValidationMode),
 	}
 
 	if app.MirrorRegistryUsername != "" {
@@ -62,30 +67,51 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		})
 	}
 
-	return operations.PushMirrorToRegistry(mirrorCtx)
+	defer os.RemoveAll(app.TmpDirName)
+
+	err := log.Process("mirror", "Unpacking Deckhouse bundle", func() error {
+		return mirror.UnpackBundle(mirrorCtx)
+	})
+	if err != nil {
+		return err
+	}
+
+	err = log.Process("mirror", "Push Deckhouse images to registry", func() error {
+		return operations.PushMirrorToRegistry(mirrorCtx)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func mirrorPullDeckhouseToLocalFilesystem() error {
 	mirrorCtx := &mirror.Context{
-		Insecure:     app.MirrorInsecure,
-		RegistryHost: app.MirrorRegistryHost,
-		RegistryRepo: app.MirrorDeckhouseRegistryRepo,
+		Insecure:        app.MirrorInsecure,
+		SkipGOSTDigests: app.MirrorSkipGOSTHashing,
+		RegistryHost:    app.MirrorRegistryHost,
+		RegistryRepo:    app.MirrorDeckhouseRegistryRepo,
 		RegistryAuth: authn.FromConfig(authn.AuthConfig{
 			Username: "license-token",
 			Password: app.MirrorDHLicenseToken,
 		}),
-		ImagesPath:     app.MirrorImagesPath,
-		ValidationMode: mirror.ValidationMode(app.MirrorValidationMode),
-		MinVersion:     app.MirrorMinVersion,
+		TarBundlePath:      app.MirrorTarBundle,
+		UnpackedImagesPath: filepath.Join(app.TmpDirName, time.Now().Format("mirror_tmp_02-01-2006_15-04-05")),
+		ValidationMode:     mirror.ValidationMode(app.MirrorValidationMode),
+		MinVersion:         app.MirrorMinVersion,
 	}
+
+	defer os.RemoveAll(mirrorCtx.UnpackedImagesPath)
 
 	var versionsToMirror []*semver.Version
 	var err error
 	err = log.Process("mirror", "Looking for required Deckhouse releases", func() error {
 		versionsToMirror, err = mirror.VersionsToCopy(mirrorCtx)
 		if err != nil {
-			return fmt.Errorf("find versions to mirror: %w", err)
+			return fmt.Errorf("Find versions to mirror: %w", err)
 		}
+		log.InfoF("Deckhouse releases to pull: %+v\n", versionsToMirror)
 		return nil
 	})
 	if err != nil {
@@ -93,10 +119,43 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	}
 
 	err = log.Process("mirror", "Pull images", func() error {
+		log.InfoLn("Working directory:", mirrorCtx.UnpackedImagesPath)
 		return operations.MirrorRegistryToLocalFS(mirrorCtx, versionsToMirror)
 	})
 	if err != nil {
 		return err
 	}
+
+	err = log.Process("mirror", "Pack images", func() error {
+		return mirror.PackBundle(mirrorCtx)
+	})
+	if err != nil {
+		return err
+	}
+
+	err = log.Process("mirror", "Compute GOST digest", func() error {
+		if mirrorCtx.SkipGOSTDigests {
+			log.InfoLn("GOST digest calculation skipped")
+			return nil
+		}
+
+		tarBundle, err := os.Open(mirrorCtx.TarBundlePath)
+		if err != nil {
+			return fmt.Errorf("Read tar bundle: %w", err)
+		}
+		gostDigest, err := mirror.CalculateBlobGostDigest(bufio.NewReaderSize(tarBundle, 128*1024))
+		if err != nil {
+			return fmt.Errorf("Calculate GOST Checksum: %w", err)
+		}
+		if err = os.WriteFile(mirrorCtx.TarBundlePath+".gostsum", []byte(gostDigest), 0666); err != nil {
+			return fmt.Errorf("Write GOST Checksum: %w", err)
+		}
+		log.InfoF("Digest: %s\nWritten to %s\n", gostDigest, mirrorCtx.TarBundlePath+".gostsum")
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

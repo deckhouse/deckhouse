@@ -42,7 +42,7 @@ var (
 	MirrorRegistryPassword = ""
 	MirrorInsecure         = false
 	MirrorDHLicenseToken   = ""
-	MirrorImagesPath       = ""
+	MirrorTarBundle        = ""
 
 	mirrorMinVersionString                 = ""
 	MirrorMinVersion       *semver.Version = nil
@@ -51,6 +51,8 @@ var (
 	MirrorDeckhouseRegistryRepo = enterpriseEditionRepo
 
 	MirrorValidationMode = ""
+
+	MirrorSkipGOSTHashing = false
 )
 
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
@@ -84,11 +86,14 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		Default(mirrorFastValidation).
 		Envar(configEnvName("MIRROR_VALIDATION")).
 		EnumVar(&MirrorValidationMode, mirrorNoValidation, mirrorFastValidation, mirrorFullValidation)
-	cmd.Flag("images", "Directory for pulled images.").
+	cmd.Flag("skip-gost-digests", "Do not calculate GOST R 34.11-2012 digests for downloaded blobs").
+		Envar(configEnvName("MIRROR_SKIP_GOST_DIGESTS")).
+		BoolVar(&MirrorSkipGOSTHashing)
+	cmd.Flag("images-bundle", "Tar bundle with pulled images").
 		Short('i').
 		Required().
-		Envar(configEnvName("MIRROR_IMAGES_PATH")).
-		StringVar(&MirrorImagesPath)
+		Envar(configEnvName("MIRROR_IMAGES_BUNDLE")).
+		StringVar(&MirrorTarBundle)
 	cmd.Flag("insecure", "Skip TLS checks.").
 		BoolVar(&MirrorInsecure)
 
@@ -120,15 +125,15 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 			MirrorDeckhouseRegistryRepo = flantEditionRepo
 		}
 
-		MirrorImagesPath = filepath.Clean(MirrorImagesPath)
-		stats, err := os.Stat(MirrorImagesPath)
+		MirrorTarBundle = filepath.Clean(MirrorTarBundle)
+		stats, err := os.Stat(MirrorTarBundle)
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
 			break
 		case err != nil && !errors.Is(err, fs.ErrNotExist):
-			return fmt.Errorf("stat %s: %w", MirrorImagesPath, err)
-		case !stats.IsDir():
-			return fmt.Errorf("%s should be a directory", MirrorImagesPath)
+			return fmt.Errorf("stat %s: %w", MirrorTarBundle, err)
+		case stats.IsDir() || filepath.Ext(MirrorTarBundle) != ".tar":
+			return fmt.Errorf("%s should be a tar archive", MirrorTarBundle)
 		}
 
 		return nil

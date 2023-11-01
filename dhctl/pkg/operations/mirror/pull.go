@@ -80,7 +80,7 @@ func pullImageSet(
 		}
 		img, err := remote.Image(ref, remoteOpts...)
 		if err != nil {
-			return fmt.Errorf("pull image %q: %w", imageTag, err)
+			return fmt.Errorf("pull image %q metadata: %w", imageTag, err)
 		}
 
 		err = targetLayout.AppendImage(img,

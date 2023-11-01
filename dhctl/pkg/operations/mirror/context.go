@@ -21,13 +21,15 @@ import (
 
 // Context hold data related to pending registry mirroring operation.
 type Context struct {
-	Insecure bool // --insecure
+	Insecure        bool // --insecure
+	SkipGOSTDigests bool // --skip-gost-digests
 
 	RegistryAuth authn.Authenticator // --registry-login + --registry-password (can be nil in this case) or --license depending on the operation requested
 	RegistryHost string              // --registry
 	RegistryRepo string
 
-	ImagesPath     string          // --images
-	ValidationMode ValidationMode  // --validation
-	MinVersion     *semver.Version // --min-version
+	TarBundlePath      string // --images
+	UnpackedImagesPath string
+	ValidationMode     ValidationMode  // --validation, hidden flag
+	MinVersion         *semver.Version // --min-version
 }

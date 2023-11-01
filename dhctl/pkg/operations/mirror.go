@@ -43,7 +43,7 @@ func MirrorRegistryToLocalFS(
 	log.InfoLn("✅")
 
 	log.InfoF("Creating OCI Image Layouts...\t")
-	layouts, err := mirror.CreateOCIImageLayouts(mirrorCtx.RegistryRepo, mirrorCtx.ImagesPath, modules)
+	layouts, err := mirror.CreateOCIImageLayouts(mirrorCtx.RegistryRepo, mirrorCtx.UnpackedImagesPath, modules)
 	if err != nil {
 		log.InfoLn("❌")
 		return fmt.Errorf("create OCI Image Layouts: %w", err)
@@ -184,9 +184,9 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, error
 	installersIndexRef := filepath.Join(mirrorCtx.RegistryRepo, "install")
 	releasesIndexRef := filepath.Join(mirrorCtx.RegistryRepo, "release-channel")
 
-	deckhouseLayoutPath := filepath.Join(mirrorCtx.ImagesPath, deckhouseIndexRef)
-	installersLayoutPath := filepath.Join(mirrorCtx.ImagesPath, installersIndexRef)
-	releasesLayoutPath := filepath.Join(mirrorCtx.ImagesPath, releasesIndexRef)
+	deckhouseLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, deckhouseIndexRef)
+	installersLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, installersIndexRef)
+	releasesLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, releasesIndexRef)
 
 	deckhouseLayout, err := layout.FromPath(deckhouseLayoutPath)
 	if err != nil {
@@ -201,7 +201,7 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, error
 		return nil, err
 	}
 
-	modulesPath := filepath.Join(mirrorCtx.ImagesPath, mirrorCtx.RegistryRepo, "modules")
+	modulesPath := filepath.Join(mirrorCtx.UnpackedImagesPath, mirrorCtx.RegistryRepo, "modules")
 	ociLayouts := map[string]layout.Path{
 		deckhouseIndexRef:  deckhouseLayout,
 		installersIndexRef: installersLayout,
