@@ -48,7 +48,7 @@ metadata:
     app: registry-modules-watcher
 data:
   .dockerconfigjson: |
-    {{ .Values.global.moduleWatcherAuths | b64dec }}
+    {{ .Values.global.moduleWatcherAuths | quote | b64dec }}
 
 ---
 apiVersion: autoscaling.k8s.io/v1
