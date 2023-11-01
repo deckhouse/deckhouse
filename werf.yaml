@@ -41,12 +41,6 @@ gitWorktree:
       - openssl
       update_cache: yes
 
-  - name: "Install libcrypto1.1"
-    apk:
-      name:
-      - libcrypto1.1
-      update_cache: yes
-
   - name: "Install jo"
     apk:
       name:
@@ -213,7 +207,7 @@ docker:
 ---
 image: dev-prebuild
 fromImage: common-base
-fromCacheVersion: "2023-10-20.0"
+fromCacheVersion: "2023-11-01.0"
 git:
 - add: /
   to: /deckhouse
