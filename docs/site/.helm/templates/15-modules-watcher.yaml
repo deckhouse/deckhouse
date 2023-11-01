@@ -17,8 +17,8 @@ spec:
     metadata:
       labels:
         app: registry-modules-watcher
-        annotations:
-          checksum/auths: {{ .Values.global.moduleWatcherAuths | quote | sha256sum }}
+      annotations:
+        checksum/auths: {{ .Values.global.moduleWatcherAuths | sha256sum }}
     spec:
       imagePullSecrets:
         - name: deckhouse-registry-site
