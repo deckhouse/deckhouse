@@ -85,6 +85,9 @@ properties:
                   type: boolean
                 validationEnabled:
                   type: boolean
+                annotationValidationEnabled:
+                  type: boolean
+                  default: false
                 nodeSelector:
                     type: object
                     additionalProperties:
