@@ -66,6 +66,7 @@ func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 
 func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []string) error {
 	reader := tar.NewReader(body)
+	klog.Infof("loading %q: %s", moduleName, channels)
 
 	for {
 		header, err := reader.Next()
@@ -90,6 +91,7 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 					continue
 				}
 
+				klog.Infof("creating dir %q", path)
 				if err := os.MkdirAll(path, 0700); err != nil {
 					return fmt.Errorf("mkdir %q failed: %w", path, err)
 				}
