@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/base64"
 	"os"
 	"registry-modules-watcher/internal/backends"
 	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
@@ -10,7 +10,6 @@ import (
 	"registry-modules-watcher/internal/wather"
 	registryclient "registry-modules-watcher/pkg/registry-client"
 
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
 
 	"k8s.io/client-go/kubernetes"
@@ -40,19 +39,14 @@ func main() {
 
 	// * * * * * * * * *
 	// dockerconfigjson
-	var regsecret v1.Secret
 	regsecretRaw := os.Getenv("REGISTRY_AUTHS")
-	if err := json.Unmarshal([]byte(regsecretRaw), &regsecret); err != nil {
-		klog.Fatal(err)
-	}
-
-	dockerCfg := regsecret.Data["dockerconfigjson"]
 
 	// * * * * * * * * *
 	// Connect to registry
 	// TODO for range watchRegistries {}
+	// TODO: remove b64 encode
 	client, err := registryclient.NewClient("registry.deckhouse.io/deckhouse/fe/modules",
-		registryclient.WithAuth(string(dockerCfg)),
+		registryclient.WithAuth(base64.RawStdEncoding.EncodeToString([]byte(regsecretRaw))),
 	)
 	if err != nil {
 		klog.Fatal(err)
