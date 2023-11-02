@@ -28,6 +28,16 @@
     <nav class="sidebar__container">
 
       <ul class="sidebar" id="mysidebar">
+        <div>
+        {%- for tab in site.data.sidebar_common.tabs %}
+          {%- assign tabName = tab[0] %}
+          {%- assign tabData = tab[1] %}
+          <a class='tabs__btn tabs__btn_sidebars {%- if tabData.default %} active{%- endif %}'  href='{{ tabData.url }}'>
+            {{- site.data.i18n.common[tabName][page.lang] | capitalize }}
+          </a>
+        {%- endfor %}
+        </div>
+
         {%- for entry in sidebar.folders %}
         {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
         {%- endfor %}

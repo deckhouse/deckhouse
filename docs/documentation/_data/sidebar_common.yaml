@@ -1,0 +1,6 @@
+tabs:
+  deckhouse:
+    url: /documentation/v1/
+    default: true
+  modules:
+    url: /modules/deckhouse-admin/alpha/
