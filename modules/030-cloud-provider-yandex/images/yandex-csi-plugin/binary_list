@@ -32,5 +32,3 @@
 /usr/sbin/nvme
 /usr/sbin/parted
 /usr/sbin/xfs*
-/lib64/lib*
-/lib64/ld*
