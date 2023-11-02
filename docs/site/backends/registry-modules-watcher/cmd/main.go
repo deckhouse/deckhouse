@@ -21,7 +21,7 @@ import (
 
 func main() {
 	registries := flag.String("watch-registries", "", "a list for followed registries")
-	scanInterval := flag.Duration("scan-interval", 30*time.Second, "interval for scanning the images. default 15 minutes")
+	scanInterval := flag.Duration("scan-interval", 15*time.Minute, "interval for scanning the images. default 15 minutes")
 	flag.Parse()
 
 	if *registries == "" {
@@ -29,6 +29,42 @@ func main() {
 	}
 
 	ctx := context.Background()
+
+	// * * * * * * * * *
+	// dockerconfigjson
+	regsecretRaw := os.Getenv("REGISTRY_AUTHS")
+	if regsecretRaw == "" {
+		klog.Fatal("registry auths not set")
+	}
+
+	// * * * * * * * * *
+	// Connect to registry
+	clients := make([]registryscaner.Client, 0)
+	for _, registry := range strings.Split(*registries, ",") {
+		klog.Infof("Watch modules source: %q", registry)
+		client, err := registryclient.NewClient(registry,
+			registryclient.WithAuth(regsecretRaw),
+		)
+		if err != nil {
+			klog.Errorf("no dockercfg auth set for source: %q. Skipping", registry)
+			continue
+		}
+
+		// TODO: some registry ping to check credentials
+
+		clients = append(clients, client)
+	}
+
+	registryScaner := registryscaner.New(clients...)
+	registryScaner.Subscribe(ctx, *scanInterval)
+
+	// * * * * * * * * *
+	// New sender
+	sender := sender.New()
+
+	// * * * * * * * * *
+	// New backends service
+	backends := backends.New(registryScaner, sender)
 
 	// * * * * * * * * *
 	// Init kube client
@@ -46,36 +82,6 @@ func main() {
 	if err != nil {
 		klog.Fatal(err)
 	}
-
-	// * * * * * * * * *
-	// dockerconfigjson
-	regsecretRaw := os.Getenv("REGISTRY_AUTHS")
-
-	// * * * * * * * * *
-	// Connect to registry
-	// TODO: remove b64 encode
-	clients := []registryscaner.Client{}
-	for _, registry := range strings.Split(*registries, ",") {
-		client, err := registryclient.NewClient(registry,
-			registryclient.WithAuth(regsecretRaw),
-		)
-		if err != nil {
-			klog.Fatal(err)
-		}
-
-		clients = append(clients, client)
-	}
-
-	registryScaner := registryscaner.New(clients...)
-	registryScaner.Subscribe(ctx, time.Duration(*scanInterval*float64(time.Second)))
-
-	// * * * * * * * * *
-	// New sender
-	sender := sender.New()
-
-	// * * * * * * * * *
-	// New backends service
-	backends := backends.New(registryScaner, sender)
 
 	// * * * * * * * * *
 	// Watch lease

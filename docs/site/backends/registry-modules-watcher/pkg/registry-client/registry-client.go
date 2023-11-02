@@ -47,8 +47,6 @@ func NewClient(repo string, options ...Option) (registryscaner.Client, error) {
 		client.authConfig = authConfig
 	}
 
-	fmt.Println("NewClient withoutAuth: ", client.options.withoutAuth)
-
 	return client, nil
 }
 

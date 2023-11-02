@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/tidwall/gjson"
 )
 
 func readAuthConfig(repo, dockerCfg string) (authn.AuthConfig, error) {
@@ -21,21 +20,25 @@ func readAuthConfig(repo, dockerCfg string) (authn.AuthConfig, error) {
 		return authn.AuthConfig{}, err
 	}
 
-	auths := gjson.Get(string(dockerCfg), "auths").Map()
-	authConfig := authn.AuthConfig{}
+	var auths dockercfgAuths
+
+	err = json.Unmarshal([]byte(dockerCfg), &auths)
+	if err != nil {
+		return authn.AuthConfig{}, err
+	}
 
 	// The config should have at least one .auths.* entry
-	for repoName, repoAuth := range auths {
+	for repoName, repoAuth := range auths.Auths {
 		if repoName == r.Host {
-			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
-			if err != nil {
-				return authn.AuthConfig{}, err
-			}
-			return authConfig, nil
+			return repoAuth, nil
 		}
 	}
 
 	return authn.AuthConfig{}, fmt.Errorf("no auth data")
+}
+
+type dockercfgAuths struct {
+	Auths map[string]authn.AuthConfig `json:"auths"`
 }
 
 // parse parses url without scheme://
