@@ -158,6 +158,12 @@ common:
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
+  deckhouse:
+    en: deckhouse
+    ru: deckhouse
+  modules:
+    en: modules
+    ru: модули
 
 comparison:
   except_parameters:
