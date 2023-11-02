@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"registry-modules-watcher/internal/backends"
 	"strings"
 	"time"
-	"watchdoc/internal/backends"
 
 	"k8s.io/klog"
 )
