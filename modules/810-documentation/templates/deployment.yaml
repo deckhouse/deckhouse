@@ -21,6 +21,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      serviceAccountName: docs-builder
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -47,6 +48,19 @@ spec:
             mountPath: /app/config
           - name: tmp
             mountPath: /tmp
+      - name: docs-builder
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ index .Values.werf.image "docs-builder" }}
+        ports:
+          - containerPort: 8081
+            name: http
+            protocol: TCP
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "web_resources" . | nindent 12 }}
+  {{- end }}
       volumes:
         - name: config
           configMap:
