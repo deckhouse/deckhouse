@@ -13,7 +13,7 @@
       "inputs": [
         "transform/source/test-source/01_local_timezone"
       ],
-      "source": ".cef = {\n  \"name\": \"Deckhouse Event\",\n  \"severity\": \"5\",\n}",
+      "source": "if !exists(.cef) {\n  .cef = {};\n};\n\nif !exists(.cef.name) {\n  .cef.name = \"Deckhouse Event\";\n};\n\nif !exists(.cef.severity) {\n  .cef.severity = \"5\";\n} else if is_string(.cef.severity) {\n  if .cef.severity == \"Debug\" {\n    .cef.severity = \"0\";\n  };\n  if .cef.severity == \"Informational\" {\n    .cef.severity = \"3\";\n  };\n  if .cef.severity == \"Notice\" {\n    .cef.severity = \"4\";\n  };\n  if .cef.severity == \"Warning\" {\n    .cef.severity = \"6\";\n  };\n  if .cef.severity == \"Error\" {\n    .cef.severity = \"7\";\n  };\n  if .cef.severity == \"Critical\" {\n    .cef.severity = \"8\";\n  };\n  if .cef.severity == \"Emergency\" {\n    .cef.severity = \"10\";\n  };\n};",
       "type": "remap"
     },
     "transform/source/test-source/00_clean_up": {
@@ -51,7 +51,9 @@
           "device_product": "log-shipper-agent",
           "device_version": "1",
           "device_event_class_id": "Log event",
-          "version": "1",
+          "name": "cef.name",
+          "severity": "cef.severity",
+          "version": "V1",
           "extensions": {
             "container": "container",
             "host": "host",
@@ -60,8 +62,8 @@
             "namespace": "namespace",
             "node": "node",
             "pod": "pod",
-            "pod_ip": "pod_ip",
-            "pod_owner": "pod_owner",
+            "podip": "pod_ip",
+            "podowner": "pod_owner",
             "timestamp": "timestamp"
           }
         }
