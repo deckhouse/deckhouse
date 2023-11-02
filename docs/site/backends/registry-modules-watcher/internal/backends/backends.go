@@ -63,10 +63,10 @@ func (b *backends) Add(backends ...string) {
 	}
 
 	state := b.registryScaner.GetState()
-	x := map[string]struct{}{
-		"localhost:8081": {},
-	}
-	err := b.sender.Send(context.TODO(), x, state)
+	//x := map[string]struct{}{
+	//	"localhost:8081": {},
+	//}
+	err := b.sender.Send(context.TODO(), b.listBackends, state)
 	if err != nil {
 		klog.Fatal("error sending docs to new backend: ", err)
 	}
