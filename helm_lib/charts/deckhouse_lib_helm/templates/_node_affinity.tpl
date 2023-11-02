@@ -116,6 +116,7 @@ tolerations:
   {{- end }}
 {{- end }}
 
+
 {{- /* Check cluster type. */ -}}
 {{- /* Returns not empty string if this is cloud or hybrid cluster */ -}}
 {{- define "_helm_lib_cloud_or_hybrid_cluster" }}
@@ -123,11 +124,12 @@ tolerations:
     {{- if eq .Values.global.clusterConfiguration.clusterType "Cloud" }}
       "not empty string"
     {{- /* We consider non-cloud clusters with enabled cloud-provider-.* module as Hybrid clusters */ -}}
-    {{- /* For now, only VSphere and OpenStack support hybrid installations */ -}}
-    {{- else if ( .Values.global.enabledModules | has "cloud-provider-vsphere") }}
-      "not empty string"
-    {{- else if ( .Values.global.enabledModules | has "cloud-provider-openstack") }}
-      "not empty string"
+    {{- else }}
+      {{- range $v := .Values.global.enabledModules }}
+        {{- if hasPrefix "cloud-provider-" $v }}
+          "not empty string"
+        {{- end }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

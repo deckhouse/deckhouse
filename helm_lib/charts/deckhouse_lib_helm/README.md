@@ -34,6 +34,7 @@
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
 | **Module Init Container** |
 | [helm_lib_module_init_container_chown_nobody_volume](#helm_lib_module_init_container_chown_nobody_volume) |
+| [helm_lib_module_init_container_chown_deckhouse_volume](#helm_lib_module_init_container_chown_deckhouse_volume) |
 | [helm_lib_module_init_container_check_linux_kernel](#helm_lib_module_init_container_check_linux_kernel) |
 | **Module Labels** |
 | [helm_lib_module_labels](#helm_lib_module_labels) |
@@ -47,7 +48,7 @@
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs) |
 | [helm_lib_module_pod_security_context_run_as_user_root](#helm_lib_module_pod_security_context_run_as_user_root) |
 | [helm_lib_module_container_security_context_not_allow_privilege_escalation](#helm_lib_module_container_security_context_not_allow_privilege_escalation) |
-| [helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux](#helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux) |
+| [helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux](#helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux) |
 | [helm_lib_module_container_security_context_read_only_root_filesystem](#helm_lib_module_container_security_context_read_only_root_filesystem) |
 | [helm_lib_module_container_security_context_privileged](#helm_lib_module_container_security_context_privileged) |
 | [helm_lib_module_container_security_context_privileged_read_only_root_filesystem](#helm_lib_module_container_security_context_privileged_read_only_root_filesystem) |
@@ -388,6 +389,16 @@ list:
 
 
 
+### helm_lib_module_init_container_chown_deckhouse_volume
+
+ returns initContainer which chowns recursively all files and directories in passed volume 
+
+#### Usage
+
+`{{ include "helm_lib_module_init_container_chown_deckhouse_volume" (list . "volume-name") }} `
+
+
+
 ### helm_lib_module_init_container_check_linux_kernel
 
  returns initContainer which checks the kernel version on the node for compliance to semver constraint 
@@ -527,13 +538,13 @@ list:
 
 
 
-### helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux
+### helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux
 
- returns SecurityContext parameters for Container with allowPrivilegeEscalation false and options for SELinux compatibility
+ returns SecurityContext parameters for Container with read only root filesystem and options for SELinux compatibility
 
 #### Usage
 
-`{{ include "helm_lib_module_container_security_context_not_allow_privilege_escalation_with_selinux" . }} `
+`{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . }} `
 
 #### Arguments
 

@@ -45,3 +45,92 @@
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
 
   {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+###
+### node
+###
+
+  {{- define "csi_node_args" }}
+- --csi-endpoint=unix://$(CSI_ENDPOINT)
+- --node=$(KUBE_NODE_NAME)
+- --linstor-endpoint=$(LS_CONTROLLERS)
+- --log-level=info
+  {{- end }}
+
+  {{- define "csi_node_envs" }}
+- name: CSI_ENDPOINT
+value: /csi/csi.sock
+- name: DRIVER_REG_SOCK_PATH
+  value: /var/lib/kubelet/plugins/linstor.csi.linbit.com/csi.sock
+- name: KUBE_NODE_NAME
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: spec.nodeName
+- name: LS_CONTROLLERS
+  value: https://linstor.d8-{{ .Chart.Name }}.svc:3371
+- name: LS_ROOT_CA
+  valueFrom:
+    secretKeyRef:
+      key: ca.crt
+      name: linstor-client-https-cert
+- name: LS_USER_CERTIFICATE
+  valueFrom:
+    secretKeyRef:
+      key: tls.crt
+      name: linstor-client-https-cert
+- name: LS_USER_KEY
+  valueFrom:
+    secretKeyRef:
+      key: tls.key
+      name: linstor-client-https-cert
+  {{- end }}
+
+
+  {{- define "csi_init_container_envs" }}
+- name: CSI_ENDPOINT
+  value: /csi/csi.sock
+- name: DRIVER_REG_SOCK_PATH
+  value: /var/lib/kubelet/plugins/linstor.csi.linbit.com/csi.sock
+- name: KUBE_NODE_NAME
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: spec.nodeName
+- name: LS_CONTROLLERS
+  value: https://linstor.d8-{{ .Chart.Name }}.svc:3371
+- name: LS_ROOT_CA
+  valueFrom:
+    secretKeyRef:
+      key: ca.crt
+      name: linstor-client-https-cert
+- name: LS_USER_CERTIFICATE
+  valueFrom:
+    secretKeyRef:
+      key: tls.crt
+      name: linstor-client-https-cert
+- name: LS_USER_KEY
+  valueFrom:
+    secretKeyRef:
+      key: tls.key
+      name: linstor-client-https-cert
+  {{ -end }}
+
+  {{- define "csi_init_container_command" }}
+- /linstor-wait-until
+- satellite-online
+- $(KUBE_NODE_NAME)
+  {{ -end }}
+
+  {{- $csiNodeConfig := dict }}
+  {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+  {{- $_ := set $csiNodeConfig "driverFQDN" "linstor.csi.linbit.com" }}
+  {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+
+  {{- $_ := set $csiNodeConfig "initContainerImage" $csiControllerImage }}
+
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_init_container_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "initContainerCommand" (include "csi_init_container_command" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
