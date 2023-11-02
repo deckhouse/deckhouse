@@ -13,6 +13,7 @@
 # limitations under the License.
 
 bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
+bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 # shellcheck disable=SC2153
 
 # check if package installed
@@ -22,6 +23,17 @@ bb-rp-is-installed?() {
     local INSTALLED_DIGEST=""
     INSTALLED_DIGEST="$(cat "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}/digest")"
     if [[ "${INSTALLED_DIGEST}" == "${2}" ]]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# Check if package fetched
+# bb-rp-is-fetched? digest
+bb-rp-is-fetched?() {
+  if [[ -d "${BB_RP_FETCHED_PACKAGES_STORE}" ]]; then
+    if [[ -f "${BB_RP_FETCHED_PACKAGES_STORE}/${1}" ]]; then
       return 0
     fi
   fi
@@ -67,10 +79,54 @@ bb-rp-get-digests() {
 bb-rp-fetch-digest() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token)"
-  curl --retry 3 -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${1}" -o "${2}"
+  curl --retry 3 -fsSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${1}" -o "${2}"
 }
 
-# download package digests, unpack them and run install script
+
+# Fetch packages by digest
+# bb-rp-fetch package1:digest1 [package2:digest2]
+bb-rp-fetch() {
+  for PACKAGE_WITH_DIGEST in "$@"; do
+    local PACKAGE=""
+    local DIGEST=""
+    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
+    DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
+
+    # shellcheck disable=SC2211
+    if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
+      continue
+    fi
+
+    # shellcheck disable=SC2211
+    if bb-rp-is-fetched? "${DIGEST}"; then
+      bb-log-info "'${PACKAGE}:${DIGEST}' package already fetched"
+      continue
+    fi
+
+    local TOP_LAYER_DIGEST=""
+    TOP_LAYER_DIGEST="$(bb-rp-get-digests "${DIGEST}")"
+
+    # if bb-error?; then
+    #   bb-log-error "Failed to get top layer digest for '${PACKAGE}:${DIGEST}'"
+    #   return $BB_ERROR
+    # fi
+
+    # Get blobs
+    mkdir -p "${BB_RP_FETCHED_PACKAGES_STORE}"
+
+    bb-log-info "Fetching package '${PACKAGE}'"
+    bb-rp-fetch-digest "${TOP_LAYER_DIGEST}" "${BB_RP_FETCHED_PACKAGES_STORE}/${DIGEST}"
+    # shellcheck disable=SC2211
+    if bb-error?; then
+      bb-log-error "Failed to fetch package '${PACKAGE}'"
+      return "${BB_ERROR}"
+    fi
+    bb-log-info "'${PACKAGE}' package saved to '${BB_RP_FETCHED_PACKAGES_STORE}/${DIGEST}'"
+  done
+}
+
+
+# Unpack packages and run install script
 # bb-rp-install package:digest
 bb-rp-install() {
   for PACKAGE_WITH_DIGEST in "$@"; do
@@ -84,25 +140,21 @@ bb-rp-install() {
       continue
     fi
 
+    # shellcheck disable=SC2211
+    if ! bb-rp-is-fetched? "${DIGEST}"; then
+      bb-log-info "'${PACKAGE}:${DIGEST}' package not found locally"
+      bb-rp-fetch "${PACKAGE_WITH_DIGEST}"
+      continue
+    fi
+
     trap "rm -rf ${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}" ERR
 
-    local DIGESTS=""
-    DIGESTS="$(bb-rp-get-digests "${DIGEST}")"
-
+    bb-log-info "Unpacking package '${PACKAGE}'"
     local TMP_DIR=""
     TMP_DIR="$(mktemp -d)"
-
-    # Get digests
-    for TMP_DIGEST in ${DIGESTS}; do
-      local TMP_FILE=""
-      TMP_FILE="$(mktemp -u)"
-      bb-rp-fetch-digest "${TMP_DIGEST}" "${TMP_FILE}"
-      tar -xf "${TMP_FILE}" -C "${TMP_DIR}"
-      rm -f "${TMP_FILE}"
-    done
+    tar -xf "${BB_RP_FETCHED_PACKAGES_STORE}/${DIGEST}" -C "${TMP_DIR}"
 
     bb-log-info "Installing package '${PACKAGE}'"
-    # run install script
     # shellcheck disable=SC2164
     pushd "${TMP_DIR}" >/dev/null
     ./install
@@ -118,9 +170,9 @@ bb-rp-install() {
     # Write digest to hold file
     mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
     echo "${DIGEST}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}/digest"
-    # copy install/uninstall scripts to hold dir
+    # Copy install/uninstall scripts to hold dir
     cp "${TMP_DIR}/install" "${TMP_DIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
-    # cleanup
+    # Cleanup
     rm -rf "${TMP_DIR}"
 
     bb-event-fire "bb-package-installed" "${PACKAGE}"
