@@ -379,6 +379,7 @@ spec:
                         codec:
                           type: string
                           enum: ["JSON", "CEF"]
+                          default: "JSON"
                     sasl:
                       type: object
                       description: Configuration for SASL authentication when interacting with Kafka.

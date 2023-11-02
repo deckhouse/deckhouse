@@ -85,7 +85,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 	if spec.Encoding.Codec == v1alpha1.EncodingCodecCEF {
 		encoding.Codec = "cef"
 		encoding.CEF = CEFEncoding{
-			Version:            "1",
+			Version:            "V1",
 			DeviceVendor:       "Deckhouse",
 			DeviceProduct:      "log-shipper-agent",
 			DeviceVersion:      "1",
