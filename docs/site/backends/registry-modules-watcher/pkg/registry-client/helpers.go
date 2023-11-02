@@ -3,7 +3,6 @@ package registryclient
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -16,13 +15,8 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
+func readAuthConfig(repo, dockerCfg string) (authn.AuthConfig, error) {
 	r, err := parse(repo)
-	if err != nil {
-		return authn.AuthConfig{}, err
-	}
-
-	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
 	if err != nil {
 		return authn.AuthConfig{}, err
 	}
