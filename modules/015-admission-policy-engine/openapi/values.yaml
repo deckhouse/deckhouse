@@ -10,6 +10,7 @@ properties:
         type: boolean
         default: false
       podSecurityStandards:
+        default: {}
         type: object
         properties:
           enforcementActions:

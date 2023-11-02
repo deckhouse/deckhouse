@@ -40,11 +40,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 						Key:      pssEnforcementActionLabel,
 						Operator: metav1.LabelSelectorOpIn,
 						Values: []string{
-							"Deny",
 							"deny",
-							"Dryrun",
 							"dryrun",
-							"Warn",
 							"warn",
 						},
 					},
