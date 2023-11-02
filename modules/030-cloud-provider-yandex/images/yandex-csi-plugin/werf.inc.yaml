@@ -9,7 +9,7 @@ import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
   add: /relocate
   to: /
-  before: setup
+  before: install
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
@@ -41,20 +41,21 @@ git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /
   stageDependencies:
-    install:
+    setup:
       - '**/*'
   includePaths:
   - binary_replace.sh
   - binary_list
 shell:
-  beforeInstall:
+  beforeSetup:
     - apt-get update
     - |
       apt-get install -y ca-certificates \
                         util-linux \
                         e2fsprogs xfsprogs \
                         mount parted
-    - chmod +x binary_replace.sh
-    - ./binary_replace.sh -i binary_list
+  setup:
+    - chmod +x /binary_replace.sh
+    - /binary_replace.sh -i binary_list
 
 
