@@ -243,8 +243,6 @@ github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/felixge/httpsnoop v1.0.3 h1:s/nj+GCswXYzN5v2DpNMuMQYe+0DDwt5WVCU6CWBdXk=
-github.com/flant/addon-operator v1.2.3 h1:v+OCw9Pqz1rBJCTiD4eLNiLH+aQAd51LqlIxp+WEpBA=
-github.com/flant/addon-operator v1.2.3/go.mod h1:ESyT888iuDIGkP92R/Bqmr4+czMXi0u5UN8xXyIAwiA=
 github.com/flant/addon-operator v1.2.4-0.20231016154044-c0a848fc7d74 h1:L/rhsw9UKCtoPH39nmS4qWNef002aXVZCU6PBmuUv5w=
 github.com/flant/addon-operator v1.2.4-0.20231016154044-c0a848fc7d74/go.mod h1:gLoFjeIg7Ds3Sb/oYsmx1/Q6bcSQMj93k7pqGS/hmJg=
 github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbLR5vJOUzKAK8p3nrD7mDk=
@@ -255,8 +253,6 @@ github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee h1:evii83J+/6QGNv
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
 github.com/flant/logboek v0.3.4 h1://0FHwS7hoLHTz7H+JlLheKlu298edC+qV61ca9OJBQ=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
-github.com/flant/shell-operator v1.3.2 h1:6sF2rxMCDfqZx9vAmmEg10RWNxsWZuDHeN+mbWXfyGM=
-github.com/flant/shell-operator v1.3.2/go.mod h1:0Sb2td567MG7qRrPMz5Mqx4Y/6JWot/pKJMYFUGlikU=
 github.com/flant/shell-operator v1.3.3-0.20231013105726-aa38dfcd70d1 h1:D1wwYq2/uzldvMWNKNwamRt8O9nwwWwXNCUnpJxlWwo=
 github.com/flant/shell-operator v1.3.3-0.20231013105726-aa38dfcd70d1/go.mod h1:0Sb2td567MG7qRrPMz5Mqx4Y/6JWot/pKJMYFUGlikU=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=

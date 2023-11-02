@@ -1,0 +1,173 @@
+package registryscaner
+
+import (
+	"archive/tar"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"strings"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"k8s.io/klog"
+)
+
+func (s *registryscaner) processRegistries(ctx context.Context) {
+	for _, registry := range s.registryClients {
+		modules, err := registry.Modules()
+		if err != nil {
+			klog.Fatal(err)
+		}
+
+		s.processModules(ctx, registry, modules)
+	}
+}
+
+func (s *registryscaner) processModules(ctx context.Context, registry Client, modules []string) {
+	for _, module := range modules {
+		tags, err := registry.ListTags(module)
+		if err != nil {
+			klog.Fatal(err)
+		}
+
+		s.processReleaseChannels(ctx, registry.Name(), module, filterReleaseChannelsFromTags(tags))
+	}
+}
+
+func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) {
+	for _, releaseChannel := range releaseChannels {
+		releaseImage, err := s.registryClients[registry].ReleaseImage(module, releaseChannel)
+		if err != nil {
+			klog.Fatal(err)
+		}
+
+		// if the checksum for the release channel matches - skip processing of the release channel
+		releaseDigest, err := releaseImage.Digest()
+		if err != nil {
+			klog.Fatal(err)
+		}
+		releaseChecksum, ok := s.cache.GetReleaseChecksum(registry, module, releaseChannel)
+		if ok && releaseChecksum == releaseDigest.String() {
+			continue
+		}
+
+		s.cache.SetReleaseChecksum(registry, module, releaseChannel, releaseDigest.String())
+
+		version, err := extractVersionFromImage(releaseImage)
+		if err != nil {
+			klog.Fatal(err) // mb not fatal
+		}
+
+		s.processVersion(ctx, registry, module, version, releaseChannel)
+	}
+}
+
+func (s *registryscaner) processVersion(ctx context.Context, registry, module, version, releaseChannel string) {
+	image, err := s.registryClients[registry].Image(module, version)
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	// image.Digest() // ???
+
+	tarFile, err := extractDocumentation(image)
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	s.cache.SetTar(registry, module, version, releaseChannel, tarFile)
+}
+
+// * * * * * *
+
+func extractDocumentation(image v1.Image) ([]byte, error) {
+	readCloser := mutate.Extract(image)
+	defer readCloser.Close()
+
+	tarFile := bytes.NewBuffer(nil)
+	tarWriter := tar.NewWriter(tarFile)
+	tarReader := tar.NewReader(readCloser)
+	h := &tar.Header{
+		Typeflag: tar.TypeDir,
+		Name:     "docs",
+		Mode:     0700,
+	}
+	if err := tarWriter.WriteHeader(h); err != nil {
+		log.Fatal(err)
+	}
+	for {
+		hdr, err := tarReader.Next()
+		if err != nil {
+			if err == io.EOF {
+				return tarFile.Bytes(), nil
+			}
+
+			return nil, err
+		}
+
+		if strings.Contains(hdr.Name, "docs/") {
+			buf := bytes.NewBuffer(nil)
+			if _, err := io.Copy(buf, tarReader); err != nil {
+				klog.Fatal(err)
+			}
+
+			if err := tarWriter.WriteHeader(hdr); err != nil {
+				log.Fatal(err)
+			}
+
+			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+}
+
+func extractVersionFromImage(releaseImage v1.Image) (string, error) {
+	// exactly local type
+	type versionJson struct {
+		Version string `json:"version"`
+	}
+
+	readCloser := mutate.Extract(releaseImage)
+	defer readCloser.Close()
+
+	tarReader := tar.NewReader(readCloser)
+	for {
+		hdr, err := tarReader.Next()
+		if err != nil {
+			if err == io.EOF {
+				return "", fmt.Errorf("version is not set")
+			}
+
+			return "", err
+		}
+
+		if hdr.Typeflag == tar.TypeReg && hdr.Name == "version.json" {
+			buf := bytes.NewBuffer(nil)
+			if _, err = io.Copy(buf, tarReader); err != nil {
+				return "", err
+			}
+
+			v := versionJson{}
+			if err := json.Unmarshal(buf.Bytes(), &v); err != nil {
+				return "", err
+			}
+
+			if v.Version != "" {
+				return v.Version, nil
+			}
+		}
+	}
+}
+
+func filterReleaseChannelsFromTags(tags []string) (releaseChannels []string) {
+	for _, tag := range tags {
+		if _, ok := releaseChannelsTags[tag]; ok {
+			releaseChannels = append(releaseChannels, tag)
+		}
+	}
+	return
+}
