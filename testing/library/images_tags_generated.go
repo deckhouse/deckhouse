@@ -182,6 +182,12 @@ var DefaultImagesDigests = map[string]interface{}{
 	"descheduler": map[string]interface{}{
 		"descheduler": "imageHash-descheduler-descheduler",
 	},
+	"docsBuilder": map[string]interface{}{
+		"docsBuilder": "imageHash-docsBuilder-docsBuilder",
+	},
+	"docsBuilderArtifact": map[string]interface{}{
+		"docsBuilderArtifact": "imageHash-docsBuilderArtifact-docsBuilderArtifact",
+	},
 	"documentation": map[string]interface{}{
 		"web": "imageHash-documentation-web",
 	},
