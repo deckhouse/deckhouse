@@ -1,3 +1,4 @@
+<div id="top"></div>
 <p align="center">
   <img src="https://raw.githubusercontent.com/deckhouse/deckhouse/main/docs/site/images/d8-small-logo.png"/>
 </p>
@@ -58,3 +59,5 @@ In addition to common GitHub features, here are some other online resources rela
 * [Telegram chat](https://t.me/deckhouse) to discuss (there's a dedicated [Telegram chat in Russian](https://t.me/deckhouse_ru) as well);
 * [Deckhouse blog](https://blog.deckhouse.io/) to read the latest articles about Deckhouse.
 * Check our [work board](https://github.com/orgs/deckhouse/projects/2) and [roadmap](https://github.com/orgs/deckhouse/projects/6) for more insights.
+
+<p align="right">(<a href="#top">🔼 Back to top</a>)</p>
