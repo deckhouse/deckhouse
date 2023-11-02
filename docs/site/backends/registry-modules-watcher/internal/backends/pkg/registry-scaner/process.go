@@ -16,11 +16,13 @@ import (
 )
 
 func (s *registryscaner) processRegistries(ctx context.Context) {
+	klog.Info("Start watching registries")
 	for _, registry := range s.registryClients {
 		modules, err := registry.Modules()
 		if err != nil {
 			klog.Fatal(err)
 		}
+		klog.Infof("Found modules: %v in %q", modules, registry.Name())
 
 		s.processModules(ctx, registry, modules)
 	}
