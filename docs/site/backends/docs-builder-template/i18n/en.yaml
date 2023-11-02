@@ -1,6 +1,7 @@
 search-placeholder: Search...
 version: version
 modules: modules
+deckhouse: deckhouse
 moduleLinkTitleREADME: Description
 moduleLinkTitleEXAMPLES: Examples
 moduleLinkTitleCONFIGURATION: Configuration
