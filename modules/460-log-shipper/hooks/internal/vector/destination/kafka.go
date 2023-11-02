@@ -90,6 +90,8 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 			DeviceProduct:      "log-shipper-agent",
 			DeviceVersion:      "1",
 			DeviceEventClassID: "Log event",
+			Name:               "cef.name",
+			Severity:           "cef.severity",
 			Extensions: map[string]string{
 				"message":   "message",
 				"timestamp": "timestamp",
