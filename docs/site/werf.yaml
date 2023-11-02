@@ -226,7 +226,7 @@ ansible:
   setup:
     - name: Build registry-modules-watcher
       shell: |
-        go build -ldflags "-w -s" -v -o /go/src/app/registry-modules-watcher /go/src/app/
+        go build -ldflags "-w -s" -v -o /go/src/app/registry-modules-watcher /go/src/app/cmd/
       args:
         executable: /bin/sh
         chdir: /go/src/app
