@@ -67,17 +67,18 @@ spec:
       - apiGroups: [""]
         kinds: ["Pod"]
     namespaceSelector:
-      {{- if eq $standard "baseline" }}
       matchExpressions:
+      {{- if eq $standard "baseline" }}
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ baseline, restricted ] }
-      matchLabels:
-        security.deckhouse.io/pod-policy-action: {{ $policyAction }}
       {{- else if eq $standard "restricted" }}
-      matchLabels:
-        security.deckhouse.io/pod-policy: restricted
-        security.deckhouse.io/pod-policy-action: {{ $policyAction }}
+        - { key: security.deckhouse.io/pod-policy, operator: In, values: [ restricted ] }
       {{- else}}
         {{ cat "Unknown policy standard" | fail }}
+      {{- end }}
+      {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
+        - { key: security.deckhouse.io/pod-policy-action, operator: NotIn, values: [{{ (without $context.Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions $policyAction | join ",") }}] }
+      {{- else }}
+        - { key: security.deckhouse.io/pod-policy-action, operator: In, values: [{{ $policyAction }}] }
       {{- end }}
   {{- if $parameters }}
   parameters:

@@ -25,19 +25,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const enforcementActionLabel = "security.deckhouse.io/pod-policy-action"
+const pssEnforcementActionLabel = "security.deckhouse.io/pod-policy-action"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "enforcement_actions",
+			Name:       "pss_enforcement_actions",
 			ApiVersion: "",
 			Kind:       "Namespace",
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      enforcementActionLabel,
+						Key:      pssEnforcementActionLabel,
 						Operator: metav1.LabelSelectorOpIn,
 						Values: []string{
 							"Deny",
@@ -57,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleActions(input *go_hook.HookInput) error {
 	actions := []string{strings.ToLower(input.Values.Get("admissionPolicyEngine.podSecurityStandards.enforcementAction").String())}
-	labels := input.Snapshots["enforcement_actions"]
+	labels := input.Snapshots["pss_enforcement_actions"]
 
 	for _, label := range labels {
 		lbl := strings.ToLower(label.(string))
@@ -69,13 +69,13 @@ func handleActions(input *go_hook.HookInput) error {
 			}
 		}
 	}
-	input.Values.Set("admissionPolicyEngine.internal.enforcementActions", actions)
+	input.Values.Set("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", actions)
 
 	return nil
 }
 
 func filterNamespaces(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	action, _, err := unstructured.NestedString(obj.Object, "metadata", "labels", enforcementActionLabel)
+	action, _, err := unstructured.NestedString(obj.Object, "metadata", "labels", pssEnforcementActionLabel)
 	if err != nil {
 		return nil, err
 	}

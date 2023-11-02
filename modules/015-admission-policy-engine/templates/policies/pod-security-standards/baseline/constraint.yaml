@@ -7,7 +7,7 @@
   {{- end }}
 {{- end }}
 
-{{- range $enforcementAction := .Values.admissionPolicyEngine.internal.enforcementActions }}
+{{- range $enforcementAction := .Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions }}
 
   {{- $parameters := dict "ranges" $knownList "allowHostNetwork" false }}
   {{- include "pod_security_standard_baseline" (list $context "D8HostNetwork" $enforcementAction $parameters) }}
