@@ -1,0 +1,1 @@
+{{ tpl (.Files.Get "werf-docs-builder.inc.yaml") . }}
