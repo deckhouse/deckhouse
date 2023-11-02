@@ -2,7 +2,7 @@ package registryclient
 
 import (
 	"fmt"
-	registryscaner "watchdoc/internal/backends/pkg/registry-scaner"
+	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"

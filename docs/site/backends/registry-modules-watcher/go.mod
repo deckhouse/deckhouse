@@ -1,4 +1,4 @@
-module registry-scanner
+module registry-modules-watcher
 
 go 1.20
 
