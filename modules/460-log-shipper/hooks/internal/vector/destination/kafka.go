@@ -78,6 +78,33 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		sasl.Enabled = true
 	}
 
+	encoding := Encoding{
+		Codec:           "json",
+		TimestampFormat: "rfc3339",
+	}
+	if spec.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+		encoding.Codec = "cef"
+		encoding.CEF = CEFEncoding{
+			Version:            "1",
+			DeviceVendor:       "Deckhouse",
+			DeviceProduct:      "log-shipper-agent",
+			DeviceVersion:      "1",
+			DeviceEventClassID: "Log event",
+			Extensions: map[string]string{
+				"message":   "message",
+				"timestamp": "timestamp",
+				"node":      "node",
+				"host":      "host",
+				"pod":       "pod",
+				"pod_ip":    "pod_ip",
+				"namespace": "namespace",
+				"image":     "image",
+				"container": "container",
+				"pod_owner": "pod_owner",
+			},
+		}
+	}
+
 	return &Kafka{
 		CommonSettings: CommonSettings{
 			Name:   ComposeName(name),
@@ -85,12 +112,9 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),
 		},
-		TLS:   tls,
-		Topic: spec.Topic,
-		Encoding: Encoding{
-			Codec:           "json",
-			TimestampFormat: "rfc3339",
-		},
+		TLS:              tls,
+		Topic:            spec.Topic,
+		Encoding:         encoding,
 		SASL:             sasl,
 		Compression:      "gzip",
 		BootstrapServers: strings.Join(spec.BootstrapServers, ","),

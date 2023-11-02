@@ -371,6 +371,14 @@ spec:
                       items:
                         type: string
                         pattern: '^(.+)\:\d{1,5}$'
+                    encoding:
+                      type: object
+                      description: |
+                        How to encode the message.
+                      properties:
+                        codec:
+                          type: string
+                          enum: ["JSON", "CEF"]
                     sasl:
                       type: object
                       description: Configuration for SASL authentication when interacting with Kafka.
