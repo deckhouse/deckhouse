@@ -1,0 +1,61 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ $.Images.BASE_ALT }}
+git:
+- add: /{{ $.ModulePath }}/{{ $.ImageName }}/binary_replace.sh
+  to: /binary_replace.sh
+  stageDependencies:
+    setup:
+      - '**/*'
+shell:
+  beforeSetup:
+    - apt-get update
+    - |
+      apt-get install -y ca-certificates \
+                        util-linux \
+                        e2fsprogs xfsprogs \
+                        mount parted
+  setup:
+  {{- include "COMMON_ALT_SCRIPT" . | indent 2}}
+# TODO export CSI_BINARYES={{ $.LIST_BINARYES }}
+# - chmod +x /binary_replace.sh
+# - /binary_replace.sh -i "$CSI_BINARYES"
+
+{{- define "COMMON_ALT_SCRIPT" }}
+- |
+  export CSI_BINARYES="/bin/chmod
+/bin/mount
+/bin/mkdir
+/bin/rmdir
+/bin/umount
+/bin/findmnt
+/bin/dmesg
+/bin/lsblk
+/sbin/badblocks
+/sbin/blockdev
+/sbin/blk*
+/sbin/btrfs*
+/sbin/debugfs
+/sbin/dumpe2fs
+/sbin/e2*
+/sbin/findfs
+/sbin/fsck*
+/sbin/fsfreeze
+/sbin/fstrim
+/sbin/mke2fs
+/sbin/mkfs*
+/sbin/resize2fs
+/sbin/tune2fs
+/sbin/xfs_repair
+/sbin/wipefs
+/usr/bin/chattr
+/usr/bin/lsattr
+/usr/sbin/e2freefrag
+/usr/sbin/e4crypt
+/usr/sbin/e4defrag
+/usr/sbin/filefrag
+/usr/sbin/nvme
+/usr/sbin/parted
+/usr/sbin/xfs*"
+- chmod +x /binary_replace.sh
+- /binary_replace.sh -i "$CSI_BINARYES" -o /relocate
+{{- end }}
