@@ -26,7 +26,7 @@ spec:
   - hosts:
       - {{ .URL }}
       - www.{{ .URL }}
-    secretName: tls-{{ .URL }}
+    secretName: star-{{ .URL | replace "." "-" }}
 {{- end }}
   rules:
 {{- range $hosts }}
