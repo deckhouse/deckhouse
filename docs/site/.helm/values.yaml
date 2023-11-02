@@ -19,7 +19,7 @@ moduleWatcher:
   registries:
     _default:
       - registry.deckhouse.io/deckhouse/fe/modules
-      - registry.flant.com/team/foxtrot/modules
+      - registry.flant.com/team/foxtrot/parca
     production:
       - registry.deckhouse.io/deckhouse/fe/modules
   scanInterval:
