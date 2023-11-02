@@ -35,6 +35,10 @@ import:
 image: static-pages
 from: {{ .Images.BASE_JEKYLL }}
 fromCacheVersion: 20210713
+docker:
+  ENV:
+    LANG: en_US.UTF-8
+    LC_ALL: en_US.UTF-8
 ansible:
   install:
     - shell: |

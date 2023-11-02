@@ -1,4 +1,5 @@
 {{ $defaultChannel := "alpha" }}
+{{/* --- subpages --- */}}
 {{ define "subpages" }}
 {{ $_pathElements := index ( findRESubmatch  `^([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` page.File.Dir 1 ) 0 }}
 {{ $currentModule := index $_pathElements 1 }}
@@ -27,12 +28,23 @@
   {{ end }}
   </ul>
 {{ end }}
+{{/* END --- subpages --- */}}
 
 {{ $context := .GetPage "/" }}
   <div class="sidebar__wrapper-inner">
     <nav class="sidebar__container">
 
       <ul class="sidebar" id="mysidebar">
+
+        <div>
+        {{- range $item, $data := .Site.Data.sidebar_common.tabs }}
+          <a class='tabs__btn tabs__btn_sidebars{{ if $data.default }} active{{end}}'  href='{{ $data.url }}'>
+            {{ humanize ( T $item ) }}
+          </a>
+        {{- end }}
+        </div>
+
+
         {{ range .Site.Sections }}
             <li class="sidebar__item sidebar__item_parent {{ if or (.IsAncestor page) (eq . page) }}active{{ end }}">
                 <a href='
