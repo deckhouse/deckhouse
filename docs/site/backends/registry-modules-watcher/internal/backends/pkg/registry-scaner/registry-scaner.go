@@ -74,10 +74,10 @@ func (s *registryscaner) UpdateChan() chan bool {
 }
 
 // Subscribe
-func (s *registryscaner) Subscribe(ctx context.Context) {
+func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Duration) {
 	// TODO subscribe interval from flags
 	s.processRegistries(ctx)
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(scanInterval)
 
 	go func() {
 		for {

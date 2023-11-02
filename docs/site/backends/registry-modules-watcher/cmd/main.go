@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
+	"flag"
 	"os"
 	"registry-modules-watcher/internal/backends"
 	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
 	"registry-modules-watcher/internal/wather"
 	registryclient "registry-modules-watcher/pkg/registry-client"
+	"strings"
+	"time"
 
 	"k8s.io/klog"
 
@@ -18,6 +20,14 @@ import (
 )
 
 func main() {
+	registries := flag.String("watch-registries", "", "a list for followed registries")
+	scanInterval := flag.Float64("scan-interval", 30, "interval for scanning the images. default 15 minutes")
+	flag.Parse()
+
+	if *registries == "" {
+		klog.Fatal("watch-registries is empty")
+	}
+
 	ctx := context.Background()
 
 	// * * * * * * * * *
@@ -43,17 +53,21 @@ func main() {
 
 	// * * * * * * * * *
 	// Connect to registry
-	// TODO for range watchRegistries {}
 	// TODO: remove b64 encode
-	client, err := registryclient.NewClient("registry.deckhouse.io/deckhouse/fe/modules",
-		registryclient.WithAuth(base64.RawStdEncoding.EncodeToString([]byte(regsecretRaw))),
-	)
-	if err != nil {
-		klog.Fatal(err)
+	clients := []registryscaner.Client{}
+	for _, registry := range strings.Split(*registries, ",") {
+		client, err := registryclient.NewClient(registry,
+			registryclient.WithAuth(regsecretRaw),
+		)
+		if err != nil {
+			klog.Fatal(err)
+		}
+
+		clients = append(clients, client)
 	}
 
-	registryScaner := registryscaner.New(client)
-	registryScaner.Subscribe(ctx)
+	registryScaner := registryscaner.New(clients...)
+	registryScaner.Subscribe(ctx, time.Duration(*scanInterval*float64(time.Second)))
 
 	// * * * * * * * * *
 	// New sender
