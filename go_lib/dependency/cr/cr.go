@@ -88,6 +88,7 @@ func (r *client) Image(tag string) (v1.Image, error) {
 	}
 
 	imageOptions := make([]remote.Option, 0)
+	imageOptions = append(imageOptions, remote.WithUserAgent(r.options.userAgent))
 	if !r.options.withoutAuth {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
 	}
@@ -195,6 +196,7 @@ type registryOptions struct {
 	useHTTP     bool
 	withoutAuth bool
 	dockerCfg   string
+	userAgent   string
 }
 
 type Option func(options *registryOptions)
@@ -224,6 +226,13 @@ func WithDisabledAuth() Option {
 func WithAuth(dockerCfg string) Option {
 	return func(options *registryOptions) {
 		options.dockerCfg = dockerCfg
+	}
+}
+
+// WithUserAgent adds ua string to the User-Agent header
+func WithUserAgent(ua string) Option {
+	return func(options *registryOptions) {
+		options.userAgent = ua
 	}
 }
 
