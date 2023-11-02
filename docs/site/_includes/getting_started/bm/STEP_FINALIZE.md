@@ -45,7 +45,7 @@ EOF
     Deckhouse will generate the script needed to configure the prospective node and include it in the cluster. Print its contents in Base64 format (you will need them at the next step):
     {% snippetcut %}
   ```bash
-kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
   ```
   {% endsnippetcut %}
   </li>
