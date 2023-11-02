@@ -14,13 +14,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-while getopts ":h:i:o:" option; do
+function Help() {
+   # Display Help
+   echo "Copy binaries and their libraries to a folder"
+   echo "Only one input parameter allowed (-f or -i) !!!" 
+   echo
+   echo "Syntax: scriptTemplate [-h|f|i|o]"
+   echo "options:"
+   echo "f     Files with paths to binaryes; Support mask like /sbin/m*"
+   echo "i     Paths to binaryes separated by space; Support mask like /sbin/m*; Example: /bin/chmod /bin/mount /sbin/m*"
+   echo '      List of binaryes should be in double quotes, -i "/bin/chmod /bin/mount" '
+   echo "o     Output directory (Default value: '/relocate')"
+   echo "h     Print this help"
+   echo 
+   echo
+}
+
+while getopts ":h:i:f:o:" option; do
    case $option in
       h) # display Help
          Help
          exit;;
-      i)
+      f)
         FILE_TEMPLATE_BINS=$OPTARG
+        ;;
+      i)
+        TEMPLATE_BINS=$OPTARG
         ;;
       o)
         RDIR=$OPTARG
@@ -31,23 +50,9 @@ while getopts ":h:i:o:" option; do
    esac
 done
 
-Help()
-{
-   # Display Help
-   echo "Add description of the script functions here."
-   echo
-   echo "Syntax: scriptTemplate [-h|i|o]"
-   echo "options:"
-   echo "i     Files with paths to binaryes; Support mask like /sbin/m*"
-   echo "o     Output directory (Default value: '/relocate')"
-   echo "h     Print this help"
-   echo
-}
-
 if [[ -z $RDIR ]];then
   RDIR="/relocate"
 fi
-
 mkdir -p "${RDIR}"
 
 function relocate() {
@@ -65,10 +70,9 @@ function relocate() {
 
 function relocate_item() {
   local file=$1
-
   local new_place="${RDIR}$(dirname ${file})"
+  
   mkdir -p ${new_place}
-
   cp -a ${file} ${new_place}
 
   # if symlink, copy original file too
@@ -83,7 +87,7 @@ function get_binnary_path () {
   BINARY_LIST=()
   
   for bin in "$@"; do
-    if [[ -z $(ls -la $bin 2>/dev/null) ]]; then
+    if [[ ! -f $bin ]] || [ "${bin}" == "${RDIR}" ]; then
       continue
     fi
     BINARY_LIST+=$(ls -la $bin 2>/dev/null | awk '{print $9}')" "
@@ -92,11 +96,16 @@ function get_binnary_path () {
   if [[ -z $BINARY_LIST ]]; then echo "No binaryes for replace"; exit 1; fi;
 }
 
-if [[ -n $FILE_TEMPLATE_BINS ]]; then
+# if get file with binaryes (-f)
+if [[ -n $FILE_TEMPLATE_BINS ]] && [[ -f $FILE_TEMPLATE_BINS ]] && [[ -z $TEMPLATE_BINS ]]; then
   BIN_TEMPLATE=$(cat $FILE_TEMPLATE_BINS)
   get_binnary_path ${BIN_TEMPLATE}
+# Or get paths to bin via raw input (-i)
+elif [[ -n $TEMPLATE_BINS ]] && [[ -z $FILE_TEMPLATE_BINS ]]; then
+  get_binnary_path ${TEMPLATE_BINS}
 else
-  get_binnary_path ${@}
+  Help
+  exit
 fi
 
 for binary in ${BINARY_LIST[@]}; do
