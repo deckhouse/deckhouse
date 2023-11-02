@@ -1,6 +1,6 @@
 package cache
 
-import "watchdoc/internal/backends"
+import "registry-modules-watcher/internal/backends"
 
 type (
 	registryName       string
