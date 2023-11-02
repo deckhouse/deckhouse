@@ -17,6 +17,7 @@ limitations under the License.
 package vrl
 
 // CEFNameAndSeverity sets default values for cef encoding.
+// If also maps falco priority values to severity to make it possible to use for cef.
 const CEFNameAndSeverity Rule = `
 if !exists(.cef) {
   .cef = {};
