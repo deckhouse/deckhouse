@@ -57,7 +57,11 @@
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: {{ $policyCRDName }}
 metadata:
+{{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
+  name: d8-pod-security-{{$standard}}-{{$policyAction}}-default
+{{- else }}
   name: d8-pod-security-{{$standard}}-{{$policyAction}}
+{{- end }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
 spec:
   enforcementAction: {{ $policyAction }}
@@ -76,7 +80,9 @@ spec:
         {{ cat "Unknown policy standard" | fail }}
       {{- end }}
       {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
-        - { key: security.deckhouse.io/pod-policy-action, operator: NotIn, values: [{{ (without $context.Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions $policyAction | join ",") }}] }
+        {{- if gt (len $context.Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions) 1 }}
+        - { key: security.deckhouse.io/pod-policy-action, operator: NotIn, values: [{{ (without $context.Values.admoissionPolicyEngine.internal.podSecurityStandards.enforcementActions $policyAction | join ",") }}] }
+        {{- end }}
       {{- else }}
         - { key: security.deckhouse.io/pod-policy-action, operator: In, values: [{{ $policyAction }}] }
       {{- end }}

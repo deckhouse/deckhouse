@@ -34,6 +34,9 @@ var _ = Describe("Module :: admissionPolicyEngine :: pod security policies ::", 
 	f := SetupHelmConfig(`
 admissionPolicyEngine:
   internal:
+    podSecurityStandards:
+      enforcementActions:
+      - deny
     bootstrapped: true
     webhook:
       ca: YjY0ZW5jX3N0cmluZwo=
