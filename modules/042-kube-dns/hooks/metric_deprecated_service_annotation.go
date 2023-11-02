@@ -49,11 +49,12 @@ func applyMetricServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 		return nil, err
 	}
 
-	if _, isMapContainsKey := svc.Annotations["service.alpha.kubernetes.io/tolerate-unready-endpoints"]; isMapContainsKey {
+	// there is an annotation and publishNotReadyAddresses=false
+	if _, isMapContainsKey := svc.Annotations["service.alpha.kubernetes.io/tolerate-unready-endpoints"]; isMapContainsKey && !svc.Spec.PublishNotReadyAddresses {
 		return MetricServiceFiltered{Name: svc.Name, Namespace: svc.Namespace, DeprecatedAnnotation: true}, nil
 	}
 
-	return MetricServiceFiltered{DeprecatedAnnotation: false}, nil
+	return MetricServiceFiltered{Name: svc.Name, Namespace: svc.Namespace, DeprecatedAnnotation: false}, nil
 }
 
 func metricDeprecatedServiceAnnotaion(input *go_hook.HookInput) error {
