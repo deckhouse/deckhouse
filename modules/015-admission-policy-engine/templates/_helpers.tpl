@@ -81,7 +81,7 @@ spec:
       {{- end }}
       {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
         {{- if gt (len $context.Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions) 1 }}
-        - { key: security.deckhouse.io/pod-policy-action, operator: NotIn, values: [{{ (without $context.Values.admoissionPolicyEngine.internal.podSecurityStandards.enforcementActions $policyAction | join ",") }}] }
+        - { key: security.deckhouse.io/pod-policy-action, operator: NotIn, values: [{{ (without $context.Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions $policyAction | join ",") }}] }
         {{- end }}
       {{- else }}
         - { key: security.deckhouse.io/pod-policy-action, operator: In, values: [{{ $policyAction }}] }
