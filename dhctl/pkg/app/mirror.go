@@ -89,12 +89,12 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("skip-gost-digests", "Do not calculate GOST R 34.11-2012 digests for downloaded blobs").
 		Envar(configEnvName("MIRROR_SKIP_GOST_DIGESTS")).
 		BoolVar(&MirrorSkipGOSTHashing)
-	cmd.Flag("images-bundle", "Tar bundle with pulled images").
+	cmd.Flag("images-bundle-path", "Path of tar bundle with pulled images").
 		Short('i').
 		Required().
 		Envar(configEnvName("MIRROR_IMAGES_BUNDLE")).
 		StringVar(&MirrorTarBundle)
-	cmd.Flag("insecure", "Skip TLS checks.").
+	cmd.Flag("insecure", "Interact with registries over HTTP.").
 		BoolVar(&MirrorInsecure)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
