@@ -94,18 +94,20 @@ bb-rp-fetch() {
 
     # shellcheck disable=SC2211
     if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
+      bb-log-debug "'${PACKAGE_WITH_DIGEST}' package already installed"
       continue
     fi
 
     # shellcheck disable=SC2211
     if bb-rp-is-fetched? "${DIGEST}"; then
-      bb-log-info "'${PACKAGE}:${DIGEST}' package already fetched"
+      bb-log-debug "'${PACKAGE}:${DIGEST}' package already fetched"
       continue
     fi
 
     local TOP_LAYER_DIGEST=""
     TOP_LAYER_DIGEST="$(bb-rp-get-digests "${DIGEST}")"
 
+    # Doesn't work because of exit code 0 if error (e.g 404 Not Found)
     # if bb-error?; then
     #   bb-log-error "Failed to get top layer digest for '${PACKAGE}:${DIGEST}'"
     #   return $BB_ERROR
@@ -121,7 +123,7 @@ bb-rp-fetch() {
       bb-log-error "Failed to fetch package '${PACKAGE}'"
       return "${BB_ERROR}"
     fi
-    bb-log-info "'${PACKAGE}' package saved to '${BB_RP_FETCHED_PACKAGES_STORE}/${DIGEST}'"
+    bb-log-debug "'${PACKAGE}' package saved to '${BB_RP_FETCHED_PACKAGES_STORE}/${DIGEST}'"
   done
 }
 
@@ -137,19 +139,19 @@ bb-rp-install() {
 
     # shellcheck disable=SC2211
     if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
+      bb-log-debug "'${PACKAGE_WITH_DIGEST}' package already installed"
       continue
     fi
 
     # shellcheck disable=SC2211
     if ! bb-rp-is-fetched? "${DIGEST}"; then
-      bb-log-info "'${PACKAGE}:${DIGEST}' package not found locally"
+      bb-log-debug "'${PACKAGE_WITH_DIGEST}' package not found locally"
       bb-rp-fetch "${PACKAGE_WITH_DIGEST}"
-      continue
     fi
 
     trap "rm -rf ${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}" ERR
 
-    bb-log-info "Unpacking package '${PACKAGE}'"
+    bb-log-debug "Unpacking package '${PACKAGE}'"
     local TMP_DIR=""
     TMP_DIR="$(mktemp -d)"
     tar -xf "${BB_RP_FETCHED_PACKAGES_STORE}/${DIGEST}" -C "${TMP_DIR}"
@@ -194,4 +196,8 @@ bb-rp-remove() {
       bb-event-fire "bb-package-removed" "${PACKAGE}"
     fi
   done
+}
+
+bb-rp-cleanup() {
+  rm -rf "${BB_RP_FETCHED_PACKAGES_STORE}"
 }

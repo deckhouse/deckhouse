@@ -40,6 +40,7 @@ bb-cleanup() {
     bb-event-cleanup                ; bb-cleanup-update-exit-code
     bb-tmp-cleanup                  ; bb-cleanup-update-exit-code
     bb-workspace-cleanup            ; bb-cleanup-update-exit-code
+    bb-rp-cleanup                   ; bb-cleanup-update-exit-code
 
     exit $BB_EXIT_CODE
 }
