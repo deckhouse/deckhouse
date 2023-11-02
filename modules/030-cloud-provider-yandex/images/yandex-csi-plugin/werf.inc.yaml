@@ -56,6 +56,4 @@ shell:
                         mount parted
   setup:
     - chmod +x /binary_replace.sh
-    - /binary_replace.sh -i binary_list
-
-
+    - /binary_replace.sh -i /binary_list
