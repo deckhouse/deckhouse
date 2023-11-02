@@ -574,8 +574,9 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) 
 func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Container, releaseChannel string) (*DeckhouseReleaseChecker, error) {
 	repo := input.Values.Get("global.modulesImages.registry.base").String() // host/ns/repo
 	dockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
+	clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
-	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), cr.WithAuth(dockerCfg), cr.WithCA(getCA(input)), cr.WithInsecureSchema(isHTTP(input)))
+	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), cr.WithAuth(dockerCfg), cr.WithCA(getCA(input)), cr.WithInsecureSchema(isHTTP(input)), cr.WithUserAgent(clusterUUID))
 	if err != nil {
 		return nil, err
 	}
