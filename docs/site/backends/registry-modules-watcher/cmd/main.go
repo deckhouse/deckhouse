@@ -21,7 +21,7 @@ import (
 
 func main() {
 	registries := flag.String("watch-registries", "", "a list for followed registries")
-	scanInterval := flag.Float64("scan-interval", 30, "interval for scanning the images. default 15 minutes")
+	scanInterval := flag.Duration("scan-interval", 30*time.Second, "interval for scanning the images. default 15 minutes")
 	flag.Parse()
 
 	if *registries == "" {
