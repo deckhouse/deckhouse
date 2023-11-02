@@ -86,6 +86,10 @@ var (
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.allowedCapabilities.items",
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredDropCapabilities.items",
 		},
+		"modules/015-admission-policy-engine/openapi/values.yaml": {
+			// enforcement actions are discovered from label values and should be propagated further into the helm chart as is
+			"properties.internal.properties.podSecurityStandards.properties.enforcementActions.items",
+		},
 		"modules/030-cloud-provider-azure/openapi/config-values.yaml": {
 			// ignore Azure disk types
 			"properties.storageClass.properties.provision.items.properties.type",
