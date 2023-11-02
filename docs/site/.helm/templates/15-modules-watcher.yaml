@@ -33,7 +33,7 @@ spec:
           image: {{ index .Values.werf.image "registry-modules-watcher" }}
           {{- include "resources" . | nindent 10 }}
           env:
-            - name: "REGISTRY_AUTHS"
+            - name: REGISTRY_AUTHS
               valueFrom:
                 secretKeyRef:
                   key: .dockerconfigjson
