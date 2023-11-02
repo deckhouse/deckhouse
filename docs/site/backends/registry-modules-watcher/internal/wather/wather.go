@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	v1 "k8s.io/api/coordination/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -12,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const namespace = "deckhouse-web-test" // TODO Get namespace from ENV and use here
 const leaseLabel = "deckhouse.io/documentation-builder-sync"
 
 var (
@@ -20,14 +20,16 @@ var (
 )
 
 type watcher struct {
-	ch      chan string
-	kClient *kubernetes.Clientset
+	ch        chan string
+	kClient   *kubernetes.Clientset
+	namespace string
 }
 
 func New(kClient *kubernetes.Clientset) *watcher {
 	return &watcher{
-		kClient: kClient,
-		ch:      make(chan string, DefaultChanSize),
+		kClient:   kClient,
+		ch:        make(chan string, DefaultChanSize),
+		namespace: os.Getenv("POD_NAMESPACE"),
 	}
 }
 
@@ -35,7 +37,7 @@ func New(kClient *kubernetes.Clientset) *watcher {
 func (w *watcher) ActiveBackends() ([]string, error) {
 	var activeBackends = []string{}
 
-	leaseList, err := w.kClient.CoordinationV1().Leases(namespace).List(context.TODO(), metav1.ListOptions{
+	leaseList, err := w.kClient.CoordinationV1().Leases(w.namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: leaseLabel,
 	})
 	if err != nil {
@@ -57,7 +59,7 @@ func (w *watcher) Watch(ctx context.Context) (chan string, error) {
 	// https://dev.to/davidsbond/go-creating-dynamic-kubernetes-informers-1npi
 	// 040 basheble api server
 	// deckhouse/modules/040-node-manager/images/bashible-apiserver/pkg/template/context.go
-	events, err := w.kClient.CoordinationV1().Leases(namespace).Watch(ctx, metav1.ListOptions{
+	events, err := w.kClient.CoordinationV1().Leases(w.namespace).Watch(ctx, metav1.ListOptions{
 		LabelSelector: leaseLabel,
 	})
 	if err != nil {
