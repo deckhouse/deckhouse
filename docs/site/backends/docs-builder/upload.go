@@ -43,18 +43,21 @@ type loadHandler struct {
 func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	pathVars := mux.Vars(request)
 	channels := strings.Split(request.URL.Query().Get("channels"), ",")
+	moduleName := pathVars["moduleName"]
+	version := pathVars["version"]
 	if len(channels) == 0 {
 		channels = []string{"stable"}
 	}
 
-	err := u.upload(request.Body, pathVars["moduleName"], channels)
+	klog.Infof("loading %s %s: %s", moduleName, version, channels)
+	err := u.upload(request.Body, moduleName, channels)
 	if err != nil {
 		klog.Error(err)
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	err = u.generateChannelMapping(pathVars["moduleName"], pathVars["version"], channels)
+	err = u.generateChannelMapping(moduleName, version, channels)
 	if err != nil {
 		klog.Error(err)
 		http.Error(writer, "Internal server error", http.StatusInternalServerError)
@@ -66,7 +69,6 @@ func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 
 func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []string) error {
 	reader := tar.NewReader(body)
-	klog.Infof("loading %q: %s", moduleName, channels)
 
 	for {
 		header, err := reader.Next()
