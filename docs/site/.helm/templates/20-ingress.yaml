@@ -38,7 +38,11 @@ spec:
 {{- if eq $.Values.web.env "web-production" }}
       - www.{{ .URL }}
 {{- end }}
+{{- if eq $.Values.web.env "web-production" }}
+    secretName: star-{{ .URL | replace "." "-" }}
+{{- else }}
     secretName: tls-{{ .URL }}
+{{- end }}
   rules:
   - host: {{ .URL }}
     http:
@@ -130,6 +134,7 @@ spec:
             name: backend
             port:
               name: http
+{{- if ne $.Values.web.env "web-production" }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -147,10 +152,6 @@ spec:
   commonName: {{ .URL }}
   dnsNames:
   - {{ .URL }}
-{{- if eq $.Values.web.env "web-production" }}
-  - www.{{ .URL }}
-{{- end }}
-{{- if ne $.Values.web.env "web-production" }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
