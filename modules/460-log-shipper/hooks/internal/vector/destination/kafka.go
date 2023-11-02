@@ -98,11 +98,11 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 				"node":      "node",
 				"host":      "host",
 				"pod":       "pod",
-				"pod_ip":    "pod_ip",
+				"podip":     "pod_ip",
 				"namespace": "namespace",
 				"image":     "image",
 				"container": "container",
-				"pod_owner": "pod_owner",
+				"podowner":  "pod_owner",
 			},
 		}
 	}
