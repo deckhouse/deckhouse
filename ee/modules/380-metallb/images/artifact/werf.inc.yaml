@@ -6,12 +6,10 @@ shell:
     - apk add --no-cache git
     - mkdir -p /src
     - cd /src
-    - git clone --depth 1 -b v0.13.12 {{ $.SOURCE_REPO }}/metallb/metallb.git .
+    - git clone -b v0.13.12 {{ $.SOURCE_REPO }}/metallb/metallb.git .
     # https://github.com/metallb/metallb/pull/2004
-    # Remove cherry-pick when this commits is included in the release
+    # Remove cherry-pick when this commit is included in the release
     - git cherry-pick 667ab7e93d1e6465d5b6d343b73b3c7b1edd5015
-    - git cherry-pick e6b5b40f00da6b86e8bda67198a46f341527761d
-    - git cherry-pick adf1274346d28996fe36253b3e4f7127fd0bfa98
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd controller
