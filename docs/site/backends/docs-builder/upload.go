@@ -67,7 +67,6 @@ func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 
 func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []string) error {
 	reader := tar.NewReader(body)
-	klog.Infof("loading %q: %s", moduleName, channels)
 
 	for {
 		header, err := reader.Next()
