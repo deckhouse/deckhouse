@@ -38,6 +38,11 @@ spec:
                 secretKeyRef:
                   key: .dockerconfigjson
                   name: watch-registry-auths
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
 ---
 apiVersion: v1
 kind: Secret
