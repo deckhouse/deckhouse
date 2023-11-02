@@ -50,18 +50,20 @@ fi
 
 mkdir -p "${RDIR}"
 
-function relocate_binary() {
+function relocate() {
   local binary=$1
-  relocate_binary_libs ${binary}
+  relocate_item ${binary}
+
   for lib in $(ldd ${binary} 2>/dev/null | awk '{if ($2=="=>") print $3; else print $1}'); do
     # don't try to relocate linux-vdso.so lib due to this lib is virtual
     if [[ "${lib}" =~ "linux-vdso" ]]; then
       continue
     fi
+    relocate_item ${lib}
   done
 }
 
-function relocate_binary_libs() {
+function relocate_item() {
   local file=$1
 
   local new_place="${RDIR}$(dirname ${file})"
@@ -98,5 +100,5 @@ else
 fi
 
 for binary in ${BINARY_LIST[@]}; do
-  relocate_binary ${binary}
+  relocate ${binary}
 done
