@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/exporter
@@ -29,22 +29,18 @@ git:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-
-ansible:
+shell:
   beforeInstall:
-    - apk:
-        name: git
-        update_cache: yes
-    - command: rm -rf /var/cache/apk/*
+  - |
+    apk upgrade --available --no-cache && \
+    apk add --no-cache ca-certificates git make
   install:
-    - shell: go mod download
-      args:
-        chdir: /src
+  - cd /src
+  - go mod download
   setup:
-    - shell: go build -ldflags="-s -w" -o exporter .
-      args:
-        chdir: /src
-      environment:
-        GOOS: "linux"
-        GOARCH: "amd64"
-        CGO_ENABLED: "0"
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o exporter .
+  - chown 64535:64535 /src/exporter
+  - chmod 0755 /src/exporter
