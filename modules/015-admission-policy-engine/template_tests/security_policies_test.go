@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security policies", func() {
-	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "securityPolicies": [
+	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "podSecurityStandards": {"enforcementActions": ["deny"]}, "securityPolicies": [
 {
 	"metadata":{"name":"genpolicy"},
 	"spec":{
