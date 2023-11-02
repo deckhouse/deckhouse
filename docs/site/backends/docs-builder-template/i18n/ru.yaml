@@ -1,6 +1,7 @@
 search-placeholder: Поиск...
 version: версия
 modules: модули
+deckhouse: deckhouse
 moduleLinkTitleREADME: Описание
 moduleLinkTitleEXAMPLES: Примеры
 moduleLinkTitleCONFIGURATION: Настройка
