@@ -178,10 +178,20 @@ However, sometimes this operation may not proceed as expected. In such cases, yo
 
 * Clean up the node as follows:
 
-  * remove all logical volumes and volume groups from the node that was used for LINSTOR storage pools:
+  > **Note!** These actions will destroy all the data on the node.
+
+  * Get and remove all volume groups from the node that were used for LINSTOR LVM storage pools:
 
     ```shell
-    vgremove -y <vg_name>
+    vgs -o+tags | awk 'NR==1;$NF~/linstor-/'
+    vgremove -y <vg names from previous comand>
+    ```
+  
+  * Get and remove all logical volumes from the node that were used for LINSTOR LVM_THIN storage pools:
+
+    ```shell
+    lvs -o+tags | awk 'NR==1;$NF~/linstor-/'
+    lvremove -y /dev/<vg name from previous command>/<lv name from previous command>
     ```
 
   * follow [this instruction](https://deckhouse.io/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster), starting from the second point for further cleanup.
