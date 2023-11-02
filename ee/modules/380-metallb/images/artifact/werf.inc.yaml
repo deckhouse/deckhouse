@@ -7,6 +7,7 @@ shell:
     - mkdir -p /src
     - cd /src
     - git clone -b v0.13.12 {{ $.SOURCE_REPO }}/metallb/metallb.git .
+    - git config --global user.email "builder@deckhouse.io"
     # https://github.com/metallb/metallb/pull/2004
     # Remove cherry-pick when this commit is included in the release
     - git cherry-pick 667ab7e93d1e6465d5b6d343b73b3c7b1edd5015
