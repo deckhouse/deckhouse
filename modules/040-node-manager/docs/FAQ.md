@@ -192,18 +192,35 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 
 You can analyze `cloud-init` to find out what's happening on a node during the bootstrapping process:
 
-- Find the node that is currently bootstrapping: `kubectl -n d8-cloud-instance-manager get machine | grep Pending`
-- To show details about a specific `machine`, enter: `kubectl -n d8-cloud-instance-manager describe machine kube-2-worker-01f438cf-757f758c4b-r2nx2`
-  You will see the following information:
+1. Find the node that is currently bootstrapping:
 
-  ```shell
-  Status:
-    Bootstrap Status:
-      Description:   Use 'nc 192.168.199.115 8000' to get bootstrap logs.
-      Tcp Endpoint:  192.168.199.115
-  ```
+   ```shell
+   kubectl get instances | grep Pending
+   ```
 
-- Run the `nc 192.168.199.115 8000`command to see `cloud-init` logs and determine the cause of the problem on the node.
+   An example:
+
+   ```shell
+   $ kubectl get instances | grep Pending
+   dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
+   ```
+
+1. Get information about connection parameters for viewing logs:
+
+   ```shell
+   kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   ```
+
+   An example:
+
+   ```shell
+   $ kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   bootstrapStatus:
+     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
+     logsEndpoint: 192.168.199.178:8000
+   ```
+
+1. Run the command you got (`nc 192.168.199.115 8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
 
 The logs of the initial node configuration are located at `/var/log/cloud-init-output.log`.
 
