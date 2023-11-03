@@ -92,7 +92,7 @@ RUN git clone ${K8S_AWAIT_ELECTION_GITREPO} /usr/local/go/k8s-await-election/ \
 FROM $BASE_UBUNTU as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.25.0
+ARG UTILS_VERSION=9.26.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -134,7 +134,7 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_UBUNTU
 ARG PIRAEUS_GITREPO=https://github.com/piraeusdatastore/piraeus
-ARG PIRAEUS_COMMIT_REF=f216a63d6f0fc797534c9d8d268a8efe955d8ae4
+ARG PIRAEUS_COMMIT_REF=1916a4e77071a3b257d7d308eaed471222ba6aff
 
 COPY --from=linstor-builder /linstor-common_*.deb /linstor-controller_*.deb /linstor-satellite_*.deb /packages/
 COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages/
