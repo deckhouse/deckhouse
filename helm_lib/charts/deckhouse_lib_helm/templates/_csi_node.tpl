@@ -19,8 +19,6 @@ memory: 25Mi
   {{- $serviceAccount := $config.serviceAccount | default "" }}
   {{- $additionalNodeEnvs := $config.additionalNodeEnvs }}
   {{- $additionalNodeArgs := $config.additionalNodeArgs }}
-  {{- $additionalInitContainerEnvs := $config.additionalInitContainerEnvs }}
-  {{- $additionalInitContainerParts := $config.additionalInitContainerParts }}
   {{- $additionalNodeVolumes := $config.additionalNodeVolumes }}
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
   {{- $initContainerCommand := $config.initContainerCommand }}
@@ -161,19 +159,12 @@ spec:
       initContainers:
       - command:
         {{- $initContainerCommand | toYaml | nindent 8 }}
-      {{- if $additionalInitContainerEnvs }}
-        env:
-        {{- $additionalInitContainerEnvs | toYaml | nindent 8 }}
-      {{- end }}
         image: {{ $initContainerImage }}
         imagePullPolicy: IfNotPresent
         name: csi-node-init-container
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-      {{- if $additionalInitContainerParts }}
-        {{- $additionalInitContainerParts | toYaml | nindent 8 }}
-      {{- end }}
   {{- end }}
       serviceAccount: {{ $serviceAccount | quote }}
       serviceAccountName: {{ $serviceAccount | quote }}
