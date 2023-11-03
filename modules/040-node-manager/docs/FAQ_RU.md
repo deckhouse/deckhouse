@@ -190,18 +190,36 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 
 ## Как посмотреть, что в данный момент выполняется на узле при его создании?
 
-Если необходимо узнать, что происходит на узле (к примеру, он долго создается), можно посмотреть логи `cloud-init`. Для этого необходимо:
-1. Найти узел, который сейчас бутстрапится: `kubectl -n d8-cloud-instance-manager get machine | grep Pending`;
-1. Посмотреть информацию о `machine`: `kubectl -n d8-cloud-instance-manager describe machine kube-2-worker-01f438cf-757f758c4b-r2nx2`. Пример результата:
+Если необходимо узнать, что происходит на узле (к примеру, он долго создается), можно посмотреть логи `cloud-init`. Для этого выполните следующие шаги:
+1. Найдите узел, который сейчас бутстрапится:
 
    ```shell
-   Status:
-     Bootstrap Status:
-       Description:   Use 'nc 192.168.199.115 8000' to get bootstrap logs.
-       Tcp Endpoint:  192.168.199.115
+   kubectl get instances | grep Pending
    ```
 
-1. Выполнить команду `nc 192.168.199.115 8000`, чтобы увидеть логи `cloud-init` и на чем зависла настройка узла.
+   Пример:
+
+   ```shell
+   $ kubectl get instances | grep Pending
+   dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
+   ```
+
+1. Получите информацию о параметрах подключения для просмотра логов:
+
+   ```shell
+   kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   ```
+
+   Пример:
+
+   ```shell
+   $ kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   bootstrapStatus:
+     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
+     logsEndpoint: 192.168.199.178:8000
+   ```
+
+1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы увидеть логи `cloud-init` и на чем зависла настройка узла.
 
 Логи первоначальной настройки узла находятся в `/var/log/cloud-init-output.log`.
 
