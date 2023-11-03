@@ -59,7 +59,7 @@
 
   {{- define "csi_node_envs" }}
 - name: CSI_ENDPOINT
-value: /csi/csi.sock
+  value: /csi/csi.sock
 - name: DRIVER_REG_SOCK_PATH
   value: /var/lib/kubelet/plugins/linstor.csi.linbit.com/csi.sock
 - name: KUBE_NODE_NAME
