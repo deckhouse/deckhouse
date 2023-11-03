@@ -72,7 +72,9 @@ RUN mkdir -p /etc && \
   cp /prometheus/prometheus/documentation/examples/prometheus.yml /etc && \
   cp /prometheus/prometheus/console_libraries/* /etc
 
-RUN chown -R 64535:64535 /prometheus/ && \
+
+RUN mkdir /empty && chown -R 64535:64535 /empty && \
+    chown -R 64535:64535 /prometheus/ && \
     chown -R 64535:64535 /etc/ && \
     chown -R 64535:64535 /consoles/ && \
     chmod 0700 /prometheus/prometheus/prometheus && \
@@ -98,7 +100,7 @@ COPY --from=artifact /prometheus/prometheus/promtool                            
 COPY --from=artifact /prometheus/prometheus/console_libraries/                     /usr/share/prometheus/console_libraries/
 COPY --from=artifact /consoles/                                                    /usr/share/prometheus/consoles/
 COPY --from=artifact /etc/                                                         /etc/prometheus/
-COPY --from=artifact /prometheus/                                                  /prometheus/
+COPY --from=artifact /empty/                                                       /prometheus/
 
 RUN apk add --no-cache curl
 
