@@ -56,6 +56,14 @@ spec:
           - containerPort: 8081
             name: http
             protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
