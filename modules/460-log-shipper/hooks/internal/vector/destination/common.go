@@ -52,10 +52,22 @@ type Healthcheck struct {
 	Enabled bool `json:"enabled"`
 }
 type Encoding struct {
-	ExceptFields    []string `json:"except_fields,omitempty"`
-	OnlyFields      []string `json:"only_fields,omitempty"`
-	Codec           string   `json:"codec,omitempty"`
-	TimestampFormat string   `json:"timestamp_format,omitempty"`
+	ExceptFields    []string    `json:"except_fields,omitempty"`
+	OnlyFields      []string    `json:"only_fields,omitempty"`
+	Codec           string      `json:"codec,omitempty"`
+	TimestampFormat string      `json:"timestamp_format,omitempty"`
+	CEF             CEFEncoding `json:"cef,omitempty"`
+}
+
+type CEFEncoding struct {
+	DeviceVendor       string            `json:"device_vendor,omitempty"`
+	DeviceProduct      string            `json:"device_product,omitempty"`
+	DeviceVersion      string            `json:"device_version,omitempty"`
+	DeviceEventClassID string            `json:"device_event_class_id,omitempty"`
+	Name               string            `json:"name,omitempty"`
+	Severity           string            `json:"severity,omitempty"`
+	Version            string            `json:"version,omitempty"`
+	Extensions         map[string]string `json:"extensions,omitempty"`
 }
 
 type CommonTLS struct {
