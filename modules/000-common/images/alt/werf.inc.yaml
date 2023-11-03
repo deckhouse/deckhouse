@@ -16,7 +16,7 @@ shell:
                         mount parted
   setup:
   {{- include "COMMON_ALT_SCRIPT" . | indent 2}}
-# TODO export CSI_BINARYES={{ $.LIST_BINARYES }}
+# TODO export CSI_BINARYES={{ $.CSI_BINARYES }}
 # - chmod +x /binary_replace.sh
 # - /binary_replace.sh -i "$CSI_BINARYES"
 
