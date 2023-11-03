@@ -74,26 +74,31 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       terminationGracePeriodSeconds: 300
       volumes:
+        - name: additional-config
+          configMap:
+            name: proxy-{{ $crd.name }}-failover-config
         - name: xtables-lock
           hostPath:
             path: /run/xtables.lock
             type: FileOrCreate
       containers:
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailover") }}
-        name: nginx
+        name: controller
         env:
         - name: CONTROLLER_NAME
           value: {{ $crd.name }}
         livenessProbe:
           httpGet:
-            path: /healthz
-            port: 10253
+            path: /status
+            port: 10255
             host: 127.0.0.1
           initialDelaySeconds: 3
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/opt/nginx-static/sbin/nginx","-s","quit"]
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 10255
+            host: 127.0.0.1
+          initialDelaySeconds: 3
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
@@ -105,14 +110,20 @@ spec:
             - NET_RAW
             - NET_ADMIN
             - NET_BIND_SERVICE
+        volumeMounts:
+          - name: additional-config
+            mountPath: "/opt/nginx-static/additional-conf"
+            readOnly: true
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailoverIptables") }}
         name: iptables-loop
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+           {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             memory: 20Mi
             cpu: 10m
         securityContext:
+          # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
+          runAsNonRoot: false
           capabilities:
             add:
             - NET_RAW

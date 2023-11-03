@@ -22,7 +22,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -127,7 +126,7 @@ func main() {
 			return
 		case <-ticker.C:
 			err := loop(iptablesMgr)
-			if err != nil && !errors.Is(err, syscall.ECONNREFUSED) {
+			if err != nil {
 				log.Fatal(err)
 			}
 		}

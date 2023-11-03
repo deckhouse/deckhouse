@@ -1,3 +1,5 @@
+daemon off;
+
 worker_processes auto;
 error_log /dev/stderr warn;
 pid /opt/nginx-static/logs/nginx.pid;
@@ -15,6 +17,7 @@ events {
 
 http {
   access_log off;
+
 
   server {
     server_name _;
@@ -45,11 +48,13 @@ stream {
   }
 
   server {
+    include /opt/nginx-static/additional-conf/accept-requests-from.conf;
     listen 169.254.20.11:1081 so_keepalive=off reuseport;
     proxy_pass http;
   }
 
   server {
+    include /opt/nginx-static/additional-conf/accept-requests-from.conf;
     listen 169.254.20.11:1444 so_keepalive=off reuseport;
     proxy_pass https;
   }
