@@ -86,8 +86,8 @@ shell:
     - |
       apt-get install -y ca-certificates \
                         util-linux \
-                        e2fsprogs xfsprogs \
-                        mount btrfs-progs udev parted
+                        mount nvme udev parted \
+                        e2fsprogs xfsprogs btrfs-progs
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-mad-hack
 from: {{ $.Images.BASE_ALT }}
