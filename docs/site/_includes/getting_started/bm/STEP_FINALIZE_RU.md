@@ -45,7 +45,7 @@ EOF
     Deckhouse подготовит скрипт, необходимый для настройки будущего узла и включения его в кластер. Выведите его содержимое в формате Base64 (оно понадобится на следующем шаге):
     {% snippetcut %}
   ```bash
-kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
   ```
   {% endsnippetcut %}
   </li>
@@ -137,7 +137,7 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-monitoring
+  name: localpath-deckhouse-system
 spec:
   nodeGroups:
   - worker
@@ -145,29 +145,6 @@ spec:
 EOF
 ```
 {% endsnippetcut %}
-
-<li><p><strong>Настройка Prometheus</strong></p>
-
-Настройте Prometheus на использование созданного StorageClass'а (это позволит не терять данные при перезапуске Prometheus). Выполните на <strong>master-узле</strong> следующую команду:
-
-{% snippetcut %}
-```shell
-sudo /opt/deckhouse/bin/kubectl create -f - << EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: prometheus
-spec:
-  enabled: true
-  settings:
-    longtermStorageClass: localpath-monitoring
-    storageClass: localpath-monitoring
-  version: 2
-EOF
-```
-{% endsnippetcut %}
-</li>
-
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
 <p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
