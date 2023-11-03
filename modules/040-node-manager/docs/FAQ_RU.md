@@ -193,7 +193,7 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 Если необходимо узнать, что происходит на узле (к примеру, он долго создается), можно посмотреть логи `cloud-init`. Для этого выполните следующие шаги:
 1. Найдите узел, который сейчас бутстрапится:
 
-   ```yaml
+   ```shell
    kubectl get instances | grep Pending
    ```
 

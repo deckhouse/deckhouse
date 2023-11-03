@@ -205,7 +205,7 @@ You can analyze `cloud-init` to find out what's happening on a node during the b
    dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
    ```
 
-1. Get information about connection to get logs:
+1. Get information about connection parameters for viewing logs:
 
    ```shell
    kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
