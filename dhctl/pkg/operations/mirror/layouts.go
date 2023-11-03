@@ -69,7 +69,7 @@ func CreateOCIImageLayouts(
 		}
 		*layoutPtr, err = layout.FromPath(fsPath)
 		if err != nil {
-			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", err)
+			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", fsPath, err)
 		}
 	}
 
@@ -80,7 +80,7 @@ func CreateOCIImageLayouts(
 		}
 		moduleLayout, err := layout.FromPath(path)
 		if err != nil {
-			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", err)
+			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", path, err)
 		}
 
 		path = filepath.Join(rootFolder, registryRepo, "modules", module.Name, "release")
@@ -89,7 +89,7 @@ func CreateOCIImageLayouts(
 		}
 		moduleReleasesLayout, err := layout.FromPath(path)
 		if err != nil {
-			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", err)
+			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", path, err)
 		}
 
 		layouts.Modules[module.Name] = ModuleImageLayout{
