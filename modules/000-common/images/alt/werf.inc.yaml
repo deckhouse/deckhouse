@@ -2,7 +2,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ $.Images.BASE_ALT }}
 git:
-- add: /{{ $.ModulePath }}/{{ $.ImageName }}/binary_replace.sh
+- add: /{{ $.ModulePath }}/modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/binary_replace.sh
   to: /binary_replace.sh
   stageDependencies:
     setup:
