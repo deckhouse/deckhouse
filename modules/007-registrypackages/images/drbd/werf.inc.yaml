@@ -1,4 +1,4 @@
-{{- $version := "9.2.5" }}
+{{- $version := "9.2.6" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
