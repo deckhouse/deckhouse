@@ -15,7 +15,6 @@
 package maputil
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -185,9 +184,8 @@ func TestFilter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Filter(tt.args.in, tt.args.filterFunc); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Filter() = %v, want %v", got, tt.want)
-			}
+			got := Filter(tt.args.in, tt.args.filterFunc)
+			require.Equal(t, got, tt.want)
 		})
 	}
 }
