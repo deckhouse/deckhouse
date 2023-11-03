@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"sort"
@@ -46,6 +47,7 @@ import (
 	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 )
 
@@ -365,6 +367,12 @@ func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath stri
 		return fmt.Errorf("copy module error: %v", err)
 	}
 
+	httpClient := dc.GetHTTPClient(d8http.WithTimeout(3 * time.Minute))
+	err = buildDocumentation(httpClient, img, moduleName, moduleVersion)
+	if err != nil {
+		return fmt.Errorf("build documentation: %w", err)
+	}
+
 	// inject registry to values
 	err = injectRegistryToModuleValues(moduleVersionPath, moduleSource)
 	if err != nil {
@@ -372,6 +380,47 @@ func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath stri
 	}
 
 	return nil
+}
+
+func buildDocumentation(client d8http.Client, img v1.Image, moduleName, moduleVersion string) error {
+	rc := mutate.Extract(img)
+	defer rc.Close()
+
+	const docsBuilderBasePath = "documentation-builder.d8-system.svc.cluster.local:8081"
+
+	url := fmt.Sprintf("%s/loadDocArchive/%s/%s", docsBuilderBasePath, moduleName, moduleVersion)
+	response, statusCode, err := httpPost(client, url, rc)
+	if err != nil {
+		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
+	}
+
+	url = fmt.Sprintf("%s/build", docsBuilderBasePath)
+	response, statusCode, err = httpPost(client, url, nil)
+	if err != nil {
+		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
+	}
+
+	return nil
+}
+
+func httpPost(httpClient d8http.Client, url string, body io.Reader) ([]byte, int, error) {
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	res, err := httpClient.Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer res.Body.Close()
+
+	dataBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return dataBytes, res.StatusCode, nil
 }
 
 func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha1.ModuleSource) error {
