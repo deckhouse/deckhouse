@@ -1,1 +1,0 @@
-../../ubuntu-lts/all/012_apt_timeout.sh.tpl
