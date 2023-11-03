@@ -108,6 +108,18 @@ type CommonTLSSpec struct {
 	VerifyCertificate   *bool  `json:"verifyCertificate,omitempty"`
 }
 
+type EncodingCodec string
+
+const (
+	EncodingCodecText EncodingCodec = "TEXT"
+	EncodingCodecCEF  EncodingCodec = "CEF"
+	EncodingCodecJSON EncodingCodec = "JSON"
+)
+
+type CommonEncoding struct {
+	Codec EncodingCodec `json:"codec"`
+}
+
 type LokiSpec struct {
 	// TenantID is used only for GrafanaCloud. When running Loki locally, a tenant ID is not required.
 	TenantID string `json:"tenantID,omitempty"`
@@ -127,6 +139,8 @@ type KafkaSpec struct {
 	TLS CommonTLSSpec `json:"tls,omitempty"`
 
 	SASL KafkaSASL `json:"sasl,omitempty"`
+
+	Encoding CommonEncoding `json:"encoding,omitempty"`
 }
 
 type KafkaSASLMechanism string
