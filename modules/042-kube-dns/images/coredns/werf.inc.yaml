@@ -7,6 +7,7 @@ shell:
     - mkdir -p /src
     - cd /src
     - git clone --depth 1 -b v1.11.1 {{ $.SOURCE_REPO }}/coredns/coredns.git .
+    - find /patches -name '*.patch' -exec git apply {} \;
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - go get -u google.golang.org/grpc@v1.57.1
