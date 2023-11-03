@@ -45,7 +45,7 @@ EOF
     Deckhouse will generate the script needed to configure the prospective node and include it in the cluster. Print its contents in Base64 format (you will need them at the next step):
     {% snippetcut %}
   ```bash
-kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
   ```
   {% endsnippetcut %}
   </li>
@@ -137,7 +137,7 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-monitoring
+  name: localpath-deckhouse-system
 spec:
   nodeGroups:
   - worker
@@ -145,29 +145,6 @@ spec:
 EOF
 ```
 {% endsnippetcut %}
-
-<li><p><strong>Configuring Prometheus</strong></p>
-
-Configure Prometheus to use the created StorageClass (this will prevent data loss if Prometheus gets restarted). Run the following command on the <strong>master node</strong>:
-
-{% snippetcut %}
-```shell
-sudo /opt/deckhouse/bin/kubectl create -f - << EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: prometheus
-spec:
-  enabled: true
-  settings:
-    longtermStorageClass: localpath-monitoring
-    storageClass: localpath-monitoring
-  version: 2
-EOF
-```
-{% endsnippetcut %}
-</li>
-
 </li>
 <li><p><strong>Create a user</strong> to access the cluster web interfaces</p>
 <p>Create on the <strong>master node</strong> the <code>user.yml</code> file containing the user account data and access rights:</p>

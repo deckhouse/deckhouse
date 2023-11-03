@@ -36,6 +36,21 @@ deckhouse:
         # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
         # [<ru>] Например, Grafana для %s.example.com будет доступна на домене grafana.example.com.
         publicDomainTemplate: "%s.example.com"
+        # [<en>] The HTTPS implementation used by the Deckhouse modules.
+        # [<ru>] Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+        https:
+          certManager:
+            # [<en>] Use self-signed certificates for Deckhouse modules.
+            # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
+            clusterIssuerName: selfsigned
+      # [<en>] The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
+      # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
+      storageClass: localpath-deckhouse-system
+    certManager:
+      disableLetsencrypt: true
+    userAuthn:
+      controlPlaneConfigurator:
+        dexCAMode: FromIngressSecret
     # [<en>] Enable the cni-flannel module.
     # [<ru>] Включить модуль cni-flannel.
     # [<en>] You might consider changing this.
