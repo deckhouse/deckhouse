@@ -3,7 +3,7 @@ positive:
   - {}
   values:
     - internal:
-        drbdVersion: "9.3.2"
+        drbdVersion: "9.2.6"
 negative:
   configValues:
   - { somethingInConfig: yes }

@@ -45,7 +45,7 @@ const (
 	moduleValues = `
   internal:
     masterPassphrase: hackme
-    drbdVersion: 9.2.1
+    drbdVersion: 9.2.6
     httpsClientCert:
       ca: |
         -----BEGIN CERTIFICATE-----
