@@ -24,9 +24,11 @@ RUN git clone --depth 1 --branch v2.0.2 ${SOURCE_REPO}/confluentinc/librdkafka.g
     && make \
     && make install
 
+COPY patches/cef-encoder.patch /
 WORKDIR /vector
 RUN git clone --depth 1 --branch v0.31.0 ${SOURCE_REPO}/vectordotdev/vector.git \
-    && cd vector
+    && cd vector \
+    && git apply /cef-encoder.patch
 
 # Download and cache dependencies
 WORKDIR /vector/vector

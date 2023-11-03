@@ -34,6 +34,9 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		if len(dest.Spec.ExtraLabels) > 0 {
 			transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
 		}
+		if dest.Spec.Kafka.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+			transforms = append(transforms, CEFNameAndSeverity())
+		}
 	}
 
 	if dest.Spec.Type == v1alpha1.DestSplunk {
