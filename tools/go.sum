@@ -1065,6 +1065,7 @@ github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSw
 github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.3.2/go.mod h1:Dp5f3tKs/els2/WYqkMv67reWr/0Ob+SBbPc/VINrM8=
 github.com/flant/kube-client v1.0.1/go.mod h1:YVcJ8PxomM0iYsK7nj2I3lmog2D0j/GloJfLYnhjlls=
+github.com/flant/kube-client v1.0.2/go.mod h1:YVcJ8PxomM0iYsK7nj2I3lmog2D0j/GloJfLYnhjlls=
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
 github.com/flant/shell-operator v1.4.2/go.mod h1:6E2IzZAXg+kvUbaHyCItDwQBABdtyZ6luXvqOTWxYNE=
