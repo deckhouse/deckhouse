@@ -87,7 +87,7 @@
   {{- end }}
 
 
-  {{- define "csi_init_container_envs" }}
+  {{- define "csi_node_init_container_envs" }}
 - name: CSI_ENDPOINT
   value: /csi/csi.sock
 - name: DRIVER_REG_SOCK_PATH
@@ -116,7 +116,7 @@
       name: linstor-client-https-cert
   {{ -end }}
 
-  {{- define "csi_init_container_command" }}
+  {{- define "csi_node_init_container_command" }}
 - /linstor-wait-until
 - satellite-online
 - $(KUBE_NODE_NAME)
@@ -130,7 +130,7 @@
 
   {{- $_ := set $csiNodeConfig "initContainerImage" $csiControllerImage }}
 
-  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_init_container_envs" . | fromYamlArray) }}
-  {{- $_ := set $csiNodeConfig "initContainerCommand" (include "csi_init_container_command" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_init_container_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "initContainerCommand" (include "csi_node_init_container_command" . | fromYamlArray) }}
 
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
