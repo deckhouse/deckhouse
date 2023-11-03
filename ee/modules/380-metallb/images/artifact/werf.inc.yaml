@@ -20,4 +20,4 @@ shell:
     - cd ../speaker
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /speaker
     - chown 64535:64535 /speaker
-    - chmod 0700 /speaker
+    - chmod 0755 /speaker
