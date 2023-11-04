@@ -9,8 +9,9 @@ This [issue](https://github.com/aquasecurity/trivy-operator/issues/695) covers b
 Skip some defseq checks for proper reports result for deckhouse installation.
 
 
-## 003-fix-node-selector.patch
+## 003-aws-ecr.patch
 
-If there aren't any tolerations for node taints because of usage of manual scheduling, `kube-controller-manager` would recursively create and delete `node-collector` pods. This patch is fixing this behaviour.
+In ClientServer mode scan pods can't retrive images from Amazon Elastic Container Registry, because `AWS_REGION` environment variable is absent.
+This patch is fixing this behaviour.
 
-[PR](https://github.com/aquasecurity/trivy-kubernetes/pull/217)
+[PR](https://github.com/aquasecurity/trivy-operator/pull/1613)
