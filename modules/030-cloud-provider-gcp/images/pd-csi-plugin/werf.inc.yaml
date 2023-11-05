@@ -6,48 +6,12 @@ import:
   add: /src/bin/gce-pd-csi-driver
   to: /gce-pd-csi-driver
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
-  add: /
+- image: common/alt
+  add: /relocate
   to: /
-  before: setup
+  before: install
   includePaths:
-  - etc/mke2fs.conf
-  - bin/chmod
-  - bin/mount
-  - bin/mkdir
-  - bin/rmdir
-  - bin/umount
-  - bin/findmnt
-  - bin/dmesg
-  - bin/lsblk
-  - sbin/badblocks
-  - sbin/blockdev
-  - 'sbin/blk*'
-  - 'sbin/btrfs*'
-  - sbin/debugfs
-  - sbin/dumpe2fs
-  - 'sbin/e2*'
-  - sbin/findfs
-  - 'sbin/fsck*'
-  - 'sbin/fsfreeze'
-  - 'sbin/fstrim'
-  - sbin/mke2fs
-  - 'sbin/mkfs*'
-  - sbin/resize2fs
-  - sbin/tune2fs
-  - sbin/xfs_repair
-  - sbin/wipefs
-  - usr/bin/chattr
-  - usr/bin/lsattr
-  - usr/sbin/e2freefrag
-  - usr/sbin/e4crypt
-  - usr/sbin/e4defrag
-  - usr/sbin/filefrag
-  - usr/sbin/nvme
-  - usr/sbin/parted
-  - usr/sbin/xfs*
-  - 'lib64/lib*'
-  - 'lib64/ld*'
+  - '**/*'
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-mad-hack
   add: /lib/udev/scsi_id
   to: /lib/udev_containerized/scsi_id
@@ -77,17 +41,6 @@ shell:
   - git clone --depth 1 --branch v1.3.3 https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git {{ $csiBuildPath }}
   - cd {{ $csiBuildPath }}
   - GCE_PD_CSI_STAGING_VERSION=v1.3.3 make gce-pd-driver
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
-from: {{ $.Images.BASE_ALT }}
-shell:
-  beforeInstall:
-    - apt-get update
-    - |
-      apt-get install -y ca-certificates \
-                        util-linux \
-                        mount nvme udev parted \
-                        e2fsprogs xfsprogs btrfs-progs
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-mad-hack
 from: {{ $.Images.BASE_ALT }}

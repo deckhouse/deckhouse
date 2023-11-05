@@ -6,48 +6,12 @@ import:
   add: /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver
   to: /bin/aws-ebs-csi-driver
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
-  add: /
+- image: common/alt
+  add: /relocate
   to: /
-  before: setup
+  before: install
   includePaths:
-  - etc/mke2fs.conf
-  - bin/chmod
-  - bin/mount
-  - bin/mkdir
-  - bin/rmdir
-  - bin/umount
-  - bin/findmnt
-  - bin/dmesg
-  - bin/lsblk
-  - sbin/badblocks
-  - sbin/blockdev
-  - 'sbin/blk*'
-  - 'sbin/btrfs*'
-  - sbin/debugfs
-  - sbin/dumpe2fs
-  - 'sbin/e2*'
-  - sbin/findfs
-  - 'sbin/fsck*'
-  - 'sbin/fsfreeze'
-  - 'sbin/fstrim'
-  - sbin/mke2fs
-  - 'sbin/mkfs*'
-  - sbin/resize2fs
-  - sbin/tune2fs
-  - sbin/xfs_repair
-  - sbin/wipefs
-  - usr/bin/chattr
-  - usr/bin/lsattr
-  - usr/sbin/e2freefrag
-  - usr/sbin/e4crypt
-  - usr/sbin/e4defrag
-  - usr/sbin/filefrag
-  - usr/sbin/nvme
-  - usr/sbin/parted
-  - usr/sbin/xfs*
-  - 'lib64/lib*'
-  - 'lib64/ld*'
+  - '**/*'
 docker:
   ENTRYPOINT: ["/bin/aws-ebs-csi-driver"]
 ---
@@ -72,14 +36,3 @@ shell:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
-from: {{ $.Images.BASE_ALT }}
-shell:
-  beforeInstall:
-    - apt-get update
-    - |
-      apt-get install -y ca-certificates \
-                      util-linux \
-                      e2fsprogs xfsprogs \
-                      mount btrfs-progs parted

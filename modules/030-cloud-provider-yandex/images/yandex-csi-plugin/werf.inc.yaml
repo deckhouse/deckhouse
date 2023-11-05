@@ -6,7 +6,6 @@ import:
   add: /go/bin/yandex-csi-driver
   to: /bin/yandex-csi-driver
   before: setup
-# - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
 - image: common/alt
   add: /relocate
   to: /
@@ -37,26 +36,3 @@ shell:
     -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version=${VERSION}' \
     -o /go/bin/yandex-csi-driver \
     github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
-# ---
-# artifact: {{ $.ModuleName }}/{{ $.ImageName }}-util-linux-artifact
-# from: {{ $.Images.BASE_ALT }}
-# git:
-# - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}
-#   to: /
-#   stageDependencies:
-#     setup:
-#       - '**/*'
-#   includePaths:
-#   - binary_replace.sh
-#   - binary_list
-# shell:
-#   beforeSetup:
-#     - apt-get update
-#     - |
-#       apt-get install -y ca-certificates \
-#                         util-linux \
-#                         e2fsprogs xfsprogs \
-#                         mount parted
-#   setup:
-#     - chmod +x /binary_replace.sh
-#     - /binary_replace.sh -i /binary_list
