@@ -1,0 +1,5 @@
+#!/bin/bash
+
+SLEEP_DURATION=${TEST_TIMEOUT_LSBLK:-5}
+sleep "$SLEEP_DURATION"
+/usr/bin/lsblk "$@"
