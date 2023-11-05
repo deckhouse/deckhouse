@@ -1,0 +1,5 @@
+#!/bin/bash
+
+SLEEP_DURATION=${TEST_TIMEOUT:-0.5}
+sleep "$SLEEP_DURATION"
+/usr/sbin/lvs "$@"

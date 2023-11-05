@@ -212,5 +212,9 @@ RUN curl -Lfo /usr/bin/piraeus-entry.sh ${PIRAEUS_GITREPO}/raw/${PIRAEUS_COMMIT_
 COPY liveness.sh /liveness.sh
 RUN chmod 755 /liveness.sh
 
+COPY vgs lvs /usr/local/sbin/
+RUN chmod +x /usr/local/sbin/vgs && \
+  chmod +x /usr/local/sbin/lvs
+
 CMD ["startSatellite"]
 ENTRYPOINT ["/usr/bin/k8s-await-election", "/usr/bin/piraeus-entry.sh"]
