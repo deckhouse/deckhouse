@@ -153,7 +153,7 @@ To take a node out of `node-manager` control, you need to:
 
 This is only needed if you have to move a static node from one cluster to another. Be aware these operations remove local storage data. If you just need to change a NodeGroup, follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).
 
-> **Note!** If the node you are cleaning up has LINSTOR storage pools, you will need to initially perform resource evacuation and remove this node from LINSTOR, following [this instruction](https://deckhouse.io/documentation/v1/modules/041-linstor/faq.html#how-to-evict-resources-from-a-node).
+> **Note!** Evict resources from the node and remove the node from LINSTOR using the [instruction](../041-linstor/faq.html#how-to-evict-resources-from-a-node) if the node you are cleaning up has LINSTOR storage pools.
 
 1. Delete the node from the Kubernetes cluster:
 

@@ -145,7 +145,7 @@ linstor node evacuate <node_name>
 ```
 
 It will move resources to other free nodes and replicate them.
-However, sometimes this operation may not proceed as expected. In such cases, you can evict resources manually.
+However, sometimes, this operation may not proceed as expected. In such cases, you can evict resources manually.
 
 ### How to evict resources from a node manually?
 
@@ -162,19 +162,19 @@ However, sometimes this operation may not proceed as expected. In such cases, yo
   kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor resource list --faulty
   ```
 
-* Verify that all pods within the d8-linstor namespace are running:
+* Verify that all pods within the `d8-linstor` namespace are running:
 
   ```shell
   kubectl -n d8-linstor get pods | grep -v Running
   ```
 
-* Run the script and follow the interactive instructions from the script:
+* Run the script and follow the interactive instructions:
 
   ```shell
   ./evict.sh
   ```
 
-  > Note! After the script is finished, the node will be removed from both Kubernetes and LINSTOR.
+  > **Note!** After the script finishes, the node will be removed from both Kubernetes and LINSTOR.
 
 * Clean up the node as follows:
 
@@ -184,7 +184,7 @@ However, sometimes this operation may not proceed as expected. In such cases, yo
 
     ```shell
     vgs -o+tags | awk 'NR==1;$NF~/linstor-/'
-    vgremove -y <vg names from previous comand>
+    vgremove -y <vg names from previous command>
     ```
   
   * Get and remove all logical volumes from the node that were used for LINSTOR LVM_THIN storage pools:
@@ -194,7 +194,7 @@ However, sometimes this operation may not proceed as expected. In such cases, yo
     lvremove -y /dev/<vg name from previous command>/<lv name from previous command>
     ```
 
-  * follow [this instruction](https://deckhouse.io/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster), starting from the second point for further cleanup.
+  * Use [the instruction](../040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster), starting from the second point for further cleanup.
 
 ## Troubleshooting
 
