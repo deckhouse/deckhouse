@@ -386,7 +386,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 1. If necessary, log in to the container registry `registry.deckhouse.io` using your license key.
 
    ```shell
-   docker login -u license-token registry.deckhouse.io
+   docker login -u "<DECKHOUSE_LICENSE_KEY>" registry.deckhouse.io
    ```
 
 1. Run the Deckhouse installer version 1.54.0 or higher.
@@ -414,6 +414,8 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    ```shell
    dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
    ```
+   
+   > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
 
 1. Upload the directory with downloaded Deckhouse images to a host with access to an air-gapped registry.
 
