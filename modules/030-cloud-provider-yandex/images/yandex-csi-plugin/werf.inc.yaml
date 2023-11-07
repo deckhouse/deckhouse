@@ -6,7 +6,7 @@ import:
   add: /go/bin/yandex-csi-driver
   to: /bin/yandex-csi-driver
   before: setup
-- image: common/alt
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
@@ -15,7 +15,6 @@ import:
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
-{{ $csiBuildPath := "/go/src/app" }}
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
@@ -23,16 +22,31 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache ca-certificates git e2fsprogs findmnt xfsprogs blkid e2fsprogs-extra
+  - apk add --no-cache ca-certificates git
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p {{ $csiBuildPath }}
-  - git clone --depth 1 --branch v0.10.0 https://github.com/deckhouse/yandex-csi-driver.git {{ $csiBuildPath }}
-  - cd {{ $csiBuildPath }}
+    - mkdir -p /go/src/app
+  - git clone --depth 1 --branch v0.10.0 {{ $.SOURCE_REPO }}/deckhouse/yandex-csi-driver.git /go/src/app
+  - cd /go/src/app
   - |
     VERSION=$(cat VERSION)
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
     -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version=${VERSION}' \
     -o /go/bin/yandex-csi-driver \
     github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
+---
+{{- $csiBINARIES := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
+
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: common/alt
+shell:
+  beforeSetup:
+    - apt-get update
+    - |
+      apt-get install -y ca-certificates \
+                        util-linux \
+                        mount udev parted \
+                        e2fsprogs xfsprogs
+  setup:
+    - /binary_replace.sh -i "{{ $csiBINARIES }}" -o /relocate
