@@ -17,7 +17,7 @@ import:
   to: /lib64
   before: install
   includePaths:
-  - 'lib64/libresolv*'
+  - 'libresolv*'
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-mad-hack
   add: /lib/udev/scsi_id
   to: /lib/udev_containerized/scsi_id
