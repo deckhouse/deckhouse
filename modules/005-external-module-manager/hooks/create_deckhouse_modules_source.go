@@ -101,7 +101,7 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 	}
 
 	if len(input.Snapshots["sources"]) > 0 {
-		ms := input.Snapshots["sources"].(v1alpha1.ModuleSource)
+		ms := input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
 
 		if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA, releaseChannel) {
 			// return if ModuleSource deckhouse already exists and all param are equal
