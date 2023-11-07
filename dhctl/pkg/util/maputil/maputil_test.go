@@ -183,9 +183,11 @@ func TestFilter(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := Filter(tt.args.in, tt.args.filterFunc)
-			require.Equal(t, got, tt.want)
-		})
+		t.Run(
+			tt.name,
+			func(t *testing.T) {
+				got := Filter(tt.args.in, tt.args.filterFunc)
+				require.Equal(t, got, tt.want)
+			})
 	}
 }
