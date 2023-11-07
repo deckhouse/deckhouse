@@ -21,6 +21,7 @@ shell:
   setup:
   - mkdir /src && cd /src
   - git clone --depth 1 --branch v0.36.0-flant.13 {{ $.SOURCE_REPO }}/deckhouse/mcm.git .
+  - go mod edit -go 1.20
   - go get -u golang.org/x/net@v0.17.0
   - go get -u github.com/prometheus/client_golang@v1.11.1
   - go mod tidy
