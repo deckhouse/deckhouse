@@ -42,7 +42,7 @@ type ModuleSourceSpec struct {
 }
 
 type ModuleSourceSpecRegistry struct {
-	Scheme    string `json:"scheme"`
+	Scheme    string `json:"scheme,omitempty"`
 	Repo      string `json:"repo"`
 	DockerCFG string `json:"dockerCfg"`
 	CA        string `json:"ca"`
