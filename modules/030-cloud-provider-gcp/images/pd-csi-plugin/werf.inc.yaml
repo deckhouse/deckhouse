@@ -32,7 +32,8 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apt-get update && apt-get install -y --no-install-recommends \
+  - |
+    apt-get update && apt-get install -y --no-install-recommends \
       git ca-certificates && apt-get clean -y && \
       rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*
   install:
