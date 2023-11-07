@@ -386,7 +386,7 @@ func buildDocumentation(client d8http.Client, img v1.Image, moduleName, moduleVe
 	rc := mutate.Extract(img)
 	defer rc.Close()
 
-	const docsBuilderBasePath = "documentation-builder.d8-system.svc.cluster.local:8081"
+	const docsBuilderBasePath = "http://documentation-builder.d8-system.svc.cluster.local:8081"
 
 	url := fmt.Sprintf("%s/loadDocArchive/%s/%s", docsBuilderBasePath, moduleName, moduleVersion)
 	response, statusCode, err := httpPost(client, url, rc)
