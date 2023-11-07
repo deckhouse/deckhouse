@@ -417,11 +417,16 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
 
+1. Optional: Copy the `dhctl` binary from the container to the directory where Deckhouse images were pulled.
+
+   ```shell
+   cp /usr/bin/dhctl /tmp/d8-images/dhctl
+   ```
+
 1. Upload the directory with the pulled Deckhouse images to a host with access to the air-gapped registry.
 
-1. Repeat steps 1 and 2 for the Deckhouse installer on the host with access to the air-gapped registry. Make sure the directory with the pulled Deckhouse images is mounted into the container.
-
-1. Push the images to the air-gapped registry using the `dhctl mirror` command.
+1. To continue with installation, use the `dhctl` binary you copied before OR repeat steps 1 and 2 for the Deckhouse installer on the host with access to the air-gapped registry. Make sure the directory with the pulled Deckhouse images is mounted into the container.
+   Push the images to the air-gapped registry using the `dhctl mirror` command.
 
    Example of pushing images from the `/tmp/d8-images/d8.tar` tarball:
 
