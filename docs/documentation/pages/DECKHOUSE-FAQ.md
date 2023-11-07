@@ -414,6 +414,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    ```shell
    dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
    ```
+
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
 
 1. Upload the directory with the pulled Deckhouse images to a host with access to the air-gapped registry.
