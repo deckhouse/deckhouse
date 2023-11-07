@@ -1,0 +1,5 @@
+external-module-manager:
+  fixes:
+    - summary: Fix deckhouse ModuleSource recreation on startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6448
+
