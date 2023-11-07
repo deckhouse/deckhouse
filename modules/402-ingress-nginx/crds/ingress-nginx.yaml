@@ -44,9 +44,15 @@ spec:
                     * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
                     * `LoadBalancerWithProxyProtocol` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. Ingress controller uses proxy-protocol to get a real IP of the client.
                     * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
+
+                      **Caution!** The selected port must not overlap with the range reserved for `nodePort` (set by the argument `kube-apiserver --service-node-port-range`, default 30000-32767).
+
                     * `HostPortWithProxyProtocol` — Ingress controller is deployed and available through nodes' ports via `hostPort, it uses proxy-protocol to get a real IP of the client.
 
                       **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
+
+                      **Caution!** The selected port must not overlap with the range reserved for `nodePort` (set by the argument `kube-apiserver --service-node-port-range`, default 30000-32767).
+
                     * `HostWithFailover` — installs two ingress controllers, the primary and the backup one. The primary controller runs in a hostNetwork. If the pods of the primary controller are not available, the traffic is routed to the backup one;
 
                       **Caution!** There can be only one controller with this inlet type on a host.
