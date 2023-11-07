@@ -1,4 +1,3 @@
----
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ $.Images.BASE_ALT }}
 git:
