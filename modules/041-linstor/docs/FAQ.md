@@ -140,11 +140,61 @@ To configure Prometheus to use LINSTOR for storing data:
 
 To do this, just run the command:
 
-```bash
+```shell
 linstor node evacuate <node_name>
 ```
 
 It will move resources to other free nodes and replicate them.
+However, sometimes, this operation may not proceed as expected. In such cases, you can evict resources manually.
+
+### How to evict resources from a node manually?
+
+* Download the script on a host that has access to the Kubernetes API server with administrative privileges (for the script to work, you need installed `kubectl` and `jq`):
+
+  ```shell
+  curl -fsSL -o evict.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/modules/041-linstor/tools/evict.sh
+  chmod 700 evict.sh
+  ```
+
+* Fix all faulty LINSTOR resources in the cluster. To identify them, execute the following command:
+
+  ```shell
+  kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor resource list --faulty
+  ```
+
+* Verify that all pods within the `d8-linstor` namespace are running:
+
+  ```shell
+  kubectl -n d8-linstor get pods | grep -v Running
+  ```
+
+* Run the script and follow the interactive instructions:
+
+  ```shell
+  ./evict.sh
+  ```
+
+  > **Note!** After the script finishes, the node will be removed from both Kubernetes and LINSTOR.
+
+* Clean up the node as follows:
+
+  > **Note!** These actions will destroy all the data on the node.
+
+  * Get and remove all volume groups from the node that were used for LINSTOR LVM storage pools:
+
+    ```shell
+    vgs -o+tags | awk 'NR==1;$NF~/linstor-/'
+    vgremove -y <vg names from previous command>
+    ```
+  
+  * Get and remove all logical volumes from the node that were used for LINSTOR LVM_THIN storage pools:
+
+    ```shell
+    lvs -o+tags | awk 'NR==1;$NF~/linstor-/'
+    lvremove -y /dev/<vg name from previous command>/<lv name from previous command>
+    ```
+
+  * Use [the instruction](../040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster), starting from the second point for further cleanup.
 
 ## Troubleshooting
 
