@@ -12,6 +12,12 @@ import:
   before: install
   includePaths:
   - '**/*'
+- image: common/alt
+  add: /lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - 'lib64/libresolv*'
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-mad-hack
   add: /lib/udev/scsi_id
   to: /lib/udev_containerized/scsi_id
