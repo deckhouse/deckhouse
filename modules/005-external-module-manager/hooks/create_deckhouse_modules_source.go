@@ -102,8 +102,9 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 
 	if len(input.Snapshots["sources"]) > 0 {
 		ms := input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
+		releaseChannel = ms.Spec.ReleaseChannel
 
-		if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA, releaseChannel) {
+		if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
 			// return if ModuleSource deckhouse already exists and all param are equal
 			return nil
 		}
@@ -141,7 +142,7 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 	return nil
 }
 
-func moduleSourceUpToDate(ms *v1alpha1.ModuleSource, repo, cfg, ca, channel string) bool {
+func moduleSourceUpToDate(ms *v1alpha1.ModuleSource, repo, cfg, ca string) bool {
 	if ms.Spec.Registry.Repo != repo {
 		return false
 	}
@@ -151,10 +152,6 @@ func moduleSourceUpToDate(ms *v1alpha1.ModuleSource, repo, cfg, ca, channel stri
 	}
 
 	if ms.Spec.Registry.DockerCFG != cfg {
-		return false
-	}
-
-	if channel != "" && ms.Spec.ReleaseChannel != channel {
 		return false
 	}
 
