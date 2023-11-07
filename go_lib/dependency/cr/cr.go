@@ -153,12 +153,12 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 
 	// The config should have at least one .auths.* entry
 	for repoName, repoAuth := range auths {
-		repoNameUrl, err := parse(repoName)
+		repoNameURL, err := parse(repoName)
 		if err != nil {
 			return authn.AuthConfig{}, err
 		}
 
-		if repoNameUrl.Host == r.Host {
+		if repoNameURL.Host == r.Host {
 			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
 			if err != nil {
 				return authn.AuthConfig{}, err
