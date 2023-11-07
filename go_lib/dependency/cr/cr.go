@@ -167,7 +167,7 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 		}
 	}
 
-	return authn.AuthConfig{}, fmt.Errorf("no auth data")
+	return authn.AuthConfig{}, fmt.Errorf("%q credentials not found in the dockerCfg", repo)
 }
 
 func GetHTTPTransport(ca string) (transport http.RoundTripper) {
