@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# shellcheck disable=SC2211,SC2153
+
 bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
 bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
-# shellcheck disable=SC2153
 
 # check if package installed
 # bb-rp-is-installed? package digest
@@ -71,7 +72,7 @@ bb-rp-get-digests() {
   curl --retry 3 -fsSL \
 			-H "Authorization: Bearer ${TOKEN}" \
 			-H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
-			"${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${1}" | jq -r '.layers[-1].digest'
+			"${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${1}" | jq -er '.layers[-1].digest'
 }
 
 # Fetch digest from registry
@@ -92,13 +93,11 @@ bb-rp-fetch() {
     PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
     DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
 
-    # shellcheck disable=SC2211
     if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
       bb-log-debug "'${PACKAGE_WITH_DIGEST}' package already installed"
       continue
     fi
 
-    # shellcheck disable=SC2211
     if bb-rp-is-fetched? "${DIGEST}"; then
       bb-log-debug "'${PACKAGE}:${DIGEST}' package already fetched"
       continue
@@ -106,19 +105,16 @@ bb-rp-fetch() {
 
     local TOP_LAYER_DIGEST=""
     TOP_LAYER_DIGEST="$(bb-rp-get-digests "${DIGEST}")"
-
-    # Doesn't work because of exit code 0 if error (e.g 404 Not Found)
-    # if bb-error?; then
-    #   bb-log-error "Failed to get top layer digest for '${PACKAGE}:${DIGEST}'"
-    #   return $BB_ERROR
-    # fi
+    if bb-error?; then
+      bb-log-error "Failed to get top layer digest for '${PACKAGE}:${DIGEST}'"
+      return $BB_ERROR
+    fi
 
     # Get blobs
     mkdir -p "${BB_RP_FETCHED_PACKAGES_STORE}"
 
     bb-log-info "Fetching package '${PACKAGE}'"
     bb-rp-fetch-digest "${TOP_LAYER_DIGEST}" "${BB_RP_FETCHED_PACKAGES_STORE}/${DIGEST}"
-    # shellcheck disable=SC2211
     if bb-error?; then
       bb-log-error "Failed to fetch package '${PACKAGE}'"
       return "${BB_ERROR}"
@@ -137,19 +133,15 @@ bb-rp-install() {
     PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
     DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
 
-    # shellcheck disable=SC2211
     if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
       bb-log-debug "'${PACKAGE_WITH_DIGEST}' package already installed"
       continue
     fi
 
-    # shellcheck disable=SC2211
     if ! bb-rp-is-fetched? "${DIGEST}"; then
       bb-log-debug "'${PACKAGE_WITH_DIGEST}' package not found locally"
       bb-rp-fetch "${PACKAGE_WITH_DIGEST}"
     fi
-
-    trap "rm -rf ${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}" ERR
 
     bb-log-debug "Unpacking package '${PACKAGE}'"
     local TMP_DIR=""
@@ -175,7 +167,7 @@ bb-rp-install() {
     # Copy install/uninstall scripts to hold dir
     cp "${TMP_DIR}/install" "${TMP_DIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
     # Cleanup
-    rm -rf "${TMP_DIR}"
+    rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${DIGEST}"
 
     bb-event-fire "bb-package-installed" "${PACKAGE}"
     trap - ERR
@@ -196,8 +188,4 @@ bb-rp-remove() {
       bb-event-fire "bb-package-removed" "${PACKAGE}"
     fi
   done
-}
-
-bb-rp-cleanup() {
-  rm -rf "${BB_RP_FETCHED_PACKAGES_STORE}"
 }
