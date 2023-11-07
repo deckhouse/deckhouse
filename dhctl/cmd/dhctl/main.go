@@ -59,80 +59,87 @@ func main() {
 		return
 	}
 
-	commands.DefineMirrorCommand(kpApp)
+	if !runningInContainer {
+		// We only allow mirror functions to be used outside of container environments.
+		commands.DefineMirrorCommand(kpApp)
+		runApplication(kpApp)
+		return
+	}
 
-	if runningInContainer {
-		bootstrap.DefineBootstrapCommand(kpApp)
-		bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
+	bootstrap.DefineBootstrapCommand(kpApp)
+	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
+	{
+		bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd)
+		bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd)
+		bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd)
+		bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd)
+		bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd)
+		bootstrap.DefineExecPostBootstrapScript(bootstrapPhaseCmd)
+	}
+
+	commands.DefineConvergeCommand(kpApp)
+	commands.DefineAutoConvergeCommand(kpApp)
+
+	lockCmd := kpApp.Command("lock", "Converge cluster lock")
+	{
+		commands.DefineReleaseConvergeLockCommand(lockCmd)
+	}
+
+	commands.DefineDestroyCommand(kpApp)
+
+	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
+	{
+		commands.DefineTerraformConvergeExporterCommand(terraformCmd)
+		commands.DefineTerraformCheckCommand(terraformCmd)
+	}
+
+	configCmd := kpApp.Command("config", "Load, edit and save various dhctl configurations.")
+	{
+		parseCmd := configCmd.Command("parse", "Parse, validate and output configurations.")
 		{
-			bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd)
-			bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd)
-			bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd)
-			bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd)
-			bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd)
-			bootstrap.DefineExecPostBootstrapScript(bootstrapPhaseCmd)
+			commands.DefineCommandParseClusterConfiguration(kpApp, parseCmd)
+			commands.DefineCommandParseCloudDiscoveryData(kpApp, parseCmd)
 		}
 
-		commands.DefineConvergeCommand(kpApp)
-		commands.DefineAutoConvergeCommand(kpApp)
-
-		lockCmd := kpApp.Command("lock", "Converge cluster lock")
+		renderCmd := configCmd.Command("render", "Render transitional configurations.")
 		{
-			commands.DefineReleaseConvergeLockCommand(lockCmd)
+			commands.DefineRenderBashibleBundle(renderCmd)
+			commands.DefineRenderKubeadmConfig(renderCmd)
+			commands.DefineRenderMasterBootstrap(renderCmd)
 		}
 
-		commands.DefineDestroyCommand(kpApp)
-
-		terraformCmd := kpApp.Command("terraform", "Terraform commands.")
+		editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
 		{
-			commands.DefineTerraformConvergeExporterCommand(terraformCmd)
-			commands.DefineTerraformCheckCommand(terraformCmd)
-		}
-
-		configCmd := kpApp.Command("config", "Load, edit and save various dhctl configurations.")
-		{
-			parseCmd := configCmd.Command("parse", "Parse, validate and output configurations.")
-			{
-				commands.DefineCommandParseClusterConfiguration(kpApp, parseCmd)
-				commands.DefineCommandParseCloudDiscoveryData(kpApp, parseCmd)
-			}
-
-			renderCmd := configCmd.Command("render", "Render transitional configurations.")
-			{
-				commands.DefineRenderBashibleBundle(renderCmd)
-				commands.DefineRenderKubeadmConfig(renderCmd)
-				commands.DefineRenderMasterBootstrap(renderCmd)
-			}
-
-			editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
-			{
-				commands.DefineEditCommands(editCmd /* wConnFlags */, true)
-			}
-		}
-
-		testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap and converge process.")
-		{
-			commands.DefineTestSSHConnectionCommand(testCmd)
-			commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
-			commands.DefineTestSCPCommand(testCmd)
-			commands.DefineTestUploadExecCommand(testCmd)
-			commands.DefineTestBundle(testCmd)
-
-			controlPlaneCmd := testCmd.Command("control-plane", "Commands to test control plane nodes.")
-			{
-				commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd)
-				commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd)
-			}
-		}
-
-		deckhouseCmd := testCmd.Command("deckhouse", "Install and uninstall deckhouse.")
-		{
-			commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
-			commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
-			commands.DefineWaitDeploymentReadyCommand(deckhouseCmd)
+			commands.DefineEditCommands(editCmd /* wConnFlags */, true)
 		}
 	}
 
+	testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap and converge process.")
+	{
+		commands.DefineTestSSHConnectionCommand(testCmd)
+		commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
+		commands.DefineTestSCPCommand(testCmd)
+		commands.DefineTestUploadExecCommand(testCmd)
+		commands.DefineTestBundle(testCmd)
+
+		controlPlaneCmd := testCmd.Command("control-plane", "Commands to test control plane nodes.")
+		{
+			commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd)
+			commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd)
+		}
+	}
+
+	deckhouseCmd := testCmd.Command("deckhouse", "Install and uninstall deckhouse.")
+	{
+		commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
+		commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
+		commands.DefineWaitDeploymentReadyCommand(deckhouseCmd)
+	}
+
+	runApplication(kpApp)
+}
+
+func runApplication(kpApp *kingpin.Application) {
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		log.InitLogger(app.LoggerType)
 		return nil

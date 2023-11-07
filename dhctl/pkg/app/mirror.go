@@ -58,6 +58,7 @@ var (
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("license", "Pull Deckhouse images to local machine using license key. Conflicts with --registry.").
 		Short('l').
+		PlaceHolder("TOKEN").
 		Envar(configEnvName("MIRROR_LICENSE")).
 		StringVar(&MirrorDHLicenseToken)
 	cmd.Flag("registry", "Push Deckhouse images to your private registry, specified as registry-host[:port]. Conflicts with --license.").
@@ -66,10 +67,12 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		StringVar(&MirrorRegistryHost)
 	cmd.Flag("registry-login", "Username to log into your registry.").
 		Short('u').
+		PlaceHolder("LOGIN").
 		Envar(configEnvName("MIRROR_USER")).
 		StringVar(&MirrorRegistryUsername)
 	cmd.Flag("registry-password", "Password to log into your registry.").
 		Short('p').
+		PlaceHolder("PASSWORD").
 		Envar(configEnvName("MIRROR_PASS")).
 		StringVar(&MirrorRegistryPassword)
 	cmd.Flag("fe", "Copy Flant Edition images instead of Enterprise Edition.").
@@ -86,11 +89,12 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		Default(mirrorFastValidation).
 		Envar(configEnvName("MIRROR_VALIDATION")).
 		EnumVar(&MirrorValidationMode, mirrorNoValidation, mirrorFastValidation, mirrorFullValidation)
-	cmd.Flag("skip-gost-digests", "Do not calculate GOST R 34.11-2012 digests for downloaded blobs").
+	cmd.Flag("skip-gost-digest", "Do not calculate GOST R 34.11-2012 STREEBOG digest for downloaded bundle").
 		Envar(configEnvName("MIRROR_SKIP_GOST_DIGESTS")).
 		BoolVar(&MirrorSkipGOSTHashing)
 	cmd.Flag("images-bundle-path", "Path of tar bundle with pulled images").
 		Short('i').
+		PlaceHolder("PATH").
 		Required().
 		Envar(configEnvName("MIRROR_IMAGES_BUNDLE")).
 		StringVar(&MirrorTarBundle)
