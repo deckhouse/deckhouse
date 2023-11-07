@@ -1,0 +1,16 @@
+- name: d8.ubuntu-version-is-deprecated
+  rules:
+    - alert: D8UbuntuVersionIsDeprecated
+      for: 10m
+      expr: max by (name) (node_os_info{name="Ubuntu",version_id="18.04"}) == 1
+      labels:
+        severity_level: "7"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: Ubuntu version 18.04 is deprecated
+        description: |-
+          Current Ubuntu version 18.04 is deprecated, and its support will be removed soon
+
+          Please migrate to the next Ubuntu version (at least 20.04)
