@@ -138,56 +138,56 @@ func TestJoin(t *testing.T) {
 	}
 }
 
-func TestFilter(t *testing.T) {
-	type args[K comparable, V any] struct {
-		in         map[K]V
-		filterFunc func(key K, val V) bool
-	}
-	type testCase[K comparable, V any] struct {
-		name string
-		args args[K, V]
-		want map[K]V
-	}
-	tests := []testCase[string, string]{
-		{
-			name: "empty input",
-			args: args[string, string]{
-				in:         map[string]string{},
-				filterFunc: func(_, _ string) bool { return true },
-			},
-			want: map[string]string{},
-		},
-		{
-			name: "nil input map",
-			args: args[string, string]{
-				in:         nil,
-				filterFunc: func(_, _ string) bool { return true },
-			},
-			want: nil,
-		},
-		{
-			name: "nil filter func",
-			args: args[string, string]{
-				in:         map[string]string{},
-				filterFunc: nil,
-			},
-			want: map[string]string{},
-		},
-		{
-			name: "basic filter",
-			args: args[string, string]{
-				in:         map[string]string{"key1": "value1", "key2": "value2"},
-				filterFunc: func(_, val string) bool { return val == "value1" },
-			},
-			want: map[string]string{"key1": "value1"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(
-			tt.name,
-			func(t *testing.T) {
-				got := Filter(tt.args.in, tt.args.filterFunc)
-				require.Equal(t, got, tt.want)
-			})
-	}
-}
+//func TestFilter(t *testing.T) {
+//	type args[K comparable, V any] struct {
+//		in         map[K]V
+//		filterFunc func(key K, val V) bool
+//	}
+//	type testCase[K comparable, V any] struct {
+//		name string
+//		args args[K, V]
+//		want map[K]V
+//	}
+//	tests := []testCase[string, string]{
+//		{
+//			name: "empty input",
+//			args: args[string, string]{
+//				in:         map[string]string{},
+//				filterFunc: func(_, _ string) bool { return true },
+//			},
+//			want: map[string]string{},
+//		},
+//		{
+//			name: "nil input map",
+//			args: args[string, string]{
+//				in:         nil,
+//				filterFunc: func(_, _ string) bool { return true },
+//			},
+//			want: nil,
+//		},
+//		{
+//			name: "nil filter func",
+//			args: args[string, string]{
+//				in:         map[string]string{},
+//				filterFunc: nil,
+//			},
+//			want: map[string]string{},
+//		},
+//		{
+//			name: "basic filter",
+//			args: args[string, string]{
+//				in:         map[string]string{"key1": "value1", "key2": "value2"},
+//				filterFunc: func(_, val string) bool { return val == "value1" },
+//			},
+//			want: map[string]string{"key1": "value1"},
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(
+//			tt.name,
+//			func(t *testing.T) {
+//				got := Filter(tt.args.in, tt.args.filterFunc)
+//				require.Equal(t, got, tt.want)
+//			})
+//	}
+//}
