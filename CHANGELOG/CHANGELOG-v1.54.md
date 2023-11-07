@@ -36,6 +36,7 @@
  - **[dhctl]** Improved the seeding and usage of rand. [#5094](https://github.com/deckhouse/deckhouse/pull/5094)
     Higher quality of insecure randomness, slightly better performance.
  - **[extended-monitoring]** Change the node search command for a DaemonSet in the `KubernetesDaemonSetReplicasUnavailable` alert. [#6068](https://github.com/deckhouse/deckhouse/pull/6068)
+ - **[external-module-manager]** Fix deckhouse ModuleSource recreation on startup. [#6448](https://github.com/deckhouse/deckhouse/pull/6448)
  - **[external-module-manager]** Add support for hardlinks and symlinks to the module. [#6330](https://github.com/deckhouse/deckhouse/pull/6330)
  - **[ingress-nginx]** Fix CVE issues in the `protobuf-exporter` image. [#6327](https://github.com/deckhouse/deckhouse/pull/6327)
  - **[ingress-nginx]** Fix CVE issues in the `nginx-exporter` image. [#6325](https://github.com/deckhouse/deckhouse/pull/6325)
