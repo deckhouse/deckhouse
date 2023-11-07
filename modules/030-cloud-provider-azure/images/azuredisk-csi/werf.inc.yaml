@@ -6,7 +6,7 @@ import:
   add: /src/_output/amd64/azurediskplugin
   to: /azurediskplugin
   before: setup
-- image: common/alt
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
@@ -15,7 +15,6 @@ import:
 docker:
   ENTRYPOINT: ["/azurediskplugin"]
 ---
-{{ $csiBuildPath := "/src" }}
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
@@ -23,16 +22,26 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - |
-    apk add --no-cache ca-certificates make git \
-      util-linux udev\
-      e2fsprogs e2fsprogs-extra \
-      xfsprogs xfsprogs-extra \
-      btrfs-progs btrfs-progs-extra
+  - apk add --no-cache ca-certificates make git
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p {{ $csiBuildPath }}
-  - git clone --depth 1 --branch v1.17.0 https://github.com/kubernetes-sigs/azuredisk-csi-driver.git {{ $csiBuildPath }}
-  - cd {{ $csiBuildPath }}
+  - mkdir -p /src
+  - git clone --depth 1 --branch v1.17.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/azuredisk-csi-driver.git /src
+  - cd /src
   - make azuredisk
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: common/alt
+shell:
+  beforeSetup:
+    - apt-get update
+    - |
+      apt-get install -y ca-certificates \
+                        util-linux \
+                        mount udev parted \
+                        e2fsprogs xfsprogs btrfs-progs
+  setup:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

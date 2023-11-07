@@ -6,7 +6,7 @@ import:
   add: /src/vsphere-csi
   to: /bin/vsphere-csi
   before: setup
-- image: common/alt
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
@@ -16,7 +16,7 @@ docker:
   ENTRYPOINT: ["/bin/vsphere-csi"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
   to: /patches
@@ -28,12 +28,10 @@ git:
   - 002-find-by-converted-uuid.patch
 shell:
   beforeInstall:
-  - |
-    apk upgrade --available --no-cache && \
-    apk add --no-cache git
+  - apk add --no-cache git ca-certificates
   install:
   - mkdir -p /src
-  - git clone --depth 1 --branch v0.2.1 https://github.com/flant/cloud-provider-vsphere.git /src
+  - git clone --depth 1 --branch v0.2.1 {{ $.SOURCE_REPO }}/flant/cloud-provider-vsphere.git /src
   - cd /src
   - find /patches -name '*.patch' -exec git apply {} \;
 ---
@@ -57,13 +55,29 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache git wget
+  - apk add --no-cache ca-certificates git
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
+  - git clone {{ $.SOURCE_REPO }}/flant/vsphere-csi-driver.git /src
   - cd /src
-  - wget https://github.com/flant/vsphere-csi-driver/archive/6189afc2522d83a96d3857110c61478710110347.tar.gz -O - | tar -xz --strip-components=1 -C .
+  - git checkout 6189afc2522d83a96d3857110c61478710110347
   - find /patches -name '*.patch' -exec git apply {} \;
   - go mod edit -replace=k8s.io/cloud-provider-vsphere=/cloud-provider-vsphere
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs* /sbin/mount.nfs /sbin/umount.nfs" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: common/alt
+shell:
+  beforeSetup:
+    - apt-get update
+    - |
+      apt-get install -y ca-certificates \
+                        util-linux \
+                        mount udev parted \
+                        nfs-utils e2fsprogs xfsprogs btrfs-progs
+  setup:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
