@@ -82,7 +82,7 @@ function relocate_item() {
   fi
 }
 
-function get_binnary_path () {
+function get_binary_path () {
   local bin
   BINARY_LIST=()
   
@@ -99,10 +99,10 @@ function get_binnary_path () {
 # if get file with binaryes (-f)
 if [[ -n $FILE_TEMPLATE_BINS ]] && [[ -f $FILE_TEMPLATE_BINS ]] && [[ -z $TEMPLATE_BINS ]]; then
   BIN_TEMPLATE=$(cat $FILE_TEMPLATE_BINS)
-  get_binnary_path ${BIN_TEMPLATE}
+  get_binary_path ${BIN_TEMPLATE}
 # Or get paths to bin via raw input (-i)
 elif [[ -n $TEMPLATE_BINS ]] && [[ -z $FILE_TEMPLATE_BINS ]]; then
-  get_binnary_path ${TEMPLATE_BINS}
+  get_binary_path ${TEMPLATE_BINS}
 else
   Help
   exit
