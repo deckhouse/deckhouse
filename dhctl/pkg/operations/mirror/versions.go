@@ -61,7 +61,7 @@ func getTagsFromRegistry(mirrorCtx *Context) ([]string, error) {
 		remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
 	}
 
-	repo, err := name.NewRepository(mirrorCtx.RegistryRepo+"/release-channel", nameOpts...)
+	repo, err := name.NewRepository(mirrorCtx.DeckhouseRegistryRepo+"/release-channel", nameOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parsing repo: %v", err)
 	}
@@ -108,7 +108,7 @@ func getRockSolidVersionFromRegistry(mirrorCtx *Context) (*semver.Version, error
 		refOpts = append(refOpts, name.Insecure)
 	}
 
-	ref, err := name.ParseReference(mirrorCtx.RegistryRepo+"/release-channel:rock-solid", refOpts...)
+	ref, err := name.ParseReference(mirrorCtx.DeckhouseRegistryRepo+"/release-channel:rock-solid", refOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parse rock solid release ref: %w", err)
 	}

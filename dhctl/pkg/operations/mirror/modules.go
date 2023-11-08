@@ -37,7 +37,7 @@ func GetExternalModules(mirrorCtx *Context) ([]Module, error) {
 		remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
 	}
 
-	modulesRepo, err := name.NewRepository(mirrorCtx.RegistryRepo+"/modules", nameOpts...)
+	modulesRepo, err := name.NewRepository(mirrorCtx.DeckhouseRegistryRepo+"/modules", nameOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parsing modules repo: %v", err)
 	}
@@ -51,7 +51,7 @@ func GetExternalModules(mirrorCtx *Context) ([]Module, error) {
 	for _, module := range modules {
 		m := Module{
 			Name:         module,
-			RegistryPath: fmt.Sprintf("%s/modules/%s", mirrorCtx.RegistryRepo, module),
+			RegistryPath: fmt.Sprintf("%s/modules/%s", mirrorCtx.DeckhouseRegistryRepo, module),
 			Releases:     []string{},
 		}
 

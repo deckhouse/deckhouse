@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -26,8 +27,12 @@ import (
 )
 
 const (
-	enterpriseEditionRepo = "registry.deckhouse.io/deckhouse/ee"
-	flantEditionRepo      = "registry.deckhouse.io/deckhouse/fe"
+	deckhouseRegistryHost     = "registry.deckhouse.io"
+	enterpriseEditionRepoPath = "/deckhouse/ee"
+	flantEditionRepoPath      = "/deckhouse/fe"
+
+	enterpriseEditionRepo = deckhouseRegistryHost + enterpriseEditionRepoPath
+	flantEditionRepo      = deckhouseRegistryHost + flantEditionRepoPath
 )
 
 const (
@@ -37,12 +42,14 @@ const (
 )
 
 var (
-	MirrorRegistryHost     = ""
+	MirrorRegistry         = ""
 	MirrorRegistryUsername = ""
 	MirrorRegistryPassword = ""
 	MirrorInsecure         = false
 	MirrorDHLicenseToken   = ""
 	MirrorImagesPath       = ""
+	MirrorRegistryHost     = ""
+	MirrorRegistryPath     = ""
 
 	mirrorMinVersionString                 = ""
 	MirrorMinVersion       *semver.Version = nil
@@ -58,10 +65,10 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		Short('l').
 		Envar(configEnvName("MIRROR_LICENSE")).
 		StringVar(&MirrorDHLicenseToken)
-	cmd.Flag("registry", "Push Deckhouse images to your private registry, specified as registry-host[:port]. Conflicts with --license.").
+	cmd.Flag("registry", "Push Deckhouse images to your private registry, specified as registry-host[:port]/path. Conflicts with --license.").
 		Short('r').
 		Envar(configEnvName("MIRROR_PRIVATE_REGISTRY")).
-		StringVar(&MirrorRegistryHost)
+		StringVar(&MirrorRegistry)
 	cmd.Flag("registry-login", "Username to log into your registry.").
 		Short('u').
 		Envar(configEnvName("MIRROR_USER")).
@@ -95,42 +102,97 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		var err error
 
-		if MirrorRegistryHost == "" && MirrorDHLicenseToken == "" {
-			return errors.New("One of --license or --registry is required.")
+		if err = validateRegistryAndTokenFlagsUsage(); err != nil {
+			return err
 		}
 
-		if MirrorRegistryHost != "" && MirrorDHLicenseToken != "" {
-			return errors.New("You have specified both --license and --registry flags. This is not how it works.\n\n" +
-				"Leave only --license if you want to pull Deckhouse images from public registry.\n" +
-				"Leave only --registry if you already pulled Deckhouse images and want to push it to your private registry.")
+		if err = parseAndValidateMinVersionFlag(); err != nil {
+			return err
 		}
 
-		if mirrorMinVersionString != "" {
-			MirrorMinVersion, err = semver.NewVersion(mirrorMinVersionString)
-			if err != nil {
-				return fmt.Errorf("Minimal deckhouse version: %w", err)
-			}
+		if err = parseAndValidateRegistryURLFlag(); err != nil {
+			return err
 		}
 
-		if MirrorRegistryPassword != "" && MirrorRegistryUsername == "" {
-			return errors.New("Registry username not specified")
+		if err = validateRegistryCredentials(); err != nil {
+			return err
+		}
+
+		if err = validateImagesBundlePathFlag(); err != nil {
+			return err
 		}
 
 		if mirrorFlantEdition {
 			MirrorDeckhouseRegistryRepo = flantEditionRepo
 		}
 
-		MirrorImagesPath = filepath.Clean(MirrorImagesPath)
-		stats, err := os.Stat(MirrorImagesPath)
-		switch {
-		case errors.Is(err, fs.ErrNotExist):
-			break
-		case err != nil && !errors.Is(err, fs.ErrNotExist):
-			return fmt.Errorf("stat %s: %w", MirrorImagesPath, err)
-		case !stats.IsDir():
-			return fmt.Errorf("%s should be a directory", MirrorImagesPath)
-		}
-
 		return nil
 	})
+}
+
+func validateImagesBundlePathFlag() error {
+	MirrorImagesPath = filepath.Clean(MirrorImagesPath)
+	stats, err := os.Stat(MirrorImagesPath)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		break
+	case err != nil && !errors.Is(err, fs.ErrNotExist):
+		return fmt.Errorf("stat %s: %w", MirrorImagesPath, err)
+	case !stats.IsDir():
+		return fmt.Errorf("%s should be a directory", MirrorImagesPath)
+	}
+	return nil
+}
+
+func validateRegistryCredentials() error {
+	if MirrorRegistryPassword != "" && MirrorRegistryUsername == "" {
+		return errors.New("Registry username not specified")
+	}
+	return nil
+}
+
+func parseAndValidateRegistryURLFlag() error {
+	if MirrorRegistry != "" {
+		registryUrl, err := url.Parse("docker://" + MirrorRegistry)
+		if err != nil {
+			return fmt.Errorf("Validate registry address: %w", err)
+		}
+
+		MirrorRegistryHost = registryUrl.Host
+		MirrorRegistryPath = registryUrl.Path
+		if MirrorRegistryHost == "" {
+			return errors.New("Please specify registry address correctly")
+		}
+		if MirrorRegistryPath == "" {
+			MirrorRegistryPath = enterpriseEditionRepoPath
+			if mirrorFlantEdition {
+				MirrorRegistryPath = flantEditionRepoPath
+			}
+		}
+	}
+	return nil
+}
+
+func parseAndValidateMinVersionFlag() error {
+	var err error
+	if mirrorMinVersionString != "" {
+		MirrorMinVersion, err = semver.NewVersion(mirrorMinVersionString)
+		if err != nil {
+			return fmt.Errorf("Minimal deckhouse version: %w", err)
+		}
+	}
+	return nil
+}
+
+func validateRegistryAndTokenFlagsUsage() error {
+	if MirrorRegistry == "" && MirrorDHLicenseToken == "" {
+		return errors.New("One of --license or --registry is required.")
+	}
+
+	if MirrorRegistry != "" && MirrorDHLicenseToken != "" {
+		return errors.New("You have specified both --license and --registry flags. This is not how it works.\n\n" +
+			"Leave only --license if you want to pull Deckhouse images from public registry.\n" +
+			"Leave only --registry if you already pulled Deckhouse images and want to push it to your private registry.")
+	}
+	return nil
 }
