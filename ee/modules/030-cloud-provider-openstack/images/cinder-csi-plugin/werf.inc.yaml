@@ -63,5 +63,4 @@ shell:
                         mount udev parted \
                         e2fsprogs xfsprogs btrfs-progs
   setup:
-    - chmod +x /binary_replace.sh
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
