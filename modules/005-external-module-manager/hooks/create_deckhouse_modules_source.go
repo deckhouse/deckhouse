@@ -90,6 +90,26 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	deckhouseRepo := input.Values.Get("global.modulesImages.registry.base").String() + "/modules"
+	deckhouseDockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
+	deckhouseCA := input.Values.Get("global.modulesImages.registry.CA").String()
+	releaseChannel := ""
+
+	if len(input.Snapshots["deckhouse-secret"]) > 0 {
+		ds := input.Snapshots["deckhouse-secret"][0].(deckhouseSecret)
+		releaseChannel = strcase.ToKebab(ds.ReleaseChannel)
+	}
+
+	if len(input.Snapshots["sources"]) > 0 {
+		ms := input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
+		releaseChannel = ms.Spec.ReleaseChannel
+
+		if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
+			// return if ModuleSource deckhouse already exists and all param are equal
+			return nil
+		}
+	}
+
 	newms := v1alpha1.ModuleSource{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ModuleSource",
@@ -102,29 +122,14 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 			},
 		},
 		Spec: v1alpha1.ModuleSourceSpec{
+			ReleaseChannel: releaseChannel,
 			Registry: v1alpha1.ModuleSourceSpecRegistry{
-				Repo:      input.Values.Get("global.modulesImages.registry.base").String() + "/modules",
-				DockerCFG: input.Values.Get("global.modulesImages.registry.dockercfg").String(),
+				Scheme:    "HTTPS",
+				Repo:      deckhouseRepo,
+				DockerCFG: deckhouseDockerCfg,
+				CA:        deckhouseCA,
 			},
 		},
-	}
-
-	ca := input.Values.Get("global.modulesImages.registry.CA").String()
-	if ca != "" {
-		newms.Spec.Registry.CA = ca
-	}
-
-	if len(input.Snapshots["deckhouse-secret"]) > 0 {
-		ds := input.Snapshots["deckhouse-secret"][0].(deckhouseSecret)
-		newms.Spec.ReleaseChannel = strcase.ToKebab(ds.ReleaseChannel)
-	}
-
-	if len(input.Snapshots["sources"]) > 0 {
-		ms := input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
-
-		// Keep some options that users configured manually to prevent overriding
-		// In the future, instead, it is possible to use the server-side apply instead of subscribing to the object.
-		newms.Spec.ReleaseChannel = ms.Spec.ReleaseChannel
 	}
 
 	o, err := sdk.ToUnstructured(&newms)
@@ -135,4 +140,20 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 	input.PatchCollector.Create(o, object_patch.UpdateIfExists())
 
 	return nil
+}
+
+func moduleSourceUpToDate(ms *v1alpha1.ModuleSource, repo, cfg, ca string) bool {
+	if ms.Spec.Registry.Repo != repo {
+		return false
+	}
+
+	if ca != "" && ms.Spec.Registry.CA != ca {
+		return false
+	}
+
+	if ms.Spec.Registry.DockerCFG != cfg {
+		return false
+	}
+
+	return true
 }

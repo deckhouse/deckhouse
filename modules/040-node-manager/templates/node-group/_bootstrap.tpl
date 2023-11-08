@@ -91,6 +91,7 @@ function get_phase2() {
   done
 }
 
+  {{- if ne $ng.nodeType "Static" }}
 function run_cloud_network_setup() {
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- if $bootstrap_script_common := $context.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type)  }}
@@ -124,7 +125,7 @@ EOF
     done
   fi
 }
-
+  {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 function run_log_output() {
   {{- /*
@@ -137,7 +138,9 @@ function run_log_output() {
 }
  {{- end }}
 BUNDLE="$(detect_bundle)"
+  {{- if ne $ng.nodeType "Static" }}
 run_cloud_network_setup
+  {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
   {{- end }}

@@ -51,7 +51,7 @@ bin/gofumpt:
 	@chmod +x "./bin/gofumpt"
 
 build:
-	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static'"  -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build-test:
 	CGO_ENABLED=0 GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl

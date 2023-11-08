@@ -18,15 +18,12 @@ package config
 
 import (
 	"fmt"
-	"reflect"
-	"sigs.k8s.io/yaml"
 	"strings"
 
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -69,16 +66,10 @@ type ModuleConfigSpec struct {
 // Finally, it unlocks further bootstrap by allowing modules hooks to run with created ModuleConfig's.
 func ConvertInitConfigurationToModuleConfigs(metaConfig *MetaConfig, schemasStore *SchemaStore, bundle string, level string) ([]*ModuleConfig, error) {
 	initConfiguration := metaConfig.DeckhouseConfig
-	// "deckhouse" ModuleConfig is mandatory.
-	dhSettings := maputil.Filter(
-		map[string]any{
-			"bundle":   bundle,
-			"logLevel": level,
-		},
-		filterNonZeroValues[string, any],
-	)
-
-	dhModuleConfig, err := buildModuleConfigWithOverrides(schemasStore, "deckhouse", true, dhSettings)
+	dhModuleConfig, err := buildModuleConfigWithOverrides(schemasStore, "deckhouse", true, map[string]any{
+		"bundle":   bundle,
+		"logLevel": level,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -173,8 +164,4 @@ func buildModuleConfigWithOverrides(
 	}
 
 	return mc, nil
-}
-
-func filterNonZeroValues[K comparable, V any](_ K, v V) bool {
-	return !reflect.ValueOf(v).IsZero()
 }

@@ -53,7 +53,7 @@ func ExtractImageDigestsFromDeckhouseInstaller(
 	}
 
 	digests := map[string]struct{}{}
-	if err = parseDigestsFromImagesDigestsJSON(mirrorCtx.RegistryRepo, imagesDigestsJSON, digests); err != nil {
+	if err = parseDigestsFromImagesDigestsJSON(mirrorCtx.DeckhouseRegistryRepo, imagesDigestsJSON, digests); err != nil {
 		return nil, fmt.Errorf("cannot parse images_digests.json: %w", err)
 	}
 
