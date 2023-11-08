@@ -98,7 +98,7 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 	}
 	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(w.dynamicClient, resyncTimeout, w.namespace, tweakListOptions)
 
-	resource := schema.GroupVersionResource{Group: "coordination.k8s.io", Version: "v1", Resource: "lease"}
+	resource := schema.GroupVersionResource{Group: "coordination.k8s.io", Version: "v1", Resource: "leases"}
 	informer := factory.ForResource(resource).Informer()
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
