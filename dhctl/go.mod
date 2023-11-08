@@ -24,7 +24,8 @@ require (
 	github.com/prometheus/client_model v0.3.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
-	golang.org/x/term v0.6.0
+	go.cypherpunks.ru/gogost/v5 v5.13.0
+	golang.org/x/term v0.11.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/satori/go.uuid.v1 v1.2.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -93,12 +94,12 @@ require (
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.mongodb.org/mongo-driver v1.3.4 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
@@ -114,3 +115,5 @@ replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v
 
 // replace with master branch to work with single dash
 replace gopkg.in/alecthomas/kingpin.v2 => github.com/alecthomas/kingpin v1.3.8-0.20200323085623-b6657d9477a6
+
+replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0

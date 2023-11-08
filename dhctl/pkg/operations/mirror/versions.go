@@ -21,8 +21,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func VersionsToCopy(mirrorCtx *Context) ([]*semver.Version, error) {
@@ -45,8 +43,6 @@ func VersionsToCopy(mirrorCtx *Context) ([]*semver.Version, error) {
 
 	versionsAboveMinimal := parseAndFilterVersionsAboveMinimal(&mirrorFromVersion, tags)
 	versionsAboveMinimal = filterOnlyLatestPatches(versionsAboveMinimal)
-
-	log.InfoF("Deckhouse releases to pull: %+v\n", versionsAboveMinimal)
 
 	return versionsAboveMinimal, nil
 }
