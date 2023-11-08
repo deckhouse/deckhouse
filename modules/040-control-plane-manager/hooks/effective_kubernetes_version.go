@@ -23,8 +23,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -34,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 /*
