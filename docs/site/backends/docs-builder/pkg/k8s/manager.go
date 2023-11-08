@@ -17,8 +17,11 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/kubernetes"
+	coordinationclientv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"os"
 	"strings"
@@ -29,11 +32,12 @@ import (
 )
 
 const (
-	name  = "docs-builder-"
+	name  = "frontend-"
 	label = "deckhouse.io/documentation-builder-sync"
 
-	leaseDuration    = 35
-	leaseRenewPeriod = 30
+	leaseDuration         = 35
+	leaseRenewPeriod      = 30
+	leaseCollectionPeriod = 90
 )
 
 func NewLeasesManager() (*LeasesManager, error) {
@@ -64,7 +68,7 @@ type LeasesManager struct {
 
 func (m *LeasesManager) Create(ctx context.Context) error {
 	l := m.newLease()
-	l, err := m.kclient.CoordinationV1().Leases(m.podNamespace).Create(ctx, l, metav1.CreateOptions{})
+	l, err := m.leases().Create(ctx, l, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
@@ -74,6 +78,28 @@ func (m *LeasesManager) Create(ctx context.Context) error {
 }
 
 func (m *LeasesManager) Run(ctx context.Context) error {
+	group, ctx := errgroup.WithContext(ctx)
+
+	group.Go(func() error {
+		err := m.renewLoop(ctx)
+		if err != nil {
+			return fmt.Errorf("renew loop: %w", err)
+		}
+		return nil
+	})
+
+	group.Go(func() error {
+		err := m.garbageCollectionLoop(ctx)
+		if err != nil {
+			return fmt.Errorf("gc loop: %w", err)
+		}
+		return nil
+	})
+
+	return group.Wait()
+}
+
+func (m *LeasesManager) renewLoop(ctx context.Context) error {
 	ticker := time.NewTicker(time.Second * leaseRenewPeriod)
 
 	for {
@@ -91,7 +117,7 @@ func (m *LeasesManager) Run(ctx context.Context) error {
 }
 
 func (m *LeasesManager) renew(ctx context.Context) error {
-	lease, err := m.kclient.CoordinationV1().Leases(m.podNamespace).Get(ctx, m.name, metav1.GetOptions{})
+	lease, err := m.leases().Get(ctx, m.name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("get lease %q: %w", m.name, err)
 	}
@@ -99,7 +125,7 @@ func (m *LeasesManager) renew(ctx context.Context) error {
 	now := metav1.NowMicro()
 	lease.Spec.RenewTime = &now
 
-	_, err = m.kclient.CoordinationV1().Leases(m.podNamespace).Update(ctx, lease, metav1.UpdateOptions{})
+	_, err = m.leases().Update(ctx, lease, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("update lease %q: %w", m.name, err)
 	}
@@ -112,7 +138,7 @@ func (m *LeasesManager) Remove(ctx context.Context) error {
 		return nil
 	}
 
-	err := m.kclient.CoordinationV1().Leases(m.podNamespace).Delete(ctx, m.name, metav1.DeleteOptions{})
+	err := m.leases().Delete(ctx, m.name, metav1.DeleteOptions{})
 	m.name = ""
 	return err
 }
@@ -141,4 +167,47 @@ func (m *LeasesManager) newLease() *coordination.Lease {
 			LeaseDurationSeconds: pointer.Int32(leaseDuration),
 		},
 	}
+}
+
+func (m *LeasesManager) garbageCollectionLoop(ctx context.Context) error {
+	ticker := time.NewTicker(time.Second * leaseCollectionPeriod)
+
+	for {
+		select {
+		case <-ticker.C:
+			err := m.gc(ctx)
+			if err != nil {
+				klog.Error("cleanup leases:", err)
+			}
+
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+func (m *LeasesManager) gc(ctx context.Context) error {
+	list, err := m.leases().List(ctx, metav1.ListOptions{LabelSelector: label})
+	if err != nil {
+		return fmt.Errorf("list: %w", err)
+	}
+
+	for _, lease := range list.Items {
+		expireAt := lease.Spec.RenewTime.Add(time.Duration(pointer.Int32Deref(lease.Spec.LeaseDurationSeconds, 0)) * time.Second)
+
+		if !expireAt.Before(time.Now()) {
+			continue
+		}
+
+		err := m.leases().Delete(ctx, lease.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return fmt.Errorf("remove: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (m *LeasesManager) leases() coordinationclientv1.LeaseInterface {
+	return m.kclient.CoordinationV1().Leases(m.podNamespace)
 }
