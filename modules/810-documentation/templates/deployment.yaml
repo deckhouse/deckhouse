@@ -86,8 +86,7 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "builder_resources" . | nindent 12 }}
   {{- end }}
-        securityContext:
-          allowPrivilegeEscalation: false
+        securityContext: {}
         volumeMounts:
           - name: tmp
             mountPath: /tmp
