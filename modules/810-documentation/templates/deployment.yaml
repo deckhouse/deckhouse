@@ -58,6 +58,16 @@ spec:
         command:
           - "/app/server"
           - "-highAvailability"
+        env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
         ports:
           - containerPort: 8081
             name: http
@@ -76,6 +86,8 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "builder_resources" . | nindent 12 }}
   {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
           - name: tmp
             mountPath: /tmp
