@@ -49,10 +49,15 @@ spec:
             subPath: nginx.conf
           - name: tmp
             mountPath: /tmp
-      - name: docs-builder
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+          - mountPath: /app/en/modules
+            name: modules-docs-en
+          - mountPath: /app/ru/modules
+            name: modules-docs-ru
+      - name: builder
         image: {{ include "helm_lib_module_image" (list $ "docsBuilder" "docs-builder") }}
-        command: ["/app/server"]
+        command:
+          - "/app/server"
+          - "-highAvailability"
         ports:
           - containerPort: 8081
             name: http
@@ -71,6 +76,13 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "builder_resources" . | nindent 12 }}
   {{- end }}
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+          - mountPath: "/app/hugo/public/en"
+            name: modules-docs-en
+          - mountPath: "/app/hugo/public/ru"
+            name: modules-docs-ru
       volumes:
         - name: config
           configMap:
@@ -79,5 +91,9 @@ spec:
           configMap:
             name: documentation-nginx-config
         - name: tmp
+          emptyDir: {}
+        - name: modules-docs-en
+          emptyDir: {}
+        - name: modules-docs-ru
           emptyDir: {}
 {{- end }}
