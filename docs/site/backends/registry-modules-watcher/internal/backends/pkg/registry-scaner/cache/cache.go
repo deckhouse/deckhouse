@@ -1,6 +1,9 @@
 package cache
 
-import "registry-modules-watcher/internal/backends"
+import (
+	"registry-modules-watcher/internal/backends"
+	"sync"
+)
 
 type (
 	registryName       string
@@ -21,7 +24,9 @@ type data struct {
 
 // map[registry]map[moduleName]module
 type Cache struct {
-	val map[registryName]map[moduleName]moduleData
+	m        sync.RWMutex
+	val      map[registryName]map[moduleName]moduleData
+	valRange []backends.Version
 }
 
 func New() *Cache {
@@ -30,7 +35,24 @@ func New() *Cache {
 	}
 }
 
+func (c *Cache) GetRange() []backends.Version {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	return c.valRange
+}
+
+func (c *Cache) ResetRange() {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	c.valRange = nil
+}
+
 func (c *Cache) GetState() []backends.Version {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
 	var versions = []backends.Version{}
 
 	for registry, modules := range c.val {
@@ -57,6 +79,9 @@ func (c *Cache) GetState() []backends.Version {
 }
 
 func (c *Cache) GetReleaseChecksum(registry, module, releaseChannel string) (string, bool) {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
 	r, ok := c.val[registryName(registry)]
 	if !ok {
 		return "", false
@@ -76,6 +101,8 @@ func (c *Cache) GetReleaseChecksum(registry, module, releaseChannel string) (str
 }
 
 func (c *Cache) SetReleaseChecksum(registry, module, releaseChannel, releaseChecksum string) {
+	c.m.Lock()
+	defer c.m.Unlock()
 
 	if _, ok := c.val[registryName(registry)]; !ok {
 		c.val[registryName(registry)] = make(map[moduleName]moduleData)
@@ -91,6 +118,9 @@ func (c *Cache) SetReleaseChecksum(registry, module, releaseChannel, releaseChec
 }
 
 func (c *Cache) SetTar(registry, module, version, releaseChannel string, tarFile []byte) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
 	var releaseChannels = make(map[string]struct{})
 
 	r, ok := c.val[registryName(registry)]
