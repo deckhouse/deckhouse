@@ -159,7 +159,11 @@ func (u *loadHandler) generateChannelMapping(moduleName, version string, channel
 		return fmt.Errorf("decode json: %w", err)
 	}
 
-	versions := make([]nameVersion, 0, len(channels))
+	var versions []nameVersion
+	if _, ok := m[moduleName]; ok {
+		versions = m[moduleName]["channels"]
+	}
+
 	for _, ch := range channels {
 		versions = append(versions, nameVersion{ch, version})
 	}
