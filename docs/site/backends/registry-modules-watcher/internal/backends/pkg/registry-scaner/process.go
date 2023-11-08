@@ -16,7 +16,7 @@ import (
 )
 
 func (s *registryscaner) processRegistries(ctx context.Context) {
-	klog.Info("Start watching registries")
+	klog.Info("Start scanning registries")
 	for _, registry := range s.registryClients {
 		modules, err := registry.Modules()
 		if err != nil {

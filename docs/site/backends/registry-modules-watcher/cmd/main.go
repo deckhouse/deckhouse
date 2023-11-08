@@ -14,7 +14,6 @@ import (
 
 	"k8s.io/klog"
 
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
@@ -73,18 +72,8 @@ func main() {
 	if err != nil {
 		klog.Fatal(err)
 	}
-	// use the current context in kubeconfig
-	// config, err := clientcmd.BuildConfigFromFlags("", "/Users/dkoba/.kube/config")
-	// if err != nil {
-	// 	klog.Fatal(err)
-	// }
 
 	kClient, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -92,19 +81,8 @@ func main() {
 	// * * * * * * * * *
 	// Watch lease
 	namespace := os.Getenv("POD_NAMESPACE")
-	wather := watcher.New(kClient, dynamicClient, namespace)
-	// events, err := wather.Watch(ctx)
-	// if err != nil {
-	// 	klog.Fatal(err)
-	// }
-
+	wather := watcher.New(kClient, namespace)
 	wather.Watch(ctx, backends.Add, backends.Delete)
-
-	// go func() {
-	// 	for event := range events {
-	// 		backends.Add(event)
-	// 	}
-	// }()
 
 	<-ctx.Done()
 }
