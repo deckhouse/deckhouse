@@ -73,8 +73,6 @@ func (s *registryscaner) processVersion(ctx context.Context, registry, module, v
 		klog.Fatal(err)
 	}
 
-	// image.Digest() // ???
-
 	tarFile, err := extractDocumentation(image)
 	if err != nil {
 		klog.Fatal(err)
@@ -83,8 +81,6 @@ func (s *registryscaner) processVersion(ctx context.Context, registry, module, v
 	s.cache.SetTar(registry, module, version, releaseChannel, tarFile)
 }
 
-// * * * * * *
-
 func extractDocumentation(image v1.Image) ([]byte, error) {
 	readCloser := mutate.Extract(image)
 	defer readCloser.Close()
@@ -92,14 +88,17 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 	tarFile := bytes.NewBuffer(nil)
 	tarWriter := tar.NewWriter(tarFile)
 	tarReader := tar.NewReader(readCloser)
-	h := &tar.Header{
+
+	// "docs" directory
+	err := tarWriter.WriteHeader(&tar.Header{
 		Typeflag: tar.TypeDir,
 		Name:     "docs",
 		Mode:     0700,
-	}
-	if err := tarWriter.WriteHeader(h); err != nil {
+	})
+	if err != nil {
 		log.Fatal(err)
 	}
+
 	for {
 		hdr, err := tarReader.Next()
 		if err != nil {

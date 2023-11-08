@@ -13,7 +13,7 @@ type Sender interface {
 
 type RegistryScaner interface {
 	GetState() []Version
-	// SubscribeOnUpdate()
+	SubscribeOnUpdate(updateHandler func([]Version) error)
 }
 
 var instance *backends = nil
@@ -42,6 +42,7 @@ func New(registryScaner RegistryScaner, sender Sender) *backends {
 			listBackends:   make(map[string]struct{}),
 		}
 	}
+	registryScaner.SubscribeOnUpdate(instance.updateHandler)
 
 	return instance
 }
@@ -55,18 +56,15 @@ func Get() (b *backends, ok bool) {
 }
 
 // Add new backend to list backends
-func (b *backends) Add(backends ...string) {
+func (b *backends) Add(backend string) {
+	klog.Infof(`backend Add call with "backends": %v`, backend)
+
 	b.m.Lock()
 	defer b.m.Unlock()
-	for _, backend := range backends {
-		b.listBackends[backend] = struct{}{}
-	}
 
+	b.listBackends[backend] = struct{}{}
 	state := b.registryScaner.GetState()
-	//x := map[string]struct{}{
-	//	"localhost:8081": {},
-	//}
-	err := b.sender.Send(context.TODO(), b.listBackends, state)
+	err := b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
 	if err != nil {
 		klog.Fatal("error sending docs to new backend: ", err)
 	}
@@ -80,11 +78,16 @@ func (b *backends) Delete(backend string) {
 }
 
 // UpdateDocks send update dock request to all backends
-func (b *backends) subscribeOnUpdates() {
-	// eventChan := SubscribeOnUpdate()
-	// for event := range eventChan {
-	//    foreach backend {
-	//	     sender.Send(backend, event.docState)
-	//    }
-	// }
+func (b *backends) updateHandler(versions []Version) error {
+	klog.Infof(`"registryScaner" produce update event`)
+
+	b.m.RLock()
+	defer b.m.RUnlock()
+
+	err := b.sender.Send(context.TODO(), b.listBackends, versions)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
