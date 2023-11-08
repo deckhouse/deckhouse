@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_ALPINE }}
+fromImage: common/distroless
 docker:
   ENTRYPOINT: ["/caps-controller-manager"]
 import:
@@ -8,12 +8,12 @@ import:
   add: /caps-controller-manager
   to: /caps-controller-manager
   before: setup
-shell:
-  beforeInstall:
-  - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
-  - echo "deckhouse:x:64535:" >> /etc/group
-  - echo "deckhouse:!::0:::::" >> /etc/shadow
-  - apk add --no-cache openssh-client
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+  includePaths:
+    - '**/*'
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
@@ -47,3 +47,14 @@ shell:
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caps-controller-manager cmd/main.go
     - chown 64535:64535 /caps-controller-manager
     - chmod 0700 /caps-controller-manager
+---
+{{- $csiBinaries := "/usr/bin/ssh" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/alt
+shell:
+  beforeSetup:
+    - apt-get update
+    - |
+      apt-get install -y openssh-clients
+  setup:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
