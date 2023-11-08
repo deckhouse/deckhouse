@@ -63,6 +63,8 @@ Description:
 	then save effectiveKubernetesVersion to Values (`global.clusterConfiguration.kubernetesVersion`)
 	and if effectiveKubernetesVersion >= maxUsedControlPlaneVersion:
 		update maxUsedControlPlaneKubernetesVersion in Secret: d8-cluster-configuration
+
+     For deckhouse upgrade requirements we are using minimal version of whole cluster.
 */
 
 const minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKubernetesVersion"
