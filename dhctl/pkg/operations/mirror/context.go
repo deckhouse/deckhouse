@@ -25,8 +25,10 @@ type Context struct {
 	SkipGOSTDigests bool // --skip-gost-digests
 
 	RegistryAuth authn.Authenticator // --registry-login + --registry-password (can be nil in this case) or --license depending on the operation requested
-	RegistryHost string              // --registry
-	RegistryRepo string
+	RegistryHost string              // --registry (FQDN with port, if one is provided)
+	RegistryPath string              // --registry (path)
+
+	DeckhouseRegistryRepo string // points to the registry.deckhouse.io with path to required edition repo, see --fe flag
 
 	TarBundlePath      string // --images
 	UnpackedImagesPath string

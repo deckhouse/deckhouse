@@ -16,9 +16,9 @@ package operations
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -43,7 +43,7 @@ func MirrorRegistryToLocalFS(
 	log.InfoLn("✅")
 
 	log.InfoF("Creating OCI Image Layouts...\t")
-	layouts, err := mirror.CreateOCIImageLayouts(mirrorCtx.RegistryRepo, mirrorCtx.UnpackedImagesPath, modules)
+	layouts, err := mirror.CreateOCIImageLayouts(mirrorCtx.DeckhouseRegistryRepo, mirrorCtx.UnpackedImagesPath, modules)
 	if err != nil {
 		log.InfoLn("❌")
 		return fmt.Errorf("create OCI Image Layouts: %w", err)
@@ -133,18 +133,13 @@ func PushMirrorToRegistry(mirrorCtx *mirror.Context) error {
 			return fmt.Errorf("read index manifest: %w", err)
 		}
 
-		// docker:// prefix is a workaround for url.Parse poor parsing when url does not contain scheme.
-		registryURL, err := url.Parse("docker://" + originalRepo)
-		if err != nil {
-			return err
-		}
-
+		repo := strings.Replace(originalRepo, mirrorCtx.DeckhouseRegistryRepo, mirrorCtx.RegistryHost+mirrorCtx.RegistryPath, 1)
 		pushCount := 1
 		for _, manifest := range indexManifest.Manifests {
-			repo := mirrorCtx.RegistryHost + registryURL.Path
 			tag := manifest.Annotations["io.deckhouse.image.short_tag"]
+			imageRef := repo + ":" + tag
 
-			log.InfoF("[%d / %d] Pushing image %s...\t", pushCount, len(indexManifest.Manifests), repo+":"+tag)
+			log.InfoF("[%d / %d] Pushing image %s...\t", pushCount, len(indexManifest.Manifests), imageRef)
 			img, err := index.Image(manifest.Digest)
 			if err != nil {
 				log.InfoLn("❌")
@@ -160,7 +155,7 @@ func PushMirrorToRegistry(mirrorCtx *mirror.Context) error {
 				remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
 			}
 
-			ref, err := name.ParseReference(repo+":"+tag, refOpts...)
+			ref, err := name.ParseReference(imageRef, refOpts...)
 			if err != nil {
 				log.InfoLn("❌")
 				return fmt.Errorf("parse oci layout reference: %w", err)
@@ -180,9 +175,9 @@ func PushMirrorToRegistry(mirrorCtx *mirror.Context) error {
 }
 
 func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, error) {
-	deckhouseIndexRef := mirrorCtx.RegistryRepo
-	installersIndexRef := filepath.Join(mirrorCtx.RegistryRepo, "install")
-	releasesIndexRef := filepath.Join(mirrorCtx.RegistryRepo, "release-channel")
+	deckhouseIndexRef := mirrorCtx.DeckhouseRegistryRepo
+	installersIndexRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "install")
+	releasesIndexRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "release-channel")
 
 	deckhouseLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, deckhouseIndexRef)
 	installersLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, installersIndexRef)
@@ -201,7 +196,7 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, error
 		return nil, err
 	}
 
-	modulesPath := filepath.Join(mirrorCtx.UnpackedImagesPath, mirrorCtx.RegistryRepo, "modules")
+	modulesPath := filepath.Join(mirrorCtx.UnpackedImagesPath, mirrorCtx.DeckhouseRegistryRepo, "modules")
 	ociLayouts := map[string]layout.Path{
 		deckhouseIndexRef:  deckhouseLayout,
 		installersIndexRef: installersLayout,
@@ -217,8 +212,8 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, error
 			continue
 		}
 
-		moduleRef := filepath.Join(mirrorCtx.RegistryRepo, "modules", dir.Name())
-		moduleReleasesRef := filepath.Join(mirrorCtx.RegistryRepo, "modules", dir.Name(), "release")
+		moduleRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "modules", dir.Name())
+		moduleReleasesRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "modules", dir.Name(), "release")
 		moduleLayout, err := layout.FromPath(filepath.Join(modulesPath, dir.Name()))
 		if err != nil {
 			return nil, fmt.Errorf("create module layout from path: %w", err)

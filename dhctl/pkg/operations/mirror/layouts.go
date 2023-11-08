@@ -153,33 +153,33 @@ type ociLayout struct {
 
 func FillLayoutsImages(mirrorCtx *Context, layouts *ImageLayouts, deckhouseVersions []*semver.Version) {
 	layouts.DeckhouseImages = map[string]struct{}{
-		mirrorCtx.RegistryRepo + ":alpha":        {},
-		mirrorCtx.RegistryRepo + ":beta":         {},
-		mirrorCtx.RegistryRepo + ":early-access": {},
-		mirrorCtx.RegistryRepo + ":stable":       {},
-		mirrorCtx.RegistryRepo + ":rock-solid":   {},
+		mirrorCtx.DeckhouseRegistryRepo + ":alpha":        {},
+		mirrorCtx.DeckhouseRegistryRepo + ":beta":         {},
+		mirrorCtx.DeckhouseRegistryRepo + ":early-access": {},
+		mirrorCtx.DeckhouseRegistryRepo + ":stable":       {},
+		mirrorCtx.DeckhouseRegistryRepo + ":rock-solid":   {},
 	}
 
 	layouts.InstallImages = map[string]struct{}{
-		mirrorCtx.RegistryRepo + "/install:alpha":        {},
-		mirrorCtx.RegistryRepo + "/install:beta":         {},
-		mirrorCtx.RegistryRepo + "/install:early-access": {},
-		mirrorCtx.RegistryRepo + "/install:stable":       {},
-		mirrorCtx.RegistryRepo + "/install:rock-solid":   {},
+		mirrorCtx.DeckhouseRegistryRepo + "/install:alpha":        {},
+		mirrorCtx.DeckhouseRegistryRepo + "/install:beta":         {},
+		mirrorCtx.DeckhouseRegistryRepo + "/install:early-access": {},
+		mirrorCtx.DeckhouseRegistryRepo + "/install:stable":       {},
+		mirrorCtx.DeckhouseRegistryRepo + "/install:rock-solid":   {},
 	}
 
 	layouts.ReleaseChannelImages = map[string]struct{}{
-		mirrorCtx.RegistryRepo + "/release-channel:alpha":        {},
-		mirrorCtx.RegistryRepo + "/release-channel:beta":         {},
-		mirrorCtx.RegistryRepo + "/release-channel:early-access": {},
-		mirrorCtx.RegistryRepo + "/release-channel:stable":       {},
-		mirrorCtx.RegistryRepo + "/release-channel:rock-solid":   {},
+		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:alpha":        {},
+		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:beta":         {},
+		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:early-access": {},
+		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:stable":       {},
+		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:rock-solid":   {},
 	}
 
 	for _, version := range deckhouseVersions {
-		layouts.DeckhouseImages[fmt.Sprintf("%s:v%s", mirrorCtx.RegistryRepo, version.String())] = struct{}{}
-		layouts.InstallImages[fmt.Sprintf("%s/install:v%s", mirrorCtx.RegistryRepo, version.String())] = struct{}{}
-		layouts.ReleaseChannelImages[fmt.Sprintf("%s/release-channel:v%s", mirrorCtx.RegistryRepo, version.String())] = struct{}{}
+		layouts.DeckhouseImages[fmt.Sprintf("%s:v%s", mirrorCtx.DeckhouseRegistryRepo, version.String())] = struct{}{}
+		layouts.InstallImages[fmt.Sprintf("%s/install:v%s", mirrorCtx.DeckhouseRegistryRepo, version.String())] = struct{}{}
+		layouts.ReleaseChannelImages[fmt.Sprintf("%s/release-channel:v%s", mirrorCtx.DeckhouseRegistryRepo, version.String())] = struct{}{}
 	}
 }
 
@@ -190,11 +190,11 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 	for _, moduleName := range modulesNames {
 		moduleData := layouts.Modules[moduleName]
 		moduleData.ReleaseImages = map[string]struct{}{
-			mirrorCtx.RegistryRepo + "/modules/" + moduleName + "/release:alpha":        {},
-			mirrorCtx.RegistryRepo + "/modules/" + moduleName + "/release:beta":         {},
-			mirrorCtx.RegistryRepo + "/modules/" + moduleName + "/release:early-access": {},
-			mirrorCtx.RegistryRepo + "/modules/" + moduleName + "/release:stable":       {},
-			mirrorCtx.RegistryRepo + "/modules/" + moduleName + "/release:rock-solid":   {},
+			mirrorCtx.DeckhouseRegistryRepo + "/modules/" + moduleName + "/release:alpha":        {},
+			mirrorCtx.DeckhouseRegistryRepo + "/modules/" + moduleName + "/release:beta":         {},
+			mirrorCtx.DeckhouseRegistryRepo + "/modules/" + moduleName + "/release:early-access": {},
+			mirrorCtx.DeckhouseRegistryRepo + "/modules/" + moduleName + "/release:stable":       {},
+			mirrorCtx.DeckhouseRegistryRepo + "/modules/" + moduleName + "/release:rock-solid":   {},
 		}
 
 		channelVersions, err := fetchVersionsFromModuleReleaseChannels(mirrorCtx, moduleData.ReleaseImages)
@@ -203,8 +203,8 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 		}
 
 		for _, moduleVersion := range channelVersions {
-			moduleData.ModuleImages[mirrorCtx.RegistryRepo+"/modules/"+moduleName+":"+moduleVersion] = struct{}{}
-			moduleData.ReleaseImages[mirrorCtx.RegistryRepo+"/modules/"+moduleName+"/release:"+moduleVersion] = struct{}{}
+			moduleData.ModuleImages[mirrorCtx.DeckhouseRegistryRepo+"/modules/"+moduleName+":"+moduleVersion] = struct{}{}
+			moduleData.ReleaseImages[mirrorCtx.DeckhouseRegistryRepo+"/modules/"+moduleName+"/release:"+moduleVersion] = struct{}{}
 		}
 
 		fetchDigestsFrom := maputil.Clone(moduleData.ModuleImages)
@@ -235,7 +235,7 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 
 			digests := digestRegex.FindAllString(imagesDigestsJSON.String(), -1)
 			for _, digest := range digests {
-				moduleData.ModuleImages[mirrorCtx.RegistryRepo+"/modules/"+moduleName+"@"+digest] = struct{}{}
+				moduleData.ModuleImages[mirrorCtx.DeckhouseRegistryRepo+"/modules/"+moduleName+"@"+digest] = struct{}{}
 			}
 		}
 
