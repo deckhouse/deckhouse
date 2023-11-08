@@ -7,7 +7,6 @@ import (
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"k8s.io/klog"
 )
 
 type Client interface {
@@ -57,6 +56,7 @@ func (s *registryscaner) SubscribeOnUpdate(updateHandler func([]backends.Version
 // Subscribe
 func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Duration) {
 	s.processRegistries(ctx)
+	s.cache.ResetRange()
 	ticker := time.NewTicker(scanInterval)
 
 	go func() {
@@ -68,12 +68,7 @@ func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Durati
 				if len(state) == 0 {
 					continue
 				}
-				err := s.updateHandler(state)
-				if err != nil {
-					klog.Errorf("send new documentation version error: %v", err)
-					continue
-				}
-
+				s.updateHandler(state)
 				s.cache.ResetRange()
 
 			case <-ctx.Done():
