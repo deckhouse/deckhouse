@@ -48,7 +48,7 @@ shell:
     - chown 64535:64535 /caps-controller-manager
     - chmod 0700 /caps-controller-manager
 ---
-{{- $csiBinaries := "/usr/bin/ssh" }}
+{{- $csiBinaries := "/usr/bin/ssh /lib64/libnss_*" }}
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
 shell:
