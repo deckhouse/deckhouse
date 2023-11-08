@@ -57,6 +57,7 @@ func (s *registryscaner) SubscribeOnUpdate(updateHandler func([]backends.Version
 // Subscribe
 func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Duration) {
 	s.processRegistries(ctx)
+	s.cache.ResetRange()
 	ticker := time.NewTicker(scanInterval)
 
 	go func() {
@@ -65,16 +66,11 @@ func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Durati
 			case <-ticker.C:
 				s.processRegistries(ctx)
 				state := s.cache.GetRange()
-				if len(state) == 0 {
-					continue
+				if len(state) > 0 {
+					klog.Infof("new versions in registry found")
+					s.updateHandler(state)
+					s.cache.ResetRange()
 				}
-				err := s.updateHandler(state)
-				if err != nil {
-					klog.Errorf("send new documentation version error: %v", err)
-					continue
-				}
-
-				s.cache.ResetRange()
 
 			case <-ctx.Done():
 				ticker.Stop()
