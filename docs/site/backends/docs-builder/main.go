@@ -20,7 +20,6 @@ import (
 	"flag"
 	"github.com/gorilla/mux"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -46,7 +45,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	ctx, stopNotify := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	ctx, stopNotify := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopNotify()
 
 	var (

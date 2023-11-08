@@ -147,24 +147,28 @@ func (u *loadHandler) generateChannelMapping(moduleName, version string, channel
 		return fmt.Errorf("open %q: %w", path, err)
 	}
 
-	type nameVersion struct {
-		Name    string `json:"name"    yaml:"name"`
+	type entity struct {
 		Version string `json:"version" yaml:"version"`
 	}
 
-	var m = make(map[string]map[string][]nameVersion)
+	// moduleName - "channels" - channelCode
+	var m = make(map[string]map[string]map[string]entity)
 
 	err = yaml.NewDecoder(f).Decode(&m)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("decode json: %w", err)
 	}
 
-	versions := make([]nameVersion, 0, len(channels))
-	for _, ch := range channels {
-		versions = append(versions, nameVersion{ch, version})
+	var versions = make(map[string]entity)
+	if _, ok := m[moduleName]; ok {
+		versions = m[moduleName]["channels"]
 	}
 
-	m[moduleName] = map[string][]nameVersion{
+	for _, ch := range channels {
+		versions[ch] = entity{version}
+	}
+
+	m[moduleName] = map[string]map[string]entity{
 		"channels": versions,
 	}
 
