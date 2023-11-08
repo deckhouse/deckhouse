@@ -40,6 +40,7 @@ func (c *Cache) ResetRange() {
 	c.m.Lock()
 	defer c.m.Unlock()
 
+	c.stateSnap = make([]backends.Version, len(state))
 	copy(c.stateSnap, state)
 }
 
