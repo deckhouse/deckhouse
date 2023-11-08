@@ -29,22 +29,23 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 	syncChan := make(chan struct{}, 5)
 	for backend := range listBackends {
 		syncChan <- struct{}{}
-
-		for _, version := range versions {
-			url := "http://" + backend + "/loadDocArchive/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
-			err := s.loadDocArchive(ctx, url, version.TarFile)
-			if err != nil {
-				klog.Fatal("send docs error: ", err)
+		// TODO retry and return error on fail
+		go func(backend string) {
+			for _, version := range versions {
+				url := "http://" + backend + "/loadDocArchive/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
+				err := s.loadDocArchive(ctx, url, version.TarFile)
+				if err != nil {
+					klog.Fatal("send docs error: ", err)
+				}
 			}
-		}
 
-		url := "http://" + backend + "/build"
-		err := s.build(ctx, url)
-		if err != nil {
-			klog.Fatal("build docs error: ", err)
-		}
-
-		<-syncChan
+			url := "http://" + backend + "/build"
+			err := s.build(ctx, url)
+			if err != nil {
+				klog.Fatal("build docs error: ", err)
+			}
+			<-syncChan
+		}(backend)
 	}
 
 	return nil

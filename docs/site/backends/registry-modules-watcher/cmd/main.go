@@ -7,13 +7,14 @@ import (
 	"registry-modules-watcher/internal/backends"
 	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
-	"registry-modules-watcher/internal/wather"
+	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
 	"strings"
 	"time"
 
 	"k8s.io/klog"
 
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
@@ -83,19 +84,27 @@ func main() {
 		klog.Fatal(err)
 	}
 
-	// * * * * * * * * *
-	// Watch lease
-	wather := wather.New(kClient)
-	events, err := wather.Watch(context.TODO())
+	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		klog.Fatal(err)
 	}
 
-	go func() {
-		for event := range events {
-			backends.Add(event)
-		}
-	}()
+	// * * * * * * * * *
+	// Watch lease
+	namespace := os.Getenv("POD_NAMESPACE")
+	wather := watcher.New(kClient, dynamicClient, namespace)
+	// events, err := wather.Watch(ctx)
+	// if err != nil {
+	// 	klog.Fatal(err)
+	// }
+
+	wather.Watch(ctx, backends.Add, backends.Delete)
+
+	// go func() {
+	// 	for event := range events {
+	// 		backends.Add(event)
+	// 	}
+	// }()
 
 	<-ctx.Done()
 }
