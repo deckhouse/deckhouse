@@ -27,14 +27,14 @@ import (
 
 func TestKubernetesVersionRequirement(t *testing.T) {
 	t.Run("requirement met", func(t *testing.T) {
-		requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.16")
+		requirements.SaveValue(minK8sVersionRequirementKey, "1.19.16")
 		ok, err := requirements.CheckRequirement("k8s", "1.19")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("requirement failed", func(t *testing.T) {
-		requirements.SaveValue("global.discovery.kubernetesVersion", "1.18.3")
+		requirements.SaveValue(minK8sVersionRequirementKey, "1.18.3")
 		ok, err := requirements.CheckRequirement("k8s", "1.19")
 		assert.False(t, ok)
 		require.Error(t, err)

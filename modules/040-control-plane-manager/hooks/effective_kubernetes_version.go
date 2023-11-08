@@ -23,6 +23,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -63,6 +65,8 @@ Description:
 	and if effectiveKubernetesVersion >= maxUsedControlPlaneVersion:
 		update maxUsedControlPlaneKubernetesVersion in Secret: d8-cluster-configuration
 */
+
+const minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKubernetesVersion"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        moduleQueue,
@@ -191,6 +195,8 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	if err != nil {
 		return err
 	}
+
+	requirements.SaveValue(minK8sVersionRequirementKey, minNodeVersion.String())
 
 	// process secret snapshot
 	maxUsedControlPlaneVersion := ekvProcessSecretSnapshot(input)

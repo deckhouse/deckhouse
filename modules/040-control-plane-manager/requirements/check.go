@@ -24,13 +24,15 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
+const minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKubernetesVersion"
+
 func init() {
 	f := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		desiredVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
 			return false, err
 		}
-		currentVersionStr, exists := getter.Get("global.discovery.kubernetesVersion")
+		currentVersionStr, exists := getter.Get(minK8sVersionRequirementKey)
 		if !exists {
 			return true, nil
 		}

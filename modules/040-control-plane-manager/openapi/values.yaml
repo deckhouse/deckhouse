@@ -10,6 +10,9 @@ properties:
     - pkiChecksum
     - rolloutEpoch
     properties:
+      minUsedControlPlaneKubernetesVersion:
+        type: string
+        x-examples: [ "1.27.2" ]
       audit:
         type: object
         default: {}
