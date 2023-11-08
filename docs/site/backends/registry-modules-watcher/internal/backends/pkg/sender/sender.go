@@ -42,7 +42,7 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 			url := "http://" + backend + "/build"
 			err := s.build(ctx, url)
 			if err != nil {
-				klog.Fatalf("build docs error: %v", err)
+				klog.Errorf("build docs error: %v", err)
 			}
 			<-syncChan
 		}(backend)
