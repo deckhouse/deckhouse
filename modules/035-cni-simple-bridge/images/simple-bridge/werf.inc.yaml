@@ -1,0 +1,44 @@
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /
+  to: /
+  before: setup
+---
+{{ $csiBinaries := "" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
+from: {{ $.Images.BASE_ALT }}
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /
+  stageDependencies:
+    install:
+      - rootfs
+      - iptables-wrapper-installer.sh
+  includePaths:
+shell:
+  beforeInstall:
+    - apt-get update
+    - |
+      apt-get install -y curl jq bash grep iptables iproute2 python3 -y
+  install:
+    - - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+
+artifact: lll
+from: {{ Images.BASE_}}
+shell:
+  beforeInstall:
+    - apk add --no-cache curl jq bash grep iptables iproute2 python3
+    
+    ADD rootfs /
+    COPY iptables-wrapper-installer.sh /
+    RUN /iptables-wrapper-installer.sh
+
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+  includePaths:
