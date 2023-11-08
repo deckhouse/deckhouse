@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"reflect"
 	"registry-modules-watcher/internal/backends"
 	"sync"
 )
@@ -22,11 +23,10 @@ type data struct {
 	TarFile         []byte
 }
 
-// map[registry]map[moduleName]module
 type Cache struct {
-	m        sync.RWMutex
-	val      map[registryName]map[moduleName]moduleData
-	valRange []backends.Version
+	m         sync.RWMutex
+	val       map[registryName]map[moduleName]moduleData
+	stateSnap []backends.Version
 }
 
 func New() *Cache {
@@ -35,18 +35,27 @@ func New() *Cache {
 	}
 }
 
+func (c *Cache) ResetRange() {
+	state := c.GetState()
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	c.stateSnap = state
+}
+
 func (c *Cache) GetRange() []backends.Version {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	return c.valRange
-}
+	var versions = []backends.Version{}
 
-func (c *Cache) ResetRange() {
-	c.m.Lock()
-	defer c.m.Unlock()
+	for _, version := range c.GetState() {
+		if !contain(c.stateSnap, version) {
+			versions = append(versions, version)
+		}
+	}
 
-	c.valRange = nil
+	return versions
 }
 
 func (c *Cache) GetState() []backends.Version {
@@ -167,4 +176,14 @@ func (c *Cache) syncReleaseChannels(registry, module, releaseChannel string) {
 			}
 		}
 	}
+}
+
+func contain(versions []backends.Version, version backends.Version) bool {
+	for _, val := range versions {
+		if reflect.DeepEqual(val, version) {
+			return true
+		}
+	}
+
+	return false
 }
