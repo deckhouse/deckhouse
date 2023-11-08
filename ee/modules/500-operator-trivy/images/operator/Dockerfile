@@ -25,6 +25,7 @@ RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
     patch -p1 < 002-skip-some-checks.patch && \
     patch -p1 < 003-fix-node-selector.patch
 
+RUN go get -u golang.org/x/net@v0.17.0 && go mod tidy
 RUN go build -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
 
 RUN chown 64535:64535 operator-trivy
