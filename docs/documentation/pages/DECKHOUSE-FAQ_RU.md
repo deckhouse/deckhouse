@@ -390,10 +390,10 @@ Deckhouse поддерживает работу только с Bearer token-с�
    docker login -u "<DECKHOUSE_LICENSE_KEY>" registry.deckhouse.io
    ```
 
-1. Запустите установщик Deckhouse версии 1.55.0 или выше.
+1. Запустите установщик Deckhouse версии 1.54.0 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.55.0 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.0 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы Deckhouse.
