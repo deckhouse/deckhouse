@@ -21,7 +21,6 @@ import (
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"k8s.io/klog"
 )
 
 type Client interface {
