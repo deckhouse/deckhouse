@@ -5,9 +5,8 @@ import (
 	"time"
 
 	v1 "k8s.io/api/coordination/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
@@ -24,14 +23,14 @@ const resyncTimeout = time.Minute
 
 type watcher struct {
 	// ch chan string
-	// kClient       *kubernetes.Clientset
+	kClient       *kubernetes.Clientset
 	dynamicClient *dynamic.DynamicClient
 	namespace     string
 }
 
 func New(kClient *kubernetes.Clientset, dynamicClient *dynamic.DynamicClient, namespace string) *watcher {
 	return &watcher{
-		// kClient:       kClient,
+		kClient:       kClient,
 		dynamicClient: dynamicClient,
 		// ch:            make(chan string, DefaultChanSize),
 		namespace: namespace,
@@ -96,22 +95,32 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 	tweakListOptions := func(options *metav1.ListOptions) {
 		options.LabelSelector = leaseLabel
 	}
-	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(w.dynamicClient, resyncTimeout, w.namespace, tweakListOptions)
 
-	resource := schema.GroupVersionResource{Group: "coordination.k8s.io", Version: "v1", Resource: "leases"}
-	informer := factory.ForResource(resource).Informer()
+	// factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(w.dynamicClient, resyncTimeout, w.namespace, tweakListOptions)
+	factory := informers.NewSharedInformerFactoryWithOptions(
+		w.kClient,
+		resyncTimeout,
+		informers.WithNamespace(w.namespace),
+		informers.WithTweakListOptions(tweakListOptions),
+	)
+	// resource := schema.GroupVersionResource{Group: "coordination.k8s.io", Version: "v1", Resource: "leases"}
+	// informer := factory.ForResource(resource).Informer()
+	informer := factory.Coordination().V1().Leases().Informer()
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			lease, ok := obj.(*v1.Lease)
 			if !ok {
 				klog.Error("cast object to lease error")
+				return
 			}
 
-			holderIdentity := lease.Spec.HolderIdentity
-			if holderIdentity != nil {
-				klog.Infof("add backend event. holderIdentity: %v", holderIdentity)
-				addHandler(*holderIdentity)
+			if lease != nil {
+				holderIdentity := lease.Spec.HolderIdentity
+				if holderIdentity != nil {
+					klog.Infof("add backend event. holderIdentity: %v", holderIdentity)
+					addHandler(*holderIdentity)
+				}
 			}
 
 			klog.Error(`lease "holderIdentity" is empty`)
@@ -123,10 +132,12 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 				return
 			}
 
-			holderIdentity := lease.Spec.HolderIdentity
-			if holderIdentity != nil {
-				klog.Infof("delete backend event. holderIdentity: %v", holderIdentity)
-				deleteHandler(*holderIdentity)
+			if lease != nil {
+				holderIdentity := lease.Spec.HolderIdentity
+				if holderIdentity != nil {
+					klog.Infof("delete backend event. holderIdentity: %v", holderIdentity)
+					deleteHandler(*holderIdentity)
+				}
 			}
 
 			klog.Error(`lease "holderIdentity" is empty`)
