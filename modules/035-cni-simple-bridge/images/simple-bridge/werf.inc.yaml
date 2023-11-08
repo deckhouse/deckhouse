@@ -5,10 +5,6 @@ import:
   add: /relocate
   to: /
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
-  add: /rootfs
-  to: /
-  before: setup
 docker:
   ENTRYPOINT: ["/iptables-wrapper-installer.sh"]
 ---
@@ -17,14 +13,11 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
 from: {{ $.Images.BASE_ALT }}
 git:
-- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /
+- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
+  to: /relocate
   stageDependencies:
     install:
     - '**/*'
-  includePaths:
-    - rootfs
-    - iptables-wrapper-installer.sh
   excludePaths:
     - werf.inc.yaml
 shell:
