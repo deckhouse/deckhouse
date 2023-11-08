@@ -74,7 +74,7 @@ bb-rp-is-fetched?() {
 }
 
 # Fetch manifests from registry and save under $BB_RP_FETCHED_PACKAGES_STORE
-# bb-rp-fetch-manifests digest [digest...]
+# bb-rp-fetch-manifests map[digest]package_name
 bb-rp-fetch-manifests() {
   declare -n PACKAGES_MAP_REF="$1"
 
@@ -97,7 +97,7 @@ bb-rp-fetch-manifests() {
 }
 
 # Fetch digests from registry and save to file
-# bb-rp-fetch-blobs digest outfile
+# bb-rp-fetch-blobs map[blob_digest]output_file
 bb-rp-fetch-blobs() {
   declare -n BLOB_FILES_MAP_REF="$1"
 
