@@ -1,44 +1,67 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
+  add: /relocate
   to: /
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
+  add: /rootfs
+  to: /
+  before: setup
+docker:
+  ENTRYPOINT: ["/iptables-wrapper-installer.sh"]
 ---
-{{ $csiBinaries := "" }}
+{{ $csiBinaries := "/bin/chmod /bin/rm /bin/ln /usr/sbin/update-alternatives /bin/true /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
 from: {{ $.Images.BASE_ALT }}
 git:
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}
+- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /
   stageDependencies:
     install:
-      - rootfs
-      - iptables-wrapper-installer.sh
+    - '**/*'
   includePaths:
+    - rootfs
+    - iptables-wrapper-installer.sh
+  excludePaths:
+    - werf.inc.yaml
 shell:
   beforeInstall:
     - apt-get update
-    - |
-      apt-get install -y curl jq bash grep iptables iproute2 python3 -y
+    - apt-get install -y curl jq bash grep iptables iproute2 python3 -y
   install:
-    - - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
 
-artifact: lll
-from: {{ Images.BASE_}}
-shell:
-  beforeInstall:
-    - apk add --no-cache curl jq bash grep iptables iproute2 python3
-    
-    ADD rootfs /
-    COPY iptables-wrapper-installer.sh /
-    RUN /iptables-wrapper-installer.sh
 
-git:
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
-  includePaths:
+/usr/bin/iptables-xml
+/usr/sbin/arptables-nft
+/usr/sbin/arptables-nft-restore
+/usr/sbin/arptables-nft-save
+/usr/sbin/ebtables-nft
+/usr/sbin/ebtables-nft-restore
+/usr/sbin/ebtables-nft-save
+/usr/sbin/ebtables-translate
+/usr/sbin/ip6tables-apply
+/usr/sbin/ip6tables-legacy
+/usr/sbin/ip6tables-legacy-restore
+/usr/sbin/ip6tables-legacy-save
+/usr/sbin/ip6tables-nft
+/usr/sbin/ip6tables-nft-restore
+/usr/sbin/ip6tables-nft-save
+/usr/sbin/ip6tables-restore-translate
+/usr/sbin/ip6tables-translate
+/usr/sbin/iptables-apply
+/usr/sbin/iptables-legacy
+/usr/sbin/iptables-legacy-restore
+/usr/sbin/iptables-legacy-save
+/usr/sbin/iptables-nft
+/usr/sbin/iptables-nft-restore
+/usr/sbin/iptables-nft-save
+/usr/sbin/iptables-restore-translate
+/usr/sbin/iptables-translate
+/usr/sbin/nfnl_osf
+/usr/sbin/xtables-legacy-multi
+/usr/sbin/xtables-monitor
+/usr/sbin/xtables-nft-multi
