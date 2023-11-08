@@ -389,10 +389,10 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    docker login -u "<DECKHOUSE_LICENSE_KEY>" registry.deckhouse.io
    ```
 
-1. Run the Deckhouse installer version 1.54.0 or higher.
+1. Run the Deckhouse installer version 1.55.0 or higher.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.0 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.55.0 bash
    ```
 
    Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball.
@@ -431,10 +431,13 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    Example of pushing images from the `/tmp/d8-images/d8.tar` tarball:
 
    ```shell
-   dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
+   dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
    ```
 
-   > Note that the images will be pushed to the `/deckhouse/ee` repository in your registry. Before running the command, make sure `/deckhouse/ee` exists, and the account you are using has write permissions.
+   > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
+   > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
+
+   If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
 
 1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
