@@ -1,8 +1,9 @@
 package cache
 
 import (
-	"reflect"
 	"registry-modules-watcher/internal/backends"
+	"sort"
+	"strings"
 	"sync"
 )
 
@@ -181,8 +182,15 @@ func (c *Cache) syncReleaseChannels(registry, module, releaseChannel string) {
 
 func contain(versions []backends.Version, version backends.Version) bool {
 	for _, val := range versions {
-		if reflect.DeepEqual(val, version) {
-			return true
+		if val.Registry == version.Registry &&
+			val.Module == version.Module &&
+			val.Version == version.Version {
+
+			sort.Strings(val.ReleaseChannels)
+			sort.Strings(version.ReleaseChannels)
+			if strings.Join(val.ReleaseChannels, "") == strings.Join(version.ReleaseChannels, "") {
+				return true
+			}
 		}
 	}
 
