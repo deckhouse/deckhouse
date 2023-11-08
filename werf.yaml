@@ -35,6 +35,12 @@ gitWorktree:
 
 ---
 {{- define "base components" }}
+  - name: "Install openssl"
+    apk:
+      name:
+      - openssl
+      update_cache: yes
+
   - name: "Install jo"
     apk:
       name:
@@ -201,7 +207,7 @@ docker:
 ---
 image: dev-prebuild
 fromImage: common-base
-fromCacheVersion: "2023-10-20.0"
+fromCacheVersion: "2023-11-01.0"
 git:
 - add: /
   to: /deckhouse
