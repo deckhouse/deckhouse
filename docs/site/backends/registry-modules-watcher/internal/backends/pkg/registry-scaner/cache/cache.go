@@ -15,7 +15,6 @@
 package cache
 
 import (
-	"reflect"
 	"registry-modules-watcher/internal/backends"
 	"sort"
 	"strings"
