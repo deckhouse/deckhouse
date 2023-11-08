@@ -7,6 +7,7 @@ import (
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"k8s.io/klog"
 )
 
 type Client interface {
@@ -65,11 +66,11 @@ func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Durati
 			case <-ticker.C:
 				s.processRegistries(ctx)
 				state := s.cache.GetRange()
-				if len(state) == 0 {
-					continue
+				if len(state) > 0 {
+					klog.Infof("new versions in registry found: %v", state)
+					s.updateHandler(state)
+					s.cache.ResetRange()
 				}
-				s.updateHandler(state)
-				s.cache.ResetRange()
 
 			case <-ctx.Done():
 				ticker.Stop()
