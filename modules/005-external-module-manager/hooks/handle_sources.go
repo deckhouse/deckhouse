@@ -204,7 +204,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 
 			moduleVersionPath := path.Join(externalModulesDir, moduleName, moduleVersion)
 
-			err = fetchAndCopyModuleByVersion(dc, moduleVersionPath, ex, moduleName, moduleVersion, opts)
+			err = fetchAndCopyModuleByVersion(dc, moduleVersionPath, ex, moduleName, moduleVersion, opts, input.Values)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
 					Name:  moduleName,
@@ -349,7 +349,7 @@ func fetchModuleWeight(moduleVersionPath string) int {
 	return def.Weight
 }
 
-func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath string, moduleSource v1alpha1.ModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
+func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath string, moduleSource v1alpha1.ModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option, values *go_hook.PatchableValues) error {
 	regCli, err := dc.GetRegistryClient(path.Join(moduleSource.Spec.Registry.Repo, moduleName), registryOptions...)
 	if err != nil {
 		return fmt.Errorf("fetch module error: %v", err)
@@ -368,7 +368,7 @@ func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath stri
 	}
 
 	httpClient := dc.GetHTTPClient(d8http.WithTimeout(3 * time.Minute))
-	err = buildDocumentation(httpClient, img, moduleName, moduleVersion)
+	err = buildDocumentation(httpClient, img, moduleName, moduleVersion, values)
 	if err != nil {
 		return fmt.Errorf("build documentation: %w", err)
 	}
@@ -382,7 +382,11 @@ func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath stri
 	return nil
 }
 
-func buildDocumentation(client d8http.Client, img v1.Image, moduleName, moduleVersion string) error {
+func buildDocumentation(client d8http.Client, img v1.Image, moduleName, moduleVersion string, values *go_hook.PatchableValues) error {
+	if !isModuleEnabled("documentation", values) {
+		return nil
+	}
+
 	rc := mutate.Extract(img)
 	defer rc.Close()
 
@@ -679,4 +683,14 @@ type injectedValues struct {
 		Registry *registrySchemaForValues `json:"registry" yaml:"registry"`
 	} `json:"properties" yaml:"properties"`
 	XXX map[string]interface{} `json:",inline" yaml:",inline"`
+}
+
+func isModuleEnabled(moduleName string, values *go_hook.PatchableValues) (enabled bool) {
+	for _, mod := range values.Get("global.enabledModules").Array() {
+		if mod.String() == moduleName {
+			return true
+		}
+	}
+
+	return false
 }
