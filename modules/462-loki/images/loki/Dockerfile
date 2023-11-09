@@ -15,6 +15,9 @@ ENV GOPROXY=${GOPROXY} \
 RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch v2.7.7 ${SOURCE_REPO}/grafana/loki.git /loki
 WORKDIR /loki/
+
+RUN go get -u golang.org/x/net@v0.17.0 \
+    && go mod tidy
 RUN go build -ldflags="-s -w" -o loki cmd/loki/main.go && \
     chown -R 64535:64535 /loki/ && \
     chmod 0700 /loki/loki
