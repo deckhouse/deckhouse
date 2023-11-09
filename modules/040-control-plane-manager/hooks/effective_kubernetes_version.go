@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 /*
@@ -62,7 +63,11 @@ Description:
 	then save effectiveKubernetesVersion to Values (`global.clusterConfiguration.kubernetesVersion`)
 	and if effectiveKubernetesVersion >= maxUsedControlPlaneVersion:
 		update maxUsedControlPlaneKubernetesVersion in Secret: d8-cluster-configuration
+
+     For deckhouse upgrade requirements we are using minimal version of whole cluster.
 */
+
+const minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKubernetesVersion"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        moduleQueue,
@@ -191,6 +196,8 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	if err != nil {
 		return err
 	}
+
+	requirements.SaveValue(minK8sVersionRequirementKey, minNodeVersion.String())
 
 	// process secret snapshot
 	maxUsedControlPlaneVersion := ekvProcessSecretSnapshot(input)

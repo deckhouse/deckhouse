@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -45,6 +46,7 @@ type input struct {
 type output struct {
 	maxUsedControlPlaneVersion string
 	effectiveVersion           string
+	minUsedVersion             string
 }
 
 func setStateFromTestCase(hec *HookExecutionConfig, caseInput input) {
@@ -186,6 +188,10 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				Expect(string(decodedMaxUsedKubernetesVersion)).To(Equal(out.maxUsedControlPlaneVersion))
 
 				Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal(out.effectiveVersion))
+
+				minVer, ok := requirements.GetValue(minK8sVersionRequirementKey)
+				Expect(ok).To(BeTrue())
+				Expect(minVer.(string)).To(Equal(out.minUsedVersion))
 			},
 			Entry("upgrade: Node version lower than control plane, do not allow to bump effective version and max used version",
 				input{
@@ -197,6 +203,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				output{
 					maxUsedControlPlaneVersion: "1.25",
 					effectiveVersion:           "1.25",
+					minUsedVersion:             "1.24.1",
 				},
 			),
 			Entry("upgrade: control plane and nodes are on the same version, allow bumping effective version and max used version", input{
@@ -208,6 +215,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				output{
 					maxUsedControlPlaneVersion: "1.26",
 					effectiveVersion:           "1.26",
+					minUsedVersion:             "1.25.2",
 				},
 			),
 			Entry("upgrade: control plane and nodes are on the same version (but kube-scheduler is on a lower version), do not bump effective version and max used version",
@@ -220,6 +228,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				output{
 					maxUsedControlPlaneVersion: "1.25",
 					effectiveVersion:           "1.25",
+					minUsedVersion:             "1.25.2",
 				},
 			),
 			Entry("downgrade: control plane and nodes are on the same version, do not lower effective version",
@@ -232,6 +241,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				output{
 					maxUsedControlPlaneVersion: "1.25",
 					effectiveVersion:           "1.25",
+					minUsedVersion:             "1.25.2",
 				},
 			),
 			Entry("downgrade: nodes are downgraded already, lower effective version",
@@ -244,6 +254,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				output{
 					maxUsedControlPlaneVersion: "1.26",
 					effectiveVersion:           "1.25",
+					minUsedVersion:             "1.25.2",
 				},
 			),
 			Entry("downgrade: nodes are downgraded already, but configVersion is 2 minor versions lower, lower effective version by one",
@@ -256,6 +267,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				output{
 					maxUsedControlPlaneVersion: "1.26",
 					effectiveVersion:           "1.25",
+					minUsedVersion:             "1.25.2",
 				},
 			),
 			Entry("downgrade: nodes are downgraded already, but maxUsedControlPlaneVersion does not allow us to downgrade by more than 1",
@@ -268,6 +280,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				output{
 					maxUsedControlPlaneVersion: "1.26",
 					effectiveVersion:           "1.25",
+					minUsedVersion:             "1.24.2",
 				},
 			),
 			Entry("downgrade: nodes are downgraded already, maxUsedControlPlaneVersion does not allow us to downgrade by more than 1, but we already violating maxUsedControlPlaneVersion",
@@ -280,6 +293,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				output{
 					maxUsedControlPlaneVersion: "1.27",
 					effectiveVersion:           "1.25",
+					minUsedVersion:             "1.24.2",
 				},
 			),
 		)
