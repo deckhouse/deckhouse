@@ -8,7 +8,7 @@ import:
 docker:
   ENTRYPOINT: ["/iptables-wrapper-installer.sh"]
 ---
-{{ $csiBinaries := "/bin/chmod /bin/rm /bin/ln /usr/sbin/update-alternatives /bin/true /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
+{{ $csiBinaries := "/bin/chmod /bin/cat /bin/rm /bin/ln /usr/sbin/update-alternatives /bin/true /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
 fromImage: common/alt
