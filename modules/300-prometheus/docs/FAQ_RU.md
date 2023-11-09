@@ -429,7 +429,7 @@ spec:
 1. Завести получателя без параметров.
 1. Смаршрутизировать лишние алерты в этого получателя.
 
-Ниже примеры настройки `CustomAlertmanager`.
+Ниже приведены примеры настройки `CustomAlertmanager`.
 
 Чтобы получать только алерты с лейблами `service: foo|bar|baz`:
 
@@ -458,14 +458,14 @@ route:
 receivers:
   # Получатель, определенный без параметров, будет работать как "/dev/null".
   - name: blackhole
-  # Действующий получатель
+  # Действующий получатель.
   - name: some-other-receiver
   # ...
 route:
   # receiver по умолчанию.
   receiver: some-other-receiver
   routes:
-    # Дочерний маршрут
+    # Дочерний маршрут.
     - matchers:
         - matchType: =
           name: alertname

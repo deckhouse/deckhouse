@@ -438,16 +438,16 @@ Receive all alerts with labels `service: foo|bar|baz`:
 
 ```yaml
 receivers:
-  # the parameterless receiver is similar to "/dev/null".
+  # The parameterless receiver is similar to "/dev/null".
   - name: blackhole
-  # your valid receiver
+  # Your valid receiver.
   - name: some-other-receiver
     # ...
 route:
-  # default receiver
+  # Default receiver.
   receiver: blackhole
   routes:
-    # child receiver
+    # Child receiver.
     - matchers:
         - matchType: =~
           name: service
@@ -459,16 +459,16 @@ Receive all alerts except for `DeadMansSwitch`:
 
 ```yaml
 receivers:
-  # the parameterless receiver is similar to "/dev/null".
+  # The parameterless receiver is similar to "/dev/null".
   - name: blackhole
-  # your valid receiver
+  # Your valid receiver.
   - name: some-other-receiver
     # ...
 route:
   # default receiver
   receiver: some-other-receiver
   routes:
-    # child receiver
+    # Child receiver.
     - matchers:
         - matchType: =
           name: alertname
