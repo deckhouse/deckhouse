@@ -288,7 +288,8 @@ function generate_password(force = false) {
     var salt = bcrypt.genSaltSync(10);
     var password = Math.random().toString(36).slice(-10);
     var hash = bcrypt.hashSync(password, salt);
-    sessionStorage.setItem("dhctl-user-password-hash", hash);
+    var base64 = btoa(hash)
+    sessionStorage.setItem("dhctl-user-password-hash", base64);
     sessionStorage.setItem("dhctl-user-password", password);
   }
 }
