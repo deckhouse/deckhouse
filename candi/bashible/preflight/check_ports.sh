@@ -52,17 +52,27 @@ function check_port() {
 
 has_error=false
 
-for port in 6443 2379 2380
-do
-    echo -n "Check port $port "
-    check_port $port
-    if [ $? -ne 0 ]; then
-        echo "Cannot open port $port. Probably control-plane node protected with firewall rules or another software (like antivirus) does not allow to open port."
-        has_error=true
-        continue
-    fi
-    echo "SUCCESS"
-done
+echo -n "Checking if kubernetes API port is open (6443) "
+check_port 6443
+if [ $? -ne 0 ]; then
+    echo "Port 6443 is closed, but required for Kubernetes API server to function. Probably control-plane node is protected by firewall rules or another software (like antivirus) and blocks connections."
+    has_error=true
+fi
+echo "SUCCESS"
+
+echo -n "Checking if Etcd ports are available (2379, 2380) "
+check_port 2379
+if [ $? -ne 0 ]; then
+    echo "Port 2379 is closed, but required for Etcd clients to communicate with it. Probably control-plane node is protected by firewall rules or another software (like antivirus) and blocks connections."
+    has_error=true
+fi
+
+check_port 2380
+if [ $? -ne 0 ]; then
+    echo "Port 2380 is closed, but required for Etcd database server peers communications. Probably control-plane node is protected by firewall rules or another software (like antivirus) and blocks connections."
+    has_error=true
+fi
+echo "SUCCESS"
 
 if [ "$has_error" == true ]; then
   exit 1
