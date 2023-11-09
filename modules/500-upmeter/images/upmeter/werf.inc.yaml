@@ -1,0 +1,51 @@
+---
+artifact: {{ .ModuleName }}/build-upmeter-artifact
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  - '**/*.sql'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+    - '**/*.sql'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - apk add --no-cache gcc musl-dev jq-dev oniguruma-dev curl
+  - cd /src
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o upmeter ./cmd/upmeter
+  - chown 64535:64535 upmeter
+  - chmod 0700 upmeter
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go install -ldflags "-s -w -linkmode external -extldflags '-static'" -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.15
+  - mv $(go env GOPATH)/bin/migrate migrate
+  - chown 64535:64535 migrate
+  - chmod 0700 migrate
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/build-upmeter-artifact
+  add: /src/pkg/db/migrations/agent
+  to: /data/migrations/agent
+  before: setup
+- artifact: {{ .ModuleName }}/build-upmeter-artifact
+  add: /src/pkg/db/migrations/server
+  to: /data/migrations/server
+  before: setup
+- artifact: {{ .ModuleName }}/build-upmeter-artifact
+  add: /src/migrate
+  to: /migrate
+  before: setup
+- artifact: {{ .ModuleName }}/build-upmeter-artifact
+  add: /src/upmeter
+  to: /upmeter
+  before: setup

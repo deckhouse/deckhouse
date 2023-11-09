@@ -43,7 +43,7 @@ for i in $(seq $attempts); do
   sleep 30
 
   if upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') 2>/dev/null; then
-    if upmeter_auth_token="$(kubectl -n d8-upmeter exec ds/upmeter-agent -c agent -- cat /run/secrets/kubernetes.io/serviceaccount/token)" 2>/dev/null; then
+    if upmeter_auth_token="$(kubectl -n d8-upmeter create token upmeter-agent)" 2>/dev/null; then
 
       # Getting availability data based on last 30 seconds of probe stats, note 'peek=1' query
       # param.
