@@ -40,8 +40,8 @@ git:
   stageDependencies:
     install:
     - '**/*'
-  excludePaths:
-    - werf.inc.yaml
+  includePaths:
+    - '*.sh'
 shell:
   beforeInstall:
     - apt-get update
