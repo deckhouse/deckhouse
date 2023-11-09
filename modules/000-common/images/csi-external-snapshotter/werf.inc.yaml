@@ -23,6 +23,8 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src
+    - go get -u google.golang.org/grpc@v1.56.3 && \
+    - go mod vendor && \
     - make build
     - cp bin/csi-snapshotter /csi-snapshotter
     - chown 64535:64535 /csi-snapshotter
