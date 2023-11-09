@@ -11,7 +11,7 @@ docker:
 {{ $csiBinaries := "/bin/chmod /bin/rm /bin/ln /usr/sbin/update-alternatives /bin/true /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
-from: {{ $.Images.BASE_ALT }}
+fromImage: common/alt
 git:
 - add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
   to: /relocate
