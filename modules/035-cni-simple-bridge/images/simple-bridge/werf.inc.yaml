@@ -5,6 +5,10 @@ import:
   add: /relocate
   to: /
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
+  add: /lib64/iptables
+  to: /lib64/iptables
+  before: setup
 docker:
   ENTRYPOINT: ["/iptables-wrapper-installer.sh"]
 ---
