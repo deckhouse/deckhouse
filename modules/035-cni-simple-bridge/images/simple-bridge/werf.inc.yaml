@@ -20,6 +20,13 @@ git:
     - '**/*'
   excludePaths:
     - werf.inc.yaml
+- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
+  includePaths:
+    - iptables-wrapper-installer.sh
 shell:
   beforeInstall:
     - apt-get update
