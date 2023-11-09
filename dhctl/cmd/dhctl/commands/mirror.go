@@ -36,7 +36,7 @@ func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	app.DefineMirrorFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		if app.MirrorRegistryHost != "" {
+		if app.MirrorRegistry != "" {
 			return log.Process("mirror", "Push mirrored Deckhouse images from local filesystem to private registry", func() error {
 				return mirrorPushDeckhouseToPrivateRegistry()
 			})
@@ -52,12 +52,13 @@ func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 func mirrorPushDeckhouseToPrivateRegistry() error {
 	mirrorCtx := &mirror.Context{
-		Insecure:           app.MirrorInsecure,
-		RegistryHost:       app.MirrorRegistryHost,
-		RegistryRepo:       app.MirrorDeckhouseRegistryRepo,
-		TarBundlePath:      app.MirrorTarBundle,
-		UnpackedImagesPath: filepath.Join(app.TmpDirName, time.Now().Format("mirror_tmp_02-01-2006_15-04-05")),
-		ValidationMode:     mirror.ValidationMode(app.MirrorValidationMode),
+		Insecure:              app.MirrorInsecure,
+		RegistryHost:          app.MirrorRegistryHost,
+		RegistryPath:          app.MirrorRegistryPath,
+		DeckhouseRegistryRepo: app.MirrorDeckhouseRegistryRepo,
+		TarBundlePath:         app.MirrorTarBundle,
+		UnpackedImagesPath:    filepath.Join(app.TmpDirName, time.Now().Format("mirror_tmp_02-01-2006_15-04-05")),
+		ValidationMode:        mirror.ValidationMode(app.MirrorValidationMode),
 	}
 
 	if app.MirrorRegistryUsername != "" {
@@ -88,10 +89,10 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 
 func mirrorPullDeckhouseToLocalFilesystem() error {
 	mirrorCtx := &mirror.Context{
-		Insecure:        app.MirrorInsecure,
-		SkipGOSTDigests: app.MirrorSkipGOSTHashing,
-		RegistryHost:    app.MirrorRegistryHost,
-		RegistryRepo:    app.MirrorDeckhouseRegistryRepo,
+		Insecure:              app.MirrorInsecure,
+		SkipGOSTDigests:       app.MirrorSkipGOSTHashing,
+		RegistryHost:          app.MirrorRegistryHost,
+		DeckhouseRegistryRepo: app.MirrorDeckhouseRegistryRepo,
 		RegistryAuth: authn.FromConfig(authn.AuthConfig{
 			Username: "license-token",
 			Password: app.MirrorDHLicenseToken,
