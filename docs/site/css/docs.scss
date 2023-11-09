@@ -295,11 +295,13 @@
   margin-top: 25px;
 }
 
-.layout-sidebar__sidebar {
+.layout-sidebar__sidebar,
+.layout-sidebar__sidebar_right {
   position: relative;
 }
 
-.layout-sidebar__sidebar::after {
+.layout-sidebar__sidebar::after,
+.layout-sidebar__sidebar_right::after {
   position: absolute;
   bottom: 0;
   content: '';
@@ -319,7 +321,7 @@
   overflow-y: auto;
 }
 
-.sidebar__wrapper-inner:has(#toc-sidebar) {
+.layout-sidebar :not(.layout-sidebar__sidebar_right) .sidebar__wrapper-inner:has(#toc-sidebar) {
   height: calc(100vh - 400px);
 }
 
@@ -1432,6 +1434,10 @@ select#contact-select {
       flex-direction: column;
       gap: 24px;
       padding-top: 24px;
+    }
+
+    > .toc-sidebar {
+      padding-top: 0;
     }
 
     .toc-sidebar__item {
