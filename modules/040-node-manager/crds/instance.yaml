@@ -23,7 +23,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the cloud instance.
+            An implementation-independent ephemeral machine resource.
           properties:
             status:
               type: object
