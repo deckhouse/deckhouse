@@ -75,15 +75,19 @@ bb-rp-is-fetched?() {
 
 # Fetch manifests from registry and save under $BB_RP_FETCHED_PACKAGES_STORE
 # bb-rp-fetch-manifests map[digest]package_name
+#
+# This function uses the PACKAGES_MAP variable from the scope of the bb-rp-fetch()
+# due to the limitations of using `declare -n` in CentOS 7 (bash 4.2, and 4.3 is needed).
+# DO NOT CALL THIS FUNCTION DIRECTLY!
 bb-rp-fetch-manifests() {
-  declare -n PACKAGES_MAP_REF="$1"
-
   local TOKEN=""
   TOKEN="$(bb-rp-get-token)"
 
   local URLs=()
-  for PACKAGE_DIGEST in "${!PACKAGES_MAP_REF[@]}"; do
-    local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP_REF[$PACKAGE_DIGEST]}"
+  # key - digest to fetch, value - package name
+  local PACKAGE_DIGEST
+  for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
+    local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
     URLs+=(
       -o "${PACKAGE_DIR}/manifest.json"
       "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${PACKAGE_DIGEST}"
@@ -97,18 +101,21 @@ bb-rp-fetch-manifests() {
 }
 
 # Fetch digests from registry and save to file
-# bb-rp-fetch-blobs map[blob_digest]output_file
+# bb-rp-fetch-blobs map[blob_digest]output_file_path
+#
+# This function uses the BLOB_FILES_MAP variable from the scope of the bb-rp-fetch()
+# due to the limitations of using `declare -n` in CentOS 7 (bash 4.2, and 4.3 is needed).
+# DO NOT CALL THIS FUNCTION DIRECTLY!
 bb-rp-fetch-blobs() {
-  declare -n BLOB_FILES_MAP_REF="$1"
-
   local TOKEN=""
   TOKEN="$(bb-rp-get-token)"
 
   local URLs=()
-  # key - digest to fetch, value - output file 
-  for BLOB_DIGEST in "${!BLOB_FILES_MAP_REF[@]}"; do
+  # key - digest to fetch, value - output file path
+  local BLOB_DIGEST
+  for BLOB_DIGEST in "${!BLOB_FILES_MAP[@]}"; do
     URLs+=(
-      -o "${BLOB_FILES_MAP_REF[$BLOB_DIGEST]}"
+      -o "${BLOB_FILES_MAP[$BLOB_DIGEST]}"
       "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${BLOB_DIGEST}"
     )
   done
@@ -122,6 +129,7 @@ bb-rp-fetch() {
   mkdir -p "${BB_RP_FETCHED_PACKAGES_STORE}"
 
   declare -A PACKAGES_MAP
+  local PACKAGE_WITH_DIGEST
   for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""
     local DIGEST=""
@@ -153,6 +161,7 @@ bb-rp-fetch() {
   fi
 
   declare -A BLOB_FILES_MAP
+  local PACKAGE_DIGEST
   for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
     local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
     jq -er '.layers[-1].digest' "${PACKAGE_DIR}/manifest.json" > "${PACKAGE_DIR}/top_layer_digest"
@@ -172,6 +181,7 @@ bb-rp-fetch() {
 # Unpack packages and run install script
 # bb-rp-install package:digest
 bb-rp-install() {
+  local PACKAGE_WITH_DIGEST
   for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""
     local DIGEST=""
