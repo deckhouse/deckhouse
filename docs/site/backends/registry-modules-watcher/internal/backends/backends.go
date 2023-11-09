@@ -57,7 +57,7 @@ func Get() (b *backends, ok bool) {
 
 // Add new backend to list backends
 func (b *backends) Add(backend string) {
-	klog.Infof(`backend Add call with "backends": %v`, backend)
+	klog.V(3).Infof(`backend Add call for: %v`, backend)
 
 	b.m.Lock()
 	defer b.m.Unlock()
@@ -71,6 +71,8 @@ func (b *backends) Add(backend string) {
 }
 
 func (b *backends) Delete(backend string) {
+	klog.V(3).Infof(`backend Delete call for: %v`, backend)
+
 	b.m.Lock()
 	defer b.m.Unlock()
 
@@ -79,12 +81,12 @@ func (b *backends) Delete(backend string) {
 
 // UpdateDocks send update dock request to all backends
 func (b *backends) updateHandler(versions []Version) error {
-	klog.Infof(`"registryScaner" produce update event`)
+	klog.V(3).Infof(`"registryScaner" produce update event`)
 
 	b.m.RLock()
 	defer b.m.RUnlock()
 
-	err := b.sender.Send(context.TODO(), b.listBackends, versions)
+	err := b.sender.Send(context.Background(), b.listBackends, versions)
 	if err != nil {
 		return err
 	}

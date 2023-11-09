@@ -4,12 +4,14 @@ import (
 	"context"
 	"flag"
 	"os"
+	"os/signal"
 	"registry-modules-watcher/internal/backends"
 	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
 	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
 	"strings"
+	"syscall"
 	"time"
 
 	"k8s.io/klog"
@@ -19,7 +21,30 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+/*
+	klog.V(0).InfoS = klog.InfoS - Generally useful for this to always be visible to a cluster operator
+	Programmer errors
+	Logging extra info about a panic
+	CLI argument handling
+	klog.V(1).InfoS - A reasonable default log level if you don't want verbosity.
+	Information about config (listening on X, watching Y)
+	Errors that repeat frequently that relate to conditions that can be corrected (pod detected as unhealthy)
+	klog.V(2).InfoS - Useful steady state information about the service and important log messages that may correlate to significant changes in the system. This is the recommended default log level for most systems.
+	Logging HTTP requests and their exit code
+	System state changing (killing pod)
+	Controller state change events (starting pods)
+	Scheduler log messages
+	klog.V(3).InfoS - Extended information about changes
+	More info about system state changes
+	klog.V(4).InfoS - Debug level verbosity
+	Logging in particularly thorny parts of code where you may want to come back later and check it
+	klog.V(5).InfoS - Trace level verbosity
+	Context to understand the steps leading up to errors and warnings
+	More information for troubleshooting reported issues
+*/
+
 func main() {
+	klog.InitFlags(nil)
 	registries := flag.String("watch-registries", "", "a list for followed registries")
 	scanInterval := flag.Duration("scan-interval", 15*time.Minute, "interval for scanning the images. default 15 minutes")
 	flag.Parse()
@@ -28,7 +53,8 @@ func main() {
 		klog.Fatal("watch-registries is empty")
 	}
 
-	ctx := context.Background()
+	ctx, stopNotify := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stopNotify()
 
 	// * * * * * * * * *
 	// dockerconfigjson
@@ -41,7 +67,7 @@ func main() {
 	// Connect to registry
 	clients := make([]registryscaner.Client, 0)
 	for _, registry := range strings.Split(*registries, ",") {
-		klog.Infof("Watch modules source: %q", registry)
+		klog.V(0).Infof("Watch modules source: %q", registry)
 		client, err := registryclient.NewClient(registry,
 			registryclient.WithAuth(regsecretRaw),
 		)
@@ -51,7 +77,6 @@ func main() {
 		}
 
 		// TODO: some registry ping to check credentials
-
 		clients = append(clients, client)
 	}
 
