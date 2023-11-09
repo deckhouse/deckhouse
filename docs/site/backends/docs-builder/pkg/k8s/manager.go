@@ -32,7 +32,6 @@ import (
 )
 
 const (
-	name  = "frontend-"
 	label = "deckhouse.io/documentation-builder-sync"
 
 	leaseDuration         = 35
@@ -51,10 +50,17 @@ func NewLeasesManager() (*LeasesManager, error) {
 		return nil, fmt.Errorf("new client set: %w", err)
 	}
 
+	podName := os.Getenv("POD_NAME")
+	splittedPodName := strings.Split(podName, "-")
+	if len(splittedPodName) != 3 {
+		return nil, fmt.Errorf("unexpected POD_NAME %q", podName)
+	}
+
 	return &LeasesManager{
 		kclient:      kclient,
 		podIP:        os.Getenv("POD_IP"),
 		podNamespace: os.Getenv("POD_NAMESPACE"),
+		name:         strings.Join([]string{"module-docs-builder", splittedPodName[2]}, "-"),
 	}, nil
 }
 
@@ -73,7 +79,6 @@ func (m *LeasesManager) Create(ctx context.Context) error {
 		return fmt.Errorf("create: %w", err)
 	}
 
-	m.name = l.Name
 	return nil
 }
 
@@ -134,12 +139,8 @@ func (m *LeasesManager) renew(ctx context.Context) error {
 }
 
 func (m *LeasesManager) Remove(ctx context.Context) error {
-	if m.name == "" {
-		return nil
-	}
-
 	err := m.leases().Delete(ctx, m.name, metav1.DeleteOptions{})
-	m.name = ""
+
 	return err
 }
 
@@ -158,8 +159,8 @@ func (m *LeasesManager) newLease() *coordination.Lease {
 			APIVersion: "coordination.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: name,
-			Labels:       map[string]string{label: ""},
+			Name:   m.name,
+			Labels: map[string]string{label: ""},
 		},
 		Spec: coordination.LeaseSpec{
 			HolderIdentity:       pointer.String(address),
