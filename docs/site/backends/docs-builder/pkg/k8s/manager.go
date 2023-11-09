@@ -32,7 +32,6 @@ import (
 )
 
 const (
-	name  = "frontend-"
 	label = "deckhouse.io/documentation-builder-sync"
 
 	leaseDuration         = 35
