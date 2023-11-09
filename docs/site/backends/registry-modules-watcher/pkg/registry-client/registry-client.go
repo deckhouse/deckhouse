@@ -11,8 +11,6 @@ import (
 )
 
 type registryOptions struct {
-	ca          string
-	useHTTP     bool
 	withoutAuth bool
 	dockerCfg   string
 }
@@ -20,7 +18,7 @@ type registryOptions struct {
 type Option func(options *registryOptions)
 
 type client struct {
-	registryURL string // registry.deckhouse.io/deckhouse/fe/modules
+	registryURL string
 	authConfig  authn.AuthConfig
 	options     *registryOptions
 }
@@ -50,25 +48,24 @@ func NewClient(repo string, options ...Option) (registryscaner.Client, error) {
 	return client, nil
 }
 
-func (r *client) Name() string {
-	return r.registryURL // TODO
+func (c *client) Name() string {
+	return c.registryURL
 }
 
-func (r *client) ReleaseImage(moduleName, tag string) (v1.Image, error) {
-	imageURL := r.registryURL + "/" + moduleName + "/release" + ":" + tag
-	return r.image(imageURL)
+func (c *client) ReleaseImage(moduleName, tag string) (v1.Image, error) {
+	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
+
+	return c.image(imageURL)
 }
 
-func (r *client) Image(moduleName, tag string) (v1.Image, error) {
-	imageURL := r.registryURL + "/" + moduleName + ":" + tag
-	return r.image(imageURL)
+func (c *client) Image(moduleName, tag string) (v1.Image, error) {
+	imageURL := c.registryURL + "/" + moduleName + ":" + tag
+
+	return c.image(imageURL)
 }
 
-func (r *client) image(imageURL string) (v1.Image, error) {
+func (c *client) image(imageURL string) (v1.Image, error) {
 	var nameOpts []name.Option
-	if r.options.useHTTP {
-		nameOpts = append(nameOpts, name.Insecure)
-	}
 
 	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: weak validation, etc.
 	if err != nil {
@@ -76,11 +73,8 @@ func (r *client) image(imageURL string) (v1.Image, error) {
 	}
 
 	imageOptions := make([]remote.Option, 0)
-	if !r.options.withoutAuth {
-		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
-	}
-	if r.options.ca != "" {
-		imageOptions = append(imageOptions, remote.WithTransport(getHTTPTransport(r.options.ca)))
+	if !c.options.withoutAuth {
+		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
 
 	return remote.Image(
@@ -89,62 +83,30 @@ func (r *client) image(imageURL string) (v1.Image, error) {
 	)
 }
 
-func (r *client) Modules() ([]string, error) {
-	var nameOpts []name.Option
-	if r.options.useHTTP {
-		nameOpts = append(nameOpts, name.Insecure)
-	}
-
-	imageOptions := make([]remote.Option, 0)
-	if !r.options.withoutAuth { // TODO обрати внимание на этот флаг
-		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
-	}
-	if r.options.ca != "" {
-		imageOptions = append(imageOptions, remote.WithTransport(getHTTPTransport(r.options.ca)))
-	}
-
-	repo, err := name.NewRepository(r.registryURL, nameOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("parsing repo %q: %w", r.registryURL, err)
-	}
-
-	return remote.List(repo, imageOptions...)
+func (c *client) Modules() ([]string, error) {
+	return c.list(c.registryURL)
 }
 
-func (r *client) ListTags(moduleName string) ([]string, error) {
+func (c *client) ListTags(moduleName string) ([]string, error) {
+	listTagsUrl := c.registryURL + "/" + moduleName + "/release"
+
+	return c.list(listTagsUrl)
+}
+
+func (c *client) list(url string) ([]string, error) {
 	var nameOpts []name.Option
-	if r.options.useHTTP {
-		nameOpts = append(nameOpts, name.Insecure)
-	}
 
 	imageOptions := make([]remote.Option, 0)
-	if !r.options.withoutAuth {
-		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
+	if !c.options.withoutAuth {
+		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
-	if r.options.ca != "" {
-		imageOptions = append(imageOptions, remote.WithTransport(getHTTPTransport(r.options.ca)))
-	}
-	url := r.registryURL + "/" + moduleName + "/release" // TODO
+
 	repo, err := name.NewRepository(url, nameOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("parsing repo %q: %w", r.registryURL, err)
+		return nil, fmt.Errorf("parsing repo %q: %w", c.registryURL, err)
 	}
 
 	return remote.List(repo, imageOptions...)
-}
-
-// WithCA use custom CA certificate
-func WithCA(ca string) Option {
-	return func(options *registryOptions) {
-		options.ca = ca
-	}
-}
-
-// WithInsecureSchema use http schema instead of https
-func WithInsecureSchema(insecure bool) Option {
-	return func(options *registryOptions) {
-		options.useHTTP = insecure
-	}
 }
 
 // WithDisabledAuth don't use authConfig

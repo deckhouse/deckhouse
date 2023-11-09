@@ -52,7 +52,6 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 			if lease != nil {
 				holderIdentity := lease.Spec.HolderIdentity
 				if holderIdentity != nil {
-					klog.Info("add backend event")
 					addHandler(*holderIdentity)
 					return
 				}
@@ -70,7 +69,6 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 			if lease != nil {
 				holderIdentity := lease.Spec.HolderIdentity
 				if holderIdentity != nil {
-					klog.Info("delete backend event")
 					deleteHandler(*holderIdentity)
 					return
 				}

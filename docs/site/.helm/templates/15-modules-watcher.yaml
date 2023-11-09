@@ -30,6 +30,7 @@ spec:
             - /app/registry-modules-watcher
             - --watch-registries={{ (pluck .Values.werf.env .Values.moduleWatcher.registries | first | default .Values.moduleWatcher.registries._default) | join "," }}
             - --scan-interval={{ pluck .Values.werf.env .Values.moduleWatcher.scanInterval | first | default .Values.moduleWatcher.scanInterval._default }}
+            - --v=1
           image: {{ index .Values.werf.image "registry-modules-watcher" }}
           {{- include "resources" . | nindent 10 }}
           env:
