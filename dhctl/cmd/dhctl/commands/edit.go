@@ -17,19 +17,20 @@ package commands
 import (
 	"context"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v1 "k8s.io/api/core/v1"
+
+	"gopkg.in/alecthomas/kingpin.v2"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	"gopkg.in/alecthomas/kingpin.v2"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
@@ -40,7 +41,7 @@ func connectionFlags(parent *kingpin.CmdClause) {
 	app.DefineBecomeFlags(parent)
 }
 
-func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, manifest func([]byte) *apiv1.Secret) *kingpin.CmdClause {
+func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) *kingpin.CmdClause {
 	cmd := parent.Command(name, fmt.Sprintf("Edit %s in Kubernetes cluster.", name))
 	app.DefineEditorConfigFlags(cmd)
 	app.DefineSanityFlags(cmd)
@@ -69,11 +70,9 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, 
 			return err
 		}
 
-		doc := manifest(modifiedData)
-
 		// This flag is validating by webhooks to allow editing unsafe resource's fields.
 		if app.SanityCheck {
-			addUnsafeAnnotation(doc)
+			addUnsafeAnnotation(config)
 		}
 
 		return log.Process(
@@ -84,23 +83,25 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, 
 					return nil
 				}
 
+				config.Data[dataKey] = modifiedData
+
 				return retry.
 					NewLoop(fmt.Sprintf("Update %s secret", name), 5, 5*time.Second).
 					Run(func() error {
 						_, err = kubeCl.CoreV1().
 							Secrets("kube-system").
-							Update(context.TODO(), doc, metav1.UpdateOptions{})
+							Update(context.TODO(), config, metav1.UpdateOptions{})
 						if err != nil {
 							return err
 						}
 
 						if app.SanityCheck {
 							log.InfoLn("Remove allow-unsafe annotation")
-							removeUnsafeAnnotation(doc)
+							removeUnsafeAnnotation(config)
 
 							_, err = kubeCl.CoreV1().
 								Secrets("kube-system").
-								Update(context.TODO(), doc, metav1.UpdateOptions{})
+								Update(context.TODO(), config, metav1.UpdateOptions{})
 						}
 
 						return err
@@ -140,7 +141,6 @@ func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.C
 		"cluster-configuration",
 		"d8-cluster-configuration",
 		"cluster-configuration.yaml",
-		manifests.SecretWithClusterConfig,
 	)
 }
 
@@ -150,9 +150,6 @@ func DefineEditProviderClusterConfigurationCommand(parent *kingpin.CmdClause) *k
 		"provider-cluster-configuration",
 		"d8-provider-cluster-configuration",
 		"cloud-provider-cluster-configuration.yaml",
-		func(data []byte) *apiv1.Secret {
-			return manifests.SecretWithProviderClusterConfig(data, nil)
-		},
 	)
 }
 
@@ -162,6 +159,5 @@ func DefineEditStaticClusterConfigurationCommand(parent *kingpin.CmdClause) *kin
 		"static-cluster-configuration",
 		"d8-static-cluster-configuration",
 		"static-cluster-configuration.yaml",
-		manifests.SecretWithStaticClusterConfig,
 	)
 }
