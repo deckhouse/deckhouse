@@ -9,6 +9,12 @@ import:
   add: /lib64/iptables
   to: /lib64/iptables
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-simple-bridge-binaries-artifact
+  add: /usr/lib64
+  to: /usr/lib64
+  before: setup
+  includePaths:
+  - "python3.*"
 docker:
   ENTRYPOINT: ["/iptables-wrapper-installer.sh"]
 ---
