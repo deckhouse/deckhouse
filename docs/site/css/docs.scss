@@ -313,7 +313,7 @@
   position: -webkit-sticky;
   position: sticky;
   top: 105px;
-  min-width: 260px;
+  width: 260px;
   height: calc(100vh - 105px);
   overflow-x: hidden;
   overflow-y: auto;
@@ -380,7 +380,7 @@
 
 }
 
-.sidebar__item_parent > a:after {
+.sidebar__item_parent > a::after {
     content: '';
     display: inline-block;
     width: 10px;
@@ -389,6 +389,7 @@
     background-repeat: no-repeat;
     background-size: contain;
     margin-left: 5px;
+    flex-shrink: 0;
 }
 
 .sidebar__item_parent.active > a:after,
@@ -1414,4 +1415,45 @@ select#contact-select {
     position: relative;
     margin-left: 15px;
     padding: 1em 0 0 0;
+}
+
+.layout-sidebar__sidebar_right {
+  .sidebar-page__title {
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    line-height: normal;
+    color: $color-main;
+    padding: 0 0 18px 0;
+  }
+
+  #toc-sidebar {
+    .toc-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding-top: 24px;
+    }
+
+    .toc-sidebar__item {
+      padding: 0;
+
+      ul > .toc-sidebar__item {
+        margin-left: 0;
+
+        .toc-sidebar__item-link {
+          padding-left: 32px;
+        }
+      }
+    }
+
+    .toc-sidebar__item-link {
+      padding-left: 8px;
+
+      &.active {
+        font-weight: normal;
+        color: $primary-700;
+        border-left: 2px solid $primary-700;
+      }
+    }
+  }
 }
