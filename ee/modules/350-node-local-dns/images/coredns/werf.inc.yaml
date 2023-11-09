@@ -18,7 +18,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  shell:
   beforeInstall:
   - apk add --no-cache ca-certificates git
   install:
@@ -31,7 +30,7 @@ shell:
   # - chown 64535:64535 /src/coredns
   # - chmod 0755 /src/coredns
 ---
-{{ $csiBinaries := "/bin/awk /bin/chmod /bin/cat /bin/rm /bin/ln /usr/sbin/update-alternatives /bin/true /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
+{{ $csiBinaries := "/bin/awk /bin/chmod /bin/cat /bin/rm /bin/ln /usr/sbin/update-alternatives /bin/true /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -46,7 +45,7 @@ git:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y curl jq bash grep iptables iproute2 python3 -y
+    - apt-get install -y curl jq bash grep iptables iproute2 -y
   install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
     # - chown 64535:64535 /*.sh
