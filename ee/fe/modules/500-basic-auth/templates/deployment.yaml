@@ -51,7 +51,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" .Chart.Name)) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -61,7 +61,7 @@ spec:
         lifecycle:
           preStop:
             exec:
-              command: [ "/usr/sbin/nginx", "-s", "quit" ]
+              command: [ "/opt/nginx-static/sbin/nginx", "-s", "quit" ]
         livenessProbe:
           httpGet:
             path: /healthz
@@ -78,11 +78,11 @@ spec:
           protocol: TCP
         volumeMounts:
         - name: nginx-config
-          mountPath: /etc/nginx/nginx.conf
+          mountPath: /opt/nginx-static/conf/nginx.conf
           subPath: nginx.conf
           readOnly: true
         - name: htpasswd
-          mountPath: /etc/nginx/htpasswd
+          mountPath: /opt/nginx-static/htpasswd
           readOnly: true
         - name: tmp
           mountPath: /tmp
