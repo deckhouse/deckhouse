@@ -74,6 +74,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user", func() {
 			Expect(userPassword.Exists()).To(BeTrue())
 			Expect(userPassword.Field("email").String()).To(Equal("user@example.com"))
 			Expect(userPassword.Field("username").String()).To(Equal("userName"))
+			Expect(userPassword.Field("userID").String()).To(Equal("userName"))
 			Expect(userPassword.Field("hash").String()).To(Equal("JDJhJDEwJDdyeGN3aDhyMlJjbndjM2pEeXNxaE9yYnNrTEJqdHgxenZ6V2FRVlBGTzc4RERBTVpIaExD"))
 			Expect(userPassword.Field("groups").String()).To(MatchJSON(`["Everyone"]`))
 
@@ -81,6 +82,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user", func() {
 			Expect(base64Password.Exists()).To(BeTrue())
 			Expect(base64Password.Field("email").String()).To(Equal("base64@example.com"))
 			Expect(base64Password.Field("username").String()).To(Equal("base64UserName"))
+			Expect(base64Password.Field("userID").String()).To(Equal("base64UserName"))
 			Expect(base64Password.Field("hash").String()).To(Equal("JDJhJDEwJDdyeGN3aDhyMlJjbndjM2pEeXNxaE9yYnNrTEJqdHgxenZ6V2FRVlBGTzc4RERBTVpIaExD"))
 			Expect(base64Password.Field("groups").String()).To(MatchJSON(`["Everyone"]`))
 
@@ -88,6 +90,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user", func() {
 			Expect(adminPassword.Exists()).To(BeTrue())
 			Expect(adminPassword.Field("email").String()).To(Equal("admintest@example.com"))
 			Expect(adminPassword.Field("username").String()).To(Equal("adminName"))
+			Expect(adminPassword.Field("userID").String()).To(Equal("adminName"))
 			Expect(adminPassword.Field("hash").String()).To(Equal("JDJhJDEwJEUvTWp5ekZpNkdaa3RhOUdIZDh6Q2V1WWlnYkxlblh2MThqa3hPWjZ2aG9Xc0tuYXhOSm91"))
 			Expect(adminPassword.Field("groups").String()).To(MatchJSON(`["Everyone","Admins"]`))
 		})
