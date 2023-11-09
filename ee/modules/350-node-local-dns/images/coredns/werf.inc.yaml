@@ -27,10 +27,8 @@ shell:
   - git clone --depth 1 --branch v1.9.3 {{ $.SOURCE_REPO }}/coredns/coredns.git /src 
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags="-s -w" -o coredns
-  # - chown 64535:64535 /src/coredns
-  # - chmod 0755 /src/coredns
 ---
-{{ $csiBinaries := "/bin/awk /bin/chmod /bin/cat /bin/rm /bin/ln /usr/sbin/update-alternatives /bin/true /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
+{{ $csiBinaries := "/bin/awk /bin/chmod /bin/cat /usr/bin/dig /bin/rm /bin/ln /usr/sbin/update-alternatives /bin/true /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -45,8 +43,6 @@ git:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y curl jq bash grep iptables iproute2 -y
+    - apt-get install -y curl jq bash grep iptables iproute2 bind-utils -y
   install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
-    # - chown 64535:64535 /*.sh
-    # - chmod 0755 /*.sh
