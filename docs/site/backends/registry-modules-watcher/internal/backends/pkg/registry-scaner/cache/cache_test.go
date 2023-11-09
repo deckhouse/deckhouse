@@ -1,3 +1,17 @@
+// Copyright 2023 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cache
 
 import (
@@ -10,10 +24,16 @@ func TestSyncReleaseChannels(t *testing.T) {
 	// c := Cache{
 	// 	val: make(map[registryName]map[moduleName]module),
 	// }
+	c.SetTar("TestReg", "testModule", "0.0.1", "stable", []byte("test"))
 	c.SetTar("TestReg", "testModule", "1.0.0", "alpha", []byte("test"))
-	c.SetTar("TestReg", "testModule", "1.0.1", "beta", []byte("test2"))
-	c.SetTar("TestReg", "testModule", "1.0.1", "alpha", []byte("test"))
-
+	c.ResetRange()
+	c.SetTar("TestReg", "testModule", "1.0.0", "beta", []byte("test"))
+	c.SetTar("TestReg", "testModule", "1.0.1", "alpha", []byte("test2"))
+	c.ResetRange()
+	c.SetTar("TestReg", "testModule", "1.0.1", "alpha", []byte("test2"))
 	c.SetReleaseChecksum("TestReg", "testModule", "alpha", "test checksumm")
-	fmt.Println(c)
+
+	rng := c.GetRange()
+	fmt.Println(len(rng))
+	fmt.Println(rng)
 }
