@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"github.com/gorilla/mux"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/flant/docs-builder/pkg/k8s"
 
+	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
 )
 
