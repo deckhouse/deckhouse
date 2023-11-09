@@ -432,28 +432,48 @@ You will need to:
 1. Create a parameterless receiver.
 1. Route unwanted alerts to this receiver.
 
-Below is the sample `alertmanager.yaml` for this kind of a situation:
+Below are samples for configuring `CustomAlertmanager`.
+
+Receive all alerts with labels `service: foo|bar|baz`:
 
 ```yaml
 receivers:
-- name: blackhole
   # the parameterless receiver is similar to "/dev/null".
-- name: some-other-receiver
-  # ...
+  - name: blackhole
+  # your valid receiver
+  - name: some-other-receiver
+    # ...
 route:
   # default receiver
-  receiver: some-other-receiver
+  receiver: blackhole
   routes:
-    - matchers:
-        - matchType: =
-          name: alertname
-          value: DeadMansSwitch
-      receiver: blackhole
+    # child receiver
     - matchers:
         - matchType: =~
           name: service
           value: ^(foo|bar|baz)$
       receiver: some-other-receiver
+```
+
+Receive all alerts except for `DeadMansSwitch`:
+
+```yaml
+receivers:
+  # the parameterless receiver is similar to "/dev/null".
+  - name: blackhole
+  # your valid receiver
+  - name: some-other-receiver
+    # ...
+route:
+  # default receiver
+  receiver: some-other-receiver
+  routes:
+    # child receiver
+    - matchers:
+        - matchType: =
+          name: alertname
+          value: DeadMansSwitch
+      receiver: blackhole
 ```
 
 A detailed description of all parameters can be found in the [official documentation](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file).
