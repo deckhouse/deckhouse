@@ -15,10 +15,14 @@ import:
   before: setup
   includePaths:
   - "python3.*"
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /iptables-wrapper
+  before: setup
 docker:
-  ENTRYPOINT: ["/iptables-wrapper-installer.sh"]
+  ENTRYPOINT: ["/iptables-wrapper"]
 ---
-{{ $csiBinaries := "/bin/awk /bin/chmod /bin/cat /bin/rm /bin/ln /usr/sbin/update-alternatives /bin/true /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
+{{ $csiBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -28,13 +32,6 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /
-  stageDependencies:
-    install:
-    - '**/*'
-  includePaths:
-    - iptables-wrapper-installer.sh
 shell:
   beforeInstall:
     - apt-get update
