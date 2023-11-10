@@ -10,6 +10,7 @@ WORKDIR /src
 RUN apk add --update --no-cache git
 RUN git clone --depth 1 --branch v0.9.1 ${SOURCE_REPO}/kubernetes-sigs/prometheus-adapter.git .
 
+RUN go get -u golang.org/x/net@v0.17.0
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o adapter ./cmd/adapter/adapter.go
 
 RUN chown 64535:64535 adapter
