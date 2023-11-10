@@ -73,6 +73,7 @@
     Kubernetes control plane components will restart, kubelet will restart.
  - **[deckhouse]** Send `clusterUUID` when checking for Deckhouse release. [#6412](https://github.com/deckhouse/deckhouse/pull/6412)
  - **[docs]** Add a guide for mirroring the Deckhouse registry using the `dhctl mirror` tool. [#6339](https://github.com/deckhouse/deckhouse/pull/6339)
+ - **[go_lib]** Bump `addon-operator` to avoid race panics. [#6505](https://github.com/deckhouse/deckhouse/pull/6505)
  - **[virtualization]** Add a validating webhook to prevent the virtualization module from being enabled. [#6356](https://github.com/deckhouse/deckhouse/pull/6356)
     The `virtualization` module cannot be enabled, but it will continue to work if it was already enabled before the update (the current version of the module is deprecated, and a new version will be published soon).
 
