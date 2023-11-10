@@ -40,6 +40,8 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "web_resources" . | nindent 12 }}
   {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
           - name: config
             mountPath: /app/config
