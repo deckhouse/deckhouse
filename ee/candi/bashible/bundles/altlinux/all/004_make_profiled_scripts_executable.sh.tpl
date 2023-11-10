@@ -12,6 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-sync-file /etc/bashrc.d/02-deckhouse-path.sh - << "EOF"
-export PATH="/opt/deckhouse/bin:$PATH"
-EOF
+# On AltLinux, scripts under /etc/profile.d should be executable.
+chmod +x /etc/profile.d/02-deckhouse-path.sh /etc/profile.d/d8-system-proxy.sh
