@@ -1,4 +1,4 @@
-{{- $falcoVersion := "0.36.2" }}
+{{- $falcoVersion := "0.35.1" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_UBUNTU }}
