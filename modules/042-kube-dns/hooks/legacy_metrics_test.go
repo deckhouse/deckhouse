@@ -90,7 +90,7 @@ var _ = Describe("kube-dns hooks :: legacy_metrics ::", func() {
 					Name:   legacyServiceAnnotationMetricName,
 					Group:  legacyServiceAnnotationGroup,
 					Action: "set",
-					Value:  pointer.Float64Ptr(1.0),
+					Value:  pointer.Float64(1.0),
 					Labels: map[string]string{
 						"service_name":      "test",
 						"service_namespace": "test",
