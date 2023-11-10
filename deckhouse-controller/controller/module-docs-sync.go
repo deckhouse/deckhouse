@@ -94,10 +94,10 @@ func (s *ModuleDocsSyncer) onLease(ctx context.Context) error {
 	}
 
 	for _, item := range list.Items {
-		fmt.Printf("%+v\n", item)
-		fmt.Println(unstructured.NestedString(item.UnstructuredContent(), ".spec.registry.repo"))
-		fmt.Println(unstructured.NestedString(item.UnstructuredContent(), ".spec.registry.dockerCfg"))
-		fmt.Println(unstructured.NestedString(item.UnstructuredContent(), ".spec.registry.ca"))
+		log.Printf("%+v\n", item)
+		log.Println(unstructured.NestedString(item.UnstructuredContent(), ".spec.registry.repo"))
+		log.Println(unstructured.NestedString(item.UnstructuredContent(), ".spec.registry.dockerCfg"))
+		log.Println(unstructured.NestedString(item.UnstructuredContent(), ".spec.registry.ca"))
 	}
 
 	//opts := make([]cr.Option, 0)
