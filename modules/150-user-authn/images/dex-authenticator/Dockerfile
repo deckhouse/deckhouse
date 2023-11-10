@@ -13,7 +13,7 @@ WORKDIR /src
 
 # Download tools
 RUN apk add git patch
-RUN git clone --depth 1 --branch v7.2.0 ${SOURCE_REPO}/oauth2-proxy/oauth2-proxy.git .
+RUN git clone --depth 1 --branch v7.5.1 ${SOURCE_REPO}/oauth2-proxy/oauth2-proxy.git .
 ADD patches/cookie-refresh.patch patches/remove-groups.patch /
 RUN patch -p1 < /cookie-refresh.patch \
   && patch -p1 < /remove-groups.patch \
