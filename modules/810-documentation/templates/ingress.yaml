@@ -42,6 +42,13 @@ spec:
               name: http
         path: /
         pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: documentation
+            port:
+              name: http
+        path: /modules
+        pathType: Prefix
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:
