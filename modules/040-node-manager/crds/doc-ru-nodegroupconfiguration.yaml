@@ -23,7 +23,24 @@ spec:
             spec:
               properties:
                 content:
-                  description: Содержимое шага конфигурации. Может быть или шаблоном Go Template, или bash-скриптом.
+                  description: |
+                    Содержимое шага конфигурации в виде bash-скрипта.
+
+                    Для генерации скрипта возможно использовать [Go Template](https://pkg.go.dev/text/template).
+
+                    Получить список доступных для использования в шаблонах параметров можно из Secret'а `bashible-apiserver-context`:
+                    ```
+                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o yaml | grep -w 'input.yaml:' | awk '{ print $2}' | base64 --decode
+                    ```
+
+                    Также в скрипте допустимо использовать подготовленные команды [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster). Например:
+                    ```
+                    bb-event-on 'bb-package-installed' 'post-install'
+                    post-install() {
+                      bb-log-info "Setting reboot flag due to kernel was updated"
+                      bb-flag-set reboot
+                    }
+                    ```
                 weight:
                   description: Очередность выполнения шага конфигурации.
                 nodeGroups:
