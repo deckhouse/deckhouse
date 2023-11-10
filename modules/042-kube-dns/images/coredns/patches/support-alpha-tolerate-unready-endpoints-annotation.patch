@@ -1,145 +1,42 @@
-diff --git a/plugin/kubernetes/handler_test.go b/plugin/kubernetes/handler_test.go
-index d867f727a1..bc80704693 100644
---- a/plugin/kubernetes/handler_test.go
-+++ b/plugin/kubernetes/handler_test.go
-@@ -684,6 +684,7 @@ var epsIndex = map[string][]*object.Endpoints{
- 		Name:      "kubedns",
- 		Namespace: "kube-system",
- 		Index:     object.EndpointsKey("kubedns", "kube-system"),
-+		Ready:     true,
- 	}},
- 	"svc1.testns": {{
- 		Subsets: []object.EndpointSubset{
-@@ -699,6 +700,7 @@ var epsIndex = map[string][]*object.Endpoints{
- 		Name:      "svc1-slice1",
- 		Namespace: "testns",
- 		Index:     object.EndpointsKey("svc1", "testns"),
-+		Ready:     true,
- 	}},
- 	"svcempty.testns": {{
- 		Subsets: []object.EndpointSubset{
-@@ -712,6 +714,7 @@ var epsIndex = map[string][]*object.Endpoints{
- 		Name:      "svcempty-slice1",
- 		Namespace: "testns",
- 		Index:     object.EndpointsKey("svcempty", "testns"),
-+		Ready:     true,
- 	}},
- 	"hdls1.testns": {{
- 		Subsets: []object.EndpointSubset{
-@@ -732,6 +735,7 @@ var epsIndex = map[string][]*object.Endpoints{
- 		Name:      "hdls1-slice1",
- 		Namespace: "testns",
- 		Index:     object.EndpointsKey("hdls1", "testns"),
-+		Ready:     true,
- 	}},
- 	"hdlsprtls.testns": {{
- 		Subsets: []object.EndpointSubset{
-@@ -745,6 +749,7 @@ var epsIndex = map[string][]*object.Endpoints{
- 		Name:      "hdlsprtls-slice1",
- 		Namespace: "testns",
- 		Index:     object.EndpointsKey("hdlsprtls", "testns"),
-+		Ready:     true,
- 	}},
- }
-
+Subject: [PATCH] add deprecation annotation support
+---
+Index: plugin/kubernetes/kubernetes.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/plugin/kubernetes/kubernetes.go b/plugin/kubernetes/kubernetes.go
-index 3c80097e96..633e00f888 100644
---- a/plugin/kubernetes/kubernetes.go
-+++ b/plugin/kubernetes/kubernetes.go
-@@ -542,6 +542,9 @@ func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.
-
+--- a/plugin/kubernetes/kubernetes.go	(revision ae2bbc29be1aaae0b3ded5d188968a6c97bb3144)
++++ b/plugin/kubernetes/kubernetes.go	(date 1698920824817)
+@@ -472,6 +472,9 @@
+ 
  				for _, eps := range ep.Subsets {
  					for _, addr := range eps.Addresses {
 +						if !addr.Ready && !svc.HasAlphaPublishUnreadyAddressesAnnotation {
 +							continue
 +						}
-
  						// See comments in parse.go parseRequest about the endpoint handling.
  						if r.endpoint != "" {
-diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes_test.go
-index 9832fbd922..586abf67cd 100644
---- a/plugin/kubernetes/kubernetes_test.go
-+++ b/plugin/kubernetes/kubernetes_test.go
-@@ -135,6 +135,7 @@ func (APIConnServiceTest) EpIndex(string) []*object.Endpoints {
- 			Name:      "svc1-slice1",
- 			Namespace: "testns",
- 			Index:     object.EndpointsKey("svc1", "testns"),
-+			Ready:     true,
- 		},
- 		{
- 			Subsets: []object.EndpointSubset{
-@@ -150,6 +151,7 @@ func (APIConnServiceTest) EpIndex(string) []*object.Endpoints {
- 			Name:      "hdls1-slice1",
- 			Namespace: "testns",
- 			Index:     object.EndpointsKey("hdls1", "testns"),
-+			Ready:     true,
- 		},
- 		{
- 			Subsets: []object.EndpointSubset{
-@@ -159,6 +161,7 @@ func (APIConnServiceTest) EpIndex(string) []*object.Endpoints {
- 					},
- 				},
- 			},
-+			Ready: true,
- 		},
- 	}
- 	return eps
-@@ -180,6 +183,7 @@ func (APIConnServiceTest) EndpointsList() []*object.Endpoints {
- 			Name:      "svc1-slice1",
- 			Namespace: "testns",
- 			Index:     object.EndpointsKey("svc1", "testns"),
-+			Ready:     true,
- 		},
- 		{
- 			Subsets: []object.EndpointSubset{
-@@ -195,6 +199,7 @@ func (APIConnServiceTest) EndpointsList() []*object.Endpoints {
- 			Name:      "hdls1-slice1",
- 			Namespace: "testns",
- 			Index:     object.EndpointsKey("hdls1", "testns"),
-+			Ready:     true,
- 		},
- 		{
- 			Subsets: []object.EndpointSubset{
-@@ -210,6 +215,7 @@ func (APIConnServiceTest) EndpointsList() []*object.Endpoints {
- 			Name:      "hdls1-slice2",
- 			Namespace: "testns",
- 			Index:     object.EndpointsKey("hdls1", "testns"),
-+			Ready:     true,
- 		},
- 		{
- 			Subsets: []object.EndpointSubset{
-@@ -219,6 +225,7 @@ func (APIConnServiceTest) EndpointsList() []*object.Endpoints {
- 					},
- 				},
- 			},
-+			Ready: true,
- 		},
- 	}
- 	return eps
+ 							if !match(r.endpoint, endpointHostname(addr, k.endpointNameMode)) {
+Index: plugin/kubernetes/object/endpoint.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/plugin/kubernetes/object/endpoint.go b/plugin/kubernetes/object/endpoint.go
-index 4af64f3631..766125a602 100644
---- a/plugin/kubernetes/object/endpoint.go
-+++ b/plugin/kubernetes/object/endpoint.go
-@@ -36,6 +36,7 @@ type EndpointAddress struct {
+--- a/plugin/kubernetes/object/endpoint.go	(revision ae2bbc29be1aaae0b3ded5d188968a6c97bb3144)
++++ b/plugin/kubernetes/object/endpoint.go	(date 1698920604996)
+@@ -34,6 +34,7 @@
  	Hostname      string
  	NodeName      string
  	TargetRefName string
 +	Ready         bool
  }
-
+ 
  // EndpointPort is a tuple that describes a single port.
-@@ -73,7 +74,7 @@ func ToEndpoints(obj meta.Object) (meta.Object, error) {
- 		}
-
- 		for j, a := range eps.Addresses {
--			ea := EndpointAddress{IP: a.IP, Hostname: a.Hostname}
-+			ea := EndpointAddress{IP: a.IP, Hostname: a.Hostname, Ready: true}
- 			if a.NodeName != nil {
- 				ea.NodeName = *a.NodeName
- 			}
-@@ -128,11 +129,9 @@ func EndpointSliceToEndpoints(obj meta.Object) (meta.Object, error) {
+@@ -84,11 +85,9 @@
  	}
-
+ 
  	for _, end := range ends.Endpoints {
 -		if !endpointsliceReady(end.Conditions.Ready) {
 -			continue
@@ -150,20 +47,7 @@ index 4af64f3631..766125a602 100644
  			if end.Hostname != nil {
  				ea.Hostname = *end.Hostname
  			}
-@@ -179,11 +178,9 @@ func EndpointSliceV1beta1ToEndpoints(obj meta.Object) (meta.Object, error) {
- 	}
-
- 	for _, end := range ends.Endpoints {
--		if !endpointsliceReady(end.Conditions.Ready) {
--			continue
--		}
- 		for _, a := range end.Addresses {
- 			ea := EndpointAddress{IP: a}
-+			ea.Ready = endpointsliceReady(end.Conditions.Ready)
- 			if end.Hostname != nil {
- 				ea.Hostname = *end.Hostname
- 			}
-@@ -244,7 +241,7 @@ func (e *Endpoints) DeepCopyObject() runtime.Object {
+@@ -151,7 +150,7 @@
  			Ports:     make([]EndpointPort, len(eps.Ports)),
  		}
  		for j, a := range eps.Addresses {
@@ -172,31 +56,106 @@ index 4af64f3631..766125a602 100644
  			sub.Addresses[j] = ea
  		}
  		for k, p := range eps.Ports {
+Index: plugin/kubernetes/kubernetes_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes_test.go
+--- a/plugin/kubernetes/kubernetes_test.go	(revision ae2bbc29be1aaae0b3ded5d188968a6c97bb3144)
++++ b/plugin/kubernetes/kubernetes_test.go	(date 1698920980350)
+@@ -126,7 +126,7 @@
+ 			Subsets: []object.EndpointSubset{
+ 				{
+ 					Addresses: []object.EndpointAddress{
+-						{IP: "172.0.0.1", Hostname: "ep1a"},
++						{IP: "172.0.0.1", Hostname: "ep1a", Ready: true},
+ 					},
+ 					Ports: []object.EndpointPort{
+ 						{Port: 80, Protocol: "tcp", Name: "http"},
+@@ -141,7 +141,7 @@
+ 			Subsets: []object.EndpointSubset{
+ 				{
+ 					Addresses: []object.EndpointAddress{
+-						{IP: "172.0.0.2"},
++						{IP: "172.0.0.2", Ready: true},
+ 					},
+ 					Ports: []object.EndpointPort{
+ 						{Port: 80, Protocol: "tcp", Name: "http"},
+@@ -156,7 +156,7 @@
+ 			Subsets: []object.EndpointSubset{
+ 				{
+ 					Addresses: []object.EndpointAddress{
+-						{IP: "10.9.8.7", NodeName: "test.node.foo.bar"},
++						{IP: "10.9.8.7", NodeName: "test.node.foo.bar", Ready: true},
+ 					},
+ 				},
+ 			},
+@@ -171,7 +171,7 @@
+ 			Subsets: []object.EndpointSubset{
+ 				{
+ 					Addresses: []object.EndpointAddress{
+-						{IP: "172.0.0.1", Hostname: "ep1a"},
++						{IP: "172.0.0.1", Hostname: "ep1a", Ready: true},
+ 					},
+ 					Ports: []object.EndpointPort{
+ 						{Port: 80, Protocol: "tcp", Name: "http"},
+@@ -186,7 +186,7 @@
+ 			Subsets: []object.EndpointSubset{
+ 				{
+ 					Addresses: []object.EndpointAddress{
+-						{IP: "172.0.0.2"},
++						{IP: "172.0.0.2", Ready: true},
+ 					},
+ 					Ports: []object.EndpointPort{
+ 						{Port: 80, Protocol: "tcp", Name: "http"},
+@@ -201,7 +201,7 @@
+ 			Subsets: []object.EndpointSubset{
+ 				{
+ 					Addresses: []object.EndpointAddress{
+-						{IP: "172.0.0.2"},
++						{IP: "172.0.0.2", Ready: true},
+ 					},
+ 					Ports: []object.EndpointPort{
+ 						{Port: 80, Protocol: "tcp", Name: "http"},
+@@ -216,7 +216,7 @@
+ 			Subsets: []object.EndpointSubset{
+ 				{
+ 					Addresses: []object.EndpointAddress{
+-						{IP: "10.9.8.7", NodeName: "test.node.foo.bar"},
++						{IP: "10.9.8.7", NodeName: "test.node.foo.bar", Ready: true},
+ 					},
+ 				},
+ 			},
+Index: plugin/kubernetes/object/service.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/plugin/kubernetes/object/service.go b/plugin/kubernetes/object/service.go
-index 812b272e26..ff2094c113 100644
---- a/plugin/kubernetes/object/service.go
-+++ b/plugin/kubernetes/object/service.go
-@@ -2,6 +2,7 @@ package object
-
+--- a/plugin/kubernetes/object/service.go	(revision ae2bbc29be1aaae0b3ded5d188968a6c97bb3144)
++++ b/plugin/kubernetes/object/service.go	(date 1698920604997)
+@@ -2,6 +2,7 @@
+ 
  import (
  	"fmt"
 +	"strconv"
-
+ 
  	api "k8s.io/api/core/v1"
  	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-@@ -20,6 +21,8 @@ type Service struct {
+@@ -20,6 +21,8 @@
  	ExternalName string
  	Ports        []api.ServicePort
-
+ 
 +	HasAlphaPublishUnreadyAddressesAnnotation bool
 +
  	// ExternalIPs we may want to export.
  	ExternalIPs []string
-
-@@ -46,6 +49,10 @@ func ToService(obj meta.Object) (meta.Object, error) {
+ 
+@@ -46,6 +49,10 @@
  		ExternalIPs: make([]string, len(svc.Status.LoadBalancer.Ingress)+len(svc.Spec.ExternalIPs)),
  	}
-
+ 
 +	if v, ok := obj.GetAnnotations()["service.alpha.kubernetes.io/tolerate-unready-endpoints"]; ok {
 +		s.HasAlphaPublishUnreadyAddressesAnnotation, _ = strconv.ParseBool(v)
 +	}
@@ -204,7 +163,7 @@ index 812b272e26..ff2094c113 100644
  	if len(svc.Spec.ClusterIPs) > 0 {
  		s.ClusterIPs = make([]string, len(svc.Spec.ClusterIPs))
  		copy(s.ClusterIPs, svc.Spec.ClusterIPs)
-@@ -94,7 +101,8 @@ func (s *Service) DeepCopyObject() runtime.Object {
+@@ -93,7 +100,8 @@
  		ExternalName: s.ExternalName,
  		ClusterIPs:   make([]string, len(s.ClusterIPs)),
  		Ports:        make([]api.ServicePort, len(s.Ports)),
@@ -214,3 +173,57 @@ index 812b272e26..ff2094c113 100644
  	}
  	copy(s1.ClusterIPs, s.ClusterIPs)
  	copy(s1.Ports, s.Ports)
+Index: plugin/kubernetes/handler_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/plugin/kubernetes/handler_test.go b/plugin/kubernetes/handler_test.go
+--- a/plugin/kubernetes/handler_test.go	(revision ae2bbc29be1aaae0b3ded5d188968a6c97bb3144)
++++ b/plugin/kubernetes/handler_test.go	(date 1698920825251)
+@@ -706,7 +706,7 @@
+ 		Subsets: []object.EndpointSubset{
+ 			{
+ 				Addresses: []object.EndpointAddress{
+-					{IP: "172.0.0.100"},
++					{IP: "172.0.0.100", Ready: true},
+ 				},
+ 				Ports: []object.EndpointPort{
+ 					{Port: 53, Protocol: "udp", Name: "dns"},
+@@ -721,7 +721,7 @@
+ 		Subsets: []object.EndpointSubset{
+ 			{
+ 				Addresses: []object.EndpointAddress{
+-					{IP: "172.0.0.1", Hostname: "ep1a"},
++					{IP: "172.0.0.1", Hostname: "ep1a", Ready: true},
+ 				},
+ 				Ports: []object.EndpointPort{
+ 					{Port: 80, Protocol: "tcp", Name: "http"},
+@@ -749,12 +749,12 @@
+ 		Subsets: []object.EndpointSubset{
+ 			{
+ 				Addresses: []object.EndpointAddress{
+-					{IP: "172.0.0.2"},
+-					{IP: "172.0.0.3"},
+-					{IP: "172.0.0.4", Hostname: "dup-name"},
+-					{IP: "172.0.0.5", Hostname: "dup-name"},
+-					{IP: "5678:abcd::1"},
+-					{IP: "5678:abcd::2"},
++					{IP: "172.0.0.2", Ready: true},
++					{IP: "172.0.0.3", Ready: true},
++					{IP: "172.0.0.4", Hostname: "dup-name", Ready: true},
++					{IP: "172.0.0.5", Hostname: "dup-name", Ready: true},
++					{IP: "5678:abcd::1", Ready: true},
++					{IP: "5678:abcd::2", Ready: true},
+ 				},
+ 				Ports: []object.EndpointPort{
+ 					{Port: 80, Protocol: "tcp", Name: "http"},
+@@ -769,7 +769,7 @@
+ 		Subsets: []object.EndpointSubset{
+ 			{
+ 				Addresses: []object.EndpointAddress{
+-					{IP: "172.0.0.20"},
++					{IP: "172.0.0.20", Ready: true},
+ 				},
+ 				Ports: []object.EndpointPort{{Port: -1}},
+ 			},
