@@ -477,18 +477,12 @@ Login into any control-plane node with `root` user and use next script:
 ```bash
 #!/usr/bin/env bash
 
-for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
-  if kubectl -n kube-system exec "$pod" -- sh -c "ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/${pod##*/}.snapshot" && \
-  kubectl -n kube-system exec "$pod" -- gzip -c /tmp/${pod##*/}.snapshot | zcat > "${pod##*/}.snapshot" && \
-  kubectl -n kube-system exec "$pod" -- sh -c "cd /tmp && sha256sum ${pod##*/}.snapshot" | sha256sum -c && \
-  kubectl -n kube-system exec "$pod" -- rm "/tmp/${pod##*/}.snapshot"; then
-    mv "${pod##*/}.snapshot" etcd-backup.snapshot
-    break
-  fi
-done
-cp -r /etc/kubernetes/ ./
+pod=`crictl ps | grep " etcd " | awk '{print $NF}'`
+kubectl -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
+mv /var/lib/etcd/"${pod##*/}.snapshot" etcd-backup.snapshot && \
+cp -r /etc/kubernetes/ ./ && \
 tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
-rm -r ./kubernetes
+rm -r ./kubernetes ./etcd-backup.snapshot
 ```
 
 In the current directory etcd snapshot file `etcd-backup.snapshot` will be created from one of an etcd cluster members.
