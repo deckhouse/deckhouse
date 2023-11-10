@@ -135,3 +135,6 @@ data:
   disable-cnp-status-updates: "true"
 
   procfs: "/host/proc"
+
+  write-cni-conf-when-ready: /host/etc/cni/net.d/05-cilium.conflist
+  cni-exclusive: "true"
