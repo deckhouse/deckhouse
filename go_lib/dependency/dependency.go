@@ -75,9 +75,7 @@ type clients struct {
 }
 
 type dependencyContainer struct {
-	// etcdClient    etcd.Client
 	k8sClient     k8s.Client
-	crClient      cr.Client
 	vsphereClient vsphere.Client
 
 	m          sync.RWMutex
@@ -213,7 +211,6 @@ func (dc *dependencyContainer) GetRegistryClient(repo string, options ...cr.Opti
 		return nil, err
 	}
 
-	dc.crClient = client
 	return client, nil
 }
 
