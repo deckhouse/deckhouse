@@ -1,8 +1,8 @@
 # Based on https://github.com/falcosecurity/falcosidekick/blob/41d530807f1a0294c0276e4cb42af68c8b26a659/Dockerfile
-ARG BASE_GOLANG_18_ALPINE
+ARG BASE_GOLANG_20_ALPINE
 ARG BASE_DISTROLESS
 
-FROM $BASE_GOLANG_18_ALPINE as artifact
+FROM $BASE_GOLANG_20_ALPINE as artifact
 ARG GOPROXY
 ARG SOURCE_REPO
 
