@@ -17,10 +17,9 @@ RUN git clone --branch v2.35.3 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /robots-txt.patch \
   && git apply /401-password-auth.patch
 
-RUN go get -u golang.org/x/net@v0.17.0 && \
-    go get -u google.golang.org/grpc@v1.56.3 && \
-    go get -u golang.org/x/text@v0.3.8 && \
+RUN go get -u google.golang.org/grpc@v1.56.3 && \
     go mod tidy && \
+    go mod vendor && \
     CGO_ENABLED=1 GOOS=linux go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo ./cmd/dex
 
 RUN chown 64535:64535 dex
