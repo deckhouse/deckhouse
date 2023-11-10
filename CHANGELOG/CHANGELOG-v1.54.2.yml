@@ -23,6 +23,8 @@ operator-prometheus:
       pull_request: https://github.com/deckhouse/deckhouse/pull/6466
 user-authn:
   fixes:
+    - summary: Add missing quotes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6491
     - summary: Provide userID field for correct JWT generation.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6484
 
