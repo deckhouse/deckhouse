@@ -147,18 +147,9 @@ index ea7633fe..b8b479da 100644
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 1934f145..f5e7bbc1 100644
+index 1934f145..f0052849 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
-@@ -505,7 +505,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
- 	// newPod.Spec.NodeName = nodeName
- 
- 	// Added default tolerations for DaemonSet pods.
--	util.AddOrUpdateDaemonPodTolerations(&newPod.Spec)
-+	// util.AddOrUpdateDaemonPodTolerations(&newPod.Spec)
- 
- 	newPodForDSCache.Store(ds.UID, &newPodForDS{generation: ds.Generation, pod: newPod})
- 	return newPod
 @@ -560,6 +560,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
@@ -233,7 +224,7 @@ index 1934f145..f5e7bbc1 100644
 +				klog.Infof("Updating relevant PodDisruptionBudget %s/%s", ds.Namespace, ds.Name)
 +				toUpdate.Status.ExpectedPods = newScale.Spec.Replicas
 +
-+				_, err = policyClient.UpdateStatus(context.TODO(), toUpdate, metav1.UpdateOptions{}) 
++				_, err = policyClient.UpdateStatus(context.TODO(), toUpdate, metav1.UpdateOptions{})
 +				if err != nil {
 +					klog.Errorf("Couldn't update relevant PodDisruptionBudget status for DaemonSet %s/%s: %v", ds.Namespace, ds.Name, err)
 +					return err
