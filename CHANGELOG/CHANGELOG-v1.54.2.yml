@@ -4,9 +4,9 @@ candi:
       pull_request: https://github.com/deckhouse/deckhouse/pull/6464
 dhctl:
   features:
-    - summary: '`dhctl` now supports uploading mirrored Deckhouse images to custom repo paths.'
+    - summary: Add support for uploading mirrored Deckhouse images to custom repo paths.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6467
-    - summary: '`dhctl` will compute stribog 256 bit hash for downloaded registry copy.'
+    - summary: Compute stribog 256 bit hash for downloaded registry copy.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6409
   fixes:
     - summary: >-
@@ -25,6 +25,6 @@ user-authn:
   fixes:
     - summary: Add missing quotes.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6491
-    - summary: Provide userID field for correct JWT generation.
+    - summary: Provide `userID` field for correct JWT generation.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6484
 

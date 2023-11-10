@@ -13,8 +13,8 @@
  - **[chrony]** Chrony image is based on distroless image. [#6240](https://github.com/deckhouse/deckhouse/pull/6240)
  - **[deckhouse]** Change `deckhouse-controller` user to `deckhouse`. [#5841](https://github.com/deckhouse/deckhouse/pull/5841)
  - **[deckhouse-controller]** Use ModuleConfig as the primary source of configuration. Don't use ConfigMap `deckhouse` anymore. [#6061](https://github.com/deckhouse/deckhouse/pull/6061)
- - **[dhctl]** `dhctl` now supports uploading mirrored Deckhouse images to custom repo paths. [#6467](https://github.com/deckhouse/deckhouse/pull/6467)
- - **[dhctl]** `dhctl` will compute stribog 256 bit hash for downloaded registry copy. [#6409](https://github.com/deckhouse/deckhouse/pull/6409)
+ - **[dhctl]** Add support for uploading mirrored Deckhouse images to custom repo paths. [#6467](https://github.com/deckhouse/deckhouse/pull/6467)
+ - **[dhctl]** Compute stribog 256 bit hash for downloaded registry copy. [#6409](https://github.com/deckhouse/deckhouse/pull/6409)
  - **[dhctl]** Implemented copying of Deckhouse images to third-party registries for air-gapped installation. [#6257](https://github.com/deckhouse/deckhouse/pull/6257)
  - **[dhctl]** Use ModuleConfig to override the default configuration instead of the `configOverrides` section of the `InitConfiguration` resource. [#6061](https://github.com/deckhouse/deckhouse/pull/6061)
     The [configOverrides](https://deckhouse.io/documentation/v1.54/installing/configuration.html#initconfiguration-deckhouse-configoverrides) parameter of the `InitConfiguration` resource has been deprecated. Use corresponding `ModuleConfig` resources when bootstrapping a new cluster. Read [the documentation](https://deckhouse.io/documentation/latest/installing/#preparing-the-configuration) for additional information.
@@ -63,7 +63,7 @@
     Check that the alerts come after the update.
  - **[prometheus]** Fix HIGH CVE issues in the `trickster` image. [#6281](https://github.com/deckhouse/deckhouse/pull/6281)
     Check that Prometheus metrics come after the update.
- - **[user-authn]** Provide userID field for correct JWT generation. [#6484](https://github.com/deckhouse/deckhouse/pull/6484)
+ - **[user-authn]** Provide `userID` field for correct JWT generation. [#6484](https://github.com/deckhouse/deckhouse/pull/6484)
 
 ## Chore
 
