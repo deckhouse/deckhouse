@@ -14,20 +14,28 @@
 
 # Avoid problems with expired ca-certificates
 bb-apt-rpm-install --force ca-certificates
+# Hack to avoid problems with certs in d8-curl and possible with alpine busybox for kube-apiserver
+if [[ ! -e /etc/ssl/certs/ca-certificates.crt ]]; then
+  mkdir -p /etc/ssl
+  pushd /etc/ssl >/dev/null
+  ln -s ../pki/tls/certs /etc/ssl/certs
+  popd > /dev/null
+  ln -s /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+fi
 
 {{- if .registry.ca }}
 bb-event-on 'registry-ca-changed' '_update_ca_certificates'
 _update_ca_certificates() {
   bb-flag-set containerd-need-restart
-  update-ca-certificates
+  update-ca-trust
 }
 
-bb-sync-file /usr/local/share/ca-certificates/registry-ca.crt - registry-ca-changed << "EOF"
+bb-sync-file /etc/pki/ca-trust/source/anchors/registry-ca.crt - registry-ca-changed << "EOF"
 {{ .registry.ca }}
 EOF
 {{- else }}
-if [ -f /usr/local/share/ca-certificates/registry-ca.crt ]; then
-  rm -f /usr/local/share/ca-certificates/registry-ca.crt
+if [ -f /etc/pki/ca-trust/source/anchors/registry-ca.crt ]; then
+  rm -f /etc/pki/ca-trust/source/anchors/registry-ca.crt
   _update_ca_certificates
 fi
 {{- end }}
