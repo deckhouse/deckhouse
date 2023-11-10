@@ -88,13 +88,13 @@ func (s *ModuleDocsSyncer) Run(ctx context.Context) {
 
 func (s *ModuleDocsSyncer) onLease(ctx context.Context) error {
 	msGVR := schema.ParseGroupResource("modulesources.deckhouse.io").WithVersion("v1alpha1")
-	list, err := s.dClient.Resource(msGVR).List(ctx, metav1.ListOptions{LabelSelector: leaseLabel})
+	list, err := s.dClient.Resource(msGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("list: %w", err)
 	}
 
 	for _, item := range list.Items {
-		log.Printf("%+v\n", item)
+		log.Printf("TMP: %+v\n", item)
 		log.Println(unstructured.NestedString(item.UnstructuredContent(), ".spec.registry.repo"))
 		log.Println(unstructured.NestedString(item.UnstructuredContent(), ".spec.registry.dockerCfg"))
 		log.Println(unstructured.NestedString(item.UnstructuredContent(), ".spec.registry.ca"))
