@@ -113,6 +113,7 @@ func (s *ModuleDocsSyncer) onLease(ctx context.Context) error {
 		return fmt.Errorf("list: %w", err)
 	}
 
+	httpClient := newHTTPClient(d8http.WithTimeout(3 * time.Minute))
 	for _, item := range list.Items {
 		repo, _, _ := unstructured.NestedString(item.UnstructuredContent(), "spec", "registry", "repo")
 		dockerCfg, _, _ := unstructured.NestedString(item.UnstructuredContent(), "spec", "registry", "dockerCfg")
