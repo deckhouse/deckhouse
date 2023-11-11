@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path"
 	"sort"
 	"strings"
@@ -79,13 +78,14 @@ func NewModuleDocsSyncer() (*ModuleDocsSyncer, error) {
 		return nil, fmt.Errorf("get dynamic client: %w", err)
 	}
 
-	s := &ModuleDocsSyncer{dClient, informer}
-	return s, nil
+	httpClient := newHTTPClient(d8http.WithTimeout(3 * time.Minute))
+	return &ModuleDocsSyncer{dClient, informer, httpClient}, nil
 }
 
 type ModuleDocsSyncer struct {
-	dClient  dynamic.Interface
-	informer cache.SharedIndexInformer
+	dClient    dynamic.Interface
+	informer   cache.SharedIndexInformer
+	httpClient d8http.Client
 }
 
 func (s *ModuleDocsSyncer) Run(ctx context.Context) {
@@ -109,7 +109,6 @@ func (s *ModuleDocsSyncer) onLease(ctx context.Context) error {
 		return fmt.Errorf("list: %w", err)
 	}
 
-	httpClient := newHTTPClient(d8http.WithTimeout(3 * time.Minute))
 	for _, item := range list.Items {
 		repo, _, _ := unstructured.NestedString(item.UnstructuredContent(), "spec", "registry", "repo")
 		dockerCfg, _, _ := unstructured.NestedString(item.UnstructuredContent(), "spec", "registry", "dockerCfg")
@@ -156,7 +155,7 @@ func (s *ModuleDocsSyncer) onLease(ctx context.Context) error {
 				return fmt.Errorf("fetch module %s %s image: %v", moduleName, moduleVersion, err)
 			}
 
-			err = buildDocumentation(httpClient, img, moduleName, moduleVersion)
+			err = s.buildDocumentation(img, moduleName, moduleVersion)
 			if err != nil {
 				return fmt.Errorf("build documentation for %s %s: %w", moduleName, moduleVersion, err)
 			}
@@ -255,7 +254,7 @@ func untarMetadata(rc io.ReadCloser, rw io.Writer) error {
 	}
 }
 
-func buildDocumentation(client d8http.Client, img v1.Image, moduleName, moduleVersion string) error {
+func (s *ModuleDocsSyncer) buildDocumentation(client d8http.Client, img v1.Image, moduleName, moduleVersion string) error {
 	rc := mutate.Extract(img)
 	defer rc.Close()
 
@@ -281,10 +280,10 @@ func newHTTPClient(options ...d8http.Option) d8http.Client {
 	opts = append(opts, options...)
 
 	//TODO: try to remove this
-	contentCA, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-	if err == nil {
-		opts = append(opts, d8http.WithAdditionalCACerts([][]byte{contentCA}))
-	}
+	//contentCA, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	//if err == nil {
+	//	opts = append(opts, d8http.WithAdditionalCACerts([][]byte{contentCA}))
+	//}
 
 	return d8http.NewClient(opts...)
 }
