@@ -141,7 +141,7 @@ func (s *ModuleDocsSyncer) onLease(ctx context.Context) error {
 
 		sort.Strings(tags)
 		for _, moduleName := range tags {
-			regCli, err := cr.NewClient(path.Join(repo, moduleName))
+			regCli, err := cr.NewClient(path.Join(repo, moduleName), opts...)
 			if err != nil {
 				return fmt.Errorf("fetch module %s: %v", moduleName, err)
 			}
