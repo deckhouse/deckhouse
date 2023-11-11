@@ -78,7 +78,7 @@ func NewModuleDocsSyncer() (*ModuleDocsSyncer, error) {
 		return nil, fmt.Errorf("get dynamic client: %w", err)
 	}
 
-	httpClient := newHTTPClient(d8http.WithTimeout(3 * time.Minute))
+	httpClient := d8http.NewClient(d8http.WithTimeout(3 * time.Minute))
 	return &ModuleDocsSyncer{dClient, informer, httpClient}, nil
 }
 
@@ -89,8 +89,6 @@ type ModuleDocsSyncer struct {
 }
 
 func (s *ModuleDocsSyncer) Run(ctx context.Context) {
-	log.Error("TMP", s.onLease(ctx)) // TODO: remove this line
-
 	s.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			err := s.onLease(ctx)
@@ -114,8 +112,6 @@ func (s *ModuleDocsSyncer) onLease(ctx context.Context) error {
 		dockerCfg, _, _ := unstructured.NestedString(item.UnstructuredContent(), "spec", "registry", "dockerCfg")
 		ca, _, _ := unstructured.NestedString(item.UnstructuredContent(), "spec", "registry", "ca")
 		releaseChannel, _, _ := unstructured.NestedString(item.UnstructuredContent(), "spec", "releaseChannel")
-
-		log.Println("TMP", repo, releaseChannel, dockerCfg, ca)
 
 		opts := make([]cr.Option, 0)
 		if dockerCfg != "" {
@@ -254,20 +250,20 @@ func untarMetadata(rc io.ReadCloser, rw io.Writer) error {
 	}
 }
 
-func (s *ModuleDocsSyncer) buildDocumentation(client d8http.Client, img v1.Image, moduleName, moduleVersion string) error {
+func (s *ModuleDocsSyncer) buildDocumentation(img v1.Image, moduleName, moduleVersion string) error {
 	rc := mutate.Extract(img)
 	defer rc.Close()
 
 	const docsBuilderBasePath = "http://documentation-builder.d8-system.svc.cluster.local:8081"
 
 	url := fmt.Sprintf("%s/loadDocArchive/%s/%s", docsBuilderBasePath, moduleName, moduleVersion)
-	response, statusCode, err := httpPost(client, url, rc)
+	response, statusCode, err := s.httpPost(url, rc)
 	if err != nil {
 		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
 	}
 
 	url = fmt.Sprintf("%s/build", docsBuilderBasePath)
-	response, statusCode, err = httpPost(client, url, nil)
+	response, statusCode, err = s.httpPost(url, nil)
 	if err != nil {
 		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
 	}
@@ -275,26 +271,13 @@ func (s *ModuleDocsSyncer) buildDocumentation(client d8http.Client, img v1.Image
 	return nil
 }
 
-func newHTTPClient(options ...d8http.Option) d8http.Client {
-	var opts []d8http.Option
-	opts = append(opts, options...)
-
-	//TODO: try to remove this
-	//contentCA, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-	//if err == nil {
-	//	opts = append(opts, d8http.WithAdditionalCACerts([][]byte{contentCA}))
-	//}
-
-	return d8http.NewClient(opts...)
-}
-
-func httpPost(httpClient d8http.Client, url string, body io.Reader) ([]byte, int, error) {
+func (s *ModuleDocsSyncer) httpPost(url string, body io.Reader) ([]byte, int, error) {
 	req, err := http.NewRequest(http.MethodPost, url, body)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	res, err := httpClient.Do(req)
+	res, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, 0, err
 	}
