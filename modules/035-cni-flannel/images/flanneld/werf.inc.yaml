@@ -34,6 +34,7 @@ artifact: {{ .ModuleName }}/flanneld-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 shell:
   install:
+    - apk add --no-cache git make bash gcc glib-static musl-dev linux-headers
     - mkdir -p /src
     - cd /src
     - git clone --depth 1 --branch v0.23.0 https://github.com/flannel-io/flannel.git .
