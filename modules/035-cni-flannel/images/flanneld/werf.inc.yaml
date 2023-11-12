@@ -20,7 +20,7 @@ shell:
       touch /iptables-wrapper
 ---
 artifact: {{ .ModuleName }}/entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 git:
 - add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld/entrypoint/
   to: /workdir/
@@ -30,14 +30,22 @@ shell:
     - apk add --no-cache git
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint main.go
 ---
-artifact: {{ .ModuleName }}/flannel
-from: quay.io/coreos/flannel:v0.15.1-amd64@sha256:a3ebdc7e5e44d1ba3ba8ccd8399e81444102bd35f5f480997a637a42d1e1da6b
+artifact: {{ .ModuleName }}/flanneld-artifact
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+shell:
+  install:
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 --branch v0.23.0 https://github.com/flannel-io/flannel.git .
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - make dist/flanneld
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/flannel
-  add: /opt/bin/flanneld
+- artifact: {{ .ModuleName }}/flanneld-artifact
+  add: /src/dist/flanneld
   to: /opt/bin/flanneld
   before: setup
 - artifact: {{ .ModuleName }}/distroless-cni-flannel-artifact
