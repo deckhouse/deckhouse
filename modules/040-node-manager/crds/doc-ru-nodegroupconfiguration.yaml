@@ -28,9 +28,16 @@ spec:
 
                     Для генерации скрипта возможно использовать [Go Template](https://pkg.go.dev/text/template).
 
-                    Получить список параметров, доступных для использования в шаблонах можно из секрета `bashible-apiserver-context`:
+                    Получить список параметров, доступных для использования в шаблонах, можно из секрета `bashible-apiserver-context`:
                     ```
-                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o yaml | grep -w 'input.yaml:' | awk '{ print $2}' | base64 --decode
+                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
+                    ```
+
+                    Пример:
+                    ```
+                    {{- if ne .nodeGroup.nodeType "Static" }}
+                      echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
+                    {{- end }}
                     ```
 
                     Также в скрипте допустимо использовать подготовленные команды [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster). Например:

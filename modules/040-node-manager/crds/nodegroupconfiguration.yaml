@@ -41,7 +41,14 @@ spec:
 
                     The list of parameters available for use in templates can be retrieved from the `bashible-apiserver-context` Secret as follows:
                     ```
-                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o yaml | grep -w 'input.yaml:' | awk '{ print $2}' | base64 --decode
+                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
+                    ```
+
+                    For example:
+                    ```
+                    {{- if ne .nodeGroup.nodeType "Static" }}
+                      echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
+                    {{- end }}
                     ```
 
                     You can also use the pre-defined [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) commands in the script. For example:
