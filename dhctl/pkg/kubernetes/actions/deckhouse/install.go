@@ -196,6 +196,36 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 				return nil
 			},
 		},
+		{
+			Name: `ConfigMap "install-version"`,
+			Manifest: func() interface{} {
+				return &apiv1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "install-version",
+						Namespace: "d8-system",
+					},
+					Data: map[string]string{
+						"version": cfg.InstallerVersion,
+					},
+				}
+			},
+			CreateFunc: func(manifest interface{}) error {
+				cm := manifest.(*apiv1.ConfigMap)
+				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
+					Create(context.TODO(), cm, metav1.CreateOptions{})
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				cm := manifest.(*apiv1.ConfigMap)
+				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
+					Update(context.TODO(), cm, metav1.UpdateOptions{})
+				return err
+			},
+		},
 	}
 
 	if cfg.IsRegistryAccessRequired() {

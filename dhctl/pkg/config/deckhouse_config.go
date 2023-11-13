@@ -99,7 +99,8 @@ type DeckhouseInstaller struct {
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
 
-	ReleaseChannel string
+	ReleaseChannel   string
+	InstallerVersion string
 }
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
@@ -255,6 +256,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		ClusterConfig:         clusterConfig,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
 		ReleaseChannel:        releaseChannel,
+		InstallerVersion:      metaConfig.InstallerVersion,
 	}
 
 	return &installConfig, nil

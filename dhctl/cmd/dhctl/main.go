@@ -164,7 +164,7 @@ func runApplication(kpApp *kingpin.Application) {
 }
 
 func isRunningInContainer() (bool, error) {
-	_, err := os.Stat("/deckhouse/version")
+	_, err := os.Stat(app.VersionFile)
 	_, inClusterEnvExists := os.LookupEnv("DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER")
 	switch {
 	case inClusterEnvExists:

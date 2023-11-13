@@ -27,6 +27,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -48,10 +49,11 @@ type MetaConfig struct {
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap map[string]interface{} `json:"-"`
-	Images     imagesDigests          `json:"-"`
-	Registry   RegistryData           `json:"-"`
-	UUID       string                 `json:"clusterUUID,omitempty"`
+	VersionMap       map[string]interface{} `json:"-"`
+	Images           imagesDigests          `json:"-"`
+	Registry         RegistryData           `json:"-"`
+	UUID             string                 `json:"clusterUUID,omitempty"`
+	InstallerVersion string                 `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -598,7 +600,7 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadimagesDigests(filename string) error {
+func (m *MetaConfig) LoadImagesDigests(filename string) error {
 	var imagesDigests imagesDigests
 
 	imagesDigestsJSONFile, err := os.ReadFile(filename)
@@ -612,6 +614,17 @@ func (m *MetaConfig) LoadimagesDigests(filename string) error {
 	}
 
 	m.Images = imagesDigests
+
+	return nil
+}
+
+func (m *MetaConfig) LoadInstallerVersion() error {
+	rawFile, err := os.ReadFile(app.VersionFile)
+	if err != nil {
+		return err
+	}
+
+	m.InstallerVersion = strings.TrimSpace(string(rawFile))
 
 	return nil
 }
