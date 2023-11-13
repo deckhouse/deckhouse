@@ -1,0 +1,134 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: vdirectorinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vdirector
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of vDirector VirtualMachines used by `cluster-api-controller-manager` (the [cloud-provider-vdirector](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vdirector/) module).
+
+            The `CloudInstanceClass` resource of the `cloud-provider-vdirector` module refers to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - numCPUs
+                - memory
+                - mainNetwork
+              properties:
+                numCPUs:
+                  description: |
+                    Count of vCPUs to allocate to vDirector VirtualMachines.
+                  x-doc-examples: [2]
+                  type: integer
+                memory:
+                  description: |
+                    Memory in MiB to allocate to vDirector VirtualMachines.
+                  x-doc-examples: [8192]
+                  type: integer
+                rootDiskSize:
+                  description: |
+                    Root disk size in GiB to use in vDirector VirtualMachines.
+
+                    The disk will be automatically enlarged if its size in the template is less than specified.
+                  x-doc-examples: [20]
+                  x-doc-default: 20
+                  type: integer
+                template:
+                  description: |
+                    Path to the template to be cloned. Relative to the datacenter.
+
+                    By default, a template from the `master` InstanceClass is used.
+                  x-doc-examples: ['dev/golden_image']
+                  type: string
+                mainNetwork:
+                  description: |
+                    Path to the network that VirtualMachines' primary NICs will connect to (default gateway). Relative to the datacenter.
+                  x-doc-examples: ['k8s-msk-178']
+                  type: string
+                additionalNetworks:
+                  description: |
+                    Paths to networks that VirtualMachines' secondary NICs will connect to. Relative to the datacenter.
+                  x-doc-examples:
+                  - DEVOPS_32
+                  - DEVOPS_50
+                  type: array
+                  items:
+                    type: string
+                runtimeOptions:
+                  description: |
+                    Additional VM's parameters.
+                  type: object
+                  properties:
+                    nestedHardwareVirtualization:
+                      description: |
+                        Whether to enable or disable nested [hardware virtualization](https://docs.vmware.com/en/VMware-vDirector/6.5/com.vmware.vDirector.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html).
+                      type: boolean
+                    cpuShares:
+                      description: |
+                        The relative amount of CPU Shares for VMs to be created.
+                      type: integer
+                    cpuLimit:
+                      description: |
+                        CPU limit in MHz.
+                      type: integer
+                    cpuReservation:
+                      description: |
+                        CPU reservation in MHz.
+                      type: integer
+                    memoryShares:
+                      description: |
+                        The relative amount of Memory Shares for VMs to be created.
+                      type: integer
+                      maximum: 100
+                      minimum: 0
+                    memoryLimit:
+                      description: |
+                        Memory limit in MB.
+                      type: integer
+                    memoryReservation:
+                      description: |
+                        VM memory reservation in percent (relative to `.spec.memory`).
+                      type: integer
+                      x-doc-default: 80
+                      minimum: 0
+                      maximum: 100
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: vDirectorinstanceclasses
+    singular: vDirectorinstanceclass
+    kind: vDirectorInstanceClass
+    categories:
+      - cloudinstanceclasses
