@@ -15,8 +15,6 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -58,18 +56,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ModuleRelease{},
 		&ModuleReleaseList{},
 	)
-	err := scheme.AddFieldLabelConversionFunc(ModuleReleaseGVK, func(label, value string) (internalLabel, internalValue string, err error) {
-		switch label {
-		case "status.phase":
-			return label, value, nil
-
-		default:
-			return "", "", fmt.Errorf("field label not supported: %s", label)
-		}
-	})
-	if err != nil {
-		return err
-	}
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

@@ -66,7 +66,7 @@ func start(_ *kingpin.ParseContext) error {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	ff.Pupupu()
+	fmt.Println(ff.Pupupu())
 
 	panic("tmp")
 

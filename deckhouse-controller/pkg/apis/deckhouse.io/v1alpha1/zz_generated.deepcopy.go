@@ -191,7 +191,7 @@ func (in *ModuleList) DeepCopyInto(out *ModuleList) {
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]ModuleConfig, len(*in))
+		*out = make([]Module, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -268,7 +268,7 @@ func (in *ModuleReleaseList) DeepCopyInto(out *ModuleReleaseList) {
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]ModuleConfig, len(*in))
+		*out = make([]ModuleRelease, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -378,7 +378,7 @@ func (in *ModuleSourceList) DeepCopyInto(out *ModuleSourceList) {
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]ModuleConfig, len(*in))
+		*out = make([]ModuleSource, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
