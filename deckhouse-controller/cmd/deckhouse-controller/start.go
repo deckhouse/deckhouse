@@ -68,6 +68,8 @@ func start(_ *kingpin.ParseContext) error {
 	}
 	ff.Pupupu()
 
+	panic("tmp")
+
 	operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig")))
 
 	// TODO: remove deckhouse-config purge after release 1.56

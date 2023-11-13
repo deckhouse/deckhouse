@@ -39,14 +39,14 @@ func NewDeckhouseModuleLoader(config *rest.Config) (*DeckhouseModuleLoader, erro
 func (dml *DeckhouseModuleLoader) Pupupu() {
 	releaseList, err := dml.kubeClient.DeckhouseV1alpha1().ModuleReleases().List(context.TODO(), v1.ListOptions{FieldSelector: "status.phase=Deployed"})
 	if err != nil {
-		panic(err)
+		fmt.Println("Err1", err)
 	}
 
 	fmt.Println("FOUND DEPLOyED releases", len(releaseList.Items))
 
 	releaseList, err = dml.kubeClient.DeckhouseV1alpha1().ModuleReleases().List(context.TODO(), v1.ListOptions{LabelSelector: "status.phase=Deployed"})
 	if err != nil {
-		panic(err)
+		fmt.Println("ERR2", err)
 	}
 
 	fmt.Println("FOUND 2 DEPLOyED releases", len(releaseList.Items))
