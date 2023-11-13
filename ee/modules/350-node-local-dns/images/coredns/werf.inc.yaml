@@ -38,7 +38,7 @@ shell:
   - chmod -R 0700 /src/coredns
   - chown -R 64535:64535 /src/coredns
 ---
-{{ $csiBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /bin/bash /bin/grep /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
+{{ $csiBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -53,7 +53,7 @@ git:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y curl bash grep iptables iproute2 bind-utils -y
+    - apt-get install -y curl jq bash grep iptables iproute2 bind-utils -y
   install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
     - |

@@ -70,7 +70,7 @@ spec:
       containers:
       - name: coredns
         {{- /*
-          UID: 0 GID:0 using for privilege access for fping because using hostNetwork
+          UID: 0 GID:0 using for privilege access for iptables because using hostNetwork
         */}}
         securityContext:
           allowPrivilegeEscalation: true
@@ -144,7 +144,7 @@ spec:
 {{- if not (.Values.global.enabledModules | has "cni-cilium" )}}
       - name: iptables-loop
         {{- /*
-          UID: 0 GID:0 using for privilege access for fping because using hostNetwork
+          UID: 0 GID:0 using for privilege access for iptables because using hostNetwork
         */}}
         securityContext:
           allowPrivilegeEscalation: true
