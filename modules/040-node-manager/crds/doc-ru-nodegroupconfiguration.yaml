@@ -28,7 +28,7 @@ spec:
 
                     Для генерации скрипта возможно использовать [Go Template](https://pkg.go.dev/text/template).
 
-                    Получить список доступных для использования в шаблонах параметров можно из Secret'а `bashible-apiserver-context`:
+                    Получить список параметров, доступных для использования в шаблонах можно из секрета `bashible-apiserver-context`:
                     ```
                     kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o yaml | grep -w 'input.yaml:' | awk '{ print $2}' | base64 --decode
                     ```
