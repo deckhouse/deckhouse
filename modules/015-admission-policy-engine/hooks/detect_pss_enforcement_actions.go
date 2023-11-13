@@ -32,7 +32,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "pss_enforcement_actions",
-			ApiVersion: "",
+			ApiVersion: "v1",
 			Kind:       "Namespace",
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
