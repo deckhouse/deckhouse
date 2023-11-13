@@ -30,11 +30,26 @@ import (
 )
 
 var _ = Describe("Global hooks :: deckhouse_admission_policy_engine_mark", func() {
-	Context("Cluster with deckhouse v1.55.1", func() {
+
+	Context("Cluster with wrong semver", func() {
+		f := HookExecutionConfigInit(`{"global": {"discovery": {}, "deckhouseVersion": "1.55.1"}}`, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(d8nsWithoutAnnotations))
+			createNamespace(d8nsWithoutAnnotations)
+			f.RunHook()
+		})
+		It("d8-namespace shouldn't have admission-policy-engine annotation set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			namespace := f.KubernetesGlobalResource("Namespace", d8Namespace)
+			Expect(namespace.Field(fmt.Sprintf("metadata.annotations.%s", strings.ReplaceAll(admissionPolicyEngineAnnotation, ".", "\\."))).Exists()).ToNot(BeTrue())
+		})
+	})
+
+	Context("Cluster with deckhouse v1.55.1 and annotation isn't set", func() {
 		f := HookExecutionConfigInit(`{"global": {"discovery": {}, "deckhouseVersion": "v1.55.1"}}`, `{}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(d8nsWithoutAnnotations))
-			createNamespace()
+			createNamespace(d8nsWithoutAnnotations)
 			f.RunHook()
 		})
 		It("d8-namespace should have admission-policy-engine annotation set", func() {
@@ -44,11 +59,26 @@ var _ = Describe("Global hooks :: deckhouse_admission_policy_engine_mark", func(
 		})
 	})
 
-	Context("Cluster with deckhouse v1.56.1", func() {
+	Context("Cluster with deckhouse v1.55.3 and annotation is set", func() {
+		f := HookExecutionConfigInit(`{"global": {"discovery": {}, "deckhouseVersion": "v1.55.3"}}`, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(d8nsWithAnnotations))
+			createNamespace(d8nsWithAnnotations)
+			f.RunHook()
+		})
+		It("d8-namespace should have admission-policy-engine annotation set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			namespace := f.KubernetesGlobalResource("Namespace", d8Namespace)
+			fmt.Println(namespace)
+			Expect(namespace.Field(fmt.Sprintf("metadata.annotations.%s", strings.ReplaceAll(admissionPolicyEngineAnnotation, ".", "\\."))).Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster with deckhouse v1.56.1 and annotation isn't set", func() {
 		f := HookExecutionConfigInit(`{"global": {"discovery": {}, "deckhouseVersion": "v1.56.1"}}`, `{}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(d8nsWithoutAnnotations))
-			createNamespace()
+			createNamespace(d8nsWithoutAnnotations)
 			f.RunHook()
 		})
 		It("d8-namespace shouldn't have admission-policy-engine annotation set", func() {
@@ -59,17 +89,27 @@ var _ = Describe("Global hooks :: deckhouse_admission_policy_engine_mark", func(
 	})
 })
 
-var d8nsWithoutAnnotations = `
+var (
+	d8nsWithoutAnnotations = `
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-system
 `
+	d8nsWithAnnotations = `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    admission-policy-engine.deckhouse.io/pss-profile-milestone: manually
+  name: d8-system
+`
+)
 
-func createNamespace() {
-
+func createNamespace(manifest string) {
 	var ns corev1.Namespace
-	_ = yaml.Unmarshal([]byte(d8nsWithoutAnnotations), &ns)
+	_ = yaml.Unmarshal([]byte(manifest), &ns)
 	_, _ = dependency.TestDC.MustGetK8sClient().CoreV1().Namespaces().Create(context.TODO(), &ns, metav1.CreateOptions{})
 }
