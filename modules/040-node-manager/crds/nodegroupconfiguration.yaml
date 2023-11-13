@@ -35,16 +35,16 @@ spec:
                 content:
                   type: string
                   description: |
-                    Содержимое шага конфигурации в виде bash-скрипта.
+                    A bash script that does the same things you would do in a configuration step.
 
-                    Для генерации скрипта возможно использовать [Go Template](https://pkg.go.dev/text/template).
+                    You can use [Go Template](https://pkg.go.dev/text/template) to generate a script.
 
-                    Получить список доступных для использования в шаблонах параметров можно из Secret'а `bashible-apiserver-context`:
+                    The list of parameters available for use in templates can be retrieved from the `bashible-apiserver-context` Secret as follows:
                     ```
                     kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o yaml | grep -w 'input.yaml:' | awk '{ print $2}' | base64 --decode
                     ```
 
-                    Также в скрипте допустимо использовать подготовленные команды [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster). Например:
+                    You can also use the pre-defined [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) commands in the script. For example:
                     ```
                     bb-event-on 'bb-package-installed' 'post-install'
                     post-install() {
