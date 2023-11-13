@@ -197,7 +197,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			},
 		},
 		{
-			Name: `ConfigMap "install-version"`,
+			Name: `ConfigMap "install-data"`,
 			Manifest: func() interface{} {
 				return &apiv1.ConfigMap{
 					TypeMeta: metav1.TypeMeta{
@@ -205,7 +205,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "install-version",
+						Name:      "install-data",
 						Namespace: "d8-system",
 					},
 					Data: map[string]string{
