@@ -28,6 +28,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
@@ -40,9 +42,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 )
 
 const (
@@ -57,13 +56,13 @@ func NewModuleDocsSyncer() (*ModuleDocsSyncer, error) {
 		return nil, fmt.Errorf("get cluster config: %w", err)
 	}
 
-	kClient, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("get k8s client: %w", err)
 	}
 
 	factory := informers.NewSharedInformerFactoryWithOptions(
-		kClient,
+		clientset,
 		resyncTimeout,
 		informers.WithNamespace(namespace),
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
