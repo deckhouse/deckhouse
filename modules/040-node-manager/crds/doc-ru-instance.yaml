@@ -22,7 +22,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Независимый от реализацииобъект эфемерной машины.
+            Независимый от реализации объект эфемерной машины.
           properties:
             status:
               properties:
