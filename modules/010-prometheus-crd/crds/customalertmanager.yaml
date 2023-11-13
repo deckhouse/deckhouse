@@ -18,12 +18,43 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
           description: The resource for connecting additional Alertmanagers to Prometheus.
           required: ['spec']
           properties:
+            status:
+              type: object
+              properties:
+                deckhouse:
+                  type: object
+                  properties:
+                    synced:
+                      type: string
+                      description: True if last observed version of the resource was successfully applied in the cluster.
+                    observed:
+                      type: object
+                      description: Contains last timestamp when the resource change was noted by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when a change of the resource was noted by the operator.
+                        checkSum:
+                          type: string
+                          description: The checksum of last observed resource.
+                    processed:
+                      type: object
+                      description: Contains last timestamp when the resource was applied in the cluster by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when a change of the resource was processed by the operator.
+                        checkSum:
+                          type: string
+                          description: The checksum of last processed resource.
             spec:
               type: object
               properties:
@@ -1249,3 +1280,17 @@ spec:
           name: Type
           description: 'Type of an Alertmanager.'
           type: string
+        - jsonPath: .status.deckhouse.synced
+          name: Synced
+          type: string
+          description: Status message if current version of the resource was processed by the operator.
+        - name: Observed
+          jsonPath: .status.deckhouse.observed.lastTimestamp
+          type: string
+          description: Timestamp when the resource was observed by the operator last time.
+          priority: 1
+        - name: Processed
+          jsonPath: .status.deckhouse.processed.lastTimestamp
+          type: string
+          description: Timestamp when the resource was processed by the operator last time.
+          priority: 1

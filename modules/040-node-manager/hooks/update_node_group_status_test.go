@@ -276,6 +276,12 @@ status:
 		panic(err)
 	}
 
+	const checkSum = "123123123123123"
+	err = os.Setenv("TEST_CONDITIONS_CALC_CHKSUM", checkSum)
+	if err != nil {
+		panic(err)
+	}
+
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -306,32 +312,39 @@ status:
 				"lastMachineFailures": [],
 				"conditionSummary": {"statusMessage": "", "ready": "True"},
 				"conditions": [
-                    {
+					{
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
 						"status": "False",
-              			"type": "Ready"
+						"type": "Ready"
 					},
 					{
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
 						"status": "False",
-              			"type": "Updating"
+						"type": "Updating"
 					},
 					{
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
 						"status": "False",
-              			"type": "WaitingForDisruptiveApproval"
+						"type": "WaitingForDisruptiveApproval"
 					},
 					{
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
 						"status": "False",
-              			"type": "Error"
+						"type": "Error"
 					},
 					{
 						"lastTransitionTime": "2023-03-03T16:49:52Z",
 						"status": "True",
-              			"type": "Scaling"
+						"type": "Scaling"
 					}
-				]
+				],
+				"deckhouse": {
+					"processed": {
+						"checkSum": "123123123123123",
+						"lastTimestamp": "2023-03-03T16:49:52Z"
+					},
+					"synced": "False"
+				}
 			}`
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(expected))
@@ -348,92 +361,106 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			const expectedNG1 = `
 				{
-				  "extra": "thing",
-				  "max": 5,
-				  "min": 1,
-				  "desired": 2,
-				  "instances": 2,
-				  "nodes": 2,
-				  "ready": 1,
-				  "upToDate": 2,
-				  "lastMachineFailures": [],
-				  "conditionSummary": {
-					"statusMessage": "",
-					"ready": "True"
-				  },
-				  "conditions": [
-                    {
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Ready"
+					"extra": "thing",
+					"max": 5,
+					"min": 1,
+					"desired": 2,
+					"instances": 2,
+					"nodes": 2,
+					"ready": 1,
+					"upToDate": 2,
+					"lastMachineFailures": [],
+					"conditionSummary": {
+						"statusMessage": "",
+						"ready": "True"
 					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Updating"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "WaitingForDisruptiveApproval"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Error"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Scaling"
+					"conditions": [
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Ready"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Updating"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "WaitingForDisruptiveApproval"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Error"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Scaling"
+						}
+					],
+					"deckhouse": {
+						"processed": {
+							"checkSum": "123123123123123",
+							"lastTimestamp": "2023-03-03T16:49:52Z"
+						},
+						"synced": "False"
 					}
-				  ]
 				}
 			`
 
 			const expectedNG2 = `
 				{
-				  "max": 9,
-				  "min": 6,
-				  "desired": 6,
-				  "instances": 0,
-				  "nodes": 0,
-				  "ready": 0,
-				  "upToDate": 0,
-				  "lastMachineFailures": [],
-				  "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",
-				  "conditionSummary": {
-					"statusMessage": "Machine creation failed. Check events for details.",
-					"ready": "False"
-				  },
-				  "conditions": [
-                    {
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Ready"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Updating"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "WaitingForDisruptiveApproval"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Error",
-						"message": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Scaling"
+					"max": 9,
+					"min": 6,
+					"desired": 6,
+					"instances": 0,
+					"nodes": 0,
+					"ready": 0,
+					"upToDate": 0,
+					"lastMachineFailures": [],
+					"error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",
+					"conditionSummary": {
+						"statusMessage": "Machine creation failed. Check events for details.",
+						"ready": "False"
+					 },
+					"conditions": [
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Ready"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Updating"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "WaitingForDisruptiveApproval"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Error",
+							"message": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Scaling"
+						}
+					],
+					"deckhouse": {
+						"processed": {
+							"checkSum": "123123123123123",
+							"lastTimestamp": "2023-03-03T16:49:52Z"
+						},
+						"synced": "False"
 					}
-				  ]
 				}
 			`
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(expectedNG1))
@@ -451,73 +478,87 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			const expectedNG1 = `
 				{
-				  "extra": "thing",
-				  "nodes": 2,
-				  "ready": 1,
-				  "upToDate": 2,
-				  "conditionSummary": {
-					"statusMessage": "",
-					"ready": "True"
-				  },
-				  "conditions": [
-                    {
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Ready"
+					"extra": "thing",
+					"nodes": 2,
+					"ready": 1,
+					"upToDate": 2,
+					"conditionSummary": {
+						"statusMessage": "",
+						"ready": "True"
 					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Updating"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "WaitingForDisruptiveApproval"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Error"
+					"conditions": [
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Ready"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Updating"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "WaitingForDisruptiveApproval"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Error"
+						}
+					],
+					"deckhouse": {
+						"processed": {
+							"checkSum": "123123123123123",
+							"lastTimestamp": "2023-03-03T16:49:52Z"
+						},
+						"synced": "False"
 					}
-				  ]
 				}
 			`
 			const expectedNG2 = `
 				{
-				  "nodes": 0,
-				  "ready": 0,
-				  "upToDate": 0,
-				  "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",
-				  "conditionSummary": {
-					"statusMessage": "Machine creation failed. Check events for details.",
-					"ready": "False"
-				  },
-				  "conditions": [
-                    {
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Ready"
+					"nodes": 0,
+					"ready": 0,
+					"upToDate": 0,
+					"error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",
+					"conditionSummary": {
+						"statusMessage": "Machine creation failed. Check events for details.",
+						"ready": "False"
 					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Updating"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "WaitingForDisruptiveApproval"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Error",
- 						"message": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."
+					"conditions": [
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Ready"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Updating"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "WaitingForDisruptiveApproval"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Error",
+							"message": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."
+						}
+					],
+					"deckhouse": {
+						"processed": {
+							"checkSum": "123123123123123",
+							"lastTimestamp": "2023-03-03T16:49:52Z"
+						},
+						"synced": "False"
 					}
-				  ]
 				}
-`
+			`
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(expectedNG1))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(expectedNG2))
 			// MachineDeployment metrics should be set
@@ -537,70 +578,77 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			const expected = `
 				{
-				  "max": 9,
-				  "min": 6,
-				  "desired": 6,
-				  "instances": 0,
-				  "nodes": 0,
-				  "ready": 0,
-				  "upToDate": 0,
-				  "lastMachineFailures": [
-					{
-					  "lastOperation": {
-						"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.",
-						"lastUpdateTime": "2020-05-15T15:01:13Z",
-						"state": "Failed",
-						"type": "Create"
-					  },
-					  "name": "machine-ng-2-bbb",
-					  "ownerRef": "korker-3e52ee98-8649499f7"
+					"max": 9,
+					"min": 6,
+					"desired": 6,
+					"instances": 0,
+					"nodes": 0,
+					"ready": 0,
+					"upToDate": 0,
+					"lastMachineFailures": [
+						{
+							"lastOperation": {
+								"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.",
+								"lastUpdateTime": "2020-05-15T15:01:13Z",
+								"state": "Failed",
+								"type": "Create"
+							},
+							"name": "machine-ng-2-bbb",
+							"ownerRef": "korker-3e52ee98-8649499f7"
+						},
+						{
+							"lastOperation": {
+								"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.",
+								"lastUpdateTime": "2020-05-15T15:01:15Z",
+								"state": "Failed",
+								"type": "Create"
+							},
+							"name": "machine-ng-2-aaa",
+							"ownerRef": "korker-3e52ee98-8649499f7"
+						}
+					],
+					"error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",
+					"conditionSummary": {
+						"statusMessage": "Machine creation failed. Check events for details.",
+						"ready": "False"
 					},
-					{
-					  "lastOperation": {
-						"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.",
-						"lastUpdateTime": "2020-05-15T15:01:15Z",
-						"state": "Failed",
-						"type": "Create"
-					  },
-					  "name": "machine-ng-2-aaa",
-					  "ownerRef": "korker-3e52ee98-8649499f7"
+					"conditions": [
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Ready"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "Updating"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "False",
+							"type": "WaitingForDisruptiveApproval"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Error",
+							"message": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.|Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2."
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Scaling"
+						}
+						],
+						"deckhouse": {
+							"processed": {
+								"checkSum": "123123123123123",
+								"lastTimestamp": "2023-03-03T16:49:52Z"
+							},
+							"synced": "False"
+						}
 					}
-				  ],
-				  "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",
-				  "conditionSummary": {
-					"statusMessage": "Machine creation failed. Check events for details.",
-					"ready": "False"
-				  },
-                  "conditions": [
-                    {
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Ready"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Updating"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "WaitingForDisruptiveApproval"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Error",
- 						"message": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.|Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2."
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Scaling"
-					}
-				  ]
-				}
-			`
+				`
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(expected))
 		})
 	})
@@ -615,78 +663,85 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			const expected = `
 				{
-				  "max": 9,
-				  "min": 6,
-				  "desired": 6,
-				  "instances": 0,
-				  "nodes": 0,
-				  "ready": 0,
-				  "upToDate": 0,
-				  "lastMachineFailures": [
-					{
-					  "lastOperation": {
-						"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.",
-						"lastUpdateTime": "2020-05-15T15:01:13Z",
-						"state": "Failed",
-						"type": "Create"
-					  },
-					  "name": "machine-ng-2-bbb",
-					  "ownerRef": "korker-3e52ee98-8649499f7"
-					},
-					{
-					  "lastOperation": {
-						"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.",
-						"lastUpdateTime": "2020-05-15T15:01:15Z",
-						"state": "Failed",
-						"type": "Create"
-					  },
-					  "name": "machine-ng-2-aaa",
-					  "ownerRef": "korker-3e52ee98-8649499f7"
-					},
-					{
-					  "lastOperation": {
-						"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3.",
-						"lastUpdateTime": "2020-05-15T15:05:12Z",
-						"state": "Failed",
-						"type": "Create"
-					  },
-					  "name": "machine-ng-2-ccc",
-					  "ownerRef": "korker-3e52ee98-8649499f7"
+					"max": 9,
+					"min": 6,
+					"desired": 6,
+					"instances": 0,
+					"nodes": 0,
+					"ready": 0,
+					"upToDate": 0,
+					"lastMachineFailures": [
+						{
+							"lastOperation": {
+								"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.",
+								"lastUpdateTime": "2020-05-15T15:01:13Z",
+								"state": "Failed",
+								"type": "Create"
+							},
+							"name": "machine-ng-2-bbb",
+							"ownerRef": "korker-3e52ee98-8649499f7"
+						},
+						{
+							"lastOperation": {
+								"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.",
+								"lastUpdateTime": "2020-05-15T15:01:15Z",
+								"state": "Failed",
+								"type": "Create"
+							  },
+							"name": "machine-ng-2-aaa",
+							"ownerRef": "korker-3e52ee98-8649499f7"
+						},
+						{
+							"lastOperation": {
+								"description": "Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3.",
+								"lastUpdateTime": "2020-05-15T15:05:12Z",
+								"state": "Failed",
+								"type": "Create"
+							},
+							"name": "machine-ng-2-ccc",
+							"ownerRef": "korker-3e52ee98-8649499f7"
+						}
+						],
+						"error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",
+						"conditionSummary": {
+							"statusMessage": "Machine creation failed. Check events for details.",
+							"ready": "False"
+						},
+						"conditions": [
+							{
+								"lastTransitionTime": "2023-03-03T16:49:52Z",
+								"status": "False",
+								"type": "Ready"
+							},
+							{
+								"lastTransitionTime": "2023-03-03T16:49:52Z",
+								"status": "False",
+								"type": "Updating"
+							},
+							{
+								"lastTransitionTime": "2023-03-03T16:49:52Z",
+								"status": "False",
+								"type": "WaitingForDisruptiveApproval"
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Error",
+							"message": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.|Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3."
+						},
+						{
+							"lastTransitionTime": "2023-03-03T16:49:52Z",
+							"status": "True",
+							"type": "Scaling"
+						}
+					],
+					"deckhouse": {
+						"processed": {
+							"checkSum": "123123123123123",
+							"lastTimestamp": "2023-03-03T16:49:52Z"
+						},
+						"synced": "False"
 					}
-				  ],
-				  "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",
-				  "conditionSummary": {
-					"statusMessage": "Machine creation failed. Check events for details.",
-					"ready": "False"
-				  },
-                  "conditions": [
-                    {
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Ready"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "Updating"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "False",
-              			"type": "WaitingForDisruptiveApproval"
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Error",
- 						"message": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.|Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3."
-					},
-					{
-						"lastTransitionTime": "2023-03-03T16:49:52Z",
-						"status": "True",
-              			"type": "Scaling"
-					}
-				  ]
 				}
 			`
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(expected))
