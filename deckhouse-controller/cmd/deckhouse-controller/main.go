@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/controller"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
