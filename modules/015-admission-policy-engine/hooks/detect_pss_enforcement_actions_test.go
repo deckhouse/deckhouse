@@ -25,8 +25,8 @@ import (
 
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss enforcement actions", func() {
 	f := HookExecutionConfigInit(
-		`{"admissionPolicyEngine": {"internal": {"bootstrapped": true, "podSecurityStandards": {"enforcementActions": []}}}}`,
-		`{"admissionPolicyEngine": {"podSecurityStandards": {"enforcementAction": "Deny"}}}`,
+		`{"admissionPolicyEngine": {"podSecurityStandards": {"enforcementAction": "Deny"},"internal": {"bootstrapped": true, "podSecurityStandards": {"enforcementActions": []}}}}`,
+		`{}`,
 	)
 
 	Context("Empty cluster with default enforcement action", func() {
