@@ -10,6 +10,12 @@ import:
 ---
 artifact: {{ $.ModuleName }}/capi-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+git:
+  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -17,11 +23,12 @@ shell:
   beforeInstall:
   - apk add --no-cache make git bash
   install:
-  - mkdir /src
+  - mkdir /cluster-api
   - export GOPROXY={{ $.GOPROXY }}
-  - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cluster-api.git /src
-  - cd /src
+  - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cluster-api.git /cluster-api
+  - for ifile in $(ls /patches/*.patch); do git apply $ifile; done
+  - cd /cluster-api
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make managers LDFLAGS="-s -w -extldflags \"-static\""
-  - mv /src/bin/manager /capi-controller-manager
+  - mv /cluster-api/bin/manager /capi-controller-manager
   - chown 64535:64535 /capi-controller-manager
   - chmod 0700 /capi-controller-manager

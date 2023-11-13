@@ -1,0 +1,32 @@
+Subject: [PATCH] Use k8s-provided bearer token for in-cluster operation
+---
+Index: cluster-api/controllers/remote/cluster_cache_tracker.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-api/controllers/remote/cluster_cache_tracker.go b/cluster-api/controllers/remote/cluster_cache_tracker.go
+--- a/cluster-api/controllers/remote/cluster_cache_tracker.go	(revision e55c6bfad66bb7c39d95037b7334c795e6201b23)
++++ b/cluster-api/controllers/remote/cluster_cache_tracker.go	(revision 0c58bf16930fc4ccb0ca0edd57c6833726e6a45a)
+@@ -316,17 +316,19 @@
+ 			return nil, errors.Wrapf(err, "error creating client for self-hosted cluster %q", cluster.String())
+ 		}
+ 
+-		// Use CA and Host from in-cluster config.
++		// Use CA, Host and Bearer token from in-cluster config.
+ 		config.CAData = nil
+ 		config.CAFile = inClusterConfig.CAFile
+ 		config.Host = inClusterConfig.Host
++		config.BearerToken = inClusterConfig.BearerToken
+ 
+ 		// Create a new client and overwrite the previously created client.
+ 		c, _, cache, err = t.createClient(ctx, config, cluster, indexes)
+ 		if err != nil {
+ 			return nil, errors.Wrap(err, "error creating client for self-hosted cluster")
+ 		}
+-		log.Info(fmt.Sprintf("Creating cluster accessor for cluster %q with in-cluster service %q", cluster.String(), config.Host))
++		// fixme remove token after tests
++		log.Info(fmt.Sprintf("Creating cluster accessor for cluster %q with in-cluster service %q BEARER TOKEN %q", cluster.String(), config.Host, config.BearerToken))
+ 	} else {
+ 		log.Info(fmt.Sprintf("Creating cluster accessor for cluster %q with the regular apiserver endpoint %q", cluster.String(), config.Host))
+ 	}
