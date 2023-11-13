@@ -28,7 +28,7 @@ const (
 	DefaultTunnelRemotePort = 22322
 )
 
-func (pc *Checker) CheckSSHTunel() error {
+func (pc *Checker) CheckSSHTunnel() error {
 	if app.PreflightSkipSSHForword {
 		log.InfoLn("SSH forward preflight check was skipped")
 		return nil
@@ -45,8 +45,7 @@ func (pc *Checker) CheckSSHTunel() error {
 	err := tun.Up()
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
-Please check connectivity to control-plane host or
-check that sshd config 'AllowTcpForwarding' set to 'yes' on control-plane node.`, err)
+Please check connectivity to control-plane host and that the sshd config parameter 'AllowTcpForwarding' set to 'yes' on control-plane node.`, err)
 	}
 
 	tun.Stop()

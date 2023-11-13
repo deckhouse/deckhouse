@@ -35,7 +35,7 @@ import (
 
 const dhctlVersionMismatchError = "" +
 	"%w\nThere is a possibility that you will not be able to install latest versions of Deckhouse correctly with this image.\n" +
-	`To fix this add "--pull=always" flag to your "docker run" cmdline`
+	`To fix this add "--pull=always" flag to your "docker run" cmdline using release channel tag or use --preflight-skip-deckhouse-version-check flag`
 
 var (
 	ErrInstallerVersionMismatch                      = errors.New("Your installer image is outdated")

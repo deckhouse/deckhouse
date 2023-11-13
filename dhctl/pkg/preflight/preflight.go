@@ -52,7 +52,7 @@ func NewChecker(sshClient *ssh.Client, config *config.DeckhouseInstaller, metaCo
 func (pc *Checker) Static() error {
 	return pc.do("Preflight checks for static-cluster", []checkStep{
 		{
-			fun:            pc.CheckSSHTunel,
+			fun:            pc.CheckSSHTunnel,
 			successMessage: "ssh tunnel will up",
 			skipFlag:       app.SSHForwardArgName,
 		},

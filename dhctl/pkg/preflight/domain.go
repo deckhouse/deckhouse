@@ -30,7 +30,7 @@ func (pc *Checker) CheckLocalhostDomain() error {
 		return nil
 	}
 
-	log.DebugLn("Checking resolving the localhost domain")
+	log.DebugLn("Checking if localhost domain resolves correctly")
 
 	file, err := template.RenderAndSavePreflightCheckLocalhostScript()
 	if err != nil {
@@ -42,9 +42,9 @@ func (pc *Checker) CheckLocalhostDomain() error {
 	if err != nil {
 		log.ErrorLn(strings.Trim(string(out), "\n"))
 		if ee, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("check_localhost.sh: %w, %s", err, string(ee.Stderr))
+			return fmt.Errorf("Localhost domain resolving check failed: %w, %s", err, string(ee.Stderr))
 		}
-		return fmt.Errorf("check_localhost.sh: %w", err)
+		return fmt.Errorf("Could not execute a script to check for localhost domain resolution: %w", err)
 	}
 
 	log.DebugLn(string(out))

@@ -15,6 +15,6 @@
 */}}
 
 if ! getent ahosts localhost; then
-  echo "Localhost is unavailable. You should add record '127.0.0.1 localhost' to /etc/hosts file."
+  echo "localhost domain is not resolved. You should add a line '127.0.0.1 localhost' to this node's /etc/hosts file."
   exit 1
 fi
