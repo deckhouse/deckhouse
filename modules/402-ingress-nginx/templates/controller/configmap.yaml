@@ -179,7 +179,7 @@ data:
   }'
 
   # We can't use whitelist-source-range option, because it may be overwritten by annotation of ingress resource.
-  {{- if $crd.spec.acceptRequestsFrom }}
+  {{- if and $crd.spec.acceptRequestsFrom (not $failover) }}
   http-snippet: |
     geo $realip_remote_addr $d8_ingreess_nginx_access_restricted {
       default "yes";
