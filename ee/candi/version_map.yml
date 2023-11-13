@@ -1,36 +1,10 @@
 bashible:
-  redos: &redos
+  redos:
     '7.3':
-  astra: &astra
+  astra:
     '1.7':
-k8s:
-  '1.24':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      astra:
-        !!merge <<: *astra
-  '1.25':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      astra:
-        !!merge <<: *astra
-  '1.26':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      astra:
-        !!merge <<: *astra
-  '1.27':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      astra:
-        !!merge <<: *astra
-  '1.28':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      astra:
-        !!merge <<: *astra
+  altlinux:
+    'p10':
+    '10.0':
+    '10.1':
+    '10.2':
