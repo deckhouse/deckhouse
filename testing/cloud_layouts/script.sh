@@ -769,15 +769,15 @@ function wait_cluster_ready() {
   infoScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh")
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
 
-#  if [[ "$PROVIDER" == "Static" ]]; then
-#    if ! run_linstor_tests; then
-#      >&2 echo -n "Linstor tests failed"
-#      >&2 echo -n "Fetch Deckhouse logs after test ..."
-#      $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
-#      return 1
-#    fi
-#  fi
-#  echo "Linstor test suite: success"
+  if [[ "$LINSTOR_TEST" == "standard" ]]; then
+    if ! run_linstor_tests; then
+      >&2 echo -n "Linstor tests failed"
+      >&2 echo -n "Fetch Deckhouse logs after test ..."
+      $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
+      return 1
+    fi
+    echo "Linstor test suite: success"
+  fi
 
   test_failed=
 
@@ -800,6 +800,258 @@ function wait_cluster_ready() {
   if [[ $test_failed == "true" ]] ; then
     return 1
   fi
+}
+
+function run_linstor_stress_test() {
+  test_failed=
+# Похоже лучше перепистаь testScript=$(cat ./test_stress.sh)
+  testScript=$(cat <<"END_SCRIPT"
+export lc='kubectl -n d8-linstor exec -t deploy/linstor-controller -- linstor'
+
+
+create_ns () {
+  export NAMESPACE=${1}
+  local template=$(echo "$TEMPLATE_NS" | envsubst)
+  kubectl apply -f - <<EFI
+${template}
+EFI
+}
+
+create_sts () {
+  local namespace=${1}
+  local sts_count=${2}
+  export REPLICAS_COUNT=${3}
+  export STORAGE_SIZE=${4}
+  local sc_string=${5}
+
+  local old_ifs=$IFS
+  IFS=' ' read -r -a storage_classes <<< "$sc_string"
+  IFS=$old_ifs
+
+  local num_storage_classes=${#storage_classes[@]}
+  local sc_index=0
+
+  for i in $(seq 0 $(expr $sts_count - 1)); do
+    export INDEX=${i}
+    export STORAGE_CLASS=${storage_classes[$sc_index]}
+
+    local template=$(echo "$TEMPLATE_STS" | envsubst)
+    kubectl create -n ${namespace} -f - <<EFI
+${template}
+EFI
+
+    sc_index=$(( (sc_index + 1) % num_storage_classes ))
+  done
+}
+
+kubectl_wait_pods_until_running () {
+  local namespace=${1}
+  local reference_pod_count=${2}
+  local number_of_new_pods=${3}
+  local total_pods_count=$((number_of_new_pods + reference_pod_count))
+  attempt=0
+
+  pod_info=$(kubectl -n ${namespace} get pods -owide --no-headers)
+  non_running_pods=$(echo "$pod_info" | grep -v Running | wc -l)
+  actual_pods_count=$(echo "$pod_info" | wc -l)
+
+  until [ "$non_running_pods" -eq 0 ] && [ "$actual_pods_count" -ge "$total_pods_count" ]
+  do
+    if [ $attempt -gt 60 ]; then
+      echo "Pods in namespace ${namespace} can't get up!"
+      break
+    fi
+
+    ((attempt=attempt+1))
+    echo "Waiting for pods in namespace ${namespace} (attempt number #$attempt)"
+
+    echo non_running_pods=$non_running_pods
+    echo actual_pods_count=$actual_pods_count, total_pods_count=$total_pods_count
+    sleep 10
+
+    pod_info=$(kubectl -n ${namespace} get pods -owide --no-headers)
+    non_running_pods=$(echo "$pod_info" | grep -v Running | wc -l)
+    actual_pods_count=$(echo "$pod_info" | wc -l)
+  done
+}
+
+kubectl_resize_cycle () {
+  local namespace=${1}
+  local pvc_size=${2}
+  local resize_amount=${3}
+  local resize_cycle_count=${4}
+
+  for i in $(seq 0 ${resize_cycle_count}); do
+    lead_pvc_size_number=${pvc_size::-2}
+    size="^${lead_pvc_size_number}[0-9]{2}Mi"
+    selected_pvc=$(kubectl get pvc -n ${namespace} -o json | jq -r --arg size "$size" '.items[] | select(.status.capacity.storage | test($size)) | .metadata.name')
+
+    pvc_size=$((pvc_size + $resize_amount))
+    i=$((i + 1))
+
+    pvc_size_mi=${pvc_size}Mi
+    for pvc in ${selected_pvc}; do
+      kubectl -n ${namespace} patch pvc ${pvc} -p "{\"spec\":{\"resources\":{\"requests\":{\"storage\":\"$pvc_size_mi\"}}}}"
+    done
+    sleep 200
+  done
+
+}
+
+kubectl_delete_cycle () {
+  for i in $(kubectl -n $1 $2); do
+    kubectl -n $1 delete $i
+  done
+}
+
+wait_until_deleted () {
+  local namespace=${1}
+  local reference_pod_count=${2}
+  local reference_resources_count=${3}
+  local reference_pvc_count=${4}
+  local reference_pv_count=${5}
+
+
+  attempt=0
+
+  total_pods=$(kubectl -n ${namespace} get pods -owide --no-headers | wc -l)
+  lotal_resources=$(${lc} r l | grep pvc | wc -l )
+  total_pvc=$(kubectl -n ${namespace} get pvc -owide --no-headers | wc -l)
+  total_pv=$(kubectl get pv -owide --no-headers | wc -l)
+
+
+  until [ "$total_pods" -eq "$reference_pod_count" ] && [ "$lotal_resources" -eq "$reference_resources_count" ] && [ "$total_pvc" -eq "$reference_pvc_count" ] && [ "$total_pv" -eq "$reference_pv_count" ]
+  do
+    if [ $attempt -gt 60 ]; then
+      echo "Resources in namespace ${namespace} can't deleted!"
+      break
+    fi
+
+    ((attempt=attempt+1))
+    echo "Waiting for resource in namespace ${namespace} (attempt number #$attempt)"
+    echo total_pods=$total_pods, reference_pod_count=$reference_pod_count
+    echo lotal_resources=$lotal_resources, reference_resources_count=$reference_resources_count
+    echo total_pvc=$total_pvc, reference_pvc_count=$reference_pvc_count
+    echo total_pv=$total_pv, reference_pv_count=$reference_pv_count
+    sleep 10
+
+    total_pods=$(kubectl -n ${namespace} get pods -owide --no-headers | wc -l)
+    lotal_resources=$(${lc} r l | grep pvc | wc -l )
+    total_pvc=$(kubectl -n ${namespace} get pvc -owide --no-headers | wc -l)
+    total_pv=$(kubectl get pv -owide --no-headers | wc -l)
+  done
+}
+
+export TEMPLATE_NS=$(cat <<'EFI'
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${NAMESPACE}
+EFI
+)
+
+export TEMPLATE_STS=$(cat <<'EFI'
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: log-generator-${INDEX}
+  labels:
+    app.kubernetes.io/name: flog-generator
+spec:
+  replicas: ${REPLICAS_COUNT}
+  serviceName: flog-${INDEX}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flog-generator-${INDEX}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: flog-generator-${INDEX}
+    spec:
+      containers:
+        - name: flog-generator
+          image: ex42zav/flog:0.4.3
+          command: ["/bin/sh"]
+          args: ["-c", "/srv/flog/run.sh 2>&1 | tee -a /var/log/flog/fake.log"]
+          env:
+            - name: FLOG_BATCH_SIZE
+              value: "50970"
+            - name: FLOG_TIME_INTERVAL
+              value: "1"
+          volumeMounts:
+            - name: flog-pv
+              mountPath: /var/log/flog
+        - name: logrotate
+          image: blacklabelops/logrotate
+          env:
+            - name: LOGS_DIRECTORIES
+              value: "/var/log/flog"
+            - name: LOGROTATE_COPIES
+              value: "1"
+            - name: LOGROTATE_SIZE
+              value: "50M"
+            - name: LOGROTATE_CRONSCHEDULE
+              value: "5 * * * * *"
+          volumeMounts:
+            - name: flog-pv
+              mountPath: /var/log/flog
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      creationTimestamp: null
+      name: flog-pv
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: ${STORAGE_SIZE}Mi
+      storageClassName: ${STORAGE_CLASS}
+      volumeMode: Filesystem
+EFI
+)
+
+# Start
+
+export TEST_NS="load-gen"
+export STS_COUNT=3
+export PVC_SIZE=300
+export PVC_RESIZE_STEP=100
+export RESIZE_CYCLE_COUNT=2
+
+number_of_new_pods=$(($STS_COUNT * $REPLICAS_COUNT))
+reference_resources_count=$(${lc} r l | grep pvc | wc -l)
+reference_pod_count=$(kubectl -n ${TEST_NS} get po --no-headers | wc -l)
+reference_pvc_count=$(kubectl -n ${TEST_NS} get pvc --no-headers | wc -l)
+reference_pv_count=$(kubectl get pv --no-headers | wc -l)
+
+create_ns "${TEST_NS}"
+
+create_sts "${TEST_NS}" "${STS_COUNT}" "${REPLICAS_COUNT}" "${PVC_SIZE}" "${STORAGE_CLASSES}"
+kubectl_wait_pods_until_running "${TEST_NS}" "${reference_pod_count}" "${number_of_new_pods}"
+
+kubectl_resize_cycle "${TEST_NS}" "${PVC_SIZE}" "${PVC_RESIZE_STEP}" "${RESIZE_CYCLE_COUNT}"
+
+
+read -p "Exit now? Otherwise clean all resource in namespace" inpout
+if [[ "$input" =~ ^[Yy]$ ]]; then
+    echo "End without clean"
+    exit 0
+else
+    kubectl_delete_cycle "${TEST_NS}" "get sts -o name"
+    kubectl -n "${TEST_NS}" delete pvc --all
+    wait_until_deleted "${TEST_NS}" "${reference_pod_count}" "${reference_resources_count}" "${reference_pvc_count}" "${reference_pv_count}"
+    echo "Cleaned res"
+    exit 0
+fi
+
+END_SCRIPT
+)
+}
+
+function run_linstor_evic_test() {
+
 }
 
 # run_linstor_tests executes helm test for linstor module
