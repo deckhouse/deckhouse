@@ -37,7 +37,7 @@ shell:
     - apk add --no-cache git make bash gcc glib-static musl-dev linux-headers
     - mkdir -p /src
     - cd /src
-    - git clone --depth 1 --branch v0.23.0 https://github.com/flannel-io/flannel.git .
+    - git clone --depth 1 --branch v0.23.0 {{ $.SOURCE_REPO }}/flannel-io/flannel.git .
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - make dist/flanneld
