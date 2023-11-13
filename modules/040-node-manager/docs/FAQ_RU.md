@@ -542,7 +542,7 @@ spec:
 
 ## Как добавить шаг для конфигурации узлов?
 
-Дополнительные шаги для конфигурации узлов задаются с помощью custom resource `NodeGroupConfiguration`.
+Дополнительные шаги для конфигурации узлов задаются с помощью custom resource [NodeGroupConfiguration](cr.html#nodegroupconfiguration).
 
 ## Как использовать containerd с поддержкой Nvidia GPU?
 

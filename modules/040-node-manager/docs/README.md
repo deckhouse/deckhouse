@@ -103,6 +103,118 @@ There are two ways for setting the number of nodes in a group when nodes are pro
 - The fixed number of nodes. In this case, Deckhouse will maintain the specified number of nodes (e.g., by provisioning new nodes if the old ones fail).
 - The [minimum](cr.html#nodegroup-v1-spec-cloudinstances-minperzone)/[maximum](cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) number of nodes (range). The autoscaling of nodes is triggered when cluster resources are low and the Pods are in the `Pending` state. If you create several node groups with different parameters and [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority), then the group priority will be considered when automatically scaling (first of all, the group with a high priority will be scaled).
 
+## Пользовательские настройки на узлах
+
+Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](cr.html#nodegroupconfiguration). Он позволяет выполнять bash-скрипты на узлах, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
+- установка и настройки дополнительных пакетов ОС ([пример установки kubectl-плагина](examples.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах), [пример настройки containerd с поддержкой Nvidia GPU](faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu))
+- обновления ядра ОС на конкретную версию ([пример](faq.html#как-обновить-ядро-на-узлах));
+- изменение параметров ОС ([пример настройки параметра sysctl](examples.html#задание-параметра-sysctl));
+- сбор информации на узле и выполнение других подобных действий. 
+
+Ресурс `NodeGroupConfiguration` позволяет указывать [приоритет](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+
+Код скрипта указывается в параметре [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле, содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволят встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор, становится доступным контекст с набором динамических переменных.
+
+Переменные, которые доступны для использования в шаблонизаторе: 
+<ul>
+<li><code>.cloudProvider</code> (для групп узлов с nodeType <code>CloudEphemeral</code> или <code>CloudPermanent</code>) — массив данных облачного провайдера.
+{% offtopic title="Пример данных..." %}
+```yaml
+cloudProvider:
+  instanceClassKind: OpenStackInstanceClass
+  machineClassKind: OpenStackMachineClass
+  openstack:
+    connection:
+      authURL: https://cloud.provider.com/v3/
+      domainName: Default
+      password: p@ssw0rd
+      region: region2
+      tenantName: mytenantname
+      username: mytenantusername
+    externalNetworkNames:
+    - public
+    instances:
+      imageName: ubuntu-22-04-cloud-amd64
+      mainNetwork: kube
+      securityGroups:
+      - kube
+      sshKeyPairName: kube
+    internalNetworkNames:
+    - kube
+    podNetworkMode: DirectRoutingWithPortSecurityEnabled
+  region: region2
+  type: openstack
+  zones:
+  - nova
+```
+{% endofftopic %}</li>
+<li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
+<li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
+<li><code>.nodeUsers</code> — массив данных группы узлов.
+{% offtopic title="Пример данных..." %}
+```yaml
+nodeUsers:
+- name: user1
+  spec:
+    isSudoer: true
+    nodeGroups:
+    - '*'
+    passwordHash: PASSWORD_HASH
+    sshPublicKey: SSH_PUBLIC_KEY
+    uid: 1050
+```
+{% endofftopic %}
+</li>
+<li><code>.nodeGroup</code> — массив данных группы узлов.
+{% offtopic title="Пример данных..." %}
+```yaml
+nodeGroup:
+  cri:
+    type: Containerd
+  disruptions:
+    approvalMode: Automatic
+  kubelet:
+    containerLogMaxFiles: 4
+    containerLogMaxSize: 50Mi
+    resourceReservation:
+      mode: "Off"
+  kubernetesVersion: "1.27"
+  manualRolloutID: ""
+  name: master
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    taints:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/master
+  nodeType: CloudPermanent
+  updateEpoch: "1699879470"
+```
+{% endofftopic %}</li>
+</ul>    
+
+{% raw %}
+Пример использования переменных в шаблонизаторе:
+```shell
+{{- range .nodeUsers }}
+echo 'Tuning environment for user {{ .name }}'
+# Some code for tuning user environment
+{{- end }}
+```
+
+Пример использования команд bashbooster:
+```shell
+bb-event-on 'bb-package-installed' 'post-install'
+post-install() {
+  bb-log-info "Setting reboot flag due to kernel was updated"
+  bb-flag-set reboot
+}
+```
+
+{% endraw %}
+Ход выполнения скриптов можно увидеть на узле в журнале сервиса bashible (`journalctl -u bashible.service`). Сами скрипты находятся на узле в директории `/var/lib/bashible/bundle_steps/`.
+
 ## Chaos Monkey
 
 The instrument (you can enable it for each `NodeGroup` individually) for unexpected and random termination of nodes in a systemic manner. Chaos Monkey tests the resilience of cluster elements, applications, and infrastructure components.
