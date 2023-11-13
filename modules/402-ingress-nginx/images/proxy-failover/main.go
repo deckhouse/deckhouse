@@ -130,7 +130,7 @@ func checker(w http.ResponseWriter, pid int) {
 		return
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		log.Printf("couldn't get 200 response code from nginx: %v", err)
 		w.WriteHeader(res.StatusCode)
 		w.Write([]byte("fail"))
