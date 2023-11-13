@@ -7,7 +7,7 @@ git:
 import:
 - artifact: terraform-provider-vdirector-artifact
   add: /terraform-provider-vcd
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vcd
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vdirector.namespace }}/{{ .TF.vdirector.type }}/{{ .TF.vdirector.version }}/linux_amd64/terraform-provider-vcd
   before: setup
 shell:
   beforeInstall:
@@ -24,7 +24,7 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch v{{ .TF.vsphere.version }} {{ $.SOURCE_REPO }}/vmware/terraform-provider-vcd.git /src
+    - git clone --depth 1 --branch v{{ .TF.vdirector.version }} {{ $.SOURCE_REPO }}/vmware/terraform-provider-vcd.git /src
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\""
     - mv /go/bin/terraform-provider-vcd /terraform-provider-vcd
