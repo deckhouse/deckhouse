@@ -3,8 +3,19 @@ properties:
   podSecurityStandards:
     type: object
     default: {}
-    description: "Pod Security Standards policy settings."
+    description: "Pod Security Standards policy settings(PSS)."
     properties:
+      defaultProfile:
+        type: string
+        description: |
+          Defines default PSS profile for all non-system namespaces:
+          - Privileged — Unrestricted policy. This policy allows for known privilege escalations.
+          - Baseline — Minimally restrictive policy which prevents known privilege escalations.
+          - Restricted — Heavily restricted policy, following current Pod hardening best practices.
+        enum:
+          - Privileged
+          - Baseline
+          - Restricted
       enforcementAction:
         type: string
         default: "Deny"
