@@ -28,6 +28,10 @@ import (
 	"syscall"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -36,7 +40,6 @@ import (
 	"k8s.io/utils/pointer"
 
 	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -74,7 +77,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	}
 	// directory for symlinks will actual versions to all external-modules
 	symlinksDir := filepath.Join(externalModulesDir, "modules")
-	ts := time.Now().UTC()
+	ts := metav1.NewTime(time.Now().UTC())
 
 	// run only once on startup
 	if !fsSynchronized {
@@ -218,7 +221,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	return nil
 }
 
-func suspendModuleVersionForRelease(input *go_hook.HookInput, release enqueueRelease, err error, ts time.Time) {
+func suspendModuleVersionForRelease(input *go_hook.HookInput, release enqueueRelease, err error, ts metav1.Time) {
 	if os.IsNotExist(err) {
 		err = errors.New("not found")
 	}
@@ -362,7 +365,7 @@ func (er enqueueRelease) GetVersion() *semver.Version {
 }
 
 type releasePredictor struct {
-	ts time.Time
+	ts metav1.Time
 
 	releases              []enqueueRelease
 	currentReleaseIndex   int
@@ -372,7 +375,7 @@ type releasePredictor struct {
 
 func newReleasePredictor(releases []enqueueRelease) *releasePredictor {
 	return &releasePredictor{
-		ts:       time.Now().UTC(),
+		ts:       metav1.NewTime(time.Now().UTC()),
 		releases: releases,
 
 		currentReleaseIndex:   -1,

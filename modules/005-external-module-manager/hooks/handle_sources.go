@@ -29,8 +29,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -43,10 +44,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
-	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 )
 
 const (
@@ -126,7 +125,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	for _, sn := range snap {
 		ex := sn.(v1alpha1.ModuleSource)
 		sc := v1alpha1.ModuleSourceStatus{
-			SyncTime: ts,
+			SyncTime: metav1.NewTime(ts),
 		}
 
 		opts := make([]cr.Option, 0)
@@ -244,15 +243,16 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 }
 
 func validateModule(moduleName, absPath string, weight int) error {
-	module, err := module_manager.NewModuleWithNameValidation(moduleName, absPath, weight)
-	if err != nil {
-		return err
-	}
-
-	err = deckhouse_config.Service().ValidateModule(module)
-	if err != nil {
-		return err
-	}
+	// TODO(yalosev): restore this after refactoring
+	//module, err := module_manager.NewModuleWithNameValidation(moduleName, absPath, weight)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//err = deckhouse_config.Service().ValidateModule(module)
+	//if err != nil {
+	//	return err
+	//}
 
 	if weight < 900 || weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
@@ -325,13 +325,19 @@ func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSou
 }
 
 func fetchModuleWeight(moduleVersionPath string) int {
-	moduleDefFile := path.Join(moduleVersionPath, module_manager.ModuleDefinitionFileName)
+	moduleDefFile := path.Join(moduleVersionPath, "module.yaml")
 
 	if _, err := os.Stat(moduleDefFile); err != nil {
 		return defaultModuleWeight
 	}
 
-	var def module_manager.ModuleDefinition
+	//var def module_manager.ModuleDefinition
+
+	def := struct {
+		Tags        []string `json:"tags"`
+		Weight      int      `json:"weight"`
+		Description string   `json:"description"`
+	}{}
 
 	f, err := os.Open(moduleDefFile)
 	if err != nil {

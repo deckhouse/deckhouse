@@ -17,6 +17,7 @@ package backend
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	logger "github.com/docker/distribution/context"
@@ -122,6 +123,7 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context) (*config.KubeConfi
 		}
 
 		if item.Name == "global" {
+			fmt.Println("SET VALUES FOR GLOBAL", values)
 			cfg.Global = &config.GlobalKubeConfig{
 				Values:   values,
 				Checksum: values.Checksum(),

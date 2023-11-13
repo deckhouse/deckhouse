@@ -25,7 +25,7 @@ import (
 )
 
 var _ runtime.Object = (*Module)(nil)
-var ModuleGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Module"}
+var ModuleGVK = schema.GroupVersionKind{Group: SchemeGroupVersion.Group, Version: SchemeGroupVersion.Version, Kind: "Module"}
 
 // +genclient
 // +genclient:nonNamespaced
@@ -110,4 +110,15 @@ func (m *Module) calculateLabels() {
 	if strings.HasSuffix(m.Name, "-crd") {
 		m.Labels["module.deckhouse.io/crd"] = ""
 	}
+}
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModuleList is a list of Module resources
+type ModuleList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleConfig `json:"items"`
 }

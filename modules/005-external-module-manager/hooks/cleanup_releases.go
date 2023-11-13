@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"os"
 	"path"
 	"sort"
@@ -29,7 +30,6 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

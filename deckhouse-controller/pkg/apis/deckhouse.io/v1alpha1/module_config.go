@@ -23,19 +23,25 @@ import (
 )
 
 const (
-	ModuleConfigKind       = "ModuleConfig"
-	ModuleConfigResource   = "moduleconfigs"
-	ModuleConfigGroup      = "deckhouse.io"
-	ModuleConfigVersion    = "v1alpha1"
+	ModuleConfigKind     = "ModuleConfig"
+	ModuleConfigResource = "moduleconfigs"
+
+	// ModuleConfigAPIVersion xxx
+	// Deprecated: dont use
 	ModuleConfigAPIVersion = "deckhouse.io/v1alpha1"
 )
 
 var (
 	// ModuleConfigGVR GroupVersionResource
 	ModuleConfigGVR = schema.GroupVersionResource{
-		Group:    ModuleConfigGroup,
-		Version:  ModuleConfigVersion,
+		Group:    SchemeGroupVersion.Group,
+		Version:  SchemeGroupVersion.Version,
 		Resource: ModuleConfigResource,
+	}
+	ModuleConfigGVK = schema.GroupVersionKind{
+		Group:   SchemeGroupVersion.Group,
+		Version: SchemeGroupVersion.Version,
+		Kind:    ModuleConfigKind,
 	}
 )
 
@@ -43,6 +49,7 @@ var _ runtime.Object = (*ModuleConfig)(nil)
 
 // +genclient
 // +genclient:nonNamespaced
+// +k8s:deepcopy-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ModuleConfig is a configuration for module or for global config values.
@@ -95,6 +102,7 @@ type ModuleConfigStatus struct {
 	Status  string `json:"status"`
 }
 
+// +k8s:deepcopy-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ModuleConfigList is a list of ModuleConfig resources
@@ -113,9 +121,5 @@ func (in *ModuleConfigStatus) GetObjectKind() schema.ObjectKind {
 
 func (f *moduleConfigKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *moduleConfigKind) GroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   ModuleConfigGroup,
-		Version: ModuleConfigVersion,
-		Kind:    ModuleConfigKind,
-	}
+	return ModuleConfigGVK
 }

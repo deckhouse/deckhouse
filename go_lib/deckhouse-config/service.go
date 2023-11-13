@@ -17,9 +17,8 @@ limitations under the License.
 package deckhouse_config
 
 import (
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"sync"
-
-	"github.com/flant/addon-operator/pkg/module_manager"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -82,9 +81,10 @@ func (srv *ConfigService) SetModuleNameToSources(allModuleNamesToSources map[str
 	srv.moduleNamesToSources = allModuleNamesToSources
 	srv.moduleNamesToSourcesMu.Unlock()
 
-	for moduleName, source := range allModuleNamesToSources {
-		srv.moduleManager.SetModuleSource(moduleName, source)
-	}
+	// TODO(yalosev): restore this after refactoring
+	//for moduleName, source := range allModuleNamesToSources {
+	//	srv.moduleManager.SetModuleSource(moduleName, source)
+	//}
 }
 
 func (srv *ConfigService) AddModuleNameToSource(moduleName, moduleSource string) {
@@ -92,7 +92,8 @@ func (srv *ConfigService) AddModuleNameToSource(moduleName, moduleSource string)
 	srv.moduleNamesToSources[moduleName] = moduleSource
 	srv.moduleNamesToSourcesMu.Unlock()
 
-	srv.moduleManager.SetModuleSource(moduleName, moduleSource)
+	// TODO(yalosev): restore this after refactoring
+	//srv.moduleManager.SetModuleSource(moduleName, moduleSource)
 }
 
 func (srv *ConfigService) ModuleToSourcesNames() map[string]string {
@@ -107,6 +108,8 @@ func (srv *ConfigService) ModuleToSourcesNames() map[string]string {
 	return res
 }
 
-func (srv *ConfigService) ValidateModule(module *module_manager.Module) error {
-	return srv.moduleManager.ValidateModule(module)
+func (srv *ConfigService) ValidateModule(module *modules.BasicModule) error {
+
+	return nil
+	//return srv.moduleManager.ValidateModule(module)
 }

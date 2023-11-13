@@ -28,8 +28,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/module_manager/models/hooks"
+
+	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
+
 	. "github.com/flant/addon-operator/pkg/hook/types"
-	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -140,7 +143,7 @@ type TestMetricsCollector interface {
 type HookExecutionConfig struct {
 	tmpDir                   string // FIXME
 	HookPath                 string
-	GoHook                   *sdk.HookWithMetadata
+	GoHook                   *kind.GoHook
 	values                   *values_store.ValuesStore
 	configValues             *values_store.ValuesStore
 	hookConfig               string // <hook> --config output
@@ -274,8 +277,8 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 	if err == nil && hasGoHook {
 		goHookName := filepath.Base(goHookPath)
 		for _, h := range sdk.Registry().Hooks() {
-			if strings.Contains(goHookPath, h.Metadata.Path) {
-				hec.GoHook = &h
+			if strings.Contains(goHookPath, h.GetPath()) {
+				hec.GoHook = h
 				break
 			}
 		}
@@ -377,19 +380,16 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) hookcontext.Ge
 		dependency.TestDC.K8sClient = hec.fakeCluster.Client
 
 		if hec.GoHook != nil {
-			// create GlobalHook or Module and convert its config
-			m := hec.GoHook.Metadata
-			// tests are only for schedule and kubernetes bindings, so we can test all hooks as global hooks
-			globalHook := module_manager.NewGlobalHook(m.Name, m.Path)
-			globalHook.WithGoHook(hec.GoHook.Hook)
-
-			goConfig := hec.GoHook.Hook.Config()
-			err := globalHook.WithGoConfig(goConfig)
+			// TODO: check if global here
+			m := hooks.NewModuleHook(hec.GoHook)
+			err := m.InitializeHookConfig()
 			if err != nil {
-				panic(fmt.Errorf("fail load hook golang config: %v", err))
+				panic(err)
 			}
+			hec.GoHook.BackportHookConfig(&m.GetHookConfig().HookConfig)
+			shHook := hec.GoHook.GetBasicHook()
 
-			hec.BindingContextController.WithHook(&globalHook.Hook)
+			hec.BindingContextController.WithHook(&shHook)
 		}
 
 		if len(hec.KubeExtraCRDs) > 0 {
@@ -714,7 +714,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		}
 	}
 
-	hec.GoHookError = hec.GoHook.Hook.Run(hookInput)
+	hec.GoHookError = hec.GoHook.Run(hookInput)
 
 	if patches := hookInput.Values.GetPatches(); len(patches) != 0 {
 		valuesPatch := addonutils.NewValuesPatch()
