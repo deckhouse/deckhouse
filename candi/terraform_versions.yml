@@ -25,6 +25,11 @@ vsphere:
   type: vsphere
   version: 2.0.2
 
+vcd:
+  namespace: vmware
+  type: vcd
+  version: 3.10.0
+
 yandex:
   namespace: yandex-cloud
   type: yandex

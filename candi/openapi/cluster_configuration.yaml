@@ -65,6 +65,7 @@ apiVersions:
             - "Yandex"
             - "vSphere"
             - "Azure"
+            - "VCD"
           prefix:
             type: string
             description: |
