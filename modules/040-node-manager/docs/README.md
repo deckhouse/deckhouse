@@ -105,7 +105,7 @@ There are two ways for setting the number of nodes in a group when nodes are pro
 
 ## Пользовательские настройки на узлах
 
-Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](cr.html#nodegroupconfiguration). Он позволяет выполнять bash-скрипты на узлах, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
+Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](cr.html#nodegroupconfiguration). Ресурс позволяет выполнять bash-скрипты на узлах, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
 - установка и настройки дополнительных пакетов ОС ([пример установки kubectl-плагина](examples.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах), [пример настройки containerd с поддержкой Nvidia GPU](faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu))
 - обновления ядра ОС на конкретную версию ([пример](faq.html#как-обновить-ядро-на-узлах));
 - изменение параметров ОС ([пример настройки параметра sysctl](examples.html#задание-параметра-sysctl));
