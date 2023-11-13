@@ -46,6 +46,14 @@ vsphere:
   artifactBinary: terraform-provider-vsphere
   destinationBinary: terraform-provider-vsphere
 
+vcd:
+  namespace: vmware
+  type: vcd
+  version: 3.10.0
+  artifact: terraform-provider-vcd-artifact
+  artifactBinary: terraform-provider-vcd
+  destinationBinary: terraform-provider-vcd
+
 yandex:
   namespace: yandex-cloud
   type: yandex

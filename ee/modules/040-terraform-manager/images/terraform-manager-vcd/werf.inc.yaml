@@ -1,0 +1,27 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: {{ .ModuleName }}/base-terraform-manager
+git:
+- add: /{{ .ModulePath }}candi/cloud-providers/vcd
+  to: /deckhouse/candi/cloud-providers/vcd
+import:
+- artifact: terraform-provider-vcd-artifact
+  add: /terraform-provider-vcd
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vcd.namespace }}/{{ .TF.vcd.type }}/{{ .TF.vcd.version }}/linux_amd64/terraform-provider-vcd
+  before: setup
+---
+artifact: terraform-provider-vcd-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apk add --no-cache make patch git bash
+  install:
+    - mkdir /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v{{ .TF.vcd.version }} {{ $.SOURCE_REPO }}/vmware/terraform-provider-vcd.git /src
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\""
+    - mv /go/bin/terraform-provider-vcd /terraform-provider-vcd

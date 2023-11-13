@@ -48,6 +48,7 @@ editions:
   terraformProviders:
     - openstack
     - vsphere
+    - vcd
 
 - name: FE
   modulesDir: "ee/fe/modules"

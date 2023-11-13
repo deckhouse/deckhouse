@@ -19,6 +19,7 @@ webhooks:
       - kube-basic-auth
       - d8-admission-policy-engine
       - d8-cloud-provider-openstack
+      - d8-cloud-provider-vcd
       - d8-cloud-provider-vsphere
       - d8-istio
       - d8-multitenancy-manager

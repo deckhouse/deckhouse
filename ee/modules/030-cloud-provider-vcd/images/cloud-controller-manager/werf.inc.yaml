@@ -1,0 +1,41 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.ccm.vcd }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /src/bin/cloud-provider-for-cloud-director
+  to: /cloud-provider-for-cloud-director
+  before: setup
+docker:
+  ENTRYPOINT: ["/cloud-provider-for-cloud-director"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+git:
+  - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - |
+    apt-get update && apt-get install -y --no-install-recommends \
+      git ca-certificates && apt-get clean -y && \
+      rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /src
+  - git clone --depth 1 --branch {{ $value.ccm.vcd }} {{ $.SOURCE_REPO }}/vmware/cloud-provider-for-cloud-director.git /src
+  - cd /src
+  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do git apply ${patchfile} ; done
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-provider-for-cloud-director/release.Version={{ $value.ccm.vcd }}" -o bin/cloud-provider-for-cloud-director cmd/ccm/main.go
+  {{- end }}
+{{- end }}

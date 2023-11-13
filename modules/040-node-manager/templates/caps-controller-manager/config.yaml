@@ -1,4 +1,4 @@
-{{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
+{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 ---
 apiVersion: v1
 kind: ConfigMap

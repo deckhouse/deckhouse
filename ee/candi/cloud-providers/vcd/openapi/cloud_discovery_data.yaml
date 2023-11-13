@@ -1,0 +1,46 @@
+kind: VCDCloudProviderDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1]
+      kind:
+        type: string
+        enum: [VCDCloudProviderDiscoveryData]
+      sizingPolicies:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        description: List of flavors.
+        uniqueItems: true
+      internalNetworks:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        description: List of internal networks.
+        uniqueItems: true
+      zones:
+        type: array
+        items:
+          type: string
+      storageProfiles:
+        type: array
+        items:
+          type: object
+          required: [name]
+          properties:
+            name:
+              type: string
+              minLength: 1
+            isEnabled:
+              type: boolean
+            isDefaultStorageProfile:
+              type: boolean
+        description: List of storage classes.

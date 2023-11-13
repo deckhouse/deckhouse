@@ -26,8 +26,20 @@ import (
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
+type hookParam struct {
+	serviceAccount string
+	cluster        string
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:        "/modules/node-manager",
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "capi_static_kubeconfig_secret",
+			Crontab: "0 1 * * *",
+		},
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "node_group",
@@ -90,18 +102,29 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 		}
 	}
 
+	capiClusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
+	hasCapiProvider := capiClusterName != ""
+
 	var capiEnabled bool
+	var capsEnabled bool
 
 	configMapSnapshots := input.Snapshots["config_map"]
 	if len(configMapSnapshots) > 0 {
-		capiEnabled = configMapSnapshots[0].(bool)
+		capiEnabled = hasCapiProvider || configMapSnapshots[0].(bool)
+		capsEnabled = configMapSnapshots[0].(bool)
+	} else {
+		capiEnabled = hasCapiProvider || hasStaticInstancesField
 	}
 
-	if capiEnabled || hasStaticInstancesField {
+	if capiEnabled {
 		input.Values.Set("nodeManager.internal.capiControllerManagerEnabled", true)
-		input.Values.Set("nodeManager.internal.capsControllerManagerEnabled", true)
 	} else {
 		input.Values.Remove("nodeManager.internal.capiControllerManagerEnabled")
+	}
+
+	if capsEnabled || hasStaticInstancesField {
+		input.Values.Set("nodeManager.internal.capsControllerManagerEnabled", true)
+	} else {
 		input.Values.Remove("nodeManager.internal.capsControllerManagerEnabled")
 	}
 

@@ -1,0 +1,39 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.clusterApi.vcd }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /cluster-api-provider-cloud-director
+    to: /cluster-api-provider-cloud-director
+    before: setup
+docker:
+  ENTRYPOINT: ["/cluster-api-provider-cloud-director"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+git:
+  - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apt update && apt install ca-certificates git
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch {{ $value.clusterApi.vcd }} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
+    - cd /src
+    - test -d /patches/ && for patchfile in /patches/*.patch ; do git apply ${patchfile} ; done
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version={{ $value.clusterApi.vcd }}" -o /cluster-api-provider-cloud-director
+    - chown 64535:64535 /cluster-api-provider-cloud-director
+    - chmod 0755 /cluster-api-provider-cloud-director
+  {{- end }}
+{{- end }}
