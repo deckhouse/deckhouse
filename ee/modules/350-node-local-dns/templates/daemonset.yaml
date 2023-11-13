@@ -76,6 +76,7 @@ spec:
           allowPrivilegeEscalation: true
           capabilities:
             add:
+            - DAC_OVERRIDE
             - NET_RAW
             - NET_ADMIN
             - NET_BIND_SERVICE
@@ -150,6 +151,7 @@ spec:
           allowPrivilegeEscalation: true
           capabilities:
             add:
+            - DAC_OVERRIDE
             - NET_RAW
             - NET_ADMIN
             - NET_BIND_SERVICE

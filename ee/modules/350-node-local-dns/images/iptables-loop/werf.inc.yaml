@@ -16,7 +16,7 @@ import:
 docker:
   ENTRYPOINT: ["/iptables-loop.sh"]
 ---
-{{ $csiBinaries := "/bin/rm /bin/mkfifo /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /usr/bin/inotifywait" }}
+{{ $csiBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /usr/bin/inotifywait" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
