@@ -5,6 +5,9 @@ git:
   to: /workdir/
   includePaths:
   - '**/file-filter'
+  stageDependencies:
+    install:
+      - 'file-filter'
 shell:
   install:
     - cd /workdir
@@ -22,13 +25,16 @@ shell:
 artifact: {{ .ModuleName }}/entrypoint-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 git:
-- add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld/entrypoint/
-  to: /workdir/
+- add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld/entrypoint
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
   install:
-    - cd /workdir
     - apk add --no-cache git
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint main.go
+    - cd /src
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint main.go
 ---
 artifact: {{ .ModuleName }}/flanneld-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
@@ -54,7 +60,7 @@ import:
   to: /
   before: setup
 - artifact: {{ .ModuleName }}/entrypoint-artifact
-  add: /workdir/entrypoint
+  add: /entrypoint
   to: /entrypoint
   before: setup
 - image: common/iptables-wrapper
