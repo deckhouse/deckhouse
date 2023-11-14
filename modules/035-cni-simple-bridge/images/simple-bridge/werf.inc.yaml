@@ -22,7 +22,7 @@ import:
 docker:
   ENTRYPOINT: ["/iptables-wrapper"]
 ---
-{{ $csiBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
+{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -37,7 +37,7 @@ shell:
     - apt-get update
     - apt-get install -y curl jq bash grep iptables iproute2 python3 -y
   install:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+    - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
