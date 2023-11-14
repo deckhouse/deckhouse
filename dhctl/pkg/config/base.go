@@ -58,7 +58,12 @@ func LoadConfigFromFile(path string) (*MetaConfig, error) {
 		return nil, err
 	}
 
-	err = metaConfig.LoadimagesDigests(imagesDigestsJSON)
+	err = metaConfig.LoadImagesDigests(imagesDigestsJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	err = metaConfig.LoadInstallerVersion()
 	if err != nil {
 		return nil, err
 	}
