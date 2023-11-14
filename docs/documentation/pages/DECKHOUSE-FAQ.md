@@ -386,13 +386,13 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 1. If necessary, log in to the container registry `registry.deckhouse.io` using your license key.
 
    ```shell
-   docker login -u "<DECKHOUSE_LICENSE_KEY>" registry.deckhouse.io
+   docker login -u license-token registry.deckhouse.io
    ```
 
-1. Run the Deckhouse installer version 1.54.2 or higher.
+1. Run the Deckhouse installer version 1.54.3 or higher.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.2 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.3 bash
    ```
 
    Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball.

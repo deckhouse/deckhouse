@@ -59,9 +59,9 @@ func main() {
 		return
 	}
 
+	commands.DefineMirrorCommand(kpApp)
 	if !runningInContainer {
 		// We only allow mirror functions to be used outside of container environments.
-		commands.DefineMirrorCommand(kpApp)
 		runApplication(kpApp)
 		return
 	}

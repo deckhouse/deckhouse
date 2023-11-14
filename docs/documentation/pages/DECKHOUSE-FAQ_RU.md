@@ -387,13 +387,13 @@ Deckhouse поддерживает работу только с Bearer token-с�
 1. При необходимости авторизуйтесь в container registry `registry.deckhouse.io` с помощью вашего лицензионного ключа.
 
    ```shell
-   docker login -u "<DECKHOUSE_LICENSE_KEY>" registry.deckhouse.io
+   docker login -u license-token registry.deckhouse.io
    ```
 
-1. Запустите установщик Deckhouse версии 1.54.2 или выше.
+1. Запустите установщик Deckhouse версии 1.54.3 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.2 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.3 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы Deckhouse.
