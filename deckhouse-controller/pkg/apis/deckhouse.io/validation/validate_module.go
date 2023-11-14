@@ -18,10 +18,9 @@ package validation
 
 import (
 	"context"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	log "github.com/sirupsen/logrus"
-	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
 	"net/http"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
@@ -39,15 +38,13 @@ func moduleValidationHandler() http.Handler {
 		return allowResult("")
 	})
 
-	logger := kwhlogrus.NewLogrus(log.NewEntry(log.StandardLogger()))
-
 	// Create webhook.
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
 		ID:        "module-operations",
 		Validator: vf,
-		Logger:    logger,
+		Logger:    nil,
 		Obj:       &v1alpha1.Module{},
 	})
 
-	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: logger})
+	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
 }

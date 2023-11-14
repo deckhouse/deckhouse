@@ -78,6 +78,7 @@ func start(_ *kingpin.ParseContext) error {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
 	err = dController.Start(operator.ModuleManager.GetModuleEventsChannel())
 	if err != nil {
 		fmt.Println(err)

@@ -233,9 +233,12 @@ func (dml *DeckhouseController) RestoreAbsentSourceModules() error {
 			continue
 		}
 
+		dml.sourceModule[item.Spec.ModuleName] = item.Labels["source"]
+
 		moduleDir := filepath.Join(symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, item.Spec.ModuleName))
 		_, err = os.Stat(moduleDir)
 		if err != nil && os.IsNotExist(err) {
+			log.Infof("Module %q is absent on file system. Restoring it from source %q", item.Spec.ModuleName, item.Labels["source"])
 			moduleVersion := "v" + item.Spec.Version.String()
 			moduleName := item.Spec.ModuleName
 			moduleVersionPath := path.Join(externalModulesDir, moduleName, moduleVersion)

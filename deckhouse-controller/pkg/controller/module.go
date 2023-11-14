@@ -1,9 +1,11 @@
 package controller
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -36,7 +38,10 @@ func NewDeckhouseModule(def deckhouseModuleDefinition, staticValues utils.Values
 	}
 }
 
-func (dm DeckhouseModule) AsKubeObject() *v1alpha1.Module {
+func (dm DeckhouseModule) AsKubeObject(source string) *v1alpha1.Module {
+	if source == "" {
+		source = "Embedded"
+	}
 	return &v1alpha1.Module{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1alpha1.ModuleGVK.Kind,
@@ -48,7 +53,8 @@ func (dm DeckhouseModule) AsKubeObject() *v1alpha1.Module {
 		},
 		Properties: v1alpha1.ModuleProperties{
 			Weight:      dm.basic.Order,
-			Source:      "Embedded",
+			Source:      source,
+			State:       "Disabled",
 			Description: dm.description,
 		},
 	}

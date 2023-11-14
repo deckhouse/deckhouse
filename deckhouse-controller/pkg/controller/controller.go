@@ -26,6 +26,8 @@ type DeckhouseController struct {
 	kubeClient      *versioned.Clientset
 
 	deckhouseModules map[string]*DeckhouseModule
+	// <module-name>: <module-source>
+	sourceModule map[string]string
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, moduleDirs string, vv *validation.ValuesValidator) (*DeckhouseController, error) {
@@ -44,7 +46,15 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, moduleDirs
 }
 
 func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
-	err := dml.searchAndLoadDeckhouseModules()
+	_ = dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, "common", v1.DeleteOptions{})
+	_ = dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, "registrypackages", v1.DeleteOptions{})
+
+	err := dml.RestoreAbsentSourceModules()
+	if err != nil {
+		return err
+	}
+
+	err = dml.searchAndLoadDeckhouseModules()
 	if err != nil {
 		return err
 	}
@@ -90,9 +100,7 @@ func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 				log.Errorf("Error occurred during the module %q turning off: %s", mod.basic.GetName(), err)
 				continue
 			}
-
 		}
-
 	}
 }
 
@@ -104,17 +112,20 @@ func (dml *DeckhouseController) handleModulePurge(m *DeckhouseModule) error {
 
 func (dml *DeckhouseController) handleModuleRegistration(m *DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
+		source := dml.sourceModule[m.basic.GetName()]
+		newModule := m.AsKubeObject(source)
+
 		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Create(dml.ctx, m.AsKubeObject(), v1.CreateOptions{})
+				_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Create(dml.ctx, newModule, v1.CreateOptions{})
 				return err
 			}
 
 			return err
 		}
 
-		existModule.Properties = m.AsKubeObject().Properties
+		existModule.Properties = newModule.Properties
 
 		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, existModule, v1.UpdateOptions{})
 
@@ -129,10 +140,9 @@ func (dml *DeckhouseController) handleEnabledModule(m *DeckhouseModule, enable b
 			return err
 		}
 
+		obj.Properties.State = "Disabled"
 		if enable {
 			obj.Properties.State = "Enabled"
-		} else {
-			obj.Properties.State = "Disabled"
 		}
 
 		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, obj, v1.UpdateOptions{})

@@ -16,7 +16,10 @@ limitations under the License.
 
 package requirements
 
+import "sync"
+
 type MemoryValuesStore struct {
+	lock   sync.RWMutex
 	values map[string]interface{}
 }
 
@@ -27,14 +30,20 @@ func newMemoryValuesStore() *MemoryValuesStore {
 }
 
 func (m *MemoryValuesStore) Set(key string, value interface{}) {
+	m.lock.Lock()
 	m.values[key] = value
+	m.lock.Unlock()
 }
 
 func (m *MemoryValuesStore) Remove(key string) {
+	m.lock.Lock()
 	delete(m.values, key)
+	m.lock.Unlock()
 }
 
 func (m *MemoryValuesStore) Get(key string) (interface{}, bool) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	v, ok := m.values[key]
 	return v, ok
 }
