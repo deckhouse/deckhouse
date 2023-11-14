@@ -31,6 +31,14 @@ const (
 	moduleDefinitionFile = "module.yaml"
 )
 
+var (
+	// some ephemeral modules, which we even don't want to load
+	excludeModules = map[string]struct{}{
+		"000-common":           {},
+		"007-registrypackages": {},
+	}
+)
+
 func (dml *DeckhouseController) LoadModules() ([]*modules.BasicModule, error) {
 	result := make([]*modules.BasicModule, 0, len(dml.deckhouseModules))
 
@@ -108,7 +116,11 @@ func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]deckhouse
 			return nil, err
 		}
 		// Skip non-directories.
-		if name == "" || name == "000-common" {
+		if name == "" {
+			continue
+		}
+
+		if _, ok := excludeModules[name]; ok {
 			continue
 		}
 
@@ -131,8 +143,8 @@ func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]deckhouse
 	return definitions, nil
 }
 
-// ValidModuleNameRe defines a valid module name. It may have a number prefix: it is an order of the module.
-var ValidModuleNameRe = regexp.MustCompile(`^(([0-9]+)-)?(.+)$`)
+// validModuleNameRe defines a valid module name. It may have a number prefix: it is an order of the module.
+var validModuleNameRe = regexp.MustCompile(`^(([0-9]+)-)?(.+)$`)
 
 const (
 	ModuleOrderIdx = 2
@@ -181,9 +193,9 @@ func (dml *DeckhouseController) moduleFromFile(absPath string) (*deckhouseModule
 
 // moduleFromDirName returns Module instance filled with name, order and its absolute path.
 func (dml *DeckhouseController) moduleFromDirName(dirName string, absPath string) (*deckhouseModuleDefinition, error) {
-	matchRes := ValidModuleNameRe.FindStringSubmatch(dirName)
+	matchRes := validModuleNameRe.FindStringSubmatch(dirName)
 	if matchRes == nil {
-		return nil, fmt.Errorf("'%s' is invalid name for module: should match regex '%s'", dirName, ValidModuleNameRe.String())
+		return nil, fmt.Errorf("'%s' is invalid name for module: should match regex '%s'", dirName, validModuleNameRe.String())
 	}
 
 	return &deckhouseModuleDefinition{

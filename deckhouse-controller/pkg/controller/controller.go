@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/client-go/util/retry"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
@@ -95,52 +97,66 @@ func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 }
 
 func (dml *DeckhouseController) handleModulePurge(m *DeckhouseModule) error {
-	return dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, m.basic.GetName(), v1.DeleteOptions{})
+	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
+		return dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, m.basic.GetName(), v1.DeleteOptions{})
+	})
 }
 
 func (dml *DeckhouseController) handleModuleRegistration(m *DeckhouseModule) error {
-	existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Create(dml.ctx, m.AsKubeObject(), v1.CreateOptions{})
+	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
+		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Create(dml.ctx, m.AsKubeObject(), v1.CreateOptions{})
+				return err
+			}
+
 			return err
 		}
 
+		existModule.Properties = m.AsKubeObject().Properties
+
+		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, existModule, v1.UpdateOptions{})
+
 		return err
-	}
-
-	existModule.Properties = m.AsKubeObject().Properties
-
-	_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, existModule, v1.UpdateOptions{})
-
-	return err
+	})
 }
 
 func (dml *DeckhouseController) handleEnabledModule(m *DeckhouseModule, enable bool) error {
-	obj, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	mc, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
-	if err != nil {
-		return err
-	}
+	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
+		obj, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
+		if err != nil {
+			return err
+		}
 
-	if enable {
-		obj.Properties.State = "Enabled"
-		mc.Status.State = "Enabled"
+		if enable {
+			obj.Properties.State = "Enabled"
+		} else {
+			obj.Properties.State = "Disabled"
+		}
 
-	} else {
-		obj.Properties.State = "Disabled"
+		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, obj, v1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+
+		// Update ModuleConfig if exists
+		mc, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
+			return err
+		}
+
 		mc.Status.Status = "Disabled"
-	}
+		if enable {
+			mc.Status.Status = "Enabled"
+		}
 
-	_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, obj, v1.UpdateOptions{})
-	if err != nil {
+		_, err = dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(dml.ctx, mc, v1.UpdateOptions{})
+
 		return err
-	}
-
-	_, err = dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(dml.ctx, mc, v1.UpdateOptions{})
-
-	return err
+	})
 }
