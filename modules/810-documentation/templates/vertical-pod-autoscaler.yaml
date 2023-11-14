@@ -32,7 +32,7 @@ spec:
       maxAllowed:
         cpu: 200m
         memory: 100Mi
-    - containerName: "docs-builder"
+    - containerName: "builder"
       minAllowed:
         {{- include "builder_resources" . | nindent 8 }}
       maxAllowed:

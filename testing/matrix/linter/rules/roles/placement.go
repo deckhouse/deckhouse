@@ -38,7 +38,12 @@ func isSystemNamespace(actual string) bool {
 }
 
 func isDeckhouseSystemNamespace(actual string) bool {
-	return actual == "d8-monitoring" || actual == "d8-system"
+	return actual == "d8-monitoring" ||
+		actual == "d8-system" ||
+		//TODO: remove next lines after RBAC objects naming fixes
+		actual == "d8-admission-policy-engine" ||
+		actual == "d8-operator-trivy" ||
+		actual == "d8-log-shipper"
 }
 
 func ObjectRBACPlacement(m utils.Module, object storage.StoreObject) errors.LintRuleError {
@@ -263,7 +268,7 @@ func handleRootRBACForUs(m utils.Module, object storage.StoreObject, objectName,
 			)
 		}
 	case !strings.HasPrefix(objectName, prefix):
-		if isDeckhouseSystemNamespace(namespace) {
+		if !isDeckhouseSystemNamespace(namespace) {
 			return errors.NewLintRuleError(
 				"MANIFEST053",
 				object.Identity(),
