@@ -14,25 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Don't forget to add "disableVirtualization": "true"
-
-package requirements
+package hooks
 
 import (
-	"errors"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
 )
 
 const embeddedVirtualizationEnabled = "embeddedVirtualization:enabled"
-const requirementsKey = "disableVirtualization"
 
-func init() {
-	f := func(_ string, getter requirements.ValueGetter) (bool, error) {
-		if _, ok := getter.Get(embeddedVirtualizationEnabled); ok {
-			return false, errors.New("embedded virtualization module must be disabled")
-		}
-		return true, nil
-	}
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnStartup: &go_hook.OrderedConfig{Order: 0},
+}, setRequirementsHandler)
 
-	requirements.RegisterCheck(requirementsKey, f)
+func setRequirementsHandler(input *go_hook.HookInput) error {
+	requirements.SaveValue(embeddedVirtualizationEnabled, "true")
+	return nil
 }

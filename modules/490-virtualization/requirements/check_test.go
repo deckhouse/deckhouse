@@ -14,25 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Don't forget to add "disableVirtualization": "true"
-
 package requirements
 
 import (
-	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-const embeddedVirtualizationEnabled = "embeddedVirtualization:enabled"
-const requirementsKey = "disableVirtualization"
+func TestDisabledEmbeddedVirtualizationRequirement(t *testing.T) {
+	requirements.RemoveValue(embeddedVirtualizationEnabled)
 
-func init() {
-	f := func(_ string, getter requirements.ValueGetter) (bool, error) {
-		if _, ok := getter.Get(embeddedVirtualizationEnabled); ok {
-			return false, errors.New("embedded virtualization module must be disabled")
-		}
-		return true, nil
-	}
+	t.Run("embedded virtualization is disabled", func(t *testing.T) {
+		ok, err := requirements.CheckRequirement(requirementsKey, "true")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
 
-	requirements.RegisterCheck(requirementsKey, f)
+	t.Run("embedded virtualization is enabled", func(t *testing.T) {
+		requirements.SaveValue(embeddedVirtualizationEnabled, "true")
+		ok, err := requirements.CheckRequirement(requirementsKey, "true")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+
 }
