@@ -150,7 +150,7 @@ cloudProvider:
 {% endofftopic %}</li>
 <li><code>.cri</code> — the CRI in use (starting with Deckhouse 1.49, only <code>Containerd</code> is supported).</li>
 <li><code>.kubernetesVersion</code> — the Kubernetes version in use.</li>
-<li><code>.nodeUsers</code> — node users dataset.
+<li><code>.nodeUsers</code> — the dataset with information about node users added via the [NodeUser](cr.html#nodeuser) resource.
 {% offtopic title="Example of data..." %}
 ```yaml
 nodeUsers:
