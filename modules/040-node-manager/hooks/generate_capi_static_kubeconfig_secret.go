@@ -65,7 +65,7 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 
 	nodeGroupSnapshots := input.Snapshots["node_group"]
 	for _, nodeGroupSnapshot := range nodeGroupSnapshots {
-		hasStaticInstancesField = nodeGroupSnapshot.(bool)
+		hasStaticInstancesField = nodeGroupSnapshot.(nodeGroupWithStaticInstances).HasStaticInstances
 		if hasStaticInstancesField {
 			break // we need at least one NodeGroup with staticInstances field
 		}
