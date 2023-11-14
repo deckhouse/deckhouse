@@ -103,22 +103,22 @@ There are two ways for setting the number of nodes in a group when nodes are pro
 - The fixed number of nodes. In this case, Deckhouse will maintain the specified number of nodes (e.g., by provisioning new nodes if the old ones fail).
 - The [minimum](cr.html#nodegroup-v1-spec-cloudinstances-minperzone)/[maximum](cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) number of nodes (range). The autoscaling of nodes is triggered when cluster resources are low and the Pods are in the `Pending` state. If you create several node groups with different parameters and [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority), then the group priority will be considered when automatically scaling (first of all, the group with a high priority will be scaled).
 
-## Пользовательские настройки на узлах
+## Custom node settings
 
-Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](cr.html#nodegroupconfiguration). Ресурс позволяет выполнять на узлах bash-скрипты, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
-- установка и настройки дополнительных пакетов ОС ([пример установки kubectl-плагина](examples.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах), [пример настройки containerd с поддержкой Nvidia GPU](faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu))
-- обновления ядра ОС на конкретную версию ([пример](faq.html#как-обновить-ядро-на-узлах));
-- изменение параметров ОС ([пример настройки параметра sysctl](examples.html#задание-параметра-sysctl));
-- сбор информации на узле и выполнение других подобных действий. 
+The [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource allows you to automate actions on group nodes. It supports running bash scripts on nodes (you can use the [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set) as well as the [Go Template](https://pkg.go.dev/text/template) templating engine, and is a great way to automate operations such as:
+- installing and configuring additional OS packages ([example of installing the plugin for kubectl](examples.html#an-example-of-install-cert-manager-plugin-for-kubectl-on-master-nodes), [example of installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support))
+- updating the OS kernel to a specific version ([example](faq.html#how-do-i-update-kernel-on-nodes));
+- modifying OS parameters ([example of customizing the sysctl parameter](examples.html#an-example-of-tune-sysctl-parameter));
+- collecting information on a node and carrying out other similar tasks.
 
-Ресурс `NodeGroupConfiguration` позволяет указывать [приоритет](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+The `NodeGroupConfiguration` resource allows you to assign [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) to scripts being run or limit them to running on specific [node groups](cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) and [OS types](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 
-Код скрипта указывается в параметре [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволят встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор становится доступным контекст с набором динамических переменных.
+The script code is stored in the [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content) of the resource. When a script is created on a node, the contents of the `content` parameter are fed into the [Go Template](https://pkg.go.dev/text/template) templating engine. The latter embeds an extra layer of logic when generating a script. When parsed by the templating engine, a context with a set of dynamic variables becomes available.
 
-Переменные, которые доступны для использования в шаблонизаторе: 
+The following variables are supported by the templating engine: 
 <ul>
-<li><code>.cloudProvider</code> (для групп узлов с nodeType <code>CloudEphemeral</code> или <code>CloudPermanent</code>) — массив данных облачного провайдера.
-{% offtopic title="Пример данных..." %}
+<li><code>.cloudProvider</code> (for node groups of nodeType <code>CloudEphemeral</code> or <code>CloudPermanent</code>) — cloud provider dataset.
+{% offtopic title="Example of data..." %}
 ```yaml
 cloudProvider:
   instanceClassKind: OpenStackInstanceClass
@@ -148,10 +148,10 @@ cloudProvider:
   - nova
 ```
 {% endofftopic %}</li>
-<li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
-<li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
-<li><code>.nodeUsers</code> — массив данных группы узлов.
-{% offtopic title="Пример данных..." %}
+<li><code>.cri</code> — the CRI in use (starting with Deckhouse 1.49, only <code>Containerd</code> is supported).</li>
+<li><code>.kubernetesVersion</code> — the Kubernetes version in use.</li>
+<li><code>.nodeUsers</code> — node users dataset.
+{% offtopic title="Example of data..." %}
 ```yaml
 nodeUsers:
 - name: user1
@@ -165,8 +165,8 @@ nodeUsers:
 ```
 {% endofftopic %}
 </li>
-<li><code>.nodeGroup</code> — массив данных группы узлов.
-{% offtopic title="Пример данных..." %}
+<li><code>.nodeGroup</code> — node group dataset.
+{% offtopic title="Example of data..." %}
 ```yaml
 nodeGroup:
   cri:
@@ -195,7 +195,7 @@ nodeGroup:
 </ul>    
 
 {% raw %}
-Пример использования переменных в шаблонизаторе:
+An example of using variables in a template:
 ```shell
 {{- range .nodeUsers }}
 echo 'Tuning environment for user {{ .name }}'
@@ -203,7 +203,7 @@ echo 'Tuning environment for user {{ .name }}'
 {{- end }}
 ```
 
-Пример использования команд bashbooster:
+An example of using bashbooster commands:
 ```shell
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
@@ -213,7 +213,7 @@ post-install() {
 ```
 
 {% endraw %}
-Ход выполнения скриптов можно увидеть на узле в журнале сервиса bashible (`journalctl -u bashible.service`). Сами скрипты находятся на узле в директории `/var/lib/bashible/bundle_steps/`.
+The script progress can be seen on the node in the bashible service log (`journalctl -u bashible.service`). The scripts themselves are located in the `/var/lib/bashible/bundle_steps/` directory of the node.
 
 ## Chaos Monkey
 

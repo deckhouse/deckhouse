@@ -96,7 +96,7 @@ spec:
     mv kubectl-cert_manager /usr/local/bin
 ```
 
-### Tuning sysctl parameter
+### Tuning the sysctl parameter
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

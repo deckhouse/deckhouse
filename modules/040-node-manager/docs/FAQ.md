@@ -540,7 +540,7 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
 ## How to add node configuration step?
 
-Additional node configuration steps are set by custom resource [NodeGroupConfiguration](cr.html#nodegroupconfiguration).
+Additional node configuration steps are set via the [NodeGroupConfiguration](cr.html#nodegroupconfiguration) custom resource.
 
 ## How to use containerd with Nvidia GPU support?
 
