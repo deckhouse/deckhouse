@@ -15,14 +15,10 @@ import:
   before: setup
   includePaths:
   - "python3.*"
-# - image: common/iptables-wrapper
-#   add: /iptables-wrapper
-#   to: /iptables-wrapper
-#   before: setup
 docker:
   ENTRYPOINT: ["/sbin/iptables-wrapper"]
 ---
-{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /usr/sbin/nft /sbin/iptables-wrapper" }}
+{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables* /sbin/iptables-wrapper" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -40,7 +36,7 @@ import:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y curl jq bash grep iptables iproute2 nftables python3 -y
+    - apt-get install -y curl jq bash grep iproute2 iptables-nft python3 -y
   install:
     - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
     - |
