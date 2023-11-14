@@ -36,6 +36,8 @@ func New() *sender {
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 5
 
+	// TODO переделать на cenkalti/backoff
+	// https://github.com/cenkalti/backoff/blob/v4/example_test.go#L8
 	client := retryClient.StandardClient()
 	client.Timeout = 30 * time.Second
 

@@ -15,25 +15,45 @@
 package cache
 
 import (
-	"fmt"
+	"registry-modules-watcher/internal/backends"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestSyncReleaseChannels(t *testing.T) {
-	c := New()
-	// c := Cache{
-	// 	val: make(map[registryName]map[moduleName]module),
-	// }
-	c.SetTar("TestReg", "testModule", "0.0.1", "stable", []byte("test"))
-	c.SetTar("TestReg", "testModule", "1.0.0", "alpha", []byte("test"))
-	c.ResetRange()
-	c.SetTar("TestReg", "testModule", "1.0.0", "beta", []byte("test"))
-	c.SetTar("TestReg", "testModule", "1.0.1", "alpha", []byte("test2"))
-	c.ResetRange()
-	c.SetTar("TestReg", "testModule", "1.0.1", "alpha", []byte("test2"))
-	c.SetReleaseChecksum("TestReg", "testModule", "alpha", "test checksumm")
+func TestGetState(t *testing.T) {
+	expected := []backends.Version{
+		{
+			Registry:        "TestReg",
+			Module:          "TestModule",
+			Version:         "1.0.0",
+			ReleaseChannels: []string{"alpha"},
+			TarFile:         []byte("test"),
+		},
+	}
+	cache := New()
+	cache.SetTar("TestReg", "TestModule", "1.0.0", "alpha", []byte("test"))
 
-	rng := c.GetRange()
-	fmt.Println(len(rng))
-	fmt.Println(rng)
+	state := cache.GetState()
+	assert.Equal(t, expected, state, "GetState return wrong state. Expected %v, got %v", expected, state)
+}
+
+func TestSetTar(t *testing.T) {
+	cache := New()
+	cache.SetTar("TestReg", "TestModule", "1.0.0", "stable", []byte(""))
+	cache.SetTar("TestReg", "TestModule", "1.0.0", "beta", []byte(""))
+	cache.SetTar("TestReg", "TestModule", "1.0.0", "alpha", []byte(""))
+	cache.ResetRange()
+
+	cache.SetTar("TestReg", "TestModule", "1.0.1", "alpha", []byte(""))
+	rng := cache.GetState()
+	// remove "alpha" tag from 1.0.0 and add to 1.0.1
+	assert.Equal(t, 2, len(rng), "Unexpected version range. Expected %v, got %v", 2, len(rng))
+
+	cache.SetTar("TestReg", "TestModule", "1.0.1", "beta", []byte(""))
+	cache.SetTar("TestReg", "TestModule", "1.0.2", "alpha", []byte(""))
+
+	rng = cache.GetRange()
+	// "stable" tag in 1.0.0, "beta" in 1.0.1 and "alpha" in 1.0.2
+	assert.Equal(t, 3, len(rng), "Unexpected version range. Expected %v, got %v", 3, len(rng))
 }
