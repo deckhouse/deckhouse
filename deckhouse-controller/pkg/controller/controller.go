@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flant/addon-operator/pkg/module_manager"
-
 	log "github.com/sirupsen/logrus"
 
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -42,7 +41,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, moduleDirs
 	}, nil
 }
 
-func (dml *DeckhouseController) Start(ec chan module_manager.ModuleEvent) error {
+func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 	err := dml.searchAndLoadDeckhouseModules()
 	if err != nil {
 		return err
@@ -53,7 +52,7 @@ func (dml *DeckhouseController) Start(ec chan module_manager.ModuleEvent) error 
 	return nil
 }
 
-func (dml *DeckhouseController) runEventLoop(ec chan module_manager.ModuleEvent) {
+func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 	for event := range ec {
 		fmt.Println("GET EVENT", event)
 		mod, ok := dml.deckhouseModules[event.ModuleName]
@@ -62,22 +61,28 @@ func (dml *DeckhouseController) runEventLoop(ec chan module_manager.ModuleEvent)
 			continue
 		}
 		switch event.EventType {
-		case module_manager.ModuleRegistered:
-
+		case events.ModuleRegistered:
 			err := dml.handleModuleRegistration(mod)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q registration: %s", mod.basic.GetName(), err)
 				continue
 			}
 
-		case module_manager.ModuleEnabled:
+		case events.ModulePurged:
+			err := dml.handleModulePurge(mod)
+			if err != nil {
+				log.Errorf("Error occurred during the module %q purge: %s", mod.basic.GetName(), err)
+				continue
+			}
+
+		case events.ModuleEnabled:
 			err := dml.handleEnabledModule(mod, true)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q turning on: %s", mod.basic.GetName(), err)
 				continue
 			}
 
-		case module_manager.ModuleDisabled:
+		case events.ModuleDisabled:
 			err := dml.handleEnabledModule(mod, false)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q turning off: %s", mod.basic.GetName(), err)
@@ -87,6 +92,10 @@ func (dml *DeckhouseController) runEventLoop(ec chan module_manager.ModuleEvent)
 		}
 
 	}
+}
+
+func (dml *DeckhouseController) handleModulePurge(m *DeckhouseModule) error {
+	return dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, m.basic.GetName(), v1.DeleteOptions{})
 }
 
 func (dml *DeckhouseController) handleModuleRegistration(m *DeckhouseModule) error {

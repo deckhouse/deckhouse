@@ -63,8 +63,6 @@ func start(_ *kingpin.ParseContext) error {
 
 	operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig")))
 
-	// TODO: remove deckhouse-config purge after release 1.56
-	operator.ExplicitlyPurgeModules = []string{"deckhouse-config"}
 	validation.RegisterAdmissionHandlers(operator)
 	// TODO: move this routes to the deckhouse-controller
 	module.SetupAdmissionRoutes(operator.AdmissionServer)

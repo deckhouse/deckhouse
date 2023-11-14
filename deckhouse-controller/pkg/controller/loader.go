@@ -108,7 +108,7 @@ func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]deckhouse
 			return nil, err
 		}
 		// Skip non-directories.
-		if name == "" {
+		if name == "" || name == "000-common" {
 			continue
 		}
 
