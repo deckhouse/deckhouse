@@ -73,7 +73,9 @@ spec:
   nodeType: Static
 ```
 
-## Пример установки плагина cert-manager для kubectl на master-узлах
+## Пример описания `NodeGroupConfiguration`
+
+### Установка плагина cert-manager для kubectl на master-узлах
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -94,7 +96,7 @@ spec:
     mv kubectl-cert_manager /usr/local/bin
 ```
 
-## Пример задания параметра sysctl
+### Задание параметра sysctl
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

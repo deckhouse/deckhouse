@@ -24,6 +24,10 @@ spec:
           type: object
           required:
             - spec
+          description: |
+            Executes bash scripts on nodes.
+
+            Read more in the [module documentation](./#custom-nodes-settings).
           properties:
             spec:
               type: object
@@ -34,7 +38,35 @@ spec:
               properties:
                 content:
                   type: string
-                  description: The content of the step. Can be either Go Template or plain bash.
+                  description: |
+                    A bash script that does the same things you would do in a configuration step.
+
+                    You can use [Go Template](https://pkg.go.dev/text/template) to generate a script.
+
+                    The list of parameters available for use in templates can be retrieved from the `bashible-apiserver-context` Secret as follows:
+
+                    ```shell
+                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
+                    ```
+
+                    For example:
+
+                    ```shell
+                    {{- range .nodeUsers }}
+                    echo 'Tuning environment for user {{ .name }}'
+                    # Some code for tuning user environment
+                    {{- end }}
+                    ```
+
+                    You can also use the pre-defined [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) commands in the script. For example:
+
+                    ```shell
+                    bb-event-on 'bb-package-installed' 'post-install'
+                    post-install() {
+                      bb-log-info "Setting reboot flag due to kernel was updated"
+                      bb-flag-set reboot
+                    }
+                    ```
                 weight:
                   type: integer
                   default: 100

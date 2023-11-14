@@ -19,11 +19,43 @@ spec:
       storage: true
       schema:
         openAPIV3Schema:
+          description: |
+            Ресурс для выполнения bash-скриптов на узлах.
+
+            [Подробнее](./#пользовательские-настройки-на-узлах) в документации модуля.
           properties:
             spec:
               properties:
                 content:
-                  description: Содержимое шага конфигурации. Может быть или шаблоном Go Template, или bash-скриптом.
+                  description: |
+                    Содержимое шага конфигурации в виде bash-скрипта.
+
+                    Для генерации скрипта возможно использовать [Go Template](https://pkg.go.dev/text/template).
+
+                    Получить список параметров, доступных для использования в шаблонах, можно из секрета `bashible-apiserver-context`:
+
+                    ```shell
+                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
+                    ```
+
+                    Пример:
+
+                    ```shell
+                    {{- range .nodeUsers }}
+                    echo 'Tuning environment for user {{ .name }}'
+                    # Some code for tuning user environment
+                    {{- end }}
+                    ```
+
+                    Также в скрипте допустимо использовать подготовленные команды [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster). Например:
+
+                    ```shell
+                    bb-event-on 'bb-package-installed' 'post-install'
+                    post-install() {
+                      bb-log-info "Setting reboot flag due to kernel was updated"
+                      bb-flag-set reboot
+                    }
+                    ```
                 weight:
                   description: Очередность выполнения шага конфигурации.
                 nodeGroups:

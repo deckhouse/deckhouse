@@ -103,6 +103,118 @@ There are two ways for setting the number of nodes in a group when nodes are pro
 - The fixed number of nodes. In this case, Deckhouse will maintain the specified number of nodes (e.g., by provisioning new nodes if the old ones fail).
 - The [minimum](cr.html#nodegroup-v1-spec-cloudinstances-minperzone)/[maximum](cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) number of nodes (range). The autoscaling of nodes is triggered when cluster resources are low and the Pods are in the `Pending` state. If you create several node groups with different parameters and [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority), then the group priority will be considered when automatically scaling (first of all, the group with a high priority will be scaled).
 
+## Custom node settings
+
+The [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource allows you to automate actions on group nodes. It supports running bash scripts on nodes (you can use the [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set) as well as the [Go Template](https://pkg.go.dev/text/template) templating engine, and is a great way to automate operations such as:
+- installing and configuring additional OS packages ([example of installing the plugin for kubectl](examples.html#an-example-of-install-cert-manager-plugin-for-kubectl-on-master-nodes), [example of installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support))
+- updating the OS kernel to a specific version ([example](faq.html#how-do-i-update-kernel-on-nodes));
+- modifying OS parameters ([example of customizing the sysctl parameter](examples.html#an-example-of-tune-sysctl-parameter));
+- collecting information on a node and carrying out other similar tasks.
+
+The `NodeGroupConfiguration` resource allows you to assign [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) to scripts being run or limit them to running on specific [node groups](cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) and [OS types](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+
+The script code is stored in the [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content) of the resource. When a script is created on a node, the contents of the `content` parameter are fed into the [Go Template](https://pkg.go.dev/text/template) templating engine. The latter embeds an extra layer of logic when generating a script. When parsed by the templating engine, a context with a set of dynamic variables becomes available.
+
+The following variables are supported by the templating engine: 
+<ul>
+<li><code>.cloudProvider</code> (for node groups of nodeType <code>CloudEphemeral</code> or <code>CloudPermanent</code>) — cloud provider dataset.
+{% offtopic title="Example of data..." %}
+```yaml
+cloudProvider:
+  instanceClassKind: OpenStackInstanceClass
+  machineClassKind: OpenStackMachineClass
+  openstack:
+    connection:
+      authURL: https://cloud.provider.com/v3/
+      domainName: Default
+      password: p@ssw0rd
+      region: region2
+      tenantName: mytenantname
+      username: mytenantusername
+    externalNetworkNames:
+    - public
+    instances:
+      imageName: ubuntu-22-04-cloud-amd64
+      mainNetwork: kube
+      securityGroups:
+      - kube
+      sshKeyPairName: kube
+    internalNetworkNames:
+    - kube
+    podNetworkMode: DirectRoutingWithPortSecurityEnabled
+  region: region2
+  type: openstack
+  zones:
+  - nova
+```
+{% endofftopic %}</li>
+<li><code>.cri</code> — the CRI in use (starting with Deckhouse 1.49, only <code>Containerd</code> is supported).</li>
+<li><code>.kubernetesVersion</code> — the Kubernetes version in use.</li>
+<li><code>.nodeUsers</code> — the dataset with information about node users added via the [NodeUser](cr.html#nodeuser) resource.
+{% offtopic title="Example of data..." %}
+```yaml
+nodeUsers:
+- name: user1
+  spec:
+    isSudoer: true
+    nodeGroups:
+    - '*'
+    passwordHash: PASSWORD_HASH
+    sshPublicKey: SSH_PUBLIC_KEY
+    uid: 1050
+```
+{% endofftopic %}
+</li>
+<li><code>.nodeGroup</code> — node group dataset.
+{% offtopic title="Example of data..." %}
+```yaml
+nodeGroup:
+  cri:
+    type: Containerd
+  disruptions:
+    approvalMode: Automatic
+  kubelet:
+    containerLogMaxFiles: 4
+    containerLogMaxSize: 50Mi
+    resourceReservation:
+      mode: "Off"
+  kubernetesVersion: "1.27"
+  manualRolloutID: ""
+  name: master
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    taints:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/master
+  nodeType: CloudPermanent
+  updateEpoch: "1699879470"
+```
+{% endofftopic %}</li>
+</ul>    
+
+{% raw %}
+An example of using variables in a template:
+```shell
+{{- range .nodeUsers }}
+echo 'Tuning environment for user {{ .name }}'
+# Some code for tuning user environment
+{{- end }}
+```
+
+An example of using bashbooster commands:
+```shell
+bb-event-on 'bb-package-installed' 'post-install'
+post-install() {
+  bb-log-info "Setting reboot flag due to kernel was updated"
+  bb-flag-set reboot
+}
+```
+
+{% endraw %}
+The script progress can be seen on the node in the bashible service log (`journalctl -u bashible.service`). The scripts themselves are located in the `/var/lib/bashible/bundle_steps/` directory of the node.
+
 ## Chaos Monkey
 
 The instrument (you can enable it for each `NodeGroup` individually) for unexpected and random termination of nodes in a systemic manner. Chaos Monkey tests the resilience of cluster elements, applications, and infrastructure components.

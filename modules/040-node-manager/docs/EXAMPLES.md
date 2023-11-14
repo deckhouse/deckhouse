@@ -73,7 +73,9 @@ spec:
   nodeType: Static
 ```
 
-## An example of install cert-manager plugin for kubectl on master nodes
+## An example of the `NodeGroupConfiguration` configuration
+
+### Installing the cert-manager plugin for kubectl on master nodes
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -94,7 +96,7 @@ spec:
     mv kubectl-cert_manager /usr/local/bin
 ```
 
-## An example of tune sysctl parameter
+### Tuning the sysctl parameter
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
