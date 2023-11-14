@@ -223,6 +223,10 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development
 	echo "Open http://localhost to access the documentation..."
 
+.PHONY: docs-check-links
+docs-check-links: ## Build documentation and run link checker.
+	bash tools/doc_check_links.sh
+
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
 	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse

@@ -1410,14 +1410,14 @@ jobs:
           echo "Create site structure in '${_TMPDIR}/site_en/'"
           mkdir -p ${_TMPDIR}/site_en/ ${_TMPDIR}/site_ru/
           touch ${_TMPDIR}/site_en/index.html ${_TMPDIR}/site_ru/index.html
-          rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_en/
-          rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_ru/
+          rsync -a --exclude='ru' --exclude='en' --exclude='compare' --exclude='includes/header.html' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_en/
+          rsync -a --exclude='ru' --exclude='en' --exclude='compare' --exclude='includes/header.html' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_ru/
           #
           rsync -a ${_TMPDIR}/frontend/en/ ${_TMPDIR}/site_en/
           rsync -a ${_TMPDIR}/frontend/ru/ ${_TMPDIR}/site_ru/
           #
-          rsync -a ${_TMPDIR}/backend/en/ ${_TMPDIR}/site_en/
-          rsync -a ${_TMPDIR}/backend/ru/ ${_TMPDIR}/site_ru/
+          rsync -a --exclude='includes/header.html' ${_TMPDIR}/backend/en/ ${_TMPDIR}/site_en/
+          rsync -a --exclude='includes/header.html' ${_TMPDIR}/backend/ru/ ${_TMPDIR}/site_ru/
           #
           rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/documentation/ ${_TMPDIR}/site_en/documentation/
           rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/documentation/ ${_TMPDIR}/site_ru/documentation/
@@ -1432,9 +1432,9 @@ jobs:
           # Do not exit on html-proofer error.
           set +e
           # Checking EN site
-          docker run --rm -v "${_TMPDIR}/site_en:/src:ro" klakegg/html-proofer:3.19.1 \
+          docker run --rm -v "${_TMPDIR}/site_en:/src:ro" klakegg/html-proofer:3.19.2 \
             --allow-hash-href --check-html --empty-alt-ignore \
-            --url-ignore "/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+            --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/|))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
             --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
             --http-status-ignore "0,429" ${1}
           # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
@@ -1445,9 +1445,9 @@ jobs:
           # Do not exit on html-proofer error.
           set +e
           # Checking RU site
-          docker run --rm -v "${_TMPDIR}/site_ru:/src:ro" klakegg/html-proofer:3.19.1 \
+          docker run --rm -v "${_TMPDIR}/site_ru:/src:ro" klakegg/html-proofer:3.19.2 \
             --allow-hash-href --check-html --empty-alt-ignore \
-            --url-ignore "/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+           --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/|))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
             --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
             --http-status-ignore "0,429" ${1}
           # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
