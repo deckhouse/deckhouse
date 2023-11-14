@@ -65,16 +65,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "ModuleConfig",
 			FilterFunc:                   filterModuleConfigForStatus,
-			ExecuteHookOnSynchronization: pointer.Bool(true),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			ExecuteHookOnEvents:          pointer.Bool(false),
 		},
 	},
-	Schedule: []go_hook.ScheduleConfig{
-		{
-			Name:    "update_statuses",
-			Crontab: "*/15 * * * * *",
-		},
-	},
+	//Schedule: []go_hook.ScheduleConfig{
+	//	{
+	//		Name:    "update_statuses",
+	//		Crontab: "*/15 * * * * *",
+	//	},
+	//},
 	Settings: &go_hook.HookConfigSettings{
 		EnableSchedulesOnStartup: true,
 	},

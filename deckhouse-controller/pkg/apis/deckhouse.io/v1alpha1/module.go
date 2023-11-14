@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"strings"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -44,7 +42,7 @@ type Module struct {
 }
 
 type ModuleProperties struct {
-	Weight      int    `json:"weight"`
+	Weight      uint32 `json:"weight"`
 	State       string `json:"state"`
 	Source      string `json:"source"`
 	Description string `json:"description"`
@@ -59,57 +57,6 @@ func (mk *moduleKind) GroupVersionKind() schema.GroupVersionKind {
 
 func (m *Module) GetObjectKind() schema.ObjectKind {
 	return &moduleKind{}
-}
-
-func (m *Module) SetName(name string) {
-	m.Name = name
-}
-
-func (m *Module) SetWeight(weight int) {
-	m.Properties.Weight = weight
-}
-
-func (m *Module) SetTags(tags []string) {
-	if len(tags) == 0 {
-		m.calculateLabels()
-		return
-	}
-
-	for _, tag := range tags {
-		m.Labels["module.deckhouse.io/"+tag] = ""
-	}
-}
-
-func (m *Module) SetSource(source string) {
-	m.Properties.Source = source
-}
-
-func (m *Module) SetDescription(description string) {
-	m.Properties.Description = description
-}
-
-func (m *Module) SetEnabledState(enabled bool) {
-	if enabled {
-		m.Properties.State = "Enabled"
-	} else {
-		m.Properties.State = "Disabled"
-	}
-}
-
-func (m *Module) calculateLabels() {
-	// could be removed when we will ready properties from the module.yaml file
-
-	if strings.HasPrefix(m.Name, "cni-") {
-		m.Labels["module.deckhouse.io/cni"] = ""
-	}
-
-	if strings.HasPrefix(m.Name, "cloud-provider-") {
-		m.Labels["module.deckhouse.io/cloud-provider"] = ""
-	}
-
-	if strings.HasSuffix(m.Name, "-crd") {
-		m.Labels["module.deckhouse.io/crd"] = ""
-	}
 }
 
 // +k8s:deepcopy-gen=true

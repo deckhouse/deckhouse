@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addon-operator/module-manager/loader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/kube-client/client"
@@ -61,15 +61,6 @@ func start(_ *kingpin.ParseContext) error {
 		os.Exit(1)
 	}
 
-	ff, err := loader.NewDeckhouseModuleLoader(operator.KubeClient().RestConfig())
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	fmt.Println(ff.Pupupu())
-
-	panic("tmp")
-
 	operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig")))
 
 	// TODO: remove deckhouse-config purge after release 1.56
@@ -83,7 +74,19 @@ func start(_ *kingpin.ParseContext) error {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	//operator.ModuleManager.SetupModuleProducer(apis.NewModuleProducer())
+
+	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager.ModulesDir, operator.ModuleManager.GetValuesValidator())
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = dController.Start(operator.ModuleManager.GetModuleEventsChannel())
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	operator.ModuleManager.SetModuleLoader(dController)
 
 	err = operator.Start()
 	if err != nil {

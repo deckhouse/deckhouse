@@ -17,8 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"os"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,4 +79,27 @@ properties:
         type: array
     type: object
 `, string(data))
+}
+
+func TestDownloadImage(t *testing.T) {
+	t.Skip("For manual run and check images")
+
+	dockerCfg := ""
+	repo := ""
+	tag := ""
+
+	opts := make([]cr.Option, 0)
+	opts = append(opts, cr.WithAuth(dockerCfg))
+
+	c, err := cr.NewClient(repo, opts...)
+	require.NoError(t, err)
+
+	img, err := c.Image(tag)
+	require.NoError(t, err)
+
+	err = os.MkdirAll("/tmp/module", 0777)
+	require.NoError(t, err)
+
+	err = copyModuleToFS("/tmp/module", img)
+	require.NoError(t, err)
 }
