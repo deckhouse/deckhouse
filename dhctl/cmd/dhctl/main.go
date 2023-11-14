@@ -59,14 +59,12 @@ func main() {
 		return
 	}
 
+	commands.DefineMirrorCommand(kpApp)
 	if !runningInContainer {
 		// We only allow mirror functions to be used outside of container environments.
-		commands.DefineMirrorCommand(kpApp)
 		runApplication(kpApp)
 		return
 	}
-
-	commands.DefineMirrorCommand(kpApp)
 
 	bootstrap.DefineBootstrapCommand(kpApp)
 	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
