@@ -12,8 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# shellcheck disable=SC2211,SC2153
+
 bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
-# shellcheck disable=SC2153
+bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
+
+# Use d8-curl if installed, fallback to system package if not
+bb-rp-curl() {
+  if command -v d8-curl > /dev/null ; then
+    d8-curl --parallel "$@"
+  else
+    curl "$@"
+  fi
+}
 
 # check if package installed
 # bb-rp-is-installed? package digest
@@ -22,6 +33,17 @@ bb-rp-is-installed?() {
     local INSTALLED_DIGEST=""
     INSTALLED_DIGEST="$(cat "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}/digest")"
     if [[ "${INSTALLED_DIGEST}" == "${2}" ]]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# Check if package fetched
+# bb-rp-is-fetched? package digest
+bb-rp-is-fetched?() {
+  if [[ -d "${BB_RP_FETCHED_PACKAGES_STORE}/${1}" ]]; then
+    if [[ -f "${BB_RP_FETCHED_PACKAGES_STORE}/${1}/${2}.tar.gz" ]]; then
       return 0
     fi
   fi
@@ -40,7 +62,7 @@ bb-rp-is-installed?() {
     AUTH="-u ${REGISTRY_AUTH}"
   fi
 
-  AUTH_HEADER="$(curl --retry 3 -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
+  AUTH_HEADER="$(bb-rp-curl --retry 3 -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
   AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< ${AUTH_HEADER} | cut -d '"' -f2)"
   AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2 | sed 's/ /+/g')"
   if [ -z ${AUTH_REALM} ]; then
@@ -48,61 +70,140 @@ bb-rp-is-installed?() {
   fi
   # shellcheck disable=SC2086
   # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
-  curl --retry 3 -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
+  bb-rp-curl --retry 3 -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
 }
 
-# fetch manifest from registry and get list of digests
-# bb-rp-get-digests digest
-bb-rp-get-digests() {
+# Fetch manifests from registry and save under $BB_RP_FETCHED_PACKAGES_STORE
+# bb-rp-fetch-manifests map[digest]package_name
+#
+# This function uses the PACKAGES_MAP variable from the scope of the bb-rp-fetch()
+# due to the limitations of using `declare -n` in CentOS 7 (bash 4.2, and 4.3 is needed).
+# DO NOT CALL THIS FUNCTION DIRECTLY!
+bb-rp-fetch-manifests() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token)"
-  curl --retry 3 -fsSL \
-			-H "Authorization: Bearer ${TOKEN}" \
-			-H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
-			"${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${1}" | jq -r '.layers[-1].digest'
+
+  local URLs=()
+  # key - digest to fetch, value - package name
+  local PACKAGE_DIGEST
+  for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
+    local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
+    URLs+=(
+      -o "${PACKAGE_DIR}/manifest.json"
+      "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${PACKAGE_DIGEST}"
+    )
+  done
+
+  bb-rp-curl --retry 3 -fsSL --create-dirs \
+    -H "Authorization: Bearer ${TOKEN}" \
+    -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+    "${URLs[@]}"
 }
 
-# Fetch digest from registry
-# bb-rp-fetch-digest digest outfile
-bb-rp-fetch-digest() {
+# Fetch digests from registry and save to file
+# bb-rp-fetch-blobs map[blob_digest]output_file_path
+#
+# This function uses the BLOB_FILES_MAP variable from the scope of the bb-rp-fetch()
+# due to the limitations of using `declare -n` in CentOS 7 (bash 4.2, and 4.3 is needed).
+# DO NOT CALL THIS FUNCTION DIRECTLY!
+bb-rp-fetch-blobs() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token)"
-  curl --retry 3 -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${1}" -o "${2}"
+
+  local URLs=()
+  # key - digest to fetch, value - output file path
+  local BLOB_DIGEST
+  for BLOB_DIGEST in "${!BLOB_FILES_MAP[@]}"; do
+    URLs+=(
+      -o "${BLOB_FILES_MAP[$BLOB_DIGEST]}"
+      "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${BLOB_DIGEST}"
+    )
+  done
+
+  bb-rp-curl --retry 3 -fsSLH "Authorization: Bearer ${TOKEN}" "${URLs[@]}"
 }
 
-# download package digests, unpack them and run install script
-# bb-rp-install package:digest
-bb-rp-install() {
+# Fetch packages by digest
+# bb-rp-fetch package1:digest1 [package2:digest2 ...]
+bb-rp-fetch() {
+  mkdir -p "${BB_RP_FETCHED_PACKAGES_STORE}"
+
+  declare -A PACKAGES_MAP
+  local PACKAGE_WITH_DIGEST
   for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""
     local DIGEST=""
     PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
     DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
 
-    # shellcheck disable=SC2211
     if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
+      bb-log-info "'${PACKAGE_WITH_DIGEST}' package already installed"
       continue
     fi
 
-    trap "rm -rf ${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}" ERR
+    if bb-rp-is-fetched? "${PACKAGE}" "${DIGEST}"; then
+      bb-log-info "'${PACKAGE_WITH_DIGEST}' package already fetched"
+      continue
+    fi
 
-    local DIGESTS=""
-    DIGESTS="$(bb-rp-get-digests "${DIGEST}")"
+    PACKAGES_MAP[$DIGEST]="${PACKAGE}"
+  done
 
+  if [ "${#PACKAGES_MAP[@]}" -eq 0 ]; then
+    return 0
+  fi
+
+  bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
+  bb-rp-fetch-manifests PACKAGES_MAP
+  if bb-error?; then
+    bb-log-error "Failed to fetch manifests"
+    return $BB_ERROR
+  fi
+
+  declare -A BLOB_FILES_MAP
+  local PACKAGE_DIGEST
+  for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
+    local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
+    jq -er '.layers[-1].digest' "${PACKAGE_DIR}/manifest.json" > "${PACKAGE_DIR}/top_layer_digest"
+    BLOB_FILES_MAP[$(cat "${PACKAGE_DIR}/top_layer_digest")]="${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
+  done
+
+  bb-log-info "Fetching packages: ${PACKAGES_MAP[*]}"
+  bb-rp-fetch-blobs BLOB_FILES_MAP
+  if bb-error?; then
+    bb-log-error "Failed to fetch packages"
+    return "${BB_ERROR}"
+  fi
+  bb-log-info "Packages saved under ${BB_RP_FETCHED_PACKAGES_STORE}"
+}
+
+
+# Unpack packages and run install script
+# bb-rp-install package:digest
+bb-rp-install() {
+  local PACKAGE_WITH_DIGEST
+  for PACKAGE_WITH_DIGEST in "$@"; do
+    local PACKAGE=""
+    local DIGEST=""
+    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
+    DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
+
+    if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
+      bb-log-info "'${PACKAGE_WITH_DIGEST}' package already installed"
+      continue
+    fi
+
+    if ! bb-rp-is-fetched? "${PACKAGE}" "${DIGEST}"; then
+      bb-log-info "'${PACKAGE_WITH_DIGEST}' package not found locally"
+      bb-rp-fetch "${PACKAGE_WITH_DIGEST}"
+    fi
+
+    bb-log-info "Unpacking package '${PACKAGE}'"
     local TMP_DIR=""
     TMP_DIR="$(mktemp -d)"
-
-    # Get digests
-    for TMP_DIGEST in ${DIGESTS}; do
-      local TMP_FILE=""
-      TMP_FILE="$(mktemp -u)"
-      bb-rp-fetch-digest "${TMP_DIGEST}" "${TMP_FILE}"
-      tar -xf "${TMP_FILE}" -C "${TMP_DIR}"
-      rm -f "${TMP_FILE}"
-    done
+    tar -xf "${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGE}/${DIGEST}.tar.gz" -C "${TMP_DIR}"
 
     bb-log-info "Installing package '${PACKAGE}'"
-    # run install script
     # shellcheck disable=SC2164
     pushd "${TMP_DIR}" >/dev/null
     ./install
@@ -118,11 +219,12 @@ bb-rp-install() {
     # Write digest to hold file
     mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
     echo "${DIGEST}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}/digest"
-    # copy install/uninstall scripts to hold dir
+    # Copy install/uninstall scripts to hold dir
     cp "${TMP_DIR}/install" "${TMP_DIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
-    # cleanup
-    rm -rf "${TMP_DIR}"
+    # Cleanup
+    rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
 
+    bb-log-info "'${PACKAGE}' package successfully installed"
     bb-event-fire "bb-package-installed" "${PACKAGE}"
     trap - ERR
   done
