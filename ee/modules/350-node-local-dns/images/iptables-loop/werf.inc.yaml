@@ -16,7 +16,7 @@ import:
 docker:
   ENTRYPOINT: ["/iptables-loop.sh"]
 ---
-{{ $csiBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /usr/bin/inotifywait" }}
+{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /usr/bin/inotifywait /usr/sbin/nft" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -31,11 +31,11 @@ git:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y bash grep iptables iproute2 inotify-tools -y
+    - apt-get install -y bash grep iptables iproute2 nftables inotify-tools -y
   install:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+    - /binary_replace.sh -i "{{ $iptablesLoopBinaries }}" -o /relocate
     - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore xtables-nft-multi; do
         ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
       done
       touch /iptables-wrapper
