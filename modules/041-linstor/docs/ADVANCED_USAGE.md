@@ -4,11 +4,11 @@ description: Steps for manually creating storage pools and StorageClasses when e
 ---
 
 {% alert level="warning" %}
-Работоспособность модуля гарантируется только в следующих случаях:
-- при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](../../supported_versions.html#linux);
-- при использовании сети 10Gbps.
+The module is guaranteed to work only in the following cases:
+- when using the stock kernels that come with [supported distributions](../../supported_versions.html#linux);
+- when using a 10 Gbps network.
 
-Работоспособность модуля в других условиях возможна, но не гарантируется.
+In all other cases, the module may work, but its full functionality is not guaranteed.
 {% endalert %}
 
 [The simplified guide](configuration.html#linstor-storage-configuration) contains steps that automatically create storage pools and StorageClasses when an LVM volume group or LVMThin pool with the tag `linstor-<name_pool>` appears on the node. Next, we consider the steps for manually creating storage pools and StorageClasses.
