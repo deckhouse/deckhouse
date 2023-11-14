@@ -75,7 +75,7 @@ spec:
 
 ## An example of the `NodeGroupConfiguration` configuration
 
-### Installing cert-manager plugin for kubectl on master nodes
+### Installing the cert-manager plugin for kubectl on master nodes
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
