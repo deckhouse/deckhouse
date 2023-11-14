@@ -3,6 +3,14 @@ title: "The linstor module: advanced configuration"
 description: Steps for manually creating storage pools and StorageClasses when enabling the linstor Deckhouse module. Configuring backup snapshots of linstor volumes to S3.
 ---
 
+{% alert level="warning" %}
+The module is guaranteed to work only in the following cases:
+- when using the stock kernels that come with [supported distributions](../../supported_versions.html#linux);
+- when using a 10 Gbps network.
+
+In all other cases, the module may work, but its full functionality is not guaranteed.
+{% endalert %}
+
 [The simplified guide](configuration.html#linstor-storage-configuration) contains steps that automatically create storage pools and StorageClasses when an LVM volume group or LVMThin pool with the tag `linstor-<name_pool>` appears on the node. Next, we consider the steps for manually creating storage pools and StorageClasses.
 
 To proceed further, the `linstor` CLI utility is required. Use one of the following options to use the `linstor` utility:
