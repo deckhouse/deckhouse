@@ -966,13 +966,13 @@ metadata:
 
 ## What is an Instance resource?
 
-An Instance resource is an implementation-independent ephemeral machine resource; for example, machines created by MachineControllerManager or Cluster API Provider Static will have a corresponding Instance resource.
+An Instance resource contains a description of an implementation-independent ephemeral machine resource. For example, machines created by MachineControllerManager or Cluster API Provider Static will have a corresponding Instance resource.
 
-The object does not contain a specification. The status contains a link to:
-1. InstanceClass if it exists for this implementation.
-1. To the Node kubernetes object.
-1. Current machine status.
-1. At the machine creation stage, information appears on how to view [machine creation logs](#how-do-i-know-what-is-running-on-a-node-while-it-is-being-created).
+The object does not contain a specification. The status contains:
+1. A link to the InstanceClass if it exists for this implementation;
+1. A link to the Kubernetes Node object;
+1. Current machine status;
+1. Information on how to view [machine creation logs](#how-do-i-know-what-is-running-on-a-node-while-it-is-being-created) (at the machine creation stage).
 
 When a machine is created/deleted, the Instance object is created/deleted accordingly.
 You cannot create an Instance resource yourself, but you can delete it. In this case, the machine will be removed from the cluster (the removal process depends on implementation details.

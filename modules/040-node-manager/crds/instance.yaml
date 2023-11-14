@@ -23,7 +23,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            An implementation-independent ephemeral machine resource.
+            Describes an implementation-independent ephemeral machine resource.
           properties:
             status:
               type: object
