@@ -3,6 +3,14 @@ title: "The linstor module"
 description: Deckhouse uses the linstor module to manage a replicated block storage in the Kubernetes cluster.
 ---
 
+{% alert level="warning" %}
+Работоспособность модуля гарантируется только в следующих случаях:
+- при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](../../supported_versions.html#linux);
+- при использовании сети 10Gbps.
+
+Работоспособность модуля в других условиях возможна, но не гарантируется.
+{% endalert %}
+
 This module manages a replicated block storage solution in the cluster using the [LINSTOR](https://linbit.com/linstor/) and the [DRBD](https://linbit.com/drbd/) kernel module.
 
 LINSTOR is an orchestrator, acting as an abstraction layer that:

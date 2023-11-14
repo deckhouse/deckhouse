@@ -3,9 +3,12 @@ title: "The linstor module: configuration examples"
 description: Example of configuring the linstor Deckhouse module. LINSTOR storage configuration. Placing the application near the data (data locality). Migration of the application in case of problems with the node (storage-based fencing).
 ---
 
-{% alert %}
-The functionality of the module is guaranteed only for stock kernels for distributions listed in the [list of supported OS](../../supported_versions.html#linux).
-The functionality of the module with other kernels is possible but not guaranteed.
+{% alert level="warning" %}
+Работоспособность модуля гарантируется только в следующих случаях:
+- при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](../../supported_versions.html#linux);
+- при использовании сети 10Gbps.
+
+Работоспособность модуля в других условиях возможна, но не гарантируется.
 {% endalert %}
 
 After enabling the module, the cluster is automatically configured to use LINSTOR, and all that remains is to configure the storage.

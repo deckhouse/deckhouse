@@ -3,6 +3,14 @@ title: "The linstor module: FAQ"
 description: LINSTOR Troubleshooting. What is difference between LVM and LVMThin? LINSTOR performance and reliability notes, comparison to Ceph. How to add existing LINSTOR LVM or LVMThin pool. How to configure Prometheus to use LINSTOR for storing data.
 ---
 
+{% alert level="warning" %}
+Работоспособность модуля гарантируется только в следующих случаях:
+- при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](../../supported_versions.html#linux);
+- при использовании сети 10Gbps.
+
+Работоспособность модуля в других условиях возможна, но не гарантируется.
+{% endalert %}
+
 ## What is difference between LVM and LVMThin?
 
 Briefly:
