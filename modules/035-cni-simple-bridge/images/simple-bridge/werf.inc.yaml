@@ -15,14 +15,14 @@ import:
   before: setup
   includePaths:
   - "python3.*"
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /iptables-wrapper
-  before: setup
+# - image: common/iptables-wrapper
+#   add: /iptables-wrapper
+#   to: /iptables-wrapper
+#   before: setup
 docker:
-  ENTRYPOINT: ["/iptables-wrapper"]
+  ENTRYPOINT: ["/sbin/iptables-wrapper"]
 ---
-{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /usr/sbin/nft" }}
+{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /usr/sbin/nft /sbin/iptables-wrapper" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -32,6 +32,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
+import:
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
 shell:
   beforeInstall:
     - apt-get update
@@ -40,6 +45,6 @@ shell:
     - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
+        rm -f "/relocate/sbin/${cmd}"
+        ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
       done
-      touch /iptables-wrapper
