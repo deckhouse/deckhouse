@@ -3,6 +3,14 @@ title: "The linstor module: FAQ"
 description: LINSTOR Troubleshooting. What is difference between LVM and LVMThin? LINSTOR performance and reliability notes, comparison to Ceph. How to add existing LINSTOR LVM or LVMThin pool. How to configure Prometheus to use LINSTOR for storing data.
 ---
 
+{% alert level="warning" %}
+The module is guaranteed to work only in the following cases:
+- when using the stock kernels that come with [supported distributions](../../supported_versions.html#linux);
+- when using a 10 Gbps network.
+
+In all other cases, the module may work, but its full functionality is not guaranteed.
+{% endalert %}
+
 ## What is difference between LVM and LVMThin?
 
 Briefly:
