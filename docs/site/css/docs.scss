@@ -461,7 +461,8 @@ a.comparison-table__module-proprietaryOkmeter:after {
 }
 
 .sidebar__submenu-item > a {
-    display: inline-block;
+    display: flex;
+    align-items: center;
     font-size: 14px;
     color: #00122C;
     letter-spacing: -0.26px;
@@ -479,7 +480,7 @@ a.comparison-table__module-proprietaryOkmeter:after {
     color: #0066FF;
 }
 
-.sidebar__submenu-item_parent > a:after {
+.sidebar__submenu-item_parent > a::after {
     content: '';
     display: inline-block;
     width: 7px;
@@ -488,6 +489,7 @@ a.comparison-table__module-proprietaryOkmeter:after {
     background-repeat: no-repeat;
     background-size: contain;
     margin-left: 5px;
+    flex-shrink: 0;
 }
 
 .sidebar__item_submenu-parent.active > a:after {
