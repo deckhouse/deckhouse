@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Don't forget to add "disableVirtualization": "true"
+// Don't forget to add "embeddedVirtualizationMustBeDisabled": "true" to release.yaml
 
 package requirements
 
@@ -24,7 +24,7 @@ import (
 )
 
 const embeddedVirtualizationEnabled = "embeddedVirtualization:enabled"
-const requirementsKey = "disableVirtualization"
+const requirementsKey = "embeddedVirtualizationMustBeDisabled"
 
 func init() {
 	f := func(_ string, getter requirements.ValueGetter) (bool, error) {
