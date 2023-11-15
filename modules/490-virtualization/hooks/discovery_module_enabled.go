@@ -17,9 +17,10 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 const embeddedVirtualizationEnabled = "embeddedVirtualization:enabled"
