@@ -28,7 +28,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 0},
 }, setRequirementsHandler)
 
-func setRequirementsHandler(input *go_hook.HookInput) error {
+func setRequirementsHandler(_ *go_hook.HookInput) error {
 	requirements.SaveValue(embeddedVirtualizationEnabled, "true")
 	return nil
 }
