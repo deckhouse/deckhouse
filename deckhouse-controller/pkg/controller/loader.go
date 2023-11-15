@@ -233,7 +233,7 @@ func (dml *DeckhouseController) RestoreAbsentSourceModules() error {
 			continue
 		}
 
-		dml.sourceModule[item.Spec.ModuleName] = item.Labels["source"]
+		dml.sourceModules[item.Spec.ModuleName] = item.Labels["source"]
 
 		moduleDir := filepath.Join(symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, item.Spec.ModuleName))
 		_, err = os.Stat(moduleDir)

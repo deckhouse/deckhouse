@@ -27,7 +27,7 @@ type DeckhouseController struct {
 
 	deckhouseModules map[string]*DeckhouseModule
 	// <module-name>: <module-source>
-	sourceModule map[string]string
+	sourceModules map[string]string
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, moduleDirs string, vv *validation.ValuesValidator) (*DeckhouseController, error) {
@@ -42,6 +42,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, moduleDirs
 		valuesValidator: vv,
 
 		deckhouseModules: make(map[string]*DeckhouseModule),
+		sourceModules:    make(map[string]string),
 	}, nil
 }
 
@@ -112,7 +113,7 @@ func (dml *DeckhouseController) handleModulePurge(m *DeckhouseModule) error {
 
 func (dml *DeckhouseController) handleModuleRegistration(m *DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		source := dml.sourceModule[m.basic.GetName()]
+		source := dml.sourceModules[m.basic.GetName()]
 		newModule := m.AsKubeObject(source)
 
 		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
