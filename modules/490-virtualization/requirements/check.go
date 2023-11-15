@@ -20,6 +20,7 @@ package requirements
 
 import (
 	"errors"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 

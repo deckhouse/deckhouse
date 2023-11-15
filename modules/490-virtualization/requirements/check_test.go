@@ -40,5 +40,4 @@ func TestDisabledEmbeddedVirtualizationRequirement(t *testing.T) {
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
-
 }
