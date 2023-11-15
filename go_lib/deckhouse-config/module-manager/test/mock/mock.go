@@ -35,6 +35,8 @@ var (
 	EnabledByScript  = pointer.Bool(true)
 	DisabledByBundle = pointer.Bool(false)
 	DisabledByScript = pointer.Bool(false)
+
+	valuesValidator = validation.NewValuesValidator()
 )
 
 // NewModuleManager returns mocked ModuleManager to test hooks
@@ -43,7 +45,7 @@ func NewModuleManager(mods ...ModuleMock) *ModuleManagerMock {
 	// Index input list of modules.
 	modulesMap := map[string]*modules.BasicModule{}
 	enabledModules := set.New()
-	valuesValidator := validation.NewValuesValidator()
+
 	for _, mod := range mods {
 		modulesMap[mod.module.GetName()] = mod.module
 		if mod.enabled == nil || *mod.enabled {
@@ -96,18 +98,13 @@ func (m *ModuleManagerMock) AddOpenAPISchemas(modName string, modPath string) er
 	return AddOpenAPISchemas(m.valuesValidator, modName, modPath)
 }
 
-//func (m *ModuleManagerMock) SetModuleSource(moduleName, source string) {
-//	module := m.modules[moduleName]
-//	//module.Source = source
-//}
-
 type ModuleMock struct {
 	module  *modules.BasicModule
 	enabled *bool
 }
 
 func NewModule(name string, _ *bool, enabledByScript *bool) ModuleMock {
-	bm := modules.NewBasicModule(name, "mockpath", 100, nil, nil)
+	bm := modules.NewBasicModule(name, "mockpath", 100, nil, valuesValidator)
 	return ModuleMock{
 		module:  bm,
 		enabled: enabledByScript,

@@ -353,7 +353,7 @@ func readModulesFromFS(dir string) (map[string]string, error) {
 type enqueueRelease struct {
 	Name         string
 	Version      *semver.Version
-	Weight       int
+	Weight       uint32
 	ModuleName   string
 	ModuleSource string
 	Status       string

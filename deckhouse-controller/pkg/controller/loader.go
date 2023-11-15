@@ -348,8 +348,10 @@ func copyLayersToFS(rootPath string, rc io.ReadCloser) error {
 			}
 		case tar.TypeSymlink:
 			link := path.Join(rootPath, hdr.Name)
-			if err := os.Symlink(hdr.Linkname, link); err != nil {
-				return fmt.Errorf("create symlink: %w", err)
+			if isRel(hdr.Linkname, link) && isRel(hdr.Name, link) {
+				if err := os.Symlink(hdr.Linkname, link); err != nil {
+					return fmt.Errorf("create symlink: %w", err)
+				}
 			}
 		case tar.TypeLink:
 			err := os.Link(path.Join(rootPath, hdr.Linkname), path.Join(rootPath, hdr.Name))
@@ -361,6 +363,20 @@ func copyLayersToFS(rootPath string, rc io.ReadCloser) error {
 			return errors.New("unknown tar type")
 		}
 	}
+}
+
+func isRel(candidate, target string) bool {
+	// GOOD: resolves all symbolic links before checking
+	// that `candidate` does not escape from `target`
+	if filepath.IsAbs(candidate) {
+		return false
+	}
+	realpath, err := filepath.EvalSymlinks(filepath.Join(target, candidate))
+	if err != nil {
+		return false
+	}
+	relpath, err := filepath.Rel(target, realpath)
+	return err == nil && !strings.HasPrefix(filepath.Clean(relpath), "..")
 }
 
 func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath string) error {
