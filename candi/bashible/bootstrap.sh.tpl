@@ -65,6 +65,11 @@ basic_bootstrap_${BUNDLE}
 # Put bootstrap log information to Machine resource status if it is a cloud installation or cluster-api static machine
 patch_pending=true
 output_log_port=8000
+# Skip this step after multiple failures.
+# This step puts information "how to get bootstrap logs" into Instance resource.
+# It's not critical, and waiting for it indefinitely, breaking bootstrap, is not reasonable.
+failure_count=0
+failure_limit=3
 while [ "$patch_pending" = true ] ; do
   for server in {{ .normal.apiserverEndpoints | join " " }} ; do
     server_addr=$(echo $server | cut -f1 -d":")
@@ -94,7 +99,15 @@ while [ "$patch_pending" = true ] ; do
 
       break
     else
-      >&2 echo "Failed to patch instance ${machine_name} status."
+      failure_count=$((failure_count + 1))
+      
+      if [[ $failure_count -eq $failure_limit ]]; then
+        >&2 echo "Failed to patch instance ${machine_name} status. Number of attempts exceeded. Status patch will be skipped."
+        patch_pending=false
+        break
+      fi
+
+      >&2 echo "Failed to patch instance ${machine_name} status. ${failure_count} of 3 attempts..."
       sleep 10
       continue
     fi
