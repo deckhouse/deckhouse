@@ -12,12 +12,3 @@ apiVersions:
       kind:
         type: string
         enum: [VsphereCloudDiscoveryData]
-      vmFolderPath:
-        type: string
-        minLength: 1
-      resourcePoolPath:
-        type: string
-      zones:
-        type: array
-        items:
-          type: string
