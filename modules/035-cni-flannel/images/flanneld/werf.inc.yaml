@@ -1,4 +1,4 @@
-{{- $binaries := "/sbin/iptables /sbin/ip6tables /sbin/iptables-save /sbin/iptables-restore /sbin/ip6tables-save /sbin/ip6tables-restore" }}
+{{- $binaries := "/sbin/iptables /sbin/ip6tables /sbin/iptables-save /sbin/iptables-restore /sbin/ip6tables-save /sbin/ip6tables-restore /usr/sbin/conntrack" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
