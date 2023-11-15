@@ -85,6 +85,7 @@ type Params struct {
 	SSHUser                 string
 	SSHBastionUser          string
 	SSHAgentPrivateKeys     []string
+	SSHHosts                []string
 	PostBootstrapScriptPath string
 	UseTfCache              *bool
 	AutoApprove             *bool
@@ -151,6 +152,9 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 
 		// NOTICE: disable "ssh-agent is singleton" logic
 		b.initializeNewAgent = true
+	}
+	if b.SSHHosts != nil {
+		restoreFuncs = append(restoreFuncs, setWithRestore(&app.SSHHosts, b.SSHHosts))
 	}
 	if b.PostBootstrapScriptPath != "" {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.PostBootstrapScriptPath, b.PostBootstrapScriptPath))
