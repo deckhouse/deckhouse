@@ -53,7 +53,7 @@ git:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y curl jq bash grep iptables iproute2 iptables-nft bind-utils -y
+    - apt-get install -y curl jq bash grep iproute2 iptables-nft bind-utils -y
   install:
     - /binary_replace.sh -i "{{ $corednsBinaries }}" -o /relocate
     - |

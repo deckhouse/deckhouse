@@ -154,7 +154,6 @@ spec:
             - DAC_OVERRIDE
             - NET_RAW
             - NET_ADMIN
-            - NET_BIND_SERVICE
             drop:
             - ALL
           readOnlyRootFilesystem: true
