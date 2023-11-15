@@ -165,20 +165,3 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 		Type:    moduleType,
 	}
 }
-
-// mergeEnabled merges enabled flags. Enabled flag can be nil.
-//
-// If all flags are nil, then false is returned — module is disabled by default.
-// Note: copy-paste from AddonOperator.moduleManager
-func mergeEnabled(enabledFlags ...*bool) bool {
-	result := false
-	for _, enabled := range enabledFlags {
-		if enabled == nil {
-			continue
-		}
-
-		result = *enabled
-	}
-
-	return result
-}

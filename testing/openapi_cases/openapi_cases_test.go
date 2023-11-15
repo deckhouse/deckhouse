@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/flant/addon-operator/pkg/utils"
-
 	"github.com/flant/addon-operator/pkg/values/validation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

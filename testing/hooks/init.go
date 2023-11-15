@@ -28,13 +28,11 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/flant/addon-operator/pkg/module_manager/models/hooks"
-
-	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
-
 	. "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+	"github.com/flant/addon-operator/pkg/module_manager/models/hooks"
+	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"

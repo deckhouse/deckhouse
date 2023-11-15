@@ -1,23 +1,36 @@
+/*
+Copyright 2023 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package controller
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
-
-	"k8s.io/client-go/util/retry"
-
-	log "github.com/sirupsen/logrus"
-
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 )
 
 type DeckhouseController struct {

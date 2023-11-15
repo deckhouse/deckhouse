@@ -198,7 +198,7 @@ status:
 			BeforeEach(func() {
 				mm, _ := module_manager.InitBasic("", "")
 				// TODO(yalosev): restore
-				//_ = mm.RegisterModules()
+				// _ = mm.RegisterModules()
 				deckhouse_config.InitService(mm)
 				st := f.KubeStateSet(`
 ---

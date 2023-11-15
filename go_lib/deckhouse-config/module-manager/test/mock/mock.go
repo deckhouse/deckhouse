@@ -20,9 +20,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-
 	"github.com/flant/addon-operator/pkg/module_manager"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"k8s.io/utils/pointer"
