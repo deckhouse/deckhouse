@@ -203,7 +203,6 @@ func updStatusFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterRes
 		Error:      ng.Status.Error,
 
 		UID:             ng.UID,
-		ResourceVersion: ng.ResourceVersion,
 		Conditions:      ng.Status.Conditions,
 	}, nil
 }
@@ -460,7 +459,6 @@ func buildEventV1(nodeGroup statusNodeGroup, eventType, reason, msg string, now 
 			Name:            nodeGroup.Name,
 			UID:             nodeGroup.UID,
 			APIVersion:      "deckhouse.io/v1",
-			ResourceVersion: nodeGroup.ResourceVersion,
 		},
 		Reason:              reason,
 		Note:                msg,
@@ -484,7 +482,6 @@ type statusNodeGroup struct {
 
 	// for event generation
 	UID             apimtypes.UID
-	ResourceVersion string
 }
 
 type statusNode struct {
