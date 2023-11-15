@@ -72,7 +72,7 @@ type ModuleRelease struct {
 type ModuleReleaseSpec struct {
 	ModuleName string          `json:"moduleName"`
 	Version    *semver.Version `json:"version,omitempty"`
-	Weight     int             `json:"weight,omitempty"`
+	Weight     uint32          `json:"weight,omitempty"`
 
 	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
 	Requirements map[string]string `json:"requirements,omitempty"`

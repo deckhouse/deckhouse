@@ -29,6 +29,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flant/addon-operator/pkg/utils"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 
 	"github.com/Masterminds/semver/v3"
@@ -210,9 +215,20 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			weight := fetchModuleWeight(moduleVersionPath)
+			moduleDef := fetchModuleDefinition(moduleVersionPath)
+			if moduleDef == nil {
+				moduleDef = &models.DeckhouseModuleDefinition{
+					Name:   moduleName,
+					Weight: defaultModuleWeight,
+					Path:   moduleVersionPath,
+				}
+			}
 
-			err = validateModule(moduleName, moduleVersionPath, weight)
+			if moduleDef.Weight == 0 {
+				moduleDef.Weight = defaultModuleWeight
+			}
+
+			err = validateModule(moduleDef)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
 					Name:  moduleName,
@@ -221,7 +237,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			createRelease(input, ex.Name, moduleName, moduleVersion, weight)
+			createRelease(input, ex.Name, moduleName, moduleVersion, moduleDef.Weight)
 		}
 
 		sc.ModuleErrors = moduleErrors
@@ -242,19 +258,14 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-func validateModule(moduleName, absPath string, weight int) error {
-	// TODO(yalosev): restore this after refactoring
-	//module, err := module_manager.NewModuleWithNameValidation(moduleName, absPath, weight)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//err = deckhouse_config.Service().ValidateModule(module)
-	//if err != nil {
-	//	return err
-	//}
+func validateModule(def *models.DeckhouseModuleDefinition) error {
+	dm := models.NewDeckhouseModule(*def, utils.Values{}, nil)
+	err := deckhouse_config.Service().ValidateModule(dm.GetBasicModule())
+	if err != nil {
+		return err
+	}
 
-	if weight < 900 || weight > 999 {
+	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
 
@@ -324,33 +335,27 @@ func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSou
 	return "v" + moduleMetadata.Version.String(), nil
 }
 
-func fetchModuleWeight(moduleVersionPath string) int {
-	moduleDefFile := path.Join(moduleVersionPath, "module.yaml")
+func fetchModuleDefinition(moduleVersionPath string) *models.DeckhouseModuleDefinition {
+	moduleDefFile := path.Join(moduleVersionPath, models.ModuleDefinitionFile)
 
 	if _, err := os.Stat(moduleDefFile); err != nil {
-		return defaultModuleWeight
+		return nil
 	}
 
-	//var def module_manager.ModuleDefinition
-
-	def := struct {
-		Tags        []string `json:"tags"`
-		Weight      int      `json:"weight"`
-		Description string   `json:"description"`
-	}{}
+	var def models.DeckhouseModuleDefinition
 
 	f, err := os.Open(moduleDefFile)
 	if err != nil {
-		return defaultModuleWeight
+		return nil
 	}
 	defer f.Close()
 
 	err = yaml.NewDecoder(f).Decode(&def)
 	if err != nil {
-		return defaultModuleWeight
+		return nil
 	}
 
-	return def.Weight
+	return &def
 }
 
 func fetchAndCopyModuleByVersion(dc dependency.Container, moduleVersionPath string, moduleSource v1alpha1.ModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
@@ -555,7 +560,7 @@ func fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
 	return meta, err
 }
 
-func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string, moduleWeight int) {
+func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string, moduleWeight uint32) {
 	rl := &v1alpha1.ModuleRelease{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ModuleRelease",

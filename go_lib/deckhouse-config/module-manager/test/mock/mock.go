@@ -106,8 +106,8 @@ type ModuleMock struct {
 	enabled *bool
 }
 
-func NewModule(name string, enabledByBundle *bool, enabledByScript *bool) ModuleMock {
-	bm := modules.NewBasicModule(name, "mockpath", 100, *enabledByBundle, nil, nil)
+func NewModule(name string, _ *bool, enabledByScript *bool) ModuleMock {
+	bm := modules.NewBasicModule(name, "mockpath", 100, nil, nil)
 	return ModuleMock{
 		module:  bm,
 		enabled: enabledByScript,

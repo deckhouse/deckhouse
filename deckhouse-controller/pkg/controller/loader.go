@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
@@ -25,10 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	moduleDefinitionFile = "module.yaml"
 )
 
 var (
@@ -43,7 +41,7 @@ func (dml *DeckhouseController) LoadModules() ([]*modules.BasicModule, error) {
 	result := make([]*modules.BasicModule, 0, len(dml.deckhouseModules))
 
 	for _, m := range dml.deckhouseModules {
-		result = append(result, m.basic)
+		result = append(result, m.GetBasicModule())
 	}
 
 	return result, nil
@@ -92,7 +90,7 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 				continue
 			}
 
-			dm := NewDeckhouseModule(def, moduleStaticValues, dml.valuesValidator)
+			dm := models.NewDeckhouseModule(def, moduleStaticValues, dml.valuesValidator)
 			dml.deckhouseModules[def.Name] = dm
 		}
 	}
@@ -100,7 +98,7 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 	return nil
 }
 
-func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]deckhouseModuleDefinition, error) {
+func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]models.DeckhouseModuleDefinition, error) {
 	dirEntries, err := os.ReadDir(modulesDir)
 	if err != nil && os.IsNotExist(err) {
 		return nil, fmt.Errorf("path '%s' does not exist", modulesDir)
@@ -109,7 +107,7 @@ func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]deckhouse
 		return nil, fmt.Errorf("listing modules directory '%s': %s", modulesDir, err)
 	}
 
-	definitions := make([]deckhouseModuleDefinition, 0)
+	definitions := make([]models.DeckhouseModuleDefinition, 0)
 	for _, dirEntry := range dirEntries {
 		name, absPath, err := resolveDirEntry(modulesDir, dirEntry)
 		if err != nil {
@@ -151,17 +149,8 @@ const (
 	ModuleNameIdx  = 3
 )
 
-type deckhouseModuleDefinition struct {
-	Name        string   `yaml:"name"`
-	Weight      uint32   `yaml:"weight"`
-	Tags        []string `yaml:"tags"`
-	Description string   `yaml:"description"`
-
-	Path string `yaml:"-"`
-}
-
-func (dml *DeckhouseController) moduleFromFile(absPath string) (*deckhouseModuleDefinition, error) {
-	mFilePath := filepath.Join(absPath, moduleDefinitionFile)
+func (dml *DeckhouseController) moduleFromFile(absPath string) (*models.DeckhouseModuleDefinition, error) {
+	mFilePath := filepath.Join(absPath, models.ModuleDefinitionFile)
 	if _, err := os.Stat(mFilePath); err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -175,7 +164,7 @@ func (dml *DeckhouseController) moduleFromFile(absPath string) (*deckhouseModule
 		return nil, err
 	}
 
-	var def deckhouseModuleDefinition
+	var def models.DeckhouseModuleDefinition
 
 	err = yaml.NewDecoder(f).Decode(&def)
 	if err != nil {
@@ -192,13 +181,13 @@ func (dml *DeckhouseController) moduleFromFile(absPath string) (*deckhouseModule
 }
 
 // moduleFromDirName returns Module instance filled with name, order and its absolute path.
-func (dml *DeckhouseController) moduleFromDirName(dirName string, absPath string) (*deckhouseModuleDefinition, error) {
+func (dml *DeckhouseController) moduleFromDirName(dirName string, absPath string) (*models.DeckhouseModuleDefinition, error) {
 	matchRes := validModuleNameRe.FindStringSubmatch(dirName)
 	if matchRes == nil {
 		return nil, fmt.Errorf("'%s' is invalid name for module: should match regex '%s'", dirName, validModuleNameRe.String())
 	}
 
-	return &deckhouseModuleDefinition{
+	return &models.DeckhouseModuleDefinition{
 		Name:   matchRes[ModuleNameIdx],
 		Path:   absPath,
 		Weight: parseUintOrDefault(matchRes[ModuleOrderIdx], 100),

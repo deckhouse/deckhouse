@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+
 	"k8s.io/client-go/util/retry"
 
 	log "github.com/sirupsen/logrus"
@@ -25,7 +27,7 @@ type DeckhouseController struct {
 	valuesValidator *validation.ValuesValidator
 	kubeClient      *versioned.Clientset
 
-	deckhouseModules map[string]*DeckhouseModule
+	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
 	sourceModules map[string]string
 }
@@ -41,7 +43,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, moduleDirs
 		dirs:            utils.SplitToPaths(moduleDirs),
 		valuesValidator: vv,
 
-		deckhouseModules: make(map[string]*DeckhouseModule),
+		deckhouseModules: make(map[string]*models.DeckhouseModule),
 		sourceModules:    make(map[string]string),
 	}, nil
 }
@@ -70,53 +72,53 @@ func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 		fmt.Println("GET EVENT", event)
 		mod, ok := dml.deckhouseModules[event.ModuleName]
 		if !ok {
-			log.Errorf("Module %q registered but not found in Deckhouse. Possible bug?", mod.basic.GetName())
+			log.Errorf("Module %q registered but not found in Deckhouse. Possible bug?", mod.GetBasicModule().GetName())
 			continue
 		}
 		switch event.EventType {
 		case events.ModuleRegistered:
 			err := dml.handleModuleRegistration(mod)
 			if err != nil {
-				log.Errorf("Error occurred during the module %q registration: %s", mod.basic.GetName(), err)
+				log.Errorf("Error occurred during the module %q registration: %s", mod.GetBasicModule().GetName(), err)
 				continue
 			}
 
 		case events.ModulePurged:
 			err := dml.handleModulePurge(mod)
 			if err != nil {
-				log.Errorf("Error occurred during the module %q purge: %s", mod.basic.GetName(), err)
+				log.Errorf("Error occurred during the module %q purge: %s", mod.GetBasicModule().GetName(), err)
 				continue
 			}
 
 		case events.ModuleEnabled:
 			err := dml.handleEnabledModule(mod, true)
 			if err != nil {
-				log.Errorf("Error occurred during the module %q turning on: %s", mod.basic.GetName(), err)
+				log.Errorf("Error occurred during the module %q turning on: %s", mod.GetBasicModule().GetName(), err)
 				continue
 			}
 
 		case events.ModuleDisabled:
 			err := dml.handleEnabledModule(mod, false)
 			if err != nil {
-				log.Errorf("Error occurred during the module %q turning off: %s", mod.basic.GetName(), err)
+				log.Errorf("Error occurred during the module %q turning off: %s", mod.GetBasicModule().GetName(), err)
 				continue
 			}
 		}
 	}
 }
 
-func (dml *DeckhouseController) handleModulePurge(m *DeckhouseModule) error {
+func (dml *DeckhouseController) handleModulePurge(m *models.DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		return dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, m.basic.GetName(), v1.DeleteOptions{})
+		return dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, m.GetBasicModule().GetName(), v1.DeleteOptions{})
 	})
 }
 
-func (dml *DeckhouseController) handleModuleRegistration(m *DeckhouseModule) error {
+func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		source := dml.sourceModules[m.basic.GetName()]
+		source := dml.sourceModules[m.GetBasicModule().GetName()]
 		newModule := m.AsKubeObject(source)
 
-		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
+		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.GetBasicModule().GetName(), v1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Create(dml.ctx, newModule, v1.CreateOptions{})
@@ -134,9 +136,9 @@ func (dml *DeckhouseController) handleModuleRegistration(m *DeckhouseModule) err
 	})
 }
 
-func (dml *DeckhouseController) handleEnabledModule(m *DeckhouseModule, enable bool) error {
+func (dml *DeckhouseController) handleEnabledModule(m *models.DeckhouseModule, enable bool) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		obj, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
+		obj, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.GetBasicModule().GetName(), v1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -152,7 +154,7 @@ func (dml *DeckhouseController) handleEnabledModule(m *DeckhouseModule, enable b
 		}
 
 		// Update ModuleConfig if exists
-		mc, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, m.basic.GetName(), v1.GetOptions{})
+		mc, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, m.GetBasicModule().GetName(), v1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return nil

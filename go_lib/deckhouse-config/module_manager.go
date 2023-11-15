@@ -28,6 +28,5 @@ type ModuleManager interface {
 	GetModule(modName string) *modules.BasicModule
 	GetModuleNames() []string
 	GetValuesValidator() *validation.ValuesValidator
-	//SetModuleSource(moduleName, source string)
-	//ValidateModule(module *modules.BasicModule) error
+	ValidateModule(module *modules.BasicModule) error
 }

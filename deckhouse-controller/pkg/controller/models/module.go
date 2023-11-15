@@ -1,4 +1,4 @@
-package controller
+package models
 
 import (
 	"strings"
@@ -19,7 +19,7 @@ type DeckhouseModule struct {
 	labels      map[string]string
 }
 
-func NewDeckhouseModule(def deckhouseModuleDefinition, staticValues utils.Values, vv *validation.ValuesValidator) *DeckhouseModule {
+func NewDeckhouseModule(def DeckhouseModuleDefinition, staticValues utils.Values, vv *validation.ValuesValidator) *DeckhouseModule {
 	basic := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, vv)
 
 	labels := make(map[string]string, len(def.Tags))
@@ -36,6 +36,10 @@ func NewDeckhouseModule(def deckhouseModuleDefinition, staticValues utils.Values
 		labels:      labels,
 		description: def.Description,
 	}
+}
+
+func (dm DeckhouseModule) GetBasicModule() *modules.BasicModule {
+	return dm.basic
 }
 
 func (dm DeckhouseModule) AsKubeObject(source string) *v1alpha1.Module {
