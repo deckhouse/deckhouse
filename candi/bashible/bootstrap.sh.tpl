@@ -107,7 +107,7 @@ while [ "$patch_pending" = true ] ; do
         break
       fi
 
-      >&2 echo "Failed to patch instance ${machine_name} status. ${failure_count} of 3 attempts..."
+      >&2 echo "Failed to patch instance ${machine_name} status. ${failure_count} of ${failure_limit} attempts..."
       sleep 10
       continue
     fi
