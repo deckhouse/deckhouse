@@ -13,6 +13,7 @@ locals {
   external_dns_addresses  = lookup(local.external_nameservers, "addresses", null)
   external_dns_search     = lookup(local.external_nameservers, "search", null)
 
+  /*
   main_interface_configuration = jsonencode(merge(
     local.external_ip == null ? { "dhcp4" = true } : tomap({}),
     local.external_ip != null ? { "addresses" = [local.external_ip] } : tomap({}),
@@ -60,6 +61,7 @@ locals {
     "guestinfo.userdata"          = var.cloudConfig
     "guestinfo.userdata.encoding" = "base64"
   }
+*/
 }
 
 data "vcd_catalog" "catalog" {
@@ -71,6 +73,7 @@ data "vcd_catalog_vapp_template" "template" {
   name       = local.template
 }
 
+/*
 resource "vsphere_virtual_disk" "kubernetes_data" {
   size               = 10
   datastore          = local.master_instance_class.datastore
@@ -80,18 +83,23 @@ resource "vsphere_virtual_disk" "kubernetes_data" {
   create_directories = true
 }
 
+*/
+
 resource "vcd_vm" "master" {
   name             = join("-", [local.prefix, "master", var.nodeIndex])
   vapp_template_id = data.vcd_catalog_vapp_template.template.id
 
   cpus = local.master_instance_class.numCPUs
   memory   = local.master_instance_class.memory
+  memory_hot_add_enabled = true
 
   network {
-    network_id   = data.vsphere_network.main.id
-    adapter_type = data.vsphere_virtual_machine.template.network_interface_types[0]
+    name               = "internal"
+    type               = "org"
+    ip_allocation_mode = "MANUAL"
+    is_primary         = true
+    ip                 = "192.168.199.2"
   }
-
 
 #  dynamic "network_interface" {
 #    for_each = local.additionalNetworks
@@ -100,11 +108,11 @@ resource "vcd_vm" "master" {
 #      adapter_type = data.vsphere_virtual_machine.template.network_interface_types[0]
 #    }
 #  }
-
+/*
   internal_disk {
     label            = "disk0"
     unit_number      = 0
-    size             = lookup(local.master_instance_class.rootDiskSize
+    size             = local.master_instance_class.rootDiskSize
   }
 
   internal_disk {
@@ -127,4 +135,5 @@ resource "vcd_vm" "master" {
   extra_config = local.vm_extra_config
 
 #  depends_on = [vsphere_virtual_disk.kubernetes_data]
+*/
 }
