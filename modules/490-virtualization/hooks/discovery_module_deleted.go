@@ -22,13 +22,11 @@ import (
 	"github.com/flant/addon-operator/sdk"
 )
 
-const embeddedVirtualizationEnabled = "embeddedVirtualization:enabled"
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 99},
-}, setRequirementsHandler)
+	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
+}, resetRequirementsHandler)
 
-func setRequirementsHandler(_ *go_hook.HookInput) error {
-	requirements.SaveValue(embeddedVirtualizationEnabled, "true")
+func resetRequirementsHandler(_ *go_hook.HookInput) error {
+	requirements.RemoveValue(embeddedVirtualizationEnabled)
 	return nil
 }
