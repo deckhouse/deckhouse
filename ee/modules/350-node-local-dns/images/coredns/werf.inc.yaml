@@ -38,7 +38,7 @@ shell:
   - chmod -R 0700 /src/coredns
   - chown -R 64535:64535 /src/coredns
 ---
-{{ $corednsBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables* /usr/sbin/nft" }}
+{{ $corednsBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -53,7 +53,7 @@ git:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y curl jq bash grep iptables iproute2 iptables-nft bind-utils nftables -y
+    - apt-get install -y curl jq bash grep iptables iproute2 iptables-nft bind-utils -y
   install:
     - /binary_replace.sh -i "{{ $corednsBinaries }}" -o /relocate
     - |

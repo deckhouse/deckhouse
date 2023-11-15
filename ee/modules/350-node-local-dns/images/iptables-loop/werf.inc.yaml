@@ -16,7 +16,7 @@ import:
 docker:
   ENTRYPOINT: ["/iptables-loop.sh"]
 ---
-{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables* /usr/bin/inotifywait /usr/sbin/nft" }}
+{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables* /usr/bin/inotifywait" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -31,7 +31,7 @@ git:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y bash grep iptables iproute2 iptables-nft inotify-tools nftables -y
+    - apt-get install -y bash grep iptables iproute2 iptables-nft inotify-tools -y
   install:
     - /binary_replace.sh -i "{{ $iptablesLoopBinaries }}" -o /relocate
     - |
