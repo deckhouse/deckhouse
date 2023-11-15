@@ -316,6 +316,27 @@ create_tiebreaker() {
   fi
 }
 
+linstor_delete_resources_from_node() {
+  local resource_names_list=("$@")
+
+  for resource_name in $resource_names_list; do
+    echo "Beginning the process of deleting resource ${resource_name}, which has replicas on the node being evicted ${NODE_FOR_EVICT}"
+    linstor_check_connection
+    linstor_check_faulty
+    linstor_wait_sync 0
+    echo "Current status of the resource:"
+    exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+    sleep 2
+    echo "Deleting resource ${resource_name}"
+    exec_linstor_with_exit_code_check resource delete ${NODE_FOR_EVICT} $resource_name
+    echo "Resource status after deleting:"
+    sleep 2
+    exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+    echo "Processing of resource $resource_name completed."
+  done
+
+}
+
 get_user_confirmation() {
   local prompt="$1"
   local positive_case="$2"
@@ -464,75 +485,80 @@ fi
 echo "Get resources that have TieBreaker on evicted node ${NODE_FOR_EVICT}"
 RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')
 
-echo "Attention! Before deleting node ${NODE_FOR_EVICT} from LINSTOR, make sure that all resources in LINSTOR are in UpToDate state."
+echo "Attention! Before evacuate resources from node ${NODE_FOR_EVICT}, make sure that all resources in LINSTOR are in UpToDate state."
 
-DECKHOUSE_REPLICAS_COUNT=$(execute_command "kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.replicas}'")
-PIRAEUS_OPERATOR_REPLICAS_COUNT=$(execute_command "kubectl -n d8-linstor get deployment piraeus-operator -o jsonpath='{.spec.replicas}'")
+if get_user_confirmation "Do you want to delete node ${NODE_FOR_EVICT} from Kubernetes and LINSTOR? If not, then only the deletion of all resources from ${NODE_FOR_EVICT} will be executed." "y" "n"; then
+  DECKHOUSE_REPLICAS_COUNT=$(execute_command "kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.replicas}'")
+  PIRAEUS_OPERATOR_REPLICAS_COUNT=$(execute_command "kubectl -n d8-linstor get deployment piraeus-operator -o jsonpath='{.spec.replicas}'")
 
-while true; do
-  if is_linstor_satellite_online; then
-    linstor_satellite_online="true"
-  else
-    linstor_satellite_online="false"
-  fi
-    
-  if [[ $linstor_satellite_online == "true" ]]; then
-    echo "Node $NODE_FOR_EVICT is ONLINE in LINSTOR. Performing standard node deletion procedure from LINSTOR"
-  else
-    echo "Warning! Node ${NODE_FOR_EVICT} is not ONLINE in LINSTOR. It is impossible to perform standard node deletion procedure from LINSTOR. The command \"linstor node lost ${NODE_FOR_EVICT}\" needs to be executed."
-    if get_user_confirmation "Perform a re-check of the connection with node ${NODE_FOR_EVICT} after $TIMEOUT_SEC seconds?" "y" "n"; then
-      echo "Waiting for $TIMEOUT_SEC seconds and re-checking the connection with node ${NODE_FOR_EVICT}"
-      sleep $TIMEOUT_SEC
-      continue
+  while true; do
+    if is_linstor_satellite_online; then
+      linstor_satellite_online="true"
+    else
+      linstor_satellite_online="false"
     fi
-  fi
-  echo "The procedure for deleting a node from LINSTOR will consist of the following actions:" 
-  echo "1. Shutting down Deckhouse and Piraeus operator"
-  if [[ $linstor_satellite_online == "true" ]]; then
-    echo "2. Standard node deletion from LINSTOR"
-  else
-    echo "2. Executing the command \"linstor node lost ${NODE_FOR_EVICT}\""
-  fi
-  echo "3. Deleting the node from Kubernetes"
-  echo "4. Turning Deckhouse and Piraeus operator back on"
-
-  if get_user_confirmation "Perform the actions listed above?" "yes-i-am-sane-and-i-understand-what-i-am-doing" "n"; then
-    execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=0"
-    execute_command "kubectl -n d8-linstor scale deployment piraeus-operator --replicas=0"
-
+      
     if [[ $linstor_satellite_online == "true" ]]; then
-      echo "Performing standard node deletion procedure from LINSTOR"
-      exec_linstor_with_exit_code_check node delete ${NODE_FOR_EVICT}
+      echo "Node $NODE_FOR_EVICT is ONLINE in LINSTOR. Performing standard node deletion procedure from LINSTOR"
     else
-      echo "Executing the command \"linstor node lost ${NODE_FOR_EVICT}\""
-      exec_linstor_with_exit_code_check node lost ${NODE_FOR_EVICT}
+      echo "Warning! Node ${NODE_FOR_EVICT} is not ONLINE in LINSTOR. It is impossible to perform standard node deletion procedure from LINSTOR. The command \"linstor node lost ${NODE_FOR_EVICT}\" needs to be executed."
+      if get_user_confirmation "Perform a re-check of the connection with node ${NODE_FOR_EVICT} after $TIMEOUT_SEC seconds?" "y" "n"; then
+        echo "Waiting for $TIMEOUT_SEC seconds and re-checking the connection with node ${NODE_FOR_EVICT}"
+        sleep $TIMEOUT_SEC
+        continue
+      fi
     fi
-
-    if is_linstor_satellite_does_not_exist; then
-      execute_command "kubectl delete node ${NODE_FOR_EVICT}"
-      execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=${DECKHOUSE_REPLICAS_COUNT}"
-      execute_command "kubectl -n d8-linstor scale deployment piraeus-operator --replicas=${PIRAEUS_OPERATOR_REPLICAS_COUNT}"
-      break
+    echo "The procedure for deleting a node from LINSTOR will consist of the following actions:" 
+    echo "1. Shutting down Deckhouse and Piraeus operator"
+    if [[ $linstor_satellite_online == "true" ]]; then
+      echo "2. Standard node deletion from LINSTOR"
     else
-      echo "Warning! Node ${NODE_FOR_EVICT} has not been deleted from LINSTOR. Turning Deckhouse and Piraeus operator back on."
-      execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=${deckhouse_current_replicas}"
-      execute_command "kubectl -n d8-linstor scale deployment piraeus-operator --replicas=${piraeus_current_replicas}"
-      echo "It is recommended to terminate the script and investigate the cause of the error."
+      echo "2. Executing the command \"linstor node lost ${NODE_FOR_EVICT}\""
+    fi
+    echo "3. Deleting the node from Kubernetes"
+    echo "4. Turning Deckhouse and Piraeus operator back on"
+
+    if get_user_confirmation "Perform the actions listed above?" "yes-i-am-sane-and-i-understand-what-i-am-doing" "n"; then
+      execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=0"
+      execute_command "kubectl -n d8-linstor scale deployment piraeus-operator --replicas=0"
+
+      if [[ $linstor_satellite_online == "true" ]]; then
+        echo "Performing standard node deletion procedure from LINSTOR"
+        exec_linstor_with_exit_code_check node delete ${NODE_FOR_EVICT}
+      else
+        echo "Executing the command \"linstor node lost ${NODE_FOR_EVICT}\""
+        exec_linstor_with_exit_code_check node lost ${NODE_FOR_EVICT}
+      fi
+
+      if is_linstor_satellite_does_not_exist; then
+        execute_command "kubectl delete node ${NODE_FOR_EVICT}"
+        execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=${DECKHOUSE_REPLICAS_COUNT}"
+        execute_command "kubectl -n d8-linstor scale deployment piraeus-operator --replicas=${PIRAEUS_OPERATOR_REPLICAS_COUNT}"
+        break
+      else
+        echo "Warning! Node ${NODE_FOR_EVICT} has not been deleted from LINSTOR. Turning Deckhouse and Piraeus operator back on."
+        execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=${deckhouse_current_replicas}"
+        execute_command "kubectl -n d8-linstor scale deployment piraeus-operator --replicas=${piraeus_current_replicas}"
+        echo "It is recommended to terminate the script and investigate the cause of the error."
+        exit_function
+      fi
+    else
       exit_function
     fi
-  else
-    exit_function
-  fi
-done
+  done
+else
+  echo "Only the deletion of all resources from ${NODE_FOR_EVICT} will be executed. The node will not be deleted from Kubernetes and LINSTOR."
+  linstor_delete_resources_from_node "${RESOURCES_TO_EVICT_NEW[@]}"
+fi
 
 
 linstor_check_faulty
-echo "State of all resources after deleting node ${NODE_FOR_EVICT}:"
+echo "State of all resources after evacuate resources from node ${NODE_FOR_EVICT}:"
 exec_linstor_with_exit_code_check resource list-volumes
 sleep 2
 
 while true; do
-  if get_user_confirmation "Perform a reduction in the number of replicas to the previous value for movable resources?" "y" "n"; then
+  if get_user_confirmation "Should we reduce the number of replicas to their previous values for movable resources and also check for TieBreakers?" "y" "n"; then
     linstor_change_replicas_count 0 2 "${RESOURCE_AND_GROUP_NAMES_NEW}" "${RESOURCE_GROUPS_NEW}" "${RESOURCES_TO_EVICT_NEW[@]}"
     break
   fi
