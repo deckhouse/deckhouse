@@ -25,7 +25,7 @@ import (
 const embeddedVirtualizationEnabled = "embeddedVirtualization:enabled"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 0},
+	OnStartup: &go_hook.OrderedConfig{Order: 99},
 }, setRequirementsHandler)
 
 func setRequirementsHandler(_ *go_hook.HookInput) error {
