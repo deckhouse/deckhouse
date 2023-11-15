@@ -3,22 +3,20 @@
 
 
 locals {
-
   catalog                 = split("/", local.master_instance_class.template)[0]
   template                = split("/", local.master_instance_class.template)[1]
   external_addresses      = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : tomap({})
   external_ip             = lookup(local.external_addresses, "address", null)
   external_gateway        = lookup(local.external_addresses, "gateway", null)
-  external_nameservers    = lookup(local.external_addresses, "nameservers", {})
-  external_dns_addresses  = lookup(local.external_nameservers, "addresses", null)
-  external_dns_search     = lookup(local.external_nameservers, "search", null)
+  external_nameservers    = local.external_addresses == null ? null : lookup(local.external_addresses, "nameservers", null)
+  external_dns_addresses  = local.external_nameservers == null ? null : lookup(local.external_nameservers, "addresses", null)
+  external_dns_search     = local.external_nameservers == null ? null : lookup(local.external_nameservers, "search", null)
 
-  /*
   main_interface_configuration = jsonencode(merge(
     local.external_ip == null ? { "dhcp4" = true } : tomap({}),
     local.external_ip != null ? { "addresses" = [local.external_ip] } : tomap({}),
     local.external_gateway != null ? { "gateway4" = local.external_gateway } : tomap({}),
-    local.external_nameservers != {} ? {
+    local.external_nameservers != null ? {
       "nameservers" = merge(
         local.external_dns_addresses != null ? { "addresses" = local.external_dns_addresses } : tomap({}),
         local.external_dns_search != null ? { "search" = local.external_dns_search } : tomap({})
@@ -26,27 +24,13 @@ locals {
     } : tomap({})
   ))
 
-  internalNodeNetworkPrefix = split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1]
   first_interface_index     = 192
-
-  additional_interface_configurations = {
-    for i, v in local.additionalNetworks :
-    "ens${local.first_interface_index + 32 * (i + 1)}" =>
-    {
-      addresses = [
-        join("", [
-          cidrhost(var.providerClusterConfiguration.internalNetworkCIDR, var.nodeIndex + 10), "/",
-          local.internalNodeNetworkPrefix
-        ])
-      ]
-    }
-  }
 
   cloud_init_network = {
     version   = 2
-    ethernets = merge({
+    ethernets = {
       "ens${local.first_interface_index}" = jsondecode(local.main_interface_configuration)
-    }, local.additional_interface_configurations)
+    }
   }
 
   cloud_init_metadata = {
@@ -61,7 +45,6 @@ locals {
     "guestinfo.userdata"          = var.cloudConfig
     "guestinfo.userdata.encoding" = "base64"
   }
-*/
 }
 
 data "vcd_catalog" "catalog" {
@@ -73,6 +56,9 @@ data "vcd_catalog_vapp_template" "template" {
   name       = local.template
 }
 
+data "vcd_storage_profile" "profile" {
+  name = local.master_instance_class.storageProfile
+}
 /*
 resource "vsphere_virtual_disk" "kubernetes_data" {
   size               = 10
@@ -96,11 +82,19 @@ resource "vcd_vm" "master" {
   network {
     name               = "internal"
     type               = "org"
-    ip_allocation_mode = "MANUAL"
+    ip_allocation_mode = local.external_ip == null ? "DHCP" : "MANUAL"
     is_primary         = true
-    ip                 = "192.168.199.2"
+    ip                 = split("/", local.external_ip)[0]
   }
 
+  override_template_disk {
+    bus_type        = "paravirtual"
+    size_in_mb      = local.clusterConfiguration.rootDiskSizeGb
+    bus_number      = 0
+    unit_number     = 0
+    iops            = data.vcd_storage_profile.profile.iops_settings.disk_iops_per_gb_max == 0 ? 0 : data.vcd_storage_profile.profile.iops_settings.disk_iops_per_gb_max * local.clusterConfiguration.rootDiskSizeGb
+    storage_profile = local.master_instance_class.storageProfile
+  }
 #  dynamic "network_interface" {
 #    for_each = local.additionalNetworks
 #    content {
