@@ -16,7 +16,7 @@ import:
 docker:
   ENTRYPOINT: ["/iptables-loop.sh"]
 ---
-{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables* /usr/bin/inotifywait" }}
+{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables* /usr/bin/inotifywait /bin/ls /bin/chmod /bin/chown /bin/ps" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
@@ -39,6 +39,3 @@ shell:
         rm -f "/relocate/sbin/${cmd}"
         ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
       done
-  beforeSetup:
-    - chmod -R 0700 /relocate/iptables-loop.sh
-    - chown -R 64535:64535 /relocate/iptables-loop.sh
