@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -82,7 +81,6 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 
 func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 	for event := range ec {
-		fmt.Println("GET EVENT", event)
 		mod, ok := dml.deckhouseModules[event.ModuleName]
 		if !ok {
 			log.Errorf("Module %q registered but not found in Deckhouse. Possible bug?", mod.GetBasicModule().GetName())
