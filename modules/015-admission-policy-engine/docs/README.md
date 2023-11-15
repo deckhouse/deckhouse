@@ -6,13 +6,18 @@ description: Deckhouse admission-policy-engine module enforces the security poli
 This module enforces the security policies in the cluster according to the Kubernetes [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) using the [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) solution.
 
 The Pod Security Standards define three different policies to broadly cover the security spectrum. These policies are cumulative and range from highly-permissive to highly-restrictive:
-- `Privileged` — Unrestricted policy. Provides the widest possible permission level (used by default).
-- `Baseline` — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration.
+- `Privileged` — Unrestricted policy. Provides the widest possible permission level;
+- `Baseline` — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
 - `Restricted` — Heavily restricted policy. Follows the most current Pod hardening best practices.
 
 You can read more about each policy variety in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
 
-To apply a policy set the label `security.deckhouse.io/pod-policy =<POLICY_NAME>` to the corresponding namespace.
+Default cluster policy is defined as follows:
+- Clusters that were bootstrapped with Deckhouse version before v1.55 have `Privileged` as default PSS policy for all non-system namespaces;
+- Clusters that were bootstrapped with Deckhouse version equal to or above v1.55 have `Baseline` as default PSS policy for all non-system namespaces;
+- Updating a cluster to v1.55 doesn't change its default PSS policy automatically.
+
+It's possible to redefine default cluster PSS policy globally with [configuration](configuration.html#parameters-podsecuritystandards-defaultProfile) as well as locally with labels. For setting PSS policy per namespace set the label `security.deckhouse.io/pod-policy =<POLICY_NAME>` to the corresponding namespace.
 
 Example of the command to set the `Restricted` policy for all Pods in the `my-namespace` Namespace.
 
