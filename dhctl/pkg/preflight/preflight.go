@@ -79,13 +79,7 @@ func (pc *Checker) Cloud() error {
 }
 
 func (pc *Checker) Global() error {
-	return pc.do("Global preflight checks", []checkStep{
-		{
-			fun:            pc.CheckDhctlVersionObsolescence,
-			successMessage: "installer and deckhouse-controller version compatibility",
-			skipFlag:       app.DeckhouseVersionCheckArgName,
-		},
-	})
+	return nil
 }
 
 func (pc *Checker) do(title string, checks []checkStep) error {
