@@ -3,48 +3,9 @@
 
 
 locals {
-  catalog                 = split("/", local.master_instance_class.template)[0]
-  template                = split("/", local.master_instance_class.template)[1]
-  external_addresses      = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : tomap({})
-  external_ip             = lookup(local.external_addresses, "address", null)
-  external_gateway        = lookup(local.external_addresses, "gateway", null)
-  external_nameservers    = local.external_addresses == null ? null : lookup(local.external_addresses, "nameservers", null)
-  external_dns_addresses  = local.external_nameservers == null ? null : lookup(local.external_nameservers, "addresses", null)
-  external_dns_search     = local.external_nameservers == null ? null : lookup(local.external_nameservers, "search", null)
-
-  main_interface_configuration = jsonencode(merge(
-    local.external_ip == null ? { "dhcp4" = true } : tomap({}),
-    local.external_ip != null ? { "addresses" = [local.external_ip] } : tomap({}),
-    local.external_gateway != null ? { "gateway4" = local.external_gateway } : tomap({}),
-    local.external_nameservers != null ? {
-      "nameservers" = merge(
-        local.external_dns_addresses != null ? { "addresses" = local.external_dns_addresses } : tomap({}),
-        local.external_dns_search != null ? { "search" = local.external_dns_search } : tomap({})
-      )
-    } : tomap({})
-  ))
-
-  first_interface_index     = 192
-
-  cloud_init_network = {
-    version   = 2
-    ethernets = {
-      "ens${local.first_interface_index}" = jsondecode(local.main_interface_configuration)
-    }
-  }
-
-  cloud_init_metadata = {
-    "local-hostname"   = join("-", [local.prefix, "master", var.nodeIndex])
-    "public-keys-data" = var.providerClusterConfiguration.sshPublicKey
-    "network"          = local.cloud_init_network
-  }
-
-  vm_extra_config_guestinfo = {
-    "guestinfo.metadata"          = base64encode(jsonencode(local.cloud_init_metadata))
-    "guestinfo.metadata.encoding" = "base64"
-    "guestinfo.userdata"          = var.cloudConfig
-    "guestinfo.userdata.encoding" = "base64"
-  }
+  catalog  = split("/", local.master_instance_class.template)[0]
+  template = split("/", local.master_instance_class.template)[1]
+  ip_address  = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
 }
 
 data "vcd_catalog" "catalog" {
@@ -56,21 +17,19 @@ data "vcd_catalog_vapp_template" "template" {
   name       = local.template
 }
 
-data "vcd_storage_profile" "profile" {
+data "vcd_storage_profile" "sp" {
   name = local.master_instance_class.storageProfile
 }
 /*
-resource "vsphere_virtual_disk" "kubernetes_data" {
-  size               = 10
-  datastore          = local.master_instance_class.datastore
-  datacenter         = data.vsphere_dynamic.datacenter_id.inventory_path
-  type               = "eagerZeroedThick"
-  vmdk_path          = "deckhouse/${join("-", [var.clusterUUID, "kubernetes-data", var.nodeIndex])}.vmdk"
-  create_directories = true
+resource "vcd_independent_disk" "kubernetes_data" {
+  name            = "kubernetes-data"
+  size_in_mb      = local.master_instance_class.etcdDiskSizeGb * 1024
+  bus_type        = "SCSI"
+  bus_sub_type    = "VirtualSCSI"
+  storage_profile = local.master_instance_class.storageProfile == null ? "" : local.master_instance_class.storageProfile
+  iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.master_instance_class.etcdDiskSizeGb
 }
-
 */
-
 resource "vcd_vm" "master" {
   name             = join("-", [local.prefix, "master", var.nodeIndex])
   vapp_template_id = data.vcd_catalog_vapp_template.template.id
@@ -82,52 +41,38 @@ resource "vcd_vm" "master" {
   network {
     name               = "internal"
     type               = "org"
-    ip_allocation_mode = local.external_ip == null ? "DHCP" : "MANUAL"
+    ip_allocation_mode = local.ip_address == null ? "DHCP" : "MANUAL"
     is_primary         = true
-    ip                 = split("/", local.external_ip)[0]
+    ip                 = local.ip_address
   }
 
   override_template_disk {
     bus_type        = "paravirtual"
-    size_in_mb      = local.clusterConfiguration.rootDiskSizeGb
+    size_in_mb      = local.master_instance_class.rootDiskSizeGb * 1024
     bus_number      = 0
     unit_number     = 0
-    iops            = data.vcd_storage_profile.profile.iops_settings.disk_iops_per_gb_max == 0 ? 0 : data.vcd_storage_profile.profile.iops_settings.disk_iops_per_gb_max * local.clusterConfiguration.rootDiskSizeGb
-    storage_profile = local.master_instance_class.storageProfile
-  }
-#  dynamic "network_interface" {
-#    for_each = local.additionalNetworks
-#    content {
-#      network_id   = data.vsphere_network.internal[network_interface.value].id
-#      adapter_type = data.vsphere_virtual_machine.template.network_interface_types[0]
-#    }
-#  }
-/*
-  internal_disk {
-    label            = "disk0"
-    unit_number      = 0
-    size             = local.master_instance_class.rootDiskSize
+    storage_profile = local.master_instance_class.storageProfile == null ? "" : local.master_instance_class.storageProfile
+    iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.master_instance_class.rootDiskSizeGb
   }
 
-  internal_disk {
-    label        = "disk1"
-    unit_number  = 1
-    attach       = true
-    size             = local.master_instance_class.etcdDiskSizeGb
+  /*
+  disk {
+    name = vcd_independent_disk.kubernetes_data.name
+    bus_number = 1
+    unit_number = 0
   }
-
-  # enable_disk_uuid = true
-
-  nested_hv_enabled  = lookup(local.runtime_options, "nestedHardwareVirtualization", null)
-  cpu_limit          = lookup(local.runtime_options, "cpuLimit", null)
-  cpu_reservation    = lookup(local.runtime_options, "cpuReservation", null)
-  cpu_share_count    = lookup(local.runtime_options, "cpuShares", null)
-  memory_limit       = lookup(local.runtime_options, "memoryLimit", null)
-  memory_reservation = lookup(local.runtime_options, "memoryReservation", null)
-  memory_share_count = lookup(local.runtime_options, "memoryShares", null)
-
-  extra_config = local.vm_extra_config
-
-#  depends_on = [vsphere_virtual_disk.kubernetes_data]
 */
+  guest_properties = {
+    "instance-id" = join("-", [local.prefix, "master", var.nodeIndex])
+    "hostname"    = join("-", [local.prefix, "master", var.nodeIndex])
+    "local-hostname"    = join("-", [local.prefix, "master", var.nodeIndex])
+    "public-keys" = var.providerClusterConfiguration.sshPublicKey
+  }
+
+  customization {
+    force                      = true
+    allow_local_admin_password = true
+    auto_generate_password     = false
+    admin_password             = "123456"
+  }
 }
