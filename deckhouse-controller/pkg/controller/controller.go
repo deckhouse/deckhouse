@@ -136,7 +136,7 @@ func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 
 // handleConvergeDone after converge we delete all absent Modules CR, which were not filled during this operator startup
 func (dml *DeckhouseController) handleConvergeDone() error {
-	epochLabelStr := fmt.Sprintf("%s=%s", epochLabelKey, epochLabelValue)
+	epochLabelStr := fmt.Sprintf("%s!=%s", epochLabelKey, epochLabelValue)
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
 		return dml.kubeClient.DeckhouseV1alpha1().Modules().DeleteCollection(dml.ctx, v1.DeleteOptions{}, v1.ListOptions{LabelSelector: epochLabelStr})
 	})
