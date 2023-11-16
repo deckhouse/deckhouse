@@ -97,6 +97,8 @@ func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 			continue
 		}
 
+		fmt.Println("GOT EVENT WITH MODULE", event.ModuleName, event.EventType)
+
 		mod, ok := dml.deckhouseModules[event.ModuleName]
 		if !ok {
 			log.Errorf("Module %q registered but not found in Deckhouse. Possible bug?", event.ModuleName)
@@ -107,13 +109,6 @@ func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 			err := dml.handleModuleRegistration(mod)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q registration: %s", mod.GetBasicModule().GetName(), err)
-				continue
-			}
-
-		case events.ModulePurged:
-			err := dml.handleModulePurge(mod)
-			if err != nil {
-				log.Errorf("Error occurred during the module %q purge: %s", mod.GetBasicModule().GetName(), err)
 				continue
 			}
 
@@ -154,7 +149,7 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 		newModule := m.AsKubeObject(source)
 		newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
 
-		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.GetBasicModule().GetName(), v1.GetOptions{})
+		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, newModule.GetName(), v1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Create(dml.ctx, newModule, v1.CreateOptions{})
