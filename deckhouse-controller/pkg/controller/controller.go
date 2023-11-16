@@ -150,9 +150,7 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
 		source := dml.sourceModules[m.GetBasicModule().GetName()]
 		newModule := m.AsKubeObject(source)
-		labels := newModule.GetLabels()
-		labels[epochLabelKey] = epochLabelValue
-		newModule.SetLabels(labels)
+		newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
 
 		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.GetBasicModule().GetName(), v1.GetOptions{})
 		if err != nil {
@@ -165,9 +163,11 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 		}
 
 		existModule.Properties = newModule.Properties
-		labels = existModule.GetLabels()
-		labels[epochLabelKey] = epochLabelValue
-		existModule.SetLabels(labels)
+		if len(existModule.Labels) == 0 {
+			newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
+		} else {
+			existModule.Labels[epochLabelKey] = epochLabelValue
+		}
 
 		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, existModule, v1.UpdateOptions{})
 
