@@ -97,8 +97,6 @@ func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 			continue
 		}
 
-		fmt.Println("GOT EVENT WITH MODULE", event.ModuleName, event.EventType)
-
 		mod, ok := dml.deckhouseModules[event.ModuleName]
 		if !ok {
 			log.Errorf("Module %q registered but not found in Deckhouse. Possible bug?", event.ModuleName)
