@@ -26,6 +26,7 @@
  - **[local-path-provisioner]** Image is based on distroless image. [#6194](https://github.com/deckhouse/deckhouse/pull/6194)
  - **[log-shipper]** Add an option to encode messages to CEF format (often accepted by SIEM systems, such as KUMA (Kaspersky Unified Monitoring and Analysis Platform). [#6406](https://github.com/deckhouse/deckhouse/pull/6406)
  - **[monitoring-ping]** Image is based on distroless image. Use static Python. [#6204](https://github.com/deckhouse/deckhouse/pull/6204)
+ - **[node-manager]** Add support for Kubernetes events in Cluster API Provider Static. [#6419](https://github.com/deckhouse/deckhouse/pull/6419)
  - **[prometheus]** Ability to set a custom logo for the Grafana dashboard. [#6268](https://github.com/deckhouse/deckhouse/pull/6268)
 
 ## Fixes
@@ -34,9 +35,12 @@
  - **[candi]** Do not use cloud network setup scripts for static NodeGroups. [#6464](https://github.com/deckhouse/deckhouse/pull/6464)
  - **[candi]** Fix big time drift on nodes. [#6297](https://github.com/deckhouse/deckhouse/pull/6297)
     All chrony pods will restart.
+ - **[cni-cilium]** Fix `resourceManagement` in the Static mode. [#6550](https://github.com/deckhouse/deckhouse/pull/6550)
  - **[common]** Fix CVE issues in the `kube-rbac-proxy` image. [#6316](https://github.com/deckhouse/deckhouse/pull/6316)
     The pods that are behind the `kube-rbac-proxy` will restart.
  - **[dashboard]** Fix apiVersion for CronJobs to display with the dashboard module. [#5799](https://github.com/deckhouse/deckhouse/pull/5799)
+ - **[deckhouse]** Fix panic when validating int in a number field in module configuration. [#6556](https://github.com/deckhouse/deckhouse/pull/6556)
+ - **[dhctl]** Fix `dhctl mirror` is not available in a container. [#6538](https://github.com/deckhouse/deckhouse/pull/6538)
  - **[dhctl]** Fix `edit provider-cluster-configuration` command to not remove `discovery-data.json` file from `kube-system/d8-provider-cluster-configuration` Secret. [#6486](https://github.com/deckhouse/deckhouse/pull/6486)
  - **[dhctl]** Improved the seeding and usage of rand. [#5094](https://github.com/deckhouse/deckhouse/pull/5094)
     Higher quality of insecure randomness, slightly better performance.
@@ -74,6 +78,7 @@
  - **[deckhouse]** Send `clusterUUID` when checking for Deckhouse release. [#6412](https://github.com/deckhouse/deckhouse/pull/6412)
  - **[docs]** Add a guide for mirroring the Deckhouse registry using the `dhctl mirror` tool. [#6339](https://github.com/deckhouse/deckhouse/pull/6339)
  - **[go_lib]** Bump `addon-operator` to avoid race panics. [#6505](https://github.com/deckhouse/deckhouse/pull/6505)
+ - **[linstor]** Add a badge in the documentation about module requirements. [#6534](https://github.com/deckhouse/deckhouse/pull/6534)
  - **[virtualization]** Add a validating webhook to prevent the virtualization module from being enabled. [#6356](https://github.com/deckhouse/deckhouse/pull/6356)
     The `virtualization` module cannot be enabled, but it will continue to work if it was already enabled before the update (the current version of the module is deprecated, and a new version will be published soon).
 
