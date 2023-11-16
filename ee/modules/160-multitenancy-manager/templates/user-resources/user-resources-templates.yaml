@@ -102,9 +102,9 @@ spec:
   accessLevel: {{ $values.role }}
   subjects:
   - kind: {{ $values.kind }}
-    name: {{ $values.name }}
+    name: {{ $values.name | quote }}
   {{- if $values.namespace }}
-    namespace: {{ $values.namespace }}
+    namespace: {{ $values.namespace | quote }}
   {{- end }}
 {{- end }}
 
@@ -118,13 +118,13 @@ spec:
 {{- end }}
 
 {{- $projectValues := $.Values.project }}
-{{- $projectTypeValues := $.Values.projectType }}
-
 {{- $_ := set $projectValues "Template" $.Template }}
+{{- $projectTemplateValues := $.Values.projectTemplate }}
 
-{{- include "project.namespace" ( list $projectValues.projectName $projectTypeValues.namespaceMetadata ) }}
 
-{{- $templates := include "prepare.templates" ( list $projectTypeValues.resourcesTemplate $projectValues.projectName $) }}
+{{- include "project.namespace" ( list $projectValues.projectName $projectTemplateValues.namespaceMetadata ) }}
+
+{{- $templates := include "prepare.templates" ( list $projectTemplateValues.template $projectValues.projectName $) }}
 {{- tpl $templates $projectValues }}
 
-{{- include "authorization.rules" (list $projectValues.projectName $projectTypeValues.subjects $)}}
+{{- include "authorization.rules" (list $projectValues.projectName $projectTemplateValues.subjects $)}}

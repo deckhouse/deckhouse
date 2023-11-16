@@ -26,7 +26,7 @@ var (
 func projectTypeHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:       ProjectTypesQueue,
-		ApiVersion: APIVersion,
+		ApiVersion: "deckhouse.io/v1alpha1",
 		Kind:       ProjectTypeKind,
 		FilterFunc: filterFunc,
 	}

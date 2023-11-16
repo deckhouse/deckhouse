@@ -1,0 +1,64 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает шаблон проекта.
+
+            На шаблон проекта ссылаются [проекты (Project)](cr.html#project).
+          properties:
+            spec:
+              description: ""
+              properties:
+                namespaceMetadata:
+                  description:
+                    Лейблы и аннотации, которые применяются к создаваемым
+                    пространствам имен при настройке проекта.
+                  properties:
+                    annotations:
+                      description: ""
+                    labels:
+                      description: ""
+                valuesSchema:
+                  description:
+                    Схема входных параметров [шаблона](#projecttemplate-v1alpha2-spec-template).
+                template:
+                  description: |
+                    Шаблоны ресурсов в формате `helm`, которые требуется создать при настройке нового проекта.
+
+                    Шаблоны совместимы со всеми функциями `helm`. Читайте подробнее про [создание изолированных окружений](usage.html#создание-изолированного-окружения)...
+
+                    В шаблонах доступны также следующие параметры (`values`):
+                    - `{{ .projectName }}` — имя проекта (`Project`), для которого рендерится шаблон;
+                    - `{{ .templateName }}` — имя шаблона (текущего `ProjectTemplate`);
+                    - `{{ .templateValues }}` — словарь пользовательских значений, описанных в параметре [.spec.valuesSchema](cr.html#projecttemplate-v1alpha2-spec-valuesSchema) и определенных в параметре [.spec.template](cr.html#project-v1alpha2-spec-template).
+
+                    > **Внимание!** Указывать поля `.metadata.namespace` для объектов необязательно,
+                    > так как они автоматически проставятся из названия проекта.
+                subjects:
+                  description:
+                    Пользователи и их доступ к созданному проекту.
+                  items:
+                    description: ""
+                    properties:
+                      kind:
+                        description: Тип субъекта.
+                      name:
+                        description: Имя субъекта.
+                      namespace:
+                        description: |
+                          Пространство имен (`namespace`) субъекта.
+
+                          Требуется только при использовании ServiceAccount'а из другого пространства имен (`namespace`).
+                      role:
+                        description:
+                          Уровень доступа из [модуля user-authz](../140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel),
+                          который выдается субъекту в проекте.
+            status:
+              description: ""
+              properties:
+                message:
+                  description: Сообщение о статусе
+                ready:
+                  description: Сводка статуса (готов или не готов).

@@ -16,8 +16,9 @@ import (
 
 var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 	f := HookExecutionConfigInit(`{"multitenancyManager":{"internal":{"projects":[]}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "Project", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "Project", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ProjectType", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ProjectTemplate", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -68,14 +69,14 @@ var (
 
 const validProject = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Project
 metadata:
   name: test-project
 spec:
   description: Test case from Deckhouse documentation
-  projectTypeName: test-project-type
-  template:
+  templateName: test-project-type
+  templateValues:
     requests:
       cpu: 5
       memory: 5Gi
@@ -87,14 +88,14 @@ spec:
 
 const invalidProject = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Project
 metadata:
   name: test-project-2
 spec:
   description: Test case from Deckhouse documentation
-  projectTypeName: test-project-type
-  template:
+  templateName: test-project-type
+  templateValues:
     requests:
       cpu: qwerty
       memory: 5Gi

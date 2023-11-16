@@ -5,25 +5,25 @@ metadata:
   labels:
     heritage: deckhouse
     module: deckhouse
-  name: projecttypes.deckhouse.io
+  name: projecttemplates.deckhouse.io
 spec:
   group: deckhouse.io
   names:
-    kind: ProjectType
-    listKind: ProjectTypeList
-    plural: projecttypes
-    singular: projecttype
+    kind: ProjectTemplate
+    listKind: ProjectTemplateList
+    plural: projecttemplates
+    singular: projecttemplate
   scope: Cluster
   versions:
-    - additionalPrinterColumns:
+    - name: v1alpha1
+      additionalPrinterColumns:
         - jsonPath: .status.ready
           name: Ready
           type: boolean
-      name: v1alpha1
       schema:
         openAPIV3Schema:
           description: |
-            Describes the environment template.
+            Describes the project template.
 
             This resource is referenced by the [Project](cr.html#project) CR.
           properties:
@@ -32,7 +32,7 @@ spec:
                 namespaceMetadata:
                   description:
                     Labels and annotations that apply to created
-                    namespaces when setting up the environment.
+                    namespaces when setting up the project.
                   properties:
                     annotations:
                       additionalProperties:
@@ -43,30 +43,30 @@ spec:
                         type: string
                       type: object
                   type: object
-                openAPI:
+                valuesSchema:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
                   description:
-                    OpenAPI specification for template values (the [resourcesTemplate](#projecttype-v1alpha1-spec-resourcestemplate) parameter).
+                    OpenAPI specification for template values (the [template](#projecttemplate-v1alpha1-spec-template) parameter).
                   type: object
-                resourcesTemplate:
+                template:
                   description: |
-                    Resource templates in `helm` format to be created when setting up a new environment.
+                    Templates in `helm` format to be created when setting up a new project.
 
                     Templates are fully compatible with all `helm` functions. Read more about [creating an isolated Environment](usage.html#creating-an-isolated-environment)...
 
                     The following values are also available in templates:
-                    - `{{ .projectName }}` — the name of the `Project` (environment) for which the template is being rendered.
-                    - `{{ .projectTypeName }}` — the name of the `ProjectType`.
-                    - `{{ .params }}` — a dictionary of custom values, described in the [.spec.openAPI](cr.html#projecttype-v1alpha1-spec-openapi) parameter and defined in the [.spec.template](cr.html#project-v1alpha1-spec-template) parameter.
+                    - `{{ .projectName }}` — the name of the `Project` (project) for which the template is being rendered.
+                    - `{{ .templateName }}` — the name of the `ProjectTemplate`.
+                    - `{{ .templateValues }}` — a dictionary of custom values, described in the [.spec.valuesSchema](cr.html#projecttemplate-v1alpha1-spec-valuesSchema) parameter and defined in the [.spec.template](cr.html#project-v1alpha1-spec-template) parameter.
 
                     > **Note!** Specifying `.metadata.namespace` fields for objects is optional,
-                    > as they are automatically set with the name of the created environment (CR `Project`).
+                    > as they are automatically set with the name of the created project.
                   type: string
                 subjects:
                   description:
                     List of ServiceAccounts, Groups and Users to provide
-                    access to the created environment (project).
+                    access to the created project.
                   items:
                     oneOf:
                       - properties:
@@ -96,7 +96,7 @@ spec:
                       kind:
                         description:
                           Kind of the target resource to apply access to the
-                          environment (`ServiceAccount`, `Group` or `User`).
+                          project (`ServiceAccount`, `Group` or `User`).
                         enum:
                           - ServiceAccount
                           - User
@@ -105,12 +105,12 @@ spec:
                       name:
                         description:
                           The name of the target resource to apply access
-                          to the environment.
+                          to the project.
                         minLength: 1
                         type: string
                       namespace:
                         description:
-                          The namespace of the target resource to apply environment access to.
+                          The namespace of the target resource to apply project access to.
 
                           Required only when using `ServiceAccount` from another namespace.
                         pattern: "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
@@ -138,7 +138,5 @@ spec:
           type: object
       served: true
       storage: true
-      deprecated: true
-      deprecationWarning: "ProjectType is deprecated. Use ProjectTemplate instead"
       subresources:
         status: {}

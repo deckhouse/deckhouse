@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	Namespace  = "d8-multitenancy-manager"
-	APIVersion = "deckhouse.io/v1alpha1"
+	Namespace = "d8-multitenancy-manager"
 
-	ProjectTypeKind = "ProjectType"
-	ProjectKind     = "Project"
+	ProjectTemplateKind = "ProjectTemplate"
+	ProjectTypeKind     = "ProjectType"
+	ProjectKind         = "Project"
 
 	PTValuesPath      = "projectTypes"
 	ProjectValuesPath = "projects"
@@ -61,7 +61,11 @@ func LoadOpenAPISchema(s interface{}) (*spec.Schema, error) {
 }
 
 func patchStatus(patcher *object_patch.PatchCollector, kind, objectName string, patch interface{}) {
-	patcher.MergePatch(patch, APIVersion, kind, "", objectName, object_patch.WithSubresource("/status"))
+	if kind == "Project" {
+		patcher.MergePatch(patch, "deckhouse.io/v1alpha2", kind, "", objectName, object_patch.WithSubresource("/status"))
+	} else {
+		patcher.MergePatch(patch, "deckhouse.io/v1alpha1", kind, "", objectName, object_patch.WithSubresource("/status"))
+	}
 }
 
 func stringOrNil(s string) interface{} {

@@ -9,11 +9,11 @@ properties:
       projects:
         items:
           properties:
-            projectTypeName:
+            templateName:
               type: string
             projectName:
               type: string
-            params:
+            templateValues:
               description: OpenApi spec for tempalte
               additionalProperties: true
           type: object

@@ -28,3 +28,30 @@ spec:
                   description: Сводка статуса.
                 sync:
                   description: Состояние Project синхронизировано с кластером.
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: ""
+          properties:
+            spec:
+              description: ""
+              properties:
+                description:
+                  description: Описание проекта.
+                projectTemplateName:
+                  description: |
+                    Имя custom resource [ProjectTemplate](cr.html#projecttemplate), который будет использоваться
+                    как шаблон для создания ресурсов проекта.
+                templateValues:
+                  description: |
+                    Входные параметры [шаблона ресурсов](cr.html#projecttemplate-v1alpha2-spec-template) из [шаблона проекта](cr.html#projecttemplate)
+                    в формате helm values, согласованные со  [схемой](cr.html#projecttemplate-v1alpha2-spec-ValuesSchema).
+            status:
+              description: ""
+              properties:
+                message:
+                  description: Сообщение о статусе.
+                state:
+                  description: Сводка статуса.
+                sync:
+                  description: Состояние Project синхронизировано с кластером.

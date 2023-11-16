@@ -24,27 +24,6 @@ type ProjectTypeSpec struct {
 	ResourcesTemplate string `json:"resourcesTemplate,omitempty" yaml:"resourcesTemplate,omitempty"`
 }
 
-type NamespaceMetadata struct {
-	Labels map[string]string `json:"labels,omitempty" yaml:"labels"`
-
-	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations"`
-}
-
-type AuthorizationRule struct {
-	// Kind of the target resource to apply access to project (`ServiceAccount`, `Group` or `User`).
-	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-
-	// The name of the target resource to apply access to the project.
-	Name string `json:"name,omitempty" yaml:"name,omitempty"`
-
-	// The namespace of the target resource to apply Project access to.
-	// Required only when using `ServiceAccount` from another NS.
-	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-
-	// Role name from [user-authz module](../../modules/140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel)
-	Role string `json:"role,omitempty" yaml:"role,omitempty"`
-}
-
 type ProjectTypeStatus struct {
 	// Status message.
 	Message string `json:"message,omitempty"`
