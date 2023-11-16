@@ -96,7 +96,9 @@ func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
 
 		return true
 	})
-	if !done {
+	if done {
+		c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup script executed successfully")
+	} else {
 		instanceScope.Logger.Info("Cleaning is not finished yet, waiting...")
 	}
 

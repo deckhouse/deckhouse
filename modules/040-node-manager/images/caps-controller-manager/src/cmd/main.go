@@ -35,6 +35,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
 	//+kubebuilder:scaffold:imports
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
@@ -42,6 +43,7 @@ import (
 	"caps-controller-manager/internal/client"
 	deckhouseiocontroller "caps-controller-manager/internal/controller/deckhouse.io"
 	infrastructurecontroller "caps-controller-manager/internal/controller/infrastructure"
+	"caps-controller-manager/internal/event"
 )
 
 var (
@@ -99,6 +101,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	recorder := event.NewRecorder(mgr.GetClient(), ctrl.Log.WithName("event recorder"))
+
 	if err = (&infrastructurecontroller.StaticClusterReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -111,7 +115,8 @@ func main() {
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		Config:     mgr.GetConfig(),
-		HostClient: client.NewClient(),
+		HostClient: client.NewClient(recorder),
+		Recorder:   recorder,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticMachine")
 		os.Exit(1)
@@ -121,9 +126,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&deckhouseiocontroller.StaticInstanceReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Config: mgr.GetConfig(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Config:   mgr.GetConfig(),
+		Recorder: recorder,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticInstance")
 		os.Exit(1)
