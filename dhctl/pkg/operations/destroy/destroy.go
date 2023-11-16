@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -161,7 +162,13 @@ func newStaticMastersDestroyer(c *ssh.Client) *staticMastersDestroyer {
 	}
 }
 
-func (d *staticMastersDestroyer) DestroyCluster(_ bool) error {
+func (d *staticMastersDestroyer) DestroyCluster(autoApprove bool) error {
+	if !autoApprove {
+		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
+			return fmt.Errorf("Cleanup master nodes disallow")
+		}
+	}
+
 	mastersHosts := d.SSHClient.Settings.AvailableHosts()
 	stdOutErrHandler := func(l string) {
 		log.WarnLn(l)
