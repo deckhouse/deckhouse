@@ -12,6 +12,8 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/6556
 dhctl:
   fixes:
+    - summary: Delete unnecessary obsolescence image preflight check.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6567
     - summary: Fix `dhctl mirror` is not available in a container.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6538
 node-manager:
