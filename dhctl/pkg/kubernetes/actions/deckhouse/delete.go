@@ -131,50 +131,6 @@ func DeletePVC(kubeCl *client.KubernetesClient) error {
 	})
 }
 
-func DeleteMachineDeployments(kubeCl *client.KubernetesClient) error {
-	machineDeploymentsSchema := schema.GroupVersionResource{Group: "machine.sapcloud.io", Version: "v1alpha1", Resource: "machinedeployments"}
-	machinesSchema := schema.GroupVersionResource{Group: "machine.sapcloud.io", Version: "v1alpha1", Resource: "machines"}
-
-	return retry.NewLoop("Delete MachineDeployments", 45, 5*time.Second).Run(func() error {
-		allMachines, err := kubeCl.Dynamic().Resource(machinesSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return fmt.Errorf("get machines: %v", err)
-		}
-
-		for _, machine := range allMachines.Items {
-			labels := machine.GetLabels()
-			labels["force-deletion"] = "True"
-			machine.SetLabels(labels)
-
-			content, err := machine.MarshalJSON()
-			if err != nil {
-				return err
-			}
-
-			_, err = kubeCl.Dynamic().Resource(machinesSchema).Namespace(machine.GetNamespace()).Patch(context.TODO(), machine.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
-			if err != nil {
-				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
-			}
-		}
-
-		allMachineDeployments, err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return fmt.Errorf("get machinedeployments: %v", err)
-		}
-
-		for _, machineDeployment := range allMachineDeployments.Items {
-			namespace := machineDeployment.GetNamespace()
-			name := machineDeployment.GetName()
-			err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
-			if err != nil {
-				return fmt.Errorf("delete machinedeployments %s: %v", name, err)
-			}
-			log.InfoF("%s/%s\n", namespace, name)
-		}
-		return nil
-	})
-}
-
 func WaitForDeckhouseDeploymentDeletion(kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Wait for Deckhouse Deployment deletion", 30, 5*time.Second).WithShowError(false).Run(func() error {
 		_, err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Get(context.TODO(), deckhouseDeploymentName, metav1.GetOptions{})
@@ -189,27 +145,6 @@ func WaitForDeckhouseDeploymentDeletion(kubeCl *client.KubernetesClient) error {
 		}
 		//goland:noinspection GoErrorStringFormat
 		return fmt.Errorf(errStr)
-	})
-}
-
-func WaitForMachinesDeletion(kubeCl *client.KubernetesClient) error {
-	resourceSchema := schema.GroupVersionResource{Group: "machine.sapcloud.io", Version: "v1alpha1", Resource: "machines"}
-	return retry.NewLoop("Wait for Machines deletion", 45, 15*time.Second).WithShowError(false).Run(func() error {
-		resources, err := kubeCl.Dynamic().Resource(resourceSchema).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return err
-		}
-
-		count := len(resources.Items)
-		if count != 0 {
-			builder := strings.Builder{}
-			for _, item := range resources.Items {
-				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.GetNamespace(), item.GetName()))
-			}
-			return fmt.Errorf("%d Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
-		}
-		log.InfoLn("All Machines are deleted from the cluster")
-		return nil
 	})
 }
 
@@ -302,12 +237,7 @@ func WaitForPVCDeletion(kubeCl *client.KubernetesClient) error {
 	})
 }
 
-func checkMachinesAPI(kubeCl *client.KubernetesClient) error {
-	gv := schema.GroupVersion{
-		Group:   "machine.sapcloud.io",
-		Version: "v1alpha1",
-	}
-
+func checkMachinesAPI(kubeCl *client.KubernetesClient, gv schema.GroupVersion) error {
 	resourcesList, err := kubeCl.Discovery().ServerResourcesForGroupVersion(gv.String())
 	if err != nil {
 		return err
@@ -328,10 +258,90 @@ func checkMachinesAPI(kubeCl *client.KubernetesClient) error {
 	return nil
 }
 
+// mcm
+const (
+	MCMGroup        = "machine.sapcloud.io"
+	MCMGroupVersion = "v1alpha1"
+)
+
+func DeleteMCMMachineDeployments(kubeCl *client.KubernetesClient) error {
+	machineDeploymentsSchema := schema.GroupVersionResource{Group: MCMGroup, Version: MCMGroupVersion, Resource: "machinedeployments"}
+	machinesSchema := schema.GroupVersionResource{Group: MCMGroup, Version: MCMGroupVersion, Resource: "machines"}
+
+	return retry.NewLoop("Delete MCM MachineDeployments", 45, 5*time.Second).Run(func() error {
+		allMachines, err := kubeCl.Dynamic().Resource(machinesSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("get machines: %v", err)
+		}
+
+		for _, machine := range allMachines.Items {
+			labels := machine.GetLabels()
+			labels["force-deletion"] = "True"
+			machine.SetLabels(labels)
+
+			content, err := machine.MarshalJSON()
+			if err != nil {
+				return err
+			}
+
+			_, err = kubeCl.Dynamic().Resource(machinesSchema).Namespace(machine.GetNamespace()).Patch(context.TODO(), machine.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+			if err != nil {
+				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
+			}
+		}
+
+		allMachineDeployments, err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("get machinedeployments: %v", err)
+		}
+
+		for _, machineDeployment := range allMachineDeployments.Items {
+			namespace := machineDeployment.GetNamespace()
+			name := machineDeployment.GetName()
+			err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+			if err != nil {
+				return fmt.Errorf("delete machinedeployments %s: %v", name, err)
+			}
+			log.InfoF("%s/%s\n", namespace, name)
+		}
+		return nil
+	})
+}
+
+func WaitForMCMMachinesDeletion(kubeCl *client.KubernetesClient) error {
+	resourceSchema := schema.GroupVersionResource{Group: MCMGroup, Version: MCMGroupVersion, Resource: "machines"}
+	return retry.NewLoop("Wait for MCM Machines deletion", 45, 15*time.Second).WithShowError(false).Run(func() error {
+		resources, err := kubeCl.Dynamic().Resource(resourceSchema).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		count := len(resources.Items)
+		if count != 0 {
+			builder := strings.Builder{}
+			for _, item := range resources.Items {
+				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.GetNamespace(), item.GetName()))
+			}
+			return fmt.Errorf("%d Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
+		}
+		log.InfoLn("All Machines are deleted from the cluster")
+		return nil
+	})
+}
+
+func checkMCMMachinesAPI(kubeCl *client.KubernetesClient) error {
+	gv := schema.GroupVersion{
+		Group:   MCMGroup,
+		Version: MCMGroupVersion,
+	}
+
+	return checkMachinesAPI(kubeCl, gv)
+}
+
 func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
-	err := retry.NewLoop("Get Kubernetes cluster resources for group/version", 5, 5*time.Second).WithShowError(false).
+	err := retry.NewLoop("Get Kubernetes cluster resources for MCM group/version", 5, 5*time.Second).WithShowError(false).
 		Run(func() error {
-			return checkMachinesAPI(kubeCl)
+			return checkMCMMachinesAPI(kubeCl)
 		})
 	if err != nil {
 		log.WarnF("Can't get resources in group=machine.sapcloud.io, version=v1alpha1: %v\n", err)
@@ -344,10 +354,93 @@ func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
 		return fmt.Errorf("Machines deletion aborted.\n")
 	}
 
-	err = DeleteMachineDeployments(kubeCl)
+	err = DeleteMCMMachineDeployments(kubeCl)
 	if err != nil {
 		return err
 	}
 
-	return WaitForMachinesDeletion(kubeCl)
+	if err := WaitForMCMMachinesDeletion(kubeCl); err != nil {
+		return err
+	}
+
+	// try to remove CAPI machines it needs for static clusters and cluster with cluster api support
+	err = retry.NewLoop("Get Kubernetes cluster resources for CAPI group/version", 5, 5*time.Second).WithShowError(false).
+		Run(func() error {
+			return checkCAPIMachinesAPI(kubeCl)
+		})
+	if err != nil {
+		log.WarnF("Can't get resources in group=cluster.x-k8s.io, version=v1beta1: %v\n", err)
+		if input.NewConfirmation().
+			WithMessage("Machines weren't deleted from the cluster. Do you want to continue?").
+			WithYesByDefault().
+			Ask() {
+			return nil
+		}
+		return fmt.Errorf("Machines deletion aborted.\n")
+	}
+
+	err = DeleteCAPIMachineDeployments(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	return WaitForCAPIMachinesDeletion(kubeCl)
+}
+
+// CAPШ
+const (
+	CAPIGroup        = "cluster.x-k8s.io"
+	CAPIGroupVersion = "v1beta1"
+)
+
+func checkCAPIMachinesAPI(kubeCl *client.KubernetesClient) error {
+	gv := schema.GroupVersion{
+		Group:   CAPIGroup,
+		Version: CAPIGroupVersion,
+	}
+
+	return checkMachinesAPI(kubeCl, gv)
+}
+
+func DeleteCAPIMachineDeployments(kubeCl *client.KubernetesClient) error {
+	machineDeploymentsSchema := schema.GroupVersionResource{Group: CAPIGroup, Version: CAPIGroupVersion, Resource: "machinedeployments"}
+
+	return retry.NewLoop("Delete CAPI MachineDeployments", 45, 5*time.Second).Run(func() error {
+		allMachineDeployments, err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("get machinedeployments: %v", err)
+		}
+
+		for _, machineDeployment := range allMachineDeployments.Items {
+			namespace := machineDeployment.GetNamespace()
+			name := machineDeployment.GetName()
+			err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+			if err != nil {
+				return fmt.Errorf("delete machinedeployments %s: %v", name, err)
+			}
+			log.InfoF("%s/%s\n", namespace, name)
+		}
+		return nil
+	})
+}
+
+func WaitForCAPIMachinesDeletion(kubeCl *client.KubernetesClient) error {
+	machinesSchema := schema.GroupVersionResource{Group: CAPIGroup, Version: CAPIGroupVersion, Resource: "machines"}
+	return retry.NewLoop("Wait for MCM Machines deletion", 45, 15*time.Second).WithShowError(false).Run(func() error {
+		resources, err := kubeCl.Dynamic().Resource(machinesSchema).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		count := len(resources.Items)
+		if count != 0 {
+			builder := strings.Builder{}
+			for _, item := range resources.Items {
+				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.GetNamespace(), item.GetName()))
+			}
+			return fmt.Errorf("%d CAPI Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
+		}
+		log.InfoLn("All CAPI Machines are deleted from the cluster")
+		return nil
+	})
 }

@@ -15,12 +15,25 @@
 package destroy
 
 import (
+	"errors"
+	"fmt"
+	"os/exec"
+	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
+
+type Destroyer interface {
+	DestroyCluster(autoApprove bool) error
+}
 
 type Params struct {
 	SSHClient   *ssh.Client
@@ -35,8 +48,8 @@ type ClusterDestroyer struct {
 	stateCache      dhctlstate.Cache
 	terrStateLoader infra.StateLoader
 
-	d8Destroyer  *DeckhouseDestroyer
-	clusterInfra *infra.ClusterInfra
+	d8Destroyer       *DeckhouseDestroyer
+	cloudClusterInfra *infra.ClusterInfra
 
 	skipResources bool
 
@@ -55,8 +68,8 @@ func NewClusterDestroyer(params *Params) *ClusterDestroyer {
 		stateCache:      params.StateCache,
 		terrStateLoader: terraStateLoader,
 
-		d8Destroyer:  d8Destroyer,
-		clusterInfra: clusterInfra,
+		d8Destroyer:       d8Destroyer,
+		cloudClusterInfra: clusterInfra,
 
 		skipResources: params.SkipResources,
 
@@ -65,8 +78,6 @@ func NewClusterDestroyer(params *Params) *ClusterDestroyer {
 }
 
 func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
-	var err error
-
 	defer d.d8Destroyer.UnlockConverge(true)
 
 	if err := d.PhasedExecutionContext.Init(d.stateCache); err != nil {
@@ -74,13 +85,30 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	}
 	defer d.PhasedExecutionContext.Finalize(d.stateCache)
 
+	// populate cluster state in cache
+	metaConfig, err := d.terrStateLoader.PopulateMetaConfig()
+	if err != nil {
+		return err
+	}
+
+	clusterType := metaConfig.ClusterType
+	var infraDestroyer Destroyer
+	switch clusterType {
+	case config.CloudClusterType:
+		infraDestroyer = d.cloudClusterInfra
+	case config.StaticClusterType:
+		infraDestroyer = newStaticMastersDestroyer()
+	default:
+		return fmt.Errorf("Unknown cluster type '%s'", clusterType)
+	}
+
 	if !d.skipResources {
 		if shouldStop, err := d.PhasedExecutionContext.StartPhase(phases.DeleteResourcesPhase, false); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
 		}
-		if err := d.d8Destroyer.DeleteResources(); err != nil {
+		if err := d.d8Destroyer.DeleteResources(clusterType); err != nil {
 			return err
 		}
 		if err := d.PhasedExecutionContext.CommitState(d.stateCache); err != nil {
@@ -88,15 +116,11 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		}
 	}
 
-	// populate cluster state in cache
-	_, err = d.terrStateLoader.PopulateMetaConfig()
-	if err != nil {
-		return err
-	}
-
-	_, _, err = d.terrStateLoader.PopulateClusterState()
-	if err != nil {
-		return err
+	if clusterType == config.CloudClusterType {
+		_, _, err = d.terrStateLoader.PopulateClusterState()
+		if err != nil {
+			return err
+		}
 	}
 
 	// only after load and save all states into cache
@@ -113,10 +137,59 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	// Stop proxy because we have already got all info from kubernetes-api
 	d.d8Destroyer.StopProxy()
 
-	if err := d.clusterInfra.DestroyCluster(autoApprove); err != nil {
+	if err := infraDestroyer.DestroyCluster(autoApprove); err != nil {
 		return err
 	}
 
 	d.state.Clean()
 	return d.PhasedExecutionContext.Complete()
+}
+
+type StaticMastersDestroyer struct{}
+
+func newStaticMastersDestroyer() *StaticMastersDestroyer {
+	return &StaticMastersDestroyer{}
+}
+
+func (d *StaticMastersDestroyer) DestroyCluster(_ bool) error {
+	sshClient := ssh.NewClientFromFlags()
+
+	mastersHosts := sshClient.Settings.AvailableHosts()
+	stdOutErrHandler := func(l string) {
+		log.InfoLn(l)
+	}
+
+	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
+	for _, host := range mastersHosts {
+		settings := sshClient.Settings.Copy()
+		settings.SetAvailableHosts([]string{host})
+		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
+			err := frontend.NewCommand(settings, cmd).
+				Sudo().
+				WithTimeout(5 * time.Minute).
+				WithStdoutHandler(stdOutErrHandler).
+				WithStderrHandler(stdOutErrHandler).
+				Run()
+
+			if err != nil {
+				var ee *exec.ExitError
+				if errors.As(err, &ee) {
+					// script reboot node
+					if ee.ExitCode() == 255 {
+						return nil
+					}
+				}
+
+				return err
+			}
+
+			return err
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
