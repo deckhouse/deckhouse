@@ -19,6 +19,8 @@ package deckhouse_config
 import (
 	"sync"
 
+	"github.com/flant/addon-operator/pkg/values/validation"
+
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -107,6 +109,10 @@ func (srv *ConfigService) ModuleToSourcesNames() map[string]string {
 	}
 
 	return res
+}
+
+func (srv *ConfigService) GetValuesValidator() *validation.ValuesValidator {
+	return srv.moduleManager.GetValuesValidator()
 }
 
 func (srv *ConfigService) ValidateModule(module *modules.BasicModule) error {

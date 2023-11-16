@@ -257,7 +257,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 }
 
 func validateModule(def *models.DeckhouseModuleDefinition) error {
-	dm := models.NewDeckhouseModule(*def, utils.Values{}, nil)
+	dm := models.NewDeckhouseModule(*def, utils.Values{}, deckhouse_config.Service().GetValuesValidator())
 	err := deckhouse_config.Service().ValidateModule(dm.GetBasicModule())
 	if err != nil {
 		return err
