@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if systemctl is-enabled --quiet systemd-networkd && systemctl is-active --quiet systemd-networkd; then
-  bb-event-on 'bb-sync-file-changed' '_on_systemctl_config_changed'
-  _on_systemctl_config_changed() {
-    systemctl restart systemd-networkd.service
-  }
+# Do nothing, if systemd-networkd is not enabled and active
+if ! systemctl is-enabled --quiet systemd-networkd && systemctl is-active --quiet systemd-networkd ; then exit 0 ; fi
 
-  bb-sync-file /etc/systemd/networkd.conf.d/80-disable-manage-foreign-rules.conf - << "EOF"
-  # CNI also manage the rules. Disable foreign rule management to prevent conflicts.
-  [Network]
-  ManageForeignRoutingPolicyRules=no
-  EOF
-fi
+bb-event-on 'bb-sync-file-changed' '_on_systemctl_config_changed'
+_on_systemctl_config_changed() {
+  systemctl restart systemd-networkd.service
+}
+bb-sync-file /etc/systemd/networkd.conf.d/80-disable-manage-foreign-rules.conf - << "EOF"
+# CNI also manage the rules. Disable foreign rule management to prevent conflicts.
+[Network]
+ManageForeignRoutingPolicyRules=no
+EOF
