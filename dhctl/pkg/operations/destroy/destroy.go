@@ -53,6 +53,8 @@ type ClusterDestroyer struct {
 
 	skipResources bool
 
+	staticDestroyer *staticMastersDestroyer
+
 	*phases.PhasedExecutionContext
 }
 
@@ -62,6 +64,8 @@ func NewClusterDestroyer(params *Params) *ClusterDestroyer {
 	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state)
 	terraStateLoader := terraform.NewLazyTerraStateLoader(terraform.NewCachedTerraStateLoader(d8Destroyer, state.cache))
 	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
+
+	staticDestroyer := newStaticMastersDestroyer(params.SSHClient)
 
 	return &ClusterDestroyer{
 		state:           state,
@@ -74,6 +78,8 @@ func NewClusterDestroyer(params *Params) *ClusterDestroyer {
 		skipResources: params.SkipResources,
 
 		PhasedExecutionContext: pec,
+
+		staticDestroyer: staticDestroyer,
 	}
 }
 
@@ -97,7 +103,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	case config.CloudClusterType:
 		infraDestroyer = d.cloudClusterInfra
 	case config.StaticClusterType:
-		infraDestroyer = newStaticMastersDestroyer()
+		infraDestroyer = d.staticDestroyer
 	default:
 		return fmt.Errorf("Unknown cluster type '%s'", clusterType)
 	}
@@ -145,23 +151,25 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	return d.PhasedExecutionContext.Complete()
 }
 
-type StaticMastersDestroyer struct{}
-
-func newStaticMastersDestroyer() *StaticMastersDestroyer {
-	return &StaticMastersDestroyer{}
+type staticMastersDestroyer struct {
+	SSHClient *ssh.Client
 }
 
-func (d *StaticMastersDestroyer) DestroyCluster(_ bool) error {
-	sshClient := ssh.NewClientFromFlags()
+func newStaticMastersDestroyer(c *ssh.Client) *staticMastersDestroyer {
+	return &staticMastersDestroyer{
+		SSHClient: c,
+	}
+}
 
-	mastersHosts := sshClient.Settings.AvailableHosts()
+func (d *staticMastersDestroyer) DestroyCluster(_ bool) error {
+	mastersHosts := d.SSHClient.Settings.AvailableHosts()
 	stdOutErrHandler := func(l string) {
-		log.InfoLn(l)
+		log.WarnLn(l)
 	}
 
 	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
 	for _, host := range mastersHosts {
-		settings := sshClient.Settings.Copy()
+		settings := d.SSHClient.Settings.Copy()
 		settings.SetAvailableHosts([]string{host})
 		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
 			err := frontend.NewCommand(settings, cmd).
