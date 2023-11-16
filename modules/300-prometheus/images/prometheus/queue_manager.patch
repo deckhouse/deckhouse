@@ -11,3 +11,19 @@ index 3edd31b91..3220c34ab 100644
  			}
  			t.seriesMtx.Unlock()
  			continue
+diff --git a/tsdb/wlog/watcher.go b/tsdb/wlog/watcher.go
+index b0c17dcba..82c9c2c6e 100644
+--- a/tsdb/wlog/watcher.go
++++ b/tsdb/wlog/watcher.go
+@@ -500,6 +500,11 @@ func (w *Watcher) readSegment(r *LiveReader, segmentNum int, tail bool) error {
+ 				w.recordDecodeFailsMetric.Inc()
+ 				return err
+ 			}
++			for _, v := range series {
++				if v.Ref == 12756108 || v.Ref == 12756109 || v.Ref ==  12756107 {
++					level.Info(w.logger).Log("msg", "debug", "ref", v.Ref, "lbls", v.Labels)
++				}
++			}
+ 			w.writer.StoreSeries(series, segmentNum)
+ 
+ 		case record.Samples:
