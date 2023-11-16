@@ -41,6 +41,7 @@
     The pods that are behind the `kube-rbac-proxy` will restart.
  - **[dashboard]** Fix apiVersion for CronJobs to display with the dashboard module. [#5799](https://github.com/deckhouse/deckhouse/pull/5799)
  - **[deckhouse]** Fix panic when validating int in a number field in module configuration. [#6556](https://github.com/deckhouse/deckhouse/pull/6556)
+ - **[dhctl]** Delete unnecessary obsolescence image preflight check. [#6567](https://github.com/deckhouse/deckhouse/pull/6567)
  - **[dhctl]** Fix `dhctl mirror` is not available in a container. [#6538](https://github.com/deckhouse/deckhouse/pull/6538)
  - **[dhctl]** Fix `edit provider-cluster-configuration` command to not remove `discovery-data.json` file from `kube-system/d8-provider-cluster-configuration` Secret. [#6486](https://github.com/deckhouse/deckhouse/pull/6486)
  - **[dhctl]** Improved the seeding and usage of rand. [#5094](https://github.com/deckhouse/deckhouse/pull/5094)
