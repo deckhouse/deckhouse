@@ -18,4 +18,6 @@ node-manager:
   features:
     - summary: Add support for Kubernetes events in Cluster API Provider Static.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6419
+    - summary: Add documentation for Cluster API Provider Static.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6387
 
