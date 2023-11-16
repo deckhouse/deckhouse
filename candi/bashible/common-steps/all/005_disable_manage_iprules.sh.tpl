@@ -15,6 +15,8 @@
 # Do nothing, if systemd-networkd is not enabled and active
 if ! systemctl is-enabled --quiet systemd-networkd && systemctl is-active --quiet systemd-networkd ; then exit 0 ; fi
 
+mkdir -p /etc/systemd/networkd.conf.d/
+
 bb-event-on 'bb-sync-file-changed' '_on_systemctl_config_changed'
 _on_systemctl_config_changed() {
   systemctl restart systemd-networkd.service
