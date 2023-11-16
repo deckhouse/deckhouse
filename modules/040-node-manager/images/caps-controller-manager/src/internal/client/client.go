@@ -19,6 +19,7 @@ package client
 import (
 	"sync"
 
+	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/providerid"
 )
 
@@ -27,12 +28,15 @@ import (
 type Client struct {
 	tasksMutex sync.Mutex
 	tasks      map[providerid.ProviderID]*bool
+
+	recorder *event.Recorder
 }
 
 // NewClient creates a new Client.
-func NewClient() *Client {
+func NewClient(recorder *event.Recorder) *Client {
 	return &Client{
-		tasks: make(map[providerid.ProviderID]*bool),
+		tasks:    make(map[providerid.ProviderID]*bool),
+		recorder: recorder,
 	}
 }
 
