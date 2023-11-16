@@ -71,7 +71,7 @@ The master node configuration for cloud clusters can be configured using the [ma
 
 Reference:
 - [How do I add a master node to a cluster...](/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
-- [How do I add a static node to a cluster...](/documentation/v1/modules/040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster)
+- [Working with static nodes...](/documentation/latest/modules/040-node-manager/#working-with-static-nodes)
 
 ### Frontend nodes
 

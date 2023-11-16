@@ -1296,6 +1296,39 @@ spec:
           type: object
           description: |
             Describes the runtime parameters of the node group.
+          x-doc-examples:
+          - |
+              ```yaml
+              # NodeGroup for cloud nodes in AWS.
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              metadata:
+                name: test
+              spec:
+                nodeType: CloudEphemeral
+                cloudInstances:
+                  zones:
+                    - eu-west-1a
+                    - eu-west-1b
+                  minPerZone: 1
+                  maxPerZone: 2
+                  classReference:
+                    kind: AWSInstanceClass
+                    name: test
+                nodeTemplate:
+                  labels:
+                    tier: test
+              ```
+          - |
+              ```yaml
+              # NodeGroup for static nodes on bare metal servers (or VMs).
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              metadata:
+                name: worker
+              spec:
+                nodeType: Static
+              ```
           required:
             - spec
           properties:

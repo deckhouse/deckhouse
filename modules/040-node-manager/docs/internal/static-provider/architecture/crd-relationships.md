@@ -12,4 +12,4 @@ The direction of the arrows indicates the direction of "management" or "referenc
 
 </aside>
 
-![CustomResourceDefinitions relationships]( ../../images/crd-relationships.png)
+![CustomResourceDefinitions relationships]( ../images/crd-relationships.png)

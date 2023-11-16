@@ -2,7 +2,7 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-At this point, you have created a cluster that consists of a **single** master node. Since only a limited set of system components run on the master node by default, <a href="/documentation/v1/modules/040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster">you have to add</a> at least one worker node to the cluster for the cluster to work properly.
+At this point, you have created a cluster that consists of a **single** master node. Since only a limited set of system components run on the master node by default, <a href="/documentation/latest/modules/040-node-manager/examples.html#adding-a-static-node-to-a-cluster">you have to add</a> at least one worker node to the cluster for the cluster to work properly.
 
 {% offtopic title="If a single master node is all you need…" %}
 <div>
