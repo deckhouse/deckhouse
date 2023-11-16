@@ -10,10 +10,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/fatih/structs"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"k8s.io/klog"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
@@ -22,10 +25,18 @@ import (
 )
 
 const (
-	// Alternative path is needed to run tests in ci\cd pipeline
+	defaultProjectTemplatePath           = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
+	secureProjectTemplatePath            = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	secureWithDedicatedNodesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
 	userResourcesTemplatePath            = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
-	alternativeUserResourcesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
+	// Alternative path is needed to run tests in ci\cd pipeline
+	alternativeDefaultProjectTemplatePath           = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
+	alternativeSecureProjectTemplatePath            = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	alternativeSecureWithDedicatedNodesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
+	alternativeUserResourcesTemplatePath            = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 )
+
+var onceCreateDefaultTemplates sync.Once
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.ModuleQueue(internal.ProjectsQueue),
@@ -40,6 +51,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
+
+	createDefaultProjectTemplate(input)
 
 	// map ProjectType to ProjectTemplate
 	for key, val := range projectTypeValuesSnap {
@@ -128,4 +141,48 @@ func readUserResourcesTemplate() (map[string]interface{}, error) {
 	}
 
 	return templates, nil
+}
+
+func createDefaultProjectTemplate(input *go_hook.HookInput) {
+	onceBody := func() {
+		defaultProjectTemplateRaw, err := readDefaultProjectTemplate(defaultProjectTemplatePath, alternativeDefaultProjectTemplatePath)
+		if err != nil {
+			klog.Errorf("error reading default ProjectTemplate: %v", err)
+			return
+		}
+
+		secureProjectTemplateRaw, err := readDefaultProjectTemplate(secureProjectTemplatePath, alternativeSecureProjectTemplatePath)
+		if err != nil {
+			klog.Errorf("error reading default ProjectTemplate: %v", err)
+			return
+		}
+
+		secureWithDedicatedNodesProjectTemplateRaw, err := readDefaultProjectTemplate(secureWithDedicatedNodesTemplatePath, alternativeSecureWithDedicatedNodesTemplatePath)
+		if err != nil {
+			klog.Errorf("error reading default ProjectTemplate: %v", err)
+			return
+		}
+
+		input.PatchCollector.Create(defaultProjectTemplateRaw, object_patch.UpdateIfExists())
+		input.PatchCollector.Create(secureProjectTemplateRaw, object_patch.UpdateIfExists())
+		input.PatchCollector.Create(secureWithDedicatedNodesProjectTemplateRaw, object_patch.UpdateIfExists())
+	}
+
+	onceCreateDefaultTemplates.Do(onceBody)
+}
+
+func readDefaultProjectTemplate(defaultPath, alternativePath string) ([]byte, error) {
+	projectTemplate, err := os.ReadFile(defaultPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			projectTemplate, err = os.ReadFile(alternativePath)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	return projectTemplate, nil
 }

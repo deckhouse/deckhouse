@@ -61,7 +61,7 @@ var (
 		{
 			name:   "invalid-project",
 			exists: true,
-			status: `{"sync":false,"state":"Error","message": "template data doesn't match the OpenAPI schema for 'test-project-type' ProjectType: validation failure list:\nrequests.cpu should match '^[0-9]+m?$'"}`,
+			status: `{"sync":false,"state":"Error","message": "template data doesn't match the OpenAPI schema for 'test-project-type' ProjectTemplate: validation failure list:\nrequests.cpu should match '^[0-9]+m?$'"}`,
 		},
 		// TODO add more cases
 	}
