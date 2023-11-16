@@ -32,6 +32,7 @@ resource "vcd_independent_disk" "kubernetes_data" {
 */
 resource "vcd_vm" "master" {
   name             = join("-", [local.prefix, "master", var.nodeIndex])
+  computer_name    = join("-", [local.prefix, "master", var.nodeIndex])
   vapp_template_id = data.vcd_catalog_vapp_template.template.id
 
   cpus = local.master_instance_class.numCPUs
@@ -63,16 +64,8 @@ resource "vcd_vm" "master" {
   }
 */
   guest_properties = {
-    "instance-id" = join("-", [local.prefix, "master", var.nodeIndex])
-    "hostname"    = join("-", [local.prefix, "master", var.nodeIndex])
-    "local-hostname"    = join("-", [local.prefix, "master", var.nodeIndex])
-    "public-keys" = var.providerClusterConfiguration.sshPublicKey
-  }
-
-  customization {
-    force                      = true
-    allow_local_admin_password = true
-    auto_generate_password     = false
-    admin_password             = "123456"
+    "instance-id"         = join("-", [local.prefix, "master", var.nodeIndex])
+    "local-hostname"      = join("-", [local.prefix, "master", var.nodeIndex])
+    "public-keys"         = var.providerClusterConfiguration.sshPublicKey
   }
 }
