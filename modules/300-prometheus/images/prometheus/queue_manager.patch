@@ -11,6 +11,20 @@ index 3edd31b91..3220c34ab 100644
  			}
  			t.seriesMtx.Unlock()
  			continue
+diff --git a/tsdb/wlog/checkpoint.go b/tsdb/wlog/checkpoint.go
+index 42b03f48f..28a18c041 100644
+--- a/tsdb/wlog/checkpoint.go
++++ b/tsdb/wlog/checkpoint.go
+@@ -271,6 +271,9 @@ func Checkpoint(logger log.Logger, w *WL, from, to int, keep func(id chunks.Head
+ 			// Only keep reference to the latest found metadata for each refID.
+ 			repl := 0
+ 			for _, m := range metadata {
++				if m.Ref == 12756107 || m.Ref == 12756108 || m.Ref == 12756109 {
++					 level.Info(logger).Log("msg", "debug", "ref", m.Ref, "help", m.Help)
++				}
+ 				if keep(m.Ref) {
+ 					if _, ok := latestMetadataMap[m.Ref]; !ok {
+ 						repl++
 diff --git a/tsdb/wlog/watcher.go b/tsdb/wlog/watcher.go
 index b0c17dcba..82c9c2c6e 100644
 --- a/tsdb/wlog/watcher.go
