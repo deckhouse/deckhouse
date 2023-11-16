@@ -1,0 +1,38 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает шаблон проекта.
+
+            На шаблон проекта ссылаются [проекты](Project)](cr.html#project).
+          properties:
+            spec:
+              properties:
+                parametersSchema:
+                  properties:
+                    openAPIV3Schema:
+                      description:
+                        Схема входных параметров [шаблона](#projecttemplate-v1alpha2-spec-template).
+                        OpenAPI спецификация 
+                        OpenAPI specification for template values (the [template](#projecttemplate-v1alpha1-spec-template) parameter).
+                resourcesTemplate:
+                  description: |
+                    Шаблоны ресурсов в формате `helm`, которые создаются при настройке нового проекта.
+
+                    Шаблоны совместимы со всеми функциями `helm`. Подробнее об этом читайте в разделе [Создание изолированных окружений](usage.html#создание-изолированного-окружения).
+
+                    В шаблонах доступны также следующие параметры (`values`):
+                    - `{{ .projectName }}` — имя проекта (`Project`), для которого рендерится шаблон;
+                    - `{{ .projectTemplateName }}` — имя шаблона (текущего `ProjectTemplate`);
+                    - `{{ .parameters }}` — словарь пользовательских значений, описанных в параметре [.spec.valuesSchema](cr.html#projecttemplate-v1alpha1-spec-valuesSchema) и определенных в параметре [.spec.template](cr.html#project-v1alpha2-spec-parameters).
+
+                    > **Внимание!** Указывать поля `.metadata.namespace` для объектов необязательно,
+                    > так как они автоматически проставятся из названия проекта.
+            status:
+              properties:
+                message:
+                  description: Сообщение о статусе
+                ready:
+                  description: Сводка статуса (готов или не готов).

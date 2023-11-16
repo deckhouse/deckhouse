@@ -15,21 +15,28 @@ spec:
     singular: project
   scope: Cluster
   versions:
-    - additionalPrinterColumns:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
         - jsonPath: .status.sync
           name: Ready
           type: boolean
         - jsonPath: .spec.description
           name: Description
           type: string
-      name: v1alpha1
       schema:
         openAPIV3Schema:
+          type: object
           properties:
             spec:
+              type: object
               properties:
                 description:
-                  description: Arbitrary description of the purpose of the environment.
+                  description: Arbitrary description of the purpose of the project.
                   type: string
                 projectTypeName:
                   description: |
@@ -42,8 +49,8 @@ spec:
                   description:
                     Values for [resource templates](cr.html#projecttype-v1alpha1-spec-resourcestemplate) from the environment template (CR [ProjectType](cr.html#projecttype) in helm values format that map to the OpenAPI specification (the [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) parameter of the environment template).
                   type: object
-              type: object
             status:
+              type: object
               properties:
                 message:
                   description: Status message.
@@ -54,9 +61,55 @@ spec:
                 sync:
                   description: Project definition sync with cluster.
                   type: boolean
-              type: object
-          type: object
+    - name: v1alpha2
       served: true
       storage: true
+      deprecated: false
       subresources:
         status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.sync
+          name: Ready
+          type: boolean
+        - jsonPath: .spec.projectTemplateName
+          name: Project template
+          type: string
+        - jsonPath: .spec.description
+          name: Description
+          type: string
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                description:
+                  description: Arbitrary description of the purpose of the project.
+                  type: string
+                projectTemplateName:
+                  description: |
+                    The name of the custom resource [ProjectTemplateName](cr.html#projectTemplateName) to be used
+                    as a template for creating resources for the project.
+                  type: string
+                parameters:
+                  additionalProperties:
+                    x-kubernetes-preserve-unknown-fields: true
+                  description:
+                    Parameters for [resources template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) 
+                    from the related [project template](cr.html#projecttemplate) in helm values format 
+                    according to the [OpenAPI specification](cr.html#projecttemplate-v1alpha1-spec-parametersSchema-openAPIV3Schema) 
+                    defined in the template.
+                  type: object
+            status:
+              type: object
+              properties:
+                message:
+                  description: Status message.
+                  type: string
+                state:
+                  description: Summary of the status.
+                  type: string
+                sync:
+                  description: Project definition sync with cluster.
+                  type: boolean

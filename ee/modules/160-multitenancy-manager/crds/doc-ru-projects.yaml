@@ -16,11 +16,35 @@ spec:
                     как шаблон для создания ресурсов окружения.
                 template:
                   description: |
-                    Значения для [темплейтов ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) из шаблона окружения (custom resource [ProjectType](cr.html#projecttype))
-                    в формате helm values, которые соотносятся с
-                    OpenAPI-спецификацией (поле [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) шаблона окружения).
+                    Значения для [темплейтов ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) 
+                    из шаблона окружения (custom resource [ProjectType](cr.html#projecttype))
+                    в формате helm values, которые соотносятся с OpenAPI-спецификацией 
+                    (поле [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) шаблона окружения).         
             status:
               description: ""
+              properties:
+                message:
+                  description: Сообщение о статусе.
+                state:
+                  description: Сводка статуса.
+                sync:
+                  description: Состояние Project синхронизировано с кластером.
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                description:
+                  description: Описание проекта.
+                projectTemplateName:
+                  description: |
+                    Имя custom resource [ProjectTemplate](cr.html#projecttemplate), который будет использоваться, как шаблон для ресурсов проекта.
+                parameters:
+                  description: |
+                    Входные параметры [шаблона ресурсов](cr.html#projecttemplate-v1alpha2-spec-resourcesTemplate) из [шаблона проекта](cr.html#projecttemplate)
+                    в формате helm values, согласованные со [схемой](cr.html#projecttemplate-v1alpha2-spec-parameters).
+            status:
               properties:
                 message:
                   description: Сообщение о статусе.
