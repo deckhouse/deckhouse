@@ -18,6 +18,8 @@ package scope
 
 import (
 	"context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/pkg/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -115,6 +117,20 @@ func (m *MachineScope) Fail(reason capierrors.MachineStatusError, err error) {
 // HasFailed returns the failure state of the machine scope.
 func (m *MachineScope) HasFailed() bool {
 	return m.StaticMachine.Status.FailureReason != nil || m.StaticMachine.Status.FailureMessage != nil
+}
+
+// LabelSelector returns a label selector for the StaticMachine.
+func (m *MachineScope) LabelSelector() (labels.Selector, error) {
+	if m.StaticMachine.Spec.LabelSelector == nil {
+		return labels.Everything(), nil
+	}
+
+	labelSelector, err := metav1.LabelSelectorAsSelector(m.StaticMachine.Spec.LabelSelector)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to convert StaticMachine label selector")
+	}
+
+	return labelSelector, nil
 }
 
 // Close the MachineScope by updating the machine spec and status.

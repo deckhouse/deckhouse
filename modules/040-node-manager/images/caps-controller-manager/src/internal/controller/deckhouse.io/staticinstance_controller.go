@@ -18,14 +18,13 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,14 +34,16 @@ import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	controller "caps-controller-manager/internal/controller/infrastructure"
+	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/scope"
 )
 
 // StaticInstanceReconciler reconciles a StaticInstance object
 type StaticInstanceReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Config *rest.Config
+	Scheme   *runtime.Scheme
+	Config   *rest.Config
+	Recorder *event.Recorder
 }
 
 //+kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances,verbs=get;list;watch;update;patch
@@ -90,22 +91,10 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
-	credentials := &deckhousev1.SSHCredentials{}
-	credentialsKey := client.ObjectKey{
-		Namespace: staticInstance.Namespace,
-		Name:      staticInstance.Spec.CredentialsRef.Name,
-	}
-
-	err = r.Client.Get(ctx, credentialsKey, credentials)
+	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			conditions.MarkFalse(staticInstance, infrav1.StaticInstanceAddedToNodeGroupCondition, infrav1.StaticInstanceWaitingForCredentialsRefReason, clusterv1.ConditionSeverityInfo, "")
-		}
-
-		return ctrl.Result{}, errors.Wrap(err, "failed to get SSHCredentials")
+		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
 	}
-
-	instanceScope.Credentials = credentials
 
 	machineScope, err := r.getStaticMachine(ctx, staticInstance)
 	if err != nil {
@@ -158,9 +147,9 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 	if instanceScope.MachineScope != nil {
 		instances := &deckhousev1.StaticInstanceList{}
 
-		labelSelector, err := metav1.LabelSelectorAsSelector(instanceScope.MachineScope.StaticMachine.Spec.LabelSelector)
+		labelSelector, err := instanceScope.MachineScope.LabelSelector()
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "unable to convert StaticMachine label selector")
+			return ctrl.Result{}, errors.Wrap(err, "failed to get label selector")
 		}
 
 		uidSelector := fields.OneTermEqualSelector("status.machineRef.uid", string(instanceScope.MachineScope.StaticMachine.UID))
@@ -176,12 +165,14 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		}
 
 		if len(instances.Items) == 0 {
-			instanceScope.Logger.Info("Labels on StaticInstance have changed and StaticInstance has left the StaticMachine.Spec.LabelSelector, trying to clean up StaticInstance (transfer Node to another NodeGroup)")
+			instanceScope.Logger.Info("Labels on StaticInstance have changed and StaticInstance has left the StaticMachine.spec.labelSelector, trying to clean up StaticInstance (transfer Node to another NodeGroup)")
 
 			err := r.Client.Delete(ctx, instanceScope.MachineScope.Machine)
 			if err != nil {
 				return ctrl.Result{}, errors.Wrap(err, "failed to delete Machine")
 			}
+
+			r.Recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceNodeGroupLeaved", fmt.Sprintf("StaticInstance has left the StaticMachine.spec.labelSelector in NodeGroup '%s'", instanceScope.MachineScope.StaticMachine.Labels["node-group"]))
 
 			return ctrl.Result{}, nil
 		}

@@ -21,26 +21,28 @@ import (
 	"math/rand"
 
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/scope"
 )
 
 // StaticInstancePool defines a pool of static instances.
 type StaticInstancePool struct {
 	client.Client
-	config *rest.Config
+	config   *rest.Config
+	recorder *event.Recorder
 }
 
 // NewStaticInstancePool creates a new static instance pool.
-func NewStaticInstancePool(client client.Client, config *rest.Config) *StaticInstancePool {
+func NewStaticInstancePool(client client.Client, config *rest.Config, recorder *event.Recorder) *StaticInstancePool {
 	return &StaticInstancePool{
-		Client: client,
-		config: config,
+		Client:   client,
+		config:   config,
+		recorder: recorder,
 	}
 }
 
@@ -63,17 +65,6 @@ func (p *StaticInstancePool) PickStaticInstance(
 
 	staticInstance := staticInstances[rand.Intn(len(staticInstances))]
 
-	credentials := &deckhousev1.SSHCredentials{}
-	credentialsKey := client.ObjectKey{
-		Namespace: staticInstance.Namespace,
-		Name:      staticInstance.Spec.CredentialsRef.Name,
-	}
-
-	err = p.Client.Get(ctx, credentialsKey, credentials)
-	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to get StaticInstance credentials")
-	}
-
 	newScope, err := scope.NewScope(p.Client, p.config, ctrl.LoggerFrom(ctx))
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed to create scope")
@@ -84,8 +75,12 @@ func (p *StaticInstancePool) PickStaticInstance(
 		return nil, false, errors.Wrap(err, "failed to create instance scope")
 	}
 
-	instanceScope.Credentials = credentials
 	instanceScope.MachineScope = machineScope
+
+	err = instanceScope.LoadSSHCredentials(ctx, p.recorder)
+	if err != nil {
+		return nil, false, errors.Wrap(err, "failed to load SSHCredentials")
+	}
 
 	return instanceScope, true, nil
 }
@@ -97,9 +92,9 @@ func (p *StaticInstancePool) findStaticInstancesInPhase(
 ) ([]deckhousev1.StaticInstance, error) {
 	staticInstances := &deckhousev1.StaticInstanceList{}
 
-	labelSelector, err := metav1.LabelSelectorAsSelector(machineScope.StaticMachine.Spec.LabelSelector)
+	labelSelector, err := machineScope.LabelSelector()
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to convert StaticMachine label selector")
+		return nil, errors.Wrap(err, "failed to get label selector")
 	}
 
 	err = p.List(

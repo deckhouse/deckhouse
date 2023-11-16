@@ -24,12 +24,11 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -41,14 +40,6 @@ const (
 	clusterAPINamespace          = "d8-cloud-instance-manager"
 	clusterAPIServiceAccountName = "capi-controller-manager"
 	clusterAPIStaticClusterName  = "static"
-)
-
-var (
-	clusterAPIClusterGVR = schema.GroupVersionResource{
-		Group:    "cluster.x-k8s.io",
-		Version:  "v1beta1",
-		Resource: "clusters",
-	}
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -67,7 +58,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "0 1 * * *",
 		},
 	},
-	AllowFailure: true,
 }, dependency.WithExternalDependencies(generateStaticKubeconfigSecret))
 
 func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container) error {
@@ -95,12 +85,12 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 		return errors.Wrap(err, "failed to get k8s client")
 	}
 
-	cluster, err := k8sClient.Dynamic().Resource(clusterAPIClusterGVR).Namespace(clusterAPINamespace).Get(context.TODO(), clusterAPIStaticClusterName, metav1.GetOptions{})
+	err = createCAPIServiceAccount(k8sClient)
 	if err != nil {
-		return errors.Wrap(err, "failed to get cluster")
+		return errors.Wrap(err, "failed to create Cluster API service account")
 	}
 
-	secretForServiceAccountToken, err := getSecretForServiceAccountToken(k8sClient, cluster)
+	secretForServiceAccountToken, err := getSecretForServiceAccountToken(clusterAPIStaticClusterName, clusterAPINamespace, k8sClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to get secret for service account token")
 	}
@@ -110,7 +100,7 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 		return errors.New("service account token not found")
 	}
 
-	config, err := kubeconfig.New(cluster.GetName(), restConfig.Host, restConfig.CAData, string(serviceAccountToken))
+	config, err := kubeconfig.New(clusterAPIStaticClusterName, restConfig.Host, restConfig.CAData, string(serviceAccountToken))
 	if err != nil {
 		return errors.Wrap(err, "failed to generate a kubeconfig")
 	}
@@ -120,7 +110,7 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 		return errors.Wrap(err, "failed to serialize kubeconfig to yaml")
 	}
 
-	secret := kubeconfig.GenerateSecret(cluster, configYAML)
+	secret := kubeconfig.GenerateSecret(clusterAPIStaticClusterName, clusterAPINamespace, configYAML)
 
 	secretUnstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(secret)
 	if err != nil {
@@ -132,11 +122,33 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 	return nil
 }
 
-func getSecretForServiceAccountToken(k8sClient k8s.Client, cluster *unstructured.Unstructured) (*v1.Secret, error) {
-	secret, err := k8sClient.CoreV1().Secrets(cluster.GetNamespace()).Get(context.TODO(), fmt.Sprintf("%s-kubeconfig-token", cluster.GetName()), metav1.GetOptions{})
+func createCAPIServiceAccount(k8sClient k8s.Client) error {
+	serviceAccount := &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ServiceAccount",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      clusterAPIServiceAccountName,
+			Namespace: clusterAPINamespace,
+		},
+	}
+
+	_, err := k8sClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
+	if err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return errors.Wrap(err, "failed to create service account")
+		}
+	}
+
+	return nil
+}
+
+func getSecretForServiceAccountToken(clusterName string, namespace string, k8sClient k8s.Client) (*v1.Secret, error) {
+	secret, err := k8sClient.CoreV1().Secrets(namespace).Get(context.TODO(), fmt.Sprintf("%s-kubeconfig-token", clusterName), metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			secret = kubeconfig.GenerateSecretForServiceAccountToken(cluster, clusterAPIServiceAccountName)
+			secret = kubeconfig.GenerateSecretForServiceAccountToken(clusterName, namespace, clusterAPIServiceAccountName)
 
 			_, err = k8sClient.CoreV1().Secrets(secret.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 			if err != nil {

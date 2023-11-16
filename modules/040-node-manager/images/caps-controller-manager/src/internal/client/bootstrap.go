@@ -104,6 +104,8 @@ func (c *Client) bootstrapFromBootstrappingPhase(ctx context.Context, instanceSc
 		return errors.Wrap(err, "failed to wait for Node to appear")
 	}
 
+	c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "NodeBootstrappingSucceeded", "Node successfully bootstrapped")
+
 	instanceScope.Logger.Info("Node successfully bootstrapped", "node", node.Name)
 
 	instanceScope.MachineScope.StaticMachine.Status.Addresses = mapAddresses(node.Status.Addresses)
@@ -137,6 +139,8 @@ func (c *Client) bootstrapFromBootstrappingPhase(ctx context.Context, instanceSc
 func (c *Client) bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) (bool, error) {
 	bootstrapScript, err := getBootstrapScript(ctx, instanceScope)
 	if err != nil {
+		c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "BootstrapScriptFetchingFailed", "Bootstrap script unreachable")
+
 		return false, errors.Wrap(err, "failed to get bootstrap script")
 	}
 
@@ -151,7 +155,9 @@ func (c *Client) bootstrap(ctx context.Context, instanceScope *scope.InstanceSco
 
 		return true
 	})
-	if !done {
+	if done {
+		c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "BootstrapScriptSucceeded", "Bootstrap script executed successfully")
+	} else {
 		instanceScope.Logger.Info("Bootstrapping is not finished yet, waiting...")
 	}
 
