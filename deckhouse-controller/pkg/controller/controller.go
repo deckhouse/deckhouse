@@ -88,9 +88,18 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 
 func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 	for event := range ec {
+		// event without module name
+		if event.EventType == events.FirstConvergeDone {
+			err := dml.handleConvergeDone()
+			if err != nil {
+				log.Errorf("Error occurred during the converge done: %s", err)
+			}
+			continue
+		}
+
 		mod, ok := dml.deckhouseModules[event.ModuleName]
 		if !ok {
-			log.Errorf("Module %q registered but not found in Deckhouse. Possible bug?", mod.GetBasicModule().GetName())
+			log.Errorf("Module %q registered but not found in Deckhouse. Possible bug?", event.ModuleName)
 			continue
 		}
 		switch event.EventType {
@@ -119,13 +128,6 @@ func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 			err := dml.handleEnabledModule(mod, false)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q turning off: %s", mod.GetBasicModule().GetName(), err)
-				continue
-			}
-
-		case events.FirstConvergeDone:
-			err := dml.handleConvergeDone()
-			if err != nil {
-				log.Errorf("Error occurred during the converge done: %s", err)
 				continue
 			}
 		}
