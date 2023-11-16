@@ -19,9 +19,8 @@ package deckhouse_config
 import (
 	"sync"
 
-	"github.com/flant/addon-operator/pkg/values/validation"
-
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/addon-operator/pkg/values/validation"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
