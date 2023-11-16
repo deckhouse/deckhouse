@@ -28,7 +28,7 @@ const (
 	// https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
 	authClientCA = "/etc/ssl/apiserver-authentication-requestheader-client-ca/ca.crt"
 
-	listenAddr = "127.0.0.1:40443"
+	ListenAddr = "127.0.0.1:40443"
 )
 
 func buildTLSConfig() (*tls.Config, error) {
@@ -92,7 +92,7 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 	}
 
 	srv := &http.Server{
-		Addr:         listenAddr,
+		Addr:         ListenAddr,
 		TLSConfig:    tlsCfg,
 		Handler:      router,
 		ErrorLog:     s.logger,
@@ -111,7 +111,7 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	s.logger.Println("server is starting to listen on ", listenAddr, "...")
+	s.logger.Println("server is starting to listen on ", ListenAddr, "...")
 
 	// Register and stop config updater
 	stopCh := make(chan struct{})
@@ -122,7 +122,7 @@ func (s *Server) Run() error {
 	})
 
 	if err := httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("could not listen on %s: %v", listenAddr, err)
+		return fmt.Errorf("could not listen on %s: %v", ListenAddr, err)
 	}
 
 	return nil
