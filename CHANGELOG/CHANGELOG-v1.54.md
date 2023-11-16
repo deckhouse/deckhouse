@@ -27,6 +27,7 @@
  - **[log-shipper]** Add an option to encode messages to CEF format (often accepted by SIEM systems, such as KUMA (Kaspersky Unified Monitoring and Analysis Platform). [#6406](https://github.com/deckhouse/deckhouse/pull/6406)
  - **[monitoring-ping]** Image is based on distroless image. Use static Python. [#6204](https://github.com/deckhouse/deckhouse/pull/6204)
  - **[node-manager]** Add support for Kubernetes events in Cluster API Provider Static. [#6419](https://github.com/deckhouse/deckhouse/pull/6419)
+ - **[node-manager]** Add documentation for Cluster API Provider Static. [#6387](https://github.com/deckhouse/deckhouse/pull/6387)
  - **[prometheus]** Ability to set a custom logo for the Grafana dashboard. [#6268](https://github.com/deckhouse/deckhouse/pull/6268)
 
 ## Fixes
