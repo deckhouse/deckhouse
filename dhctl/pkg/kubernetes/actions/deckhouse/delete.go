@@ -23,6 +23,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -387,11 +388,13 @@ func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
 	return WaitForCAPIMachinesDeletion(kubeCl)
 }
 
-// CAPШ
+// CAPI
 const (
 	CAPIGroup        = "cluster.x-k8s.io"
 	CAPIGroupVersion = "v1beta1"
 )
+
+var capiMachinesSchema = schema.GroupVersionResource{Group: CAPIGroup, Version: CAPIGroupVersion, Resource: "machines"}
 
 func checkCAPIMachinesAPI(kubeCl *client.KubernetesClient) error {
 	gv := schema.GroupVersion{
@@ -406,6 +409,21 @@ func DeleteCAPIMachineDeployments(kubeCl *client.KubernetesClient) error {
 	machineDeploymentsSchema := schema.GroupVersionResource{Group: CAPIGroup, Version: CAPIGroupVersion, Resource: "machinedeployments"}
 
 	return retry.NewLoop("Delete CAPI MachineDeployments", 45, 5*time.Second).Run(func() error {
+		allMachines, err := kubeCl.Dynamic().Resource(capiMachinesSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("get machines: %v", err)
+		}
+
+		for _, machine := range allMachines.Items {
+			m := machine
+			unstructured.SetNestedField(m.Object, "10s", "spec", "nodeDrainTimeout")
+
+			_, err = kubeCl.Dynamic().Resource(capiMachinesSchema).Namespace(machine.GetNamespace()).Update(context.TODO(), &m, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
+			}
+		}
+
 		allMachineDeployments, err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machinedeployments: %v", err)
@@ -425,9 +443,8 @@ func DeleteCAPIMachineDeployments(kubeCl *client.KubernetesClient) error {
 }
 
 func WaitForCAPIMachinesDeletion(kubeCl *client.KubernetesClient) error {
-	machinesSchema := schema.GroupVersionResource{Group: CAPIGroup, Version: CAPIGroupVersion, Resource: "machines"}
-	return retry.NewLoop("Wait for MCM Machines deletion", 45, 15*time.Second).WithShowError(false).Run(func() error {
-		resources, err := kubeCl.Dynamic().Resource(machinesSchema).List(context.TODO(), metav1.ListOptions{})
+	return retry.NewLoop("Wait for CAPI Machines deletion", 45, 15*time.Second).WithShowError(false).Run(func() error {
+		resources, err := kubeCl.Dynamic().Resource(capiMachinesSchema).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
