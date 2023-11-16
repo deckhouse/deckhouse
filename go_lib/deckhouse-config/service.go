@@ -83,20 +83,12 @@ func (srv *ConfigService) SetModuleNameToSources(allModuleNamesToSources map[str
 	srv.moduleNamesToSourcesMu.Lock()
 	srv.moduleNamesToSources = allModuleNamesToSources
 	srv.moduleNamesToSourcesMu.Unlock()
-
-	// TODO(yalosev): restore this after refactoring
-	// for moduleName, source := range allModuleNamesToSources {
-	//	srv.moduleManager.SetModuleSource(moduleName, source)
-	//}
 }
 
 func (srv *ConfigService) AddModuleNameToSource(moduleName, moduleSource string) {
 	srv.moduleNamesToSourcesMu.Lock()
 	srv.moduleNamesToSources[moduleName] = moduleSource
 	srv.moduleNamesToSourcesMu.Unlock()
-
-	// TODO(yalosev): restore this after refactoring
-	// srv.moduleManager.SetModuleSource(moduleName, moduleSource)
 }
 
 func (srv *ConfigService) ModuleToSourcesNames() map[string]string {

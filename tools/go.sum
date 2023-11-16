@@ -1065,7 +1065,7 @@ github.com/fatih/structtag v1.2.0 h1:/OdNE99OxoI/PqaW/SuSK9uxxT3f/tcSZgon/ssNSx4
 github.com/fatih/structtag v1.2.0/go.mod h1:mBJUNpUnHmRKrKlQQlmCrh5PuhftFbNv8Ys4/aAZl94=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/flant/addon-operator v1.3.3-0.20231116112957-733699fb45cd/go.mod h1:vUleSCehuyIkV1u0TS6w38rH0gngDEkFxa3rHdROZZ8=
+github.com/flant/addon-operator v1.3.3-0.20231116114053-98ec953a28a2/go.mod h1:vUleSCehuyIkV1u0TS6w38rH0gngDEkFxa3rHdROZZ8=
 github.com/flant/gogost/v5 v5.13.0/go.mod h1:Uc2FKYMOm/1NZAze/LOufgP57tNZxijLEFB5+At7GWw=
 github.com/flant/kube-client v1.0.3/go.mod h1:YVcJ8PxomM0iYsK7nj2I3lmog2D0j/GloJfLYnhjlls=
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
