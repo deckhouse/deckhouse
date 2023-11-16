@@ -35,7 +35,7 @@ spec:
       name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: StaticMachine is the Schema for the staticmachines API
+          description: StaticMachine is the Schema for the Cluster API Provider Static
           properties:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation
@@ -171,12 +171,20 @@ spec:
                     type: object
                   type: array
                 failureMessage:
+                  description: |
+                    FailureMessage will be set in the event that there is a terminal problem
+                    reconciling the StaticMachine and will contain a more verbose string suitable
+                    for logging and human consumption.
                   type: string
                 failureReason:
-                  description: MachineStatusError defines errors states for Machine
-                    objects.
+                  description: |
+                    FailureReason will be set in the event that there is a terminal problem
+                    reconciling the StaticMachine and will contain a succinct value suitable
+                    for machine interpretation.
                   type: string
                 ready:
+                  description: |
+                      Ready denotes that the static machine (infrastructure) is ready.
                   type: boolean
               type: object
           required:

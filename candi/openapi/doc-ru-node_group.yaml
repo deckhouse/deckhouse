@@ -509,7 +509,7 @@ spec:
                           description: Путь к сокету CRI.
                 staticInstances:
                   description: |
-                    Параметры настройки машин статичных узлов кластера.
+                    Параметры настройки машин статических узлов кластера.
                   properties:
                     labelSelector:
                       description: |
