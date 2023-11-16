@@ -74,6 +74,7 @@ Create a new application in the GitLab project.
 To do this, you need to:
 * **self-hosted**: go to `Admin area` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)` and set scopes `read_user`, `openid`;
 * **cloud gitlab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)`; also, don't forget to set scopes `read_user`, `openid`.
+* When using Gitlab version 16 and higher, when creating an application, you also need to check the `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` option.
 
 Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html#dexprovider) custom resource.
 

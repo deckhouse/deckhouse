@@ -74,6 +74,7 @@ spec:
 Для этого необходимо:
 * **self-hosted**: перейти в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`;
 * **cloud gitlab.com**: под главной учетной записью проекта перейти в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`.
+* При использовании Gitlab версии 16 и выше - при создании приложения также требуется отметить опцию `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow`.
 
 Полученные `Application ID` и `Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
