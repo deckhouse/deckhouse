@@ -65,6 +65,8 @@ type OrderCertificateRequest struct {
 	ValueName   string
 	ModuleName  string
 	WaitTimeout time.Duration
+
+	ExpirationSeconds *int32
 }
 
 func (r *OrderCertificateRequest) DeepCopy() OrderCertificateRequest {
@@ -247,9 +249,10 @@ func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 			Name: request.CommonName,
 		},
 		Spec: certificatesv1.CertificateSigningRequestSpec{
-			Request:    csrPEM,
-			Usages:     request.Usages,
-			SignerName: request.SignerName,
+			Request:           csrPEM,
+			Usages:            request.Usages,
+			SignerName:        request.SignerName,
+			ExpirationSeconds: request.ExpirationSeconds,
 		},
 	}
 
