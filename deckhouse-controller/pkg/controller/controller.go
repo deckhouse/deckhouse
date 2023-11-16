@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -30,6 +32,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+)
+
+const (
+	epochLabelKey = "deckhouse.io/epoch"
+)
+
+var (
+	epochLabelValue = fmt.Sprintf("%d", rand.Uint32())
 )
 
 type DeckhouseController struct {
@@ -61,9 +71,6 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, moduleDirs
 }
 
 func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
-	_ = dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, "common", v1.DeleteOptions{})
-	_ = dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, "registrypackages", v1.DeleteOptions{})
-
 	err := dml.RestoreAbsentSourceModules()
 	if err != nil {
 		return err
@@ -114,8 +121,23 @@ func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
 				log.Errorf("Error occurred during the module %q turning off: %s", mod.GetBasicModule().GetName(), err)
 				continue
 			}
+
+		case events.FirstConvergeDone:
+			err := dml.handleConvergeDone()
+			if err != nil {
+				log.Errorf("Error occurred during the converge done: %s", err)
+				continue
+			}
 		}
 	}
+}
+
+// handleConvergeDone after converge we delete all absent Modules CR, which were not filled during this operator startup
+func (dml *DeckhouseController) handleConvergeDone() error {
+	epochLabelStr := fmt.Sprintf("%s=%s", epochLabelKey, epochLabelValue)
+	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
+		return dml.kubeClient.DeckhouseV1alpha1().Modules().DeleteCollection(dml.ctx, v1.DeleteOptions{}, v1.ListOptions{LabelSelector: epochLabelStr})
+	})
 }
 
 func (dml *DeckhouseController) handleModulePurge(m *models.DeckhouseModule) error {
@@ -128,6 +150,7 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
 		source := dml.sourceModules[m.GetBasicModule().GetName()]
 		newModule := m.AsKubeObject(source)
+		newModule.Labels[epochLabelKey] = epochLabelValue
 
 		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.GetBasicModule().GetName(), v1.GetOptions{})
 		if err != nil {
@@ -140,6 +163,7 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 		}
 
 		existModule.Properties = newModule.Properties
+		existModule.Labels[epochLabelKey] = epochLabelValue
 
 		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, existModule, v1.UpdateOptions{})
 

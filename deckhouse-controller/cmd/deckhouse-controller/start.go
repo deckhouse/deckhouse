@@ -37,7 +37,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 func start(_ *kingpin.ParseContext) error {
@@ -61,10 +60,7 @@ func start(_ *kingpin.ParseContext) error {
 	}
 
 	operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig")))
-
 	validation.RegisterAdmissionHandlers(operator)
-	// TODO: move this routes to the deckhouse-controller
-	module.SetupAdmissionRoutes(operator.AdmissionServer)
 
 	err = operator.Setup()
 	if err != nil {
