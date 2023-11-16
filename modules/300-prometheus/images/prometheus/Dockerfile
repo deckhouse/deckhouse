@@ -58,9 +58,11 @@ go mod download
 
 COPY sample_limit_annotation.patch ./
 COPY successfully_sent_metric.patch ./
+COPY queue_manager.patch ./
 
 RUN git apply sample_limit_annotation.patch && \
   git apply successfully_sent_metric.patch && \
+  git apply queue_manager.patch && \
   go generate -tags plugins ./plugins && \
   /bin/promu build --prefix /prometheus/prometheus
 
