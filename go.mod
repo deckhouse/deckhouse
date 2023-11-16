@@ -223,6 +223,6 @@ replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
-replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
+replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.1
 
 replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0
