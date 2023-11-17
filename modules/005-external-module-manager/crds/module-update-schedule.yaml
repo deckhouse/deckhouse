@@ -1,0 +1,193 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: moduleupdateschedule.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: external-module-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: moduleupdateschedules
+    singular: moduleupdateschedule
+    kind: ModuleUpdateSchedule
+    shortNames:
+      - mus
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the update schedule for Deckhouse release.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - update
+                - moduleReleaseSelector
+              properties:
+                releaseChannel:
+                  type: string
+                  description: |
+                    Desirable module release channel.
+                    The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+                  default: Alpha
+                  enum: 
+                    - Alpha
+                    - Beta
+                    - EarlyAccess
+                    - Stable
+                    - RockSolid
+                update:
+                  type: object
+                  description: Update settings for target modules.
+                  oneOf:
+                    - properties:
+                        mode:
+                          enum: [Manual]
+                      not:
+                        required: [windows]
+                    - properties:
+                        mode:
+                          enum: [Auto]
+                      required: [windows]
+                  properties:
+                    mode:
+                      type: string
+                      default: 'Auto'
+                      description: |
+                        Modules minor version update mode (release change).
+                        - `Auto` — all updates are applied automatically.
+
+                        Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
+                        - `Manual` — to change a minor version of modules (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required.
+
+                        To confirm the update, edit relevant modulereleases.deckhouse.io object, corresponding to the version, by setting the `approved' field to 'true'.
+                      enum:
+                        - 'Auto'
+                        - 'Manual'
+                    windows:
+                      type: array
+                      description: |
+                        Modules update timetable.
+                      items:
+                        type: object
+                      required:
+                        - from
+                        - to
+                        properties:
+                          from:
+                            type: string
+                            pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                            example: '13:00'
+                            description: |
+                              Start time of the update window (UTC timezone).
+
+                              Should be less than the end time of the update window.
+                          to:
+                            type: string
+                            pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                            example: '18:30'
+                            description: |
+                              End time of the update window (UTC timezone).
+
+                              Should be more than the start time of the update window.
+                          days:
+                            type: array
+                            description: The days of the week on which the update window is applied.
+                            example: ["Mon", "Wed"]
+                            items:
+                              type: string
+                              description: Day of the week.
+                              x-examples: [Mon]
+                              enum:
+                                - Mon
+                                - Tue
+                                - Wed
+                                - Thu
+                                - Fri
+                                - Sat
+                                - Sun
+                moduleReleaseSelector:
+                  type: object
+                  description: |
+                    Defines label-selector-based filters to match target modules.
+                    required:
+                      - labelSelector
+                    properties:
+                      labelSelector:
+                        description: |
+                          Label-selector-based filter to match target modules.
+
+                          If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
+                          If multiple `matchExpression` conditions are provided, they all must be satisfied in order to match.
+                        type: object
+                        minProperties: 1
+                        properties:
+                          matchExpressions:
+                            type: array
+                            description: An array of set-based expressions.
+                            items:
+                              required: 
+                                - key
+                                - operator
+                              oneOf:
+                                - properties:
+                                    operator:
+                                      enum: [Exists, DoesNotExist]
+                                  required: [key, operator]
+                                  not:
+                                    required: [values]
+                                - properties:
+                                    operator:
+                                      enum: [In, NotIn]
+                                  required: [key, operator, values]
+                              type: object
+                              properties:
+                                key:
+                                  description: A label name.
+                                  type: string
+                                operator:
+                                  description: A comparison operator.
+                                  type: string
+                                  enum: [In, NotIn, Exists, DoesNotExist]
+                                values:
+                                  type: array
+                                  description: A label value.
+                                  items:
+                                    type: string
+                          matchLabels:
+                            type: object
+                            description: A number of equality-based label filters.
+                            x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                            additionalProperties:
+                              type: string
+            status:
+              type: object
+              properties:
+                matchedModules:
+                  type: string
+                  description: List of modules that are subject for the schedule.
+                errors:
+                  type: string
+                  items:
+                    type: string
+                  description: List of error messages.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: modules
+          jsonPath: .status.matchedModules
+          type: string
+          description: List of modules that are subject for the schedule.
+        - name: errors
+          jsonPath: .status.errors
+          type: string
+          description: List of error messages.

@@ -64,6 +64,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents: pointer.Bool(true),
 			FilterFunc:          filterSource,
 		},
+		{
+			Name:                "schedules",
+			ApiVersion:          "deckhouse.io/v1alpha1",
+			Kind:                "ModuleUpdateSchedule",
+			ExecuteHookOnEvents: pointer.Bool(true),
+			FilterFunc:          filterSchedule,
+		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
 		{
@@ -75,6 +82,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		EnableSchedulesOnStartup: true,
 	},
 }, dependency.WithExternalDependencies(handleSource))
+
+func filterSchedule(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return obj.GetName(), nil
+}
 
 func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ms v1alpha1.ModuleSource
