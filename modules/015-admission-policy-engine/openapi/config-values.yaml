@@ -8,10 +8,10 @@ properties:
       defaultProfile:
         type: string
         description: |
-          Defines default PSS profile for all non-system namespaces:
-          - `Privileged` — Unrestricted policy. This policy allows for known privilege escalations;
-          - `Baseline` — Minimally restrictive policy which prevents known privilege escalations;
-          - `Restricted` — Heavily restricted policy, following current Pod hardening best practices.
+          Sets the default PSS profile for all non-system namespaces:
+          - `Privileged` — an unrestricted policy. Privilege escalation is possible with this policy;
+          - `Baseline` — a policy with minimum restrictions that prevents privilege escalation;
+          - `Restricted` — a policy with maximum restrictions that conforms to current best practices for securely running applications in a cluster.
         enum:
           - Privileged
           - Baseline
