@@ -1,0 +1,8 @@
+dhctl:
+  features:
+    - summary: Support destroy command for static clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6557
+  fixes:
+    - summary: Fix panic on getting tag during bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6576
+
