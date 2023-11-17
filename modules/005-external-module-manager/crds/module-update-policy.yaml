@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: moduleupdateschedules.deckhouse.io
+  name: moduleupdatepolicies.deckhouse.io
   labels:
     heritage: deckhouse
     module: external-module-manager
@@ -9,11 +9,11 @@ spec:
   group: deckhouse.io
   scope: Cluster
   names:
-    plural: moduleupdateschedules
-    singular: moduleupdateschedule
-    kind: ModuleUpdateSchedule
+    plural: moduleupdatepolicies
+    singular: moduleupdatepolicy
+    kind: ModuleUpdatePolicy
     shortNames:
-      - mus
+      - mup
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -38,7 +38,7 @@ spec:
                   description: |
                     Desirable module release channel.
                     The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
-                  default: Alpha
+                  default: Stable
                   enum: 
                     - Alpha
                     - Beta
@@ -174,19 +174,21 @@ spec:
               properties:
                 matchedModules:
                   type: string
-                  description: List of modules that are subject for the schedule.
+                  description: List of modules that are subject for the policy.
                 errors:
                   type: string
-                  items:
-                    type: string
                   description: List of error messages.
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: modules
+        - name: matched modules
           jsonPath: .status.matchedModules
           type: string
-          description: List of modules that are subject for the schedule.
+          description: List of modules that are subject for the policy.
+        - name: release channel
+          jsonPath: .spec.releaseChannel
+          type: string
+          description: Module release channel.
         - name: errors
           jsonPath: .status.errors
           type: string

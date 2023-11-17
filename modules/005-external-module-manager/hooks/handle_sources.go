@@ -41,6 +41,7 @@ import (
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	labels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/pointer"
 
 	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
@@ -50,8 +51,7 @@ import (
 )
 
 const (
-	defaultReleaseChannel = "stable"
-	defaultModuleWeight   = 900
+	defaultModuleWeight = 900
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -65,11 +65,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:          filterSource,
 		},
 		{
-			Name:                "schedules",
+			Name:                "policies",
 			ApiVersion:          "deckhouse.io/v1alpha1",
-			Kind:                "ModuleUpdateSchedule",
+			Kind:                "ModuleUpdatePolicy",
 			ExecuteHookOnEvents: pointer.Bool(true),
-			FilterFunc:          filterSchedule,
+			FilterFunc:          filterPolicy,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -83,8 +83,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleSource))
 
-func filterSchedule(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.GetName(), nil
+func filterPolicy(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var mus v1alpha1.ModuleUpdatePolicy
+
+	err := sdk.FromUnstructured(obj, &mus)
+	if err != nil {
+		return nil, err
+	}
+
+	newmus := v1alpha1.ModuleUpdatePolicy{
+		TypeMeta: mus.TypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: mus.Name,
+		},
+		Spec: mus.Spec,
+	}
+
+	return newmus, nil
 }
 
 func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -112,10 +127,6 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 		},
 	}
 
-	if newms.Spec.ReleaseChannel == "" {
-		newms.Spec.ReleaseChannel = defaultReleaseChannel
-	}
-
 	return newms, nil
 }
 
@@ -124,8 +135,14 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	checksumFilePath := path.Join(externalModulesDir, "checksum.json")
 	ts := time.Now().UTC()
 
-	snap := input.Snapshots["sources"]
-	if len(snap) == 0 {
+	snapPolicies := input.Snapshots["policies"]
+	if len(snapPolicies) == 0 {
+		input.LogEntry.Info("not a single module update policy was found - skip external module releases")
+		return nil
+	}
+
+	snapSources := input.Snapshots["sources"]
+	if len(snapSources) == 0 {
 		return nil
 	}
 
@@ -134,8 +151,19 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	for _, sn := range snap {
-		ex := sn.(v1alpha1.ModuleSource)
+	policies := make(map[string]*modulePolicy)
+
+	for _, sch := range snapPolicies {
+		policy := sch.(v1alpha1.ModuleUpdatePolicy)
+		policies[policy.Name] = &modulePolicy{
+			spec:            policy.Spec,
+			affectedModules: make([]string, 0),
+			errors:          make([]string, 0),
+		}
+	}
+
+	for _, source := range snapSources {
+		ex := source.(v1alpha1.ModuleSource)
 		sc := v1alpha1.ModuleSourceStatus{
 			SyncTime: ts,
 		}
@@ -188,7 +216,22 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			moduleVersion, err := fetchModuleVersion(input.LogEntry, dc, ex, moduleName, mChecksum, opts)
+			foundPolicy, policyConflict, moduleReleasePolicy, err := getReleasePolicy(ex.Name, moduleName, policies)
+			if err != nil {
+				return fmt.Errorf("couldn't check module %s release: %v", moduleName, err)
+			}
+
+			if !foundPolicy {
+				input.LogEntry.Infof("module %s release from module source %s was skipped as no matching policies were found", moduleName, ex.Name)
+				continue
+			}
+
+			if policyConflict {
+				input.LogEntry.Warnf("module %s release from module source %s was skipped as it is matched by multiple module policies", moduleName, ex.Name)
+				continue
+			}
+
+			moduleVersion, err := fetchModuleVersion(input.LogEntry, dc, ex, moduleName, moduleReleasePolicy.ReleaseChannel, mChecksum, opts)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
 					Name:  moduleName,
@@ -244,6 +287,8 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 		updateSourceStatus(input, ex.Name, sc)
 	}
+
+	updatePolicyStatuses(input, policies)
 
 	// save checksums
 	err = saveSourceChecksums(checksumFilePath, sourcesChecksum)
@@ -302,13 +347,13 @@ func saveSourceChecksums(checksumFilePath string, checksums sourceChecksum) erro
 	return os.WriteFile(checksumFilePath, data, 0666)
 }
 
-func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSource v1alpha1.ModuleSource, moduleName string, modulesChecksum map[string]string, registryOptions []cr.Option) ( /* moduleVersion */ string, error) {
+func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSource v1alpha1.ModuleSource, moduleName, moduleReleaseChannel string, modulesChecksum map[string]string, registryOptions []cr.Option) ( /* moduleVersion */ string, error) {
 	regCli, err := dc.GetRegistryClient(path.Join(moduleSource.Spec.Registry.Repo, moduleName, "release"), registryOptions...)
 	if err != nil {
 		return "", fmt.Errorf("fetch release image error: %v", err)
 	}
 
-	img, err := regCli.Image(strcase.ToKebab(moduleSource.Spec.ReleaseChannel))
+	img, err := regCli.Image(strcase.ToKebab(moduleReleaseChannel))
 	if err != nil {
 		return "", fmt.Errorf("fetch image error: %v", err)
 	}
@@ -560,7 +605,45 @@ func fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
 	return meta, err
 }
 
+func getReleaseLabels(source, module string) map[string]string {
+	return map[string]string{"module": module, "source": source}
+}
+
+func getReleasePolicy(sourceName, moduleName string, policies map[string]*modulePolicy) (bool, bool, *v1alpha1.ModuleUpdatePolicySpec, error) {
+	var labelsSet labels.Set = getReleaseLabels(sourceName, moduleName)
+	var matchedPolicy string
+	var found, conflict bool
+	for name, policy := range policies {
+		if policy.spec.ModuleReleaseSelector.LabelSelector != nil {
+			selector, err := metav1.LabelSelectorAsSelector(policy.spec.ModuleReleaseSelector.LabelSelector)
+			if err != nil {
+				return false, false, nil, err
+			}
+
+			if selector.Matches(labelsSet) {
+				policies[name].affectedModules = append(policies[name].affectedModules, moduleName)
+				if found {
+					policies[name].errors = append(policies[name].errors, fmt.Sprintf("module %s is also affected by %s policy", moduleName, matchedPolicy))
+					policies[matchedPolicy].errors = append(policies[matchedPolicy].errors, fmt.Sprintf("module %s is also affected by %s policy", moduleName, name))
+					conflict = true
+				} else {
+					found = true
+					matchedPolicy = name
+				}
+			}
+		}
+	}
+
+	if !found {
+		return found, conflict, nil, nil
+	}
+
+	return found, conflict, &policies[matchedPolicy].spec, nil
+}
+
 func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string, moduleWeight int) {
+	moduleReleaseLabels := getReleaseLabels(sourceName, moduleName)
+
 	rl := &v1alpha1.ModuleRelease{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ModuleRelease",
@@ -569,7 +652,7 @@ func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersi
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        fmt.Sprintf("%s-%s", moduleName, moduleVersion),
 			Annotations: make(map[string]string),
-			Labels:      map[string]string{"module": moduleName, "source": sourceName},
+			Labels:      moduleReleaseLabels,
 		},
 		Spec: v1alpha1.ModuleReleaseSpec{
 			ModuleName: moduleName,
@@ -579,6 +662,18 @@ func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersi
 	}
 
 	input.PatchCollector.Create(rl, object_patch.UpdateIfExists())
+}
+
+func updatePolicyStatuses(input *go_hook.HookInput, policies map[string]*modulePolicy) {
+	for name, policy := range policies {
+		status := map[string]v1alpha1.ModuleUpdatePolicyStatus{
+			"status": {
+				MatchedModules: strings.Join(policy.affectedModules, ", "),
+				Errors:         strings.Join(policy.errors, ", "),
+			},
+		}
+		input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleUpdatePolicy", "", name, object_patch.WithSubresource("/status"))
+	}
 }
 
 func updateSourceStatus(input *go_hook.HookInput, name string, sc v1alpha1.ModuleSourceStatus) {
@@ -596,6 +691,12 @@ type moduleReleaseMetadata struct {
 type moduleChecksum map[string]string
 
 type sourceChecksum map[string]moduleChecksum
+
+type modulePolicy struct {
+	errors          []string
+	affectedModules []string
+	spec            v1alpha1.ModuleUpdatePolicySpec
+}
 
 // part of openapi schema for injecting registry values
 type registrySchemaForValues struct {

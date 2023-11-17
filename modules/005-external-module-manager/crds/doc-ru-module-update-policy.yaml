@@ -107,6 +107,10 @@ spec:
           jsonPath: .status.matchedModules
           type: string
           description: Список модулей подпадающих под данные настройки обновления.
+        - name: release channel
+          jsonPath: .spec.releaseChannel
+          type: string
+          description: Канал обновления модуля.
         - name: errors
           jsonPath: .status.errors
           type: string
