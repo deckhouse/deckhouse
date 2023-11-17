@@ -13,6 +13,7 @@
  - **[chrony]** Chrony image is based on distroless image. [#6240](https://github.com/deckhouse/deckhouse/pull/6240)
  - **[deckhouse]** Change `deckhouse-controller` user to `deckhouse`. [#5841](https://github.com/deckhouse/deckhouse/pull/5841)
  - **[deckhouse-controller]** Use ModuleConfig as the primary source of configuration. Don't use ConfigMap `deckhouse` anymore. [#6061](https://github.com/deckhouse/deckhouse/pull/6061)
+ - **[dhctl]** Support destroy command for static clusters. [#6557](https://github.com/deckhouse/deckhouse/pull/6557)
  - **[dhctl]** Add support for uploading mirrored Deckhouse images to custom repo paths. [#6467](https://github.com/deckhouse/deckhouse/pull/6467)
  - **[dhctl]** Compute stribog 256 bit hash for downloaded registry copy. [#6409](https://github.com/deckhouse/deckhouse/pull/6409)
  - **[dhctl]** Implemented copying of Deckhouse images to third-party registries for air-gapped installation. [#6257](https://github.com/deckhouse/deckhouse/pull/6257)
@@ -41,6 +42,7 @@
     The pods that are behind the `kube-rbac-proxy` will restart.
  - **[dashboard]** Fix apiVersion for CronJobs to display with the dashboard module. [#5799](https://github.com/deckhouse/deckhouse/pull/5799)
  - **[deckhouse]** Fix panic when validating int in a number field in module configuration. [#6556](https://github.com/deckhouse/deckhouse/pull/6556)
+ - **[dhctl]** Fix panic on getting tag during bootstrap. [#6576](https://github.com/deckhouse/deckhouse/pull/6576)
  - **[dhctl]** Delete unnecessary obsolescence image preflight check. [#6567](https://github.com/deckhouse/deckhouse/pull/6567)
  - **[dhctl]** Fix `dhctl mirror` is not available in a container. [#6538](https://github.com/deckhouse/deckhouse/pull/6538)
  - **[dhctl]** Fix `edit provider-cluster-configuration` command to not remove `discovery-data.json` file from `kube-system/d8-provider-cluster-configuration` Secret. [#6486](https://github.com/deckhouse/deckhouse/pull/6486)
