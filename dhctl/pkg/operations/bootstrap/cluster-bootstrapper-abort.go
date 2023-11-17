@@ -43,10 +43,6 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(forceAbortFromCache) })
 }
 
-type Destroyer interface {
-	DestroyCluster(autoApprove bool) error
-}
-
 func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
 	metaConfig, err := config.ParseConfig(app.ConfigPath)
 	if err != nil {
@@ -82,7 +78,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		return err
 	}
 
-	var destroyer Destroyer
+	var destroyer destroy.Destroyer
 
 	err = log.Process("common", "Choice abort type", func() error {
 		ok, err := stateCache.InCache(ManifestCreatedInClusterCacheKey)
