@@ -277,6 +277,7 @@ func DeleteMCMMachineDeployments(kubeCl *client.KubernetesClient) error {
 
 		for _, machine := range allMachines.Items {
 			labels := machine.GetLabels()
+			// it needs for force delete machine (without drain)
 			labels["force-deletion"] = "True"
 			machine.SetLabels(labels)
 
@@ -416,6 +417,7 @@ func DeleteCAPIMachineDeployments(kubeCl *client.KubernetesClient) error {
 
 		for _, machine := range allMachines.Items {
 			m := machine
+			// we delete cluster anyway and we can force delete machine (without drain)
 			unstructured.SetNestedField(m.Object, "10s", "spec", "nodeDrainTimeout")
 
 			_, err = kubeCl.Dynamic().Resource(capiMachinesSchema).Namespace(machine.GetNamespace()).Update(context.TODO(), &m, metav1.UpdateOptions{})
