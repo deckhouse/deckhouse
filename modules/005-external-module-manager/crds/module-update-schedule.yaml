@@ -23,7 +23,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the update schedule for Deckhouse release.
+            Defines the update settings for a module's release.
           required:
             - spec
           properties:
@@ -79,9 +79,9 @@ spec:
                         Modules update timetable.
                       items:
                         type: object
-                      required:
-                        - from
-                        - to
+                        required:
+                          - from
+                          - to
                         properties:
                           from:
                             type: string
@@ -118,7 +118,7 @@ spec:
                 moduleReleaseSelector:
                   type: object
                   description: |
-                    Defines label-selector-based filters to match target modules.
+                    Selects target modules to apply update settings to.
                     required:
                       - labelSelector
                     properties:
