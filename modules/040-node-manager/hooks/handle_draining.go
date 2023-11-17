@@ -163,7 +163,6 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 
 		wg.Add(1)
 		go func(node drainingNode) {
-			//
 			if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 				if node.Name == "foo-2" {
 					drainHelper.PodSelector = "a: b._c"
