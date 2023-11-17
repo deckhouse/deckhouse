@@ -86,7 +86,7 @@ spec:
                           from:
                             type: string
                             pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                            example: '13:00'
+                            x-doc-examples: ["13:00"]
                             description: |
                               Start time of the update window (UTC timezone).
 
@@ -94,7 +94,7 @@ spec:
                           to:
                             type: string
                             pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                            example: '18:30'
+                            x-doc-examples: ["18:30"]
                             description: |
                               End time of the update window (UTC timezone).
 
@@ -102,11 +102,11 @@ spec:
                           days:
                             type: array
                             description: The days of the week on which the update window is applied.
-                            example: ["Mon", "Wed"]
+                            x-doc-examples: ["Mon", "Wed"]
                             items:
                               type: string
                               description: Day of the week.
-                              x-examples: [Mon]
+                              x-doc-examples: ["Mon"]
                               enum:
                                 - Mon
                                 - Tue
