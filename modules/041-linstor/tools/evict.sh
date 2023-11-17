@@ -16,15 +16,16 @@
 
 export TIMEOUT_SEC=15
 export DISKLESS_STORAGE_POOL="DfltDisklessStorPool"
+export LINSTOR_NAMESPACE="d8-linstor"
 
 command -v jq >/dev/null 2>&1 || { echo "jq is required but it's not installed.  Aborting." >&2; exit 1; }
 
 exec_linstor_with_exit_code_check() {
-  execute_command kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor "$@"
+  execute_command kubectl -n ${LINSTOR_NAMESPACE} exec -ti deploy/linstor-controller -c linstor-controller -- linstor "$@"
 }
 
 linstor() {
-  kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor "$@"
+  kubectl -n ${LINSTOR_NAMESPACE} exec -ti deploy/linstor-controller -c linstor-controller -- linstor "$@"
 }
 
 execute_command() {
@@ -51,18 +52,40 @@ execute_command() {
 
 linstor_check_faulty() {
   while true; do
+    echo "Checking for LINSTOR controller online"
+    local count=0
+    local max_attempts=30
+    until linstor node list > /dev/null 2>&1 || [ $count -eq $max_attempts ]; do
+      echo "LINSTOR controller is not online. Waiting $TIMEOUT_SEC seconds and rechecking for LINSTOR controller online. Attempt $((count+1))/$max_attempts."
+      sleep $TIMEOUT_SEC
+      ((count++))
+    done
+
+    if [ $count -eq $max_attempts ]; then
+      echo "Timeout reached. LINSTOR controller is not online."
+      if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+        echo "Waiting $TIMEOUT_SEC seconds and rechecking for LINSTOR controller online"
+        sleep $TIMEOUT_SEC
+      else
+        exit_function
+      fi
+      continue
+    fi
+
+    echo "LINSTOR controller is online"
     echo "Checking for faulty resources"
     if (( $(linstor resource list --faulty | tee /dev/tty | grep -v -i sync | grep  "[a-zA-Z0-9]" | wc -l) > 1)); then
       echo "Faulty resources found."
       if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
         echo "Waiting $TIMEOUT_SEC seconds and rechecking for faulty resources"
         sleep $TIMEOUT_SEC
+        continue
       else
         exit_function
       fi
     else
       echo "No faulty resources found"
-      break
+      return
     fi
   done
 }
@@ -313,6 +336,8 @@ create_tiebreaker() {
       exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
       exit_function
     fi
+  else
+    echo "The count of diskless replicas is ${diskless_replicas_count}. TieBreaker for resource ${resource_name} is not needed."
   fi
 }
 
@@ -325,13 +350,37 @@ linstor_delete_resources_from_node() {
     linstor_check_faulty
     linstor_wait_sync 0
     echo "Current status of the resource:"
-    exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+    exec_linstor_with_exit_code_check resource list-volumes -r ${resource_name}
     sleep 2
     echo "Deleting resource ${resource_name}"
-    exec_linstor_with_exit_code_check resource delete ${NODE_FOR_EVICT} $resource_name
+    exec_linstor_with_exit_code_check resource delete ${NODE_FOR_EVICT} ${resource_name}
     echo "Resource status after deleting:"
     sleep 2
-    exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+    exec_linstor_with_exit_code_check resource list-volumes -r ${resource_name}
+    sleep 2
+
+    while true; do
+      current_diskful_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName != $disklessStorPoolName).name] | length')    
+      if [[ -z $current_diskful_replicas_count ]]; then
+        echo "Warning! Can't get the total number of diskfull replicas for resource ${resource_name}."
+        echo "Resource status:"
+        exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+        if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+          echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskfull replicas for resource ${resource_name}"
+          sleep $TIMEOUT_SEC
+        else
+          exit_function
+        fi
+      else
+        break
+      fi
+    done
+    
+    if (( $current_diskful_replicas_count == 2 )); then
+      echo "Resource ${resource_name} has an even number of diskfull replicas. Creating a TieBreaker for this resource if it does not exist."
+      create_tiebreaker ${resource_name}
+    fi
+    
     echo "Processing of resource $resource_name completed."
   done
 
@@ -379,9 +428,8 @@ exit_function(){
 }
 
 kubernetes_check_node() {
-  export RESOURCES_TO_EVICT=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName != $disklessStorPoolName).name')
-
-  if [[ -z "${RESOURCES_TO_EVICT}" ]]; then
+  export DISKFUL_RESOURCES_TO_EVICT=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName != $disklessStorPoolName).name')
+  if [[ -z "${DISKFUL_RESOURCES_TO_EVICT}" ]]; then
       echo
       echo "List of resources to evict is empty. Please enter the values again."
       echo "List of storage pools and nodes in LINSTOR:"
@@ -406,6 +454,150 @@ kubernetes_check_node() {
   fi
   
   return 0
+}
+
+wait_for_deployment_scale_down() {
+  local DEPLOYMENT_NAME=$1
+  local NAMESPACE=$2
+
+  local count=0
+  local max_attempts=60
+
+  until [[ $(kubectl get pods -n "$NAMESPACE" -l app="$DEPLOYMENT_NAME" --no-headers 2>/dev/null | wc -l) -eq 0 ]] || [[ $count -eq $max_attempts ]]; do
+    echo "Waiting for pods to be deleted... Attempt $((count+1))/$max_attempts."
+    sleep 5
+    ((count++))
+  done
+  
+  if [[ $count -eq $max_attempts ]]; then
+    echo "Timeout reached. Pods were not deleted."
+    exit_function
+    return
+  fi
+  echo "Pods were deleted."
+
+}
+
+linstor_backup_database() {
+  echo "Performing database backup"
+  
+  while true; do
+    echo "Checking the number of replicas for LINSTOR controller"
+    LINSTOR_CONTROLLER_REPLICAS_COUNT=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment linstor-controller -o jsonpath='{.spec.replicas}')
+    if [[ -n "${LINSTOR_CONTROLLER_REPLICAS_COUNT}" ]]; then
+      echo "Scale down LINSTOR controller"
+      execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment linstor-controller --replicas=0"
+      echo "Waiting for LINSTOR controller to scale down"
+      wait_for_deployment_scale_down "linstor-controller" "${LINSTOR_NAMESPACE}"
+      break
+    else
+      echo "Can't get the number of replicas for LINSTOR controller."
+      if get_user_confirmation "Should we recheck the number of replicas for the LINSTOR controller after $TIMEOUT_SEC seconds? (Note that the database backup will not be performed if this is not done.)" "y" "n"; then
+        echo "Waiting $TIMEOUT_SEC seconds and rechecking the number of replicas for LINSTOR controller"
+        sleep $TIMEOUT_SEC
+        continue
+      else
+        break
+      fi
+    fi
+  done
+
+  echo "Creating a backup of the LINSTOR database"
+  export current_datetime=$(date +%Y-%m-%d_%H-%M-%S)
+  mkdir linstor_db_backup_before_evict_${current_datetime}
+  kubectl get crds | grep -o ".*.internal.linstor.linbit.com" | xargs kubectl get crds -oyaml > ./linstor_db_backup_before_evict_${current_datetime}/crds.yaml
+  kubectl get crds | grep -o ".*.internal.linstor.linbit.com" | xargs -i{} sh -xc "kubectl get {} -oyaml > ./linstor_db_backup_before_evict_${current_datetime}/{}.yaml"
+  echo "Database backup completed"
+  echo "Scale up LINSTOR controller"
+  execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment linstor-controller --replicas=${LINSTOR_CONTROLLER_REPLICAS_COUNT}"
+  echo "Waiting for LINSTOR controller to scale up"
+  sleep 15
+  linstor_check_faulty
+}
+
+delete_node_from_kubernetes_and_linstor() {
+  while true; do
+    deckhouse_current_replicas=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.replicas}')
+    piraeus_current_replicas=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment piraeus-operator -o jsonpath='{.spec.replicas}')
+
+    if [[ -z "${deckhouse_current_replicas}" || -z "${piraeus_current_replicas}" ]]; then
+      echo "Can't get the number of replicas for Deckhouse or Piraeus operator."
+      if get_user_confirmation "Should we recheck the number of replicas for Deckhouse and Piraeus operator after $TIMEOUT_SEC seconds? (Note that the node will not be deleted from Kubernetes and LINSTOR if this is not done.)" "y" "n"; then
+        echo "Waiting $TIMEOUT_SEC seconds and rechecking the number of replicas for Deckhouse and Piraeus operator"
+        sleep $TIMEOUT_SEC
+        continue
+      else
+        echo "Warning! The node will not be deleted from Kubernetes and LINSTOR."
+        return
+      fi
+    fi
+    break
+  done
+
+  while true; do
+    if is_linstor_satellite_online; then
+      linstor_satellite_online="true"
+    else
+      linstor_satellite_online="false"
+    fi
+      
+    if [[ $linstor_satellite_online == "true" ]]; then
+      echo "Node $NODE_FOR_EVICT is ONLINE in LINSTOR. Performing standard node deletion procedure from LINSTOR"
+    else
+      echo "Warning! Node ${NODE_FOR_EVICT} is not ONLINE in LINSTOR. It is impossible to perform standard node deletion procedure from LINSTOR. The command \"linstor node lost ${NODE_FOR_EVICT}\" needs to be executed."
+      if get_user_confirmation "Perform a re-check of the connection with node ${NODE_FOR_EVICT} after $TIMEOUT_SEC seconds?" "y" "n"; then
+        echo "Waiting for $TIMEOUT_SEC seconds and re-checking the connection with node ${NODE_FOR_EVICT}"
+        sleep $TIMEOUT_SEC
+        continue
+      fi
+    fi
+  done
+
+  echo "The procedure for deleting a node from LINSTOR will consist of the following actions:" 
+  echo "1. Shutting down Deckhouse and Piraeus operator"
+  if [[ $linstor_satellite_online == "true" ]]; then
+    echo "2. Standard node deletion from LINSTOR"
+  else
+    echo "2. Executing the command \"linstor node lost ${NODE_FOR_EVICT}\""
+  fi
+  echo "3. Deleting the node from Kubernetes"
+  echo "4. Turning Deckhouse and Piraeus operator back on"
+
+  if get_user_confirmation "Perform the actions listed above?" "yes-i-am-sane-and-i-understand-what-i-am-doing" "n"; then
+    execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=0"
+    echo "Waiting for Deckhouse to scale down"
+    wait_for_deployment_scale_down "deckhouse" "d8-system"
+
+    execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment piraeus-operator --replicas=0"
+    echo "Waiting for piraeus-operator to scale down"
+    wait_for_deployment_scale_down "piraeus-operator" "${LINSTOR_NAMESPACE}"
+
+    if [[ $linstor_satellite_online == "true" ]]; then
+      echo "Performing standard node deletion procedure from LINSTOR"
+      exec_linstor_with_exit_code_check node delete ${NODE_FOR_EVICT}
+    else
+      echo "Executing the command \"linstor node lost ${NODE_FOR_EVICT}\""
+      exec_linstor_with_exit_code_check node lost ${NODE_FOR_EVICT}
+    fi
+
+    if is_linstor_satellite_does_not_exist; then
+      execute_command "kubectl delete node ${NODE_FOR_EVICT}"
+      execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=${deckhouse_current_replicas}"
+      execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment piraeus-operator --replicas=${piraeus_current_replicas}"
+      return
+    else
+      echo "Warning! Node ${NODE_FOR_EVICT} has not been deleted from LINSTOR. Turning Deckhouse and Piraeus operator back on."
+      execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=${deckhouse_current_replicas}"
+      execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment piraeus-operator --replicas=${piraeus_current_replicas}"
+      echo "It is recommended to terminate the script and investigate the cause of the error."
+      exit_function
+      return
+    fi
+  else
+    exit_function
+    return
+  fi
+
 }
 
 
@@ -436,17 +628,20 @@ while true; do
   
 done
 
+if get_user_confirmation "Perform database backup before evicting resources from node ${NODE_FOR_EVICT}?" "y" "n"; then
+  linstor_backup_database
+fi
 
 echo "Excluding node ${NODE_FOR_EVICT} from LINSTOR scheduler"
 exec_linstor_with_exit_code_check node set-property ${NODE_FOR_EVICT} AutoplaceTarget false
 
-RESOURCE_AND_GROUP_NAMES=$(linstor -m --output-version=v1 resource-definition list -r ${RESOURCES_TO_EVICT} | jq -r '.[][] | {resource: .name, resource_group: .resource_group_name}')
+RESOURCE_AND_GROUP_NAMES=$(linstor -m --output-version=v1 resource-definition list -r ${DISKFUL_RESOURCES_TO_EVICT} | jq -r '.[][] | {resource: .name, resource_group: .resource_group_name}')
 RESOURCE_GROUPS=$(linstor -m --output-version=v1 resource-group list | jq -r '.[][] | {resource_group: .name, place_count: .select_filter.place_count}')
 
 echo "List of resources to be evicted from node ${NODE_FOR_EVICT}:"
-exec_linstor_with_exit_code_check resource list-volumes -r ${RESOURCES_TO_EVICT}
+exec_linstor_with_exit_code_check resource list-volumes -r ${DISKFUL_RESOURCES_TO_EVICT}
 
-linstor_change_replicas_count 1 10 "${RESOURCE_AND_GROUP_NAMES}" "${RESOURCE_GROUPS}" "${RESOURCES_TO_EVICT[@]}" 
+linstor_change_replicas_count 1 10 "${RESOURCE_AND_GROUP_NAMES}" "${RESOURCE_GROUPS}" "${DISKFUL_RESOURCES_TO_EVICT[@]}" 
 echo "Increase in replica count for movable resources completed"
 
 
@@ -455,7 +650,7 @@ echo "Increase in replica count for movable resources completed"
 ## If that didn't help, then remove the replica on the problematic node and manually create it on another node with the command linstor r create <node name> <resource name>
 
 echo "Status of processed resources"
-exec_linstor_with_exit_code_check resource list-volumes -r ${RESOURCES_TO_EVICT}
+exec_linstor_with_exit_code_check resource list-volumes -r ${DISKFUL_RESOURCES_TO_EVICT}
 sleep 2
 
 echo "Performing checks before deleting the node"
@@ -463,13 +658,13 @@ linstor_check_faulty
 linstor_wait_sync 0
 
 echo "Getting the list of resources, replicas of which are on the evicted node ${NODE_FOR_EVICT} again, to check if the new resources have appeared"
-export RESOURCES_TO_EVICT_NEW=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName != $disklessStorPoolName).name')
-RESOURCE_AND_GROUP_NAMES_NEW=$(linstor -m --output-version=v1 resource-definition list -r ${RESOURCES_TO_EVICT_NEW} | jq -r '.[][] | {resource: .name, resource_group: .resource_group_name}')
+export DISKFUL_RESOURCES_TO_EVICT_NEW=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName != $disklessStorPoolName).name')
+RESOURCE_AND_GROUP_NAMES_NEW=$(linstor -m --output-version=v1 resource-definition list -r ${DISKFUL_RESOURCES_TO_EVICT_NEW} | jq -r '.[][] | {resource: .name, resource_group: .resource_group_name}')
 RESOURCE_GROUPS_NEW=$(linstor -m --output-version=v1 resource-group list | jq -r '.[][] | {resource_group: .name, place_count: .select_filter.place_count}')
-added_resources=$(comm -13 <(echo "$RESOURCES_TO_EVICT" | sort) <(echo "$RESOURCES_TO_EVICT_NEW" | sort))
+added_resources=$(comm -13 <(echo "$DISKFUL_RESOURCES_TO_EVICT" | sort) <(echo "$DISKFUL_RESOURCES_TO_EVICT_NEW" | sort))
 
-echo "Old resource list: ${RESOURCES_TO_EVICT}"
-echo "New resource list: ${RESOURCES_TO_EVICT_NEW}"
+echo "Old resource list: ${DISKFUL_RESOURCES_TO_EVICT}"
+echo "New resource list: ${DISKFUL_RESOURCES_TO_EVICT_NEW}"
 if [[ -n "${added_resources}" ]]; then
   echo "The following resources have appeared on the node ${NODE_FOR_EVICT}:"
   exec_linstor_with_exit_code_check resource list-volumes -r ${added_resources}
@@ -487,68 +682,16 @@ RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE=$(linstor -m --output-version=v1 resou
 
 echo "Attention! Before evacuate resources from node ${NODE_FOR_EVICT}, make sure that all resources in LINSTOR are in UpToDate state."
 
-if get_user_confirmation "Do you want to delete node ${NODE_FOR_EVICT} from Kubernetes and LINSTOR? If not, then only the deletion of all resources from ${NODE_FOR_EVICT} will be executed." "y" "n"; then
-  DECKHOUSE_REPLICAS_COUNT=$(execute_command "kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.replicas}'")
-  PIRAEUS_OPERATOR_REPLICAS_COUNT=$(execute_command "kubectl -n d8-linstor get deployment piraeus-operator -o jsonpath='{.spec.replicas}'")
-
-  while true; do
-    if is_linstor_satellite_online; then
-      linstor_satellite_online="true"
-    else
-      linstor_satellite_online="false"
-    fi
-      
-    if [[ $linstor_satellite_online == "true" ]]; then
-      echo "Node $NODE_FOR_EVICT is ONLINE in LINSTOR. Performing standard node deletion procedure from LINSTOR"
-    else
-      echo "Warning! Node ${NODE_FOR_EVICT} is not ONLINE in LINSTOR. It is impossible to perform standard node deletion procedure from LINSTOR. The command \"linstor node lost ${NODE_FOR_EVICT}\" needs to be executed."
-      if get_user_confirmation "Perform a re-check of the connection with node ${NODE_FOR_EVICT} after $TIMEOUT_SEC seconds?" "y" "n"; then
-        echo "Waiting for $TIMEOUT_SEC seconds and re-checking the connection with node ${NODE_FOR_EVICT}"
-        sleep $TIMEOUT_SEC
-        continue
-      fi
-    fi
-    echo "The procedure for deleting a node from LINSTOR will consist of the following actions:" 
-    echo "1. Shutting down Deckhouse and Piraeus operator"
-    if [[ $linstor_satellite_online == "true" ]]; then
-      echo "2. Standard node deletion from LINSTOR"
-    else
-      echo "2. Executing the command \"linstor node lost ${NODE_FOR_EVICT}\""
-    fi
-    echo "3. Deleting the node from Kubernetes"
-    echo "4. Turning Deckhouse and Piraeus operator back on"
-
-    if get_user_confirmation "Perform the actions listed above?" "yes-i-am-sane-and-i-understand-what-i-am-doing" "n"; then
-      execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=0"
-      execute_command "kubectl -n d8-linstor scale deployment piraeus-operator --replicas=0"
-
-      if [[ $linstor_satellite_online == "true" ]]; then
-        echo "Performing standard node deletion procedure from LINSTOR"
-        exec_linstor_with_exit_code_check node delete ${NODE_FOR_EVICT}
-      else
-        echo "Executing the command \"linstor node lost ${NODE_FOR_EVICT}\""
-        exec_linstor_with_exit_code_check node lost ${NODE_FOR_EVICT}
-      fi
-
-      if is_linstor_satellite_does_not_exist; then
-        execute_command "kubectl delete node ${NODE_FOR_EVICT}"
-        execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=${DECKHOUSE_REPLICAS_COUNT}"
-        execute_command "kubectl -n d8-linstor scale deployment piraeus-operator --replicas=${PIRAEUS_OPERATOR_REPLICAS_COUNT}"
-        break
-      else
-        echo "Warning! Node ${NODE_FOR_EVICT} has not been deleted from LINSTOR. Turning Deckhouse and Piraeus operator back on."
-        execute_command "kubectl -n d8-system scale deployment deckhouse --replicas=${deckhouse_current_replicas}"
-        execute_command "kubectl -n d8-linstor scale deployment piraeus-operator --replicas=${piraeus_current_replicas}"
-        echo "It is recommended to terminate the script and investigate the cause of the error."
-        exit_function
-      fi
-    else
-      exit_function
-    fi
-  done
+if get_user_confirmation "Do you want to delete node ${NODE_FOR_EVICT} from Kubernetes and LINSTOR? If not, then only the deletion of all resources from ${NODE_FOR_EVICT} will be executed." "y" "n"; then  
+  delete_node_from_kubernetes_and_linstor
 else
-  echo "Only the deletion of all resources from ${NODE_FOR_EVICT} will be executed. The node will not be deleted from Kubernetes and LINSTOR."
-  linstor_delete_resources_from_node "${RESOURCES_TO_EVICT_NEW[@]}"
+  if get_user_confirmation "Do you want to delete all resources from node ${NODE_FOR_EVICT}?" "y" "n"; then
+    echo "Only the deletion of all resources from ${NODE_FOR_EVICT} will be executed. The node will NOT be deleted from Kubernetes and LINSTOR."
+    linstor_delete_resources_from_node "${RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE[@]}"
+    linstor_delete_resources_from_node "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
+  else
+    echo "Deletion of resources from node ${NODE_FOR_EVICT} will not be performed."
+  fi
 fi
 
 
@@ -559,7 +702,7 @@ sleep 2
 
 while true; do
   if get_user_confirmation "Should we reduce the number of replicas to their previous values for movable resources and also check for TieBreakers?" "y" "n"; then
-    linstor_change_replicas_count 0 2 "${RESOURCE_AND_GROUP_NAMES_NEW}" "${RESOURCE_GROUPS_NEW}" "${RESOURCES_TO_EVICT_NEW[@]}"
+    linstor_change_replicas_count 0 2 "${RESOURCE_AND_GROUP_NAMES_NEW}" "${RESOURCE_GROUPS_NEW}" "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
     break
   fi
   exit_function
