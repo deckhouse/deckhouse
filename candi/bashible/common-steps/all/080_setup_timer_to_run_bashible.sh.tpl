@@ -40,4 +40,5 @@ Description=Bashible service
 [Service]
 EnvironmentFile=/etc/environment
 ExecStart=/var/lib/bashible/bashible.sh --max-retries 10
+RuntimeMaxSec=3h
 EOF
