@@ -6,7 +6,7 @@ locals {
   catalog  = split("/", local.master_instance_class.template)[0]
   template = split("/", local.master_instance_class.template)[1]
   ip_address  = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
-  sizing_policy = local.master_instance_class.sizingPolicy
+  placement_policy = lookup(local.master_instance_class, "placementPolicy", "")
 }
 
 data "vcd_catalog" "catalog" {
@@ -26,6 +26,17 @@ data "vcd_vm_sizing_policy" "vmsp" {
   name = local.master_instance_class.sizingPolicy
 }
 
+data "vcd_org_vdc" "vdc" {
+  name = var.providerClusterConfiguration.virtualDataCenter
+  org = var.providerClusterConfiguration.organization
+}
+
+data "vcd_vm_placement_policy" "vmpp" {
+  count = local.placement_policy == "" ? 0 : 1
+  name = local.placement_policy
+  vdc_id = data.vcd_org_vdc.vdc.id
+}
+
 /*
 resource "vcd_independent_disk" "kubernetes_data" {
   name            = "kubernetes-data"
@@ -41,6 +52,7 @@ resource "vcd_vm" "master" {
 
 
   sizing_policy_id = data.vcd_vm_sizing_policy.vmsp.id
+  placement_policy_id = local.placement_policy == "" ? "" : data.vcd_vm_placement_policy.vmpp[0].id
 
   network {
     name               = "internal"
