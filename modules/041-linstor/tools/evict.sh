@@ -482,25 +482,32 @@ linstor_backup_database() {
   echo "Performing database backup"
   
   while true; do
-    echo "Checking the number of replicas for LINSTOR controller"
-    LINSTOR_CONTROLLER_REPLICAS_COUNT=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment linstor-controller -o jsonpath='{.spec.replicas}')
-    if [[ -n "${LINSTOR_CONTROLLER_REPLICAS_COUNT}" ]]; then
-      echo "Scale down LINSTOR controller"
-      execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment linstor-controller --replicas=0"
-      echo "Waiting for LINSTOR controller to scale down"
-      wait_for_deployment_scale_down "linstor-controller" "${LINSTOR_NAMESPACE}"
-      break
-    else
-      echo "Can't get the number of replicas for LINSTOR controller."
-      if get_user_confirmation "Should we recheck the number of replicas for the LINSTOR controller after $TIMEOUT_SEC seconds? (Note that the database backup will not be performed if this is not done.)" "y" "n"; then
-        echo "Waiting $TIMEOUT_SEC seconds and rechecking the number of replicas for LINSTOR controller"
+    echo "Checking the number of replicas for LINSTOR controller and Piraeus operator"
+    linstor_controller_current_replicas=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment linstor-controller -o jsonpath='{.spec.replicas}')
+    piraeus_current_replicas=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment piraeus-operator -o jsonpath='{.spec.replicas}')
+
+
+    if [[ -z "${linstor_controller_current_replicas}" || -z "${piraeus_current_replicas}" ]]; then
+      echo "Can't get the number of replicas for LINSTOR controller or piraeus-operator."
+      if get_user_confirmation "Should we recheck the number of replicas for the LINSTOR controller and piraeus-operator after $TIMEOUT_SEC seconds? (Note that the database backup will not be performed if this is not done.)" "y" "n"; then
+        echo "Waiting $TIMEOUT_SEC seconds and rechecking the number of replicas for LINSTOR controller and piraeus-operator"
         sleep $TIMEOUT_SEC
         continue
       else
-        break
+        return
       fi
     fi
+    break
   done
+
+  echo "Scale down piraeus-operator and LINSTOR controller"
+  execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment piraeus-operator --replicas=0"
+  echo "Waiting for piraeus-operator to scale down"
+  wait_for_deployment_scale_down "piraeus-operator" "${LINSTOR_NAMESPACE}"
+
+  execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment linstor-controller --replicas=0"
+  echo "Waiting for LINSTOR controller to scale down"
+  wait_for_deployment_scale_down "linstor-controller" "${LINSTOR_NAMESPACE}"
 
   echo "Creating a backup of the LINSTOR database"
   export current_datetime=$(date +%Y-%m-%d_%H-%M-%S)
@@ -508,8 +515,9 @@ linstor_backup_database() {
   kubectl get crds | grep -o ".*.internal.linstor.linbit.com" | xargs kubectl get crds -oyaml > ./linstor_db_backup_before_evict_${current_datetime}/crds.yaml
   kubectl get crds | grep -o ".*.internal.linstor.linbit.com" | xargs -i{} sh -xc "kubectl get {} -oyaml > ./linstor_db_backup_before_evict_${current_datetime}/{}.yaml"
   echo "Database backup completed"
-  echo "Scale up LINSTOR controller"
-  execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment linstor-controller --replicas=${LINSTOR_CONTROLLER_REPLICAS_COUNT}"
+  echo "Scale up LINSTOR controller and Piraeus operator"
+  execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment piraeus-operator --replicas=${piraeus_current_replicas}"
+  execute_command "kubectl -n ${LINSTOR_NAMESPACE} scale deployment linstor-controller --replicas=${linstor_controller_current_replicas}"
   echo "Waiting for LINSTOR controller to scale up"
   sleep 15
   linstor_check_faulty
@@ -678,7 +686,6 @@ else
 fi
 
 echo "Get resources that have TieBreaker on evicted node ${NODE_FOR_EVICT}"
-RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')
 
 echo "Attention! Before evacuate resources from node ${NODE_FOR_EVICT}, make sure that all resources in LINSTOR are in UpToDate state."
 
@@ -687,7 +694,7 @@ if get_user_confirmation "Do you want to delete node ${NODE_FOR_EVICT} from Kube
 else
   if get_user_confirmation "Do you want to delete all resources from node ${NODE_FOR_EVICT}?" "y" "n"; then
     echo "Only the deletion of all resources from ${NODE_FOR_EVICT} will be executed. The node will NOT be deleted from Kubernetes and LINSTOR."
-    linstor_delete_resources_from_node "${RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE[@]}"
+    export RESOURCE_REMOVAL="true"
     linstor_delete_resources_from_node "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
   else
     echo "Deletion of resources from node ${NODE_FOR_EVICT} will not be performed."
@@ -710,6 +717,12 @@ done
 
 linstor_check_faulty
 echo "Reduction in the number of replicas for movable resources completed"
+
+RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')
+
+if [[ ${RESOURCE_REMOVAL} == "true" ]]; then
+  linstor_delete_resources_from_node "${RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE[@]}"
+fi
 
 if [[ -n $RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE ]]; then
   echo "Create TieBreaker if needed for resources that had TieBreaker on evicted node \"${NODE_FOR_EVICT}\""
