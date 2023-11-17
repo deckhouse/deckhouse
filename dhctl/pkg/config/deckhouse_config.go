@@ -134,8 +134,8 @@ func readVersionTagFromInstallerContainer() (string, bool) {
 		return "", false
 	}
 
-	tag := string(rawFile)
-	if _, err = semver.NewVersion(tag); err != nil {
+	tag := strings.TrimSpace(string(rawFile))
+	if _, err = semver.NewVersion(strings.TrimPrefix(tag, "v")); err != nil {
 		return "", false
 	}
 
