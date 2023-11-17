@@ -119,56 +119,56 @@ spec:
                   type: object
                   description: |
                     Selects target modules to apply update settings to.
-                    required:
-                      - labelSelector
-                    properties:
-                      labelSelector:
-                        description: |
-                          Label-selector-based filter to match target modules.
+                  required:
+                    - labelSelector
+                  properties:
+                    labelSelector:
+                      description: |
+                        Label-selector-based filter to match target modules.
 
-                          If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
-                          If multiple `matchExpression` conditions are provided, they all must be satisfied in order to match.
-                        type: object
-                        minProperties: 1
-                        properties:
-                          matchExpressions:
-                            type: array
-                            description: An array of set-based expressions.
-                            items:
-                              required: 
-                                - key
-                                - operator
-                              oneOf:
-                                - properties:
-                                    operator:
-                                      enum: [Exists, DoesNotExist]
-                                  required: [key, operator]
-                                  not:
-                                    required: [values]
-                                - properties:
-                                    operator:
-                                      enum: [In, NotIn]
-                                  required: [key, operator, values]
-                              type: object
-                              properties:
-                                key:
-                                  description: A label name.
-                                  type: string
-                                operator:
-                                  description: A comparison operator.
-                                  type: string
-                                  enum: [In, NotIn, Exists, DoesNotExist]
-                                values:
-                                  type: array
-                                  description: A label value.
-                                  items:
-                                    type: string
-                          matchLabels:
+                        If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
+                        If multiple `matchExpression` conditions are provided, they all must be satisfied in order to match.
+                      type: object
+                      minProperties: 1
+                      properties:
+                        matchExpressions:
+                          type: array
+                          description: An array of set-based expressions.
+                          items:
+                            required: 
+                              - key
+                              - operator
+                            oneOf:
+                              - properties:
+                                  operator:
+                                    enum: [Exists, DoesNotExist]
+                                required: [key, operator]
+                                not:
+                                  required: [values]
+                              - properties:
+                                  operator:
+                                    enum: [In, NotIn]
+                                required: [key, operator, values]
                             type: object
-                            description: A number of equality-based label filters.
-                            x-doc-examples: [{ "foo": "bar", "baz": "who" }]
-                            additionalProperties:
-                              type: string
+                            properties:
+                              key:
+                                description: A label name.
+                                type: string
+                              operator:
+                                description: A comparison operator.
+                                type: string
+                                enum: [In, NotIn, Exists, DoesNotExist]
+                              values:
+                                type: array
+                                description: A label value.
+                                items:
+                                  type: string
+                        matchLabels:
+                          type: object
+                          description: A number of equality-based label filters.
+                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                          additionalProperties:
+                            type: string
             status:
               type: object
               properties:
