@@ -23,6 +23,7 @@ bb-event-on 'bb-sync-file-changed' '_on_systemctl_config_changed'
 _on_systemctl_config_changed() {
   systemctl restart systemd-networkd.service
 }
+
 bb-sync-file /etc/systemd/networkd.conf.d/80-disable-manage-foreign-rules.conf - << "EOF"
 # CNI also manage the rules. Disable foreign rule management to prevent conflicts.
 [Network]
