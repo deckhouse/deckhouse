@@ -1,14 +1,7 @@
 {{ $_ := set . "Env" (.Env | default "FE") }}
 
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_NGINX_ALPINE }}
-ansible:
-  setup:
-  - name: "Copy nginx.conf"
-    copy:
-      content: |
-        {{- .Files.Get (printf "%smodules/810-documentation/images/web/nginx.conf" .ModulePath) | nindent 8 }}
-      dest: /etc/nginx/nginx.conf
+fromImage: common/nginx-static
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
@@ -20,6 +13,8 @@ import:
   - search-index.json
   - '*/sitemap*.xml'
   - '*/robots.txt'
+docker:
+  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
