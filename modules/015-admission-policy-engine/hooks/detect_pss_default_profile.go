@@ -34,10 +34,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                "install_data",
-			ApiVersion:          "v1",
-			Kind:                "ConfigMap",
-			ExecuteHookOnEvents: pointer.Bool(false),
+			Name:                         "install_data",
+			ApiVersion:                   "v1",
+			Kind:                         "ConfigMap",
+			ExecuteHookOnEvents:          pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
