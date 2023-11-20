@@ -35,7 +35,7 @@ spec:
 
                     **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
                   x-doc-examples: ['nginx']
-                  default: 'nginx'
+                  default: 'example'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 inlet:
                   type: string
