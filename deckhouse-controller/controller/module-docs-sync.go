@@ -89,7 +89,7 @@ type ModuleDocsSyncer struct {
 }
 
 func (s *ModuleDocsSyncer) Run(ctx context.Context) {
-	s.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := s.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			err := s.onLease(ctx)
 			if err != nil {
@@ -97,6 +97,10 @@ func (s *ModuleDocsSyncer) Run(ctx context.Context) {
 			}
 		},
 	})
+	if err != nil {
+		log.Error("add event handler:", err)
+	}
+
 	s.informer.Run(ctx.Done())
 }
 
