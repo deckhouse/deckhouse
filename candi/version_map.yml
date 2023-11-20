@@ -27,7 +27,7 @@ k8s:
       yandex: v0.24.0
       aws: v1.24.1
       vsphere: v1.24.0
-      azure: v1.24.4
+      azure: v1.24.22
       gcp: eda9a5a3dd73ef923df7b16cf067af1b0ccbb929
     csi:
       openstack: v1.24.2
@@ -47,7 +47,7 @@ k8s:
       yandex: v0.25.2
       aws: v1.25.1
       vsphere: v1.25.0
-      azure: v1.25.4
+      azure: v1.25.22
       gcp: ccm/v25.3.0
     csi:
       openstack: v1.25.3
@@ -67,7 +67,7 @@ k8s:
       yandex: v0.26.1
       aws: v1.26.0
       vsphere: v1.26.0
-      azure: v1.26.5
+      azure: v1.26.17
       gcp: ccm/v26.0.4
     csi:
       openstack: v1.26.1
@@ -87,7 +87,7 @@ k8s:
       yandex: v0.27.0
       aws: v1.27.1
       vsphere: 4e80a0c86d2ae8a1b843b4ba9e5ac31707758912
-      azure: v1.27.4
+      azure: v1.27.11
       gcp: ccm/v27.1.0
     csi:
       openstack: v1.27.1
@@ -107,7 +107,7 @@ k8s:
       yandex: v0.27.0
       aws: v1.28.1
       vsphere: v1.28.0
-      azure: v1.28.0
+      azure: v1.28.3
       gcp: ccm/v27.1.6
     csi:
       openstack: v1.28.0
