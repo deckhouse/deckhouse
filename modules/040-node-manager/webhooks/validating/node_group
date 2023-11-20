@@ -131,7 +131,7 @@ EOF
   has_missing_taints=0
   taints=$(context::jq -r '.review.request.object.spec.nodeTemplate.taints // []')
   if [[ "$taints" != "[]" ]]; then
-    customTolerationKeys=$(context::jq -e -r '.snapshots.deckhouse_config[0].filterResult' | yq  e '.' -j - | jq -r '.modules.placement.customTolerationKeys | if . == null then empty else .[] end')
+    customTolerationKeys=$(context::jq -e -r 'if (.snapshots.deckhouse_config | length) > 0 then .snapshots.deckhouse_config[0].filterResult else {} end' | yq  e '.' -j - | jq -r '.modules.placement.customTolerationKeys | if . == null then empty else .[] end')
     for taint in $(jq -e -r '.[].key' <<< "$taints"); do
       # Skip 'standart' taints
       if [[ $taint = 'dedicated' || $taint = 'dedicated.deckhouse.io' || $taint = 'node-role.kubernetes.io/control-plane' || $taint = 'node-role.kubernetes.io/master' ]]; then
