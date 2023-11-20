@@ -12,7 +12,3 @@ variable "providerClusterConfiguration" {
 variable "nodeIndex" {
   type = number
 }
-
-variable "cloudConfig" {
-  type = string
-}

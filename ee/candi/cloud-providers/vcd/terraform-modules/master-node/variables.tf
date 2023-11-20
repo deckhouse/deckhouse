@@ -25,11 +25,6 @@ variable "nodeIndex" {
   default = 0
 }
 
-variable "cloudConfig" {
-  type    = string
-  default = ""
-}
-
 variable "clusterUUID" {
   type = string
 }
