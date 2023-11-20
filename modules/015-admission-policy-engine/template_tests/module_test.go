@@ -58,7 +58,7 @@ modules:
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"operationPolicies": [
+	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
     {
       "metadata": {
         "name": "foo"

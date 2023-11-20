@@ -9,6 +9,19 @@ properties:
       bootstrapped:
         type: boolean
         default: false
+      podSecurityStandards:
+        default: {}
+        type: object
+        properties:
+          enforcementActions:
+            type: array
+            default: []
+            items:
+              type: string
+              enum:
+              - deny
+              - dryrun
+              - warn
       effectiveStorageClass:
         default: false
         oneOf:
