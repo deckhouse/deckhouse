@@ -22,6 +22,8 @@ k8s:
     patch: 17
     bashible: *bashible
     clusterAutoscalerPatch: 3
+    clusterApi:
+      vcd: v1.1.1
     ccm:
       openstack: v1.24.2
       yandex: v0.24.0
@@ -42,6 +44,8 @@ k8s:
     patch: 16
     bashible: *bashible
     clusterAutoscalerPatch: 3
+    clusterApi:
+      vcd: v1.1.1
     ccm:
       openstack: v1.25.3
       yandex: v0.25.2
@@ -62,6 +66,8 @@ k8s:
     patch: 11
     bashible: *bashible
     clusterAutoscalerPatch: 2
+    clusterApi:
+      vcd: v1.1.1
     ccm:
       openstack: v1.26.1
       yandex: v0.26.1
@@ -82,6 +88,8 @@ k8s:
     patch: 8
     bashible: *bashible
     clusterAutoscalerPatch: '0'
+    clusterApi:
+      vcd: v1.1.1
     ccm:
       openstack: v1.27.1
       yandex: v0.27.0
@@ -102,6 +110,8 @@ k8s:
     patch: 4
     bashible: *bashible
     clusterAutoscalerPatch: '0'
+    clusterApi:
+      vcd: v1.1.1
     ccm:
       openstack: v1.28.0
       yandex: v0.27.0
