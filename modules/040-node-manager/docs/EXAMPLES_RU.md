@@ -142,6 +142,7 @@ spec:
      cat caps-id.pub >> /home/caps/.ssh/authorized_keys 
      chmod 700 /home/caps/.ssh 
      chmod 600 /home/caps/.ssh/authorized_keys
+     chown -R caps:caps /home/caps/
      ```
 
 1. Создайте в кластере ресурс [SSHCredentials](cr.html#sshcredentials).
