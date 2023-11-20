@@ -1,0 +1,95 @@
+From 92652166583f406ed4ce470f31e88a687e5ad33f Mon Sep 17 00:00:00 2001
+From: Alexandr Ohrimenko <alexandr.ohrimenko@flant.com>
+Date: Mon, 20 Nov 2023 16:43:43 +0300
+Subject: [PATCH] ToggleDisk: Set resolved StorPoolName property
+
+---
+ .../CtrlRscToggleDiskApiCallHandler.java      | 25 ++++++++++++++++---
+ 1 file changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/controller/src/main/java/com/linbit/linstor/core/apicallhandler/controller/CtrlRscToggleDiskApiCallHandler.java b/controller/src/main/java/com/linbit/linstor/core/apicallhandler/controller/CtrlRscToggleDiskApiCallHandler.java
+index eacdda04b..d819ebec2 100644
+--- a/controller/src/main/java/com/linbit/linstor/core/apicallhandler/controller/CtrlRscToggleDiskApiCallHandler.java
++++ b/controller/src/main/java/com/linbit/linstor/core/apicallhandler/controller/CtrlRscToggleDiskApiCallHandler.java
+@@ -26,6 +26,7 @@ import com.linbit.linstor.core.apicallhandler.response.ResponseUtils;
+ import com.linbit.linstor.core.identifier.NodeName;
+ import com.linbit.linstor.core.identifier.ResourceName;
+ import com.linbit.linstor.core.identifier.SharedStorPoolName;
++import com.linbit.linstor.core.identifier.StorPoolName;
+ import com.linbit.linstor.core.objects.Node;
+ import com.linbit.linstor.core.objects.Resource;
+ import com.linbit.linstor.core.objects.Resource.DiskfulBy;
+@@ -77,6 +78,7 @@ import javax.inject.Singleton;
+ import java.util.ArrayList;
+ import java.util.Collection;
+ import java.util.Collections;
++import java.util.HashSet;
+ import java.util.Iterator;
+ import java.util.List;
+ import java.util.Set;
+@@ -389,7 +391,9 @@ public class CtrlRscToggleDiskApiCallHandler implements CtrlSatelliteConnectionL
+         {
+             payload.drbdRsc.needsNewNodeId = true;
+         }
++
+         // Resolve storage pool now so that nothing is committed if the storage pool configuration is invalid
++        Set<StorPoolName> storPoolNames = new HashSet<>();
+         Iterator<Volume> vlmIter = rsc.iterateVolumes();
+         while (vlmIter.hasNext())
+         {
+@@ -399,12 +403,27 @@ public class CtrlRscToggleDiskApiCallHandler implements CtrlSatelliteConnectionL
+             StorPool sp = ctrlStorPoolResolveHelper
+                 .resolveStorPool(rsc, vlmDfn, removeDisk)
+                 .extractApiCallRc(responses);
++            storPoolNames.add(sp.getName());
+             if (isSharedSpAlreadyUsed(rsc, sp))
+             {
+                 needsDeactivate = true;
+                 payload.drbdRsc.needsNewNodeId = true;
+             }
+         }
++        if (storPoolNames.size() == 1)
++        {
++            /*
++             * Since we also set the StorPoolName property when going diskless, we should also set it then going diskful
++             * (and this property makes sense to be set on resource-level)
++             */
++            ctrlPropsHelper.fillProperties(
++                responses,
++                LinStorObject.RESOURCE,
++                Collections.singletonMap(ApiConsts.KEY_STOR_POOL_NAME, storPoolNames.iterator().next().displayValue),
++                rscProps,
++                ApiConsts.FAIL_ACC_DENIED_RSC
++            );
++        }
+ 
+         if (removeDisk)
+         {
+@@ -420,7 +439,7 @@ public class CtrlRscToggleDiskApiCallHandler implements CtrlSatelliteConnectionL
+         else
+         {
+             // diskless -> diskful
+-//            ctrlLayerStackHelper.resetStoragePools(rsc);
++            // ctrlLayerStackHelper.resetStoragePools(rsc);
+ 
+             markDiskAddRequested(rsc);
+ 
+@@ -702,7 +721,7 @@ public class CtrlRscToggleDiskApiCallHandler implements CtrlSatelliteConnectionL
+         }
+ 
+         // Don't start the operation if any of the required nodes are offline
+-        if (!offlineWarnings.getEntries().isEmpty())
++        if (!offlineWarnings.isEmpty())
+         {
+             responses = Flux.just(offlineWarnings);
+         }
+@@ -1336,4 +1355,4 @@ public class CtrlRscToggleDiskApiCallHandler implements CtrlSatelliteConnectionL
+     {
+         return lockGuardFactory.buildDeferred(LockType.WRITE, LockObj.NODES_MAP, LockObj.RSC_DFN_MAP);
+     }
+-}
++}
+\ No newline at end of file
+-- 
+2.39.3 (Apple Git-145)
+
