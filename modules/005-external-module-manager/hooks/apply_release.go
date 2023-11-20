@@ -78,7 +78,8 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	var modulesChangedReason string
 	var fsModulesLinks map[string]string
 
-	snap := input.Snapshots["releases"]
+	snapReleases := input.Snapshots["releases"]
+	snapPolicies := input.Snapshots["policies"]
 
 	externalModulesDir := os.Getenv("EXTERNAL_MODULES_DIR")
 	if externalModulesDir == "" {
@@ -99,8 +100,17 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		}
 	}
 
+	policies := make(map[string]*modulePolicy)
+
+	for _, pol := range snapPolicies {
+		policy := pol.(v1alpha1.ModuleUpdatePolicy)
+		policies[policy.Name] = &modulePolicy{
+			spec:            policy.Spec,
+		}
+	}
+
 	moduleReleases := make(map[string][]enqueueRelease, 0)
-	for _, sn := range snap {
+	for _, sn := range snapReleases {
 		if sn == nil {
 			continue
 		}
