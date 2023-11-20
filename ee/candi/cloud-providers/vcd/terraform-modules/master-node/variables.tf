@@ -31,6 +31,7 @@ variable "clusterUUID" {
 
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
+  vapp_name = var.providerClusterConfiguration.virtualApplicationName
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
   main_ip_addresses  = lookup(local.master_instance_class, "mainNetworkIPAddresses", [])
 }

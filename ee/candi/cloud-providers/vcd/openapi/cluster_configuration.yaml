@@ -22,6 +22,7 @@ apiVersions:
           sshPublicKey: "<SSH_PUBLIC_KEY>"
           organization: My_Org
           virtualDataCenter: My_Org
+          virtualApplicationName: Cloud
           layout: Standard
           internalNetworkCIDR: 172.16.2.0/24
           masterNodeGroup:
@@ -46,7 +47,7 @@ apiVersions:
             username: '<USERNAME>'
             password: '<PASSWORD>'
             insecure: true
-      required: [apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider, organization, virtualDataCenter]
+      required: [apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider, organization, virtualDataCenter, virtualApplicationName]
       properties:
         apiVersion:
           type: string
@@ -243,8 +244,16 @@ apiVersions:
             A public key for accessing nodes.
         organization:
           type: string
+          description: |
+            Vcloud Director Organization name.
         virtualDataCenter:
           type: string
+          description: |
+            Vcloud Director Virtual Data Center name (belongs to Organization).
+        virtualApplicationName:
+          type: string
+          description: |
+            Vcloud Director Virtual Application name (belongs to Virtual Data Center).
         internalNetworkCIDR:
           type: string
           description: |

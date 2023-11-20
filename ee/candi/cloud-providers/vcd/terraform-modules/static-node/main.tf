@@ -4,6 +4,7 @@
 locals {
   catalog  = split("/", local.instance_class.template)[0]
   template = split("/", local.instance_class.template)[1]
+  main_network_name = local.instance_class.mainNetwork
   ip_address  = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
   placement_policy = lookup(local.instance_class, "placementPolicy", "")
 }
@@ -37,7 +38,7 @@ data "vcd_vm_placement_policy" "vmpp" {
 }
 
 resource "vcd_vapp_vm" "node" {
-  vapp_name        = local.prefix
+  vapp_name        = local.vapp_name
   name             = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
   computer_name    = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
   vapp_template_id = data.vcd_catalog_vapp_template.template.id
@@ -47,7 +48,7 @@ resource "vcd_vapp_vm" "node" {
   placement_policy_id = local.placement_policy == "" ? "" : data.vcd_vm_placement_policy.vmpp[0].id
 
   network {
-    name               = "internal"
+    name               = local.main_network_name
     type               = "org"
     ip_allocation_mode = local.ip_address == null ? "DHCP" : "MANUAL"
     is_primary         = true

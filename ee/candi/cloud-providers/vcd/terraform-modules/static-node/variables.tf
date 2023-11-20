@@ -34,6 +34,7 @@ variable "nodeGroupName" {
 
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
+  vapp_name = var.providerClusterConfiguration.virtualApplicationName
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
   ng             = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
   instance_class = local.ng["instanceClass"]
