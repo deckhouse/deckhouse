@@ -20,7 +20,7 @@ Example of the command to set the `Restricted` policy for all Pods in the `my-na
 kubectl label ns my-namespace security.deckhouse.io/pod-policy=restricted
 ```
 
-By default, Pod Security Standards policies have their enforcement actions set to "Deny" which means any workload pods not compliant to the selected policy won't be able to run. This behavior can be adjusted either for the whole cluster or per namespace. For setting PSS enforcement action cluster-wide check [configuration](configuration.html#parameters-podsecuritystandards-enforcementaction). In case you want to override default enforcement action for a namespace, set label `security.deckhouse.io/pod-policy-acion =<POLICY_ACTION>` to the corresponding namespace. The list of possible enforcement actions consists of the following values: "dry", "warn", "deny".
+By default, Pod Security Standards policies have their enforcement actions set to "Deny" which means any workload pods not compliant to the selected policy won't be able to run. This behavior can be adjusted either for the whole cluster or per namespace. For setting PSS enforcement action cluster-wide check [configuration](configuration.html#parameters-podsecuritystandards-enforcementaction). In case you want to override default enforcement action for a namespace, set label `security.deckhouse.io/pod-policy-acion =<POLICY_ACTION>` to the corresponding namespace. The list of possible enforcement actions consists of the following values: "dryrun", "warn", "deny".
 
 Example of the command to set a non-default enforcement action "warn" for all Pods in the `my-namespace` Namespace.
 
