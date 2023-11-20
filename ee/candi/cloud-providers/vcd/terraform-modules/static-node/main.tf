@@ -36,7 +36,8 @@ data "vcd_vm_placement_policy" "vmpp" {
   vdc_id = data.vcd_org_vdc.vdc.id
 }
 
-resource "vcd_vm" "node" {
+resource "vcd_vapp_vm" "node" {
+  vapp_name        = local.prefix
   name             = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
   computer_name    = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
   vapp_template_id = data.vcd_catalog_vapp_template.template.id
