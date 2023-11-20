@@ -153,7 +153,12 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 
 	// The config should have at least one .auths.* entry
 	for repoName, repoAuth := range auths {
-		if repoName == r.Host {
+		repoNameURL, err := parse(repoName)
+		if err != nil {
+			return authn.AuthConfig{}, err
+		}
+
+		if repoNameURL.Host == r.Host {
 			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
 			if err != nil {
 				return authn.AuthConfig{}, err
@@ -162,7 +167,7 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 		}
 	}
 
-	return authn.AuthConfig{}, fmt.Errorf("no auth data")
+	return authn.AuthConfig{}, fmt.Errorf("%q credentials not found in the dockerCfg", repo)
 }
 
 func GetHTTPTransport(ca string) (transport http.RoundTripper) {

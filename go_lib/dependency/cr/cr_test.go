@@ -17,7 +17,10 @@ limitations under the License.
 package cr
 
 import (
+	"encoding/base64"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParse(t *testing.T) {
@@ -42,4 +45,66 @@ func TestParse(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReadAuthConfig(t *testing.T) {
+	t.Run("host match", func(t *testing.T) {
+		auths := `
+{
+	"auths": {
+		"registry.example.com:8032/modules": {
+			"auth": "YTpiCg=="
+		}
+	}
+}
+`
+		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg)
+		assert.NoError(t, err)
+	})
+
+	t.Run("path mismatch", func(t *testing.T) {
+		auths := `
+{
+	"auths": {
+		"registry.example.com:8032/foo/bar": {
+			"auth": "YTpiCg=="
+		}
+	}
+}
+`
+		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg)
+		assert.NoError(t, err)
+	})
+
+	t.Run("host mismatch", func(t *testing.T) {
+		auths := `
+{
+	"auths": {
+		"registry.invalid.com:8032/modules": {
+			"auth": "YTpiCg=="
+		}
+	}
+}
+`
+		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg)
+		assert.Error(t, err)
+	})
+
+	t.Run("port mismatch", func(t *testing.T) {
+		auths := `
+{
+	"auths": {
+		"registry.example.com:8033/foobar": {
+			"auth": "YTpiCg=="
+		}
+	}
+}
+`
+		cfg := base64.RawStdEncoding.EncodeToString([]byte(auths))
+		_, err := readAuthConfig("registry.example.com:8032/modules", cfg)
+		assert.Error(t, err)
+	})
 }
