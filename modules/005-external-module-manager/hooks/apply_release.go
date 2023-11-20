@@ -47,12 +47,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/external-module-source/apply-release",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
+			Name:                "policies",
+			ApiVersion:          "deckhouse.io/v1alpha1",
+			Kind:                "ModuleUpdatePolicy",
+			ExecuteHookOnEvents: pointer.Bool(true),
+			FilterFunc:          filterPolicy,
+		},
+		{
 			Name:                         "releases",
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "ModuleRelease",
 			ExecuteHookOnEvents:          pointer.Bool(true),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   filterRelease,
+		},
+	},
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "check_module_releases",
+			Crontab: "*/15 * * * *",
 		},
 	},
 }, applyModuleRelease)

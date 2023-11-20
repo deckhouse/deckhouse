@@ -42,6 +42,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	labels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
 	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
@@ -74,7 +75,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:    "check_deckhouse_release",
+			Name:    "check_module_releases",
 			Crontab: "*/3 * * * *",
 		},
 	},
@@ -95,6 +96,7 @@ func filterPolicy(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 		TypeMeta: mus.TypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mus.Name,
+			UID:  mus.UID,
 		},
 		Spec: mus.Spec,
 	}
@@ -153,9 +155,10 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 
 	policies := make(map[string]*modulePolicy)
 
-	for _, sch := range snapPolicies {
-		policy := sch.(v1alpha1.ModuleUpdatePolicy)
+	for _, pol := range snapPolicies {
+		policy := pol.(v1alpha1.ModuleUpdatePolicy)
 		policies[policy.Name] = &modulePolicy{
+			uid:             policy.UID,
 			spec:            policy.Spec,
 			affectedModules: make([]string, 0),
 			errors:          make([]string, 0),
@@ -216,7 +219,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			foundPolicy, policyConflict, moduleReleasePolicy, err := getReleasePolicy(ex.Name, moduleName, policies)
+			foundPolicy, policyConflict, modulePolicyName, modulePolicy, err := getReleasePolicy(ex.Name, moduleName, policies)
 			if err != nil {
 				return fmt.Errorf("couldn't check module %s release: %v", moduleName, err)
 			}
@@ -231,7 +234,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			moduleVersion, err := fetchModuleVersion(input.LogEntry, dc, ex, moduleName, moduleReleasePolicy.ReleaseChannel, mChecksum, opts)
+			moduleVersion, err := fetchModuleVersion(input.LogEntry, dc, ex, moduleName, modulePolicy.spec.ReleaseChannel, mChecksum, opts)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
 					Name:  moduleName,
@@ -276,7 +279,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			createRelease(input, ex.Name, moduleName, moduleVersion, weight)
+			createRelease(input, ex.Name, moduleName, moduleVersion, modulePolicyName, weight, modulePolicy.uid)
 		}
 
 		sc.ModuleErrors = moduleErrors
@@ -609,7 +612,7 @@ func getReleaseLabels(source, module string) map[string]string {
 	return map[string]string{"module": module, "source": source}
 }
 
-func getReleasePolicy(sourceName, moduleName string, policies map[string]*modulePolicy) (bool, bool, *v1alpha1.ModuleUpdatePolicySpec, error) {
+func getReleasePolicy(sourceName, moduleName string, policies map[string]*modulePolicy) (bool, bool, string, *modulePolicy, error) {
 	var labelsSet labels.Set = getReleaseLabels(sourceName, moduleName)
 	var matchedPolicy string
 	var found, conflict bool
@@ -617,7 +620,7 @@ func getReleasePolicy(sourceName, moduleName string, policies map[string]*module
 		if policy.spec.ModuleReleaseSelector.LabelSelector != nil {
 			selector, err := metav1.LabelSelectorAsSelector(policy.spec.ModuleReleaseSelector.LabelSelector)
 			if err != nil {
-				return false, false, nil, err
+				return false, false, "", nil, err
 			}
 
 			if selector.Matches(labelsSet) {
@@ -635,13 +638,13 @@ func getReleasePolicy(sourceName, moduleName string, policies map[string]*module
 	}
 
 	if !found {
-		return found, conflict, nil, nil
+		return found, conflict, "", nil, nil
 	}
 
-	return found, conflict, &policies[matchedPolicy].spec, nil
+	return found, conflict, matchedPolicy, policies[matchedPolicy], nil
 }
 
-func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string, moduleWeight int) {
+func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion, policyName string, moduleWeight int, policyUID types.UID) {
 	moduleReleaseLabels := getReleaseLabels(sourceName, moduleName)
 
 	rl := &v1alpha1.ModuleRelease{
@@ -653,6 +656,14 @@ func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersi
 			Name:        fmt.Sprintf("%s-%s", moduleName, moduleVersion),
 			Annotations: make(map[string]string),
 			Labels:      moduleReleaseLabels,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "deckhouse.io/v1alpha1",
+					Kind:       "ModuleUpdatePolicy",
+					Name:       policyName,
+					UID:        policyUID,
+				},
+			},
 		},
 		Spec: v1alpha1.ModuleReleaseSpec{
 			ModuleName: moduleName,
@@ -696,6 +707,7 @@ type modulePolicy struct {
 	errors          []string
 	affectedModules []string
 	spec            v1alpha1.ModuleUpdatePolicySpec
+	uid             types.UID
 }
 
 // part of openapi schema for injecting registry values

@@ -45,6 +45,7 @@ external-module-manager:
   internal: {}
 `, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleRelease", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleUpdatePolicy", false)
 
 	Context("Cluster has pending ModuleRelease", func() {
 		BeforeEach(func() {
