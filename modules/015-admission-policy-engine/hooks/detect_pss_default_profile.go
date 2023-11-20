@@ -38,6 +38,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:          "v1",
 			Kind:                "ConfigMap",
 			ExecuteHookOnEvents: pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-system"},
