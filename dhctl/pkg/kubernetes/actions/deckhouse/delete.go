@@ -459,7 +459,7 @@ func WaitForCAPIMachinesDeletion(kubeCl *client.KubernetesClient) error {
 		}
 
 		machines := make([]unstructured.Unstructured, 0, len(resources.Items))
-		for _, m := range machines {
+		for _, m := range resources.Items {
 			labels := m.GetLabels()
 			if labels != nil {
 				ng, ok := labels["node-group"]
