@@ -12,6 +12,7 @@ shell:
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
       done
+      touch /iptables-wrapper
 ---
 artifact: {{ .ModuleName }}/entrypoint-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
