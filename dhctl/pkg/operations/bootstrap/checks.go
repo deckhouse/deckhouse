@@ -55,5 +55,4 @@ Please check hostname.`, uuidInCluster, config.UUID)
 
 		return nil
 	})
-
 }
