@@ -89,7 +89,7 @@ spec:
         CLOUD_PLATFORM: {{ $cloudPlatform }}
         ISTIO_META_DNS_CAPTURE: "true"
         PROXY_CONFIG_XDS_AGENT: "true"
-        ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.proxyConfig.istioMetaIdleTimeout }}
+        ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.proxyConfig.idleTimeout }}
       holdApplicationUntilProxyStarts: {{ $.Values.istio.proxyConfig.holdApplicationUntilProxyStarts }}
   {{- if $.Values.istio.tracing.enabled }}
       tracing:
