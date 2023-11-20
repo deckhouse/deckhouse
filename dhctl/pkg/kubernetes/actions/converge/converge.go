@@ -157,7 +157,9 @@ func (r *Runner) converge() error {
 		}
 	}
 
-	if !r.isSkip(PhaseBaseInfra) {
+	skipTerraform := metaConfig.ClusterType == config.StaticClusterType
+
+	if !skipTerraform && !r.isSkip(PhaseBaseInfra) {
 		if r.PhasedExecutionContext != nil {
 			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true, r.stateCache); err != nil {
 				return err
@@ -179,77 +181,76 @@ func (r *Runner) converge() error {
 		log.InfoLn("Skip converge base infrastructure")
 	}
 
-	if r.isSkip(PhaseAllNodes) {
-		log.InfoLn("Skip converge nodes")
-		return nil
-	}
-
-	if r.PhasedExecutionContext != nil {
-		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true, r.stateCache); err != nil {
-			return err
-		} else if shouldStop {
-			return nil
+	if !skipTerraform && !r.isSkip(PhaseAllNodes) {
+		if r.PhasedExecutionContext != nil {
+			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true, r.stateCache); err != nil {
+				return err
+			} else if shouldStop {
+				return nil
+			}
 		}
-	}
 
-	var nodesState map[string]NodeGroupTerraformState
+		var nodesState map[string]NodeGroupTerraformState
 
-	err = log.Process("converge", "Gather Nodes Terraform state", func() error {
-		nodesState, err = GetNodesStateFromCluster(r.kubeCl)
+		err = log.Process("converge", "Gather Nodes Terraform state", func() error {
+			nodesState, err = GetNodesStateFromCluster(r.kubeCl)
+			if err != nil {
+				return fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
+			}
+			return nil
+		})
 		if err != nil {
-			return fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	terraNodeGroups := metaConfig.GetTerraNodeGroups()
-
-	desiredQuantity := metaConfig.MasterNodeGroupSpec.Replicas
-	for _, group := range terraNodeGroups {
-		desiredQuantity += group.Replicas
-	}
-
-	// dhctl has nodes to create, and there are no nodes in the cluster.
-	if len(nodesState) == 0 && desiredQuantity > 0 {
-		confirmation := input.NewConfirmation().WithYesByDefault().WithMessage(noNodesConfirmationMessage)
-		if !r.changeSettings.AutoApprove && !confirmation.Ask() {
-			log.InfoLn("Aborted")
-			return nil
-		}
-	}
-
-	var nodeGroupsWithStateInCluster []string
-
-	for _, group := range terraNodeGroups {
-		// Skip if node group terraform state exists, we will update node group state below
-		if _, ok := nodesState[group.Name]; ok {
-			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
-			continue
-		}
-		if err := r.createPreviouslyNotExistedNodeGroup(group, metaConfig); err != nil {
 			return err
 		}
-	}
 
-	for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
-		ngState := nodesState[nodeGroupName]
-		controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache)
-		controller.WithChangeSettings(r.changeSettings)
-		controller.WithCommanderMode(r.commanderMode)
-		controller.WithExcludedNodes(r.excludedNodes)
+		terraNodeGroups := metaConfig.GetTerraNodeGroups()
 
-		if err := controller.Run(); err != nil {
-			return err
+		desiredQuantity := metaConfig.MasterNodeGroupSpec.Replicas
+		for _, group := range terraNodeGroups {
+			desiredQuantity += group.Replicas
 		}
-	}
 
-	if r.PhasedExecutionContext != nil {
-		if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
-			return err
+		// dhctl has nodes to create, and there are no nodes in the cluster.
+		if len(nodesState) == 0 && desiredQuantity > 0 {
+			confirmation := input.NewConfirmation().WithYesByDefault().WithMessage(noNodesConfirmationMessage)
+			if !r.changeSettings.AutoApprove && !confirmation.Ask() {
+				log.InfoLn("Aborted")
+				return nil
+			}
 		}
+
+		var nodeGroupsWithStateInCluster []string
+
+		for _, group := range terraNodeGroups {
+			// Skip if node group terraform state exists, we will update node group state below
+			if _, ok := nodesState[group.Name]; ok {
+				nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
+				continue
+			}
+			if err := r.createPreviouslyNotExistedNodeGroup(group, metaConfig); err != nil {
+				return err
+			}
+		}
+
+		for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
+			ngState := nodesState[nodeGroupName]
+			controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache)
+			controller.WithChangeSettings(r.changeSettings)
+			controller.WithCommanderMode(r.commanderMode)
+			controller.WithExcludedNodes(r.excludedNodes)
+
+			if err := controller.Run(); err != nil {
+				return err
+			}
+		}
+
+		if r.PhasedExecutionContext != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+				return err
+			}
+		}
+	} else {
+		log.InfoLn("Skip converge nodes")
 	}
 
 	if r.commanderMode {
