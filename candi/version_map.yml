@@ -37,6 +37,8 @@ k8s:
       registrar: v2.7.0
       snapshotter: v6.3.1
       livenessprobe: v2.9.0
+    clusterApi:
+      vcd: v1.1.1
   '1.25':
     status: available
     patch: 15
@@ -57,6 +59,8 @@ k8s:
       registrar: v2.7.0
       snapshotter: v6.3.1
       livenessprobe: v2.9.0
+    clusterApi:
+      vcd: v1.1.1
   '1.26':
     status: available
     patch: 10
@@ -77,6 +81,8 @@ k8s:
       registrar: v2.7.0
       snapshotter: v6.3.1
       livenessprobe: v2.9.0
+    clusterApi:
+      vcd: v1.1.1
   '1.27':
     status: available
     patch: 7
@@ -97,6 +103,8 @@ k8s:
       registrar: v2.8.0
       snapshotter: v6.3.1
       livenessprobe: v2.10.0
+    clusterApi:
+      vcd: v1.1.1
   '1.28':
     status: preview
     patch: 3
@@ -117,3 +125,5 @@ k8s:
       registrar: v2.9.0
       snapshotter: v6.3.1
       livenessprobe: v2.11.0
+    clusterApi:
+      vcd: v1.1.1

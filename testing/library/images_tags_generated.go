@@ -69,6 +69,13 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager128": "imageHash-cloudProviderOpenstack-cloudControllerManager128",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderOpenstack-cloudDataDiscoverer",
 	},
+	"cloudProviderVcd": map[string]interface{}{
+		"capcdControllerManager124": "imageHash-cloudProviderVcd-capcdControllerManager124",
+		"capcdControllerManager125": "imageHash-cloudProviderVcd-capcdControllerManager125",
+		"capcdControllerManager126": "imageHash-cloudProviderVcd-capcdControllerManager126",
+		"capcdControllerManager127": "imageHash-cloudProviderVcd-capcdControllerManager127",
+		"capcdControllerManager128": "imageHash-cloudProviderVcd-capcdControllerManager128",
+	},
 	"cloudProviderVsphere": map[string]interface{}{
 		"cloudControllerManager124": "imageHash-cloudProviderVsphere-cloudControllerManager124",
 		"cloudControllerManager125": "imageHash-cloudProviderVsphere-cloudControllerManager125",

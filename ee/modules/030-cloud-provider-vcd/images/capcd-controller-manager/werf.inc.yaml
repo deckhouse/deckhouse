@@ -1,0 +1,31 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.clusterApi.vcd }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /cluster-api-provider-cloud-director
+    to: /cluster-api-provider-cloud-director
+    before: setup
+docker:
+  ENTRYPOINT: ["/cluster-api-provider-cloud-director"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apt update && apt install ca-certificates git
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - mkdir -p /src
+    - git clone --depth 1 --branch v1.1.1 {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director.git /src
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /cluster-api-provider-cloud-director
+  {{- end }}
+{{- end }}
