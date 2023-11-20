@@ -14,7 +14,7 @@ variable "providerClusterConfiguration" {
   }
 
   validation {
-    condition     = length(flatten([for ng in var.providerClusterConfiguration.nodeGroups : ng.instanceClass.mainNetworkIPAddresses if contains(keys(ng.instanceClass), "mainNetworkIPAddresses")])) == length(flatten([for ng in var.providerClusterConfiguration.nodeGroups : [for a in ng.instanceClass.mainNetworkIPAddresses : s if cidrsubnet(format("%s/%s", s, split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1]), 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR] if contains(keys(ng.instanceClass), "mainNetworkIPAddresses")]))
+    condition     = length(flatten([for ng in var.providerClusterConfiguration.nodeGroups : ng.instanceClass.mainNetworkIPAddresses if contains(keys(ng.instanceClass), "mainNetworkIPAddresses")])) == length(flatten([for ng in var.providerClusterConfiguration.nodeGroups : [for s in ng.instanceClass.mainNetworkIPAddresses : s if cidrsubnet(format("%s/%s", s, split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1]), 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR] if contains(keys(ng.instanceClass), "mainNetworkIPAddresses")]))
     error_message = "Address in mainNetworkIPAddresses not in internalNetworkCIDR."
   }
 }
