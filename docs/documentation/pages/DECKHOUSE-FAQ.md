@@ -445,6 +445,60 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
    During installation, add your registry address and authorization data to the `InitConfiguration` resource (the [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3](/gs/bm-private/step3.html) of the Getting started guide as well).
 
+### Manually uploading images of third-party Deckhouse modules into an isolated private registry
+
+1. Run Deckhouse installer version 1.56.0 or higher:
+
+  ```shell
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.56.0 bash
+   ```
+
+   Please note the volumes mounted from the host file system into the installer container: a directory into which module images will be loaded, and the ModuleSource YAML manifest, which describes the source of third-party modules.
+
+1. Download module images from their source registry, described as a ModuleSource resource, into a dedicated directory using the command `dhctl mirror-modules`
+
+   `dhctl mirror-modules` downloads only versions of modules available in the module release channels at the time of copying.
+
+   The following command will download module images from the source described in the ModuleSource resource located in the `$HOME/module_source.yml` file:
+
+   ```shell
+   dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml
+   ```
+
+1. Optional: Copy the `dhctl` binary from the container to the directory where Deckhouse images were pulled.
+
+   ```shell
+   cp /usr/bin/dhctl /tmp/d8-images/dhctl
+   ```
+
+1. To continue with installation, use the `dhctl` binary you copied before OR repeat steps 1 and 2 for the Deckhouse installer on the host with access to the air-gapped registry. Make sure the directory with the pulled modules images is mounted into the container.
+
+1. Upload module images to the isolated registry using the `dhctl mirror-modules` command.
+
+   Example command for downloading images from the `/tmp/d8-modules` directory:
+
+   ```shell
+   dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
+   ```
+
+   > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse-modules).
+   > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
+
+   If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
+
+1. After uploading the images to the air-gapped registry, edit the ModuleSource YAML manifest:
+
+    * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when uploading images;
+    * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
+
+1. Apply the ModuleSource manifest received in the previous step to the cluster
+
+   ```shell
+   kubectl apply -f $HOME/module_source.yml
+   ```
+
+   Once the manifest has been applied, the modules are ready to use, please refer to the module developer documentation for further instructions on how to configure and use them.
+
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:

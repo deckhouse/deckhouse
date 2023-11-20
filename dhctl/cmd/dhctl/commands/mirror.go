@@ -78,7 +78,7 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 	}
 
 	err = log.Process("mirror", "Push Deckhouse images to registry", func() error {
-		return operations.PushMirrorToRegistry(mirrorCtx)
+		return operations.PushDeckhouseToRegistry(mirrorCtx)
 	})
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 
 	err = log.Process("mirror", "Pull images", func() error {
 		log.InfoLn("Working directory:", mirrorCtx.UnpackedImagesPath)
-		return operations.MirrorRegistryToLocalFS(mirrorCtx, versionsToMirror)
+		return operations.MirrorDeckhouseToLocalFS(mirrorCtx, versionsToMirror)
 	})
 	if err != nil {
 		return err
