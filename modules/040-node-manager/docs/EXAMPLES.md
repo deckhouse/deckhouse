@@ -142,6 +142,7 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
      cat caps-id.pub >> /home/caps/.ssh/authorized_keys 
      chmod 700 /home/caps/.ssh 
      chmod 600 /home/caps/.ssh/authorized_keys
+     chown -R caps:caps /home/caps/
      ```
 
 1. Create a [SSHCredentials](cr.html#sshcredentials) resource in the cluster:
