@@ -5,4 +5,11 @@ properties:
   internal:
     type: object
     default: {}
-
+    properties:
+      modulesChecksums:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          additionalProperties:
+            type: string
