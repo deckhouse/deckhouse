@@ -1,0 +1,14 @@
+{{ $name := .name }}
+{{ $attributes := .attributes }}
+{{ $parent := .parent }}
+{{ $langData := .langData }}
+
+{{ $description :=  "" }}
+{{ if $langData.description }}
+  {{ $description = $langData.description | markdownify }}
+{{ else }}
+  {{ $description =  $attributes.description | markdownify }}
+{{ end }}
+
+
+<div class="resources__prop_description">{{ $description }}</div>
