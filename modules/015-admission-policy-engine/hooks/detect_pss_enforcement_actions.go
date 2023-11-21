@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -52,8 +53,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleActions)
 
+func actionCode(action string) float64 {
+	switch action {
+	case "deny":
+		return 3
+	case "warn":
+		return 2
+	case "dryrun":
+		return 1
+	default:
+		return 0
+	}
+}
+
 func handleActions(input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire("d8_admission_policy_engine_pss_default_action")
 	actions := []string{strings.ToLower(input.Values.Get("admissionPolicyEngine.podSecurityStandards.enforcementAction").String())}
+	input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_action", actionCode(actions[0]), map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_pss_default_action"))
 	labels := input.Snapshots["pss_enforcement_actions"]
 
 	for _, label := range labels {
@@ -67,7 +83,6 @@ func handleActions(input *go_hook.HookInput) error {
 		}
 	}
 	input.Values.Set("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", actions)
-
 	return nil
 }
 

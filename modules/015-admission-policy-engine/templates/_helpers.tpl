@@ -51,6 +51,7 @@
   {{- $policyCRDName := index . 2 }}
   {{- $policyAction := index . 3 }}
   {{- $parameters := index . 4 }}
+  {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "privileged" | lower) }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
@@ -73,16 +74,27 @@ spec:
     namespaceSelector:
       matchExpressions:
       {{- if eq $standard "baseline" }}
+        {{- if eq $defaultPolicy "privileged" }}
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ baseline, restricted ] }
+        {{- else }}
+        - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged ] }
+        {{- end }}
       {{- else if eq $standard "restricted" }}
+        {{- if eq $defaultPolicy "restricted" }}
+        - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged, baseline ] }
+        {{- else }}
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ restricted ] }
+        {{- end }}
       {{- else}}
         {{ cat "Unknown policy standard" | fail }}
       {{- end }}
+      # matches default enforcement action
       {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
+        # if there are other policy actions apart from the default one, we add all of them to NotIn list, so that namespaces with such labels aren't subject default policy
         {{- if gt (len $context.Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions) 1 }}
         - { key: security.deckhouse.io/pod-policy-action, operator: NotIn, values: [{{ (without $context.Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions $policyAction | join ",") }}] }
         {{- end }}
+      # matches another action (non-default)
       {{- else }}
         - { key: security.deckhouse.io/pod-policy-action, operator: In, values: [{{ $policyAction }}] }
       {{- end }}
