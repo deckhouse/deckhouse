@@ -7,148 +7,318 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
 
 ---
+# permissions to do leader election.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: leader-election-role
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:node-manager:capcd-controller-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
 rules:
-- apiGroups:
-    - cluster.x-k8s.io
-  resources:
-    - clusters
-  verbs:
-    - get
-    - list
-    - watch
-- apiGroups:
-    - cluster.x-k8s.io
-  resources:
-    - clusters/status
-  verbs:
-    - get
-- apiGroups:
-    - cluster.x-k8s.io
-  resources:
-    - machines
-  verbs:
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
-- apiGroups:
-    - cluster.x-k8s.io
-  resources:
-    - machines/status
-  verbs:
-    - get
-    - patch
-    - update
-- apiGroups:
-    - ""
-  resources:
-    - nodes
-  verbs:
-    - get
-    - list
-    - watch
-- apiGroups:
-    - ""
-  resources:
-    - secrets
-  verbs:
-    - get
-    - list
-    - watch
-- apiGroups:
-    - deckhouse.io
-  resources:
-    - sshcredentials
-  verbs:
-    - get
-    - list
-    - watch
-- apiGroups:
-    - deckhouse.io
-  resources:
-    - staticinstances
-  verbs:
-    - get
-    - list
-    - patch
-    - update
-    - watch
-- apiGroups:
-    - deckhouse.io
-  resources:
-    - staticinstances/status
-  verbs:
-    - get
-    - patch
-    - update
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticclusters
-  verbs:
-    - get
-    - list
-    - patch
-    - update
-    - watch
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticclusters/status
-  verbs:
-    - get
-    - patch
-    - update
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticcontrolplanes
-  verbs:
-    - get
-    - list
-    - patch
-    - update
-    - watch
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticcontrolplanes/status
-  verbs:
-    - get
-    - patch
-    - update
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticmachines
-  verbs:
-    - get
-    - list
-    - patch
-    - update
-    - watch
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticmachines/finalizers
-  verbs:
-    - update
-- apiGroups:
-    - infrastructure.cluster.x-k8s.io
-  resources:
-    - staticmachines/status
-  verbs:
-    - get
-    - patch
-    - update
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - addons.cluster.x-k8s.io
+    resources:
+      - clusterresourcesetbindings
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - bootstrap.cluster.x-k8s.io
+    resources:
+      - kubeadmconfigtemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - cluster.x-k8s.io
+    resources:
+      - clusters
+      - clusters/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - cluster.x-k8s.io
+    resources:
+      - machinedeployments
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - cluster.x-k8s.io
+    resources:
+      - machines
+      - machines/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - controlplane.cluster.x-k8s.io
+    resources:
+      - kubeadmcontrolplanes
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdclusters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdclusters/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdclusters/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachines
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachines/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachines/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachinetemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdclusters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdclusters/status
+    verbs:
+      - get
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdclusters
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdclusters/status
+    verbs:
+      - get
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdclustertemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdclustertemplates/status
+    verbs:
+      - get
 
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachines
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachines/status
+    verbs:
+      - get
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachines
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachines/status
+    verbs:
+      - get
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachinetemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachinetemplates/status
+    verbs:
+      - get
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachinetemplates
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - vcdmachinetemplates/status
+    verbs:
+      - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -172,37 +342,38 @@ metadata:
   namespace:  d8-cloud-provider-vcd
   {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
 rules:
-- apiGroups:
-    - ""
-  resources:
-    - configmaps
-  verbs:
-    - get
-    - list
-    - watch
-    - create
-    - update
-    - patch
-    - delete
-- apiGroups:
-    - coordination.k8s.io
-  resources:
-    - leases
-  verbs:
-    - get
-    - list
-    - watch
-    - create
-    - update
-    - patch
-    - delete
-- apiGroups:
-    - ""
-  resources:
-    - events
-  verbs:
-    - create
-    - patch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1

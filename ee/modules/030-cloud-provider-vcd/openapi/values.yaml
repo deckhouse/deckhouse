@@ -6,6 +6,8 @@ properties:
     type: object
     default: {}
     properties:
+      apiServerIp:
+        type: string
       cniSecretData:
         type: string
       providerClusterConfiguration:
@@ -296,6 +298,23 @@ properties:
               - server
               - username
               - password
+      capcdControllerManagerWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
       providerDiscoveryData:
         type: object
         additionalProperties: false

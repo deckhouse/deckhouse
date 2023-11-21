@@ -321,6 +321,7 @@ spec:
                             - AWSInstanceClass
                             - YandexInstanceClass
                             - AzureInstanceClass
+                            - VCDInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -954,6 +955,7 @@ spec:
                             - AWSInstanceClass
                             - YandexInstanceClass
                             - AzureInstanceClass
+                            - VCDInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1733,6 +1735,7 @@ spec:
                             - AWSInstanceClass
                             - YandexInstanceClass
                             - AzureInstanceClass
+                            - VCDInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).

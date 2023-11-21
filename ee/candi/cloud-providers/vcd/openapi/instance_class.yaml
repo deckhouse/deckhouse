@@ -22,7 +22,7 @@ spec:
           properties:
             spec:
               type: object
-              required: [template, mainNetwork, storageProfile]
+              required: [template, storageProfile]
               properties:
                 rootDiskSizeGb:
                   description: |

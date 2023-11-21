@@ -690,6 +690,8 @@ const openstackCIMPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/clo
 const openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
 const vsphereCIMPath = "/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager"
 const vsphereCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
+const vcdCAPIPath = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
+const vcdCAPISymlink = "/deckhouse/modules/040-node-manager/capi/vcd"
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -699,12 +701,16 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Symlink(vsphereCIMPath, vsphereCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink(vcdCAPIPath, vcdCAPISymlink)
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
 		err := os.Remove(openstackCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Remove(vsphereCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Remove(vcdCAPISymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -1730,6 +1736,107 @@ ccc: ddd
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
 				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
 				Expect(checksum).To(Equal("55b0c5ac9c7e72252f509bc825f5046e198eab25ebd80efa3258cfb38e881359"))
+			})
+		})
+	})
+
+	Context("CAPI", func() {
+		Context("VCD", func() {
+			// TODO enable cluster autoscaller
+			const nodeManagerVCD = `
+internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: vcd
+    machineClassKind: ""
+    capiClusterKind: "VCDCluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    capiClusterName: "vcd"
+    capiMachineTemplateKind: "VCDMachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    vcd:
+      sshPublicKey: ssh-rsa AAAAA
+      organization: org
+      virtualDataCenter: dc
+      virtualApplicationName: app
+      server: https://localhost:5000
+      username: user
+      password: pass
+      insecure: true
+  nodeGroups:
+  - name: worker
+    instanceClass:
+      flavorName: m1.large
+      imageName: ubuntu-18-04-cloud-amd64
+      platformID: myplaid
+      cores: 42
+      coreFraction: 50 #optional
+      memory: 42
+      gpus: 2
+      imageID: myimageid
+      preemptible: true #optional
+      diskType: ssd #optional
+      diskSizeGB: 42 #optional
+      assignPublicIPAddress: true #optional
+      mainSubnet: mymainsubnet
+      additionalSubnets: [aaa, bbb]
+      additionalLabels: # optional
+        my: label
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Docker"
+    cloudInstances:
+      classReference:
+        kind: YandexInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 5
+      zones:
+      - zonea
+      - zoneb
+  machineControllerManagerEnabled: false
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerVCD)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("Everything must render properly", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
+				Expect(namespace.Exists()).To(BeTrue())
+
+				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
+				Expect(registrySecret.Exists()).To(BeTrue())
+
+				secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "capi-user-credentials")
+				Expect(secret.Exists()).To(BeTrue())
+
+				cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "vcd")
+				Expect(cluster.Exists()).To(BeTrue())
+
+				vcdCluster := f.KubernetesResource("VCDCluster", "d8-cloud-instance-manager", "app")
+				Expect(vcdCluster.Exists()).To(BeTrue())
+
 			})
 		})
 	})

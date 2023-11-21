@@ -172,6 +172,13 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 
 			if nodeGroup.NodeType == ngv1.NodeTypeCloudEphemeral {
 				fixCloudNodeTaints(nodeObj, nodeGroup)
+				// cluster api does not apply template
+				// in the future we need to write our own bootstrap provider
+				// which it will set node template
+				err = applyNodeTemplate(nodeObj, node, nodeGroup)
+				if err != nil {
+					return nil, err
+				}
 			} else {
 				err = applyNodeTemplate(nodeObj, node, nodeGroup)
 				if err != nil {

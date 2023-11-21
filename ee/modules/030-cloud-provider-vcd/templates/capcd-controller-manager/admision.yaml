@@ -1,0 +1,100 @@
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: capcd-mutating-webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVcd.internal.capcdControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capcd-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vcd
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster
+  failurePolicy: Fail
+  name: mutation.vcdcluster.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vcdclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVcd.internal.capcdControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capcd-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vcd
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine
+  failurePolicy: Fail
+  name: mutation.vcdmachine.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vcdmachines
+  sideEffects: None
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: capcd-validating-webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVcd.internal.capcdControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capcd-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vcd
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster
+  failurePolicy: Fail
+  name: validation.vcdcluster.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vcdclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVcd.internal.capcdControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capcd-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vcd
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine
+  failurePolicy: Fail
+  name: validation.vcdmachine.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vcdmachines
+  sideEffects: None
