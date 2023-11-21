@@ -74,8 +74,8 @@ spec:
           jsonPath: .metadata.creationTimestamp
   scope: Cluster
   names:
-    plural: VCDinstanceclasses
-    singular: VCDinstanceclass
+    plural: vcdinstanceclasses
+    singular: vcdinstanceclass
     kind: VCDInstanceClass
     categories:
       - cloudinstanceclasses
