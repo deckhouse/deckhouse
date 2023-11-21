@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -38,6 +40,19 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss enfo
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions").Array()).To(HaveLen(1))
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions").Array()[0].String()).To(Equal("deny"))
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_pss_default_action",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_action",
+				Group:  "d8_admission_policy_engine_pss_default_action",
+				Action: "set",
+				Value:  pointer.Float64(3.0),
+				Labels: map[string]string{},
+			}))
 		})
 	})
 
@@ -50,6 +65,19 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss enfo
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions").Array()).To(HaveLen(1))
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions").Array()[0].String()).To(Equal("deny"))
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_pss_default_action",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_action",
+				Group:  "d8_admission_policy_engine_pss_default_action",
+				Action: "set",
+				Value:  pointer.Float64(3.0),
+				Labels: map[string]string{},
+			}))
 		})
 	})
 
@@ -62,6 +90,19 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss enfo
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions").Array()).To(HaveLen(1))
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions").Array()[0].String()).To(Equal("deny"))
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_pss_default_action",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_action",
+				Group:  "d8_admission_policy_engine_pss_default_action",
+				Action: "set",
+				Value:  pointer.Float64(3.0),
+				Labels: map[string]string{},
+			}))
 		})
 	})
 
@@ -76,6 +117,19 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss enfo
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions").AsStringSlice()).To(ContainElement("deny"))
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions").AsStringSlice()).To(ContainElement("dryrun"))
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions").AsStringSlice()).To(ContainElement("warn"))
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_pss_default_action",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_action",
+				Group:  "d8_admission_policy_engine_pss_default_action",
+				Action: "set",
+				Value:  pointer.Float64(3.0),
+				Labels: map[string]string{},
+			}))
 		})
 	})
 })
