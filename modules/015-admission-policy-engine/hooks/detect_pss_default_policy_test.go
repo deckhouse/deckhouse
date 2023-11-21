@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 const (
