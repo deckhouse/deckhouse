@@ -113,6 +113,16 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 		log.Fatal(err)
 	}
 
+	// "docs" directory
+	err = tarWriter.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeDir,
+		Name:     "openapi",
+		Mode:     0700,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for {
 		hdr, err := tarReader.Next()
 		if err != nil {
@@ -124,6 +134,21 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 		}
 
 		if strings.Contains(hdr.Name, "docs/") {
+			buf := bytes.NewBuffer(nil)
+			if _, err := io.Copy(buf, tarReader); err != nil {
+				klog.Fatal(err)
+			}
+
+			if err := tarWriter.WriteHeader(hdr); err != nil {
+				log.Fatal(err)
+			}
+
+			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		if strings.Contains(hdr.Name, "openapi/") {
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
 				klog.Fatal(err)
