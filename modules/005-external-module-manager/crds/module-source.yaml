@@ -87,10 +87,6 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: "release channel"
-          type: string
-          jsonPath: .spec.releaseChannel
-          description: "Default release channel for modules inside this source."
         - name: count
           type: integer
           jsonPath: .status.modulesCount
