@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -191,7 +192,7 @@ func (u *loadHandler) generateChannelMapping(moduleName, version string, channel
 }
 
 func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string, bool) {
-	fileName, _ = strings.CutPrefix(fileName, "./")
+	fileName = filepath.Clean(fileName)
 
 	if strings.HasSuffix(fileName, "_RU.md") {
 		fileName = strings.Replace(fileName, "_RU.md", ".ru.md", 1)
@@ -201,5 +202,13 @@ func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string
 		return filepath.Join(u.baseDir, "content", moduleName, channel, fileName), true
 	}
 
+	if strings.HasPrefix(fileName, "crds") ||
+		fileName == "openapi/config-values.yaml" ||
+		docConfValuesRegexp.MatchString(fileName) {
+		return filepath.Join(u.baseDir, "data", moduleName, channel, fileName), true
+	}
+
 	return "", false
 }
+
+var docConfValuesRegexp = regexp.MustCompile(`^openapi/doc-.*-config-values\.yaml$`)
