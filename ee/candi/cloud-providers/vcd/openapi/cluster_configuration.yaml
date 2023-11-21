@@ -82,6 +82,12 @@ apiVersions:
                   example: 20
                   default: 20
                   type: integer
+                etcdDiskSizeGb:
+                  description: |
+                    Etcd disk size in gigabytes.
+                  example: 10
+                  default: 10
+                  type: integer
                 placementPolicy:
                   description: |
                     PlacementPolicy is the placement policy to be used on this machine.
@@ -109,12 +115,6 @@ apiVersions:
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
                   example: internal
                   type: string
-                etcdDiskSizeGb:
-                  description: |
-                    Etcd disk size in gigabytes.
-                  example: 10
-                  default: 10
-                  type: integer
                 mainNetworkIPAddresses:
                   type: array
                   description: |
