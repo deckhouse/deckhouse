@@ -58,6 +58,11 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			"/app/hugo/data/moduleName/stable/openapi/config-values.yaml",
 			true,
 		},
+		{
+			"openapi",
+			"/app/hugo/data/moduleName/stable/openapi",
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.fileName, func(t *testing.T) {
