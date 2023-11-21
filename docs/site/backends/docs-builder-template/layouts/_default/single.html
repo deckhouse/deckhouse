@@ -10,7 +10,7 @@
 
         {{.Content}}
 
-        {{ if and .IsPage (eq .Name "CRD") }} {{/* Render module CRDs */}}
+        {{ if and .IsPage (eq .File.ContentBaseName "CRD") }} {{/* Render module CRDs */}}
 
           {{ $_pathElements := index ( findRESubmatch  `^([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
 
