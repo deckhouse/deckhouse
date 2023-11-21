@@ -10,6 +10,16 @@
 
         {{.Content}}
 
+        {{ if eq .Name "CRD" }} {{/* Render module CRDs */}}
+
+          {{ $moduleName := "deckhouse-admin" }}
+          {{ $moduleData := index .Site.Data.modules $moduleName }}
+          {{ $moduleChannel := "alpha" }}
+
+          {{ partial "module-resources" (dict "name" $moduleName "data" (index $moduleData $moduleChannel) "type" "crds" "lang" .Language.Lang )}}
+
+        {{ end }}
+
     </div>
 </div>
 {{ end }}

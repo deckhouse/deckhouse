@@ -1,8 +1,9 @@
 knownPageNames:
-  - README
-  - EXAMPLES
-  - CONFIGURATION
-  - USAGE
   - ADVANCED_USAGE
-  - SETUP
+  - CONFIGURATION
+  - CRD
+  - EXAMPLES
   - FAQ
+  - README
+  - SETUP
+  - USAGE

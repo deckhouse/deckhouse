@@ -1,0 +1,22 @@
+{{/*
+Renders a module resources (CRDs or configuration OpenAPI specification).
+Context:
+.name — module name
+.data — module data (usually, it is .Site.Data.modules.<MODULE_NAME> structure)
+.type — resource to render. Can be: "crds" or "configuration"
+.lang — language to use for rendering
+*/}}
+
+{{ $moduleName := .name }}
+{{ $moduleData := .data }}
+{{ $lang := .lang }}
+
+{{ if eq .type "crds" }}
+  {{ range $crdName, $crdData := $moduleData.crds }}
+    {{ if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
+    {{ $langData := index $moduleData.crds (printf "doc-%s-%s" $lang $crdName) }}
+    {{ partial "openapi/format-crd" ( dict "data" $crdData "langData" $langData ) }}
+  {{ end }}
+{{ else if eq .type "configuration" }}
+    {{ partial "openapi/crd" (dict "name" "crdName" "data" "crdData") }}
+{{ end }}
