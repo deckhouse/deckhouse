@@ -29,6 +29,7 @@ import (
 
 	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	module_manager "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager"
+	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -47,7 +48,373 @@ external-module-manager:
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleRelease", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleUpdatePolicy", false)
 
-	Context("Cluster has pending ModuleRelease", func() {
+	Context("Cluster has Deployed, Superseded and Pending ModuleReleases", func() {
+		BeforeEach(func() {
+			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
+			_ = os.Mkdir(tmpDir+"/modules", 0777)
+			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+			testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
+
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.0.1
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.0.1
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.0.2
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.0.2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.0.3
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.0.3
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: echoserver-policy
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: echoserver
+        module: echoserver
+  releaseChannel: Stable
+  update:
+    mode: Manual
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
+
+		It("module should be in Pending state", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhaseDeployed))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.2").Field("status.phase").String()).To(Equal(v1alpha1.PhaseSuperseded))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.3").Field("status.phase").String()).To(Equal(v1alpha1.PhasePending))
+		})
+	})
+
+	Context("Cluster has ModuleRelease not associated with any policy", func() {
+		BeforeEach(func() {
+			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
+			_ = os.Mkdir(tmpDir+"/modules", 0777)
+			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+			testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
+
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.0.1
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.0.1
+status:
+  phase: Pending
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
+
+		It("module should be in PolicyUndefined state", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhasePolicyUndefined))
+		})
+	})
+
+	Context("Cluster has pending ModuleRelease and policy Auto with window and in time", func() {
+		BeforeEach(func() {
+			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
+			_ = os.Mkdir(tmpDir+"/modules", 0777)
+			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+			testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
+
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.0.1
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.0.1
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: echoserver-policy
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: echoserver
+        module: echoserver
+  releaseChannel: Stable
+  update:
+    mode: Auto
+    windows:
+    - days:
+      - Mon
+      - Tue
+      - Wed
+      - Thu
+      - Fri
+      - Sat
+      - Sun
+      from: "00:00"
+      to: "23:59"
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
+
+		It("module symlink should be created", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhaseDeployed))
+			moduleLinks, err := os.ReadDir(tmpDir + "/modules")
+			if err != nil {
+				Fail(err.Error())
+			}
+			Expect(moduleLinks).To(HaveLen(1))
+			Expect(moduleLinks[0].Name()).To(Equal("900-echoserver"))
+		})
+	})
+
+	Context("Cluster has pending ModuleRelease and policy Auto with window and not in time", func() {
+		BeforeEach(func() {
+			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
+			_ = os.Mkdir(tmpDir+"/modules", 0777)
+			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+			testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
+
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.0.1
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.0.1
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: echoserver-policy
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: echoserver
+        module: echoserver
+  releaseChannel: Stable
+  update:
+    mode: Auto
+    windows:
+    - days:
+      - Sun
+      from: "00:05"
+      to: "00:06"
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
+
+		It("module should be waiting for update window", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhasePending))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.message").String()).To(ContainSubstring(waitingForWindow[:len(waitingForWindow)-2]))
+		})
+	})
+
+	Context("Cluster has pending ModuleRelease and policy Auto without windows", func() {
+		BeforeEach(func() {
+			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
+			_ = os.Mkdir(tmpDir+"/modules", 0777)
+			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+			testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
+
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.0.1
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.0.1
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: echoserver-policy
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: echoserver
+        module: echoserver
+  releaseChannel: Stable
+  update:
+    mode: Auto
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
+
+		It("module symlink should be created", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhaseDeployed))
+			moduleLinks, err := os.ReadDir(tmpDir + "/modules")
+			if err != nil {
+				Fail(err.Error())
+			}
+			Expect(moduleLinks).To(HaveLen(1))
+			Expect(moduleLinks[0].Name()).To(Equal("900-echoserver"))
+		})
+
+		Context("ModuleRelease was deleted", func() {
+			BeforeEach(func() {
+				st := f.KubeStateSet(``)
+				f.BindingContexts.Set(st)
+				fsSynchronized = false
+				f.RunHook()
+			})
+
+			It("should delete module from FS", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				moduleLinks, err := os.ReadDir(tmpDir + "/modules")
+				if err != nil {
+					Fail(err.Error())
+				}
+				Expect(moduleLinks).To(HaveLen(0))
+			})
+		})
+	})
+
+	Context("Cluster has unapproved pending ModuleRelease and policy Manual", func() {
+		BeforeEach(func() {
+			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
+			_ = os.Mkdir(tmpDir+"/modules", 0777)
+			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+			testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
+
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.0.1
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.0.1
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: echoserver-policy
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: echoserver
+        module: echoserver
+  releaseChannel: Stable
+  update:
+    mode: Manual
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
+
+		It("module should be waiting for manual approval", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhasePending))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.message").String()).To(Equal(manualApproval))
+		})
+	})
+
+	Context("Cluster has approved pending ModuleRelease", func() {
 		BeforeEach(func() {
 			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
 			_ = os.Mkdir(tmpDir+"/modules", 0777)
@@ -97,7 +464,7 @@ spec:
 
 		It("module symlink should be created", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhaseDeployed))
 			moduleLinks, err := os.ReadDir(tmpDir + "/modules")
 			if err != nil {
 				Fail(err.Error())
@@ -174,7 +541,7 @@ spec:
 
 		It("module symlink should be created with custom weight", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhaseDeployed))
 			moduleLinks, err := os.ReadDir(tmpDir + "/modules")
 			if err != nil {
 				Fail(err.Error())
@@ -244,8 +611,8 @@ spec:
 
 			It("should change module symlink", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal("Superseded"))
-				Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.2").Field("status.phase").String()).To(Equal("Deployed"))
+				Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhaseSuperseded))
+				Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.2").Field("status.phase").String()).To(Equal(v1alpha1.PhaseDeployed))
 				moduleLinks, err := os.ReadDir(tmpDir + "/modules")
 				if err != nil {
 					Fail(err.Error())
@@ -283,7 +650,7 @@ status:
 
 			It("Should suspend the release", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.KubernetesGlobalResource("ModuleRelease", "absent-v0.0.1").Field("status.phase").String()).To(Equal("Suspended"))
+				Expect(f.KubernetesGlobalResource("ModuleRelease", "absent-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhaseSuspended))
 				Expect(f.KubernetesGlobalResource("ModuleRelease", "absent-v0.0.1").Field("status.message").String()).To(Equal("Desired version of the module met problems: not found"))
 			})
 		})

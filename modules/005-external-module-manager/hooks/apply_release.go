@@ -40,7 +40,9 @@ import (
 )
 
 const (
-	policyNotFound = "Release isn't associated with any update policy"
+	policyNotFound   = "Release isn't associated with any update policy"
+	manualApproval   = "Waiting for manual approval"
+	waitingForWindow = "Release is waiting for the update window: %s"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -51,11 +53,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/external-module-source/apply-release",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                "policies",
-			ApiVersion:          "deckhouse.io/v1alpha1",
-			Kind:                "ModuleUpdatePolicy",
-			ExecuteHookOnEvents: pointer.Bool(true),
-			FilterFunc:          filterPolicy,
+			Name:                         "policies",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "ModuleUpdatePolicy",
+			ExecuteHookOnEvents:          pointer.Bool(true),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			FilterFunc:                   filterPolicy,
 		},
 		{
 			Name:                         "releases",
@@ -69,7 +72,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "check_module_releases",
-			Crontab: "*/15 * * * *",
+			Crontab: "*/15 * * * * *",
 		},
 	},
 }, applyModuleRelease)
@@ -119,30 +122,27 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			continue
 		}
 		rel := sn.(enqueueRelease)
-		if rel.Status == "" {
-			// check if release somehow doesn't match any policy
-			if _, found := policies[rel.ModuleUpdatePolicy]; !found {
-				rel.Status = v1alpha1.PhaseSuspended
-				status := map[string]v1alpha1.ModuleReleaseStatus{
-					"status": {
-						Phase:          v1alpha1.PhaseSuspended,
-						TransitionTime: ts,
-						Message:        policyNotFound,
-					},
-				}
-				input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", rel.Name, object_patch.WithSubresource("/status"))
-				continue
-			}
 
-			rel.Status = v1alpha1.PhasePending
-			status := map[string]v1alpha1.ModuleReleaseStatus{
-				"status": {
-					Phase:          v1alpha1.PhasePending,
-					TransitionTime: ts,
-					Message:        "",
-				},
+		_, foundPolicy := policies[rel.ModuleUpdatePolicy]
+		switch rel.Status {
+		case "":
+			if !foundPolicy {
+				setReleasePhaseWithMsg(input, rel, v1alpha1.PhasePolicyUndefined, policyNotFound, ts)
+				rel.Status = v1alpha1.PhasePolicyUndefined
+			} else {
+				setReleasePhaseWithMsg(input, rel, v1alpha1.PhasePending, "", ts)
+				rel.Status = v1alpha1.PhasePending
 			}
-			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", rel.Name, object_patch.WithSubresource("/status"))
+		case v1alpha1.PhasePending:
+			if !foundPolicy {
+				setReleasePhaseWithMsg(input, rel, v1alpha1.PhasePolicyUndefined, policyNotFound, ts)
+				rel.Status = v1alpha1.PhasePolicyUndefined
+			}
+		case v1alpha1.PhasePolicyUndefined:
+			if foundPolicy {
+				setReleasePhaseWithMsg(input, rel, v1alpha1.PhasePending, "", ts)
+				rel.Status = v1alpha1.PhasePending
+			}
 		}
 
 		moduleReleases[rel.ModuleName] = append(moduleReleases[rel.ModuleName], rel)
@@ -177,7 +177,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 				err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
-					suspendModuleVersionForRelease(input, deployedRelease, err, ts)
+					setSuspendedModuleVersionForRelease(input, deployedRelease, err, ts)
 					continue
 				}
 				modulesChangedReason = "one of modules is not enabled"
@@ -188,27 +188,8 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		if len(pred.skippedPatchesIndexes) > 0 {
 			for _, index := range pred.skippedPatchesIndexes {
 				release := pred.releases[index]
-				status := map[string]v1alpha1.ModuleReleaseStatus{
-					"status": {
-						Phase:          v1alpha1.PhaseSuperseded,
-						TransitionTime: pred.ts,
-						Message:        "",
-					},
-				}
-				input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+				setReleasePhaseWithMsg(input, release, v1alpha1.PhaseSuperseded, "", pred.ts)
 			}
-		}
-
-		if pred.currentReleaseIndex >= 0 {
-			release := pred.releases[pred.currentReleaseIndex]
-			status := map[string]v1alpha1.ModuleReleaseStatus{
-				"status": {
-					Phase:          v1alpha1.PhaseSuperseded,
-					TransitionTime: pred.ts,
-					Message:        "",
-				},
-			}
-			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 		}
 
 		if pred.desiredReleaseIndex >= 0 {
@@ -217,11 +198,13 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			if releasePolicy, found := policies[release.ModuleUpdatePolicy]; found {
 				// manual and not approved
 				if releasePolicy.spec.Update.Mode == "Manual" && !release.Approved {
+					setReleasePhaseWithMsg(input, release, v1alpha1.PhasePending, manualApproval, ts)
 					continue
 				}
 
 				// auto and not in time
 				if releasePolicy.spec.Update.Mode == "Auto" && !releasePolicy.spec.Update.Windows.IsAllowed(ts) {
+					setReleasePhaseWithMsg(input, release, v1alpha1.PhasePending, fmt.Sprintf(waitingForWindow, releasePolicy.spec.Update.Windows.NextAllowedTime(ts)), ts)
 					continue
 				}
 
@@ -231,20 +214,19 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 				err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module deploy failed: %v", err)
-					suspendModuleVersionForRelease(input, release, err, ts)
+					setSuspendedModuleVersionForRelease(input, release, err, ts)
 					continue
 				}
-				modulesChangedReason = "a new module release found"
-				status := map[string]v1alpha1.ModuleReleaseStatus{
-					"status": {
-						Phase:          v1alpha1.PhaseDeployed,
-						TransitionTime: pred.ts,
-						Message:        "",
-					},
+
+				// after deploying a new release, mark previous one (if any) as superseded
+				if pred.currentReleaseIndex >= 0 {
+					setReleasePhaseWithMsg(input, pred.releases[pred.currentReleaseIndex], v1alpha1.PhaseSuperseded, "", pred.ts)
 				}
-				input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+
+				modulesChangedReason = "a new module release found"
+				setReleasePhaseWithMsg(input, release, v1alpha1.PhaseDeployed, "", pred.ts)
 			} else {
-				suspendModuleVersionForRelease(input, release, fmt.Errorf(policyNotFound), ts)
+				setReleasePhaseWithMsg(input, release, v1alpha1.PhasePolicyUndefined, policyNotFound, ts)
 			}
 		}
 	}
@@ -272,7 +254,29 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	return nil
 }
 
-func suspendModuleVersionForRelease(input *go_hook.HookInput, release enqueueRelease, err error, ts time.Time) {
+func setReleasePhaseWithMsg(input *go_hook.HookInput, release enqueueRelease, phase, message string, ts time.Time) {
+	if release.Status != phase {
+		status := map[string]v1alpha1.ModuleReleaseStatus{
+			"status": {
+				Phase:          phase,
+				TransitionTime: ts,
+				Message:        message,
+			},
+		}
+		input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+	} else if release.StatusMessage != message {
+		status := map[string]v1alpha1.ModuleReleaseStatus{
+			"status": {
+				Phase:          phase,
+				TransitionTime: release.StatusTransitionTime,
+				Message:        message,
+			},
+		}
+		input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+	}
+}
+
+func setSuspendedModuleVersionForRelease(input *go_hook.HookInput, release enqueueRelease, err error, ts time.Time) {
 	if os.IsNotExist(err) {
 		err = errors.New("not found")
 	}
@@ -370,14 +374,16 @@ func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}
 
 	return enqueueRelease{
-		Name:               release.Name,
-		Version:            release.Spec.Version,
-		Weight:             release.Spec.Weight,
-		ModuleName:         release.Spec.ModuleName,
-		ModuleSource:       release.Labels["source"],
-		ModuleUpdatePolicy: release.Labels["module-update-policy"],
-		Status:             release.Status.Phase,
-		Approved:           releaseApproved,
+		Name:                 release.Name,
+		Version:              release.Spec.Version,
+		Weight:               release.Spec.Weight,
+		ModuleName:           release.Spec.ModuleName,
+		ModuleSource:         release.Labels["source"],
+		ModuleUpdatePolicy:   release.Labels["module-update-policy"],
+		Status:               release.Status.Phase,
+		StatusMessage:        release.Status.Message,
+		StatusTransitionTime: release.Status.TransitionTime,
+		Approved:             releaseApproved,
 	}, nil
 }
 
@@ -403,14 +409,16 @@ func readModulesFromFS(dir string) (map[string]string, error) {
 }
 
 type enqueueRelease struct {
-	Name               string
-	Version            *semver.Version
-	Weight             int
-	ModuleName         string
-	ModuleSource       string
-	ModuleUpdatePolicy string
-	Status             string
-	Approved           bool
+	Name                 string
+	Version              *semver.Version
+	Weight               int
+	ModuleName           string
+	ModuleSource         string
+	ModuleUpdatePolicy   string
+	Status               string
+	StatusMessage        string
+	StatusTransitionTime time.Time
+	Approved             bool
 }
 
 func (er enqueueRelease) GetVersion() *semver.Version {

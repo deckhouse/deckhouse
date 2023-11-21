@@ -31,10 +31,11 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 const (
-	PhasePending    = "Pending"
-	PhaseDeployed   = "Deployed"
-	PhaseSuperseded = "Superseded"
-	PhaseSuspended  = "Suspended"
+	PhasePending         = "Pending"
+	PhasePolicyUndefined = "PolicyUndefined"
+	PhaseDeployed        = "Deployed"
+	PhaseSuperseded      = "Superseded"
+	PhaseSuspended       = "Suspended"
 )
 
 // ModuleRelease is a Module release object.
