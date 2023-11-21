@@ -718,15 +718,15 @@ done
 linstor_check_faulty
 echo "Reduction in the number of replicas for movable resources completed"
 
-RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')
+DISKLESS_RESOURCES_TO_EVICT=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')
 
 if [[ ${RESOURCE_REMOVAL} == "true" ]]; then
-  linstor_delete_resources_from_node "${RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE[@]}"
+  linstor_delete_resources_from_node "${DISKLESS_RESOURCES_TO_EVICT[@]}"
 fi
 
-if [[ -n $RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE ]]; then
+if [[ -n $DISKLESS_RESOURCES_TO_EVICT ]]; then
   echo "Create TieBreaker if needed for resources that had TieBreaker on evicted node \"${NODE_FOR_EVICT}\""
-  for resource in $RESOURCES_WITH_TIEBREAKER_ON_EVICTED_NODE; do
+  for resource in $DISKLESS_RESOURCES_TO_EVICT; do
     create_tiebreaker $resource
   done
 fi
