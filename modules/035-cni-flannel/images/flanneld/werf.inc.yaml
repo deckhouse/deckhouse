@@ -5,7 +5,7 @@ fromImage: common/alt
 shell:
   install:
     - apt-get update
-    - apt-get install -y iptables conntrack-tools
+    - apt-get install -y iptables
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
