@@ -90,7 +90,7 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			for _, channel := range channels {
 				path, ok := u.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping %v in %s", header.Name, moduleName)
+					klog.Infof("skipping tree %v in %s", header.Name, moduleName)
 					continue
 				}
 
@@ -105,7 +105,7 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			for _, channel := range channels {
 				path, ok := u.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping %v in %s", header.Name, moduleName)
+					klog.Infof("skipping file %v in %s", header.Name, moduleName)
 					continue
 				}
 				klog.Infof("creating %s", path)
@@ -203,6 +203,7 @@ func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string
 	}
 
 	if strings.HasPrefix(fileName, "crds") ||
+		fileName == "openapi" ||
 		fileName == "openapi/config-values.yaml" ||
 		docConfValuesRegexp.MatchString(fileName) {
 		return filepath.Join(u.baseDir, "data", moduleName, channel, fileName), true
