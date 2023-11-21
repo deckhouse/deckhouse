@@ -14,13 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# only allowed subcomands of linstor client
+# only allowed subcommands of linstor client
 valid_subcommands_list=("storage-pool" "sp" "node" "n" "resource" "r" "volume" "v" "resource-definition" "rd")
 valid_subcommands_ver=("controller" "c")
 valid_subcommands_lv=("resource" "r")
 allowed=false
 
-# check for alllowed linstor ... l and linstor ... list commands
+# check for allowed linstor ... l and linstor ... list commands
 if [[ $(echo "${valid_subcommands_list[@]}" | fgrep -w $1) ]]; then
   if [[ $2 == "l" || $2 == "list" ]]; then
     allowed=true
@@ -28,14 +28,14 @@ if [[ $(echo "${valid_subcommands_list[@]}" | fgrep -w $1) ]]; then
 fi
 
 
-# check for alllowed linstor ... v and linstor ... version commands
+# check for allowed linstor ... v and linstor ... version commands
 if [[ $(echo "${valid_subcommands_ver[@]}" | fgrep -w $1) ]]; then
   if [[ $2 == "v" || $2 == "version" ]]; then
     allowed=true
   fi
 fi
 
-# check for alllowed linstor ... lv commands
+# check for allowed linstor ... lv commands
 if [[ $(echo "${valid_subcommands_lv[@]}" | fgrep -w $1) ]]; then
   if [[ $2 == "lv" ]]; then
     allowed=true
@@ -43,10 +43,8 @@ if [[ $(echo "${valid_subcommands_lv[@]}" | fgrep -w $1) ]]; then
 fi
 
 if [[ $allowed == true ]]; then
-  /usr/bin/linstor "$@"
+  /usr/bin/originallinstor "$@"
 else
-  echo "You're not allowed to change state of linstor cluster manually. Please contact your tech supports"
+  echo "You're not allowed to change state of linstor cluster manually. Please contact tech support"
   exit 1
 fi
-
-

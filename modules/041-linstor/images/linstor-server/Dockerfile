@@ -216,5 +216,8 @@ RUN chmod 755 /liveness.sh
 COPY client-wrapper.sh /usr/local/bin/linstor
 RUN chmod 755 /usr/local/bin/linstor
 
+COPY /usr/bin/linstor /usr/bin/originallinstor
+RUN rm /usr/bin/linstor
+
 CMD ["startSatellite"]
 ENTRYPOINT ["/usr/bin/k8s-await-election", "/usr/bin/piraeus-entry.sh"]
