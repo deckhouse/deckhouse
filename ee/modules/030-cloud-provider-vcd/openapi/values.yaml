@@ -6,8 +6,9 @@ properties:
     type: object
     default: {}
     properties:
+      cniSecretData:
+        type: string
       providerClusterConfiguration:
         $ref: '/deckhouse/candi/cloud-providers/vcd/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
       providerDiscoveryData:
         $ref: '/deckhouse/candi/cloud-providers/vcd/openapi/cloud_discovery_data.yaml#/apiVersions/0/openAPISpec'
-
