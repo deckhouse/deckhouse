@@ -29,7 +29,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,6 +42,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 const (
@@ -255,7 +255,7 @@ func untarMetadata(rc io.ReadCloser, rw io.Writer) error {
 }
 
 func (s *ModuleDocsSyncer) buildDocumentation(img v1.Image, moduleName, moduleVersion string) error {
-	rc := mutate.Extract(img)
+	rc := module.ExtractDocs(img)
 	defer rc.Close()
 
 	const docsBuilderBasePath = "http://documentation-builder.d8-system.svc.cluster.local:8081"
