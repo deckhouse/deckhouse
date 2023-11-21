@@ -14,7 +14,7 @@
        <li class="sidebar__submenu-item {{ if or (.IsAncestor page) (eq . page) }}active{{ end }}">
           <a href="{{ if .IsPage }}{{ replaceRE "/readme.html$" "/" .RelPermalink }}{{ else }}#{{ end }}">
           {{- if in .Site.Data.helpers.knownPageNames .File.TranslationBaseName }}
-            {{- humanize ( T (printf "moduleLinkTitle%s" .File.TranslationBaseName) ) }}
+            {{- T (printf "moduleLinkTitle%s" .File.TranslationBaseName) }}
           {{- else if .LinkTitle }}
             {{- .LinkTitle }}
           {{- else if .Title }}
