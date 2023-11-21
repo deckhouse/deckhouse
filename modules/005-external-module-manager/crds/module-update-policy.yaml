@@ -48,16 +48,6 @@ spec:
                 update:
                   type: object
                   description: Update settings for target modules.
-                  oneOf:
-                    - properties:
-                        mode:
-                          enum: [Manual]
-                      not:
-                        required: [windows]
-                    - properties:
-                        mode:
-                          enum: [Auto]
-                      required: [windows]
                   properties:
                     mode:
                       type: string

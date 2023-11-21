@@ -644,7 +644,7 @@ func getReleasePolicy(sourceName, moduleName string, policies map[string]*module
 
 func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion, policyName string, moduleWeight int) {
 	moduleReleaseLabels := getReleaseLabels(sourceName, moduleName)
-	moduleReleaseLabels["module-update-policy"]=policyName
+	moduleReleaseLabels["module-update-policy"] = policyName
 
 	rl := &v1alpha1.ModuleRelease{
 		TypeMeta: metav1.TypeMeta{

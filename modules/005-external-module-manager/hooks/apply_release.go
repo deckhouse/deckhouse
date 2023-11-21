@@ -39,6 +39,10 @@ import (
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 )
 
+const (
+	policyNotFound = "Release doesn't match any update policy"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// check symlinks exist on the startup
 	OnBeforeHelm: &go_hook.OrderedConfig{
@@ -105,7 +109,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	for _, pol := range snapPolicies {
 		policy := pol.(v1alpha1.ModuleUpdatePolicy)
 		policies[policy.Name] = &modulePolicy{
-			spec:            policy.Spec,
+			spec: policy.Spec,
 		}
 	}
 
@@ -116,6 +120,20 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		}
 		rel := sn.(enqueueRelease)
 		if rel.Status == "" {
+			// check if release somehow doesn't match any policy
+			if _, found := policies[rel.ModuleUpdatePolicy]; !found {
+				rel.Status = v1alpha1.PhaseSuspended
+				status := map[string]v1alpha1.ModuleReleaseStatus{
+					"status": {
+						Phase:          v1alpha1.PhaseSuspended,
+						TransitionTime: ts,
+						Message:        policyNotFound,
+					},
+				}
+				input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", rel.Name, object_patch.WithSubresource("/status"))
+				continue
+			}
+
 			rel.Status = v1alpha1.PhasePending
 			status := map[string]v1alpha1.ModuleReleaseStatus{
 				"status": {
@@ -196,25 +214,38 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		if pred.desiredReleaseIndex >= 0 {
 			release := pred.releases[pred.desiredReleaseIndex]
 
-			modulePath := generateModulePath(module, release.Version.String())
-			newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", release.Weight, module))
+			if releasePolicy, found := policies[release.ModuleUpdatePolicy]; found {
+				// manual and not approved
+				if releasePolicy.spec.Update.Mode == "Manual" && !release.Approved {
+					continue
+				}
 
-			err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
-			if err != nil {
-				input.LogEntry.Errorf("Module deploy failed: %v", err)
-				suspendModuleVersionForRelease(input, release, err, ts)
-				continue
-			}
-			modulesChangedReason = "a new module release found"
+				// auto and not in time
+				if releasePolicy.spec.Update.Mode == "Auto" && !releasePolicy.spec.Update.Windows.IsAllowed(ts) {
+					continue
+				}
 
-			status := map[string]v1alpha1.ModuleReleaseStatus{
-				"status": {
-					Phase:          v1alpha1.PhaseDeployed,
-					TransitionTime: pred.ts,
-					Message:        "",
-				},
+				modulePath := generateModulePath(module, release.Version.String())
+				newModuleSymlink := path.Join(symlinksDir, fmt.Sprintf("%d-%s", release.Weight, module))
+
+				err := enableModule(externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
+				if err != nil {
+					input.LogEntry.Errorf("Module deploy failed: %v", err)
+					suspendModuleVersionForRelease(input, release, err, ts)
+					continue
+				}
+				modulesChangedReason = "a new module release found"
+				status := map[string]v1alpha1.ModuleReleaseStatus{
+					"status": {
+						Phase:          v1alpha1.PhaseDeployed,
+						TransitionTime: pred.ts,
+						Message:        "",
+					},
+				}
+				input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
+			} else {
+				suspendModuleVersionForRelease(input, release, fmt.Errorf(policyNotFound), ts)
 			}
-			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.WithSubresource("/status"))
 		}
 	}
 	if !fsSynchronized {
@@ -339,13 +370,14 @@ func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}
 
 	return enqueueRelease{
-		Name:         release.Name,
-		Version:      release.Spec.Version,
-		Weight:       release.Spec.Weight,
-		ModuleName:   release.Spec.ModuleName,
-		ModuleSource: release.Labels["source"],
-		Status:       release.Status.Phase,
-		Approved:     releaseApproved,
+		Name:               release.Name,
+		Version:            release.Spec.Version,
+		Weight:             release.Spec.Weight,
+		ModuleName:         release.Spec.ModuleName,
+		ModuleSource:       release.Labels["source"],
+		ModuleUpdatePolicy: release.Labels["module-update-policy"],
+		Status:             release.Status.Phase,
+		Approved:           releaseApproved,
 	}, nil
 }
 
@@ -371,13 +403,14 @@ func readModulesFromFS(dir string) (map[string]string, error) {
 }
 
 type enqueueRelease struct {
-	Name         string
-	Version      *semver.Version
-	Weight       int
-	ModuleName   string
-	ModuleSource string
-	Status       string
-	Approved     bool
+	Name               string
+	Version            *semver.Version
+	Weight             int
+	ModuleName         string
+	ModuleSource       string
+	ModuleUpdatePolicy string
+	Status             string
+	Approved           bool
 }
 
 func (er enqueueRelease) GetVersion() *semver.Version {

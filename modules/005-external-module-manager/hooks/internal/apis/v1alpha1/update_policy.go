@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 )
 
 type ModuleUpdatePolicy struct {
@@ -39,7 +41,8 @@ type ModuleUpdatePolicySpec struct {
 }
 
 type ModuleUpdatePolicySpecUpdate struct {
-	Mode string `json:"mode"`
+	Mode    string         `json:"mode"`
+	Windows update.Windows `json:"windows"`
 }
 
 type ModuleUpdatePolicySpecLabelSelector struct {
