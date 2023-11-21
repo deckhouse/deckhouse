@@ -42,6 +42,7 @@
     The pods that are behind the `kube-rbac-proxy` will restart.
  - **[dashboard]** Fix apiVersion for CronJobs to display with the dashboard module. [#5799](https://github.com/deckhouse/deckhouse/pull/5799)
  - **[deckhouse]** Fix panic when validating int in a number field in module configuration. [#6556](https://github.com/deckhouse/deckhouse/pull/6556)
+ - **[dhctl]** Fix static cluster destroy. [#6597](https://github.com/deckhouse/deckhouse/pull/6597)
  - **[dhctl]** Fix panic on getting tag during bootstrap. [#6576](https://github.com/deckhouse/deckhouse/pull/6576)
  - **[dhctl]** Delete unnecessary obsolescence image preflight check. [#6567](https://github.com/deckhouse/deckhouse/pull/6567)
  - **[dhctl]** Fix `dhctl mirror` is not available in a container. [#6538](https://github.com/deckhouse/deckhouse/pull/6538)
