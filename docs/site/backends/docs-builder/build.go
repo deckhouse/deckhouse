@@ -17,20 +17,23 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"github.com/flant/docs-builder/pkg/hugo"
 	"k8s.io/klog/v2"
 )
 
-func newBuildHandler(src string) *buildHandler {
+func newBuildHandler(src, dst string) *buildHandler {
 	return &buildHandler{
 		src: src,
+		dst: dst,
 	}
 }
 
 type buildHandler struct {
 	src string
+	dst string
 }
 
 func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -55,6 +58,34 @@ func (b *buildHandler) build() error {
 	err := hugo.Build(flags)
 	if err != nil {
 		return fmt.Errorf("hugo build: %w", err)
+	}
+
+	err = removeGlob(filepath.Join(b.dst, "*"))
+	if err != nil {
+		return fmt.Errorf("clear %s: %w", b.dst, err)
+	}
+
+	oldLocation := filepath.Join(b.src, "public")
+	newLocation := filepath.Join(b.dst, "public")
+	err = os.Rename(oldLocation, newLocation)
+	if err != nil {
+		return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
+	}
+
+	return nil
+}
+
+func removeGlob(path string) error {
+	contents, err := filepath.Glob(path)
+	if err != nil {
+		return fmt.Errorf("glob: %w", err)
+	}
+
+	for _, item := range contents {
+		err = os.RemoveAll(item)
+		if err != nil {
+			return fmt.Errorf("remove all: %w", err)
+		}
 	}
 
 	return nil
