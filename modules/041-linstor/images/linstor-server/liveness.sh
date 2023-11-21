@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is default linstor controller liveness probe
+# This is default linstor controller liveness probe.
 if ! curl --connect-timeout 3 -sf http://localhost:9999/ > /dev/null; then
   exit 1;
 fi
