@@ -142,7 +142,7 @@ func (u *loadHandler) generateChannelMapping(moduleName, version string, channel
 	u.channelMappingMu.Lock()
 	defer u.channelMappingMu.Unlock()
 
-	path := filepath.Join(u.baseDir, "data/modules/channels-data.yaml")
+	path := filepath.Join(u.baseDir, "data/modules/channels.yaml")
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return fmt.Errorf("open %q: %w", path, err)
