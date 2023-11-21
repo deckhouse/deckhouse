@@ -40,12 +40,12 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 		},
 		{
 			"crds/object.yaml",
-			"/app/hugo/data/moduleName/stable/crds/object.yaml",
+			"/app/hugo/data/modules/moduleName/stable/crds/object.yaml",
 			true,
 		},
 		{
 			"openapi/doc-ru-config-values.yaml",
-			"/app/hugo/data/moduleName/stable/openapi/doc-ru-config-values.yaml",
+			"/app/hugo/data/modules/moduleName/stable/openapi/doc-ru-config-values.yaml",
 			true,
 		},
 		{
@@ -55,12 +55,12 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 		},
 		{
 			"./openapi/config-values.yaml",
-			"/app/hugo/data/moduleName/stable/openapi/config-values.yaml",
+			"/app/hugo/data/modules/moduleName/stable/openapi/config-values.yaml",
 			true,
 		},
 		{
 			"openapi",
-			"/app/hugo/data/moduleName/stable/openapi",
+			"/app/hugo/data/modules/moduleName/stable/openapi",
 			true,
 		},
 	}
