@@ -7,7 +7,7 @@ properties:
     default: {}
     properties:
       providerClusterConfiguration:
-        $ref: '/deckhouse/ee/candi/cloud-providers/vcd/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
+        $ref: '/deckhouse/candi/cloud-providers/vcd/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
       providerDiscoveryData:
-        $ref: '/deckhouse/ee/candi/cloud-providers/vcd/openapi/cloud_discovery_data.yaml#/apiVersions/0/openAPISpec'
+        $ref: '/deckhouse/candi/cloud-providers/vcd/openapi/cloud_discovery_data.yaml#/apiVersions/0/openAPISpec'
 
