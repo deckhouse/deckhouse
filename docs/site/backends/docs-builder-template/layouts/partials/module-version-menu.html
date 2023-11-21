@@ -1,7 +1,7 @@
 {{ $module := .module }}
 {{ $moduleChannel := .channel }}
 {{ $versionPrev := "" }}
-{{ $moduleChannelsData := (index .ctx.Site.Data.modules $module).channels }}
+{{ $moduleChannelsData := (index .ctx.Site.Data.modules.channels $module).channels }}
 {{ $channelsInfo := .ctx.Site.Data.channels.info }}
 {{ $urlFileName := replaceRE `^.*/` "" .ctx.Page.RelPermalink 1 }}
 
