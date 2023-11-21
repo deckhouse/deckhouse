@@ -182,6 +182,60 @@ CAA record does not match issuer
   EOF
   ```
 
+## Как использовать свой или промежуточный CA для заказа сертификатов?
+
+Для использования собственного или промежуточного CA:
+
+- Сгенерируйте сертификат:
+
+  ```shell
+  openssl genrsa -out rootCAKey.pem 2048
+  openssl req -x509 -sha256 -new -nodes -key rootCAKey.pem -days 3650 -out rootCACert.pem
+  ```
+- Создайте секрет в пространстве имён `d8-cert-manager` и добавьте в него закодированные в base64 файлы сертификата:
+
+  ```yaml
+  apiVersion: v1
+  data:
+    tls.crt: <cat rootCACert.pem | base64 -w0>
+    tls.key: <cat rootCAKey.pem | base64 -w0>
+  kind: Secret
+  metadata:
+    name: internal-ca-key-pair
+    namespace: d8-cert-manager
+  type: Opaque
+  ```
+
+  Название секрета может быть любым.
+
+- Создайте ClusterIssuer из созданного секрета:
+
+  ```yaml
+  apiVersion: cert-manager.io/v1
+  kind: ClusterIssuer
+  metadata:
+    name: inter-ca
+  spec:
+    ca:
+      secretName: internal-ca-key-pair    # Имя созданного секрета.
+  ```
+
+  Название также может быть любым.
+
+Теперь можно использовать созданный ClusterIssuer для получения сертификатов. Например, для получения сертификатов для всех компонентов Deckhouse отредактируйте глобальную конфигурацию (`kubectl edit mc global`), указав секцию для заказа сертификатов:
+
+  ```yaml
+  spec:
+    settings:
+      modules:
+        https:
+          certManager:
+            clusterIssuerName: inter-ca
+          mode: CertManager
+        publicDomainTemplate: '%s.<public_domain_template>'
+    version: 1
+  ```
+
 ## Как защитить учетные данные cert-manager?
 
 Если вы не хотите хранить учетные данные конфигурации Deckhouse (например, по соображениям безопасности), можете создать
