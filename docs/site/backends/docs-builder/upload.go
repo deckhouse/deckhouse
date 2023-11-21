@@ -39,13 +39,15 @@ type loadHandler struct {
 }
 
 func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	channelsStr := request.URL.Query().Get("channels")
+	channels := []string{"stable"}
+	if len(channelsStr) != 0 {
+		channels = strings.Split(channelsStr, ",")
+	}
+
 	pathVars := mux.Vars(request)
-	channels := strings.Split(request.URL.Query().Get("channels"), ",")
 	moduleName := pathVars["moduleName"]
 	version := pathVars["version"]
-	if len(channels) == 0 {
-		channels = []string{"stable"}
-	}
 
 	klog.Infof("loading %s %s: %s", moduleName, version, channels)
 	err := u.upload(request.Body, moduleName, channels)
