@@ -179,6 +179,10 @@ spec:
           jsonPath: .spec.releaseChannel
           type: string
           description: Module release channel.
+        - name: update mode
+          jsonPath: .spec.update.mode
+          type: string
+          description: Module release update mode.
         - name: errors
           jsonPath: .status.errors
           type: string

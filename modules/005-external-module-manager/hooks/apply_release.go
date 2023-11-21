@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	policyNotFound = "Release doesn't match any update policy"
+	policyNotFound = "Release isn't associated with any update policy"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

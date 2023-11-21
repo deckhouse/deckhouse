@@ -111,6 +111,10 @@ spec:
           jsonPath: .spec.releaseChannel
           type: string
           description: Канал обновления модуля.
+        - name: update mode
+          jsonPath: .spec.update.mode
+          type: string
+          description: Режим обновления модуля.
         - name: errors
           jsonPath: .status.errors
           type: string

@@ -60,11 +60,31 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   name: echoserver-v0.0.1
+  annotations:
+    release.deckhouse.io/approved: "true"
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
 spec:
   moduleName: echoserver
   version: 0.0.1
 status:
   phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: echoserver-policy
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: echoserver
+        module: echoserver
+  releaseChannel: Stable
+  update:
+    mode: Manual
 `)
 
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -118,12 +138,30 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   name: echoserver-v0.0.1
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
 spec:
   moduleName: echoserver
   version: 0.0.1
   weight: 987
 status:
   phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: echoserver-policy
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: echoserver
+        module: echoserver
+  releaseChannel: Stable
+  update:
+    mode: Auto
 `)
 
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -156,6 +194,10 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   name: echoserver-v0.0.1
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
 spec:
   moduleName: echoserver
   version: 0.0.1
@@ -167,12 +209,30 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   name: echoserver-v0.0.2
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
 spec:
   moduleName: echoserver
   version: 0.0.2
   weight: 913
 status:
   phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: echoserver-policy
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: echoserver
+        module: echoserver
+  releaseChannel: Stable
+  update:
+    mode: Auto
 `)
 				f.BindingContexts.Set(st)
 				fsSynchronized = false
