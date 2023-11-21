@@ -8,9 +8,8 @@ metadata:
 type: Opaque
 data:
   type: {{ b64enc "vcd" | quote }}
-  region: default
-  zones:
-  - "default"
+  region: {{ b64enc "default" | quote }}
+  zones: {{ b64enc "[\"default\"]" | quote }}
   instanceClassKind: {{ b64enc "VCDInstanceClass" | quote }}
-  machineClassKind: ""
-  vcd: "{}"
+  machineClassKind: {{ b64enc "" | quote }}
+  vcd: {{ b64enc "{}" | quote }}
