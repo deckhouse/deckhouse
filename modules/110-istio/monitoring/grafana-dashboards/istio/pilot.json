@@ -35,7 +35,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
         "h": 5,
@@ -64,7 +64,7 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "sum(istio_build{component=\"pilot\"}) by (tag)",
@@ -133,7 +133,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -162,13 +162,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "process_virtual_memory_bytes{app=\"istiod\"}",
           "format": "time_series",
           "instant": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Virtual Memory",
           "refId": "I",
           "step": 2
@@ -176,7 +176,7 @@
         {
           "expr": "process_resident_memory_bytes{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Resident Memory",
           "refId": "H",
           "step": 2
@@ -185,7 +185,7 @@
           "expr": "go_memstats_heap_sys_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "heap sys",
           "refId": "A"
         },
@@ -193,14 +193,14 @@
           "expr": "go_memstats_heap_alloc_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "heap alloc",
           "refId": "D"
         },
         {
           "expr": "go_memstats_alloc_bytes{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Alloc",
           "refId": "F",
           "step": 2
@@ -209,7 +209,7 @@
           "expr": "go_memstats_heap_inuse_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Heap in-use",
           "refId": "E",
           "step": 2
@@ -217,7 +217,7 @@
         {
           "expr": "go_memstats_stack_inuse_bytes{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Stack in-use",
           "refId": "G",
           "step": 2
@@ -226,7 +226,7 @@
           "expr": "container_memory_working_set_bytes{container=~\"discovery\", pod=~\"istiod-.*|istio-pilot-.*\"}",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Discovery (container)",
           "refId": "B",
           "step": 2
@@ -285,7 +285,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -314,29 +314,29 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"discovery\", pod=~\"istiod-.*|istio-pilot-.*\"}[$__interval_sx4]))",
+          "expr": "sum(irate(container_cpu_usage_seconds_total{container=\"discovery\", pod=~\"istiod-.*|istio-pilot-.*\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Discovery (container)",
           "refId": "A"
         },
         {
-          "expr": "rate(process_cpu_seconds_total{app=\"istiod\"}[$__interval_sx4])",
+          "expr": "irate(process_cpu_seconds_total{app=\"istiod\"}[1m])",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Discovery (process)",
           "refId": "C",
           "step": 2
         },
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\", pod=~\"istiod-.*|istio-pilot-.*\"}[$__interval_sx4]))",
+          "expr": "sum(irate(container_cpu_usage_seconds_total{container=\"istio-proxy\", pod=~\"istiod-.*|istio-pilot-.*\"}[1m]))",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Sidecar (container)",
           "refId": "B",
           "step": 2
@@ -388,7 +388,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -417,12 +417,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "container_fs_usage_bytes{container=\"discovery\", pod=~\"istiod-.*|istio-pilot-.*\"}",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Discovery",
           "refId": "B",
           "step": 2
@@ -482,7 +482,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -511,12 +511,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "go_goroutines{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Number of Goroutines",
           "refId": "A",
           "step": 2
@@ -581,7 +581,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "description": "Shows the rate of pilot pushes",
       "fill": 1,
       "gridPos": {
@@ -612,43 +612,45 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(pilot_xds_pushes{type=\"cds\"}[$__interval_sx4]))",
+          "expr": "sum(irate(pilot_xds_pushes{type=\"cds\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Cluster",
           "refId": "C"
         },
         {
-          "expr": "sum(rate(pilot_xds_pushes{type=\"eds\"}[$__interval_sx4]))",
+          "expr": "sum(irate(pilot_xds_pushes{type=\"eds\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Endpoints",
           "refId": "D"
         },
         {
-          "expr": "sum(rate(pilot_xds_pushes{type=\"lds\"}[$__interval_sx4]))",
+          "expr": "sum(irate(pilot_xds_pushes{type=\"lds\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Listeners",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(pilot_xds_pushes{type=\"rds\"}[$__interval_sx4]))",
+          "expr": "sum(irate(pilot_xds_pushes{type=\"rds\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Routes",
           "refId": "E"
         },
         {
-          "expr": "sum(rate(pilot_xds_pushes{type=\"sds\"}[$__interval_sx4]))",
+          "expr": "sum(irate(pilot_xds_pushes{type=\"sds\"}[1m]))",
+          "interval": "",
           "legendFormat": "Secrets",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(pilot_xds_pushes{type=\"nds\"}[$__interval_sx4]))",
+          "expr": "sum(irate(pilot_xds_pushes{type=\"nds\"}[1m]))",
+          "interval": "",
           "legendFormat": "Nametables",
           "refId": "F"
         }
@@ -701,7 +703,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "description": "Captures a variety of pilot errors",
       "fill": 1,
       "gridPos": {
@@ -733,7 +735,7 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "sum(pilot_xds_cds_reject{app=\"istiod\"}) or (absent(pilot_xds_cds_reject{app=\"istiod\"}) - 1)",
@@ -768,14 +770,14 @@
           "refId": "B"
         },
         {
-          "expr": "sum(rate(pilot_xds_write_timeout{app=\"istiod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(pilot_xds_write_timeout{app=\"istiod\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Write Timeouts",
           "refId": "F"
         },
         {
-          "expr": "sum(rate(pilot_total_xds_internal_errors{app=\"istiod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(pilot_total_xds_internal_errors{app=\"istiod\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -783,7 +785,7 @@
           "refId": "H"
         },
         {
-          "expr": "sum(rate(pilot_total_xds_rejects{app=\"istiod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(pilot_total_xds_rejects{app=\"istiod\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -791,7 +793,7 @@
           "refId": "E"
         },
         {
-          "expr": "sum(rate(pilot_xds_push_context_errors{app=\"istiod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(pilot_xds_push_context_errors{app=\"istiod\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -799,7 +801,7 @@
           "refId": "K"
         },
         {
-          "expr": "sum(rate(pilot_xds_write_timeout{app=\"istiod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(pilot_xds_write_timeout{app=\"istiod\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Push Timeouts",
@@ -852,7 +854,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "description": "Shows the total time it takes to push a config update to a proxy",
       "fill": 1,
       "gridPos": {
@@ -882,31 +884,31 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(pilot_proxy_convergence_time_bucket[$__interval_sx4])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(pilot_proxy_convergence_time_bucket[1m])) by (le))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "p50 ",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.9, sum(rate(pilot_proxy_convergence_time_bucket[$__interval_sx4])) by (le))",
+          "expr": "histogram_quantile(0.9, sum(rate(pilot_proxy_convergence_time_bucket[1m])) by (le))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "p90",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(pilot_proxy_convergence_time_bucket[$__interval_sx4])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(pilot_proxy_convergence_time_bucket[1m])) by (le))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "p99",
           "refId": "C"
         },
         {
-          "expr": "histogram_quantile(0.999, sum(rate(pilot_proxy_convergence_time_bucket[$__interval_sx4])) by (le))",
+          "expr": "histogram_quantile(0.999, sum(rate(pilot_proxy_convergence_time_bucket[1m])) by (le))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "p99.9",
@@ -959,7 +961,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -990,7 +992,7 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "pilot_conflict_inbound_listener{app=\"istiod\"}",
@@ -1001,28 +1003,12 @@
           "refId": "B"
         },
         {
-          "expr": "pilot_conflict_outbound_listener_http_over_current_tcp{app=\"istiod\"}",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "Outbound Listeners (http over current tcp)",
-          "refId": "A"
-        },
-        {
           "expr": "pilot_conflict_outbound_listener_tcp_over_current_tcp{app=\"istiod\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
           "legendFormat": "Outbound Listeners (tcp over current tcp)",
           "refId": "C"
-        },
-        {
-          "expr": "pilot_conflict_outbound_listener_tcp_over_current_http{app=\"istiod\"}",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "Outbound Listeners (tcp over current http)",
-          "refId": "D"
         }
       ],
       "thresholds": [],
@@ -1071,7 +1057,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -1100,7 +1086,7 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "avg(pilot_virt_services{app=\"istiod\"})",
@@ -1183,7 +1169,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "description": "Shows details about Envoy proxies in the mesh",
       "fill": 1,
       "gridPos": {
@@ -1213,10 +1199,10 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(envoy_cluster_upstream_cx_total{cluster_name=\"xds-grpc\"}[$__interval_sx4]))",
+          "expr": "sum(irate(envoy_cluster_upstream_cx_total{cluster_name=\"xds-grpc\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1224,7 +1210,7 @@
           "refId": "C"
         },
         {
-          "expr": "sum(rate(envoy_cluster_upstream_cx_connect_fail{cluster_name=\"xds-grpc\"}[$__interval_sx4]))",
+          "expr": "sum(irate(envoy_cluster_upstream_cx_connect_fail{cluster_name=\"xds-grpc\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1232,7 +1218,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(increase(envoy_server_hot_restart_epoch[$__interval_sx4]))",
+          "expr": "sum(increase(envoy_server_hot_restart_epoch[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Envoy Restarts",
@@ -1285,7 +1271,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -1314,12 +1300,12 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "sum(envoy_cluster_upstream_cx_active{cluster_name=\"xds-grpc\"})",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "XDS Active Connections",
           "refId": "C",
           "step": 2
@@ -1371,7 +1357,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "Prometheus",
       "description": "Shows the size of XDS requests and responses",
       "fill": 1,
       "gridPos": {
@@ -1403,10 +1389,10 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "max(rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name=\"xds-grpc\"}[$__interval_sx4]))",
+          "expr": "max(rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name=\"xds-grpc\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1414,7 +1400,7 @@
           "refId": "D"
         },
         {
-          "expr": "quantile(0.5, rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name=\"xds-grpc\"}[$__interval_sx4]))",
+          "expr": "quantile(0.5, rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name=\"xds-grpc\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1422,14 +1408,14 @@
           "refId": "B"
         },
         {
-          "expr": "max(rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name=\"xds-grpc\"}[$__interval_sx4]))",
+          "expr": "max(rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name=\"xds-grpc\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "XDS Request Bytes Max",
           "refId": "A"
         },
         {
-          "expr": "quantile(.5, rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name=\"xds-grpc\"}[$__interval_sx4]))",
+          "expr": "quantile(.5, rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name=\"xds-grpc\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "XDS Request Bytes Average",
@@ -1531,15 +1517,17 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(galley_validation_passed[$__interval_sx4]))",
+          "expr": "sum(rate(galley_validation_passed[1m]))",
+          "interval": "",
           "legendFormat": "Validations (Success)",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(galley_validation_failed[$__interval_sx4]))",
+          "expr": "sum(rate(galley_validation_failed[1m]))",
+          "interval": "",
           "legendFormat": "Validation (Failure)",
           "refId": "B"
         }
@@ -1625,15 +1613,17 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(sidecar_injection_success_total[$__interval_sx4]))",
+          "expr": "sum(rate(sidecar_injection_success_total[1m]))",
+          "interval": "",
           "legendFormat": "Injections (Success)",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(sidecar_injection_failure_total[$__interval_sx4]))",
+          "expr": "sum(rate(sidecar_injection_failure_total[1m]))",
+          "interval": "",
           "legendFormat": "Injections (Failure)",
           "refId": "B"
         }

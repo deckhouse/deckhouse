@@ -118,15 +118,15 @@ properties:
               minimum: 1
               maximum: 9
         default:
-          - version: "1.12"
-            alertSeverity: 4
           - version: "1.13"
+            alertSeverity: 4
+          - version: "1.16"
             alertSeverity: 6
         x-examples:
-          - [{version: "1.12", alertSeverity: 7}, {version: "1.13", alertSeverity: 9}]
+          - [{version: "1.13", alertSeverity: 4}, {version: "1.16", alertSeverity: 6}]
       globalVersion:
         type: string
-        x-examples: ["1.13"] # must be real
+        x-examples: ["1.19"] # must be real
       isGlobalVersionIstiodReady:
         type: boolean
         default: false
@@ -137,14 +137,14 @@ properties:
           type: string
         default: []
         x-examples:
-        - ["1.13"] # must be real
+        - ["1.19"] # must be real
       operatorVersionsToInstall:
         type: array
         items:
           type: string
         default: []
         x-examples:
-        - ["1.13"] # must be real
+        - ["1.19"] # must be real
       applicationNamespaces:
         type: array
         items:

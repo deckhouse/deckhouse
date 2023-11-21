@@ -3,11 +3,14 @@
 # Copyright 2023 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
-ISTIO_VER=${1:-1.16.2}
+ISTIO_VER=${1:-1.19.4}
 
 git clone --depth 1  --branch "${ISTIO_VER}" git@github.com:istio/istio.git 2>/dev/null
 
 cp istio/manifests/addons/dashboards/*.json .
+
+for i in $( ls *.json ); do mv $i ${i/-dashboard/}; done
+for i in $( ls *.json ); do mv $i ${i/istio-/}; done
 
 # Replace `irate` to `rate`
 sed 's/irate(/rate(/g' -i *.json
@@ -31,6 +34,6 @@ sed 's|/dashboard/db/istio-service-dashboard|/d/'${SERVICES_UID}'/istio-service-
 for dashboard in *.json; do
   for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | tr -d "[]" | sort | uniq); do
     echo $dashboard $range
-    sed  -i -e 's/\['${range}'\]/[$__interval_sx4]/g'  $dashboard
+    sed -e 's/\['${range}'\]/[$__interval_sx4]/g' $dashboard
   done
 done
