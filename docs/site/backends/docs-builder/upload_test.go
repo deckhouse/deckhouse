@@ -94,7 +94,7 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 		},
 		{
 			"openapi",
-			"/app/hugo/data/moduleName/stable/openapi",
+			"/app/hugo/data/modules/moduleName/stable/openapi",
 			true,
 		},
 	}
