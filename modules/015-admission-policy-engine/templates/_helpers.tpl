@@ -51,7 +51,7 @@
   {{- $policyCRDName := index . 2 }}
   {{- $policyAction := index . 3 }}
   {{- $parameters := index . 4 }}
-  {{- $defaultProfile := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultProfile | default "privileged" | lower) }}
+  {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "privileged" | lower) }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
@@ -74,13 +74,13 @@ spec:
     namespaceSelector:
       matchExpressions:
       {{- if eq $standard "baseline" }}
-        {{- if eq $defaultProfile "privileged" }}
+        {{- if eq $defaultPolicy "privileged" }}
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ baseline, restricted ] }
         {{- else }}
         - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged ] }
         {{- end }}
       {{- else if eq $standard "restricted" }}
-        {{- if eq $defaultProfile "restricted" }}
+        {{- if eq $defaultPolicy "restricted" }}
         - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged, baseline ] }
         {{- else }}
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ restricted ] }

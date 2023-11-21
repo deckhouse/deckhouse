@@ -50,10 +50,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: getVersion,
 		},
 	},
-}, setDefaultProfile)
+}, setDefaultPolicy)
 
-func profileCode(action string) float64 {
-	switch strings.ToLower(action) {
+func policyCode(name string) float64 {
+	switch strings.ToLower(name) {
 	case "restricted":
 		return 3
 	case "baseline":
@@ -65,18 +65,18 @@ func profileCode(action string) float64 {
 	}
 }
 
-func setDefaultProfile(input *go_hook.HookInput) error {
-	profile := getDefaultProfile(input)
-	input.Values.Set("admissionPolicyEngine.podSecurityStandards.defaultProfile", profile)
-	input.MetricsCollector.Expire("d8_admission_policy_engine_pss_default_profile")
-	input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_profile", profileCode(profile), map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_pss_default_profile"))
+func setDefaultPolicy(input *go_hook.HookInput) error {
+	policy := getDefaultPolicy(input)
+	input.Values.Set("admissionPolicyEngine.podSecurityStandards.defaultPolicy", policy)
+	input.MetricsCollector.Expire("d8_admission_policy_engine_pss_default_policy")
+	input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_policy", policyCode(policy), map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_pss_default_policy"))
 	return nil
 }
 
-func getDefaultProfile(input *go_hook.HookInput) string {
-	// default profile is set explicitly - nothing to do here
-	if profile := input.ConfigValues.Get("admissionPolicyEngine.podSecurityStandards.defaultProfile").String(); profile != "" {
-		return profile
+func getDefaultPolicy(input *go_hook.HookInput) string {
+	// default policy is set explicitly - nothing to do here
+	if policy := input.ConfigValues.Get("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String(); policy != "" {
+		return policy
 	}
 
 	// no map found - an old cluster
@@ -94,7 +94,7 @@ func getDefaultProfile(input *go_hook.HookInput) string {
 
 	// if deckhouse bootstrap release >= v1.55
 	if semver.Compare(semver.MajorMinor(deckhouseVersion), milestone) >= 0 {
-		input.LogEntry.Infof("PSS default profile for %v is set to baseline", deckhouseVersion)
+		input.LogEntry.Infof("PSS default policy for %v is set to baseline", deckhouseVersion)
 		return "Baseline"
 	}
 

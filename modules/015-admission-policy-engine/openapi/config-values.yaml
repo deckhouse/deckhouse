@@ -5,10 +5,10 @@ properties:
     default: {}
     description: "Pod Security Standards policy settings (PSS)."
     properties:
-      defaultProfile:
+      defaultPolicy:
         type: string
         description: |
-          Sets the default PSS profile for all non-system namespaces:
+          Sets the default PSS policy for all non-system namespaces:
           - `Privileged` — an unrestricted policy. Privilege escalation is possible with this policy;
           - `Baseline` — a policy with minimum restrictions that prevents privilege escalation;
           - `Restricted` — a policy with maximum restrictions that conforms to current best practices for securely running applications in a cluster.
@@ -30,6 +30,8 @@ properties:
           - Dryrun
       policies:
         type: object
+        description: |
+          Sets additional policy parameters.
         properties:
           hostPorts:
             type: object

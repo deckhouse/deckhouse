@@ -18,7 +18,7 @@ The type of cluster policy to use by default is determined based on the followin
 
 **Note** that upgrading Deckhouse in a cluster to v1.55 does not automatically result in a default policy change. 
 
-Default policies can be overridden either globally ([in the module settings](configuration.html#parameters-podsecuritystandards-defaultProfile)) or on a per-namespace basis (using the `security.deckhouse.io/pod-policy=<POLICY_NAME>` label for the corresponding namespace).
+Default policy can be overridden either globally ([in the module settings](configuration.html#parameters-podsecuritystandards-defaultPolicy)) or on a per-namespace basis (using the `security.deckhouse.io/pod-policy=<POLICY_NAME>` label for the corresponding namespace).
 
 Example of the command to set the `Restricted` policy for all Pods in the `my-namespace` Namespace.
 
