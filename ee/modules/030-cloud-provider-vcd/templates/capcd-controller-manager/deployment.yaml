@@ -3,8 +3,7 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
-{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -27,7 +26,7 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 50Mi
-  {{- end }}
+{{- end }}
 
 ---
 apiVersion: policy/v1
@@ -110,4 +109,3 @@ spec:
           secret:
             defaultMode: 420
             secretName: capcd-controller-manager-webhook-tls
-{{- end }}
