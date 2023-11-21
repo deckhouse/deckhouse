@@ -38,6 +38,26 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			"",
 			false,
 		},
+		{
+			"crds/object.yaml",
+			"/app/hugo/data/moduleName/stable/crds/object.yaml",
+			true,
+		},
+		{
+			"openapi/doc-ru-config-values.yaml",
+			"/app/hugo/data/moduleName/stable/openapi/doc-ru-config-values.yaml",
+			true,
+		},
+		{
+			"openapi/openapi-case-tests.yaml",
+			"",
+			false,
+		},
+		{
+			"./openapi/config-values.yaml",
+			"/app/hugo/data/moduleName/stable/openapi/config-values.yaml",
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.fileName, func(t *testing.T) {
