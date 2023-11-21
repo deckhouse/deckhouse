@@ -416,6 +416,7 @@ func DeleteCAPIMachineDeployments(kubeCl *client.KubernetesClient) error {
 		}
 
 		for _, machine := range allMachines.Items {
+			log.DebugF("Patch nodeDrainTimeout for machine %s\n", machine.GetName())
 			m := machine
 			// we delete cluster anyway and we can force delete machine (without drain)
 			unstructured.SetNestedField(m.Object, "10s", "spec", "nodeDrainTimeout")
@@ -424,6 +425,8 @@ func DeleteCAPIMachineDeployments(kubeCl *client.KubernetesClient) error {
 			if err != nil {
 				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
 			}
+
+			log.DebugF("Machine %s patched\n", machine.GetName())
 		}
 
 		allMachineDeployments, err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
@@ -434,6 +437,10 @@ func DeleteCAPIMachineDeployments(kubeCl *client.KubernetesClient) error {
 		for _, machineDeployment := range allMachineDeployments.Items {
 			namespace := machineDeployment.GetNamespace()
 			name := machineDeployment.GetName()
+			if name == "master" {
+				log.InfoLn("Machine deployment 'master' was skipped. It will be deleted later.")
+				continue
+			}
 			err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("delete machinedeployments %s: %v", name, err)
@@ -451,10 +458,24 @@ func WaitForCAPIMachinesDeletion(kubeCl *client.KubernetesClient) error {
 			return err
 		}
 
-		count := len(resources.Items)
+		machines := make([]unstructured.Unstructured, 0, len(resources.Items))
+		for _, m := range resources.Items {
+			labels := m.GetLabels()
+			if labels != nil {
+				ng, ok := labels["node-group"]
+				if ok && ng == "master" {
+					log.DebugF("Machine %s was skipped from delete check because it is in master ng. Continue.\n", m.GetName())
+					continue
+				}
+			}
+
+			machines = append(machines, m)
+		}
+
+		count := len(machines)
 		if count != 0 {
 			builder := strings.Builder{}
-			for _, item := range resources.Items {
+			for _, item := range machines {
 				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.GetNamespace(), item.GetName()))
 			}
 			return fmt.Errorf("%d CAPI Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
