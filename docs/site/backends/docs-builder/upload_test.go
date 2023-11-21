@@ -92,6 +92,11 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			"/app/hugo/data/modules/moduleName/stable/openapi",
 			true,
 		},
+		{
+			"openapi",
+			"/app/hugo/data/moduleName/stable/openapi",
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.fileName, func(t *testing.T) {

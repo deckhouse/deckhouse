@@ -175,6 +175,7 @@ func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string
 	}
 
 	if strings.HasPrefix(fileName, "crds") ||
+		fileName == "openapi" ||
 		fileName == "openapi/config-values.yaml" ||
 		docConfValuesRegexp.MatchString(fileName) {
 		return filepath.Join(u.baseDir, "data", moduleName, channel, fileName), true
