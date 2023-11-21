@@ -48,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 )
 
@@ -387,7 +388,7 @@ func buildDocumentation(client d8http.Client, img v1.Image, moduleName, moduleVe
 		return nil
 	}
 
-	rc := mutate.Extract(img)
+	rc := module.ExtractDocs(img)
 	defer rc.Close()
 
 	const docsBuilderBasePath = "http://documentation-builder.d8-system.svc.cluster.local:8081"
