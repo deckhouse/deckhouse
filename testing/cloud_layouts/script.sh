@@ -782,6 +782,7 @@ function wait_cluster_ready() {
   test_failed=
 
   testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
+  testAlerts=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
