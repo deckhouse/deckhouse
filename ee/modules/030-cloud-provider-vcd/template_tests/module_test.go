@@ -48,11 +48,27 @@ const globalValues = `
 const moduleValuesA = `
     internal:
       providerClusterConfiguration:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: VCDClusterConfiguration
         provider:
           username: myuname
           password: myPaSsWd
           insecure: true
           server: "http://server/api"
+        layout: Standard
+        sshPublicKey: rsa-aaaa
+        organization: org
+        virtualDataCenter: dc
+        virtualApplicationName: app
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            template: Templates/ubuntu-focal-20.04
+            mainNetwork: internal
+            sizingPolicy: 4cpu8ram
+            rootDiskSizeGb: 20
+            etcdDiskSizeGb: 20
+            storageProfile: nvme
 `
 
 var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
@@ -75,7 +91,7 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderVCD", moduleValuesA)
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesA)
 			f.HelmRender()
 		})
 

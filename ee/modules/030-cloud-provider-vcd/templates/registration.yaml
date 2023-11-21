@@ -1,6 +1,3 @@
-{{- $providerClusterConfiguration := .Values.cloudProviderVcd.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
-{{- $providerDiscoveryData := .Values.cloudProviderVsphere.internal.providerDiscoveryData | default dict }}
-{{- $masterNodeGroup := $providerClusterConfiguration.masterNodeGroup | default dict }}
 ---
 apiVersion: v1
 kind: Secret

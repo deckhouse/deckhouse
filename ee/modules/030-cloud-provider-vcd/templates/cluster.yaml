@@ -47,6 +47,7 @@ spec:
     secretRef:
       name: capi-user-credentials
       namespace: d8-cloud-instance-manager
+{{- if hasKey $.Values.global.clusterConfiguration "proxy" }}
   proxyConfigSpec:
     {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpProxy" }}
     httpProxy: {{ $.Values.global.clusterConfiguration.proxy.httpProxy | quote }}
@@ -60,5 +61,6 @@ spec:
     {{- end }}
     noProxy:
     {{- $noProxy | toYaml | nindent 4 }}
+{{- end }}
 # TODO change it on generic solution for *ControlPlane
 

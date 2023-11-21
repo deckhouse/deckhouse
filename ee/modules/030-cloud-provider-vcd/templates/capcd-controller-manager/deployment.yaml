@@ -3,6 +3,10 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $capcdImageName := join "" (list "capcdControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $autoscalerImage := include "helm_lib_module_image_no_fail" (list . $capcdImageName) }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -74,7 +78,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: capcd-controller-manager
-        image: {{ include "helm_lib_module_image" (list . "capcdControllerManager") }}
+        image: {{ $autoscalerImage }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9443
