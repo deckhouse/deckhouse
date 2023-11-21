@@ -10,11 +10,13 @@
 
         {{.Content}}
 
-        {{ if eq .Name "CRD" }} {{/* Render module CRDs */}}
+        {{ if and .IsPage (eq .Name "CRD") }} {{/* Render module CRDs */}}
 
-          {{ $moduleName := "deckhouse-admin" }}
+          {{ $_pathElements := index ( findRESubmatch  `^([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+
+          {{ $moduleName := index $_pathElements 1 }}
           {{ $moduleData := index .Site.Data.modules $moduleName }}
-          {{ $moduleChannel := "alpha" }}
+          {{ $moduleChannel := index $_pathElements 2 }}
 
           {{ partial "module-resources" (dict "name" $moduleName "data" (index $moduleData $moduleChannel) "type" "crds" "lang" .Language.Lang )}}
 
