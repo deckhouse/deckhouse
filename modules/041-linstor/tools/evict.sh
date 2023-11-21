@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export TIMEOUT_SEC=15
+export TIMEOUT_SEC=10
 export DISKLESS_STORAGE_POOL="DfltDisklessStorPool"
 export LINSTOR_NAMESPACE="d8-linstor"
 
@@ -29,6 +29,22 @@ linstor() {
 }
 
 execute_command() {
+
+  if [[ "${NON_INTERACTIVE}" == "true" ]]; then
+    count=0
+    max_attempts=10
+    until eval "$@"; do
+      echo "Command \"$@\" failed. Retrying in $TIMEOUT_SEC seconds."
+      sleep $TIMEOUT_SEC
+      ((count++))
+      if [[ $count -eq $max_attempts ]]; then
+        echo "Maximum number of attempts reached. Command \"$@\" failed."
+        exit_function
+      fi
+    done
+    return
+  fi
+
   while true; do
     eval "$@"
     local exit_code=$?
@@ -50,11 +66,11 @@ execute_command() {
   done
 }
 
-linstor_check_faulty() {
+linstor_check_controller_online() {
+  echo "Checking for LINSTOR controller online"
   while true; do
-    echo "Checking for LINSTOR controller online"
     local count=0
-    local max_attempts=30
+    local max_attempts=20
     until linstor node list > /dev/null 2>&1 || [ $count -eq $max_attempts ]; do
       echo "LINSTOR controller is not online. Waiting $TIMEOUT_SEC seconds and rechecking for LINSTOR controller online. Attempt $((count+1))/$max_attempts."
       sleep $TIMEOUT_SEC
@@ -63,29 +79,52 @@ linstor_check_faulty() {
 
     if [ $count -eq $max_attempts ]; then
       echo "Timeout reached. LINSTOR controller is not online."
-      if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+      if get_user_confirmation "Exit the script? If not, the script will continue to wait for the LINSTOR controller to come online." "y" "n"; then
+        exit_function
+      else
         echo "Waiting $TIMEOUT_SEC seconds and rechecking for LINSTOR controller online"
         sleep $TIMEOUT_SEC
-      else
-        exit_function
+        continue
       fi
-      continue
     fi
-
     echo "LINSTOR controller is online"
-    echo "Checking for faulty resources"
-    if (( $(linstor resource list --faulty | tee /dev/tty | grep -v -i sync | grep  "[a-zA-Z0-9]" | wc -l) > 1)); then
-      echo "Faulty resources found."
-      if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+    return
+  done
+}
+
+linstor_check_faulty() {
+  linstor_check_controller_online
+
+  while true; do
+    local count=0
+    local max_attempts=5
+
+    until [ $count -eq $max_attempts ]; do
+      echo "Checking for faulty resources"
+      if (( $(linstor resource list --faulty | tee /dev/tty | grep -v -i sync | grep  "[a-zA-Z0-9]" | wc -l) > 1)); then
+        echo "Faulty resources found."
+        if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+          echo "Waiting $TIMEOUT_SEC seconds and rechecking for faulty resources"
+          sleep $TIMEOUT_SEC
+          ((count++))
+        else
+          exit_function
+        fi
+      else
+        echo "No faulty resources found"
+        return
+      fi
+    done
+
+    if [ $count -eq $max_attempts ]; then
+      echo "Maximum number of attempts reached. Faulty resources are still present."
+      if get_user_confirmation "Exit the script? If not, the script will continue to wait and recheck for faulty resources." "y" "n"; then
+        exit_function
+      else
         echo "Waiting $TIMEOUT_SEC seconds and rechecking for faulty resources"
         sleep $TIMEOUT_SEC
         continue
-      else
-        exit_function
       fi
-    else
-      echo "No faulty resources found"
-      return
     fi
   done
 }
@@ -96,49 +135,70 @@ linstor_check_advise() {
     if (( $(linstor advise r | tee /dev/tty | grep  "[a-zA-Z0-9]" | wc -l) > 1)); then
       echo "Advise found."
       echo "It is recommended to perform the advised actions manually."
-      if get_user_confirmation "Do you perform the advised actions manually?" "y" "n"; then
-        linstor_check_faulty
-      else
+      if get_user_confirmation "Exit the script? If not, the script will continue and recheck for advise." "y" "n"; then
         exit_function
+      else
+        linstor_check_faulty
+        continue
       fi
     else
       echo "No advise found"
-      break
+      return
     fi
   done
 }
 
 linstor_check_connection() {
   while true; do
-    echo "Checking connection of LINSTOR controller to its satellites."
+    count=0
+    max_attempts=5
 
-    SATELLITES_ONLINE=$(linstor -m --output-version=v1 node list | jq -r '.[][] | select(.type == "SATELLITE" and .connection_status == "ONLINE").name')
-    if [[ -z $SATELLITES_ONLINE ]]; then
-      echo "No satellites are online. This is usually a sign of issues with the LINSTOR controller operation. It is recommended to restart the controller and satellites."
-      echo "List of satellites:"
-      exec_linstor_with_exit_code_check node list
-      if get_user_confirmation "Perform connection recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
-        echo "Waiting $TIMEOUT_SEC seconds and rechecking the connection of LINSTOR controller to its satellites"
-        sleep $TIMEOUT_SEC
-      else
-        exit_function
-      fi
-    else
-      if [ $(linstor -m --output-version=v1 storage-pool list -s DfltDisklessStorPool -n $SATELLITES_ONLINE | jq '.[][].reports[]?.message' | grep 'No active connection to satellite' | wc -l) -ne 0 ]; then
-        echo "Some satellites are not connected, even though they are online. This is usually a sign of issues with the LINSTOR controller operation. It is recommended to restart the controller and satellites."
+
+    until [ $count -eq $max_attempts ]; do
+      echo "Checking connection of LINSTOR controller to its satellites."
+      ((count++))
+
+      SATELLITES_ONLINE=$(linstor -m --output-version=v1 node list | jq -r '.[][] | select(.type == "SATELLITE" and .connection_status == "ONLINE").name')
+      if [[ -z $SATELLITES_ONLINE ]]; then
+        echo "No satellites are online. This is usually a sign of issues with the LINSTOR controller operation. It is recommended to restart the controller and satellites."
         echo "List of satellites:"
         exec_linstor_with_exit_code_check node list
-        echo "List of storage pools:"
-        exec_linstor_with_exit_code_check storage-pool list
         if get_user_confirmation "Perform connection recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
           echo "Waiting $TIMEOUT_SEC seconds and rechecking the connection of LINSTOR controller to its satellites"
           sleep $TIMEOUT_SEC
+          continue
         else
           exit_function
         fi
       else
-        echo "LINSTOR controller has connection with all satellites that are online."
-        break
+        if [ $(linstor -m --output-version=v1 storage-pool list -s DfltDisklessStorPool -n $SATELLITES_ONLINE | jq '.[][].reports[]?.message' | grep 'No active connection to satellite' | wc -l) -ne 0 ]; then
+          echo "Some satellites are not connected, even though they are online. This is usually a sign of issues with the LINSTOR controller operation. It is recommended to restart the controller and satellites."
+          echo "List of satellites:"
+          exec_linstor_with_exit_code_check node list
+          echo "List of storage pools:"
+          exec_linstor_with_exit_code_check storage-pool list
+          if get_user_confirmation "Perform connection recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+            echo "Waiting $TIMEOUT_SEC seconds and rechecking the connection of LINSTOR controller to its satellites"
+            sleep $TIMEOUT_SEC
+            continue
+          else
+            exit_function
+          fi
+        else
+          echo "LINSTOR controller has connection with all satellites that are online."
+          return
+        fi
+      fi
+    done
+
+    if [ $count -eq $max_attempts ]; then
+      echo "Maximum number of attempts reached. LINSTOR controller has no connection with its satellites."
+      if get_user_confirmation "Exit the script? If not, the script will continue and recheck for connection." "y" "n"; then
+        exit_function
+      else
+        echo "Waiting $TIMEOUT_SEC seconds and rechecking the connection of LINSTOR controller to its satellites"
+        sleep $TIMEOUT_SEC
+        continue
       fi
     fi
   done
@@ -147,37 +207,82 @@ linstor_check_connection() {
 linstor_wait_sync() {
   local max_number_of_parallel_syncs=$1
   while true; do
-    echo "Checking the number of replicas currently syncing"
-    export SYNC_TARGET_RESOURCES=$(linstor -m --output-version=v1 resource list-volumes | jq -r '.[][] | select(.volumes[].state.disk_state | contains("SyncTarget")).name') 
-    if [[ -n "${SYNC_TARGET_RESOURCES}" ]]; then
-      echo "Resources found to be syncing at the moment. List of such resources:"
-      exec_linstor_with_exit_code_check resource list-volumes -r ${SYNC_TARGET_RESOURCES}
-      local number_of_parallel_syncs=$(echo ${SYNC_TARGET_RESOURCES} | wc -w)
-      if (( ${number_of_parallel_syncs} > ${max_number_of_parallel_syncs} )); then
-        echo "Number of sync operations at the moment=${number_of_parallel_syncs}. This is more than the maximum allowed number of simultaneously performed sync operations (${max_number_of_parallel_syncs}). Waiting for synchronization to complete."
-        sleep 15
+    count=0
+    max_attempts=180
+    until [ $count -eq $max_attempts ]; do
+      echo "Checking the number of replicas currently syncing"
+      ((count++))
+      export SYNC_TARGET_RESOURCES=$(linstor -m --output-version=v1 resource list-volumes | jq -r '.[][] | select(.volumes[].state.disk_state | contains("SyncTarget")).name') 
+      if [[ -n "${SYNC_TARGET_RESOURCES}" ]]; then
+        echo "Resources found to be syncing at the moment. List of such resources:"
+        exec_linstor_with_exit_code_check resource list-volumes -r ${SYNC_TARGET_RESOURCES}
+        local number_of_parallel_syncs=$(echo ${SYNC_TARGET_RESOURCES} | wc -w)
+        if (( ${number_of_parallel_syncs} > ${max_number_of_parallel_syncs} )); then
+          echo "Number of sync operations at the moment=${number_of_parallel_syncs}. This is more than the maximum allowed number of simultaneously performed sync operations (${max_number_of_parallel_syncs}). Waiting for synchronization to complete."
+          sleep ${TIMEOUT_SEC}
+          continue
+        else
+          echo "Number of sync operations at the moment=${number_of_parallel_syncs}. This is less than or equal to the maximum allowed number of simultaneously performed sync operations (${max_number_of_parallel_syncs}). Ending synchronization wait."
+          return
+        fi
       else
-        echo "Number of sync operations at the moment=${number_of_parallel_syncs}. This is less than or equal to the maximum allowed number of simultaneously performed sync operations (${max_number_of_parallel_syncs}). Ending synchronization wait."
-        break
+        echo "No resources found to be syncing at the moment. Ending synchronization wait."
+        return
       fi
-    else
-      echo "No resources found to be syncing at the moment. Ending synchronization wait."
-      break
+    done
+
+    if [ $count -eq $max_attempts ]; then
+      echo "Maximum number of attempts reached. Resources are still syncing."
+      if get_user_confirmation "Exit the script? If not, the script will continue and recheck for synchronization." "y" "n"; then
+        exit_function
+      else
+        echo "Waiting $TIMEOUT_SEC seconds and rechecking the number of replicas currently syncing"
+        sleep $TIMEOUT_SEC
+        continue
+      fi
     fi
   done
 }
 
 
 is_linstor_satellite_online() {
-  node_connection_status=$(linstor -m --output-version=v1 node list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" '.[][] | select(.name == $nodeName).connection_status')
-  if [[ ${node_connection_status^^} == "ONLINE" ]]; then
-    return 0
-  else
-    echo "Node ${NODE_FOR_EVICT} is not ONLINE in LINSTOR."
-    echo "List of satellites:"
-    exec_linstor_with_exit_code_check node list 
-    return 1
-  fi
+
+  while true; do
+    count=0
+    max_attempts=10
+    until [ $count -eq $max_attempts ]; do
+      echo "Checking the connection status of node ${NODE_FOR_EVICT} in LINSTOR"
+      ((count++))
+      node_connection_status=$(linstor -m --output-version=v1 node list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" '.[][] | select(.name == $nodeName).connection_status')
+      if [[ ${node_connection_status^^} == "ONLINE" ]]; then
+        return 0
+      else
+        echo "Node ${NODE_FOR_EVICT} is not ONLINE in LINSTOR."
+        echo "List of satellites:"
+        exec_linstor_with_exit_code_check node list 
+        if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+          echo "Waiting $TIMEOUT_SEC seconds and rechecking the connection status of node ${NODE_FOR_EVICT} in LINSTOR"
+          sleep $TIMEOUT_SEC
+          continue
+        else
+          return 1
+        fi
+      fi
+    done
+
+    if [ $count -eq $max_attempts ]; then
+      echo "Maximum number of attempts reached. Node ${NODE_FOR_EVICT} is not ONLINE in LINSTOR."
+      echo "List of satellites:"
+      exec_linstor_with_exit_code_check node list
+      if get_user_confirmation "Stop checking? If not, the script will continue and recheck for the connection status of node ${NODE_FOR_EVICT} in LINSTOR." "y" "n"; then
+        return 1
+      else
+        echo "Waiting $TIMEOUT_SEC seconds and rechecking the connection status of node ${NODE_FOR_EVICT} in LINSTOR"
+        sleep $TIMEOUT_SEC
+        continue
+      fi
+    fi
+  done
 }
 
 is_linstor_satellite_does_not_exist() {
@@ -220,22 +325,40 @@ linstor_change_replicas_count() {
     fi
 
     while true; do
-      current_diskful_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName != $disklessStorPoolName).name] | length')    
-      if [[ -z $current_diskful_replicas_count ]]; then
-        echo "Warning! Can't get the total number of diskfull replicas for resource ${resource_name}."
+      count=0
+      max_attempts=10
+      until [ $count -eq $max_attempts ]; do
+        current_diskful_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName != $disklessStorPoolName).name] | length')    
+        ((count++))
+        if [[ -z $current_diskful_replicas_count ]]; then
+          echo "Warning! Can't get the total number of diskfull replicas for resource ${resource_name}."
+          echo "Resource status:"
+          exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+          if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+            echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskfull replicas for resource ${resource_name}"
+            sleep $TIMEOUT_SEC
+          else
+            exit_function
+          fi
+        else
+          break
+        fi
+      done
+
+      if [ $count -eq $max_attempts ]; then
+        echo "Maximum number of attempts reached. Can't get the total number of diskfull replicas for resource ${resource_name}."
         echo "Resource status:"
         exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
-        if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+        if get_user_confirmation "Exit the script? If not, the script will continue and recheck for the total number of diskfull replicas for resource ${resource_name}." "y" "n"; then
+          exit_function
+        else
           echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskfull replicas for resource ${resource_name}"
           sleep $TIMEOUT_SEC
-        else
-          exit_function
+          continue
         fi
-      else
-        break
       fi
+      break
     done
-
 
     echo "Current status of the resource:"
     exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
@@ -252,20 +375,39 @@ linstor_change_replicas_count() {
       exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
 
       while true; do
-        current_diskful_replicas_count_new=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName != $disklessStorPoolName).name] | length')
-        if [[ -z $current_diskful_replicas_count_new ]]; then
-          echo "Warning! Can't get the total number of diskfull replicas for resource ${resource_name}."
+        count=0
+        max_attempts=10
+        until [ $count -eq $max_attempts ]; do
+          current_diskful_replicas_count_new=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName != $disklessStorPoolName).name] | length')
+          ((count++))
+          if [[ -z $current_diskful_replicas_count_new ]]; then
+            echo "Warning! Can't get the total number of diskfull replicas for resource ${resource_name}."
+            echo "Resource status:"
+            exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+            if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+              echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskfull replicas for resource ${resource_name}"
+              sleep $TIMEOUT_SEC
+            else
+              exit_function
+            fi
+          else
+            break
+          fi
+        done
+
+        if [ $count -eq $max_attempts ]; then
+          echo "Maximum number of attempts reached. Can't get the total number of diskfull replicas for resource ${resource_name}."
           echo "Resource status:"
           exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
-          if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+          if get_user_confirmation "Exit the script? If not, the script will continue and recheck for the total number of diskfull replicas for resource ${resource_name}." "y" "n"; then
+            exit_function
+          else
             echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskfull replicas for resource ${resource_name}"
             sleep $TIMEOUT_SEC
-          else
-            exit_function
+            continue
           fi
-        else
-          break
         fi
+        break
       done
       
       if (( ${current_diskful_replicas_count_new} != ${desired_diskful_replicas_count} )); then
@@ -292,32 +434,12 @@ create_tiebreaker() {
   resource_name=$1
 
   while true; do
-    diskless_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName == $disklessStorPoolName).name] | length')
-    if [[ -z $diskless_replicas_count ]]; then
-      echo "Warning! Can't get the total number of diskless replicas for resource ${resource_name}."
-      echo "Resource status:"
-      exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
-      if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
-        echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskless replicas for resource ${resource_name}"
-        sleep $TIMEOUT_SEC
-      else
-        exit_function
-      fi
-    else
-      break
-    fi
-  done
-
-
-
-  if (( ${diskless_replicas_count} < 1 )); then
-    echo "The count of diskless replicas is ${diskless_replicas_count}. Creating a TieBreaker for resource ${resource_name}"
-    exec_linstor_with_exit_code_check resource-definition set-property $resource_name DrbdOptions/auto-add-quorum-tiebreaker true
-    sleep 5
-
-    while true; do
-      diskless_replicas_count_new=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName == $disklessStorPoolName).name] | length')
-      if [[ -z $diskless_replicas_count_new ]]; then
+    count=0
+    max_attempts=10
+    until [ $count -eq $max_attempts ]; do
+      diskless_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName == $disklessStorPoolName).name] | length')
+      ((count++))
+      if [[ -z $diskless_replicas_count ]]; then
         echo "Warning! Can't get the total number of diskless replicas for resource ${resource_name}."
         echo "Resource status:"
         exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
@@ -331,6 +453,65 @@ create_tiebreaker() {
         break
       fi
     done
+
+    if [ $count -eq $max_attempts ]; then
+      echo "Maximum number of attempts reached. Can't get the total number of diskless replicas for resource ${resource_name}."
+      echo "Resource status:"
+      exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+      if get_user_confirmation "Exit the script? If not, the script will continue and recheck for the total number of diskless replicas for resource ${resource_name}." "y" "n"; then
+        exit_function
+      else
+        echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskless replicas for resource ${resource_name}"
+        sleep $TIMEOUT_SEC
+        continue
+      fi
+    fi
+    break
+  done
+
+
+
+  if (( ${diskless_replicas_count} < 1 )); then
+    echo "The count of diskless replicas is ${diskless_replicas_count}. Creating a TieBreaker for resource ${resource_name}"
+    exec_linstor_with_exit_code_check resource-definition set-property $resource_name DrbdOptions/auto-add-quorum-tiebreaker true
+    sleep 5
+
+    while true; do
+      count=0
+      max_attempts=10
+      until [ $count -eq $max_attempts ]; do
+        diskless_replicas_count_new=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName == $disklessStorPoolName).name] | length')
+        ((count++))
+        if [[ -z $diskless_replicas_count_new ]]; then
+          echo "Warning! Can't get the total number of diskless replicas for resource ${resource_name}."
+          echo "Resource status:"
+          exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+          if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+            echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskless replicas for resource ${resource_name}"
+            sleep $TIMEOUT_SEC
+          else
+            exit_function
+          fi
+        else
+          break
+        fi
+      done
+
+      if [ $count -eq $max_attempts ]; then
+        echo "Maximum number of attempts reached. Can't get the total number of diskless replicas for resource ${resource_name}."
+        echo "Resource status:"
+        exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+        if get_user_confirmation "Exit the script? If not, the script will continue and recheck for the total number of diskless replicas for resource ${resource_name}." "y" "n"; then
+          exit_function
+        else
+          echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskless replicas for resource ${resource_name}"
+          sleep $TIMEOUT_SEC
+          continue
+        fi
+      fi
+      break
+    done
+
     if (( ${diskless_replicas_count_new} < 1 )); then
       echo "Warning! TieBreaker for the resource did not create. Resource status:"
       exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
@@ -346,8 +527,8 @@ linstor_delete_resources_from_node() {
 
   for resource_name in $resource_names_list; do
     echo "Beginning the process of deleting resource ${resource_name}, which has replicas on the node being evicted ${NODE_FOR_EVICT}"
-    linstor_check_connection
     linstor_check_faulty
+    linstor_check_connection
     linstor_wait_sync 0
     echo "Current status of the resource:"
     exec_linstor_with_exit_code_check resource list-volumes -r ${resource_name}
@@ -360,20 +541,39 @@ linstor_delete_resources_from_node() {
     sleep 2
 
     while true; do
-      current_diskful_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName != $disklessStorPoolName).name] | length')    
-      if [[ -z $current_diskful_replicas_count ]]; then
-        echo "Warning! Can't get the total number of diskfull replicas for resource ${resource_name}."
+      count=0
+      max_attempts=10
+      until [ $count -eq $max_attempts ]; do
+        current_diskful_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName != $disklessStorPoolName).name] | length')    
+        ((count++))
+        if [[ -z $current_diskful_replicas_count ]]; then
+          echo "Warning! Can't get the total number of diskfull replicas for resource ${resource_name}."
+          echo "Resource status:"
+          exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
+          if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+            echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskfull replicas for resource ${resource_name}"
+            sleep $TIMEOUT_SEC
+          else
+            exit_function
+          fi
+        else
+          break
+        fi
+      done
+
+      if [ $count -eq $max_attempts ]; then
+        echo "Maximum number of attempts reached. Can't get the total number of diskfull replicas for resource ${resource_name}."
         echo "Resource status:"
         exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
-        if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+        if get_user_confirmation "Exit the script? If not, the script will continue and recheck for the total number of diskfull replicas for resource ${resource_name}." "y" "n"; then
+          exit_function
+        else
           echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskfull replicas for resource ${resource_name}"
           sleep $TIMEOUT_SEC
-        else
-          exit_function
+          continue
         fi
-      else
-        break
       fi
+      break
     done
     
     if (( $current_diskful_replicas_count == 2 )); then
@@ -390,6 +590,10 @@ get_user_confirmation() {
   local prompt="$1"
   local positive_case="$2"
   local negative_case="$3"
+
+  if [[ "${NON_INTERACTIVE}" == "true" ]]; then
+    return 0
+  fi
 
   while true; do
     echo -n "$prompt ($positive_case/$negative_case): "
@@ -412,6 +616,11 @@ get_user_confirmation() {
 }
 
 exit_function(){
+  if [[ "${NON_INTERACTIVE}" == "true" ]]; then
+    echo "Terminating the script"
+    exit 1
+  fi
+
   if get_user_confirmation "Terminate the script?" "y" "n"; then
     if get_user_confirmation "Return node ${NODE_FOR_EVICT} to LINSTOR scheduler?" "y" "n"; then
       echo "Returning node ${NODE_FOR_EVICT} to LINSTOR scheduler"
@@ -429,9 +638,11 @@ exit_function(){
 
 kubernetes_check_node() {
   export DISKFUL_RESOURCES_TO_EVICT=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName != $disklessStorPoolName).name')
-  if [[ -z "${DISKFUL_RESOURCES_TO_EVICT}" ]]; then
+  export DISKLESS_RESOURCES_TO_EVICT=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')   
+
+  if [[ -z "${DISKFUL_RESOURCES_TO_EVICT}" && -z "${DISKLESS_RESOURCES_TO_EVICT}" ]]; then
       echo
-      echo "List of resources to evict is empty. Please enter the values again."
+      echo "List of resources to evict is empty. Please choose another node."
       echo "List of storage pools and nodes in LINSTOR:"
       exec_linstor_with_exit_code_check storage-pool list
       sleep 2
@@ -482,19 +693,35 @@ linstor_backup_database() {
   echo "Performing database backup"
   
   while true; do
-    echo "Checking the number of replicas for LINSTOR controller and Piraeus operator"
-    linstor_controller_current_replicas=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment linstor-controller -o jsonpath='{.spec.replicas}')
-    piraeus_current_replicas=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment piraeus-operator -o jsonpath='{.spec.replicas}')
+    count=0
+    max_attempts=10
+    until [ $count -eq $max_attempts ]; do
+      echo "Checking the number of replicas for LINSTOR controller and Piraeus operator"
+      linstor_controller_current_replicas=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment linstor-controller -o jsonpath='{.spec.replicas}')
+      piraeus_current_replicas=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment piraeus-operator -o jsonpath='{.spec.replicas}')
+      ((count++))
+      if [[ -z "${linstor_controller_current_replicas}" || -z "${piraeus_current_replicas}" ]]; then
+        echo "Can't get the number of replicas for LINSTOR controller or piraeus-operator."
+        if get_user_confirmation "Should we recheck the number of replicas for the LINSTOR controller and piraeus-operator after $TIMEOUT_SEC seconds? (Note that the database backup will not be performed if this is not done.)" "y" "n"; then
+          echo "Waiting $TIMEOUT_SEC seconds and rechecking the number of replicas for LINSTOR controller and piraeus-operator"
+          sleep $TIMEOUT_SEC
+          continue
+        else
+          exit_function
+        fi
+      else
+        break
+      fi
+    done
 
-
-    if [[ -z "${linstor_controller_current_replicas}" || -z "${piraeus_current_replicas}" ]]; then
-      echo "Can't get the number of replicas for LINSTOR controller or piraeus-operator."
-      if get_user_confirmation "Should we recheck the number of replicas for the LINSTOR controller and piraeus-operator after $TIMEOUT_SEC seconds? (Note that the database backup will not be performed if this is not done.)" "y" "n"; then
+    if [ $count -eq $max_attempts ]; then
+      echo "Timeout reached. Can't get the number of replicas for LINSTOR controller or piraeus-operator."
+      if get_user_confirmation "Exit the script? If not, the script will continue and recheck for the number of replicas for LINSTOR controller and piraeus-operator." "y" "n"; then
+        exit_function
+      else
         echo "Waiting $TIMEOUT_SEC seconds and rechecking the number of replicas for LINSTOR controller and piraeus-operator"
         sleep $TIMEOUT_SEC
         continue
-      else
-        return
       fi
     fi
     break
@@ -525,41 +752,52 @@ linstor_backup_database() {
 
 delete_node_from_kubernetes_and_linstor() {
   while true; do
-    deckhouse_current_replicas=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.replicas}')
-    piraeus_current_replicas=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment piraeus-operator -o jsonpath='{.spec.replicas}')
+    count=0
+    max_attempts=10
+    until [ $count -eq $max_attempts ]; do
+      echo "Checking the number of replicas for Deckhouse and Piraeus operator"
+      deckhouse_current_replicas=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.replicas}')
+      piraeus_current_replicas=$(kubectl -n ${LINSTOR_NAMESPACE} get deployment piraeus-operator -o jsonpath='{.spec.replicas}')
+      ((count++))
+      if [[ -z "${deckhouse_current_replicas}" || -z "${piraeus_current_replicas}" ]]; then
+        echo "Can't get the number of replicas for Deckhouse or Piraeus operator."
+        if get_user_confirmation "Should we recheck the number of replicas for Deckhouse and Piraeus operator after $TIMEOUT_SEC seconds? (Note that the node will not be deleted from Kubernetes and LINSTOR if this is not done.)" "y" "n"; then
+          echo "Waiting $TIMEOUT_SEC seconds and rechecking the number of replicas for Deckhouse and Piraeus operator"
+          sleep $TIMEOUT_SEC
+          continue
+        else
+          echo "Warning! The node will not be deleted from Kubernetes and LINSTOR."
+          exit_function
+          return
+        fi
+      fi
+      break
+    done
 
-    if [[ -z "${deckhouse_current_replicas}" || -z "${piraeus_current_replicas}" ]]; then
-      echo "Can't get the number of replicas for Deckhouse or Piraeus operator."
-      if get_user_confirmation "Should we recheck the number of replicas for Deckhouse and Piraeus operator after $TIMEOUT_SEC seconds? (Note that the node will not be deleted from Kubernetes and LINSTOR if this is not done.)" "y" "n"; then
+    if [ $count -eq $max_attempts ]; then
+      echo "Timeout reached. Can't get the number of replicas for Deckhouse or Piraeus operator."
+      if get_user_confirmation "Exit the script? If not, the script will continue and recheck for the number of replicas for Deckhouse and Piraeus operator." "y" "n"; then
+        exit_function
+      else
         echo "Waiting $TIMEOUT_SEC seconds and rechecking the number of replicas for Deckhouse and Piraeus operator"
         sleep $TIMEOUT_SEC
         continue
-      else
-        echo "Warning! The node will not be deleted from Kubernetes and LINSTOR."
-        return
       fi
     fi
     break
   done
 
-  while true; do
-    if is_linstor_satellite_online; then
-      linstor_satellite_online="true"
-    else
-      linstor_satellite_online="false"
-    fi
-      
-    if [[ $linstor_satellite_online == "true" ]]; then
-      echo "Node $NODE_FOR_EVICT is ONLINE in LINSTOR. Performing standard node deletion procedure from LINSTOR"
-    else
-      echo "Warning! Node ${NODE_FOR_EVICT} is not ONLINE in LINSTOR. It is impossible to perform standard node deletion procedure from LINSTOR. The command \"linstor node lost ${NODE_FOR_EVICT}\" needs to be executed."
-      if get_user_confirmation "Perform a re-check of the connection with node ${NODE_FOR_EVICT} after $TIMEOUT_SEC seconds?" "y" "n"; then
-        echo "Waiting for $TIMEOUT_SEC seconds and re-checking the connection with node ${NODE_FOR_EVICT}"
-        sleep $TIMEOUT_SEC
-        continue
-      fi
-    fi
-  done
+  if is_linstor_satellite_online; then
+    linstor_satellite_online="true"
+  else
+    linstor_satellite_online="false"
+  fi
+    
+  if [[ $linstor_satellite_online == "true" ]]; then
+    echo "Node $NODE_FOR_EVICT is ONLINE in LINSTOR. Performing standard node deletion procedure from LINSTOR"
+  else
+    echo "Warning! Node ${NODE_FOR_EVICT} is not ONLINE in LINSTOR. It is impossible to perform standard node deletion procedure from LINSTOR. The command \"linstor node lost ${NODE_FOR_EVICT}\" needs to be executed."
+  fi
 
   echo "The procedure for deleting a node from LINSTOR will consist of the following actions:" 
   echo "1. Shutting down Deckhouse and Piraeus operator"
@@ -609,34 +847,102 @@ delete_node_from_kubernetes_and_linstor() {
 }
 
 
+process_args() {
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+      --non-interactive)
+        NON_INTERACTIVE=true
+        shift
+        ;;
+      --skip-db-backup)
+        CREATE_DB_BACKUP=false
+        shift
+        ;;
+      # --delete-resources-only)
+      #   DELETE_RESOURCES=true
+      #   DELETE_MODE="resources-only"
+      #   shift
+      #   ;;
+      --delete-node)
+        DELETE_NODE=true
+        DELETE_MODE="node"
+        shift
+        ;;
+      --node-name)
+        NODE_FOR_EVICT="$2"
+        shift
+        shift
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  if [[ "${DELETE_RESOURCES}" == "true" && "${DELETE_NODE}" == "true" ]]; then
+    echo "The arguments \"--delete-resources-only\" and \"--delete-node\" can not be used together."
+    exit 1
+  fi
+
+}
+
+#####################################
+################ MAIN ###############
+#####################################
+NON_INTERACTIVE=false
+CREATE_DB_BACKUP=true
+DELETE_MODE=""
+
 echo "The script for evicting LINSTOR resources has been launched. Performing necessary checks before starting."
+process_args "$@"
+
+if [[ -z "${DELETE_MODE}" ]]; then
+  #echo "Please choose the delete mode. Possible arguments: \"--delete-resources-only\" or \"--delete-node\""
+  echo "Please choose the delete mode. Possible arguments: \"--delete-node\""
+  exit 1
+fi
+
 linstor_check_faulty
 linstor_check_connection
 linstor_wait_sync 0
 
-echo "List of storage pools and nodes in LINSTOR:"
-exec_linstor_with_exit_code_check storage-pool list
-
-while true; do
-  while true; do
-    echo -n "Enter the name of the node from which LINSTOR resources need to be evicted: "
-    read NODE_FOR_EVICT
-    if [[ -z "$NODE_FOR_EVICT" ]]; then
-        echo "Name cannot be empty. Please enter the value again."
-    else
-        break
-    fi
-  done
-
+if [[ "${NON_INTERACTIVE}" == "false" ]]; then
+  echo "List of storage pools and nodes in LINSTOR:"
+  exec_linstor_with_exit_code_check storage-pool list
   echo
-  
-  if kubernetes_check_node; then
-    break
-  fi
-  
-done
+  while true; do
+    while true; do
+      echo -n "Enter the name of the node from which LINSTOR resources need to be evicted: "
+      read NODE_FOR_EVICT
+      if [[ -z "$NODE_FOR_EVICT" ]]; then
+          echo "Name cannot be empty. Please enter the value again."
+      else
+          break
+      fi
+    done
 
-if get_user_confirmation "Perform database backup before evicting resources from node ${NODE_FOR_EVICT}?" "y" "n"; then
+    echo
+    
+    if kubernetes_check_node; then
+      break
+    fi
+    
+  done
+else
+  if [[ -z "${NODE_FOR_EVICT}" ]]; then
+    echo "Please choose the node from which LINSTOR resources need to be evicted. Example: --node-name <node name>"    
+    exit 1
+  fi
+
+  if ! kubernetes_check_node; then
+    exit 1
+  fi
+fi
+
+
+
+if [[ "${CREATE_DB_BACKUP}" == "true" ]]; then
   linstor_backup_database
 fi
 
@@ -689,16 +995,11 @@ echo "Get resources that have TieBreaker on evicted node ${NODE_FOR_EVICT}"
 
 echo "Attention! Before evacuate resources from node ${NODE_FOR_EVICT}, make sure that all resources in LINSTOR are in UpToDate state."
 
-if get_user_confirmation "Do you want to delete node ${NODE_FOR_EVICT} from Kubernetes and LINSTOR? If not, then only the deletion of all resources from ${NODE_FOR_EVICT} will be executed." "y" "n"; then  
+if [[ "${DELETE_MODE}" == "node" ]]; then
   delete_node_from_kubernetes_and_linstor
-else
-  if get_user_confirmation "Do you want to delete all resources from node ${NODE_FOR_EVICT}?" "y" "n"; then
-    echo "Only the deletion of all resources from ${NODE_FOR_EVICT} will be executed. The node will NOT be deleted from Kubernetes and LINSTOR."
-    export RESOURCE_REMOVAL="true"
-    linstor_delete_resources_from_node "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
-  else
-    echo "Deletion of resources from node ${NODE_FOR_EVICT} will not be performed."
-  fi
+elif [[ "${DELETE_MODE}" == "resources-only" ]]; then
+  echo "Only the deletion of all resources from ${NODE_FOR_EVICT} will be executed. The node will NOT be deleted from Kubernetes and LINSTOR."
+  linstor_delete_resources_from_node "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
 fi
 
 
@@ -707,26 +1008,22 @@ echo "State of all resources after evacuate resources from node ${NODE_FOR_EVICT
 exec_linstor_with_exit_code_check resource list-volumes
 sleep 2
 
-while true; do
-  if get_user_confirmation "Should we reduce the number of replicas to their previous values for movable resources and also check for TieBreakers?" "y" "n"; then
-    linstor_change_replicas_count 0 2 "${RESOURCE_AND_GROUP_NAMES_NEW}" "${RESOURCE_GROUPS_NEW}" "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
-    break
-  fi
-  exit_function
-done
+if get_user_confirmation "Should we reduce the number of replicas to their previous values for movable resources and also check for TieBreakers?" "y" "n"; then
+  linstor_change_replicas_count 0 2 "${RESOURCE_AND_GROUP_NAMES_NEW}" "${RESOURCE_GROUPS_NEW}" "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
+fi
 
 linstor_check_faulty
 echo "Reduction in the number of replicas for movable resources completed"
 
-DISKLESS_RESOURCES_TO_EVICT=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')
+DISKLESS_RESOURCES_TO_EVICT_NEW=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')
 
-if [[ ${RESOURCE_REMOVAL} == "true" ]]; then
-  linstor_delete_resources_from_node "${DISKLESS_RESOURCES_TO_EVICT[@]}"
+if [[ "${DELETE_MODE}" == "resources-only" ]]; then
+  linstor_delete_resources_from_node "${DISKLESS_RESOURCES_TO_EVICT_NEW[@]}"
 fi
 
-if [[ -n $DISKLESS_RESOURCES_TO_EVICT ]]; then
+if [[ -n $DISKLESS_RESOURCES_TO_EVICT_NEW ]]; then
   echo "Create TieBreaker if needed for resources that had TieBreaker on evicted node \"${NODE_FOR_EVICT}\""
-  for resource in $DISKLESS_RESOURCES_TO_EVICT; do
+  for resource in $DISKLESS_RESOURCES_TO_EVICT_NEW; do
     create_tiebreaker $resource
   done
 fi
