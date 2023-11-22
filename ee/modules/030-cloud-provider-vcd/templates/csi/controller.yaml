@@ -12,14 +12,20 @@
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
-- name: csi-controller
+- name: csi-controller-config-volume
   secret:
     secretName: cloud-controller-manager
+- name: csi-controller-credentials-volume
+  secret:
+    secretName: cloud-controller-manager-credentials
 {{- end }}
 
 {{- define "csi_controller_volume_mounts" }}
-- name: csi-controller
+- name: csi-controller-config-volume
   mountPath: /etc/config
+  readOnly: true
+- name: csi-controller-credentials-volume
+  mountPath: /etc/kubernetes/vcloud/basic-auth
   readOnly: true
 {{- end }}
 
@@ -37,14 +43,20 @@
 {{- end }}
 
 {{- define "csi_node_volumes" }}
-- name: secret-cinderplugin
+- name: csi-node-config-volume
   secret:
     secretName: cloud-controller-manager
+- name: csi-node-credentials-volume
+  secret:
+    secretName: cloud-controller-manager-credentials
 {{- end }}
 
 {{- define "csi_node_volume_mounts" }}
-- name: secret-cinderplugin
-  mountPath: /etc/config
+- mountPath: /etc/cloud
+  name: csi-node-config-volume
+  readOnly: true
+- name: csi-node-credentials-volume
+  mountPath: /etc/kubernetes/vcloud/basic-auth
   readOnly: true
 {{- end }}
 
