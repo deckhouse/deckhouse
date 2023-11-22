@@ -74,7 +74,7 @@ data:
         server_name _;
 
         root   /app;
-        index  index.html;
+        index  index.html readme.html;
         error_page 403 404 /$lang/404.html;
 
         charset utf-8;
