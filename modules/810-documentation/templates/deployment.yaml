@@ -51,9 +51,9 @@ spec:
             subPath: nginx.conf
           - name: tmp
             mountPath: /tmp
-          - mountPath: /app/en/modules
+          - mountPath: /app/en/others/modules
             name: modules-docs-en
-          - mountPath: /app/ru/modules
+          - mountPath: /app/ru/others/modules
             name: modules-docs-ru
       - name: builder
         image: {{ include "helm_lib_module_image" (list $ "docsBuilder" "docs-builder") }}
