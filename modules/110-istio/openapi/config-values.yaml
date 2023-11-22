@@ -356,6 +356,22 @@ properties:
           With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
 
           This global flag can be overriden per Pod by an annotation — `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
+      idleTimeout:
+        type: string
+        pattern: '^[0-9]+(s|m|h)$'
+        x-examples: [24h]
+        default: 1h
+        description: |
+          Timeout for connections without application activity established between the client's istio-sidecar and the service. When the timeout expires, the connection between the sidecar and the service is closed, but the connection between the application and the sidecar is not closed. If set to `0s`, the timeout is disabled.
+
+          This global flag can be overriden per Pod by an annotation:
+            ```yaml
+              proxy.istio.io/config: |-
+                proxyMetadata:
+                  ISTIO_META_IDLE_TIMEOUT: "12h"
+            ```
+          > **Warning!** Disabling this timeout (setting the value to `0s`) is very likely to result in leaky connections due to TCP FIN packet loss, etc.
+          > **Warning!** After changing this setting, a restart of the client pods is required.
   controlPlane:
     type: object
     description: istiod specific settings.
