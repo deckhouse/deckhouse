@@ -1,0 +1,19 @@
+- name: d8.node-group-node-with-deprecated-availability-zone
+  rules:
+    - alert: NodeGroupNodeWithDeprecatedAvailabilityZone
+      expr: |
+        max by (node_group) (d8_node_group_node_with_deprecated_availability_zone) > 0
+      for: 1m
+      labels:
+        tier: cluster
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: NodeGroup {{ $labels.node_group }} contains Nodes with deprecated availability zone.
+        description: |
+          Availability zone `ru-central1-c` is deprecated by Yandex.Cloud.
+          You should migrate your Nodes to `ru‑central1‑a` or `ru‑central1‑b` zone.
+          To check which Nodes should be migrated, use `kubectl get node -l "topology.kubernetes.io/zone=ru-central1-c"` command.
