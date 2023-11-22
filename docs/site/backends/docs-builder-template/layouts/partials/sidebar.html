@@ -51,7 +51,7 @@
                   {{- if or (.IsAncestor page) (eq . page) }}
                     {{- if .IsPage }}{{ .RelPermalink }}{{ else }}#{{ end }}
                   {{- else }}
-                    {{- printf "/modules/%s/%s/" (path.BaseName .Permalink) $defaultChannel }}
+                    {{- printf "/others/modules/%s/%s/" (path.BaseName .Permalink) $defaultChannel }}
                   {{- end }}'>{{ .SectionsPath }}</a>
                   {{ template "subpages" . }}
             </li>
