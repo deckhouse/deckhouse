@@ -9,7 +9,7 @@ defaultContentLanguageInSubdir: false
 #contentDir: "content/en"
 
 uglyURLs: true
-relativeURLs: true
+#relativeURLs: true
 
 params:
   display_toc: true
@@ -57,12 +57,11 @@ languages:
     languageName: ""
     title: Modules
     weight: 0
-    baseURL: http://localhost/modules/
+    baseURL: /others/modules/
   ru:
-    #contentDir: "content/ru"
     disabled: false
     languageDirection: ""
     languageName: ""
     weight: 1
     title: Модули
-    baseURL: http://ru.localhost/modules/
+    baseURL: /others/modules/
