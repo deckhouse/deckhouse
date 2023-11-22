@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/otiai10/copy"
+	"github.com/spf13/fsync"
 	"k8s.io/klog/v2"
 
 	"github.com/flant/docs-builder/pkg/hugo"
@@ -70,7 +70,7 @@ func (b *buildHandler) build() error {
 
 		oldLocation := filepath.Join(b.src, "public", lang)
 		newLocation := filepath.Join(b.dst, "public", lang)
-		err = copy.Copy(oldLocation, newLocation)
+		err = fsync.Sync(oldLocation, newLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
 		}
