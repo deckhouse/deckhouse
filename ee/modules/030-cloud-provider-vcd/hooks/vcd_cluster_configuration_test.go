@@ -38,6 +38,7 @@ kind: VCDClusterConfiguration
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 organization: My_Org
 virtualDataCenter: My_Org
+virtualApplicationName: VAPP
 layout: Standard
 internalNetworkCIDR: 172.16.2.0/24
 masterNodeGroup:
@@ -82,7 +83,7 @@ data:
 	_ = os.Setenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS", "/deckhouse/ee/candi")
 
 	a := HookExecutionConfigInit(emptyValues, `{}`)
-	Context("Cluster without module configuration, with secret (without nsx-t)", func() {
+	Context("Cluster without module configuration", func() {
 		BeforeEach(func() {
 			a.BindingContexts.Set(a.KubeStateSet(notEmptyProviderClusterConfigurationState))
 			a.RunHook()
