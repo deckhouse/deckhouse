@@ -20,8 +20,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/flant/docs-builder/pkg/hugo"
+	"github.com/otiai10/copy"
 	"k8s.io/klog/v2"
+
+	"github.com/flant/docs-builder/pkg/hugo"
 )
 
 func newBuildHandler(src, dst string) *buildHandler {
@@ -68,7 +70,7 @@ func (b *buildHandler) build() error {
 
 		oldLocation := filepath.Join(b.src, "public", lang)
 		newLocation := filepath.Join(b.dst, "public", lang)
-		err = os.Rename(oldLocation, newLocation)
+		err = copy.Copy(oldLocation, newLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
 		}
