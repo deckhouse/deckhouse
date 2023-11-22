@@ -94,7 +94,7 @@ spec:
             name: frontend
             port:
               name: http
-      - path: /modules
+      - path: /others
         pathType: Prefix
         backend:
           service:
