@@ -48,15 +48,7 @@ func VersionsToCopy(mirrorCtx *Context) ([]*semver.Version, error) {
 }
 
 func getTagsFromRegistry(mirrorCtx *Context) ([]string, error) {
-	nameOpts := []name.Option{}
-	remoteOpts := []remote.Option{}
-	if mirrorCtx.Insecure {
-		nameOpts = append(nameOpts, name.Insecure)
-	}
-	if mirrorCtx.RegistryAuth != nil {
-		remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
-	}
-
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 	repo, err := name.NewRepository(mirrorCtx.DeckhouseRegistryRepo+"/release-channel", nameOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parsing repo: %v", err)

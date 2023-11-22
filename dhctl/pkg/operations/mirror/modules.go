@@ -30,15 +30,9 @@ type Module struct {
 	Releases     []string
 }
 
-func GetDeckhouseModules(mirrorCtx *Context) ([]Module, error) {
-	nameOpts, remoteOpts := []name.Option{}, []remote.Option{}
-	if mirrorCtx.Insecure {
-		nameOpts = append(nameOpts, name.Insecure)
-	}
-	if mirrorCtx.RegistryAuth != nil {
-		remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
-	}
-
+func GetExternalModules(mirrorCtx *Context) ([]Module, error) {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
+	modulesRepo, err := name.NewRepository(mirrorCtx.DeckhouseRegistryRepo+"/modules", nameOpts...)
 	repoPathBuildFuncForDeckhouseModule := func(repo, moduleName string) string {
 		return fmt.Sprintf("%s/modules/%s", mirrorCtx.DeckhouseRegistryRepo, moduleName)
 	}

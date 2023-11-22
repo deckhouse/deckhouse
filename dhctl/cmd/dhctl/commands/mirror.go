@@ -70,6 +70,14 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 
 	defer os.RemoveAll(app.TmpDirName)
 
+	if err := mirror.ValidateWriteAccessForRepo(
+		mirrorCtx.RegistryHost+mirrorCtx.RegistryPath,
+		mirrorCtx.RegistryAuth,
+		mirrorCtx.Insecure,
+	); err != nil {
+		return fmt.Errorf("Registry credentials validation failure: %w", err)
+	}
+
 	err := log.Process("mirror", "Unpacking Deckhouse bundle", func() error {
 		return mirror.UnpackBundle(mirrorCtx)
 	})
@@ -104,6 +112,10 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	}
 
 	defer os.RemoveAll(mirrorCtx.UnpackedImagesPath)
+
+	if err := mirror.ValidateReadAccessForImage(mirrorCtx.DeckhouseRegistryRepo+":rock-solid", mirrorCtx.RegistryAuth, mirrorCtx.Insecure); err != nil {
+		return fmt.Errorf("License token validation failure: %w", err)
+	}
 
 	var versionsToMirror []*semver.Version
 	var err error
