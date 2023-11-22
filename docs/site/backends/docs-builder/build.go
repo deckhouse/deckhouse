@@ -36,7 +36,7 @@ type buildHandler struct {
 	dst string
 }
 
-func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, _ *http.Request) {
 	err := b.build()
 	if err != nil {
 		klog.Error(err)
@@ -52,7 +52,6 @@ func (b *buildHandler) build() error {
 		LogLevel: "debug",
 		Source:   b.src,
 		CfgDir:   filepath.Join(b.src, "config"),
-		//GC:       true,
 	}
 
 	err := hugo.Build(flags)
@@ -60,16 +59,19 @@ func (b *buildHandler) build() error {
 		return fmt.Errorf("hugo build: %w", err)
 	}
 
-	err = removeGlob(filepath.Join(b.dst, "*"))
-	if err != nil {
-		return fmt.Errorf("clear %s: %w", b.dst, err)
-	}
+	for _, lang := range []string{"ru", "en"} {
+		glob := filepath.Join(b.dst, "public", lang, "*")
+		err = removeGlob(glob)
+		if err != nil {
+			return fmt.Errorf("clear %s: %w", b.dst, err)
+		}
 
-	oldLocation := filepath.Join(b.src, "public")
-	newLocation := filepath.Join(b.dst, "public")
-	err = os.Rename(oldLocation, newLocation)
-	if err != nil {
-		return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
+		oldLocation := filepath.Join(b.src, "public", lang)
+		newLocation := filepath.Join(b.dst, "public", lang)
+		err = os.Rename(oldLocation, newLocation)
+		if err != nil {
+			return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
+		}
 	}
 
 	return nil
