@@ -9,7 +9,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:cloud-provider-vsphere:cloud-controller-manager
+  name: d8:cloud-provider-vcd:cloud-controller-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
 rules:
 - apiGroups:
@@ -96,12 +96,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:cloud-provider-vsphere:cloud-controller-manager
+  name: d8:cloud-provider-vcd:cloud-controller-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:cloud-provider-vsphere:cloud-controller-manager
+  name: d8:cloud-provider-vcd:cloud-controller-manager
 subjects:
 - kind: ServiceAccount
   name: cloud-controller-manager
