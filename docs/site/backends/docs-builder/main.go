@@ -33,12 +33,14 @@ import (
 var (
 	listenAddress    string
 	src              string
+	dst              string
 	highAvailability bool
 )
 
 func init() {
 	flag.StringVar(&listenAddress, "address", ":8081", "Address to listen on")
 	flag.StringVar(&src, "src", "/app/hugo/", "Directory to load source files")
+	flag.StringVar(&dst, "dst", "/mount/", "Directory for site files")
 	flag.BoolVar(&highAvailability, "highAvailability", false, "high availability mod")
 }
 
@@ -62,7 +64,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	r.Handle("/loadDocArchive/{moduleName}/{version}", newLoadHandler(src)).Methods(http.MethodPost)
-	r.Handle("/build", newBuildHandler(src)).Methods(http.MethodPost)
+	r.Handle("/build", newBuildHandler(src, dst)).Methods(http.MethodPost)
 
 	srv := &http.Server{
 		Addr:    listenAddress,

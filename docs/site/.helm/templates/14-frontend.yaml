@@ -81,9 +81,9 @@ spec:
               path: /healthz
               port: 8081
           volumeMounts:
-            - mountPath: "/app/hugo/public/en"
+            - mountPath: "/mount/public/en"
               name: modules-docs-en
-            - mountPath: "/app/hugo/public/ru"
+            - mountPath: "/mount/public/ru"
               name: modules-docs-ru
       volumes:
         - name: modules-docs-en
