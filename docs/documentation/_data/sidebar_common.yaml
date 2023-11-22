@@ -3,4 +3,4 @@ tabs:
     url: /documentation/v1/
     default: true
   modules:
-    url: /modules/deckhouse-admin/alpha/
+    url: /others/modules/deckhouse-admin/alpha/
