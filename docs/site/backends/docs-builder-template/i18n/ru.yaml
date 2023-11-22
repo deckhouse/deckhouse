@@ -25,3 +25,4 @@ string: строка
 of_string: строк
 boolean: булевый
 of_boolean: булевых значений
+version_of_schema: Версия схемы

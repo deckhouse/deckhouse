@@ -11,12 +11,14 @@ Context:
 {{ $moduleData := .data }}
 {{ $lang := .lang }}
 
-{{ if eq .type "crds" }}
+{{ if and (eq .type "crds") $moduleData.crds }}
   {{ range $crdName, $crdData := $moduleData.crds }}
     {{ if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
     {{ $langData := index $moduleData.crds (printf "doc-%s-%s" $lang $crdName) }}
     {{ partial "openapi/format-crd" ( dict "data" $crdData "langData" $langData ) }}
   {{ end }}
-{{ else if eq .type "configuration" }}
-    {{ partial "openapi/crd" (dict "name" "crdName" "data" "crdData") }}
+{{ else if and (eq .type "configuration") $moduleData.openapi }}
+    {{ $cfgData := index $moduleData.openapi "config-values" }}
+    {{ $langData := index $moduleData.openapi (printf "doc-%s-config-values" $lang ) }}
+    {{ partial "openapi/format-configuration" ( dict "data" $cfgData "langData" $langData ) }}
 {{ end }}
