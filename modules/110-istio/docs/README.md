@@ -5,7 +5,6 @@ webIfaces:
 ---
 
 Currently supported Istio versions:
-* 1.12 (deprecated)
 * 1.13 (deprecated)
 * 1.16 (deprecated)
 * 1.19

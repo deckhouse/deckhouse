@@ -7,7 +7,7 @@ FROM $BASE_UBUNTU
 WORKDIR /
 
 # https://hub.docker.com/layers/istio/proxyv2/1.19.4/images/sha256-6f72d576ce64616342df2ed7246eb33a9c59f01d63741b7ac0791cbf719c7624?context=explore
-# from image layer 14
+# from image layer 17
 ARG proxy_version=istio-proxy:f9707e29aa0a36b1430b373d95e6c9abb5deca75
 ARG istio_version=1.19.4
 ARG SIDECAR=envoy
