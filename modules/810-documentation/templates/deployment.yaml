@@ -98,9 +98,9 @@ spec:
         volumeMounts:
           - name: tmp
             mountPath: /tmp
-          - mountPath: "/app/hugo/public/en"
+          - mountPath: "/mount/public/en"
             name: modules-docs-en
-          - mountPath: "/app/hugo/public/ru"
+          - mountPath: "/mount/public/ru"
             name: modules-docs-ru
       volumes:
         - name: config
