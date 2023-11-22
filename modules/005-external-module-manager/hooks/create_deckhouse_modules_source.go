@@ -79,17 +79,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, createDeckhouseModuleSource)
 
 func createDeckhouseModuleSource(input *go_hook.HookInput) error {
-	if input.Values.Get("global.modulesImages.registry.address").String() != "registry.deckhouse.io" {
-		// For now, modules are only stored in the base deckhouse registry,
-		// for other registries deploying this resource by default will only cause an error.
-		return nil
-	}
-
-	if input.Values.Get("global.modulesImages.registry.path").String() == "/deckhouse/ce" {
-		// For CE, there are no modules for now, but will be some in the future!
-		return nil
-	}
-
 	deckhouseRepo := input.Values.Get("global.modulesImages.registry.base").String() + "/modules"
 	deckhouseDockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	deckhouseCA := input.Values.Get("global.modulesImages.registry.CA").String()
@@ -105,7 +94,7 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 		releaseChannel = ms.Spec.ReleaseChannel
 
 		if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
-			// return if ModuleSource deckhouse already exists and all param are equal
+			// return if ModuleSource deckhouse already exists and all params are equal
 			return nil
 		}
 	}
