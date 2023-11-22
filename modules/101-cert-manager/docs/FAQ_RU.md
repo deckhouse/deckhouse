@@ -204,8 +204,8 @@ CAA record does not match issuer
   ```yaml
   apiVersion: v1
   data:
-    tls.crt: <cat rootCACert.pem | base64 -w0>
-    tls.key: <cat rootCAKey.pem | base64 -w0>
+    tls.crt: <результат команды `cat rootCACert.pem | base64 -w0`>
+    tls.key: <результат команды `cat rootCAKey.pem | base64 -w0`>
   kind: Secret
   metadata:
     name: internal-ca-key-pair
