@@ -195,9 +195,9 @@ CAA record does not match issuer
 - В пространстве имён `d8-cert-manager` создайте секрет, содержащий данные файлов сертификатов.
 
   Пример создания секрета с помощью команды kubectl:
-  ###shell
+  ```shell
   kubectl create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
-  ###
+  ```
 
   Пример создания секрета из YAML-файла (содержимое файлов сертификатов должно быть закодировано в Base64):
 
