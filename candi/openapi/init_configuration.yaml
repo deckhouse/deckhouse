@@ -37,9 +37,6 @@ apiVersions:
       deckhouse:
         type: object
         description: Initial parameters required to install Deckhouse.
-        oneOf:
-        - required: [devBranch]
-        - required: [releaseChannel]
         properties:
           imagesRepo:
             type: string
