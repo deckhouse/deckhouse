@@ -2,5 +2,5 @@ tabs:
   deckhouse:
     url: /documentation/v1/
   modules:
-    url: /others/modules/deckhouse-admin/alpha/
+    url: /others/modules/deckhouse-admin/stable/
     default: true
