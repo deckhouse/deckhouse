@@ -9,6 +9,7 @@ require (
 	github.com/bep/overlayfs v0.6.0
 	github.com/gohugoio/hugo v0.119.0
 	github.com/gorilla/mux v1.8.0
+	github.com/otiai10/copy v1.14.0
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/fsync v0.9.0
 	golang.org/x/sync v0.3.0
