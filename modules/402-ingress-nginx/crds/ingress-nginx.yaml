@@ -203,6 +203,9 @@ spec:
                   anyOf:
                   - {required: ["httpPort"]}
                   - {required: ["httpsPort"]}
+                  x-kubernetes-validations:
+                    - message: .spec.httpsPort shouldn't equal to 6443
+                      rule: 'self.httpsPort != 6443'
                   properties:
                     httpPort:
                       type: integer
@@ -222,9 +225,6 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       x-doc-examples: ['443']
-                      x-kubernetes-validations:
-                        - message: .spec.httpsPort shouldn't equal to 6443 for .spec.annotationValidationEnabled to make effect
-                          rule: 'self.annotationValidationEnabled == true ? self.httpsPort != 6443: true'
                     behindL7Proxy:
                       type: boolean
                       description: |
