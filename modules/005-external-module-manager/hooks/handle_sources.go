@@ -110,7 +110,6 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 
 func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	externalModulesDir := os.Getenv("EXTERNAL_MODULES_DIR")
-	checksumFilePath := path.Join(externalModulesDir, "checksum.json")
 	ts := time.Now().UTC()
 
 	snap := input.Snapshots["sources"]
@@ -118,10 +117,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	sourcesChecksum, err := getSourceChecksums(checksumFilePath)
-	if err != nil {
-		return err
-	}
+	sourcesChecksum := getSourceChecksums(input)
 
 	for _, sn := range snap {
 		ex := sn.(v1alpha1.ModuleSource)
@@ -234,12 +230,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		updateSourceStatus(input, ex.Name, sc)
 	}
 
-	// save checksums
-	err = saveSourceChecksums(checksumFilePath, sourcesChecksum)
-	if err != nil {
-		return err
-	}
-
+	saveSourceChecksums(input, sourcesChecksum)
 	return nil
 }
 
@@ -261,34 +252,20 @@ func validateModule(moduleName, absPath string, weight int) error {
 	return nil
 }
 
-func getSourceChecksums(checksumFilePath string) (sourceChecksum, error) {
-	var sourcesChecksum sourceChecksum
+func getSourceChecksums(input *go_hook.HookInput) sourceChecksum {
+	sourcesChecksum := make(sourceChecksum)
 
-	if _, err := os.Stat(checksumFilePath); err == nil {
-		checksumFile, err := os.Open(checksumFilePath)
-		if err != nil {
-			return nil, err
+	for ms, modules := range input.Values.Get("externalModuleManager.internal.modulesChecksums").Map() {
+		sourcesChecksum[ms] = make(map[string]string)
+		for module, checksum := range modules.Map() {
+			sourcesChecksum[ms][module] = checksum.String()
 		}
-		defer checksumFile.Close()
-
-		err = json.NewDecoder(checksumFile).Decode(&sourcesChecksum)
-		if err != nil {
-			if err == io.EOF {
-				return make(sourceChecksum), nil
-			}
-			return nil, err
-		}
-
-		return sourcesChecksum, nil
 	}
-
-	return make(sourceChecksum), nil
+	return sourcesChecksum
 }
 
-func saveSourceChecksums(checksumFilePath string, checksums sourceChecksum) error {
-	data, _ := json.Marshal(checksums)
-
-	return os.WriteFile(checksumFilePath, data, 0666)
+func saveSourceChecksums(input *go_hook.HookInput, checksums sourceChecksum) {
+	input.Values.Set("externalModuleManager.internal.modulesChecksums", checksums)
 }
 
 func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSource v1alpha1.ModuleSource, moduleName string, modulesChecksum map[string]string, registryOptions []cr.Option) ( /* moduleVersion */ string, error) {
