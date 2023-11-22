@@ -19,7 +19,7 @@
   "panels": [
     {
       "collapsed": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -36,7 +36,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -94,17 +94,15 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "avg(envoy_wasm_envoy_wasm_runtime_null_active)",
-          "interval": "",
           "legendFormat": "native",
           "refId": "A"
         },
         {
           "expr": "avg(envoy_wasm_envoy_wasm_runtime_v8_active)",
-          "interval": "",
           "legendFormat": "v8",
           "refId": "B"
         }
@@ -157,7 +155,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -198,17 +196,15 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "avg(envoy_wasm_envoy_wasm_runtime_null_created)",
-          "interval": "",
           "legendFormat": "native",
           "refId": "A"
         },
         {
           "expr": "avg(envoy_wasm_envoy_wasm_runtime_v8_created)",
-          "interval": "",
           "legendFormat": "v8",
           "refId": "B"
         }
@@ -258,7 +254,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -275,7 +271,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -316,11 +312,10 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "avg(envoy_wasm_remote_load_cache_entries)",
-          "interval": "",
           "legendFormat": "entries",
           "refId": "A"
         }
@@ -373,7 +368,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -414,23 +409,20 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "avg(envoy_wasm_remote_load_cache_hits)",
-          "interval": "",
           "legendFormat": "hits",
           "refId": "A"
         },
         {
           "expr": "avg(envoy_wasm_remote_load_cache_misses)",
-          "interval": "",
           "legendFormat": "misses",
           "refId": "B"
         },
         {
           "expr": "avg(envoy_wasm_remote_load_cache_negative_hits)",
-          "interval": "",
           "legendFormat": "negative hits",
           "refId": "C"
         }
@@ -483,7 +475,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -524,17 +516,15 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "avg(envoy_wasm_remote_load_fetch_failures)",
-          "interval": "",
           "legendFormat": "failures",
           "refId": "A"
         },
         {
           "expr": "avg(envoy_wasm_remote_load_fetch_successes)",
-          "interval": "",
           "legendFormat": "successes",
           "refId": "B"
         }
@@ -584,7 +574,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -601,7 +591,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -642,13 +632,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "sum(container_memory_working_set_bytes{container=\"istio-proxy\"})",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
@@ -702,7 +692,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -743,13 +733,13 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[$__interval_sx4]))",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2

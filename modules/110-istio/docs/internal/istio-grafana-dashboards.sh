@@ -24,27 +24,27 @@ for i in $( ls *.json ); do mv $i ${i/-dashboard/}; done
 for i in $( ls *.json ); do mv $i ${i/istio-/}; done
 
 # Replace `irate` to `rate`
-sed 's/irate(/rate(/g' -i *.json
+sed -i '' -e 's/irate(/rate(/g' *.json
 # Replace `Resolution` to `1/1`
-sed 's/"intervalFactor":\s[0-9]/"intervalFactor": 1/' -i *.json
+sed -i '' -e 's/"intervalFactor": [0-9]/"intervalFactor": 1/' *.json
 # Remove `Min Step`
-sed '/"interval":/d' -i *.json
+sed -i '' -e '/"interval":/d' *.json
 # Replace `Staircase` graphs
-sed 's/"steppedLine": false/"steppedLine": true/' -i *.json
+sed -i '' -e 's/"steppedLine": false/"steppedLine": true/' *.json
 # Replace all datasource to `null`
-sed 's/"datasource": "Prometheus"/"datasource": null/' -i *.json
+sed -i '' -e 's/"datasource": "Prometheus"/"datasource": null/' *.json
 
 WORKLOADS_UID=$(cat workload.json| jq .uid -r)
 SERVICES_UID=$(cat service.json| jq .uid -r)
 
 # Fix dashboard urls
-sed 's|/dashboard/db/istio-workload-dashboard|/d/'${WORKLOADS_UID}'/istio-workload-dashboard|g' -i *.json
-sed 's|/dashboard/db/istio-service-dashboard|/d/'${SERVICES_UID}'/istio-service-dashboard|g' -i *.json
+sed -i '' -e 's|/dashboard/db/istio-workload-dashboard|/d/'${WORKLOADS_UID}'/istio-workload-dashboard|g' *.json
+sed -i '' -e 's|/dashboard/db/istio-service-dashboard|/d/'${SERVICES_UID}'/istio-service-dashboard|g' *.json
 
 # Find all ranges and replace them to `$__interval_sx4`:
 for dashboard in *.json; do
   for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | tr -d "[]" | sort | uniq); do
     echo $dashboard $range
-    sed -e 's/\['${range}'\]/[$__interval_sx4]/g' $dashboard
+    sed -i '' -e 's/\['${range}'\]/[$__interval_sx4]/g' $dashboard
   done
 done
