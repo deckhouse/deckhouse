@@ -43,6 +43,7 @@ const globalValues = `
       master: 3
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.25.1
+    clusterUUID: cluster
 `
 
 const moduleValuesA = `
