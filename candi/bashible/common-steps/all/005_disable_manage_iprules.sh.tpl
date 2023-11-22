@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Do nothing, if systemd-networkd is not enabled and active
-if ! systemctl is-enabled --quiet systemd-networkd && systemctl is-active --quiet systemd-networkd ; then
+if ! systemctl is-enabled --quiet systemd-networkd ; then
   exit 0
 fi
 
