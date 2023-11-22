@@ -213,7 +213,7 @@ CAA record does not match issuer
   type: Opaque
   ```
 
-  Название секрета может быть любым.
+  Имя секрета может быть любым.
 
 - Создайте ClusterIssuer из созданного секрета:
 
