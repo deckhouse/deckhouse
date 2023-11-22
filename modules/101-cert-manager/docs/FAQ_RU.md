@@ -186,7 +186,7 @@ CAA record does not match issuer
 
 Для использования собственного или промежуточного CA:
 
-- Сгенерируйте сертификат:
+- Сгенерируйте сертификат (при необходимости):
 
   ```shell
   openssl genrsa -out rootCAKey.pem 2048
