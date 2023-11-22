@@ -1,10 +1,12 @@
-{{ $name := .name  }}
-{{ $data := .data }}
-{{ $langData := .langData }}
+{{/* Renders a JSON schema. (Calls itself recursively) */}}
+
+{{ $name := .name  }} {{/* parameter name */}}
+{{ $data := .data }} {{/* A map, containing the JSON schema. */}}
+{{ $langData := .langData }} {{/* A map, containing the preferable language data. Optional. */}}
 {{ $parent := .parent }}
-{{ $ancestors := .ancestors }}
-{{ $apiVersion := .apiVersion }}
-{{ $resourceName := .resourceName }}
+{{ $ancestors := .ancestors }} {{/* A map, containing the parameter ancestors */}}
+{{ $apiVersion := .apiVersion }} {{/* A string. APIVersion of the resource of the parameter, to build the parameter HTML id (for links). Optional. */}}
+{{ $resourceName := .resourceName }} {{/* A string. The name of the resource of the parameter, to build the parameter HTML id (for links). Required. */}}
 
 {{ $description :=  "" }}
 
@@ -19,7 +21,12 @@
 {{ $fullPath := $ancestors }}
 {{ $parameterTitle := $name }}
 {{ $ancestorsPathString := "" }}
-{{ $linkAnchor := printf "%s-%s" $resourceName $apiVersion }}
+{{ $linkAnchor := "" }}
+{{ if $apiVersion }}
+  {{ $linkAnchor = printf "%s-%s" $resourceName $apiVersion }}
+{{ else }}
+  {{ $linkAnchor = $resourceName }}
+{{ end }}
 
 {{ if gt ($name | len ) 0 }}
   {{ $fullPath = $fullPath | append $name }}

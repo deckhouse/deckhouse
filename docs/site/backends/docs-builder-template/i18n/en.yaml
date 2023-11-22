@@ -25,3 +25,4 @@ string: string
 of_string: of strings
 boolean: boolean
 of_boolean: of booleans
+version_of_schema: Schema version

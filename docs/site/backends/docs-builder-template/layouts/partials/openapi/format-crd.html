@@ -42,8 +42,7 @@
     <div class="resources__prop_description">{{ $description }}</div>
     <ul class="resources">
       {{ range $property, $propertyData := $versionSchema.properties }}
-        {{/* skip .status for now*/}}
-        {{ if eq $property "status" }}{{ continue }}{{ end }}
+        {{ if eq $property "status" }}{{ continue }}{{ end }} {{/* skip .status for now*/}}
         {{ $propertyLangData := index $langVersionData.schema.openAPIV3Schema.properties $property }}
 
         {{ partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "parent" $versionSchema "apiVersion"  $versionName "resourceName" $kindDowncase) }}
