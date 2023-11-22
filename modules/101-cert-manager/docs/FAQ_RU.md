@@ -229,7 +229,9 @@ CAA record does not match issuer
 
   Имя ClusterIssuer также может быть любым.
 
-Теперь можно использовать созданный ClusterIssuer для получения сертификатов. Например, для получения сертификатов для всех компонентов Deckhouse отредактируйте глобальную конфигурацию (`kubectl edit mc global`), указав секцию для заказа сертификатов:
+Теперь можно использовать созданный ClusterIssuer для получения сертификатов для всех компонентов Deckhouse или конкретного компонента.
+
+Например, чтобы использовать ClusterIssuer для получения сертификатов для всех компонентов Deckhouse, укажите его имя в глобальном параметре [clusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) (`kubectl edit mc global`):
 
   ```yaml
   spec:
