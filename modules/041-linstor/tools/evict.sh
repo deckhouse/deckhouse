@@ -132,12 +132,29 @@ linstor_check_faulty() {
 
 linstor_check_corrupt_resources() {
   echo "Checking for corrupted resources"
-  exec_linstor_with_exit_code_check resource list-volumes | grep -E -- "-1 KiB|None"
-  if [ $? -eq 0 ]; then
-    echo "Corrupted resources found."
+  count=0
+  max_attempts=5
+
+  until [ $count -eq $max_attempts ]; do
+    ((count++))
+    exec_linstor_with_exit_code_check resource list-volumes | grep -E -- "-1 KiB|None"
+    if [ $? -eq 0 ]; then
+      echo "Corrupted resources found."
+      if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
+        echo "Waiting $TIMEOUT_SEC seconds and rechecking for corrupted resources"
+        sleep $TIMEOUT_SEC
+      else
+        exit_function
+      fi
+    else
+      echo "No corrupted resources found"
+      return
+    fi
+  done
+
+  if [ $count -eq $max_attempts ]; then
+    echo "Maximum number of attempts reached. Corrupted resources are still present."
     exit_function
-  else
-    echo "No corrupted resources found"
   fi
 }
 
@@ -477,7 +494,7 @@ get_sorted_free_nodes() {
   local diskful_storage_pool_nodes=$2
 
   resource_all_nodes=($(echo $resource_nodes | jq -r '.[].node_name'))
-  resource_diskful_nodes=($(echo $resource_nodes | jq -r '.[] | select(.storage_pool != "DfltDisklessStorPool") | .node_name'))
+  # resource_diskful_nodes=($(echo $resource_nodes | jq -r '.[] | select(.storage_pool != "DfltDisklessStorPool") | .node_name'))
   diskful_nodes=($(echo $diskful_storage_pool_nodes | jq -r '.[].node_name'))
   free_capacities=($(echo $diskful_storage_pool_nodes | jq -r '.[].free_capacity'))
 
@@ -485,7 +502,7 @@ get_sorted_free_nodes() {
 
   for i in "${!diskful_nodes[@]}"; do
       node=${diskful_nodes[$i]}
-      if [[ ! " ${resource_diskful_nodes[@]} " =~ " ${node} " ]]; then
+      if [[ ! " ${resource_all_nodes[@]} " =~ " ${node} " ]]; then
           free_nodes+=("${free_capacities[$i]} ${node}")
       fi
   done
@@ -1061,6 +1078,8 @@ echo "Get resources that have TieBreaker on evicted node ${NODE_FOR_EVICT}"
 
 echo "Attention! Before evacuate resources from node ${NODE_FOR_EVICT}, make sure that all resources in LINSTOR are in UpToDate state."
 
+DISKLESS_RESOURCES_TO_EVICT_NEW=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')
+
 if [[ "${DELETE_MODE}" == "node" ]]; then
   delete_node_from_kubernetes_and_linstor
 elif [[ "${DELETE_MODE}" == "resources-only" ]]; then
@@ -1078,16 +1097,17 @@ sleep 2
 #   linstor_change_replicas_count 0 2 "${RESOURCE_AND_GROUP_NAMES_NEW}" "${RESOURCE_GROUPS_NEW}" "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
 # fi
 
+echo "Check the number of replicas for movable resources and also check for TieBreakers"
+linstor_change_replicas_count 0 2 "${RESOURCE_AND_GROUP_NAMES_NEW}" "${RESOURCE_GROUPS_NEW}" "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
 linstor_check_faulty
-echo "Reduction in the number of replicas for movable resources completed"
 
-DISKLESS_RESOURCES_TO_EVICT_NEW=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName == $disklessStorPoolName and .state.in_use == false).name')
 
-if [[ "${DELETE_MODE}" == "resources-only" ]]; then
-  linstor_delete_resources_from_node "${DISKLESS_RESOURCES_TO_EVICT_NEW[@]}"
-fi
 
 if [[ -n $DISKLESS_RESOURCES_TO_EVICT_NEW ]]; then
+  if [[ "${DELETE_MODE}" == "resources-only" ]]; then
+    echo "Delete diskless resources from node \"${NODE_FOR_EVICT}\""
+    linstor_delete_resources_from_node "${DISKLESS_RESOURCES_TO_EVICT_NEW[@]}"
+  fi
   echo "Create TieBreaker if needed for resources that had TieBreaker on evicted node \"${NODE_FOR_EVICT}\""
   for resource in $DISKLESS_RESOURCES_TO_EVICT_NEW; do
     create_tiebreaker $resource
