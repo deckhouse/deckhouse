@@ -78,6 +78,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	informerFactory := externalversions.NewSharedInformerFactory(mcClient, 15*time.Minute)
 	moduleSourceInformer := informerFactory.Deckhouse().V1alpha1().ModuleSources()
 	moduleReleaseInformer := informerFactory.Deckhouse().V1alpha1().ModuleReleases()
+	moduleUpdatePolicyInformer := informerFactory.Deckhouse().V1alpha1().ModuleUpdatePolicies()
 
 	return &DeckhouseController{
 		ctx:        ctx,
@@ -89,8 +90,8 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		sourceModules:    make(map[string]string),
 
 		informerFactory:         informerFactory,
-		moduleSourceController:  source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, mm),
-		moduleReleaseController: release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer),
+		moduleSourceController:  source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, mm),
+		moduleReleaseController: release.NewController(mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer),
 	}, nil
 }
 

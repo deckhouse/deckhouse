@@ -58,6 +58,7 @@ spec:
                   type: string
                   enum:
                     - Pending
+                    - PolicyUndefined
                     - Deployed
                     - Superseded
                     - Suspended
@@ -79,6 +80,10 @@ spec:
           jsonPath: .status.phase
           type: string
           description: 'Current release status.'
+        - name: effective policy
+          jsonPath: .metadata.labels.module-update-policy
+          type: string
+          description: 'Associated update policy.'
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date

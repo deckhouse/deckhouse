@@ -27,10 +27,11 @@ import (
 )
 
 const (
-	PhasePending    = "Pending"
-	PhaseDeployed   = "Deployed"
-	PhaseSuperseded = "Superseded"
-	PhaseSuspended  = "Suspended"
+	PhasePending         = "Pending"
+	PhasePolicyUndefined = "PolicyUndefined"
+	PhaseDeployed        = "Deployed"
+	PhaseSuperseded      = "Superseded"
+	PhaseSuspended       = "Suspended"
 )
 
 var (

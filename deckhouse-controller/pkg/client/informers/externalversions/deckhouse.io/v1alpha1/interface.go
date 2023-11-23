@@ -32,6 +32,8 @@ type Interface interface {
 	ModuleReleases() ModuleReleaseInformer
 	// ModuleSources returns a ModuleSourceInformer.
 	ModuleSources() ModuleSourceInformer
+	// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
+	ModuleUpdatePolicies() ModuleUpdatePolicyInformer
 }
 
 type version struct {
@@ -63,4 +65,9 @@ func (v *version) ModuleReleases() ModuleReleaseInformer {
 // ModuleSources returns a ModuleSourceInformer.
 func (v *version) ModuleSources() ModuleSourceInformer {
 	return &moduleSourceInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
+func (v *version) ModuleUpdatePolicies() ModuleUpdatePolicyInformer {
+	return &moduleUpdatePolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

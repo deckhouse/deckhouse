@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -60,10 +61,12 @@ type Controller struct {
 	// d8ClientSet is a clientset for our own API group
 	d8ClientSet versioned.Interface
 
-	moduleReleasesLister d8listers.ModuleReleaseLister
-	moduleSourcesLister  d8listers.ModuleSourceLister
-	moduleReleasesSynced cache.InformerSynced
-	moduleSourcesSynced  cache.InformerSynced
+	moduleReleasesLister       d8listers.ModuleReleaseLister
+	moduleSourcesLister        d8listers.ModuleSourceLister
+	moduleUpdatePoliciesLister d8listers.ModuleUpdatePolicyLister
+	moduleReleasesSynced       cache.InformerSynced
+	moduleSourcesSynced        cache.InformerSynced
+	moduleUpdatePoliciesSynced cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -85,8 +88,23 @@ type Controller struct {
 	restartReason string
 }
 
+const (
+	approvalAnnotation     = "release.deckhouse.io/approved"
+	defaultScanInterval    = 15 * time.Second
+	manualApprovalRequired = "Waiting for manual approval"
+	waitingForWindow       = "Release is waiting for the update window: %s"
+)
+
 // NewController returns a new sample controller
+<<<<<<< HEAD
 func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, moduleReleaseInformer d8informers.ModuleReleaseInformer, moduleSourceInformer d8informers.ModuleSourceInformer) *Controller {
+=======
+func NewController(
+	kubeClient versioned.Interface,
+	moduleReleaseInformer d8informers.ModuleReleaseInformer,
+	moduleSourceInformer d8informers.ModuleSourceInformer,
+	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer) *Controller {
+>>>>>>> 5d833a02e... [module-controller] update crds
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
 		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(50), 300)},
@@ -95,6 +113,7 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, mod
 	lg := log.WithField("component", "ModuleReleaseController")
 
 	controller := &Controller{
+<<<<<<< HEAD
 		kubeclientset:        ks,
 		d8ClientSet:          d8ClientSet,
 		moduleReleasesLister: moduleReleaseInformer.Lister(),
@@ -103,6 +122,17 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, mod
 		moduleSourcesSynced:  moduleSourceInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:               lg,
+=======
+		kubeClient:                 kubeClient,
+		moduleReleasesLister:       moduleReleaseInformer.Lister(),
+		moduleReleasesSynced:       moduleReleaseInformer.Informer().HasSynced,
+		moduleSourcesLister:        moduleSourceInformer.Lister(),
+		moduleSourcesSynced:        moduleSourceInformer.Informer().HasSynced,
+		moduleUpdatePoliciesLister: moduleUpdatePolicyInformer.Lister(),
+		moduleUpdatePoliciesSynced: moduleUpdatePolicyInformer.Informer().HasSynced,
+		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
+		logger:                     lg,
+>>>>>>> 5d833a02e... [module-controller] update crds
 
 		sourceModules: make(map[string]string),
 
@@ -309,8 +339,7 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1
 
 	switch mr.Status.Phase {
 	case "":
-		mr.Status.Phase = v1alpha1.PhasePending
-		if e := c.updateModuleReleaseStatus(ctx, mr); e != nil {
+		if e := c.updateModuleReleaseStatus(ctx, mr, v1alpha1.PhasePending, ""); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
 
@@ -407,44 +436,78 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	if len(pred.skippedPatchesIndexes) > 0 {
 		for _, index := range pred.skippedPatchesIndexes {
 			release := pred.releases[index]
-			release.Status.Phase = v1alpha1.PhaseSuperseded
 
-			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
+			if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhaseSuperseded, ""); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
-		}
-	}
-
-	if pred.currentReleaseIndex >= 0 {
-		release := pred.releases[pred.currentReleaseIndex]
-		release.Status.Phase = v1alpha1.PhaseSuperseded
-		release.Status.Message = ""
-
-		if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
-			return ctrl.Result{Requeue: true}, e
 		}
 	}
 
 	if pred.desiredReleaseIndex >= 0 {
 		release := pred.releases[pred.desiredReleaseIndex]
-
-		modulePath := generateModulePath(moduleName, release.Spec.Version.String())
-		newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
-
-		err := enableModule(c.externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
-		if err != nil {
-			c.logger.Errorf("Module deploy failed: %v", err)
-			if e := c.suspendModuleVersionForRelease(ctx, release, err); e != nil {
-				return ctrl.Result{Requeue: true}, e
+		ts := time.Now().UTC()
+		// if release has associated update policy
+		if policyName, found := release.ObjectMeta.Labels["module-update-policy"]; found {
+			// get policy spec
+			policy, err := c.moduleUpdatePoliciesLister.Get(policyName)
+			if err != nil {
+				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, fmt.Sprintf("update policy %s not found", policyName)); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+				return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 			}
-		}
-		modulesChangedReason = "a new module release found"
 
+			// if policy mode manual
+			if policy.Spec.Update.Mode == "Manual" && !isReleaseApproved(release) {
+				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, manualApprovalRequired); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+				return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+			}
+
+			// if policy mode auto
+			if policy.Spec.Update.Mode == "Auto" && !policy.Spec.Update.Windows.IsAllowed(ts) {
+				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+				return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+			}
+
+<<<<<<< HEAD
 		release.Status.Phase = v1alpha1.PhaseDeployed
 		release.Status.Message = ""
 		c.sendDocumentation(ctx, modulePath)
 		if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 			return ctrl.Result{Requeue: true}, e
+=======
+			modulePath := generateModulePath(moduleName, release.Spec.Version.String())
+			newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
+
+			err = enableModule(c.externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
+			if err != nil {
+				c.logger.Errorf("Module deploy failed: %v", err)
+				if e := c.suspendModuleVersionForRelease(ctx, release, err); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+			}
+			// after deploying a new release, mark previous one (if any) as superseded
+			if pred.currentReleaseIndex >= 0 {
+				if e := c.updateModuleReleaseStatus(ctx, pred.releases[pred.currentReleaseIndex], v1alpha1.PhaseSuperseded, ""); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+			}
+
+			modulesChangedReason = "a new module release found"
+
+			if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhaseDeployed, ""); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+		} else {
+			if e := c.updateModuleReleaseStatus(ctx, mr, v1alpha1.PhasePending, "update policy not set"); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+			return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+>>>>>>> 5d833a02e... [module-controller] update crds
 		}
 	}
 
@@ -512,10 +575,7 @@ func (c *Controller) suspendModuleVersionForRelease(ctx context.Context, release
 		err = errors.New("not found")
 	}
 
-	release.Status.Phase = v1alpha1.PhaseSuspended
-	release.Status.Message = fmt.Sprintf("Desired version of the module met problems: %s", err)
-
-	return c.updateModuleReleaseStatus(ctx, release)
+	return c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhaseSuspended, fmt.Sprintf("Desired version of the module met problems: %s", err))
 }
 
 func enableModule(externalModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
@@ -594,12 +654,28 @@ func addLabels(mr *v1alpha1.ModuleRelease, labels map[string]string) {
 	}
 }
 
-func (c *Controller) updateModuleReleaseStatus(ctx context.Context, mrCopy *v1alpha1.ModuleRelease) error {
+func (c *Controller) updateModuleReleaseStatus(ctx context.Context, mrCopy *v1alpha1.ModuleRelease, phase, message string) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
+<<<<<<< HEAD
 	mrCopy.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
 	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, mrCopy, metav1.UpdateOptions{})
+=======
+	if mrCopy.Status.Phase == phase && mrCopy.Status.Message == message {
+		return nil
+	}
+
+	if mrCopy.Status.Phase != phase {
+		mrCopy.Status.Phase = phase
+		mrCopy.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+	}
+
+	if mrCopy.Status.Message != message {
+		mrCopy.Status.Message = message
+	}
+	_, err := c.kubeClient.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, mrCopy, metav1.UpdateOptions{})
+>>>>>>> 5d833a02e... [module-controller] update crds
 	if err != nil {
 		return err
 	}
@@ -766,4 +842,15 @@ func (b byVersion) Swap(i, j int) {
 
 func (b byVersion) Less(i, j int) bool {
 	return b[i].Spec.Version.LessThan(b[j].Spec.Version)
+}
+
+func isReleaseApproved(release *v1alpha1.ModuleRelease) bool {
+	if approved, found := release.ObjectMeta.Annotations[approvalAnnotation]; found {
+		value, err := strconv.ParseBool(approved)
+		if err != nil {
+			return false
+		}
+		return value
+	}
+	return false
 }

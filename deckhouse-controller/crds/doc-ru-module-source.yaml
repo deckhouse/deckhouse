@@ -11,6 +11,7 @@ spec:
               properties:
                 releaseChannel:
                   description: Желаемый канал обновлений по-умолчанию для модулей данного container registry.
+                  x-doc-deprecated: true
                 registry:
                   properties:
                     scheme:

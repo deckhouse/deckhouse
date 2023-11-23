@@ -35,6 +35,10 @@ spec:
           jsonPath: .status.phase
           type: string
           description: 'Показывает текущий статус релиза.'
+        - name: effective policy
+          jsonPath: .metadata.labels.module-update-policy
+          type: string
+          description: 'Применяемая политика обновления.'
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date

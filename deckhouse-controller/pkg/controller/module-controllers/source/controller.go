@@ -56,10 +56,12 @@ type Controller struct {
 	// kubeClient is a clientset for our own API group
 	kubeClient versioned.Interface
 
-	moduleSourcesLister  d8listers.ModuleSourceLister
-	moduleSourcesSynced  cache.InformerSynced
-	moduleReleasesLister d8listers.ModuleReleaseLister
-	moduleReleasesSynced cache.InformerSynced
+	moduleSourcesLister        d8listers.ModuleSourceLister
+	moduleSourcesSynced        cache.InformerSynced
+	moduleReleasesLister       d8listers.ModuleReleaseLister
+	moduleReleasesSynced       cache.InformerSynced
+	moduleUpdatePoliciesLister d8listers.ModuleUpdatePolicyLister
+	moduleUpdatePoliciesSynced cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -83,7 +85,12 @@ type moduleValidator interface {
 }
 
 // NewController returns a new ModuleSource controller
-func NewController(kubeClient versioned.Interface, moduleSourceInformer d8informers.ModuleSourceInformer, moduleReleaseInformer d8informers.ModuleReleaseInformer, mv moduleValidator) *Controller {
+func NewController(
+	kubeClient versioned.Interface,
+	moduleSourceInformer d8informers.ModuleSourceInformer,
+	moduleReleaseInformer d8informers.ModuleReleaseInformer,
+	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
+	mv moduleValidator) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
 		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(50), 300)},
@@ -92,12 +99,14 @@ func NewController(kubeClient versioned.Interface, moduleSourceInformer d8inform
 	lg := log.WithField("component", "ModuleSourceController")
 
 	controller := &Controller{
-		kubeClient:           kubeClient,
-		moduleSourcesLister:  moduleSourceInformer.Lister(),
-		moduleSourcesSynced:  moduleSourceInformer.Informer().HasSynced,
-		moduleReleasesLister: moduleReleaseInformer.Lister(),
-		moduleReleasesSynced: moduleReleaseInformer.Informer().HasSynced,
-		workqueue:            workqueue.NewRateLimitingQueue(ratelimiter),
+		kubeClient:                 kubeClient,
+		moduleSourcesLister:        moduleSourceInformer.Lister(),
+		moduleSourcesSynced:        moduleSourceInformer.Informer().HasSynced,
+		moduleReleasesLister:       moduleReleaseInformer.Lister(),
+		moduleReleasesSynced:       moduleReleaseInformer.Informer().HasSynced,
+		moduleUpdatePoliciesLister: moduleUpdatePolicyInformer.Lister(),
+		moduleUpdatePoliciesSynced: moduleUpdatePolicyInformer.Informer().HasSynced,
+		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
 
 		logger: lg,
 
@@ -303,13 +312,27 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 
 	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, opts)
 
+	// get all policies regardless their labels
+	policies, err := c.moduleUpdatePoliciesLister.List(labels.Everything())
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
+
 	for _, moduleName := range moduleNames {
 		if moduleName == "modules" {
 			c.logger.Warn("'modules' name for module is forbidden. Skip module.")
 			continue
 		}
+
+		// check if we have an update policy for the moduleName
+		policy, err := getReleasePolicy(ms.Name, moduleName, policies)
+		if err != nil {
+			modulesErrorsMap[moduleName] = err.Error()
+			continue
+		}
+
 		checksum := modulesChecksums[moduleName]
-		downloadResult, err := md.DownloadFromReleaseChannel(moduleName, ms.Spec.ReleaseChannel, checksum)
+		downloadResult, err := md.DownloadFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, checksum)
 		if err != nil {
 			modulesErrorsMap[moduleName] = err.Error()
 			continue
@@ -330,7 +353,7 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 			continue
 		}
 
-		err = c.createModuleRelease(ctx, ms, moduleName, downloadResult)
+		err = c.createModuleRelease(ctx, ms, moduleName, policy.Name, downloadResult)
 		if err != nil {
 			// if module release creation failed, we have to restart the reconcile loop
 			return ctrl.Result{Requeue: true}, err
@@ -413,7 +436,7 @@ func (c *Controller) deleteReconcile(ctx context.Context, ms *v1alpha1.ModuleSou
 	return ctrl.Result{}, nil
 }
 
-func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.ModuleSource, moduleName string, result downloader.ModuleDownloadResult) error {
+func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.ModuleSource, moduleName, policyName string, result downloader.ModuleDownloadResult) error {
 	// image digest has 64 symbols, while label can have maximum 63 symbols
 	// so make md5 sum here
 	checksum := fmt.Sprintf("%x", md5.Sum([]byte(result.Checksum)))
@@ -424,8 +447,13 @@ func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.Modul
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   fmt.Sprintf("%s-%s", moduleName, result.ModuleVersion),
-			Labels: map[string]string{"module": moduleName, "source": ms.Name, "release-checksum": checksum},
+			Name: fmt.Sprintf("%s-%s", moduleName, result.ModuleVersion),
+			Labels: map[string]string{
+				"module":               moduleName,
+				"source":               ms.Name,
+				"release-checksum":     checksum,
+				"module-update-policy": policyName,
+			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: v1alpha1.ModuleSourceGVK.GroupVersion().String(),
@@ -489,4 +517,34 @@ func (c *Controller) validateModule(def *models.DeckhouseModuleDefinition) error
 	}
 
 	return nil
+}
+
+// GetReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
+// if many policies match the module release labels, conflict=true is returned
+func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
+	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
+	var matchedPolicy *v1alpha1.ModuleUpdatePolicy
+	var found bool
+	for _, policy := range policies {
+		if policy.Spec.ModuleReleaseSelector.LabelSelector != nil {
+			selector, err := metav1.LabelSelectorAsSelector(policy.Spec.ModuleReleaseSelector.LabelSelector)
+			if err != nil {
+				return nil, err
+			}
+
+			if selector.Matches(releaseLabelsSet) {
+				if found {
+					return nil, fmt.Errorf("more than one update policy matches module: %s and %s", matchedPolicy.Name, policy.Name)
+				}
+				found = true
+				matchedPolicy = policy
+			}
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("no matching update policy found")
+	}
+
+	return matchedPolicy, nil
 }
