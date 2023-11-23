@@ -129,19 +129,23 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			if !foundPolicy {
 				setReleasePhaseWithMsg(input, rel, v1alpha1.PhasePolicyUndefined, policyNotFound, ts)
 				rel.Status = v1alpha1.PhasePolicyUndefined
+				rel.StatusTransitionTime = ts
 			} else {
 				setReleasePhaseWithMsg(input, rel, v1alpha1.PhasePending, "", ts)
 				rel.Status = v1alpha1.PhasePending
+				rel.StatusTransitionTime = ts
 			}
 		case v1alpha1.PhasePending:
 			if !foundPolicy {
 				setReleasePhaseWithMsg(input, rel, v1alpha1.PhasePolicyUndefined, policyNotFound, ts)
 				rel.Status = v1alpha1.PhasePolicyUndefined
+				rel.StatusTransitionTime = ts
 			}
 		case v1alpha1.PhasePolicyUndefined:
 			if foundPolicy {
 				setReleasePhaseWithMsg(input, rel, v1alpha1.PhasePending, "", ts)
 				rel.Status = v1alpha1.PhasePending
+				rel.StatusTransitionTime = ts
 			}
 		}
 

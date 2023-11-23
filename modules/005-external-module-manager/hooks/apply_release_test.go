@@ -48,7 +48,84 @@ external-module-manager:
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleRelease", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleUpdatePolicy", false)
 
-	Context("Cluster has Deployed, Superseded and Pending ModuleReleases", func() {
+	Context("Cluster has Deployed, Superseded and Pending ModuleReleases (minor versions)", func() {
+		BeforeEach(func() {
+			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
+			_ = os.Mkdir(tmpDir+"/modules", 0777)
+			_ = os.Setenv("EXTERNAL_MODULES_DIR", tmpDir)
+			testCreateModuleOnFS(tmpDir, "echoserver", "v0.0.1")
+
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.0.1
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.0.1
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.1.2
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.1.2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: echoserver-v0.2.0
+  labels:
+    source: echoserver
+    module: echoserver
+    module-update-policy: echoserver-policy
+spec:
+  moduleName: echoserver
+  version: 0.2.0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: echoserver-policy
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: echoserver
+        module: echoserver
+  releaseChannel: Stable
+  update:
+    mode: Manual
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
+
+		It("module should be in Pending state", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.1").Field("status.phase").String()).To(Equal(v1alpha1.PhaseDeployed))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.1.2").Field("status.phase").String()).To(Equal(v1alpha1.PhasePending))
+			Expect(f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.2.0").Field("status.phase").String()).To(Equal(v1alpha1.PhasePending))
+		})
+	})
+
+	Context("Cluster has Deployed, Superseded and Pending ModuleReleases (patches)", func() {
 		BeforeEach(func() {
 			tmpDir, _ = os.MkdirTemp(os.TempDir(), "exrelease-*")
 			_ = os.Mkdir(tmpDir+"/modules", 0777)

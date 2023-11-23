@@ -84,23 +84,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleSource))
 
 func filterPolicy(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var mus v1alpha1.ModuleUpdatePolicy
+	var mup v1alpha1.ModuleUpdatePolicy
 
-	err := sdk.FromUnstructured(obj, &mus)
+	err := sdk.FromUnstructured(obj, &mup)
 	if err != nil {
 		return nil, err
 	}
 
-	newmus := v1alpha1.ModuleUpdatePolicy{
-		TypeMeta: mus.TypeMeta,
+	newmup := v1alpha1.ModuleUpdatePolicy{
+		TypeMeta: mup.TypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mus.Name,
-			UID:  mus.UID,
+			Name: mup.Name,
 		},
-		Spec: mus.Spec,
+		Spec: mup.Spec,
 	}
 
-	return newmus, nil
+	return newmup, nil
 }
 
 func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
