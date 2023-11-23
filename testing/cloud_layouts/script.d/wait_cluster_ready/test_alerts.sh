@@ -18,19 +18,34 @@ set -Eeuo pipefail
 availability=""
 attempts=50
 
+allow_alerts=("D8DeckhouseIsNotOnReleaseChannel" "DeadMansSwitch")
+
 # With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
 for i in $(seq $attempts); do
   # Sleeping at the start for readability. First iterations do not succeed anyway.
   sleep 30
-  alerts=$(kubectl get clusteralerts -o jsonpath='{range .items[*].alert}{.name}{"\n"}{end}')
-  if [[ $alerts = "DeadMansSwitch" ]]; then
-    echo "Alerts include only DeadMansSwitch. All is ok"
+
+  # Get alert names with kubectl command
+  kube_alerts=$(kubectl get clusteralerts -o jsonpath='{range .items[*].alert}{.name}{" "}{end}')
+  # Split the kube_alerts into an array of alerts
+  IFS=' ' read -ra alerts <<< "$kube_alerts"
+
+  # Loop through each alert in the output
+  alerts_is_ok=true
+  for alert in "${alerts[@]}"; do
+    # Check if the alert is in the allow list
+    if ! [[ " ${allow_alerts[@]} " =~ " ${alert} " ]]; then
+      echo "Error: Unexpected alert: '$alert'"
+      alerts_is_ok=false
+    else
+      echo "Alert '$alert' ignored"
+    fi
+  done
+  if [[ $alerts_is_ok = true ]]; then
+    echo "All alerts are in the allow list."
     exit 0
-  else
-    echo "ERROR: More than 1 alert. Alerts:"
-    echo $alerts
   fi
-  sleep 10
+
 done
 
 >&2 echo 'Timeout waiting for checks to succeed'
