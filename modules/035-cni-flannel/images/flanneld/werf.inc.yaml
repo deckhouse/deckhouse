@@ -11,7 +11,6 @@ shell:
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
         ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
       done
-      echo test > /relocate/test
       # broken symlinks are not imported from the artifact
       touch /iptables-wrapper
 ---
