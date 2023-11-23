@@ -5,12 +5,18 @@ description: Deckhouse admission-policy-engine module enforces the security poli
 
 This module enforces the security policies in the cluster according to the Kubernetes [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) using the [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) solution.
 
-The Pod Security Standards define three different policies to broadly cover the security spectrum. These policies are cumulative and range from highly-permissive to highly-restrictive:
+The Pod Security Standards define three different policies to broadly cover the security spectrum. These policies are cumulative and range from highly-permissive to highly-restrictive.
+
+{% alert level="info" %}
+The module does not apply policies to system namespaces.
+{% endalert %}    
+
+List of policies available for use:
 - `Privileged` — Unrestricted policy. Provides the widest possible permission level;
 - `Baseline` — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
 - `Restricted` — Heavily restricted policy. Follows the most current Pod hardening best practices.
 
-You can read more about each policy variety in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+You can read more about each policy variety in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/security/pod-security-standards/#profile-details).
 
 The type of cluster policy to use by default is determined based on the following criteria:
 - If a Deckhouse version **lower than v1.55** is being installed, the `Privileged` default policy is applied to all non-system namespaces;
