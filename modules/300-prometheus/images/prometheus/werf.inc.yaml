@@ -145,7 +145,7 @@ docker:
   VOLUME:
   - "/prometheus"
   WORKDIR: "/prometheus"
-  ENTRYPOINTN:
+  ENTRYPOINT:
   - "/bin/prometheus"
   CMD:
   - "--config.file=/etc/prometheus/prometheus.yml"
