@@ -2,7 +2,6 @@
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
-- "--upgrade-rde"
 {{- end }}
 
 {{- define "csi_controller_envs" }}
