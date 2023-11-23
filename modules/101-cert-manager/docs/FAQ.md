@@ -189,9 +189,11 @@ Follow the steps below to use a custom or interim CA:
   openssl genrsa -out rootCAKey.pem 2048
   openssl req -x509 -sha256 -new -nodes -key rootCAKey.pem -days 3650 -out rootCACert.pem
   ```
+
 - In the `d8-cert-manager` namespace, create a secret containing certificate file data.
 
   An example of creating a secret with kubectl:
+
   ```shell
   kubectl create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
   ```
@@ -241,7 +243,6 @@ For example, to issue certificates for all Deckhouse components, specify the Clu
         publicDomainTemplate: '%s.<public_domain_template>'
     version: 1
   ```
-
 
 ## How to secure cert-manager credentials?
 

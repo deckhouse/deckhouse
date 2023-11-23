@@ -192,9 +192,11 @@ CAA record does not match issuer
   openssl genrsa -out rootCAKey.pem 2048
   openssl req -x509 -sha256 -new -nodes -key rootCAKey.pem -days 3650 -out rootCACert.pem
   ```
+
 - В пространстве имён `d8-cert-manager` создайте секрет, содержащий данные файлов сертификатов.
 
   Пример создания секрета с помощью команды kubectl:
+
   ```shell
   kubectl create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
   ```
