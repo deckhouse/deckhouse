@@ -179,30 +179,30 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/140-
   EOF
   ```
 
-## Как использовать свой или промежуточный CA для заказа сертификатов?
+## How do I use a custom or interim CA to issue certificates?
 
-Для использования собственного или промежуточного CA:
+Follow the steps below to use a custom or interim CA:
 
-- Сгенерируйте сертификат (при необходимости):
+- Generate a certificate (if necessary):
 
   ```shell
   openssl genrsa -out rootCAKey.pem 2048
   openssl req -x509 -sha256 -new -nodes -key rootCAKey.pem -days 3650 -out rootCACert.pem
   ```
-- В пространстве имён `d8-cert-manager` создайте секрет, содержащий данные файлов сертификатов.
+- In the `d8-cert-manager` namespace, create a secret containing certificate file data.
 
-  Пример создания секрета с помощью команды kubectl:
+  An example of creating a secret with kubectl:
   ```shell
   kubectl create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
   ```
 
-  Пример создания секрета из YAML-файла (содержимое файлов сертификатов должно быть закодировано в Base64):
+  An example of creating a secret from a YAML file (the contents of the certificate files must be Base64-encoded):
 
   ```yaml
   apiVersion: v1
   data:
-    tls.crt: <результат команды `cat rootCACert.pem | base64 -w0`>
-    tls.key: <результат команды `cat rootCAKey.pem | base64 -w0`>
+    tls.crt: <OUTPUT OF `cat rootCACert.pem | base64 -w0`>
+    tls.key: <OUTPUT OF `cat rootCAKey.pem | base64 -w0`>
   kind: Secret
   metadata:
     name: internal-ca-key-pair
@@ -210,9 +210,9 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/140-
   type: Opaque
   ```
 
-  Имя секрета может быть любым.
+  You can use any name you like for the secret.
 
-- Создайте ClusterIssuer из созданного секрета:
+- Create a ClusterIssuer using the secret you created earlier:
 
   ```yaml
   apiVersion: cert-manager.io/v1
@@ -221,14 +221,14 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/140-
     name: inter-ca
   spec:
     ca:
-      secretName: internal-ca-key-pair    # Имя созданного секрета.
+      secretName: internal-ca-key-pair    # Name of the secret you created earlier.
   ```
 
-  Имя ClusterIssuer также может быть любым.
+  You can use any name as your ClusterIssuer name.
 
-Теперь можно использовать созданный ClusterIssuer для получения сертификатов для всех компонентов Deckhouse или конкретного компонента.
+You can now use the created ClusterIssuer to issue certificates for all Deckhouse components or a particular component.
 
-Например, чтобы использовать ClusterIssuer для получения сертификатов для всех компонентов Deckhouse, укажите его имя в глобальном параметре [clusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) (`kubectl edit mc global`):
+For example, to issue certificates for all Deckhouse components, specify the ClusterIssuer name in the [clusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) global parameter (`kubectl edit mc global`):
 
   ```yaml
   spec:
