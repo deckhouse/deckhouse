@@ -29,7 +29,7 @@ The module integrates with the [cert-manager](../../modules/101-cert-manager/) m
 
 ## Interaction with other modules
 
-Explicitly disabling a module or installing the [minimal bundle](https://deckhouse.ru/documentation/v1/#наборы-модулей) will result in the listed modules being non-functional.:
+Explicitly disabling a module or installing the [minimal bundle](https://deckhouse.ru/documentation/v1/#наборы-модулей) will result in the listed modules being non-functional:
 - prometheus/trickster
 - prometheus/grafana
 - istio/kiali
