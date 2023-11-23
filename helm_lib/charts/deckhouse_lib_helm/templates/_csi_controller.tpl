@@ -36,6 +36,7 @@ memory: 50Mi
   {{- $fullname := $config.fullname | default "csi-controller" }}
   {{- $snapshotterEnabled := dig "snapshotterEnabled" true $config }}
   {{- $resizerEnabled := dig "resizerEnabled" true $config }}
+  {{- $topologyEnabled := dig "topologyEnabled" true $config }}
   {{- $controllerImage := $config.controllerImage | required "$config.controllerImage is required" }}
   {{- $provisionerTimeout := $config.provisionerTimeout | default "600s" }}
   {{- $attacherTimeout := $config.attacherTimeout | default "600s" }}
@@ -45,10 +46,6 @@ memory: 50Mi
   {{- $attacherWorkers := $config.attacherWorkers | default "10" }}
   {{- $resizerWorkers := $config.resizerWorkers | default "10" }}
   {{- $snapshotterWorkers := $config.snapshotterWorkers | default "10" }}
-  {{- $topologyEnabled := true }}
-  {{- if hasKey $config "topologyEnabled" }}
-    {{- $topologyEnabled = $config.topologyEnabled }}
-  {{- end }}
   {{- $additionalControllerEnvs := $config.additionalControllerEnvs }}
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
