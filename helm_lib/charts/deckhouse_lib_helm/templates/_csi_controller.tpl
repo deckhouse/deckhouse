@@ -34,11 +34,8 @@ memory: 50Mi
 
   {{- $config := index . 1 }}
   {{- $fullname := $config.fullname | default "csi-controller" }}
-  {{- /* we need this `if` to properly set $snapshotterEnabled variable if $config.snapshotterEnabled is not set */ -}}
-  {{- $snapshotterEnabled := true }}
-  {{- if hasKey $config "snapshotterEnabled" }}
-    {{- $snapshotterEnabled = $config.snapshotterEnabled }}
-  {{- end }}
+  {{- $snapshotterEnabled := dig "snapshotterEnabled" true $config }}
+  {{- $resizerEnabled := dig "resizerEnabled" true $config }}
   {{- $controllerImage := $config.controllerImage | required "$config.controllerImage is required" }}
   {{- $provisionerTimeout := $config.provisionerTimeout | default "600s" }}
   {{- $attacherTimeout := $config.attacherTimeout | default "600s" }}
@@ -106,12 +103,14 @@ spec:
       maxAllowed:
         cpu: 20m
         memory: 50Mi
+    {{- if $resizerEnabled }}
     - containerName: "resizer"
       minAllowed:
         {{- include "resizer_resources" $context | nindent 8 }}
       maxAllowed:
         cpu: 20m
         memory: 50Mi
+    {{- end }}
     {{- if $snapshotterEnabled }}
     - containerName: "snapshotter"
       minAllowed:
@@ -247,6 +246,7 @@ spec:
   {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "attacher_resources" $context | nindent 12 }}
   {{- end }}
+            {{- if $resizerEnabled }}
       - name: resizer
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $resizerImage | quote }}
@@ -274,6 +274,7 @@ spec:
   {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "resizer_resources" $context | nindent 12 }}
   {{- end }}
+            {{- end }}
             {{- if $snapshotterEnabled }}
       - name: snapshotter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
