@@ -27,6 +27,19 @@ title: "Модуль ingress-nginx"
 
 Также модуль интегрирован с модулем [cert-manager](../../modules/101-cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование NGINX Ingress controller'ами.
 
+## Взаимодействие с другими модулями
+
+Явное отключение модуля или установка [бандла minimal](https://deckhouse.ru/documentation/v1/#наборы-модулей) привдет к тому, что перечисленные модули могут быть неработоспособны:
+- prometheus/trickster
+- prometheus/grafana
+- istio/kiali
+- user-authn
+- cilium-hubble/ui
+- dashboard
+- upmeter
+- openvpn
+- documentation
+
 ## Мониторинг и статистика
 
 В нашей реализации `ingress-nginx` добавлена система сбора статистики в Prometheus с множеством метрик:

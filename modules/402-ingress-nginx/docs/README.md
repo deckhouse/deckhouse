@@ -27,6 +27,19 @@ The module allows you to manage HTTPS security policies for each of the NGINX In
 
 The module integrates with the [cert-manager](../../modules/101-cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
 
+## Interaction with other modules
+
+Explicitly disabling a module or installing the [minimal bundle](https://deckhouse.ru/documentation/v1/#наборы-модулей) will result in the listed modules being non-functional.:
+- prometheus/trickster
+- prometheus/grafana
+- istio/kiali
+- user-authn
+- cilium-hubble/ui
+- dashboard
+- upmeter
+- openvpn
+- documentation
+
 ## Monitoring and statistics
 
 Our Ingress Nginx implementation has a Prometheus-based system for collecting statistical data built-in. It uses a variety of metrics based on:
