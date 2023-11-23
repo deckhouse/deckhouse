@@ -1,6 +1,6 @@
 {{- define "csi_controller_args" }}
 - "--nodeid=$(NODE_ID)"
-- "--cloud-config=/etc/config/cloud-config"
+- "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
@@ -22,7 +22,7 @@
 
 {{- define "csi_controller_volume_mounts" }}
 - name: csi-controller-config-volume
-  mountPath: /etc/config
+  mountPath: /etc/cloud
   readOnly: true
 - name: csi-controller-credentials-volume
   mountPath: /etc/kubernetes/vcloud/basic-auth
@@ -31,7 +31,7 @@
 
 {{- define "csi_node_args" }}
 - "--nodeid=$(NODE_ID)"
-- "--cloud-config=/etc/config/cloud-config"
+- "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
