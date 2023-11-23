@@ -429,28 +429,48 @@ spec:
 1. Завести получателя без параметров.
 1. Смаршрутизировать лишние алерты в этого получателя.
 
-В `alertmanager.yaml` это будет выглядеть так:
+Ниже приведены примеры настройки `CustomAlertmanager`.
+
+Чтобы получать только алерты с лейблами `service: foo|bar|baz`:
 
 ```yaml
 receivers:
-- name: blackhole
   # Получатель, определенный без параметров, будет работать как "/dev/null".
-- name: some-other-receiver
-  # ...
+  - name: blackhole
+  # Действующий получатель  
+  - name: some-other-receiver
+    # ...
 route:
   # receiver по умолчанию.
-  receiver: some-other-receiver
+  receiver: blackhole
   routes:
-    - matchers:
-        - matchType: =
-          name: alertname
-          value: DeadMansSwitch
-      receiver: blackhole
+    # Дочерний маршрут
     - matchers:
         - matchType: =~
           name: service
           value: ^(foo|bar|baz)$
       receiver: some-other-receiver
+```
+
+Чтобы получать все алерты, кроме `DeadMansSwitch`:
+
+```yaml
+receivers:
+  # Получатель, определенный без параметров, будет работать как "/dev/null".
+  - name: blackhole
+  # Действующий получатель.
+  - name: some-other-receiver
+  # ...
+route:
+  # receiver по умолчанию.
+  receiver: some-other-receiver
+  routes:
+    # Дочерний маршрут.
+    - matchers:
+        - matchType: =
+          name: alertname
+          value: DeadMansSwitch
+      receiver: blackhole
 ```
 
 С подробным описанием всех параметров можно ознакомиться [в официальной документации](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file).
