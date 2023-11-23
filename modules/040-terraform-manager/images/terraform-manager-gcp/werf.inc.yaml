@@ -7,18 +7,18 @@ git:
 import:
 - artifact: terraform-provider-gcp
   add: /terraform-provider-gcp/terraform-provider-gcp
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64
   before: setup
-ansible:
-  install:
-  - name: "Create a directory for terraform provider gcp"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64
-      state: directory
-  - apk:
-      name: ca-certificates
-      update_cache: yes
-  - command: rm -rf /var/cache/apk/*
+#ansible:
+#  install:
+#  - name: "Create a directory for terraform provider gcp"
+#    file:
+#      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64
+#      state: directory
+#  - apk:
+#      name: ca-certificates
+#      update_cache: yes
+#  - command: rm -rf /var/cache/apk/*
 ---
 artifact: terraform-provider-gcp
 from: {{ .Images.BASE_GOLANG_ALPINE }}

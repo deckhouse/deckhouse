@@ -8,10 +8,10 @@ import:
   add: /terraform-provider-azure
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64
   before: setup
-shell:
-  install:
-    - "apk update && apk add ca-certificates"
-    - "rm -rf /var/cache/apk/*"
+#shell:
+#  install:
+#    - "apk update && apk add ca-certificates"
+#    - "rm -rf /var/cache/apk/*"
 ---
 artifact: terraform-provider-azure
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
