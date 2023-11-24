@@ -39,7 +39,8 @@ var _ = Describe("Multitenancy Manager hooks :: migrate releases ::", func() {
 
 	Context("Cluster with Projects", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(validProject + namespace))
+			f.KubeStateSet(validProject + namespace + randomNamespace)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -47,7 +48,16 @@ var _ = Describe("Multitenancy Manager hooks :: migrate releases ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("Namespace annotations are updated", func() {
+		It("Project namespace annotations are updated", func() {
+			Expect(f.KubernetesGlobalResource("Namespace", "test-project").Field(`metadata.annotations.meta\.helm\.sh/release-name`).String()).To(Equal("test-project"))
+			Expect(f.KubernetesGlobalResource("Namespace", "test-project").Field(`metadata.annotations.meta\.helm\.sh/release-namespace`).String()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("Namespace", "test-project").Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
+		})
+
+		It("Random namespace annotations don't exist", func() {
+			Expect(f.KubernetesGlobalResource("Namespace", "random").Field(`metadata.annotations.meta\.helm\.sh/release-name`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Namespace", "random").Field(`metadata.annotations.meta\.helm\.sh/release-namespace`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Namespace", "random").Field(`metadata.annotations.helm\.sh/resource-policy`).Exists()).To(BeFalse())
 		})
 	})
 })
@@ -83,4 +93,14 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: Helm
   name: test-project
+`
+
+const randomNamespace = `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: random
+  annotations:
+    extended-monitoring.deckhouse.io/enabled: ""
 `

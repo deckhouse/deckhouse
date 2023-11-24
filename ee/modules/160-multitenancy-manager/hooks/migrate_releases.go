@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			WaitForSynchronization:       pointer.Bool(true),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc: filterProjects,
+			FilterFunc:                   filterProjects,
 		},
 	},
 }, patchNamespaces)
@@ -53,8 +53,8 @@ func patchNamespaces(input *go_hook.HookInput) (err error) {
 		patch := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"annotations": map[string]string{
-					"helm.sh/resource-policy": "keep",
-					"meta.helm.sh/release-name": projectName,
+					"helm.sh/resource-policy":        "keep",
+					"meta.helm.sh/release-name":      projectName,
 					"meta.helm.sh/release-namespace": "",
 				},
 			},
