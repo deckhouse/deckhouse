@@ -51,6 +51,13 @@ function _enable_kubelet_service() {
   bb-flag-set kubelet-need-restart
 }
 
+# CIS becnhmark purposes
+tls_args=""
+if [ -f /var/lib/kubelet/pki/kubelet-server-current.pem ]; then
+  tls_args="--tls-cert-file=/var/lib/kubelet/pki/kubelet-server-current.pem
+    --tls-private-key-file=/var/lib/kubelet/pki/kubelet-server-current.pem"
+fi
+
 # Generate kubelet unit
 bb-sync-file /etc/systemd/system/kubelet.service.d/10-deckhouse.conf - << EOF
 [Service]
@@ -89,7 +96,9 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
     ${cri_config} \\
 {{- end }}
     --v=2
+    ${tls_args}
 EOF
 
 # CIS becnhmark purposes
 chmod 600 /etc/systemd/system/kubelet.service.d/10-deckhouse.conf
+chmod 600 /lib/systemd/system/kubelet.service
