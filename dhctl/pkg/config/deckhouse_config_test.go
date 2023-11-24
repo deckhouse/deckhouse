@@ -30,6 +30,35 @@ func generateMetaConfigForDeckhouseConfigTestWithErr(t *testing.T, data map[stri
 	return generateMetaConfig(t, configOverridesTemplate, data, true)
 }
 
+func TestDeckhouseReleaseChannelDeprecated(t *testing.T) {
+	metaConfig := generateMetaConfig(t, `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.28"
+clusterDomain: "cluster.local"
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  devBranch: aaaa
+  releaseChannel: Beta
+---
+apiVersion: deckhouse.io/v1alpha1
+# type of the configuration section
+kind: StaticClusterConfiguration
+# address space for the cluster's internal network
+internalNetworkCIDRs:
+- 192.168.199.0/24
+
+`, map[string]interface{}{}, false)
+	iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
+	require.NoError(t, err)
+	require.Equal(t, iCfg.ReleaseChannel, "Beta")
+}
+
 func TestModuleDeckhouseConfigOverridesAndMc(t *testing.T) {
 	t.Run("Fail whe module config and config overrides", func(t *testing.T) {
 		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
