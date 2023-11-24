@@ -401,16 +401,32 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 						log.InfoLn(createMsg)
 					}
 					// need for invalidate cache
-					_, _ = kubeCl.APIResourceList(config.ModuleConfigGroup + "/" + config.ModuleConfigVersion)
-					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+					_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
+					if err != nil {
+						log.DebugF("Error getting mc api resource: %v\n", err)
+					}
+
+					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
 						Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
+					if err != nil {
+						log.InfoF("Do not create mc: %v\n", err)
+					}
+
 					return err
 				},
 				UpdateFunc: func(manifest interface{}) error {
 					// need for invalidate cache
-					_, _ = kubeCl.APIResourceList(config.ModuleConfigGroup + "/" + config.ModuleConfigVersion)
-					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+					_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
+					if err != nil {
+						log.DebugF("Error getting mc api resource: %v\n", err)
+					}
+
+					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
 						Update(context.TODO(), manifest.(*unstructured.Unstructured), metav1.UpdateOptions{})
+					if err != nil {
+						log.InfoF("Do not updating mc: %v\n", err)
+					}
+
 					return err
 				},
 			}
@@ -425,7 +441,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 
 	err := log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
-			err := retry.NewSilentLoop(task.Name, 45, 10*time.Second).Run(task.CreateOrUpdate)
+			err := retry.NewSilentLoop(task.Name, 60, 5*time.Second).Run(task.CreateOrUpdate)
 			if err != nil {
 				return err
 			}
