@@ -15,7 +15,7 @@
 110-istio/                  @apolovov
 140-user-authz/             @nabokihms @apolovov
 150-user-authn/             @nabokihms
-160-multitenancy-manager/    @yalosev @Dmitrykob
+160-multitenancy-manager/   @yalosev @Dmitrykob
 200-operator-prometheus/    @nabokihms
 340-extended-monitoring/    @nabokihms
 340-monitoring-*/           @nabokihms
@@ -31,6 +31,7 @@
 491-containerized-data-importer @fl64
 500-openvpn/                @vitaliy-sn
 500-upmeter/                @shvgn
+500-operator-trivy/         @miklezzzz
 502-delivery/               @shvgn
 600-flant-integration/      @nabokihms
 650-runtime-audit-engine/   @nabokihms
