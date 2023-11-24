@@ -202,6 +202,11 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
+	if deckhouseUpdater.HasAppliedNowRelease() {
+		deckhouseUpdater.ApplyAppliedNowRelease()
+		return nil
+	}
+
 	if deckhouseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
 		deckhouseUpdater.ApplyPredictedRelease(nil)
@@ -251,6 +256,12 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 	if v, ok := release.Annotations["release.deckhouse.io/force"]; ok {
 		if v == "true" {
 			annotationFlags.Force = true
+		}
+	}
+
+	if v, ok := release.Annotations["release.deckhouse.io/apply-now"]; ok {
+		if v == "true" {
+			annotationFlags.ApplyNow = true
 		}
 	}
 
