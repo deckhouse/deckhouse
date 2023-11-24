@@ -1,5 +1,9 @@
 <div class="breadcrumbs-container">
    <ol class="breadcrumbs">
+     <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
+   </ol>
+   <ol class="breadcrumbs">
+      <li class="breadcrumbs__item">{{ site.data.i18n.common.platform[page.lang] }}</li>
       <!--#include virtual="/includes/group-menu.html" -->
       {%- assign page_url_parts = page.url | split: '/' -%}
       {%- assign max_ind = page_url_parts.size | minus: 1 -%}
@@ -36,7 +40,7 @@
     <!--end search-->
    {% unless site.mode == "local" %}
    <div id="doc-versions-menu" class="channel-menu submenu-parent">
-      <!--#include virtual="/includes/channel-menu.html" -->
+      <!-- #include virtual="/includes/channel-menu.html" -->
    </div>
    {% endunless %}
 </div>

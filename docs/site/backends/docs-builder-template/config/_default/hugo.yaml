@@ -48,7 +48,7 @@ disableKinds:
 - home
 - taxonomy
 - term
-#- section
+- section
 
 languages:
   en:
@@ -57,11 +57,11 @@ languages:
     languageName: ""
     title: Modules
     weight: 0
-    baseURL: /others/modules/
+    baseURL: https://deckhouse.io/source/
   ru:
     disabled: false
     languageDirection: ""
     languageName: ""
     weight: 1
     title: Модули
-    baseURL: /others/modules/
+    baseURL: https://deckhouse.ru/source/

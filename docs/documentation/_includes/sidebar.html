@@ -3,17 +3,31 @@
   <div class="sidebar__wrapper-inner">
     <nav class="sidebar__container">
 
-      <ul class="sidebar" id="mysidebar">
-        <div>
-        {%- for tab in site.data.sidebar_common.tabs %}
-          {%- assign tabName = tab[0] %}
-          {%- assign tabData = tab[1] %}
-          <a class='tabs__btn tabs__btn_sidebars {%- if tabData.default %} active{%- endif %}'  href='{{ tabData.url }}'>
-            {{- site.data.i18n.common[tabName][page.lang] | capitalize }}
-          </a>
-        {%- endfor %}
+      {% unless site.mode == "local" %}
+      <div style="display: flex;flex-direction: row; justify-content: start; padding-bottom: 15px;">
+        <div class="channel-menu submenu-parent">
+
+          <!-- documentation-section-badge -->
+          <a data-proofer-ignore="" href="#" style="margin-right: 25px;" class="highlight">{{ site.data.i18n.common.platform[page.lang] | capitalize }}</a>
+          <div class="submenu-container">
+              <ul class="submenu">
+              <li class="submenu-item">
+                  <a data-proofer-ignore='' class='submenu-item-link' href='/source/modules/deckhouse-admin/alpha/'>
+                      <span class="submenu-item-channel">{{ site.data.i18n.common.modules[page.lang] | capitalize }}</span>
+                  </a>
+              </li>
+              </ul>
+          </div>
         </div>
 
+        <!-- module-version-badge -->
+        <div id="doc-versions-menu" class="channel-menu submenu-parent">
+           <!--#include virtual="/includes/channel-menu-v2.html" -->
+        </div>
+      </div>
+      {% endunless %}
+
+      <ul class="sidebar" id="mysidebar">
         {%- for entry in sidebar.folders %}
         {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
         {%- endfor %}

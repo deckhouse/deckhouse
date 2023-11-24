@@ -2,6 +2,9 @@ search-placeholder: Search...
 version: version
 modules: modules
 deckhouse: deckhouse
+documentation: documentation
+core: core
+platform: platform
 moduleLinkTitleREADME: Description
 moduleLinkTitleEXAMPLES: Examples
 moduleLinkTitleCONFIGURATION: Configuration

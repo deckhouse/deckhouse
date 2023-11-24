@@ -199,7 +199,7 @@ func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string
 	}
 
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
-		return filepath.Join(u.baseDir, "content", moduleName, channel, fileName), true
+		return filepath.Join(u.baseDir, "content/modules", moduleName, channel, fileName), true
 	}
 
 	if strings.HasPrefix(fileName, "crds") ||

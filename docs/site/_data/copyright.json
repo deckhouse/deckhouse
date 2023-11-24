@@ -17,7 +17,7 @@
     },
     {
       "title": "Technical support regulations",
-      "url": "/regulations/",
+      "url": "/regulations-en/",
       "target": ""
     }
   ],
@@ -30,17 +30,17 @@
     {
       "title": "Лицензионное соглашение",
       "url": "/license/",
-      "target": ""
+      "target": "_blank"
     },
     {
       "title": "Правила лицензирования",
       "url": "/license-rules/",
-      "target": ""
+      "target": "_blank"
     },
     {
       "title": "Регламент технической поддержки",
       "url": "/regulations/",
-      "target": ""
+      "target": "_blank"
     }
   ]
 }

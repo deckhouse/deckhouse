@@ -31,8 +31,8 @@ services:
     image: $WERF_WEB_FRONTEND_DOCKER_IMAGE_NAME
     volumes:
       - ".werf/nginx-dev.conf:/etc/nginx/nginx.conf:ro"
-      - "./backends/docs-builder-template/public/en:/app/en/modules:ro"
-      - "./backends/docs-builder-template/public/ru:/app/ru/modules:ro"
+      - "./backends/docs-builder-template/public/en:/app/en/source:ro"
+      - "./backends/docs-builder-template/public/ru:/app/ru/source:ro"
     ports:
       - "80:80"
     networks:

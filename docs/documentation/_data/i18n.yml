@@ -110,6 +110,15 @@ common:
   no_description:
     en: There is no description...
     ru: Нет описания...
+  documentation:
+    en: Documentation
+    ru: Документация
+  core:
+    en: Core
+    ru: Ядро
+  platform:
+    en: Platform
+    ru: Платформа
   search_placeholder_text:
     en: Search...
     ru: Поиск...
