@@ -9,16 +9,6 @@ import:
   add: /terraform-provider-vsphere/terraform-provider-vsphere
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64
   before: setup
-#ansible:
-#  install:
-#  - name: "Create a directory for terraform provider vsphere"
-#    file:
-#      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64
-#      state: directory
-#  - apk:
-#      name: ca-certificates
-#      update_cache: yes
-#  - command: rm -rf /var/cache/apk/*
 ---
 artifact: terraform-provider-vsphere
 from: {{ .Images.BASE_GOLANG_ALPINE }}

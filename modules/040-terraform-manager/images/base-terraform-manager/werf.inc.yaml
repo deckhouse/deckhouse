@@ -23,10 +23,6 @@ git:
   to: /deckhouse
   includePaths:
     - "candi/openapi"
-# shell:
-#   install:
-#     - "apk update && apk add ca-certificates"
-#     - "rm -rf /var/cache/apk/*"
 
 ---
 # use artifact for one place import for base and install images
