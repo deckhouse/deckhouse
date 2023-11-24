@@ -163,10 +163,13 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
 
+	releaseChannel := ""
+
 	// todo after release 1.55 remove it and from openapi schema
 	deprecatedFields := make([]string, 0, 3)
 	deprecatedFieldsExamples := make([]string, 0, 3)
 	if metaConfig.DeckhouseConfig.ReleaseChannel != "" {
+		releaseChannel = metaConfig.DeckhouseConfig.ReleaseChannel
 		deprecatedFields = append(deprecatedFields, "releaseChannel")
 		deprecatedFieldsExamples = append(deprecatedFieldsExamples, "releaseChannel: Stable")
 	}
@@ -221,8 +224,6 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 			bundle = bundleRaw.(string)
 		}
 	}
-
-	releaseChannel := ""
 
 	if deckhouseCm == nil {
 		deckhouseCm, err = buildModuleConfigWithOverrides(schemasStore, "deckhouse", true, map[string]any{

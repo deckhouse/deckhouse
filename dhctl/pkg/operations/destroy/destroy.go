@@ -54,7 +54,7 @@ type ClusterDestroyer struct {
 
 	skipResources bool
 
-	staticDestroyer *staticMastersDestroyer
+	staticDestroyer *StaticMastersDestroyer
 
 	*phases.PhasedExecutionContext
 }
@@ -66,7 +66,7 @@ func NewClusterDestroyer(params *Params) *ClusterDestroyer {
 	terraStateLoader := terraform.NewLazyTerraStateLoader(terraform.NewCachedTerraStateLoader(d8Destroyer, state.cache))
 	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
 
-	staticDestroyer := newStaticMastersDestroyer(params.SSHClient)
+	staticDestroyer := NewStaticMastersDestroyer(params.SSHClient)
 
 	return &ClusterDestroyer{
 		state:           state,
@@ -152,17 +152,17 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	return d.PhasedExecutionContext.Complete()
 }
 
-type staticMastersDestroyer struct {
+type StaticMastersDestroyer struct {
 	SSHClient *ssh.Client
 }
 
-func newStaticMastersDestroyer(c *ssh.Client) *staticMastersDestroyer {
-	return &staticMastersDestroyer{
+func NewStaticMastersDestroyer(c *ssh.Client) *StaticMastersDestroyer {
+	return &StaticMastersDestroyer{
 		SSHClient: c,
 	}
 }
 
-func (d *staticMastersDestroyer) DestroyCluster(autoApprove bool) error {
+func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
 			return fmt.Errorf("Cleanup master nodes disallow")
