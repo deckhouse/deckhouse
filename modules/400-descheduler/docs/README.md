@@ -21,12 +21,11 @@ You can enable, disable, and configure a strategy in the [`Descheduler` custom r
 
 ### HighNodeUtilization
 
-This strategy finds nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled
-compactly into fewer nodes. This strategy must be used with the scheduler strategy `MostRequestedPriority`.
+This strategy finds nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled compactly into fewer nodes. This strategy must be used with the scheduler strategy `MostRequestedPriority`.
 
 ### LowNodeUtilization
 
-The descheduler finds underutilized or overutilized nodes using cpu/memory/Pods (in %) thresholds and evict Pods from overutilized nodes hoping that these Pods will be rescheduled on underutilized nodes. Note that this strategy takes into account Pod requests instead of actual resources consumed.
+This strategy finds underutilized or overutilized nodes using cpu/memory/Pods (in %) thresholds and evicts Pods from overutilized nodes hoping that these Pods will be rescheduled on underutilized nodes. Note that this strategy takes into account Pod requests instead of actual resources consumed.
 
 ### PodLifeTime
 
