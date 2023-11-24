@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -400,10 +401,13 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 					if createMsg != "" {
 						log.InfoLn(createMsg)
 					}
-					// need for invalidate cache
-					_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
-					if err != nil {
-						log.DebugF("Error getting mc api resource: %v\n", err)
+					// fake client does not support cache
+					if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
+						// need for invalidate cache
+						_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
+						if err != nil {
+							log.DebugF("Error getting mc api resource: %v\n", err)
+						}
 					}
 
 					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
@@ -415,10 +419,13 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 					return err
 				},
 				UpdateFunc: func(manifest interface{}) error {
-					// need for invalidate cache
-					_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
-					if err != nil {
-						log.DebugF("Error getting mc api resource: %v\n", err)
+					// fake client does not support cache
+					if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
+						// need for invalidate cache
+						_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
+						if err != nil {
+							log.DebugF("Error getting mc api resource: %v\n", err)
+						}
 					}
 
 					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
