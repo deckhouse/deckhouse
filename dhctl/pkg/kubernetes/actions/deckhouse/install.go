@@ -421,7 +421,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 
 	err := log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
-			err := retry.NewSilentLoop(task.Name, 15, 5*time.Second).Run(task.CreateOrUpdate)
+			err := retry.NewSilentLoop(task.Name, 45, 10*time.Second).Run(task.CreateOrUpdate)
 			if err != nil {
 				return err
 			}
