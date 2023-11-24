@@ -304,7 +304,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
 
 			if baseOutputs.BastionHost != "" {
-				setBastionHostFromCloudProvider(baseOutputs.BastionHost, sshClient)
+				setBastionHost(baseOutputs.BastionHost, sshClient)
 				SaveBastionHostToCache(baseOutputs.BastionHost)
 			}
 
@@ -525,7 +525,7 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 	})
 }
 
-func setBastionHostFromCloudProvider(host string, sshClient *ssh.Client) {
+func setBastionHost(host string, sshClient *ssh.Client) {
 	app.SSHBastionHost = host
 
 	if app.SSHBastionUser == "" {

@@ -57,7 +57,7 @@ func getSSHClient() (*ssh.Client, error) {
 	}
 
 	if bastionHost != "" {
-		setBastionHostFromCloudProvider(bastionHost, nil)
+		setBastionHost(bastionHost, nil)
 	}
 
 	return ssh.NewClientFromFlags().Start()
