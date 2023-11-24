@@ -66,6 +66,9 @@ func handleHostNetworkFalseWithHostPorts(input *go_hook.HookInput, dc dependency
 	if !ok {
 		return nil
 	}
+if len(snap) == 0 {
+		return nil
+	}
 
 	if !snap[0].(bool) {
 		return nil
