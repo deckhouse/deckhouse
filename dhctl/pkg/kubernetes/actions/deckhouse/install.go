@@ -400,11 +400,15 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 					if createMsg != "" {
 						log.InfoLn(createMsg)
 					}
+					// need for invalidate cache
+					_, _ = kubeCl.APIResourceList(config.ModuleConfigGroup + "/" + config.ModuleConfigVersion)
 					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
 						Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
 					return err
 				},
 				UpdateFunc: func(manifest interface{}) error {
+					// need for invalidate cache
+					_, _ = kubeCl.APIResourceList(config.ModuleConfigGroup + "/" + config.ModuleConfigVersion)
 					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
 						Update(context.TODO(), manifest.(*unstructured.Unstructured), metav1.UpdateOptions{})
 					return err
