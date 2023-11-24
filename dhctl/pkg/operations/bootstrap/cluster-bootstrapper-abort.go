@@ -43,6 +43,26 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(forceAbortFromCache) })
 }
 
+func getSSHClient() (*ssh.Client, error) {
+	mastersIPs, err := GetMasterHostsIPs()
+	if err != nil {
+		return nil, err
+	}
+	app.SSHHosts = mastersIPs
+
+	bastionHost, err := GetBastionHostFromCache()
+	if err != nil {
+		log.ErrorF("Can not load bastion host: %v\n", err)
+		return nil, err
+	}
+
+	if bastionHost != "" {
+		setBastionHostFromCloudProvider(bastionHost, nil)
+	}
+
+	return ssh.NewClientFromFlags().Start()
+}
+
 func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
 	metaConfig, err := config.ParseConfig(app.ConfigPath)
 	if err != nil {
@@ -87,8 +107,16 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		}
 		if !ok || forceAbortFromCache {
 			log.DebugF(fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache))
-			terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
-			destroyer = infrastructure.NewClusterInfra(terraStateLoader, stateCache)
+			if metaConfig.ClusterType == config.CloudClusterType {
+				terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
+				destroyer = infrastructure.NewClusterInfra(terraStateLoader, stateCache)
+			} else {
+				sshClient, err := getSSHClient()
+				if err != nil {
+					return err
+				}
+				destroyer = destroy.NewStaticMastersDestroyer(sshClient)
+			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
 			if forceAbortFromCache {
@@ -100,26 +128,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			return nil
 		}
 
-		mastersIPs, err := GetMasterHostsIPs()
+		sshClient, err := getSSHClient()
 		if err != nil {
 			return err
 		}
-		app.SSHHosts = mastersIPs
 
-		bastionHost, err := GetBastionHostFromCache()
-		if err != nil {
-			log.ErrorF("Can not load bastion host: %v\n", err)
-			return err
-		}
-
-		if bastionHost != "" {
-			setBastionHostFromCloudProvider(bastionHost, nil)
-		}
-
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}

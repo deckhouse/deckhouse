@@ -334,6 +334,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 		_ = json.Unmarshal(metaConfig.ClusterConfig["static"], &static)
 		nodeIP = static.NodeIP
+
+		if sshClient.Settings.BastionHost != "" {
+			SaveBastionHostToCache(sshClient.Settings.BastionHost)
+		}
+
+		SaveMasterHostsToCache(map[string]string{
+			"first-master": sshClient.Settings.Host(),
+		})
 	}
 
 	// next parse and check resources
