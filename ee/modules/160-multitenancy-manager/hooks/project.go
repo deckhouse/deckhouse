@@ -25,8 +25,8 @@ const userResourcesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/t
 const alternativeUserResourcesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        internal.ModuleQueue(internal.ProjectsQueue),
-	AllowFailure: true,
+	Queue:       internal.ModuleQueue(internal.ProjectsQueue),
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 25},
 	Kubernetes: []go_hook.KubernetesConfig{
 		internal.ProjectHookKubeConfig,
 		// subscribe to ProjectTypes to update Projects when ProjectType changes
@@ -39,7 +39,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectValuesSnap = internal.GetProjectSnapshots(input, projectTypeValuesSnap)
 	var existProjects = set.NewFromSnapshot(input.Snapshots[internal.ProjectsSecrets])
-	var upgradeProjectErr error
 
 	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager)
 	if err != nil {
@@ -61,7 +60,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
-			upgradeProjectErr = err
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("upgrade project \"%v\" error: %v", projectName, err)
 			continue
@@ -76,10 +74,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("delete project \"%v\" error: %v", projectName, err)
 		}
-	}
-
-	if upgradeProjectErr != nil {
-		return upgradeProjectErr
 	}
 
 	return nil
