@@ -61,6 +61,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
+			upgradeProjectErr = err
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("upgrade project \"%v\" error: %v", projectName, err)
 			continue
@@ -72,7 +73,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	for projectName := range existProjects {
 		err := helmClient.Delete(projectName)
 		if err != nil {
-			upgradeProjectErr = err
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("delete project \"%v\" error: %v", projectName, err)
 		}
