@@ -32,10 +32,16 @@ import (
 )
 
 func TestDeckhouseInstall(t *testing.T) {
+	err := os.Setenv("DHCTL_TEST", "yes")
+	require.NoError(t, err)
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+	}()
+
 	log.InitLogger("simple")
 	fakeClient := client.NewFakeKubernetesClient()
 
-	err := os.WriteFile("/deckhouse/version", []byte("1.54.1"), 0o666)
+	err = os.WriteFile("/deckhouse/version", []byte("1.54.1"), 0o666)
 	if err != nil {
 		panic(err)
 	}
@@ -121,9 +127,15 @@ func TestDeckhouseInstall(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithDevBranch(t *testing.T) {
+	err := os.Setenv("DHCTL_TEST", "yes")
+	require.NoError(t, err)
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+	}()
+
 	fakeClient := client.NewFakeKubernetesClient()
 
-	err := os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
 	if err != nil {
 		panic(err)
 	}
@@ -140,7 +152,13 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
-	err := os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	err := os.Setenv("DHCTL_TEST", "yes")
+	require.NoError(t, err)
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+	}()
+
+	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
 	if err != nil {
 		panic(err)
 	}
@@ -184,7 +202,13 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
-	err := os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	err := os.Setenv("DHCTL_TEST", "yes")
+	require.NoError(t, err)
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+	}()
+
+	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
 	if err != nil {
 		panic(err)
 	}

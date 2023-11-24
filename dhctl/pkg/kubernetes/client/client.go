@@ -39,6 +39,7 @@ type KubeClient interface {
 	kubernetes.Interface
 	Dynamic() dynamic.Interface
 	APIResourceList(apiVersion string) ([]*metav1.APIResourceList, error)
+	APIResource(apiVersion, kind string) (*metav1.APIResource, error)
 	GroupVersionResource(apiVersion, kind string) (schema.GroupVersionResource, error)
 }
 

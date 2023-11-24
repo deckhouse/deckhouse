@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -400,13 +401,39 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 					if createMsg != "" {
 						log.InfoLn(createMsg)
 					}
-					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+					// fake client does not support cache
+					if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
+						// need for invalidate cache
+						_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
+						if err != nil {
+							log.DebugF("Error getting mc api resource: %v\n", err)
+						}
+					}
+
+					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
 						Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
+					if err != nil {
+						log.InfoF("Do not create mc: %v\n", err)
+					}
+
 					return err
 				},
 				UpdateFunc: func(manifest interface{}) error {
-					_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+					// fake client does not support cache
+					if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
+						// need for invalidate cache
+						_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
+						if err != nil {
+							log.DebugF("Error getting mc api resource: %v\n", err)
+						}
+					}
+
+					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
 						Update(context.TODO(), manifest.(*unstructured.Unstructured), metav1.UpdateOptions{})
+					if err != nil {
+						log.InfoF("Do not updating mc: %v\n", err)
+					}
+
 					return err
 				},
 			}
@@ -421,7 +448,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 
 	err := log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
-			err := retry.NewSilentLoop(task.Name, 15, 5*time.Second).Run(task.CreateOrUpdate)
+			err := retry.NewSilentLoop(task.Name, 60, 5*time.Second).Run(task.CreateOrUpdate)
 			if err != nil {
 				return err
 			}
