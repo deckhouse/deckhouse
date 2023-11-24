@@ -16,7 +16,7 @@ import (
 // TODO: Remove this migration hook after release 1.55
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 25},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "projects",

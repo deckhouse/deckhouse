@@ -38,7 +38,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectValuesSnap = internal.GetProjectSnapshots(input, projectTypeValuesSnap)
 	var existProjects = set.NewFromSnapshot(input.Snapshots[internal.ProjectsSecrets])
-	var projectUpgradeError error
 
 	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager)
 	if err != nil {
@@ -60,7 +59,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
-			projectUpgradeError = err
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("upgrade project \"%v\" error: %v", projectName, err)
 			continue
@@ -75,11 +73,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("delete project \"%v\" error: %v", projectName, err)
 		}
-	}
-
-	// return err if some projects couldn't get upgraded
-	if projectUpgradeError != nil {
-		return projectUpgradeError
 	}
 
 	return nil
