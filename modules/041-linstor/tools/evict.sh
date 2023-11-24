@@ -200,7 +200,7 @@ linstor_check_connection() {
           exit_function
         fi
       else
-        if [ $(linstor -m --output-version=v1 storage-pool list -s DfltDisklessStorPool -n $SATELLITES_ONLINE | jq '.[][].reports[]?.message' | grep 'No active connection to satellite' | wc -l) -ne 0 ]; then
+        if [ $(linstor -m --output-version=v1 storage-pool list -s ${DISKLESS_STORAGE_POOL} -n $SATELLITES_ONLINE | jq '.[][].reports[]?.message' | grep 'No active connection to satellite' | wc -l) -ne 0 ]; then
           echo "Some satellites are not connected, even though they are online. This is usually a sign of issues with the LINSTOR controller operation. It is recommended to restart the controller and satellites."
           echo "List of satellites:"
           exec_linstor_with_exit_code_check node list
@@ -341,6 +341,7 @@ linstor_change_replicas_count() {
   local changed_resources=0
 
   for resource_name in $resource_names_list; do
+    linstor_wait_sync 3
     echo "Beginning the process of changing the count of diskfull replicas for resource ${resource_name}, which has replicas on the node being evicted ${NODE_FOR_EVICT}"
 
     local is_tiebreaker_needed=false
@@ -357,24 +358,23 @@ linstor_change_replicas_count() {
       count=0
       max_attempts=10
       until [ $count -eq $max_attempts ]; do
-        RESOURCE_NODES=$(linstor -m --output-version=v1 resource list-volumes  -r "${resource_name}" | jq '[.[][] | {node_name: .node_name, storage_pool: .props.StorPoolName}]')
+        RESOURCE_NODES=$(linstor -m --output-version=v1 resource list-volumes  -r "${resource_name}" | jq '[.[][] | {node_name: .node_name, storage_pool: .props.StorPoolName, allocated_size_kib: .layer_object.children[0].storage.storage_volumes[0].allocated_size_kib}]')
         resource_storage_pools=$(echo $RESOURCE_NODES | jq 'group_by(.storage_pool) | map({storage_pool: .[0].storage_pool, count: length})')
-        diskful_storage_pools_count=$(echo $resource_storage_pools | jq '[.[] | select(.storage_pool != "DfltDisklessStorPool")] | length')
+        diskful_storage_pools_count=$(echo $resource_storage_pools | jq --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[] | select(.storage_pool != $disklessStorPoolName)] | length')
 
         if (( diskful_pools_count > 1 )); then
-            echo "Error: More than one diskful storage pool found."
+            echo "Error: More than one diskful storage pool found for resource ${resource_name}."
             echo $resource_storage_pools
             exit 1
         fi
 
-        diskful_storage_pool_name=$(echo $resource_storage_pools | jq -r '.[] | select(.storage_pool != "DfltDisklessStorPool") | .storage_pool')
-        DISKFUL_STORAGE_POOL_NODES=$(linstor -m --output-version=v1 storage-pool list | jq --arg pool "$diskful_storage_pool_name" '[.[][] | select(.storage_pool_name == $pool) | {node_name: .node_name, free_capacity: .free_capacity}]')
-        current_diskful_replicas_count=$(echo $RESOURCE_NODES | jq '[.[] | select(.storage_pool != "DfltDisklessStorPool")] | length')
+        diskful_storage_pool_name=$(echo $resource_storage_pools | jq -r --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[] | select(.storage_pool != $disklessStorPoolName) | .storage_pool')
+        current_diskful_replicas_count=$(echo $RESOURCE_NODES | jq --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[] | select(.storage_pool != $disklessStorPoolName)] | length')
 
         # current_diskful_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName != $disklessStorPoolName).name] | length')    
         ((count++))
-        if [[ -z $RESOURCE_NODES || -z $DISKFUL_STORAGE_POOL_NODES || -z $current_diskful_replicas_count ]]; then
-          echo "Warning! Can't get the resource nodes, diskful storage pool nodes or the total number of diskfull replicas for resource ${resource_name}."
+        if [[ -z $RESOURCE_NODES || -z $current_diskful_replicas_count ]]; then
+          echo "Warning! Can't get the resource nodes or the total number of diskfull replicas for resource ${resource_name}."
           echo "Resource status:"
           exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
           if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
@@ -408,8 +408,7 @@ linstor_change_replicas_count() {
     sleep 2
     if (( ${current_diskful_replicas_count} < ${desired_diskful_replicas_count} )); then
       difference=$((desired_diskful_replicas_count - current_diskful_replicas_count))
-      eval "$(get_sorted_free_nodes "$RESOURCE_NODES" "$DISKFUL_STORAGE_POOL_NODES")"
-
+      eval "$(get_sorted_free_nodes "$RESOURCE_NODES" "$DISKFUL_STORAGE_POOLS_NODES" "${diskful_storage_pool_name}")"
 
       echo "The total number of diskfull replicas for resource ${resource_name} (${current_diskful_replicas_count}) less then the desired number of replicas(${desired_diskful_replicas_count}). Adding ${difference} diskfull replicas for this resource"
       for ((i=0; i<difference; i++)); do
@@ -418,15 +417,28 @@ linstor_change_replicas_count() {
           exit_function
           break
         fi
+
+        node_available_free_space=$(echo ${sorted_free_nodes[$i]} | cut -d' ' -f1)
         node_name_for_new_replica=$(echo ${sorted_free_nodes[$i]} | cut -d' ' -f2)
+        resource_allocated_size_kib=$(echo $RESOURCE_NODES | jq '.[].allocated_size_kib' | sort -nr | head -n 1)
+        
+        if (( ${resource_allocated_size_kib} > ${node_available_free_space} )); then
+          echo "Node ${node_name_for_new_replica} has ${node_available_free_space} free space. New replica needs ${resource_allocated_size_kib} space. Error: Not enough free space on node ${node_name_for_new_replica}"
+          exit_function
+          break
+        fi
 
-
+        echo "Node ${node_name_for_new_replica} has ${node_available_free_space} free space. New replica needs ${resource_allocated_size_kib} space. Creating new replica on this node."
         echo "Performing checks before create new replica on node \"${node_name_for_new_replica}\""
         linstor_check_faulty
-        linstor_wait_sync 3
 
         echo "Creating new replica on node \"${node_name_for_new_replica}\" for resource \"${resource_name}\""
         exec_linstor_with_exit_code_check resource create ${node_name_for_new_replica} ${resource_name} --storage-pool ${diskful_storage_pool_name}
+        
+        DISKFUL_STORAGE_POOLS_NODES=$(echo $DISKFUL_STORAGE_POOLS_NODES | jq --arg node_name "${node_name_for_new_replica}" --arg diskfulStoragePoolName "${diskful_storage_pool_name}" --argjson resource_allocated_size_kib "${resource_allocated_size_kib}" '
+          map(if .node_name == $node_name and .storage_pool_name == $diskfulStoragePoolName then .free_capacity -= $resource_allocated_size_kib else . end)
+        ')
+
         sleep ${timeout}
         echo "Resource status after create new replica:"
         exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
@@ -491,17 +503,18 @@ linstor_change_replicas_count() {
 
 get_sorted_free_nodes() {
   local resource_nodes=$1
-  local diskful_storage_pool_nodes=$2
+  local diskful_storage_pools_nodes=$2
+  local diskful_storage_pool_name=$3
 
   resource_all_nodes=($(echo $resource_nodes | jq -r '.[].node_name'))
-  # resource_diskful_nodes=($(echo $resource_nodes | jq -r '.[] | select(.storage_pool != "DfltDisklessStorPool") | .node_name'))
-  diskful_nodes=($(echo $diskful_storage_pool_nodes | jq -r '.[].node_name'))
-  free_capacities=($(echo $diskful_storage_pool_nodes | jq -r '.[].free_capacity'))
+  # resource_diskful_nodes=($(echo $resource_nodes | jq -r --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[] | select(.storage_pool != $disklessStorPoolName) | .node_name'))
+  diskful_nodes_for_storage_pool=($(echo $diskful_storage_pools_nodes | jq -r --arg diskfulStoragePoolName "${diskful_storage_pool_name}" '.[] | select(.storage_pool_name == $diskfulStoragePoolName) | .node_name'))
+  free_capacities=($(echo $diskful_storage_pools_nodes | jq -r --arg diskfulStoragePoolName "${diskful_storage_pool_name}" '.[] | select(.storage_pool_name == $diskfulStoragePoolName) | .free_capacity'))
 
   free_nodes=()
 
-  for i in "${!diskful_nodes[@]}"; do
-      node=${diskful_nodes[$i]}
+  for i in "${!diskful_nodes_for_storage_pool[@]}"; do
+      node=${diskful_nodes_for_storage_pool[$i]}
       if [[ ! " ${resource_all_nodes[@]} " =~ " ${node} " ]]; then
           free_nodes+=("${free_capacities[$i]} ${node}")
       fi
@@ -1034,6 +1047,7 @@ exec_linstor_with_exit_code_check node set-property ${NODE_FOR_EVICT} AutoplaceT
 
 RESOURCE_AND_GROUP_NAMES=$(linstor -m --output-version=v1 resource-definition list -r ${DISKFUL_RESOURCES_TO_EVICT} | jq -r '.[][] | {resource: .name, resource_group: .resource_group_name}')
 RESOURCE_GROUPS=$(linstor -m --output-version=v1 resource-group list | jq -r '.[][] | {resource_group: .name, place_count: .select_filter.place_count}')
+DISKFUL_STORAGE_POOLS_NODES=$(linstor -m --output-version=v1 storage-pool list | jq --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.storage_pool_name != $disklessStorPoolName) | {storage_pool_name: .storage_pool_name, node_name: .node_name, free_capacity: .free_capacity}]')
 
 echo "List of resources to be evicted from node ${NODE_FOR_EVICT}:"
 exec_linstor_with_exit_code_check resource list-volumes -r ${DISKFUL_RESOURCES_TO_EVICT}
@@ -1053,6 +1067,7 @@ sleep 2
 echo "Performing checks before deleting the node"
 linstor_check_faulty
 linstor_wait_sync 0
+linstor_check_faulty
 
 echo "Getting the list of resources, replicas of which are on the evicted node ${NODE_FOR_EVICT} again, to check if the new resources have appeared"
 export DISKFUL_RESOURCES_TO_EVICT_NEW=$(linstor -m --output-version=v1 resource list -n ${NODE_FOR_EVICT} | jq -r --arg nodeName "${NODE_FOR_EVICT}" --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[][] | select(.node_name == $nodeName and .props.StorPoolName != $disklessStorPoolName).name')
