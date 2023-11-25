@@ -17,7 +17,7 @@
 # This helper script is looking for *_GITREPO *_VERSION and *_COMMIT_REF variables
 # on Dockerfiles and updating them to the latest versions from GitHub
 #
-# Usage: [DRBDONLY=1] hack/update.sh [./images]
+# Usage: [DRBDONLY=1] hack/update.sh [./images] 
 
 sed_regex=""
 targets="$(grep -rl '^ARG [A-Z_]*_\(VERSION\|COMMIT_REF\)=' $@)"
