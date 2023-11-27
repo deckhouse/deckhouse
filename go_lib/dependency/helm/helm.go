@@ -64,6 +64,7 @@ func NewClient(namespace string, options ...Option) (Client, error) {
 
 	client := helmClient{
 		actionConfig: conf,
+		options:      *opts,
 	}
 
 	return &client, nil
@@ -93,7 +94,8 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 	ch := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,
-			Version: "0.0.1"},
+			Version: "0.0.1",
+		},
 	}
 
 	for name, template := range templates {
