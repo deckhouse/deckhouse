@@ -455,7 +455,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
    Please note the volumes mounted from the host file system into the installer container: a directory into which module images will be loaded, and the ModuleSource YAML manifest, which describes the source of third-party modules.
 
-1. Download module images from their source registry, described as a ModuleSource resource, into a dedicated directory using the command `dhctl mirror-modules`
+1. Download module images from their source registry, described as a ModuleSource resource, into a dedicated directory using the command `dhctl mirror-modules`.
 
    `dhctl mirror-modules` downloads only versions of modules available in the module release channels at the time of copying.
 
@@ -491,7 +491,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
     * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when uploading images;
     * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
 
-1. Apply the ModuleSource manifest received in the previous step to the cluster
+1. Apply the ModuleSource manifest received in the previous step to the cluster.
 
    ```shell
    kubectl apply -f $HOME/module_source.yml
