@@ -235,7 +235,7 @@ func fetchVersionsFromModuleReleaseChannels(
 	authProvider authn.Authenticator,
 	insecure bool,
 ) (map[string]string, error) {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure)
 	channelVersions := map[string]string{}
 	for imageTag := range releaseChannelImages {
 

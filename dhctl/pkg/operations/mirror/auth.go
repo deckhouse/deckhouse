@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
@@ -50,14 +50,15 @@ func ValidateWriteAccessForRepo(repo string, authProvider authn.Authenticator, i
 		return err
 	}
 
-	if err = remote.Write(ref, empty.Image, remoteOpts...); err != nil {
+	syntheticImage, err := random.Image(512, 1)
+	if err != nil {
+		return fmt.Errorf("Generate random image: %w", err)
+	}
+
+	// We do not delete uploaded synthetic image, not all registries are set up to take DELETE requests kindly
+	if err = remote.Write(ref, syntheticImage, remoteOpts...); err != nil {
 		return err
 	}
-
-	if err = remote.Delete(ref, remoteOpts...); err != nil {
-		return fmt.Errorf("Could not clean up image %q after write-testing registry permissions: %w", ref.String(), err)
-	}
-
 	return nil
 }
 
