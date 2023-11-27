@@ -254,6 +254,8 @@ tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_
 # serverTLSBootstrap flag should be enable after bootstrap of first master.
 # This flag affects logs from kubelet, for period of time between kubelet start and certificate request approve by Deckhouse hook.
 serverTLSBootstrap: true
+tlsCertFile: /var/lib/kubelet/pki/kubelet-server-current.pem
+tlsPrivateKeyFile: /var/lib/kubelet/pki/kubelet-server-current.pem
 {{- end }}
 {{/*
 RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be explicitly enabled
