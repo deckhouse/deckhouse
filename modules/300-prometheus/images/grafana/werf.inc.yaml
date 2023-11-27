@@ -101,11 +101,11 @@ from: {{ $.Images.BASE_UBUNTU }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana-server
-  to: /usr/share/grafana/bin
+  to: /usr/share/grafana/bin/grafana-server
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana-cli
-  to: /usr/share/grafana/bin
+  to: /usr/share/grafana/bin/grafana-cli
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
   add: /usr/src/app/public
