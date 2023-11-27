@@ -3,7 +3,7 @@ title: "Cloud provider — AWS: Layouts"
 description: "Schemes of placement and interaction of resources in AWS when working with the Deckhouse cloud provider."
 ---
 
-Three layouts are supported. Below is more information about each of them.
+Two layouts are supported. Below is more information about each of them.
 
 ## WithoutNAT
 
@@ -72,8 +72,8 @@ apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: WithNAT
 provider:
-  providerAccessKeyId: MYACCESSKEY
-  providerSecretAccessKey: mYsEcReTkEy
+  providerAccessKeyId: '<AWS_ACCESS_KEY>'
+  providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
   region: eu-central-1
 withNAT:
   bastionInstance:
