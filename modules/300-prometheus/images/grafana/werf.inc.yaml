@@ -7,7 +7,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 from: {{ $.Images.BASE_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
+  to: /
   includePaths:
   - '**/*.patch'
   stageDependencies:
@@ -17,7 +17,7 @@ shell:
   beforeInstall:
   - apk add --no-cache git patch
   install:
-  - mkdir /usr/src/app
+  - mkdir -p /usr/src/app
   - cd /usr/src/app
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
 # Extra '__interval_*' vars for prometheus datasource.
