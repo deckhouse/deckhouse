@@ -7,7 +7,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
 --- a/pkg/vcdcsiclient/disks.go	(revision 08f5fff9e55009aea1ae837f0776aa6061f7c1cd)
-+++ b/pkg/vcdcsiclient/disks.go	(date 1701092560212)
++++ b/pkg/vcdcsiclient/disks.go	(date 1701094679986)
 @@ -9,17 +9,19 @@
  	"context"
  	"encoding/json"
@@ -34,7 +34,7 @@ diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
  )
  
  type DiskManager struct {
-@@ -161,6 +163,21 @@
+@@ -161,6 +163,24 @@
  		diskParams.Disk.StorageProfile = &types.Reference{
  			HREF: storageReference.HREF,
  		}
@@ -45,13 +45,16 @@ diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
 +				storageProfile, diskName, storageReference.HREF)
 +		}
 +
-+		if storageProfileData.IopsSettings.Enabled {
-+			// If storageProfile Max IOPS per Gb is set
-+			iops := storageProfileData.IopsSettings.DiskIopsPerGbMax * d.SizeMb / 1024
-+			if iops == 0 {
-+				iops = storageProfileData.IopsSettings.DiskIopsMax
++		klog.Infof("StorageProfile: [%q]", storageProfileData)
++		if storageProfileData.IopsSettings != nil {
++			if storageProfileData.IopsSettings.Enabled {
++				// If storageProfile Max IOPS per Gb is set
++				iops := storageProfileData.IopsSettings.DiskIopsPerGbMax * d.SizeMb / 1024
++				if iops == 0 {
++					iops = storageProfileData.IopsSettings.DiskIopsMax
++				}
++				d.Iops = iops
 +			}
-+			d.Iops = iops
 +		}
  	}
  
