@@ -57,7 +57,7 @@ func (c *Client) Bootstrap(ctx context.Context, instanceScope *scope.InstanceSco
 }
 
 func (c *Client) bootstrapFromPendingPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	providerID := providerid.GenerateProviderID()
+	providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
 
 	instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
 
@@ -144,8 +144,8 @@ func (c *Client) bootstrap(ctx context.Context, instanceScope *scope.InstanceSco
 		return false, errors.Wrap(err, "failed to get bootstrap script")
 	}
 
-	done := c.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
-		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir /var/lib/bashible || exit 0 && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)), nil)
+	done := c.bootstrapTaskManager.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
+		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)), nil)
 		if err != nil {
 			// If Node reboots, the ssh connection will close, and we will get an error.
 			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to exec ssh command")
