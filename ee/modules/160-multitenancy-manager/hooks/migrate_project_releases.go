@@ -90,6 +90,8 @@ func migrateReleases(input *go_hook.HookInput, dc dependency.Container) error {
 
 			input.PatchCollector.MergePatch(patch, obj.ApiVersion, obj.Kind, obj.Metadata.Namespace, obj.Metadata.Name, object_patch.IgnoreMissingObject())
 		}
+
+		input.PatchCollector.Delete("v1", "Secret", secret.Namespace, secret.Name)
 	}
 
 	return nil
