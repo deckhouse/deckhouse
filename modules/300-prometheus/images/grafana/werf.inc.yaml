@@ -100,11 +100,11 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
 from: {{ $.Images.BASE_UBUNTU }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
-  add: /usr/src/app/bin/*/grafana-server
+  add: /usr/src/app/bin/linux-amd64/grafana-server
   to: /usr/share/grafana/bin
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
-  add: /usr/src/app/bin/*/grafana-cli
+  add: /usr/src/app/bin/linux-amd64/grafana-cli
   to: /usr/share/grafana/bin
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
@@ -151,9 +151,9 @@ shell:
     GF_PATHS_PLUGINS="/usr/share/grafana/plugins-bundled" \
     GF_PATHS_PROVISIONING="/etc/grafana/provisioning"
   - cd $GF_PATHS_HOME
-  - mkdir -p "$GF_PATHS_HOME/.aws"
   - |
-    mkdir -p "$GF_PATHS_PROVISIONING/datasources" \
+    mkdir -p "$GF_PATHS_HOME/.aws" \
+             "$GF_PATHS_PROVISIONING/datasources" \
              "$GF_PATHS_PROVISIONING/dashboards" \
              "$GF_PATHS_PROVISIONING/notifiers" \
              "$GF_PATHS_PROVISIONING/plugins" \
@@ -164,14 +164,14 @@ shell:
   - cp "$GF_PATHS_HOME/conf/sample.ini" "$GF_PATHS_CONFIG"
   - cp "$GF_PATHS_HOME/conf/ldap.toml" /etc/grafana/ldap.toml
   - chmod -R 777 "$GF_PATHS_DATA" "$GF_PATHS_HOME/.aws" "$GF_PATHS_LOGS" "$GF_PATHS_PLUGINS" "$GF_PATHS_PROVISIONING"
-    ARG BUNDLED_PLUGINS
-  - echo Add bundled plugins: {{ $bundledPlugins }}
+  - echo "Add bundled plugins: {{ $bundledPlugins }}"
   - export IFS=","
   - |
     for plugin in {{ $bundledPlugins }}; do \
       grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin}; \
     done
   - chmod +r /etc/grafana/grafana.ini
+  - export BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
   - chown -R 64535:64535 /usr/share/grafana
   - chown -R 64535:64535 /etc/grafana
   - chown -R 64535:64535 /var/lib/grafana
