@@ -60,7 +60,7 @@ shell:
   install:
   - cd /grafana-statusmap
   - yarn install
-  - export NODE_ENV production
+  - export NODE_ENV=production
   - yarn build
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
@@ -172,8 +172,8 @@ shell:
   - cp "$GF_PATHS_HOME/conf/ldap.toml" /etc/grafana/ldap.toml
   - chmod -R 777 "$GF_PATHS_DATA" "$GF_PATHS_HOME/.aws" "$GF_PATHS_LOGS" "$GF_PATHS_PLUGINS" "$GF_PATHS_PROVISIONING"
   # - echo "Add bundled plugins: {{ $bundledPlugins }}"
-  - export IFS=","
   - |
+    IFS="," && \
     for plugin in {{ $bundledPlugins }}; do \
       grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin}; \
     done
