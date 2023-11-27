@@ -69,7 +69,7 @@ func DefineMirrorModulesFlags(cmd *kingpin.CmdClause) {
 		}
 
 		if MirrorModuleSourcePath == "" && MirrorRegistry == "" {
-			return errors.New("One of ----modules-source or --registry flags is required.")
+			return errors.New("One of --modules-source or --registry flags is required.")
 		}
 
 		if MirrorModuleSourcePath != "" && MirrorRegistry != "" {
