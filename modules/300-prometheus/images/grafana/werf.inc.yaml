@@ -44,8 +44,7 @@ shell:
   install:
   - cd /usr/src/app
   - yarn install
-  - export NODE_ENV production
-  - export NODE_OPTIONS "--max_old_space_size=8000"
+  - export NODE_ENV=production NODE_OPTIONS="--max_old_space_size=8000"
   - yarn build
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-statusmap
@@ -66,6 +65,9 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
   add: /usr/src/app
@@ -84,6 +86,9 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
   to: /app
