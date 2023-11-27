@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"io"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/flant/kube-client/manifest/releaseutil"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"sigs.k8s.io/yaml"
@@ -46,6 +48,8 @@ func migrateReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for _, secret := range helmSecretList.Items {
+		var adoptedCount int
+
 		data, ok := secret.Data["release"]
 		if !ok {
 			continue
@@ -75,6 +79,7 @@ func migrateReleases(input *go_hook.HookInput, dc dependency.Container) error {
 
 			releaseName := obj.Metadata.Namespace
 			// global resources, like Namespace
+			// Namespace name is equal to a project name
 			if obj.Metadata.Namespace == "" {
 				releaseName = obj.Metadata.Name
 			}
@@ -89,9 +94,16 @@ func migrateReleases(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 
 			input.PatchCollector.MergePatch(patch, obj.ApiVersion, obj.Kind, obj.Metadata.Namespace, obj.Metadata.Name, object_patch.IgnoreMissingObject())
+			adoptedCount++
 		}
 
-		input.PatchCollector.Delete("v1", "Secret", secret.Namespace, secret.Name)
+		// delete secret to prevent resources deletion
+		// system resources will be recreated
+		// project resources are adopted for a new release
+		log.WithField("module", "multitenancy-manager").Infof("Adopted %d resources", adoptedCount)
+		if adoptedCount > 0 {
+			input.PatchCollector.Delete("v1", "Secret", secret.Namespace, secret.Name, object_patch.InForeground())
+		}
 	}
 
 	return nil
