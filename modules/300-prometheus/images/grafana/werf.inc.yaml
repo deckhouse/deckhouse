@@ -7,7 +7,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 from: {{ $.Images.BASE_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /
+  to: /usr/src/app
   includePaths:
   - '**/*.patch'
   stageDependencies:
