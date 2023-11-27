@@ -20,7 +20,7 @@ shell:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
-  - cp -r /patches /usr/src/app
+  - cp -a /patches /usr/src/app
 # Extra '__interval_*' vars for prometheus datasource.
   - patch -p1 < ./feat_prometheus_extra_vars.patch
 # Fix heatmap render: constant bucket widths for fast-forward datasource.
