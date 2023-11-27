@@ -7,7 +7,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 from: {{ $.Images.BASE_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /usr/src/app
+  to: /patches
   includePaths:
   - '**/*.patch'
   stageDependencies:
@@ -20,6 +20,7 @@ shell:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
+  - cp /patches /usr/src/app
 # Extra '__interval_*' vars for prometheus datasource.
   - patch -p1 < ./feat_prometheus_extra_vars.patch
 # Fix heatmap render: constant bucket widths for fast-forward datasource.
