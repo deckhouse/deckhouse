@@ -55,7 +55,7 @@ func ValidateWriteAccessForRepo(repo string, authProvider authn.Authenticator, i
 	}
 
 	if err = remote.Delete(ref, remoteOpts...); err != nil {
-		return fmt.Errorf("Could not clean up after write-testing registry permissions: %w", err)
+		return fmt.Errorf("Could not clean up image %q after write-testing registry permissions: %w", ref.String(), err)
 	}
 
 	return nil
