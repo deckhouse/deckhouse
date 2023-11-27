@@ -181,11 +181,14 @@ shell:
   - chmod 0700 ./bin/grafana-server
   - chmod 0700 ./bin/grafana-cli
 ---
-{{ $binariesList := "/usr/lib64 /usr/lib" }}
+{{ $binariesList := "/usr/lib64/* /usr/lib/*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
 shell:
+  beforeSetup:
+  - apt-get update
+  - apt-get install -y glibc
   install:
     - /binary_replace.sh -i "{{ $binariesList }}" -o /relocate
 ---
