@@ -32,7 +32,7 @@ func ValidateReadAccessForImage(imageTag string, authProvider authn.Authenticato
 		return fmt.Errorf("Parse registry address: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	remoteOpts = append(remoteOpts, remote.WithContext(ctx))
 	_, err = remote.Head(ref, remoteOpts...)
