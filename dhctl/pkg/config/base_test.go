@@ -142,6 +142,28 @@ spec:
 		require.Equal(t, "Static", metaConfig.ClusterType)
 	})
 
+	t.Run("Without init configuration", func(t *testing.T) {
+		metaConfig, err := ParseConfigFromData(clusterConfig)
+		require.NoError(t, err)
+
+		parsedStaticConfig, err := metaConfig.StaticClusterConfigYAML()
+		require.NoError(t, err)
+		require.Equal(t, 0, len(parsedStaticConfig))
+
+		parsedProviderConfig, err := metaConfig.ProviderClusterConfigYAML()
+		require.NoError(t, err)
+		require.Equal(t, 0, len(parsedProviderConfig))
+
+		require.Equal(t, "10.111.0.10", metaConfig.ClusterDNSAddress)
+		require.Equal(t, "Static", metaConfig.ClusterType)
+
+		require.Equal(t, metaConfig.Registry.Address, "registry.deckhouse.io")
+		require.Equal(t, metaConfig.Registry.Address, "registry.deckhouse.io")
+		require.Equal(t, metaConfig.Registry.Path, "/deckhouse/ce")
+		require.Equal(t, metaConfig.Registry.DockerCfg, "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=")
+		require.Equal(t, metaConfig.Registry.Scheme, "https")
+	})
+
 	t.Run("Static with StaticClusterConfig", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig)
 		require.NoError(t, err)
