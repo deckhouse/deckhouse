@@ -44,13 +44,12 @@ const (
 )
 
 type NodeSettings struct {
-	Name                    string
-	NodeType                ngv1.NodeType
-	NodeGroup               string
-	Annotations             map[string]string
-	Labels                  map[string]string
-	Taints                  []v1.Taint
-	LastAppliedNodeTemplate *NodeSettings
+	Name        string
+	NodeType    ngv1.NodeType
+	NodeGroup   string
+	Annotations map[string]string
+	Labels      map[string]string
+	Taints      []v1.Taint
 }
 
 // Hook will be executed when NodeType or NodeTemplate are changed.
@@ -89,15 +88,6 @@ func actualNodeSettingsFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 		Labels:      nodeObj.Labels,
 		Annotations: nodeObj.Annotations,
 		Taints:      nodeObj.Spec.Taints,
-	}
-
-	lastApplied, ok := settings.Annotations[LastAppliedNodeTemplateAnnotation]
-	if ok {
-		settings.LastAppliedNodeTemplate = new(NodeSettings)
-		err = json.Unmarshal([]byte(lastApplied), settings.LastAppliedNodeTemplate)
-		if err != nil {
-			return nil, fmt.Errorf("parse last applied node template: %v", err)
-		}
 	}
 
 	return settings, nil
@@ -273,11 +263,24 @@ func fixCloudNodeTaints(nodeObj *v1.Node, nodeGroup NodeSettings) {
 }
 
 func applyNodeTemplate(nodeObj *v1.Node, node, nodeGroup NodeSettings) error {
+	var lastAppliedNodeTemplate *NodeSettings
+
+	lastApplied := node.Annotations[LastAppliedNodeTemplateAnnotation]
+	if lastApplied != "" {
+		lant := NodeSettings{}
+
+		if err := json.Unmarshal([]byte(lastApplied), &lant); err != nil {
+			return fmt.Errorf("parse last applied node template: %v", err)
+		}
+
+		lastAppliedNodeTemplate = &lant
+	}
+
 	// 1. Labels
 	// 1.1. Merge node.labels with nodeTemplate.labels and remove excess keys.
 	var lastLabels map[string]string
-	if node.LastAppliedNodeTemplate != nil {
-		lastLabels = node.LastAppliedNodeTemplate.Labels
+	if lastAppliedNodeTemplate != nil {
+		lastLabels = lastAppliedNodeTemplate.Labels
 	}
 	newLabels, labelsChanged := ApplyTemplateMap(node.Labels, nodeGroup.Labels, lastLabels)
 
@@ -298,8 +301,8 @@ func applyNodeTemplate(nodeObj *v1.Node, node, nodeGroup NodeSettings) error {
 	// 2. Annotations
 	// 2.1. Merge node.annotations with nodeTemplate.annotations and remove excess keys.
 	var lastAnnotations map[string]string
-	if node.LastAppliedNodeTemplate != nil {
-		lastAnnotations = node.LastAppliedNodeTemplate.Annotations
+	if lastAppliedNodeTemplate != nil {
+		lastAnnotations = lastAppliedNodeTemplate.Annotations
 	}
 	newAnnotations, annotationsChanged := ApplyTemplateMap(node.Annotations, nodeGroup.Annotations, lastAnnotations)
 
@@ -333,8 +336,8 @@ func applyNodeTemplate(nodeObj *v1.Node, node, nodeGroup NodeSettings) error {
 	// 3. Taints
 	// 3.1. Merge taints, remove excess.
 	var lastTaints []v1.Taint
-	if node.LastAppliedNodeTemplate != nil {
-		lastTaints = node.LastAppliedNodeTemplate.Taints
+	if lastAppliedNodeTemplate != nil {
+		lastTaints = lastAppliedNodeTemplate.Taints
 	}
 	newTaints, taintsChanged := taints.Slice(node.Taints).ApplyTemplate(nodeGroup.Taints, lastTaints)
 
