@@ -86,13 +86,12 @@ from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
   to: /app
-  includePaths:
-  - '**/*'
   stageDependencies:
     install:
     - '**/*'
 shell:
   install:
+  - cd /app
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go build -ldflags="-s -w" -o entrypoint main.go
   - chown -R 64535:64535 /app/
@@ -128,15 +127,11 @@ import:
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/grafana_home_dashboard.json
   to: /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
-  includePaths:
-  - '**/*'
   stageDependencies:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/web
   to: /usr/share/grafana/public/img/
-  includePaths:
-  - '**/*'
   stageDependencies:
     install:
     - '**/*'
