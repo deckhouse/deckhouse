@@ -13,18 +13,15 @@ import (
 	"encoding/json"
 	"io"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/kube-client/manifest/releaseutil"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -68,7 +65,7 @@ func migrateReleases(input *go_hook.HookInput, dc dependency.Container) error {
 				continue
 			}
 
-			if obj.Kind == "" || obj.ApiVersion == "" {
+			if obj.Kind == "" || obj.APIVersion == "" {
 				continue
 			}
 
@@ -93,7 +90,7 @@ func migrateReleases(input *go_hook.HookInput, dc dependency.Container) error {
 				},
 			}
 
-			input.PatchCollector.MergePatch(patch, obj.ApiVersion, obj.Kind, obj.Metadata.Namespace, obj.Metadata.Name, object_patch.IgnoreMissingObject())
+			input.PatchCollector.MergePatch(patch, obj.APIVersion, obj.Kind, obj.Metadata.Namespace, obj.Metadata.Name, object_patch.IgnoreMissingObject())
 			adoptedCount++
 		}
 
@@ -110,7 +107,7 @@ func migrateReleases(input *go_hook.HookInput, dc dependency.Container) error {
 }
 
 type releaseObject struct {
-	ApiVersion string `json:"apiVersion"`
+	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
 	Metadata   struct {
 		Name      string `json:"name"`
@@ -121,12 +118,7 @@ type releaseObject struct {
 var magicGzip = []byte{0x1f, 0x8b, 0x08}
 
 type release struct {
-	Name      string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name,proto3"`
-	Namespace string `json:"namespace,omitempty" protobuf:"bytes,8,opt,name=namespace,proto3"`
-	Manifest  string `json:"manifest,omitempty" protobuf:"bytes,5,opt,name=manifest,proto3"`
-
-	// set helm version manually
-	HelmVersion string `json:"-"`
+	Manifest string `json:"manifest,omitempty" protobuf:"bytes,5,opt,name=manifest,proto3"`
 }
 
 // Import this from helm3 lib - https://github.com/helm/helm/blob/49819b4ef782e80b0c7f78c30bd76b51ebb56dc8/pkg/storage/driver/util.go#L56
