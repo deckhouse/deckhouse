@@ -100,6 +100,10 @@ node-manager:
     - summary: Additional status fields for custom resource `NodeGroup`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/5274
   fixes:
+    - summary: >-
+        Fix node-manager does not remove `node.deckhouse.io/unitialized` taint when using one taint
+        with different effects.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6671
     - summary: Fix nodeGroup validation webhook if global mc does not exists.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6583
     - summary: Fix CVE issue in fix cve in `bashible-apiserver` image.
