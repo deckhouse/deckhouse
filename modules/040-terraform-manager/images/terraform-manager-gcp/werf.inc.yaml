@@ -13,7 +13,7 @@ import:
 artifact: terraform-provider-gcp
 from: {{ .Images.BASE_GOLANG_ALPINE }}
 git:
-- url: https://github.com/flant/terraform-provider-google
+- url: {{ $.SOURCE_REPO }}/flant/terraform-provider-google
   add: /
   to: /terraform-provider-gcp
   tag: v{{ .TF.gcp.version }}-flant.1

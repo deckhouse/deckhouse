@@ -13,7 +13,7 @@ import:
 artifact: terraform-provider-vsphere
 from: {{ .Images.BASE_GOLANG_ALPINE }}
 git:
-- url: https://github.com/deckhouse/3p-terraform-provider-vsphere
+- url: {{ $.SOURCE_REPO }}/deckhouse/3p-terraform-provider-vsphere
   add: /
   to: /terraform-provider-vsphere
   tag: v{{ .TF.vsphere.version }}-flant.1
