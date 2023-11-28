@@ -82,6 +82,8 @@ spec:
           - --cloud-config=/etc/cloud/cloud-config
           - --cloud-provider=vmware-cloud-director
           - --allow-untagged-cloud=true
+          - --configure-cloud-routes=false
+          - --controllers="[cloud-node,cloud-node-lifecycle]"
           - --bind-address=$(HOST_IP)
           - --secure-port=10471
           - --v=4
@@ -107,7 +109,7 @@ spec:
             - name: ccm-controller-config-volume
               mountPath: /etc/cloud
               readOnly: true
-            - name: ccm-controller-credentials-volume
+            - name: vcd-credentials-volume
               mountPath: /etc/kubernetes/vcloud/basic-auth
               readOnly: true
           resources:
@@ -119,8 +121,8 @@ spec:
       volumes:
       - name: ccm-controller-config-volume
         secret:
-          secretName: cloud-controller-manager
-      - name: ccm-controller-credentials-volume
+          secretName: ccm-controller-manager
+      - name: vcd-credentials-volume
         secret:
-          secretName: cloud-controller-manager-credentials
+          secretName: vcd-credentials
 {{- end }}
