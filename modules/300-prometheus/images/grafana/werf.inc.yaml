@@ -174,7 +174,8 @@ shell:
   # - echo "Add bundled plugins: {{ $bundledPlugins }}"
   - |
     IFS="," && \
-    for plugin in "{{ $bundledPlugins }}"; do \
+    BUNDLED_PLUGINS={{ $bundledPlugins }} && \
+    for plugin in ${BUNDLED_PLUGINS}; do \
       grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin}; \
     done
   - chmod +r /etc/grafana/grafana.ini
