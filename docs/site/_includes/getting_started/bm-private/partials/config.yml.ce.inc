@@ -6,12 +6,14 @@ apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
 # [<en>] Address space of the cluster's Pods.
-# [<ru>] Адресное пространство Pod’ов кластера.
+# [<ru>] Адресное пространство подов кластера.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
-# [<ru>] Адресное пространство для service’ов кластера.
+# [<ru>] Адресное пространство сети сервисов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
+# [<en>] Cluster domain (used for local routing).
+# [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
 # [<en>] Proxy server settings.
 # [<ru>] Настройки proxy-сервера.
@@ -27,43 +29,6 @@ proxy:
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  releaseChannel: Stable
-  configOverrides:
-    global:
-      modules:
-        # [<en>] Template to use for system app domains within the cluster.
-        # [<en>] For example, in the case of %s.example.com, Grafana will be mapped to grafana.example.com.
-        # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
-        # [<ru>] Например, Grafana для %s.example.com будет доступна на домене grafana.example.com.
-        publicDomainTemplate: "%s.example.com"
-        # [<en>] The HTTPS implementation used by the Deckhouse modules.
-        # [<ru>] Способ реализации протокола HTTPS, используемый модулями Deckhouse.
-        https:
-          certManager:
-            # [<en>] Use self-signed certificates for Deckhouse modules.
-            # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
-            clusterIssuerName: selfsigned
-      # [<en>] The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-      # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
-      storageClass: localpath-deckhouse-system
-    certManager:
-      disableLetsencrypt: true
-    userAuthn:
-      controlPlaneConfigurator:
-        dexCAMode: FromIngressSecret
-    # [<en>] Enable the cni-flannel module.
-    # [<ru>] Включить модуль cni-flannel.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    cniFlannelEnabled: true
-    # [<en>] Cni-flannel module settings.
-    # [<ru>] Настройки модуля cni-flannel.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    cniFlannel:
-      # [<en>] Flannel backend, available values are VXLAN (if your servers have L3 connectivity) and HostGW (for L2 networks).
-      # [<ru>] Режим работы flannel, допустимые значения VXLAN (если ваши сервера имеют связность L3) или HostGW (для L2-сетей).
-      podNetworkMode: VXLAN
   # [<en>] Address of the Docker registry where the Deckhouse images are located.
   # [<ru>] Адрес Docker registry с образами Deckhouse.
   imagesRepo: <IMAGES_REPO_URI>
@@ -77,18 +42,107 @@ deckhouse:
   # [<ru>] Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
   registryCA: <REGISTRY_CA>
 ---
-# [<en>] Section with the parameters of the bare metal cluster (StaticClusterConfiguration).
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    bundle: Default
+    releaseChannel: Stable
+    logLevel: Info
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 1
+  settings: # <-- Параметры модуля из раздела "Параметры" ниже.
+    modules:
+      # [<en>] Template that will be used for system apps domains within the cluster.
+      # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+      # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
+      # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+      # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
+      # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
+      publicDomainTemplate: "%s.example.com"
+      # [<en>] The HTTPS implementation used by the Deckhouse modules.
+      # [<ru>] Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+      https:
+        certManager:
+          # [<en>] Use self-signed certificates for Deckhouse modules.
+          # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
+          clusterIssuerName: selfsigned
+    # [<en>] The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
+    # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
+    storageClass: localpath-deckhouse-system
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 1
+  enabled: true
+  settings:
+    controlPlaneConfigurator:
+      dexCAMode: FromIngressSecret
+    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<en>] Enabling access to the API server through Ingress.
+    # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    publishAPI:
+      enable: true
+      https:
+        mode: Global
+        global:
+          kubeconfigGeneratorMasterCA: ""
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  version: 1
+  enabled: true
+  settings:
+    disableLetsencrypt: true
+---
+# [<en>] Enable the cni-flannel module.
+# [<ru>] Включить модуль cni-flannel.
+# [<en>] You might consider changing this.
+# [<ru>] Возможно, захотите изменить.
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-flannel
+spec:
+  version: 1
+  enabled: true
+  # [<en>] Cni-flannel module settings.
+  # [<ru>] Настройки модуля cni-flannel.
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+  settings:
+    # [<en>] Flannel backend, available values are VXLAN (if your servers have L3 connectivity) and HostGW (for L2 networks).
+    # [<ru>] Режим работы flannel, допустимые значения VXLAN (если ваши сервера имеют связность L3) или HostGW (для L2-сетей).
+    podNetworkMode: VXLAN
+---
+# [<en>] Section with the parameters of the static cluster.
 # [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#staticclusterconfiguration
-# [<ru>] Секция с параметрами bare metal кластера (StaticClusterConfiguration).
+# [<ru>] Секция с параметрами статического кластера.
 # [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#staticclusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
-# [<en>] list of internal cluster networks (e.g., '10.0.4.0/24'), which is
-# [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.)
-# [<en>] if every node in cluster has only one network interface
+# [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is
+# [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.).
+# [<en>] If every node in cluster has only one network interface
 # [<en>] StaticClusterConfiguration resource can be skipped.
-# [<ru>] список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
-# [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой
+# [<ru>] Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
+# [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
 # [<ru>] Если каждый узел в кластере имеет только один сетевой интерфейс,
 # [<ru>] ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:
