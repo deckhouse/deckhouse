@@ -79,11 +79,12 @@ spec:
           image: {{ $ccmImage }}
           args:
           - --leader-elect=true
+          - --cloud-config=/etc/cloud/cloud-config
           - --cloud-provider=vmware-cloud-director
           - --allow-untagged-cloud=true
           - --bind-address=$(HOST_IP)
           - --secure-port=10471
-          - --v=2
+          - --v=4
           env:
           - name: HOST_IP
             valueFrom:
@@ -103,11 +104,11 @@ spec:
               port: https
               scheme: HTTPS
           volumeMounts:
-            - mountPath: /etc/kubernetes/pki
-              name: k8s-certs
+            - name: ccm-controller-config-volume
+              mountPath: /etc/cloud
               readOnly: true
-            - mountPath: /etc/config
-              name: config
+            - name: ccm-controller-credentials-volume
+              mountPath: /etc/kubernetes/vcloud/basic-auth
               readOnly: true
           resources:
             requests:
@@ -116,11 +117,10 @@ spec:
               {{- include "vcd_cloud_controller_manager_resources" . | nindent 14 }}
   {{- end }}
       volumes:
-      - hostPath:
-          path: /etc/kubernetes/pki
-          type: DirectoryOrCreate
-        name: k8s-certs
-      - name: config
+      - name: ccm-controller-config-volume
         secret:
           secretName: cloud-controller-manager
+      - name: ccm-controller-credentials-volume
+        secret:
+          secretName: cloud-controller-manager-credentials
 {{- end }}
