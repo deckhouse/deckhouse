@@ -234,7 +234,7 @@
 
         You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'`
 
-        the error message is: {{ $labels.message }}
+        The error message is: {{ $labels.message }}
   - alert: D8BashibleApiserverLocked
     expr: d8_bashible_apiserver_locked == 1
     for: 15m
