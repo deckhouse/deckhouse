@@ -137,7 +137,7 @@ git:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/web
-  to: /usr/share/grafana/public/img/
+  to: /img/
   stageDependencies:
     install:
     - '**/*'
@@ -170,6 +170,7 @@ shell:
              "$GF_PATHS_DATA"
   - cp "$GF_PATHS_HOME/conf/sample.ini" "$GF_PATHS_CONFIG"
   - cp "$GF_PATHS_HOME/conf/ldap.toml" /etc/grafana/ldap.toml
+  - cp /img/* "$GF_PATHS_HOME/public/img"
   - chmod -R 777 "$GF_PATHS_DATA" "$GF_PATHS_HOME/.aws" "$GF_PATHS_LOGS" "$GF_PATHS_PLUGINS" "$GF_PATHS_PROVISIONING" "$GF_PATHS_HOME"
   # - echo "Add bundled plugins: {{ $bundledPlugins }}"
   - |
