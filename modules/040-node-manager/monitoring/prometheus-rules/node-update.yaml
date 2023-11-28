@@ -230,7 +230,7 @@
       plk_labels_as_annotations: message
       summary: The {{ $labels.node }} Node is stuck in draining.
       description: |
-        The {{ $labels.node } Node of the {{ $labels.node_group }} NodeGroup stuck in draining.
+        The {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup stuck in draining.
 
         You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'`
 
