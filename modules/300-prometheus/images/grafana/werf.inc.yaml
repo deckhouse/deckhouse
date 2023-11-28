@@ -1,8 +1,7 @@
 ---
 {{ $grafanaVersion := "8.5.13" }}
 {{ $statusmapVersion := "0.5.1" }}
-# {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
-{{ $bundledPlugins := "btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
+{{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 from: {{ $.Images.BASE_ALPINE }}
@@ -176,7 +175,8 @@ shell:
   - |
     IFS="," && \
     for plugin in {{ $bundledPlugins }}; do \
-      grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin}; \
+      echo ${plugin}; \
+      # grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin}; \
     done
   - chmod +r /etc/grafana/grafana.ini
   - export BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
