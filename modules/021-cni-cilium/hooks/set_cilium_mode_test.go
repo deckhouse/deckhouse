@@ -124,6 +124,20 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
+	Context("kube-system/d8-cni-configuration is absent, tunnelMode set to `Disabled`, but previously the mode was discovered to `VXLAN`", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
+			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
+			f.RunHook()
+		})
+		It("hook should run successfully, mode must be changed to Direct", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+		})
+	})
+
 	Context("kube-system/d8-cni-configuration is absent, createNodeRoutes set to `true`", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")

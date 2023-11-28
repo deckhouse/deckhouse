@@ -97,11 +97,11 @@ type: Opaque
 			f.RunHook()
 		})
 
-		It("Should not deploy the module source", func() {
+		It("Should deploy the module source", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
-			Expect(ms.Exists()).To(BeFalse())
+			Expect(ms.Exists()).To(BeTrue())
 		})
 	})
 
@@ -112,11 +112,11 @@ type: Opaque
 			f.RunHook()
 		})
 
-		It("Should not deploy the module source", func() {
+		It("Should deploy the module source", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
-			Expect(ms.Exists()).To(BeFalse())
+			Expect(ms.Exists()).To(BeTrue())
 		})
 	})
 

@@ -3,8 +3,23 @@ properties:
   podSecurityStandards:
     type: object
     default: {}
-    description: "Pod Security Standards policy settings."
+    description: "Pod Security Standards policy settings (PSS)."
     properties:
+      defaultPolicy:
+        type: string
+        description: |
+          Sets the default [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) policy for all **non-system** namespaces:
+          - `Privileged` — an unrestricted policy. Privilege escalation is possible with this policy;
+          - `Baseline` — a policy with minimum restrictions that prevents privilege escalation;
+          - `Restricted` — a policy with maximum restrictions that conforms to current best practices for securely running applications in a cluster.
+
+          By default:
+          - `Baseline` — if a Deckhouse version starting with v1.55 is being installed;
+          - `Privilged` — if a Deckhouse version lower than v1.55 is being installed (upgrading Deckhouse in a cluster to v1.55+ does not automatically result in a default policy change).
+        enum:
+          - Privileged
+          - Baseline
+          - Restricted
       enforcementAction:
         type: string
         default: "Deny"
@@ -19,6 +34,8 @@ properties:
           - Dryrun
       policies:
         type: object
+        description: |
+          Sets additional policy parameters.
         properties:
           hostPorts:
             type: object

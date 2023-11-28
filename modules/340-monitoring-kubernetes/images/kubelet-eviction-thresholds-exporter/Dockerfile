@@ -14,8 +14,10 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src/
 COPY exporter/ /src/
-RUN apk add --no-cache git && \
-    go build -ldflags="-s -w" -o loop main.go && \
+RUN apk add --no-cache git \
+    && go get -u golang.org/x/net@v0.17.0 \
+    && go mod tidy \
+    && go build -ldflags="-s -w" -o loop main.go && \
     chown -R 64535:64535 /src/ && \
     chmod 0700 /src/loop
 

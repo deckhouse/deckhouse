@@ -19,6 +19,7 @@
  - **[dhctl]** Implemented copying of Deckhouse images to third-party registries for air-gapped installation. [#6257](https://github.com/deckhouse/deckhouse/pull/6257)
  - **[dhctl]** Use ModuleConfig to override the default configuration instead of the `configOverrides` section of the `InitConfiguration` resource. [#6061](https://github.com/deckhouse/deckhouse/pull/6061)
     The [configOverrides](https://deckhouse.io/documentation/v1.54/installing/configuration.html#initconfiguration-deckhouse-configoverrides) parameter of the `InitConfiguration` resource has been deprecated. Use corresponding `ModuleConfig` resources when bootstrapping a new cluster. Read [the documentation](https://deckhouse.io/documentation/latest/installing/#preparing-the-configuration) for additional information.
+ - **[external-module-manager]** Store checksums in memory. [#6617](https://github.com/deckhouse/deckhouse/pull/6617)
  - **[external-module-manager]** Add support for module pull from insecure (HTTP) registry. [#6340](https://github.com/deckhouse/deckhouse/pull/6340)
  - **[ingress-nginx]** Use chrooted image for controller version `1.9`. Add `enable-annotation-validation` feature for version `1.9`. [#6370](https://github.com/deckhouse/deckhouse/pull/6370)
  - **[ingress-nginx]** Add v1.9.3 Ingress Nginx controller version. [#6312](https://github.com/deckhouse/deckhouse/pull/6312)
@@ -34,6 +35,7 @@
 ## Fixes
 
 
+ - **[candi]** Do not wait Instance status patch indefinitely during bootstrap. [#6682](https://github.com/deckhouse/deckhouse/pull/6682)
  - **[candi]** Do not use cloud network setup scripts for static NodeGroups. [#6464](https://github.com/deckhouse/deckhouse/pull/6464)
  - **[candi]** Fix big time drift on nodes. [#6297](https://github.com/deckhouse/deckhouse/pull/6297)
     All chrony pods will restart.
@@ -42,6 +44,10 @@
     The pods that are behind the `kube-rbac-proxy` will restart.
  - **[dashboard]** Fix apiVersion for CronJobs to display with the dashboard module. [#5799](https://github.com/deckhouse/deckhouse/pull/5799)
  - **[deckhouse]** Fix panic when validating int in a number field in module configuration. [#6556](https://github.com/deckhouse/deckhouse/pull/6556)
+ - **[dhctl]** Fix Deckhouse CE registry setting do not set if InitConfiguration was skipped. [#6683](https://github.com/deckhouse/deckhouse/pull/6683)
+ - **[dhctl]** Fix releaseChannel does not get from InitConfiguration. [#6648](https://github.com/deckhouse/deckhouse/pull/6648)
+ - **[dhctl]** Remove debBranch or releaseChannel requirements from InitConfiguration. [#6624](https://github.com/deckhouse/deckhouse/pull/6624)
+ - **[dhctl]** Fix static cluster destroy. [#6597](https://github.com/deckhouse/deckhouse/pull/6597)
  - **[dhctl]** Fix panic on getting tag during bootstrap. [#6576](https://github.com/deckhouse/deckhouse/pull/6576)
  - **[dhctl]** Delete unnecessary obsolescence image preflight check. [#6567](https://github.com/deckhouse/deckhouse/pull/6567)
  - **[dhctl]** Fix `dhctl mirror` is not available in a container. [#6538](https://github.com/deckhouse/deckhouse/pull/6538)
@@ -62,7 +68,9 @@
  - **[metallb]** Fix error with preserving controller internal state after reboot. [#6418](https://github.com/deckhouse/deckhouse/pull/6418)
     Metallb pods will restart.
  - **[monitoring-kubernetes]** Fix CVE issues in the `kube-state-metrics` image. [#6336](https://github.com/deckhouse/deckhouse/pull/6336)
+ - **[multitenancy-manager]** Keep projects resources during the deckhouse update. [#6670](https://github.com/deckhouse/deckhouse/pull/6670)
  - **[multitenancy-manager]** Non-valid `Project` or `ProjectType` resources don't block the main queue. [#6049](https://github.com/deckhouse/deckhouse/pull/6049)
+ - **[node-manager]** Add MachineHealthCheck for CAPS. [#6637](https://github.com/deckhouse/deckhouse/pull/6637)
  - **[node-manager]** Fix `CVE-2021-4238` and  `GHSA-m425-mq94-257g` in `bashible-apiserver`. [#6348](https://github.com/deckhouse/deckhouse/pull/6348)
  - **[operator-prometheus]** Fix RBAC for updating alertmanager status. [#6466](https://github.com/deckhouse/deckhouse/pull/6466)
  - **[pod-reloader]** Add a forgotten `nodeSelector`. [#6338](https://github.com/deckhouse/deckhouse/pull/6338)

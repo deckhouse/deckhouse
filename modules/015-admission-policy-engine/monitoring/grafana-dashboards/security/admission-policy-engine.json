@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -19,17 +22,20 @@
     ]
   },
   "description": "Visualize violations from OPA Gatekeeper",
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "gnetId": 15763,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1644943216721,
+  "iteration": 1699970633918,
   "links": [],
   "liveNow": false,
   "panels": [
     {
-      "datasource": null,
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -37,11 +43,14 @@
         "y": 0
       },
       "id": 24,
+      "panels": [],
       "title": "Summaries",
       "type": "row"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "Description: Current number of constraint templates\n\"All NS\"\n\nUnderstanding this metric: Gatekeeper subscribes to a watch on all ConstraintTemplate resources. Whenever one is created or deleted on the cluster, this count gets updated.",
       "fieldConfig": {
         "defaults": {
@@ -66,8 +75,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 3,
+        "h": 4,
+        "w": 5,
         "x": 0,
         "y": 1
       },
@@ -87,7 +96,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -101,7 +110,287 @@
       "type": "stat"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 19,
+        "x": 5,
+        "y": 1
+      },
+      "id": 41,
+      "options": {
+        "displayMode": "basic",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "text": {}
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (kind) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{kind}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Violations by kind",
+      "transformations": [],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "align": "left",
+            "displayMode": "auto",
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Action"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "1": {
+                        "index": 2,
+                        "text": "dryrun (default action)"
+                      },
+                      "2": {
+                        "index": 1,
+                        "text": "warn (default action)"
+                      },
+                      "3": {
+                        "index": 0,
+                        "text": "deny (default action)"
+                      },
+                      "deny": {
+                        "index": 3,
+                        "text": "deny (label)"
+                      },
+                      "dryrun": {
+                        "index": 5,
+                        "text": "dryrun (label)"
+                      },
+                      "warn": {
+                        "index": 4,
+                        "text": "warn (label)"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 269
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Policy"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "1": {
+                        "index": 2,
+                        "text": "privileged (default policy)"
+                      },
+                      "2": {
+                        "index": 1,
+                        "text": "baseline (default policy)"
+                      },
+                      "3": {
+                        "index": 0,
+                        "text": "restricted (default policy)"
+                      },
+                      "baseline": {
+                        "index": 4,
+                        "text": "baseline (label)"
+                      },
+                      "privileged": {
+                        "index": 5,
+                        "text": "privileged (label)"
+                      },
+                      "restricted": {
+                        "index": 3,
+                        "text": "restricted (label)"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 229
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Namespace"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 192
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 10,
+        "x": 0,
+        "y": 5
+      },
+      "id": 44,
+      "options": {
+        "footer": {
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "exemplar": false,
+          "expr": "group(kube_namespace_labels{namespace!~\"(d8-.+|kube-.+)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy=~\"(restricted|baseline|privileged)\",label_security_deckhouse_io_pod_policy_action=~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action)\nor\nlabel_replace(group(kube_namespace_labels{namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy=~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action!~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy_action\", \"$default_action\", \"label_security_deckhouse_io_pod_policy_action\", \".*\")\nor\nlabel_replace(group(kube_namespace_labels{namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy!~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action=~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy\", \"$default_policy\", \"label_security_deckhouse_io_pod_policy\", \".*\")\nor\nlabel_replace(label_replace(group(kube_namespace_labels{namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy!~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action!~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy\", \"$default_policy\", \"label_security_deckhouse_io_pod_policy\", \".*\"), \"label_security_deckhouse_io_pod_policy_action\", \"$default_action\", \"label_security_deckhouse_io_pod_policy_action\", \".*\")",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Effective PSS Policies/Actions per Namespace",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true
+            },
+            "indexByName": {
+              "Time": 4,
+              "Value": 3,
+              "label_security_deckhouse_io_pod_policy": 1,
+              "label_security_deckhouse_io_pod_policy_action": 2,
+              "namespace": 0
+            },
+            "renameByName": {
+              "label_security_deckhouse_io_pod_policy": "Policy",
+              "label_security_deckhouse_io_pod_policy_action": "Action",
+              "namespace": "Namespace"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Namespace"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "Description: The number of audit violations per constraint detected in the last audit cycle\n\nUnderstanding this metric: During each run, the audit sums up all of the violations that it finds and reports these counts per-enforcement-mode.",
       "fieldConfig": {
         "defaults": {
@@ -187,14 +476,16 @@
         ]
       },
       "gridPos": {
-        "h": 5,
-        "w": 7,
-        "x": 3,
-        "y": 1
+        "h": 6,
+        "w": 14,
+        "x": 10,
+        "y": 5
       },
       "id": 25,
       "options": {
         "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -206,7 +497,7 @@
         "showUnfilled": true,
         "text": {}
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -223,74 +514,16 @@
       "type": "bargauge"
     },
     {
-      "datasource": "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 14,
-        "x": 10,
-        "y": 1
-      },
-      "id": 41,
-      "options": {
-        "displayMode": "basic",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true,
-        "text": {}
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum by (kind) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
-          "format": "time_series",
-          "hide": false,
-          "instant": true,
-          "interval": "",
-          "legendFormat": "{{kind}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Total Violations by kind",
-      "transformations": [],
-      "type": "bargauge"
-    },
-    {
       "collapsed": false,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 11
       },
       "id": 32,
       "panels": [],
@@ -442,7 +675,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 12
       },
       "id": 34,
       "options": {
@@ -523,7 +756,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short"
@@ -536,7 +771,7 @@
         "h": 7,
         "w": 11,
         "x": 0,
-        "y": 15
+        "y": 20
       },
       "hiddenSeries": false,
       "id": 36,
@@ -556,7 +791,7 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "pointradius": 1,
       "points": true,
       "renderer": "flot",
@@ -574,9 +809,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "OPA Violations Over Time",
       "tooltip": {
         "shared": true,
@@ -585,9 +818,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -595,29 +826,24 @@
         {
           "$$hashKey": "object:107",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:108",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -644,11 +870,13 @@
         "h": 7,
         "w": 10,
         "x": 11,
-        "y": 15
+        "y": 20
       },
       "id": 38,
       "options": {
         "displayMode": "basic",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -660,7 +888,7 @@
         "showUnfilled": true,
         "text": {}
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -678,7 +906,9 @@
       "type": "bargauge"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -715,7 +945,7 @@
         "h": 7,
         "w": 3,
         "x": 21,
-        "y": 15
+        "y": 20
       },
       "id": 40,
       "options": {
@@ -732,7 +962,8 @@
           "values": false
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
@@ -773,12 +1004,15 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 27
       },
       "id": 10,
       "panels": [],
@@ -786,7 +1020,9 @@
       "type": "row"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "The number of audit violations per constraint detected in the last audit cycle",
       "fieldConfig": {
         "defaults": {
@@ -875,11 +1111,13 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 28
       },
       "id": 8,
       "options": {
         "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -891,7 +1129,7 @@
         "showUnfilled": true,
         "text": {}
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -908,7 +1146,9 @@
       "type": "bargauge"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "Latency of audit operation",
       "fieldConfig": {
         "defaults": {
@@ -938,7 +1178,7 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 23
+        "y": 28
       },
       "id": 12,
       "options": {
@@ -956,7 +1196,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -971,7 +1211,9 @@
       "type": "stat"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "Description: Timestamp of last audit run time",
       "fieldConfig": {
         "defaults": {
@@ -1001,7 +1243,7 @@
         "h": 4,
         "w": 3,
         "x": 15,
-        "y": 23
+        "y": 28
       },
       "id": 27,
       "options": {
@@ -1019,7 +1261,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1034,7 +1276,9 @@
       "type": "stat"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "Total number of watched GroupVersionKinds",
       "fieldConfig": {
         "defaults": {
@@ -1064,7 +1308,7 @@
         "h": 4,
         "w": 3,
         "x": 18,
-        "y": 23
+        "y": 28
       },
       "id": 30,
       "options": {
@@ -1082,7 +1326,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1097,7 +1341,9 @@
       "type": "stat"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "Total number of GroupVersionKinds with a registered watch intent",
       "fieldConfig": {
         "defaults": {
@@ -1127,7 +1373,7 @@
         "h": 4,
         "w": 3,
         "x": 21,
-        "y": 23
+        "y": 28
       },
       "id": 29,
       "options": {
@@ -1145,7 +1391,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1161,12 +1407,15 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 32
       },
       "id": 16,
       "panels": [],
@@ -1174,93 +1423,9 @@
       "type": "row"
     },
     {
-      "datasource": "$ds_prometheus",
-      "description": "Description: The number of requests that are routed to validation webhook",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineStyle": {
-              "fill": "solid"
-            },
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
+      "datasource": {
+        "uid": "$ds_prometheus"
       },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 28
-      },
-      "id": 22,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum by (admission_status, pod) (rate(gatekeeper_validation_request_count[20m]))",
-          "interval": "",
-          "legendFormat": "{{admission_status}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Validation request count",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "$ds_prometheus",
       "description": "Description: The number of requests that are routed to mutation webhook",
       "fieldConfig": {
         "defaults": {
@@ -1319,7 +1484,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 33
       },
       "id": 26,
       "options": {
@@ -1329,7 +1494,8 @@
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "pluginVersion": "8.2.3",
@@ -1346,13 +1512,105 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "Description: The number of requests that are routed to validation webhook",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.2.3",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (admission_status, pod) (rate(gatekeeper_validation_request_count[20m]))",
+          "interval": "",
+          "legendFormat": "{{admission_status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Validation request count",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 39
       },
       "id": 14,
       "panels": [],
@@ -1360,7 +1618,9 @@
       "type": "row"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "Description: Current number of constraint templates\n\nUnderstanding this metric: Gatekeeper subscribes to a watch on all ConstraintTemplate resources. Whenever one is created or deleted on the cluster, this count gets updated.",
       "fieldConfig": {
         "defaults": {
@@ -1388,7 +1648,7 @@
         "h": 6,
         "w": 3,
         "x": 0,
-        "y": 35
+        "y": 40
       },
       "id": 18,
       "options": {
@@ -1406,7 +1666,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1420,7 +1680,9 @@
       "type": "stat"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "Current number of constraints\nUnderstanding this metric: Gatekeeper subscribes to a watch on all constraint resources. Whenever one is created or deleted on the cluster, this count gets updated.",
       "fieldConfig": {
         "defaults": {
@@ -1509,11 +1771,13 @@
         "h": 6,
         "w": 9,
         "x": 3,
-        "y": 35
+        "y": 40
       },
       "id": 19,
       "options": {
         "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1525,7 +1789,7 @@
         "showUnfilled": true,
         "text": {}
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1542,7 +1806,9 @@
       "type": "bargauge"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "Description: Constraint Template ingestion duration distribution\n\nUnderstanding this metric: When Gatekeeper is notified of a new constraint template, records the time from when it has loaded the resource from etcd to after OPA successfully returns from compiling the code. If there is a compilation error, the metric is not updated.",
       "fieldConfig": {
         "defaults": {
@@ -1606,7 +1872,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 35
+        "y": 40
       },
       "id": 20,
       "options": {
@@ -1633,7 +1899,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 31,
+  "schemaVersion": 36,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1644,8 +1910,6 @@
           "text": "default",
           "value": "default"
         },
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Prometheus",
@@ -1661,11 +1925,16 @@
       },
       {
         "allValue": ".*",
-        "current": {},
-        "datasource": "$ds_prometheus",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
         "definition": "",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Namespace",
@@ -1677,13 +1946,66 @@
           "refId": "Prometheus-namespace-Variable-Query"
         },
         "refresh": 2,
-        "regex": "",
+        "regex": "^(?!d8-.+)(?!kube-system)(\\S+)",
         "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
         "tagsQuery": "",
         "type": "query",
         "useTags": false
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "2",
+          "value": "2"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "P0D6E4079E36703EB"
+        },
+        "definition": "query_result(d8_admission_policy_engine_pss_default_action)",
+        "hide": 2,
+        "includeAll": false,
+        "label": "",
+        "multi": false,
+        "name": "default_action",
+        "options": [],
+        "query": {
+          "query": "query_result(d8_admission_policy_engine_pss_default_action)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "/.* ([^\\ ]*) .*/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "3",
+          "value": "3"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "P0D6E4079E36703EB"
+        },
+        "definition": "query_result(d8_admission_policy_engine_pss_default_policy)",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "default_policy",
+        "options": [],
+        "query": {
+          "query": "query_result(d8_admission_policy_engine_pss_default_policy)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "/.* ([^\\ ]*) .*/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -1719,5 +2041,6 @@
   "timezone": "UTC",
   "title": "Admission policy engine",
   "uid": "YBgRZG6Ms",
-  "version": 1
+  "version": 3,
+  "weekStart": ""
 }

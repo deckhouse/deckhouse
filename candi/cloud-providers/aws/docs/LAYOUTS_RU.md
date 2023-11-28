@@ -3,7 +3,7 @@ title: "Cloud provider — AWS: схемы размещения"
 description: "Описание схем размещения и взаимодействия ресурсов в AWS при работе облачного провайдера Deckhouse."
 ---
 
-Поддерживаются три схемы размещения. Ниже подробнее о каждой их них.
+Поддерживаются две схемы размещения. Ниже подробнее о каждой их них.
 
 ## WithoutNAT
 
@@ -74,8 +74,8 @@ apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: WithNAT
 provider:
-  providerAccessKeyId: MYACCESSKEY
-  providerSecretAccessKey: mYsEcReTkEy
+  providerAccessKeyId: '<AWS_ACCESS_KEY>'
+  providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
   region: eu-central-1
 withNAT:
   bastionInstance:

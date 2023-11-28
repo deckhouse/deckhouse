@@ -730,7 +730,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"pods\",node=~\"$node\"}[$__interval_sx3])) - on(node) (count by (node) (\n  ((max by (pod, namespace)(kube_pod_container_status_running))==1) * on (pod, namespace) group_right() (kube_pod_info{node=~\"$node\"}==1) \n))) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"pods\",node=~\"$node\"}[$__interval_sx3])))",
+          "expr": "sum(((max by (pod, namespace)(kube_pod_container_status_running))==1) * on (pod, namespace) group_right() (kube_pod_info{node=~\"$node\"}==1) \n) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"pods\",node=~\"$node\"}[$__interval_sx3])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,

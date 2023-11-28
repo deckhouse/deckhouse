@@ -91,7 +91,7 @@ spec:
                         highNodeUtilization:
                           required: [enabled]
                           description: >
-                            This strategy finds nodes that are over utilized and evicts Pods from the nodes in the hope
+                            This strategy finds nodes that are under utilized and evicts Pods from the nodes in the hope
                             that these Pods will be scheduled compactly into fewer nodes.
                           properties:
                             enabled:
