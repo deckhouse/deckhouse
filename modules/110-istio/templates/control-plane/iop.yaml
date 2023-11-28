@@ -107,6 +107,7 @@ spec:
   {{- end }}
 
   values:
+    defaultRevision: ""
     global:
       istioNamespace: d8-{{ $.Chart.Name }}
       meshID: d8-istio-mesh
