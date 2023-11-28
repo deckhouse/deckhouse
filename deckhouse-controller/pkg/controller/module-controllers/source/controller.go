@@ -534,7 +534,7 @@ func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.Module
 
 			if selector.Matches(releaseLabelsSet) {
 				if found {
-					return nil, fmt.Errorf("more than one update policy matches module: %s and %s", matchedPolicy.Name, policy.Name)
+					return nil, fmt.Errorf("More than one update policy matches the module: %s and %s", matchedPolicy.Name, policy.Name)
 				}
 				found = true
 				matchedPolicy = policy

@@ -91,7 +91,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 
 		informerFactory:         informerFactory,
 		moduleSourceController:  source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, mm),
-		moduleReleaseController: release.NewController(mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer),
+		moduleReleaseController: release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer),
 	}, nil
 }
 

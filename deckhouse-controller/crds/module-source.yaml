@@ -36,7 +36,6 @@ spec:
                   type: string
                   description: Desirable default release channel for modules in the current source.
                   x-doc-deprecated: true
-                  default: "alpha"
                 registry:
                   type: object
                   required:

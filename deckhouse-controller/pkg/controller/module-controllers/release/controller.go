@@ -89,22 +89,14 @@ type Controller struct {
 }
 
 const (
+	defaultCheckInterval   = 15 * time.Second
 	approvalAnnotation     = "release.deckhouse.io/approved"
-	defaultScanInterval    = 15 * time.Second
 	manualApprovalRequired = "Waiting for manual approval"
 	waitingForWindow       = "Release is waiting for the update window: %s"
 )
 
 // NewController returns a new sample controller
-<<<<<<< HEAD
-func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, moduleReleaseInformer d8informers.ModuleReleaseInformer, moduleSourceInformer d8informers.ModuleSourceInformer) *Controller {
-=======
-func NewController(
-	kubeClient versioned.Interface,
-	moduleReleaseInformer d8informers.ModuleReleaseInformer,
-	moduleSourceInformer d8informers.ModuleSourceInformer,
-	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer) *Controller {
->>>>>>> 5d833a02e... [module-controller] update crds
+func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, moduleReleaseInformer d8informers.ModuleReleaseInformer, moduleSourceInformer d8informers.ModuleSourceInformer, moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
 		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(50), 300)},
@@ -113,17 +105,8 @@ func NewController(
 	lg := log.WithField("component", "ModuleReleaseController")
 
 	controller := &Controller{
-<<<<<<< HEAD
-		kubeclientset:        ks,
-		d8ClientSet:          d8ClientSet,
-		moduleReleasesLister: moduleReleaseInformer.Lister(),
-		moduleReleasesSynced: moduleReleaseInformer.Informer().HasSynced,
-		moduleSourcesLister:  moduleSourceInformer.Lister(),
-		moduleSourcesSynced:  moduleSourceInformer.Informer().HasSynced,
-		workqueue:            workqueue.NewRateLimitingQueue(ratelimiter),
-		logger:               lg,
-=======
-		kubeClient:                 kubeClient,
+		kubeclientset:              ks,
+		d8ClientSet:                d8ClientSet,
 		moduleReleasesLister:       moduleReleaseInformer.Lister(),
 		moduleReleasesSynced:       moduleReleaseInformer.Informer().HasSynced,
 		moduleSourcesLister:        moduleSourceInformer.Lister(),
@@ -132,7 +115,6 @@ func NewController(
 		moduleUpdatePoliciesSynced: moduleUpdatePolicyInformer.Informer().HasSynced,
 		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:                     lg,
->>>>>>> 5d833a02e... [module-controller] update crds
 
 		sourceModules: make(map[string]string),
 
@@ -142,7 +124,7 @@ func NewController(
 		delayTimer: time.NewTimer(5 * time.Second),
 	}
 
-	// Set up an event handler for when ModuleSource resources change
+	// Set up an event handler for when ModuleRelease resources change
 	_, _ = moduleReleaseInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueModuleRelease,
 		UpdateFunc: func(old, new interface{}) {
@@ -451,10 +433,10 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			// get policy spec
 			policy, err := c.moduleUpdatePoliciesLister.Get(policyName)
 			if err != nil {
-				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, fmt.Sprintf("update policy %s not found", policyName)); e != nil {
+				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
-				return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 			}
 
 			// if policy mode manual
@@ -462,7 +444,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, manualApprovalRequired); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
-				return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 			}
 
 			// if policy mode auto
@@ -470,16 +452,9 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
-				return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 			}
 
-<<<<<<< HEAD
-		release.Status.Phase = v1alpha1.PhaseDeployed
-		release.Status.Message = ""
-		c.sendDocumentation(ctx, modulePath)
-		if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
-			return ctrl.Result{Requeue: true}, e
-=======
 			modulePath := generateModulePath(moduleName, release.Spec.Version.String())
 			newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
 
@@ -503,11 +478,10 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				return ctrl.Result{Requeue: true}, e
 			}
 		} else {
-			if e := c.updateModuleReleaseStatus(ctx, mr, v1alpha1.PhasePending, "update policy not set"); e != nil {
+			if e := c.updateModuleReleaseStatus(ctx, mr, v1alpha1.PhasePending, "Update policy not set. Create a ModuleUpdatePolicy object and label the release 'module-update-policy=<policy_name>'"); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
-			return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
->>>>>>> 5d833a02e... [module-controller] update crds
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
 	}
 
@@ -658,10 +632,6 @@ func (c *Controller) updateModuleReleaseStatus(ctx context.Context, mrCopy *v1al
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
-<<<<<<< HEAD
-	mrCopy.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, mrCopy, metav1.UpdateOptions{})
-=======
 	if mrCopy.Status.Phase == phase && mrCopy.Status.Message == message {
 		return nil
 	}
@@ -674,8 +644,8 @@ func (c *Controller) updateModuleReleaseStatus(ctx context.Context, mrCopy *v1al
 	if mrCopy.Status.Message != message {
 		mrCopy.Status.Message = message
 	}
-	_, err := c.kubeClient.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, mrCopy, metav1.UpdateOptions{})
->>>>>>> 5d833a02e... [module-controller] update crds
+
+	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, mrCopy, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
