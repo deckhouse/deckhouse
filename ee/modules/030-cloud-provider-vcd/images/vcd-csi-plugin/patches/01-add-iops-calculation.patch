@@ -58,6 +58,25 @@ diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
  	}
 
  	task, err := diskManager.createDisk(diskParams)
+Index: go.sum
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.sum b/go.sum
+--- a/go.sum	(revision 89ff1aeab1be77cdf6536f1e1002bdc58dde63f2)
++++ b/go.sum	(date 1701115113335)
+@@ -370,8 +370,8 @@
+ github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
+ github.com/vmware/cloud-provider-for-cloud-director v0.0.0-20230928223648-8134f65b3f61 h1:5OBXV9Q84GleGRrznPmKsEYKFtbaS8tTFL8d/hsDvy4=
+ github.com/vmware/cloud-provider-for-cloud-director v0.0.0-20230928223648-8134f65b3f61/go.mod h1:LXs88jpAH7nny7nQcLaXzjyCvg4Q1JhttSoD9mI5kaQ=
+-github.com/vmware/go-vcloud-director/v2 v2.14.0-rc.3 h1:VJolXzgomaRPrgzSr0EduuUtJIJEf5RdoLbktZFQqIc=
+-github.com/vmware/go-vcloud-director/v2 v2.14.0-rc.3/go.mod h1:2BS1yw61VN34WI0/nUYoInFvBc3Zcuf84d4ESiAAl68=
++github.com/vmware/go-vcloud-director/v2 v2.21.0 h1:zIONrJpM+Fj+rDyXmsRfMAn1sP5WAP87USL0T9GS4DY=
++github.com/vmware/go-vcloud-director/v2 v2.21.0/go.mod h1:QPxGFgrUcSyzy9IlpwDE4UNT3tsOy2047tJOPEJ4nlw=
+ github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
+ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 Index: go.mod
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
