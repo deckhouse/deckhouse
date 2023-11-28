@@ -172,7 +172,6 @@ shell:
   - cp "$GF_PATHS_HOME/conf/ldap.toml" /etc/grafana/ldap.toml
   - cp /img/* "$GF_PATHS_HOME/public/img"
   - chmod -R 777 "$GF_PATHS_DATA" "$GF_PATHS_HOME/.aws" "$GF_PATHS_LOGS" "$GF_PATHS_PLUGINS" "$GF_PATHS_PROVISIONING" "$GF_PATHS_HOME"
-  # - echo "Add bundled plugins: {{ $bundledPlugins }}"
   - |
     IFS="," && \
     BUNDLED_PLUGINS={{ $bundledPlugins }} && \
@@ -188,7 +187,7 @@ shell:
   - chmod 0700 ./bin/grafana-server
   - chmod 0700 ./bin/grafana-cli
 ---
-{{ $binariesList := "/usr/lib64/* /usr/lib/* /bin/ls" }}
+{{ $binariesList := "/usr/lib64/* /usr/lib/*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
