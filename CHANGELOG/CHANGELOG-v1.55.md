@@ -40,6 +40,7 @@
  - **[candi]** Fixed wait apt update. [#6040](https://github.com/deckhouse/deckhouse/pull/6040)
  - **[cloud-provider-azure]** Azure cloud-controller-manager has been updated to the latest versions for all supported Kubernetes versions. [#6574](https://github.com/deckhouse/deckhouse/pull/6574)
     cloud-controller-manager will restart.
+ - **[cni-cilium]** Restore removed API versions in CRDs. [#6690](https://github.com/deckhouse/deckhouse/pull/6690)
  - **[common]** Fix vulnerabilities in csi-external-* images: `CVE-2023-44487`, `CVE-2022-41723`, `GHSA-m425-mq94-257g`. [#6313](https://github.com/deckhouse/deckhouse/pull/6313)
  - **[deckhouse-controller]** Fix getting Deckhouse version in debugging. [#6517](https://github.com/deckhouse/deckhouse/pull/6517)
  - **[deckhouse-controller]** Fix CVE issues in deckhouse-controller image. [#6393](https://github.com/deckhouse/deckhouse/pull/6393)
