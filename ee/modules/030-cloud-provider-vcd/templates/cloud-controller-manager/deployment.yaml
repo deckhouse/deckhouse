@@ -83,7 +83,7 @@ spec:
           - --cloud-provider=vmware-cloud-director
           - --allow-untagged-cloud=true
           - --configure-cloud-routes=false
-          - --controllers="cloud-node,cloud-node-lifecycle"
+          - --controllers=cloud-node,cloud-node-lifecycle
           - --bind-address=$(HOST_IP)
           - --secure-port=10471
           - --v=4
