@@ -233,7 +233,13 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 
 To establish a federation, you must:
 * Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
-* Add the `federation.istio.deckhouse.io/public-service=` label to each resource that is considered public within the federation.
+  * After successful auto-negotiation between clusters, will be filled `public` section (the neighboring cluster's keys will appear) and `private` section (information about the neighboring cluster's `ingressGateways` will appear) in resource `IstioFederation` under the `.status.metadataCache`.
+* Add the `federation.istio.deckhouse.io/public-service=` label to each resource(`service`) that is considered public within the federation.
+  * The following events will then occur:
+    * in the same cluster, information about these `services` will be added to the `IstioFederation` under the `.status.metadataCache.private.publicServices` section
+    * in the remaining federation clusters, a corresponding `ServiceEntry` will be created for each `service`, leading to the `ingressgateway` of the original cluster
+
+> It is important, that in these `services`, in the `.spec.ports` section, each port must have the `name` field filled.
 
 ### Multicluster
 
