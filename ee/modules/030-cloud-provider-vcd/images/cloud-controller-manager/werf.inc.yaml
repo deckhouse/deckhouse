@@ -1,5 +1,8 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.ccm.vcd }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -9,7 +12,7 @@ import:
 docker:
   ENTRYPOINT: ["/cloud-provider-for-cloud-director"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
 mount:
 - fromPath: ~/go-pkg-cache
@@ -23,8 +26,9 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - export VERSION="1.4.1"
   - mkdir -p /src
-  - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/vmware/cloud-provider-for-cloud-director.git /src
+  - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/vmware/cloud-provider-for-cloud-director.git /src
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-provider-for-cloud-director/release.Version=${VERSION}" -o bin/cloud-provider-for-cloud-director cmd/ccm/main.go
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-provider-for-cloud-director/release.Version={{ $version }}" -o bin/cloud-provider-for-cloud-director cmd/ccm/main.go
+  {{- end }}
+{{- end }}
