@@ -27,8 +27,8 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
-  - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/vmware/cloud-provider-for-cloud-director.git /src
+  - git clone --depth 1 --branch {{ $value.ccm.vcd }} {{ $.SOURCE_REPO }}/vmware/cloud-provider-for-cloud-director.git /src
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-provider-for-cloud-director/release.Version={{ $version }}" -o bin/cloud-provider-for-cloud-director cmd/ccm/main.go
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-provider-for-cloud-director/release.Version={{ $value.ccm.vcd }}" -o bin/cloud-provider-for-cloud-director cmd/ccm/main.go
   {{- end }}
 {{- end }}
