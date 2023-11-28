@@ -611,7 +611,7 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 }
 
 var metricStatuses = []string{
-	"WaitingForApproval", "Approved", "DrainingForDisruption", "WaitingForDisruptionApproval",
+	"WaitingForApproval", "Approved", "DrainingForDisruption", "Draining", "Drained", "WaitingForDisruptionApproval",
 	"WaitingForManualDisruptionApproval", "DisruptionApproved", "ToBeUpdated", "UpToDate", "UpdateFailedNoConfigChecksum",
 }
 
