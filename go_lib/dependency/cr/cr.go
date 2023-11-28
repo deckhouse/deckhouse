@@ -26,6 +26,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -39,7 +40,7 @@ import (
 //go:generate minimock -i Client -o cr_mock.go
 
 const (
-	defaultTimeout = 30 * time.Second
+	defaultTimeout = 60 * time.Second
 )
 
 type Client interface {
@@ -57,8 +58,17 @@ type client struct {
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
 // Repo example: "cr.example.com/ns/app"
 func NewClient(repo string, options ...Option) (Client, error) {
+	timeout := defaultTimeout
+	// make possible to rewrite timeout in runtime
+	if t := os.Getenv("REGISTRY_TIMEOUT"); t != "" {
+		var err error
+		timeout, err = time.ParseDuration(t)
+		if err != nil {
+			return nil, err
+		}
+	}
 	opts := &registryOptions{
-		timeout: defaultTimeout,
+		timeout: timeout,
 	}
 
 	for _, opt := range options {
@@ -225,8 +235,7 @@ type registryOptions struct {
 	withoutAuth bool
 	dockerCfg   string
 	userAgent   string
-
-	timeout time.Duration
+	timeout     time.Duration
 }
 
 type Option func(options *registryOptions)
