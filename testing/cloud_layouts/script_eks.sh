@@ -232,6 +232,24 @@ function wait_cluster_ready() {
   if [[ $test_failed == "true" ]] ; then
     return 1
   fi
+
+  chmod 755 /deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if /deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Run test script: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
 }
 
 function destroy_eks_infra() {
