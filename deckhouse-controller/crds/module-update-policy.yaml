@@ -168,3 +168,8 @@ spec:
           jsonPath: .spec.update.mode
           type: string
           description: Module release update mode.
+        - name: update windows
+          jsonPath: .spec.update.windows
+          priority: 1
+          type: string
+          description: Module release update windows.

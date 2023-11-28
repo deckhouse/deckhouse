@@ -103,10 +103,6 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: modules
-          jsonPath: .status.matchedModules
-          type: string
-          description: Список модулей подпадающих под данные настройки обновления.
         - name: release channel
           jsonPath: .spec.releaseChannel
           type: string
@@ -115,7 +111,7 @@ spec:
           jsonPath: .spec.update.mode
           type: string
           description: Режим обновления модуля.
-        - name: errors
-          jsonPath: .status.errors
+        - name: update windows
+          jsonPath: .spec.update.windows
           type: string
-          description: Список сообщений об ошибках.
+          description: Окна обновления модуля.
