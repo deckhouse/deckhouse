@@ -204,7 +204,7 @@ spec:
                   - {required: ["httpPort"]}
                   - {required: ["httpsPort"]}
                   x-kubernetes-validations:
-                    - message: .spec.httpsPort shouldn't equal to 6443
+                    - message: .spec.httpsPort can't be 6443, it reserved for KubeApiServer
                       rule: 'self.httpsPort != 6443'
                   properties:
                     httpPort:
