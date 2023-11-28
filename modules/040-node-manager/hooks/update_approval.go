@@ -519,7 +519,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-required"]; ok {
 		isDisruptionRequired = true
 	}
-	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v == "bashible" {
+	if _, ok := node.Annotations[drainingAnnotationKey]; ok {
 		isDraining = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
@@ -533,7 +533,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if !ok {
 		nodeGroup = ""
 	}
-	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v == "bashible" {
+	if _, ok := node.Annotations[drainedAnnotationKey]; ok {
 		isDrained = true
 	}
 
