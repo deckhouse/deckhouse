@@ -1,51 +1,62 @@
-artifact: {{ .ModuleName }}/distroless-cni-flannel-artifact
-from: {{ .Images.BASE_ALPINE }}
-git:
-- add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld
-  to: /workdir/
-  includePaths:
-  - '**/file-filter'
+{{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so*" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/alt
 shell:
   install:
-    - cd /workdir
-    - apk update
-    - apk add rsync
-    - apk fetch -R -o . iproute2-minimal iptables ip6tables conntrack-tools
-    - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
-    - mkdir /filtered-apk && rsync -av --include-from=file-filter --include='*/' --exclude '*' /apk/ /filtered-apk/
+    - apt-get update
+    - apt-get install -y iptables iptables-nft
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        ln -f -s /iptables-wrapper "/filtered-apk/sbin/${cmd}"
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
+        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
       done
+      # broken symlinks are not imported from the artifact
       touch /iptables-wrapper
 ---
 artifact: {{ .ModuleName }}/entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 git:
-- add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld/entrypoint/
-  to: /workdir/
+- add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld/entrypoint
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
   install:
-    - cd /workdir
     - apk add --no-cache git
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint main.go
+    - cd /src
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint main.go
 ---
-artifact: {{ .ModuleName }}/flannel
-from: quay.io/coreos/flannel:v0.15.1-amd64@sha256:a3ebdc7e5e44d1ba3ba8ccd8399e81444102bd35f5f480997a637a42d1e1da6b
+artifact: {{ .ModuleName }}/flanneld-artifact
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+shell:
+  install:
+    - apk add --no-cache git make bash gcc glib-static musl-dev linux-headers
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 --branch v0.23.0 {{ $.SOURCE_REPO }}/flannel-io/flannel.git .
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - make dist/flanneld
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/flannel
-  add: /opt/bin/flanneld
+- artifact: {{ .ModuleName }}/flanneld-artifact
+  add: /src/dist/flanneld
   to: /opt/bin/flanneld
   before: setup
-- artifact: {{ .ModuleName }}/distroless-cni-flannel-artifact
-  add: /filtered-apk
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
   to: /
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib64/iptables
+  to: /lib64/iptables
+  before: setup
 - artifact: {{ .ModuleName }}/entrypoint-artifact
-  add: /workdir/entrypoint
+  add: /entrypoint
   to: /entrypoint
   before: setup
 - image: common/iptables-wrapper
