@@ -213,7 +213,7 @@
 
   - alert: NodeStuckInDraining
     expr: |
-      max by (message, node) (d8_node_draining) == 1
+      max by (message, node) (d8_node_draining * on (node) group_left () kube_node_info) == 1
     for: 5m
     labels:
       tier: cluster

@@ -575,6 +575,12 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 	case node.IsApproved && node.IsDisruptionRequired && node.IsDraining:
 		return "DrainingForDisruption"
 
+	case node.IsDraining:
+		return "Draining"
+
+	case node.IsDrained:
+		return "Drained"
+
 	case node.IsApproved && node.IsDisruptionRequired && ng.Disruptions.ApprovalMode == "Automatic":
 		return "WaitingForDisruptionApproval"
 
