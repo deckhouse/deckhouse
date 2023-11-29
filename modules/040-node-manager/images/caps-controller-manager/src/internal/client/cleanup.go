@@ -20,11 +20,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
-	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
 )
@@ -32,8 +29,10 @@ import (
 // Cleanup runs the cleanup script on StaticInstance.
 func (c *Client) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	switch instanceScope.GetPhase() {
-	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
-		err := c.cleanupFromRunningPhase(ctx, instanceScope)
+	case
+		deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping,
+		deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
+		err := c.cleanupFromBootstrappingOrRunningPhase(ctx, instanceScope)
 		if err != nil {
 			return errors.Wrap(err, "failed to clean up StaticInstance from running phase")
 		}
@@ -49,7 +48,7 @@ func (c *Client) Cleanup(ctx context.Context, instanceScope *scope.InstanceScope
 	return nil
 }
 
-func (c *Client) cleanupFromRunningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
+func (c *Client) cleanupFromBootstrappingOrRunningPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning)
 
 	err := instanceScope.Patch(ctx)
@@ -69,24 +68,16 @@ func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *sc
 		return nil
 	}
 
-	instanceScope.Instance.Status.MachineRef = nil
-	instanceScope.Instance.Status.NodeRef = nil
-	instanceScope.Instance.Status.CurrentStatus = nil
-
-	conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForNodeRefReason, clusterv1.ConditionSeverityInfo, "")
-
-	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
-
-	err := instanceScope.Patch(ctx)
+	err := instanceScope.ToPending(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to patch StaticInstance phase")
+		return errors.Wrap(err, "failed to set StaticInstance to Pending phase")
 	}
 
 	return nil
 }
 
 func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
-	done := c.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
+	done := c.cleanupTaskManager.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
 		err := ssh.ExecSSHCommand(instanceScope, "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing", nil)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
