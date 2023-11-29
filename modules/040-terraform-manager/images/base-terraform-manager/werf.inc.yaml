@@ -23,29 +23,6 @@ git:
   to: /deckhouse
   includePaths:
     - "candi/openapi"
-
-#---
-## use artifact for one place import for base and install images
-#artifact: terraform
-## we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
-## current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-#from: {{ .Images.BASE_UBUNTU }}
-#shell:
-#  beforeInstall:
-#    - apt-get update && apt install -y wget unzip
-#    - |
-#      mkdir /terraform
-#      wget https://releases.hashicorp.com/terraform/{{ .TF.version }}/terraform_{{ .TF.version }}_linux_amd64.zip -O /terraform.zip
-#      unzip -d /terraform /terraform.zip
-#      chmod 755 /terraform/terraform
-#      cat << EOD > /root/.terraformrc
-#      provider_installation {
-#        filesystem_mirror {
-#          path    = "/usr/local/share/terraform/plugins"
-#          include = ["*/*/*"]
-#        }
-#      }
-#      EOD
 ---
 # use artifact for one place import for base and install images
 artifact: terraform
@@ -61,8 +38,7 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch v{{ .TF.version }} https://github.com/hashicorp/terraform.git /src
-#    - git clone --depth 1 --branch v{{ .TF.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform.git /src
+    - git clone --depth 1 --branch v{{ .TF.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform.git /src
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
     - chmod 755 /terraform/terraform
