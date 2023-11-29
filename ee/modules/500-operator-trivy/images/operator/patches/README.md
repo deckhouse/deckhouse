@@ -2,6 +2,7 @@
 
 ## 001-add-registry-secret-as-dockerconfigjson.patch
 
+This patch adds docker auth config via kubernetes volume/volumeMount to scanjobs in Standalone mode so that trivy init container can download trivy-db from a private registry. ClientServer mode doesn't have to download trivy-db on its own.
 This [issue](https://github.com/aquasecurity/trivy-operator/issues/695) covers both trivy and trivy-operator. We've decided not to pursue patch upstreaming for now.
 
 ## 002-skip-some-checks.patch
