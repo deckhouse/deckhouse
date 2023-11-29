@@ -358,13 +358,13 @@ linstor_change_replicas_count() {
       count=0
       max_attempts=10
       until [ $count -eq $max_attempts ]; do
-        RESOURCE_NODES=$(linstor -m --output-version=v1 resource list-volumes  -r "${resource_name}" | jq '[.[][] | {node_name: .node_name, storage_pool: .props.StorPoolName, allocated_size_kib: .layer_object.children[0].storage.storage_volumes[0].allocated_size_kib}]')
+        RESOURCE_NODES=$(linstor -m --output-version=v1 resource list-volumes  -r "${resource_name}" | jq '[.[][] | {node_name: .node_name, storage_pool: .volumes[0].storage_pool_name, allocated_size_kib: .volumes[0].allocated_size_kib}]')
         resource_storage_pools=$(echo $RESOURCE_NODES | jq 'group_by(.storage_pool) | map({storage_pool: .[0].storage_pool, count: length})')
         diskful_storage_pools_count=$(echo $resource_storage_pools | jq --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[] | select(.storage_pool != $disklessStorPoolName)] | length')
 
-        if (( diskful_pools_count > 1 )); then
+        if (( $diskful_storage_pools_count > 1 )); then
             echo "Error: More than one diskful storage pool found for resource ${resource_name}."
-            echo $resource_storage_pools
+            echo $RESOURCE_NODES
             exit 1
         fi
 
@@ -408,11 +408,12 @@ linstor_change_replicas_count() {
     sleep 2
     if (( ${current_diskful_replicas_count} < ${desired_diskful_replicas_count} )); then
       difference=$((desired_diskful_replicas_count - current_diskful_replicas_count))
-      eval "$(get_sorted_free_nodes "$RESOURCE_NODES" "$DISKFUL_STORAGE_POOLS_NODES" "${diskful_storage_pool_name}")"
+      eval "$(get_sorted_free_nodes "$RESOURCE_NODES" "$ALL_STORAGE_POOLS_NODES" "${diskful_storage_pool_name}")"
 
       echo "The total number of diskfull replicas for resource ${resource_name} (${current_diskful_replicas_count}) less then the desired number of replicas(${desired_diskful_replicas_count}). Adding ${difference} diskfull replicas for this resource"
       for ((i=0; i<difference; i++)); do
         if [ $i -ge ${#sorted_free_nodes[@]} ]; then
+          echo "sorted_free_nodes=${sorted_free_nodes[@]}"
           echo "Error: Not enough free nodes"
           exit_function
           break
@@ -435,7 +436,7 @@ linstor_change_replicas_count() {
         echo "Creating new replica on node \"${node_name_for_new_replica}\" for resource \"${resource_name}\""
         exec_linstor_with_exit_code_check resource create ${node_name_for_new_replica} ${resource_name} --storage-pool ${diskful_storage_pool_name}
         
-        DISKFUL_STORAGE_POOLS_NODES=$(echo $DISKFUL_STORAGE_POOLS_NODES | jq --arg node_name "${node_name_for_new_replica}" --arg diskfulStoragePoolName "${diskful_storage_pool_name}" --argjson resource_allocated_size_kib "${resource_allocated_size_kib}" '
+        ALL_STORAGE_POOLS_NODES=$(echo $ALL_STORAGE_POOLS_NODES | jq --arg node_name "${node_name_for_new_replica}" --arg diskfulStoragePoolName "${diskful_storage_pool_name}" --argjson resource_allocated_size_kib "${resource_allocated_size_kib}" '
           map(if .node_name == $node_name and .storage_pool_name == $diskfulStoragePoolName then .free_capacity -= $resource_allocated_size_kib else . end)
         ')
 
@@ -503,20 +504,22 @@ linstor_change_replicas_count() {
 
 get_sorted_free_nodes() {
   local resource_nodes=$1
-  local diskful_storage_pools_nodes=$2
-  local diskful_storage_pool_name=$3
+  local all_storage_pools_nodes=$2
+  local storage_pool_name=$3
 
   resource_all_nodes=($(echo $resource_nodes | jq -r '.[].node_name'))
   # resource_diskful_nodes=($(echo $resource_nodes | jq -r --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '.[] | select(.storage_pool != $disklessStorPoolName) | .node_name'))
-  diskful_nodes_for_storage_pool=($(echo $diskful_storage_pools_nodes | jq -r --arg diskfulStoragePoolName "${diskful_storage_pool_name}" '.[] | select(.storage_pool_name == $diskfulStoragePoolName) | .node_name'))
-  free_capacities=($(echo $diskful_storage_pools_nodes | jq -r --arg diskfulStoragePoolName "${diskful_storage_pool_name}" '.[] | select(.storage_pool_name == $diskfulStoragePoolName) | .free_capacity'))
+  nodes_for_storage_pool=($(echo $all_storage_pools_nodes | jq -r --arg storagePoolName "${storage_pool_name}" '.[] | select(.storage_pool_name == $storagePoolName) | .node_name'))
+  free_capacities=($(echo $all_storage_pools_nodes | jq -r --arg storagePoolName "${storage_pool_name}" '.[] | select(.storage_pool_name == $storagePoolName) | .free_capacity'))
 
   free_nodes=()
 
-  for i in "${!diskful_nodes_for_storage_pool[@]}"; do
-      node=${diskful_nodes_for_storage_pool[$i]}
+  for i in "${!nodes_for_storage_pool[@]}"; do
+      node=${nodes_for_storage_pool[$i]}
       if [[ ! " ${resource_all_nodes[@]} " =~ " ${node} " ]]; then
+        if [[ "$node" != "$NODE_FOR_EVICT" ]]; then
           free_nodes+=("${free_capacities[$i]} ${node}")
+        fi
       fi
   done
 
@@ -527,20 +530,22 @@ get_sorted_free_nodes() {
 }
 
 create_tiebreaker() {
-  resource_name=$1
+  local resource_name=$1
+  local all_storage_pools_nodes=$2
 
   while true; do
     count=0
     max_attempts=10
     until [ $count -eq $max_attempts ]; do
-      diskless_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName == $disklessStorPoolName).name] | length')
+      # diskless_replicas_count=$(linstor -m --output-version=v1 resource list -r ${resource_name} | jq -r  --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.props.StorPoolName == $disklessStorPoolName).name] | length')
+      RESOURCE_NODES=$(linstor -m --output-version=v1 resource list-volumes  -r "${resource_name}" | jq '[.[][] | {node_name: .node_name, storage_pool: .volumes[0].storage_pool_name, allocated_size_kib: .volumes[0].allocated_size_kib}]')
       ((count++))
-      if [[ -z $diskless_replicas_count ]]; then
-        echo "Warning! Can't get the total number of diskless replicas for resource ${resource_name}."
+      if [[ -z $RESOURCE_NODES ]]; then
+        echo "Warning! Can't get RESOURCE_NODES for resource ${resource_name}."
         echo "Resource status:"
         exec_linstor_with_exit_code_check resource list-volumes -r $resource_name
         if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
-          echo "Waiting $TIMEOUT_SEC seconds and rechecking the total number of diskless replicas for resource ${resource_name}"
+          echo "Waiting $TIMEOUT_SEC seconds before retrying to get RESOURCE_NODES for the resource ${resource_name}."
           sleep $TIMEOUT_SEC
         else
           exit_function
@@ -566,10 +571,38 @@ create_tiebreaker() {
   done
 
 
+  resource_storage_pools=$(echo $RESOURCE_NODES | jq 'group_by(.storage_pool) | map({storage_pool: .[0].storage_pool, count: length})')
+  diskful_storage_pools_count=$(echo $resource_storage_pools | jq --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[] | select(.storage_pool != $disklessStorPoolName)] | length')
+  if (( diskful_storage_pools_count > 1 )); then
+    echo "Error: More than one diskful storage pool found for resource ${resource_name}."
+    echo $RESOURCE_NODES
+    exit 1
+  fi
 
-  if (( ${diskless_replicas_count} < 1 )); then
-    echo "The count of diskless replicas is ${diskless_replicas_count}. Creating a TieBreaker for resource ${resource_name}"
+  diskful_replicas_count=$(echo $RESOURCE_NODES | jq --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[] | select(.storage_pool != $disklessStorPoolName)] | length')
+  diskless_replicas_count=$(echo $RESOURCE_NODES | jq --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[] | select(.storage_pool == $disklessStorPoolName)] | length')
+
+  if (( ${diskless_replicas_count} < 1 && ${diskful_replicas_count} == 2)); then
+    echo "The count of diskless replicas is ${diskless_replicas_count} and count of diskful replicas is ${diskful_replicas_count}. Creating a TieBreaker for resource ${resource_name}"
+
+    eval "$(get_sorted_free_nodes "$RESOURCE_NODES" "$ALL_STORAGE_POOLS_NODES" "${DISKLESS_STORAGE_POOL}")"
+    free_node_count=${#sorted_free_nodes[@]}
+    if [ 0 -ge ${free_node_count} ]; then
+      echo "Error: Not enough free nodes for create tiebreaker"
+      echo "sorted_free_nodes=${sorted_free_nodes[@]}"
+      echo "free_node_count=${free_node_count}"
+      
+      exit_function
+      return
+    fi
+
+    rand_index=$((RANDOM % free_node_count))
+    node_name=$(echo ${sorted_free_nodes[$rand_index]} | cut -d' ' -f2)
+    echo "Node ${node_name} has been selected for TieBreaker creation for resource ${resource_name}. Creating TieBreaker(diskless replica) on this node."
+
+    linstor_check_faulty
     exec_linstor_with_exit_code_check resource-definition set-property $resource_name DrbdOptions/auto-add-quorum-tiebreaker true
+    linstor resource create ${node_name} ${resource_name} --storage-pool ${DISKLESS_STORAGE_POOL} --drbd-diskless
     sleep 5
 
     while true; do
@@ -629,6 +662,9 @@ linstor_delete_resources_from_node() {
     echo "Current status of the resource:"
     exec_linstor_with_exit_code_check resource list-volumes -r ${resource_name}
     sleep 2
+    echo "Setting auto-add-quorum-tiebreaker to false for resource ${resource_name} before deleting"
+    exec_linstor_with_exit_code_check resource-definition set-property ${resource_name} DrbdOptions/auto-add-quorum-tiebreaker false
+    sleep 2
     echo "Deleting resource ${resource_name}"
     exec_linstor_with_exit_code_check resource delete ${NODE_FOR_EVICT} ${resource_name}
     echo "Resource status after deleting:"
@@ -676,7 +712,10 @@ linstor_delete_resources_from_node() {
       echo "Resource ${resource_name} has an even number of diskfull replicas. Creating a TieBreaker for this resource if it does not exist."
       create_tiebreaker ${resource_name}
     fi
-    
+
+    echo "Setting auto-add-quorum-tiebreaker to true for resource ${resource_name} after deleting"
+    exec_linstor_with_exit_code_check resource-definition set-property ${resource_name} DrbdOptions/auto-add-quorum-tiebreaker true
+    sleep 2
     echo "Processing of resource $resource_name completed."
   done
 
@@ -955,11 +994,11 @@ process_args() {
         CREATE_DB_BACKUP=false
         shift
         ;;
-      # --delete-resources-only)
-      #   DELETE_RESOURCES=true
-      #   DELETE_MODE="resources-only"
-      #   shift
-      #   ;;
+      --delete-resources-only)
+        DELETE_RESOURCES=true
+        DELETE_MODE="resources-only"
+        shift
+        ;;
       --delete-node)
         DELETE_NODE=true
         DELETE_MODE="node"
@@ -1047,7 +1086,7 @@ exec_linstor_with_exit_code_check node set-property ${NODE_FOR_EVICT} AutoplaceT
 
 RESOURCE_AND_GROUP_NAMES=$(linstor -m --output-version=v1 resource-definition list -r ${DISKFUL_RESOURCES_TO_EVICT} | jq -r '.[][] | {resource: .name, resource_group: .resource_group_name}')
 RESOURCE_GROUPS=$(linstor -m --output-version=v1 resource-group list | jq -r '.[][] | {resource_group: .name, place_count: .select_filter.place_count}')
-DISKFUL_STORAGE_POOLS_NODES=$(linstor -m --output-version=v1 storage-pool list | jq --arg disklessStorPoolName "${DISKLESS_STORAGE_POOL}" '[.[][] | select(.storage_pool_name != $disklessStorPoolName) | {storage_pool_name: .storage_pool_name, node_name: .node_name, free_capacity: .free_capacity}]')
+ALL_STORAGE_POOLS_NODES=$(linstor -m --output-version=v1 storage-pool list | jq  '[.[][] | {storage_pool_name: .storage_pool_name, node_name: .node_name, free_capacity: .free_capacity}]')
 
 echo "List of resources to be evicted from node ${NODE_FOR_EVICT}:"
 exec_linstor_with_exit_code_check resource list-volumes -r ${DISKFUL_RESOURCES_TO_EVICT}
@@ -1097,37 +1136,26 @@ DISKLESS_RESOURCES_TO_EVICT_NEW=$(linstor -m --output-version=v1 resource list -
 
 if [[ "${DELETE_MODE}" == "node" ]]; then
   delete_node_from_kubernetes_and_linstor
+  linstor_check_faulty
+  echo "Create a TieBreaker, if necessary, for resources whose diskful replicas were on the removed node \"${NODE_FOR_EVICT}\""
+  for resource in $DISKFUL_RESOURCES_TO_EVICT_NEW; do
+    create_tiebreaker $resource
+  done
+  if [[ -n $DISKLESS_RESOURCES_TO_EVICT_NEW ]]; then
+    echo "Create a TieBreaker, if necessary, for resources that had a TieBreaker on the removed node \"${NODE_FOR_EVICT}\""
+    for resource in $DISKLESS_RESOURCES_TO_EVICT_NEW; do
+      create_tiebreaker $resource
+    done
+  fi
 elif [[ "${DELETE_MODE}" == "resources-only" ]]; then
   echo "Only the deletion of all resources from ${NODE_FOR_EVICT} will be executed. The node will NOT be deleted from Kubernetes and LINSTOR."
   linstor_delete_resources_from_node "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
+  linstor_delete_resources_from_node "${DISKLESS_RESOURCES_TO_EVICT_NEW[@]}"
 fi
 
-
-linstor_check_faulty
 echo "State of all resources after evacuate resources from node ${NODE_FOR_EVICT}:"
 exec_linstor_with_exit_code_check resource list-volumes
 sleep 2
-
-# if get_user_confirmation "Should we reduce the number of replicas to their previous values for movable resources and also check for TieBreakers?" "y" "n"; then
-#   linstor_change_replicas_count 0 2 "${RESOURCE_AND_GROUP_NAMES_NEW}" "${RESOURCE_GROUPS_NEW}" "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
-# fi
-
-echo "Check the number of replicas for movable resources and also check for TieBreakers"
-linstor_change_replicas_count 0 2 "${RESOURCE_AND_GROUP_NAMES_NEW}" "${RESOURCE_GROUPS_NEW}" "${DISKFUL_RESOURCES_TO_EVICT_NEW[@]}"
-linstor_check_faulty
-
-
-
-if [[ -n $DISKLESS_RESOURCES_TO_EVICT_NEW ]]; then
-  if [[ "${DELETE_MODE}" == "resources-only" ]]; then
-    echo "Delete diskless resources from node \"${NODE_FOR_EVICT}\""
-    linstor_delete_resources_from_node "${DISKLESS_RESOURCES_TO_EVICT_NEW[@]}"
-  fi
-  echo "Create TieBreaker if needed for resources that had TieBreaker on evicted node \"${NODE_FOR_EVICT}\""
-  for resource in $DISKLESS_RESOURCES_TO_EVICT_NEW; do
-    create_tiebreaker $resource
-  done
-fi
 
 linstor_check_faulty
 linstor_check_advise
