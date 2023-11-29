@@ -17,6 +17,7 @@ package source
 import (
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -267,6 +268,10 @@ const (
 	defaultScanInterval = 3 * time.Minute
 )
 
+var (
+	ErrNoPolicyFound = errors.New("no matching update policy found")
+)
+
 func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1.ModuleSource) (ctrl.Result, error) {
 	modulesErrorsMap := make(map[string]string)
 	for _, moduleError := range roMS.Status.ModuleErrors {
@@ -305,7 +310,13 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 
 	sort.Strings(moduleNames)
 
-	ms.Status.AvailableModules = moduleNames
+	// form available modules structure
+	availableModules := make([]v1alpha1.AvailableModule, len(moduleNames))
+	for idx, module := range moduleNames {
+		availableModules[idx].Name = module
+	}
+
+	ms.Status.AvailableModules = availableModules
 	ms.Status.ModulesCount = len(moduleNames)
 
 	modulesChecksums := c.getModuleSourceChecksum(ms.Name)
@@ -327,9 +338,14 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 		// check if we have an update policy for the moduleName
 		policy, err := getReleasePolicy(ms.Name, moduleName, policies)
 		if err != nil {
+			if errors.Is(err, ErrNoPolicyFound) {
+				updateAvailableModules(ms.Status.AvailableModules, moduleName, "")
+				continue
+			}
 			modulesErrorsMap[moduleName] = err.Error()
 			continue
 		}
+		updateAvailableModules(ms.Status.AvailableModules, moduleName, policy.Name)
 
 		checksum := modulesChecksums[moduleName]
 		downloadResult, err := md.DownloadFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, checksum)
@@ -519,7 +535,7 @@ func (c *Controller) validateModule(def *models.DeckhouseModuleDefinition) error
 	return nil
 }
 
-// GetReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
+// getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
 // if many policies match the module release labels, conflict=true is returned
 func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
 	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
@@ -534,7 +550,7 @@ func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.Module
 
 			if selector.Matches(releaseLabelsSet) {
 				if found {
-					return nil, fmt.Errorf("More than one update policy matches the module: %s and %s", matchedPolicy.Name, policy.Name)
+					return nil, fmt.Errorf("more than one update policy matches the module: %s and %s", matchedPolicy.Name, policy.Name)
 				}
 				found = true
 				matchedPolicy = policy
@@ -543,8 +559,18 @@ func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.Module
 	}
 
 	if !found {
-		return nil, fmt.Errorf("no matching update policy found")
+		return nil, ErrNoPolicyFound
 	}
 
 	return matchedPolicy, nil
+}
+
+// updateAvailableModules updates a ModuleSource's status field AvailableModules with applied policies
+func updateAvailableModules(availableModules []v1alpha1.AvailableModule, moduleName, policyName string) {
+	for idx, module := range availableModules {
+		if module.Name == moduleName {
+			availableModules[idx].Policy = policyName
+			break
+		}
+	}
 }

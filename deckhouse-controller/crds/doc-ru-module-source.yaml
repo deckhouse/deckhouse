@@ -30,6 +30,17 @@ spec:
                   description: 'Время последней синхронизации с container registry.'
                 availableModules:
                   type: array
+                  description: Список доступных для установки модулей и их политики обновления.
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Имя модуля.
+                      policy:
+                        type: string
+                        description: Имя политики.
+                  type: array
                   description: Список доступных для установки модулей в данном репозитории.
                 message:
                   type: string
