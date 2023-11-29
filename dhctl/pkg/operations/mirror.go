@@ -30,22 +30,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 )
 
-func MirrorRegistryToLocalFS(
+func MirrorDeckhouseToLocalFS(
 	mirrorCtx *mirror.Context,
 	versions []*semver.Version,
 ) error {
 	log.InfoF("Fetching Deckhouse modules list...\t")
-	modules, err := mirror.GetExternalModules(mirrorCtx)
+	modules, err := mirror.GetDeckhouseModules(mirrorCtx)
 	if err != nil {
-		log.InfoLn("❌")
 		return fmt.Errorf("get Deckhouse modules: %w", err)
 	}
 	log.InfoLn("✅")
 
 	log.InfoF("Creating OCI Image Layouts...\t")
-	layouts, err := mirror.CreateOCIImageLayouts(mirrorCtx.DeckhouseRegistryRepo, mirrorCtx.UnpackedImagesPath, modules)
+	layouts, err := mirror.CreateOCIImageLayoutsForDeckhouse(mirrorCtx.DeckhouseRegistryRepo, mirrorCtx.UnpackedImagesPath, modules)
 	if err != nil {
-		log.InfoLn("❌")
 		return fmt.Errorf("create OCI Image Layouts: %w", err)
 	}
 	log.InfoLn("✅")
@@ -54,13 +52,11 @@ func MirrorRegistryToLocalFS(
 
 	log.InfoF("Searching for Deckhouse modules images...\t")
 	if err = mirror.FindDeckhouseModulesImages(mirrorCtx, layouts); err != nil {
-		log.InfoLn("❌")
 		return fmt.Errorf("find Deckhouse modules images: %w", err)
 	}
 	log.InfoLn("✅")
 
 	if err = mirror.PullInstallers(mirrorCtx, layouts); err != nil {
-		log.InfoLn("❌")
 		return fmt.Errorf("pull installers: %w", err)
 	}
 
@@ -68,7 +64,6 @@ func MirrorRegistryToLocalFS(
 	for imageTag := range layouts.InstallImages {
 		digests, err := mirror.ExtractImageDigestsFromDeckhouseInstaller(mirrorCtx, imageTag, layouts.Install)
 		if err != nil {
-			log.InfoLn("❌")
 			return fmt.Errorf("extract images digests: %w", err)
 		}
 		maputil.Join(layouts.DeckhouseImages, digests)
@@ -105,18 +100,16 @@ func validateLayoutsIfRequired(layouts *mirror.ImageLayouts, validationMode mirr
 	return nil
 }
 
-func PushMirrorToRegistry(mirrorCtx *mirror.Context) error {
+func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 	log.InfoF("Find Deckhouse images to push...\t")
 	ociLayouts, err := findLayoutsToPush(mirrorCtx)
 	if err != nil {
-		log.InfoLn("❌")
 		return fmt.Errorf("Find OCI Image Layouts to push: %w", err)
 	}
 	log.InfoLn("✅")
 
 	log.InfoF("Validating downloaded Deckhouse images...\t")
 	if err = mirror.ValidateLayouts(maputil.Values(ociLayouts), mirrorCtx.ValidationMode); err != nil {
-		log.InfoLn("❌")
 		return fmt.Errorf("OCI Image Layouts are invalid: %w", err)
 	}
 	log.InfoLn("✅")
@@ -142,7 +135,6 @@ func PushMirrorToRegistry(mirrorCtx *mirror.Context) error {
 			log.InfoF("[%d / %d] Pushing image %s...\t", pushCount, len(indexManifest.Manifests), imageRef)
 			img, err := index.Image(manifest.Digest)
 			if err != nil {
-				log.InfoLn("❌")
 				return fmt.Errorf("read image: %w", err)
 			}
 
@@ -157,11 +149,9 @@ func PushMirrorToRegistry(mirrorCtx *mirror.Context) error {
 
 			ref, err := name.ParseReference(imageRef, refOpts...)
 			if err != nil {
-				log.InfoLn("❌")
 				return fmt.Errorf("parse oci layout reference: %w", err)
 			}
 			if err = remote.Write(ref, img, remoteOpts...); err != nil {
-				log.InfoLn("❌")
 				return fmt.Errorf("write %s to registry: %w", ref.String(), err)
 			}
 			log.InfoLn("✅")
@@ -171,7 +161,6 @@ func PushMirrorToRegistry(mirrorCtx *mirror.Context) error {
 	}
 
 	return nil
-
 }
 
 func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, error) {
