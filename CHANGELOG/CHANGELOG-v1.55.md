@@ -54,6 +54,7 @@
  - **[node-manager]** Fix CVE issue in fix cve in `bashible-apiserver` image. [#6526](https://github.com/deckhouse/deckhouse/pull/6526)
  - **[operator-prometheus]** Fix CVE issues in `operator-prometheus` image. [#6456](https://github.com/deckhouse/deckhouse/pull/6456)
  - **[operator-trivy]** Fix CVE issues in `operator-trivy` image. [#6463](https://github.com/deckhouse/deckhouse/pull/6463)
+ - **[prometheus]** Fixes update_alertmanager_status hook when there is an alertmanager via a labeled service in the cluster. [#6699](https://github.com/deckhouse/deckhouse/pull/6699)
  - **[prometheus]** Fix CVE issues in alertsreceiver image. [#6503](https://github.com/deckhouse/deckhouse/pull/6503)
  - **[prometheus-metrics-adapter]** Fix CVE issues in k8sPrometheusAdapter image. [#6506](https://github.com/deckhouse/deckhouse/pull/6506)
  - **[runtime-audit-engine]** Add request to search for nodes with non-working pods in `D8RuntimeAuditEngineNotScheduledInCluster` prometheus-rule. [#5946](https://github.com/deckhouse/deckhouse/pull/5946)
