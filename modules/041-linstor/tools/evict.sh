@@ -994,11 +994,11 @@ process_args() {
         CREATE_DB_BACKUP=false
         shift
         ;;
-      --delete-resources-only)
-        DELETE_RESOURCES=true
-        DELETE_MODE="resources-only"
-        shift
-        ;;
+      # --delete-resources-only)
+      #   DELETE_RESOURCES=true
+      #   DELETE_MODE="resources-only"
+      #   shift
+      #   ;;
       --delete-node)
         DELETE_NODE=true
         DELETE_MODE="node"
