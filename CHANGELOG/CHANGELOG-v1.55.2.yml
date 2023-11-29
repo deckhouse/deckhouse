@@ -1,0 +1,7 @@
+prometheus:
+  fixes:
+    - summary: >-
+        Fixes update_alertmanager_status hook when there is an alertmanager via a labeled service in
+        the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6699
+
