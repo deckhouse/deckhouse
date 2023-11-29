@@ -429,4 +429,6 @@ subjects:
   - kind: ServiceAccount
     name: capi-controller-manager
     namespace: d8-cloud-instance-manager
+  - kind: User
+    name: capi-controller-manager
 {{- end }}

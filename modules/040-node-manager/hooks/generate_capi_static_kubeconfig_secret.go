@@ -18,14 +18,14 @@ package hooks
 
 import (
 	"context"
-	"fmt"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/pkg/errors"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/kubeconfig"
 )
 
@@ -90,17 +91,23 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 		return errors.Wrap(err, "failed to create Cluster API service account")
 	}
 
-	secretForServiceAccountToken, err := getSecretForServiceAccountToken(clusterAPIStaticClusterName, clusterAPINamespace, k8sClient)
+	certExirationSeconds := int32((180 * 24 * time.Hour).Seconds())
+
+	cert, err := tls_certificate.IssueCertificate(input, dc, tls_certificate.OrderCertificateRequest{
+		CommonName: "capi-controller-manager",
+		Groups: []string{
+			"d8:node-manager:capi-controller-manager:manager-role",
+		},
+		Usages: []certificatesv1.KeyUsage{
+			certificatesv1.UsageClientAuth,
+		},
+		ExpirationSeconds: &certExirationSeconds,
+	})
 	if err != nil {
-		return errors.Wrap(err, "failed to get secret for service account token")
+		return errors.Wrap(err, "failed to issue certificate")
 	}
 
-	serviceAccountToken, ok := secretForServiceAccountToken.Data["token"]
-	if !ok {
-		return errors.New("service account token not found")
-	}
-
-	config, err := kubeconfig.New(clusterAPIStaticClusterName, restConfig.Host, restConfig.CAData, string(serviceAccountToken))
+	config, err := kubeconfig.New(clusterAPIStaticClusterName, restConfig.Host, restConfig.CAData, []byte(cert.Key), []byte(cert.Certificate))
 	if err != nil {
 		return errors.Wrap(err, "failed to generate a kubeconfig")
 	}
@@ -142,31 +149,4 @@ func createCAPIServiceAccount(k8sClient k8s.Client) error {
 	}
 
 	return nil
-}
-
-func getSecretForServiceAccountToken(clusterName string, namespace string, k8sClient k8s.Client) (*v1.Secret, error) {
-	secret, err := k8sClient.CoreV1().Secrets(namespace).Get(context.TODO(), fmt.Sprintf("%s-kubeconfig-token", clusterName), metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			secret = kubeconfig.GenerateSecretForServiceAccountToken(clusterName, namespace, clusterAPIServiceAccountName)
-
-			_, err = k8sClient.CoreV1().Secrets(secret.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
-			if err != nil {
-				if !apierrors.IsAlreadyExists(err) {
-					return nil, errors.Wrap(err, "failed to create secret")
-				}
-			}
-
-			secret, err = k8sClient.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to get secret after creation")
-			}
-
-			return secret, nil
-		}
-
-		return nil, errors.Wrap(err, "failed to get secret")
-	}
-
-	return secret, nil
 }
