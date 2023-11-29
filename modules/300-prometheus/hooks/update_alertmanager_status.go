@@ -59,6 +59,10 @@ func updateAmStatus(input *go_hook.HookInput) error {
 	}
 
 	for _, am := range serviceDeclaredAlertmanagers {
+		// customalertmanagers via labeled services (https://github.com/deckhouse/deckhouse/blob/30c51d36178942825ab26e895cc0a01dbdfb1a73/modules/300-prometheus/hooks/alertmanager_crd_discovery.go#L45)  have empty ResoruceNames and are deprecated
+		if len(am.ResourceName) == 0 {
+			continue
+		}
 		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.ResourceName, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
 	}
 
