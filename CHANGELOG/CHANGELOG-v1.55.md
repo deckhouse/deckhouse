@@ -49,6 +49,7 @@
  - **[loki]** Fix CVE issue in Loki image. [#6494](https://github.com/deckhouse/deckhouse/pull/6494)
  - **[monitoring-kubernetes]** Fix CVE issues in `node-exporter`, `kubelet-eviction-tresholds-exporter` image. [#6523](https://github.com/deckhouse/deckhouse/pull/6523)
  - **[monitoring-kubernetes]** Capacity Planning dashboard shows correct number of Pods usage [#5934](https://github.com/deckhouse/deckhouse/pull/5934)
+ - **[node-manager]** Add MachineHealthCheck for CAPS. [#6609](https://github.com/deckhouse/deckhouse/pull/6609)
  - **[node-manager]** Fix node-manager does not remove `node.deckhouse.io/unitialized` taint when using one taint with different effects. [#6671](https://github.com/deckhouse/deckhouse/pull/6671)
  - **[node-manager]** Fix nodeGroup validation webhook if global mc does not exists. [#6583](https://github.com/deckhouse/deckhouse/pull/6583)
  - **[node-manager]** Fix CVE issue in fix cve in `bashible-apiserver` image. [#6526](https://github.com/deckhouse/deckhouse/pull/6526)
