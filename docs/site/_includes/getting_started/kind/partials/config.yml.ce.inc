@@ -1,15 +1,3 @@
-# [<en>] Section for bootstrapping the Deckhouse cluster.
-# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#initconfiguration
-# [<ru>] Секция первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-  configOverrides:
-    operatorPrometheusCrdEnabled: true
-    operatorPrometheusEnabled: true
-    prometheusCrdEnabled: true
-    monitoringDeckhouseEnabled: true
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -72,5 +60,19 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: monitoring-kubernetes-control-plane
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-deckhouse
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: operator-prometheus-crd
 spec:
   enabled: true
