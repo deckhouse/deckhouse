@@ -20,15 +20,7 @@ shell:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
-  - cp /patches/* /usr/src/app
-# Extra '__interval_*' vars for prometheus datasource.
-  - patch -p1 < ./feat_prometheus_extra_vars.patch
-# Fix heatmap render: constant bucket widths for fast-forward datasource.
-  - patch -p1 < ./fix_heatmap_thin_bars_on_ff.patch
-# Set more useful version than 'dev'. There are tabs in patch, so -l is used.
-  - patch -p1 -l < ./build_go.patch
-# Patch to copy bundled plugins at start from ro directory to rw.
-  - patch -p1 < ./run_sh.patch
+  - find /patches -name '*.patch' -exec git apply {} \;
   - git clone --depth 1 --branch v{{ $statusmapVersion }} {{ $.SOURCE_REPO }}/flant/grafana-statusmap.git /grafana-statusmap
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
