@@ -16,7 +16,7 @@ export LANG=C
 set -Eeuo pipefail
 
 availability=""
-attempts=50
+attempts=10
 
 allow_alerts=("D8DeckhouseIsNotOnReleaseChannel" "DeadMansSwitch")
 
