@@ -33,8 +33,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 2 }}
 spec:
   revision: {{ $revision }}
-  # Deckhouse handles default revisions itself by deploying `d8-istio-sidecar-injector-global` MutatingWebhookConfiguration resource
-  defaultRevision: false
 
   components:
     base:
@@ -107,7 +105,6 @@ spec:
   {{- end }}
 
   values:
-    defaultRevision: ""
     global:
       istioNamespace: d8-{{ $.Chart.Name }}
       meshID: d8-istio-mesh
