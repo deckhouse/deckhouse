@@ -81,7 +81,6 @@ while [ "$patch_pending" = true ] ; do
     machine_name="$(hostname -s)"
     if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
       machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
-      rm -f ${BOOTSTRAP_DIR}/machine-name
     fi
 
     if curl -sS --fail -x "" \
@@ -100,7 +99,7 @@ while [ "$patch_pending" = true ] ; do
       break
     else
       failure_count=$((failure_count + 1))
-      
+
       if [[ $failure_count -eq $failure_limit ]]; then
         >&2 echo "Failed to patch instance ${machine_name} status. Number of attempts exceeded. Status patch will be skipped."
         patch_pending=false
