@@ -1441,8 +1441,10 @@ select#contact-select {
       display: flex;
       flex-direction: column;
       gap: 24px;
+      max-width: 260px;
       padding-top: 24px;
       padding-right: 20px;
+      overflow: auto;
     }
 
     > .toc-sidebar {
