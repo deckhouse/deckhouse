@@ -200,14 +200,7 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 			moduleData.ReleaseImages[mirrorCtx.DeckhouseRegistryRepo+"/modules/"+moduleName+"/release:"+moduleVersion] = struct{}{}
 		}
 
-		nameOpts := []name.Option{}
-		remoteOpts := []remote.Option{}
-		if mirrorCtx.Insecure {
-			nameOpts = append(nameOpts, name.Insecure)
-		}
-		if mirrorCtx.RegistryAuth != nil {
-			remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
-		}
+		nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 		fetchDigestsFrom := maputil.Clone(moduleData.ModuleImages)
 		for imageTag := range fetchDigestsFrom {
 			ref, err := name.ParseReference(imageTag, nameOpts...)
@@ -242,15 +235,9 @@ func fetchVersionsFromModuleReleaseChannels(
 	authProvider authn.Authenticator,
 	insecure bool,
 ) (map[string]string, error) {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure)
 	channelVersions := map[string]string{}
 	for imageTag := range releaseChannelImages {
-		nameOpts, remoteOpts := []name.Option{}, []remote.Option{}
-		if insecure {
-			nameOpts = append(nameOpts, name.Insecure)
-		}
-		if authProvider != nil {
-			remoteOpts = append(remoteOpts, remote.WithAuth(authProvider))
-		}
 
 		ref, err := name.ParseReference(imageTag, nameOpts...)
 		if err != nil {

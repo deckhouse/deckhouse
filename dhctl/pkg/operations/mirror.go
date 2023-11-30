@@ -35,7 +35,7 @@ func MirrorDeckhouseToLocalFS(
 	versions []*semver.Version,
 ) error {
 	log.InfoF("Fetching Deckhouse modules list...\t")
-	modules, err := mirror.GetDeckhouseModules(mirrorCtx)
+	modules, err := mirror.GetDeckhouseExternalModules(mirrorCtx)
 	if err != nil {
 		return fmt.Errorf("get Deckhouse modules: %w", err)
 	}
@@ -138,15 +138,7 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 				return fmt.Errorf("read image: %w", err)
 			}
 
-			refOpts := []name.Option{}
-			remoteOpts := []remote.Option{}
-			if mirrorCtx.Insecure {
-				refOpts = append(refOpts, name.Insecure)
-			}
-			if mirrorCtx.RegistryAuth != nil {
-				remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
-			}
-
+			refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 			ref, err := name.ParseReference(imageRef, refOpts...)
 			if err != nil {
 				return fmt.Errorf("parse oci layout reference: %w", err)
