@@ -100,11 +100,11 @@ const (
 )
 
 var (
-	storage unsupportedVersionsStore
+	helm_storage unsupportedVersionsStore
 )
 
 func init() {
-	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &storage)
+	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &helm_storage)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 				continue
 			}
 
-			incompatibility, k8sCompatibilityVersion := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
+			incompatibility, k8sCompatibilityVersion := helm_storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
 			if incompatibility > 0 {
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
 					"helm_release_name":      rel.Name,
