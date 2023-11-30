@@ -7,7 +7,7 @@ shell:
     - apt-get update
     - apt-get install -y iptables iptables-nft
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-    - mkdir -p /relocate/lib64/iptables
+    - mkdir -m 0755 -p /relocate/lib64/iptables /relocate/run
     - cp -rp /lib64/iptables /relocate/lib64/
 ---
 artifact: {{ .ModuleName }}/entrypoint-artifact
@@ -53,9 +53,6 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-shell:
-  install:
-    - mkdir -m 0755 -p /run
 import:
 - artifact: {{ .ModuleName }}/openvpn-artifact
   add: /src/openvpn/src/openvpn/openvpn
