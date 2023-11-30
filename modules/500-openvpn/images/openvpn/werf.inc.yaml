@@ -53,6 +53,9 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+shell:
+  install:
+    - mkdir -m 0755 -p /run
 import:
 - artifact: {{ .ModuleName }}/openvpn-artifact
   add: /src/openvpn/src/openvpn/openvpn
