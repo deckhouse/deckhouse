@@ -101,7 +101,12 @@ linstor_check_faulty() {
 
     until [ $count -eq $max_attempts ]; do
       echo "Checking for faulty resources"
-      if (( $(linstor resource list --faulty | tee /dev/tty | grep -v -i sync | grep  "[a-zA-Z0-9]" | wc -l) > 1)); then
+      if [[ -n $EXCLUDED_RESOURCES_FROM_CHECK ]]; then
+        faulty_resource_count=$(linstor resource list --faulty | tee /dev/tty | grep -v -i sync | grep -v -E "$EXCLUDED_RESOURCES_FROM_CHECK" | grep  "[a-zA-Z0-9]" | wc -l)
+      else
+        faulty_resource_count=$(linstor resource list --faulty | tee /dev/tty | grep -v -i sync | grep  "[a-zA-Z0-9]" | wc -l)
+      fi
+      if (( $faulty_resource_count > 1)); then
         echo "Faulty resources found."
         if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
           echo "Waiting $TIMEOUT_SEC seconds and rechecking for faulty resources"
@@ -137,7 +142,11 @@ linstor_check_corrupt_resources() {
 
   until [ $count -eq $max_attempts ]; do
     ((count++))
-    exec_linstor_with_exit_code_check resource list-volumes | grep -E -- "-1 KiB|None"
+    if [[ -n $EXCLUDED_RESOURCES_FROM_CHECK ]]; then
+      exec_linstor_with_exit_code_check resource list-volumes | grep -v -E "$EXCLUDED_RESOURCES_FROM_CHECK" | grep -E -- "-1 KiB|None"
+    else
+      exec_linstor_with_exit_code_check resource list-volumes | grep -E -- "-1 KiB|None"
+    fi
     if [ $? -eq 0 ]; then
       echo "Corrupted resources found."
       if get_user_confirmation "Perform recheck in $TIMEOUT_SEC seconds?" "y" "n"; then
@@ -241,7 +250,7 @@ linstor_wait_sync() {
     until [ $count -eq $max_attempts ]; do
       echo "Checking the number of replicas currently syncing"
       ((count++))
-      export SYNC_TARGET_RESOURCES=$(linstor -m --output-version=v1 resource list-volumes | jq -r '.[][] | select(.volumes[].state.disk_state | contains("SyncTarget")).name') 
+      export SYNC_TARGET_RESOURCES=$(linstor -m --output-version=v1 resource list-volumes | jq -r '.[][] | select(.volumes[] | (.state.disk_state // empty) | contains("SyncTarget")).name') 
       if [[ -n "${SYNC_TARGET_RESOURCES}" ]]; then
         echo "Resources found to be syncing at the moment. List of such resources:"
         exec_linstor_with_exit_code_check resource list-volumes -r ${SYNC_TARGET_RESOURCES}
@@ -413,8 +422,13 @@ linstor_change_replicas_count() {
       echo "The total number of diskfull replicas for resource ${resource_name} (${current_diskful_replicas_count}) less then the desired number of replicas(${desired_diskful_replicas_count}). Adding ${difference} diskfull replicas for this resource"
       for ((i=0; i<difference; i++)); do
         if [ $i -ge ${#sorted_free_nodes[@]} ]; then
-          echo "sorted_free_nodes=${sorted_free_nodes[@]}"
           echo "Error: Not enough free nodes"
+          echo "sorted_free_nodes=${sorted_free_nodes[@]}"
+          echo "i=${i}"
+          echo free nodes count=${#sorted_free_nodes[@]}
+          echo RESOURCE_NODES=${RESOURCE_NODES}
+          echo ALL_STORAGE_POOLS_NODES=${ALL_STORAGE_POOLS_NODES}
+          echo diskful_storage_pool_name=${diskful_storage_pool_name}
           exit_function
           break
         fi
@@ -994,11 +1008,11 @@ process_args() {
         CREATE_DB_BACKUP=false
         shift
         ;;
-      # --delete-resources-only)
-      #   DELETE_RESOURCES=true
-      #   DELETE_MODE="resources-only"
-      #   shift
-      #   ;;
+      --delete-resources-only)
+        DELETE_RESOURCES=true
+        DELETE_MODE="resources-only"
+        shift
+        ;;
       --delete-node)
         DELETE_NODE=true
         DELETE_MODE="node"
@@ -1006,6 +1020,15 @@ process_args() {
         ;;
       --node-name)
         NODE_FOR_EVICT="$2"
+        shift
+        shift
+        ;;
+      --exclude-resources-from-check)
+        EXCLUDED_RESOURCES_FROM_CHECK="$2"
+        if ! [[ $EXCLUDED_RESOURCES_FROM_CHECK =~ ^[a-zA-Z0-9_|-]+$ ]]; then
+          echo "Invalid format in --exclude-resources-from-check: \"${EXCLUDED_RESOURCES_FROM_CHECK}\". Only alphanumeric characters, underscores, pipes, and hyphens are allowed."
+          exit 1
+        fi
         shift
         shift
         ;;
@@ -1019,7 +1042,7 @@ process_args() {
     echo "The arguments \"--delete-resources-only\" and \"--delete-node\" can not be used together."
     exit 1
   fi
-
+  
 }
 
 #####################################
@@ -1103,7 +1126,7 @@ echo "Status of processed resources"
 exec_linstor_with_exit_code_check resource list-volumes -r ${DISKFUL_RESOURCES_TO_EVICT}
 sleep 2
 
-echo "Performing checks before deleting the node"
+echo "Performing checks before evict resources"
 linstor_check_faulty
 linstor_wait_sync 0
 linstor_check_faulty
