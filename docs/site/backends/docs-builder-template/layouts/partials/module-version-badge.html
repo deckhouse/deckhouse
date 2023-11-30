@@ -6,7 +6,7 @@
 {{ $urlFileName := replaceRE `^.*/` "" .ctx.Page.RelPermalink 1 }}
 
 {{ if $moduleChannelsData }}
-<a data-proofer-ignore="" href="#" style="margin-right: 25px;" class="highlight">{{ (index ( where $channelsInfo "code" $moduleChannel ) 0 ).title }}</a>
+<a data-proofer-ignore="" href="#" class="highlight">{{ (index ( where $channelsInfo "code" $moduleChannel ) 0 ).title }}</a>
 <div class="submenu-container">
     <ul class="submenu">
 

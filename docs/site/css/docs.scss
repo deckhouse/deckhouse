@@ -8,6 +8,14 @@
     margin: 25px 0;
 }
 
+.breadcrumbs__left {
+  width: 300px;
+}
+
+.breadcrumbs__right {
+  flex: 1;
+}
+
 .breadcrumbs {
     color: #bbb;
     font-size: 14px;
@@ -92,7 +100,7 @@
 .channel-menu > a.highlight {
     text-decoration: none;
     height: 30px;
-    padding: 0 15px;
+    padding: 3px 18px;
     border-radius: 10px;
     font-weight: 600;
     background: #0066ff;
@@ -198,6 +206,7 @@
 .search {
     display: inline-block;
     margin-left: 5px;
+    width: 250px;
 }
 
 .search__results.active {
@@ -265,6 +274,7 @@
 }
 
 .search__input {
+    box-sizing: border-box;
     border-radius: 10px;
     padding: 5px 35px 5px 10px;
     border: 2px solid transparent;

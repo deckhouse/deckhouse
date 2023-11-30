@@ -11,12 +11,16 @@
      <div class="container">
 
        <div class="breadcrumbs-container">
-          <ol class="breadcrumbs">
-            <li class="breadcrumbs__item">{{ T "documentation" | humanize }}</li>
-          </ol>
-          <ol class="breadcrumbs">
+         <div class="breadcrumbs__left">
+           <ol class="breadcrumbs">
+             <li class="breadcrumbs__item">{{ T "documentation" | humanize }}</li>
+           </ol>
+         </div>
+         <div class="breadcrumbs__right">
+           <ol class="breadcrumbs">
              {{ partial "breadcrumbs" . }}
-          </ol>
+           </ol>
+         </div>
           <!-- <div id="doc-versions-menu" class="channel-menu submenu-parent">
           {{ if .IsPage }}
             {{ $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/.*$` .File.Dir 1 ) 0 }}
