@@ -104,7 +104,7 @@ var (
 )
 
 func init() {
-	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &helm_storage)
+	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &helmStorage)
 	if err != nil {
 		log.Fatal(err)
 	}
