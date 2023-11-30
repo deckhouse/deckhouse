@@ -22,6 +22,7 @@ _on_containerd_config_changed() {
 if bb-flag? containerd-need-restart; then
   bb-log-warning "'containerd-need-restart' flag was set. Containerd should be restarted!"
   _on_containerd_config_changed
+  bb-flag-set kubelet-need-restart
   bb-flag-unset containerd-need-restart
 fi
 
