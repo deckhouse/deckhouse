@@ -33,7 +33,7 @@ import (
 // it takes latest metrics from prometheus and duplicate them on Deckhouse startup
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/helm/helm_releases",
+	Queue: "/modules/monitoring-kubernetes/helm_releases",
 	OnStartup: &go_hook.OrderedConfig{
 		Order: 1,
 	},
