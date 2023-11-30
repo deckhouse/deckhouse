@@ -100,7 +100,7 @@ const (
 )
 
 var (
-	helm_storage unsupportedVersionsStore
+	helmStorage unsupportedVersionsStore
 )
 
 func init() {
@@ -296,7 +296,7 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 				continue
 			}
 
-			incompatibility, k8sCompatibilityVersion := helm_storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
+			incompatibility, k8sCompatibilityVersion := helmStorage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
 			if incompatibility > 0 {
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
 					"helm_release_name":      rel.Name,
