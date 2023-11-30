@@ -72,7 +72,7 @@ type LeasesManager struct {
 	kclient *kubernetes.Clientset
 }
 
-func (m *LeasesManager) Create(ctx context.Context) error {
+func (m *LeasesManager) create(ctx context.Context) error {
 	l := m.newLease()
 	l, err := m.leases().Create(ctx, l, metav1.CreateOptions{})
 	if err != nil {
@@ -83,6 +83,14 @@ func (m *LeasesManager) Create(ctx context.Context) error {
 }
 
 func (m *LeasesManager) Run(ctx context.Context) error {
+	if err := m.gc(ctx); err != nil {
+		return fmt.Errorf("first gc: %w", err)
+	}
+
+	if err := m.create(ctx); err != nil {
+		return fmt.Errorf("create leases: %w", err)
+	}
+
 	group, ctx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
