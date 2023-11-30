@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -30,7 +29,7 @@ import (
 
 func LoadOpenAPISchemas(validator *validation.ValuesValidator, moduleName, modulePath string) error {
 	openAPIDir := filepath.Join("/deckhouse", "global-hooks", "openapi")
-	configBytes, valuesBytes, err := module_manager.ReadOpenAPIFiles(openAPIDir)
+	configBytes, valuesBytes, err := utils.ReadOpenAPIFiles(openAPIDir)
 	if err != nil {
 		return fmt.Errorf("read global openAPI schemas: %v", err)
 	}
@@ -45,7 +44,7 @@ func LoadOpenAPISchemas(validator *validation.ValuesValidator, moduleName, modul
 
 	valuesKey := utils.ModuleNameToValuesKey(moduleName)
 	openAPIPath := filepath.Join(modulePath, "openapi")
-	configBytes, valuesBytes, err = module_manager.ReadOpenAPIFiles(openAPIPath)
+	configBytes, valuesBytes, err = utils.ReadOpenAPIFiles(openAPIPath)
 	if err != nil {
 		return fmt.Errorf("module '%s' read openAPI schemas: %v", moduleName, err)
 	}

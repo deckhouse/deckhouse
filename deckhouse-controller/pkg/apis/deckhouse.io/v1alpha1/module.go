@@ -17,15 +17,13 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"strings"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var _ runtime.Object = (*Module)(nil)
-var ModuleGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Module"}
+var ModuleGVK = schema.GroupVersionKind{Group: SchemeGroupVersion.Group, Version: SchemeGroupVersion.Version, Kind: "Module"}
 
 // +genclient
 // +genclient:nonNamespaced
@@ -44,10 +42,10 @@ type Module struct {
 }
 
 type ModuleProperties struct {
-	Weight      int    `json:"weight"`
-	State       string `json:"state"`
-	Source      string `json:"source"`
-	Description string `json:"description"`
+	Weight      uint32 `json:"weight"`
+	State       string `json:"state,omitempty"`
+	Source      string `json:"source,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 type moduleKind struct{}
@@ -61,53 +59,13 @@ func (m *Module) GetObjectKind() schema.ObjectKind {
 	return &moduleKind{}
 }
 
-func (m *Module) SetName(name string) {
-	m.Name = name
-}
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-func (m *Module) SetWeight(weight int) {
-	m.Properties.Weight = weight
-}
+// ModuleList is a list of Module resources
+type ModuleList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
 
-func (m *Module) SetTags(tags []string) {
-	if len(tags) == 0 {
-		m.calculateLabels()
-		return
-	}
-
-	for _, tag := range tags {
-		m.Labels["module.deckhouse.io/"+tag] = ""
-	}
-}
-
-func (m *Module) SetSource(source string) {
-	m.Properties.Source = source
-}
-
-func (m *Module) SetDescription(description string) {
-	m.Properties.Description = description
-}
-
-func (m *Module) SetEnabledState(enabled bool) {
-	if enabled {
-		m.Properties.State = "Enabled"
-	} else {
-		m.Properties.State = "Disabled"
-	}
-}
-
-func (m *Module) calculateLabels() {
-	// could be removed when we will ready properties from the module.yaml file
-
-	if strings.HasPrefix(m.Name, "cni-") {
-		m.Labels["module.deckhouse.io/cni"] = ""
-	}
-
-	if strings.HasPrefix(m.Name, "cloud-provider-") {
-		m.Labels["module.deckhouse.io/cloud-provider"] = ""
-	}
-
-	if strings.HasSuffix(m.Name, "-crd") {
-		m.Labels["module.deckhouse.io/crd"] = ""
-	}
+	Items []Module `json:"items"`
 }

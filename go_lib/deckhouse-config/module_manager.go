@@ -17,7 +17,7 @@ limitations under the License.
 package deckhouse_config
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/values/validation"
 )
 
@@ -25,9 +25,8 @@ import (
 // with methods needed for deckhouse-config package.
 type ModuleManager interface {
 	IsModuleEnabled(modName string) bool
-	GetModule(modName string) *module_manager.Module
+	GetModule(modName string) *modules.BasicModule
 	GetModuleNames() []string
 	GetValuesValidator() *validation.ValuesValidator
-	SetModuleSource(moduleName, source string)
-	ValidateModule(module *module_manager.Module) error
+	ValidateModule(module *modules.BasicModule) error
 }

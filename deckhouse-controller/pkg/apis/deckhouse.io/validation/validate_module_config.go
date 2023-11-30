@@ -21,9 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
-	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -66,17 +64,17 @@ func moduleConfigValidationHandler() http.Handler {
 		return allowResult(res.Warning)
 	})
 
-	logger := kwhlogrus.NewLogrus(log.NewEntry(log.StandardLogger()))
-
 	// Create webhook.
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
 		ID:        "module-config-operations",
 		Validator: vf,
-		Logger:    logger,
-		Obj:       &v1alpha1.ModuleConfig{},
+		// logger is nil, because webhook has Info level for reporting about http handler
+		// and we get a log of useless spam here. So we decided to use Noop logger here
+		Logger: nil,
+		Obj:    &v1alpha1.ModuleConfig{},
 	})
 
-	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: logger})
+	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
 }
 
 func allowResult(warnMsg string) (*kwhvalidating.ValidatorResult, error) {

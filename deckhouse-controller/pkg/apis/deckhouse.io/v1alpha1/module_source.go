@@ -17,11 +17,15 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModuleSource source
 type ModuleSource struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -49,7 +53,7 @@ type ModuleSourceSpecRegistry struct {
 }
 
 type ModuleSourceStatus struct {
-	SyncTime         time.Time     `json:"syncTime"`
+	SyncTime         metav1.Time   `json:"syncTime"`
 	ModulesCount     int           `json:"modulesCount"`
 	AvailableModules []string      `json:"availableModules"`
 	Msg              string        `json:"message"`
@@ -59,4 +63,15 @@ type ModuleSourceStatus struct {
 type ModuleError struct {
 	Name  string `json:"name"`
 	Error string `json:"error"`
+}
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModuleSourceList is a list of ModuleSource resources
+type ModuleSourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleSource `json:"items"`
 }
