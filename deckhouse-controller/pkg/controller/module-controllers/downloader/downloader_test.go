@@ -78,26 +78,3 @@ properties:
     type: object
 `, string(data))
 }
-
-// func TestDownloadImage(t *testing.T) {
-//	t.Skip("For manual run and check images")
-//
-//	dockerCfg := ""
-//	repo := ""
-//	tag := ""
-//
-//	opts := make([]cr.Option, 0)
-//	opts = append(opts, cr.WithAuth(dockerCfg))
-//
-//	c, err := cr.NewClient(repo, opts...)
-//	require.NoError(t, err)
-//
-//	img, err := c.Image(tag)
-//	require.NoError(t, err)
-//
-//	err = os.MkdirAll("/tmp/module", 0777)
-//	require.NoError(t, err)
-//
-//	err = copyModuleToFS("/tmp/module", img)
-//	require.NoError(t, err)
-//}
