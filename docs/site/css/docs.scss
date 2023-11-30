@@ -367,6 +367,7 @@
     text-decoration: none;
     position: relative;
     display: inline-flex;
+    align-items: center;
     padding-left: 15px;
 }
 
@@ -465,6 +466,7 @@ a.comparison-table__module-proprietaryOkmeter:after {
 .sidebar__submenu-item > a {
     position: relative;
     display: inline-flex;
+    align-items: center;
     font-size: 14px;
     color: #00122C;
     letter-spacing: -0.26px;
