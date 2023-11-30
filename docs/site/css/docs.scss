@@ -367,6 +367,7 @@
     text-decoration: none;
     position: relative;
     display: inline-flex;
+    padding-left: 15px;
 }
 
 .sidebar__item > a:hover {
@@ -379,7 +380,6 @@
 
 .sidebar__item_parent > a {
     position: relative;
-    padding-left: 15px;
 }
 
 .sidebar__item_parent > a::after {
