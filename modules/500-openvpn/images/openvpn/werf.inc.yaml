@@ -7,6 +7,8 @@ shell:
     - apt-get update
     - apt-get install -y iptables iptables-nft
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - mkdir -p /relocate/lib64/iptables
+    - cp -rp /lib64/iptables /relocate/lib64/
 ---
 artifact: {{ .ModuleName }}/entrypoint-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
@@ -63,10 +65,6 @@ import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /lib64/iptables
-  to: /lib64/iptables
   before: setup
 docker:
   ENTRYPOINT: ["/openvpn"]
