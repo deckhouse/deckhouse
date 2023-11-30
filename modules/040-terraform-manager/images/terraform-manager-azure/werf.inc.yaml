@@ -23,6 +23,6 @@ shell:
     - git clone --depth 1 --branch v{{ .TF.azure.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-azurerm.git /src
     - cd /src
     - make fmt
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\""
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-azurerm/version.ProviderVersion={{ .TF.azure.version }}"
     - mv /go/bin/terraform-provider-azurerm /terraform-provider-azure
     - chmod -R 755 /terraform-provider-azure

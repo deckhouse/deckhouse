@@ -38,7 +38,7 @@ ansible:
       chdir: /terraform-provider-vsphere
 
   setup:
-  - command: go build -o terraform-provider-vsphere
+  - command: go build -o terraform-provider-vsphere -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-vsphere/version.ProviderVersion={{ .TF.vsphere.version }}"
     args:
       chdir: /terraform-provider-vsphere
     environment:

@@ -38,7 +38,7 @@ ansible:
       chdir: /terraform-provider-gcp
 
   setup:
-  - command: go build -o terraform-provider-gcp
+  - command: go build -o terraform-provider-gcp -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-google/version.ProviderVersion={{ .TF.gcp.version }}"
     args:
       chdir: /terraform-provider-gcp
     environment:
