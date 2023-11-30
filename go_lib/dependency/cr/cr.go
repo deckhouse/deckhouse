@@ -40,7 +40,7 @@ import (
 //go:generate minimock -i Client -o cr_mock.go
 
 const (
-	defaultTimeout = 60 * time.Second
+	defaultTimeout = 90 * time.Second
 )
 
 type Client interface {
@@ -116,7 +116,11 @@ func (r *client) Image(tag string) (v1.Image, error) {
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
 		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
-		defer cancel()
+		// seems weird - yes! but we can't call cancel here, otherwise Image outside this function would be inaccessible
+		go func() {
+			<-ctx.Done()
+			cancel()
+		}()
 
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
@@ -149,7 +153,10 @@ func (r *client) ListTags() ([]string, error) {
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge amount of tags
 		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
-		defer cancel()
+		go func() {
+			<-ctx.Done()
+			cancel()
+		}()
 
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
