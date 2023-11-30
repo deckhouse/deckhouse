@@ -55,9 +55,9 @@ type ModuleUpdatePolicy struct {
 }
 
 type ModuleUpdatePolicySpec struct {
-	Update                ModuleUpdatePolicySpecUpdate        `json:"update"`
-	ReleaseChannel        string                              `json:"releaseChannel"`
-	ModuleReleaseSelector ModuleUpdatePolicySpecLabelSelector `json:"moduleReleaseSelector"`
+	Update                ModuleUpdatePolicySpecUpdate          `json:"update"`
+	ReleaseChannel        string                                `json:"releaseChannel"`
+	ModuleReleaseSelector ModuleUpdatePolicySpecReleaseSelector `json:"moduleReleaseSelector"`
 }
 
 type ModuleUpdatePolicySpecUpdate struct {
@@ -65,7 +65,7 @@ type ModuleUpdatePolicySpecUpdate struct {
 	Windows update.Windows `json:"windows"`
 }
 
-type ModuleUpdatePolicySpecLabelSelector struct {
+type ModuleUpdatePolicySpecReleaseSelector struct {
 	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
 }
 

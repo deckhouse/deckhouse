@@ -36,6 +36,7 @@ global:
 
 	var msResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "modulesources"}
 	f.RegisterCRD(msResource.Group, msResource.Version, "ModuleSource", false)
+	f.RegisterCRD(msResource.Group, msResource.Version, "ModuleUpdatePolicy", false)
 
 	const (
 		discoverySecret = `
@@ -60,9 +61,11 @@ type: Opaque
 			f.RunHook()
 		})
 
-		It("Should deploy the module source", func() {
+		It("Should deploy the module source and update policy", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(ms.Exists()).To(BeTrue())
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
@@ -78,9 +81,11 @@ type: Opaque
 			f.RunHook()
 		})
 
-		It("Should deploy the module source", func() {
+		It("Should deploy the module source and updatep policy", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(ms.Exists()).To(BeTrue())
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
@@ -97,9 +102,11 @@ type: Opaque
 			f.RunHook()
 		})
 
-		It("Should deploy the module source", func() {
+		It("Should deploy the module source and update policy", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(ms.Exists()).To(BeTrue())
 		})
@@ -112,9 +119,11 @@ type: Opaque
 			f.RunHook()
 		})
 
-		It("Should deploy the module source", func() {
+		It("Should deploy the module source and update policy", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(ms.Exists()).To(BeTrue())
 		})
@@ -127,9 +136,11 @@ type: Opaque
 			f.RunHook()
 		})
 
-		It("Should deploy the module source with CA", func() {
+		It("Should deploy the module source with CA and update policy", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.ca").String()).To(Equal("--- BEGIN ..."))
@@ -159,9 +170,11 @@ spec:
 			f.RunHook()
 		})
 
-		It("Should update the module source", func() {
+		It("Should update the module source and update policy", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))

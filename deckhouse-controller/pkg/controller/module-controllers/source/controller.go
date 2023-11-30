@@ -338,11 +338,14 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 		// check if we have an update policy for the moduleName
 		policy, err := getReleasePolicy(ms.Name, moduleName, policies)
 		if err != nil {
+			// if policy not found - drop all previous module's errors
 			if errors.Is(err, ErrNoPolicyFound) {
-				updateAvailableModules(ms.Status.AvailableModules, moduleName, "")
-				continue
+				delete(modulesErrorsMap, moduleName)
+				// if another error - update module's error status field
+			} else {
+				modulesErrorsMap[moduleName] = err.Error()
 			}
-			modulesErrorsMap[moduleName] = err.Error()
+			updateAvailableModules(ms.Status.AvailableModules, moduleName, "")
 			continue
 		}
 		updateAvailableModules(ms.Status.AvailableModules, moduleName, policy.Name)

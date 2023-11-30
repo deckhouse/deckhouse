@@ -116,6 +116,32 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 	deckhouseCA := input.Values.Get("global.modulesImages.registry.CA").String()
 	releaseChannel := ""
 
+	// ensure deckhouse module update policy
+	deckhouseMup := &v1alpha1.ModuleUpdatePolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ModuleUpdatePolicy",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "deckhouse",
+		},
+		Spec: v1alpha1.ModuleUpdatePolicySpec{
+			ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"source": "deckhouse",
+					},
+				},
+			},
+			ReleaseChannel: "stable",
+			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+				Mode: "Auto",
+			},
+		},
+	}
+
+	input.PatchCollector.Create(deckhouseMup, object_patch.IgnoreIfExists())
+
 	if len(input.Snapshots["deckhouse-secret"]) > 0 {
 		ds := input.Snapshots["deckhouse-secret"][0].(deckhouseSecret)
 		releaseChannel = strcase.ToKebab(ds.ReleaseChannel)
