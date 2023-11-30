@@ -133,7 +133,7 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 					},
 				},
 			},
-			ReleaseChannel: "stable",
+			ReleaseChannel: "Stable",
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 				Mode: "Auto",
 			},
