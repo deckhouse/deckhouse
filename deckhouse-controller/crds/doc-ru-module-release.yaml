@@ -35,7 +35,7 @@ spec:
           jsonPath: .status.phase
           type: string
           description: 'Показывает текущий статус релиза.'
-        - name: effective policy
+        - name: update policy
           jsonPath: .metadata.labels.module-update-policy
           type: string
           description: 'Применяемая политика обновления.'
