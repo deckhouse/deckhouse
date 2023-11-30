@@ -27,8 +27,11 @@ spec:
             status:
               properties:
                 syncTime:
-                  description: 'Время последней синхронизации с container registry.'
-                availableModules:
+                  description: Время последней синхронизации с container registry.
+                modulesCount:
+                  type: integer
+                  description: Колличество доступых модулей.
+                modules:
                   type: array
                   description: Список доступных для установки модулей и их политики обновления.
                   items:

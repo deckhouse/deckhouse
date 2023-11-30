@@ -565,7 +565,7 @@ func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.Module
 	return matchedPolicy, nil
 }
 
-// updateAvailableModules updates a ModuleSource's status field AvailableModules with applied policies
+// updateAvailableModules updates a ModuleSource's status field Modules with applied policies
 func updateAvailableModules(availableModules []v1alpha1.AvailableModule, moduleName, policyName string) {
 	for idx, module := range availableModules {
 		if module.Name == moduleName {

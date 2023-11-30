@@ -69,7 +69,7 @@ type ModuleSourceSpecRegistry struct {
 type ModuleSourceStatus struct {
 	SyncTime         metav1.Time       `json:"syncTime"`
 	ModulesCount     int               `json:"modulesCount"`
-	AvailableModules []AvailableModule `json:"availableModules"`
+	AvailableModules []AvailableModule `json:"modules"`
 	Msg              string            `json:"message"`
 	ModuleErrors     []ModuleError     `json:"moduleErrors"`
 }

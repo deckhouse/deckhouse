@@ -68,7 +68,7 @@ spec:
                 modulesCount:
                   type: integer
                   description: "Number of modules available."
-                availableModules:
+                modules:
                   type: array
                   description: "List of modules available from the source and their update policies."
                   items:
