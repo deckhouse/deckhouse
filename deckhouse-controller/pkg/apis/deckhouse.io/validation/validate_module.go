@@ -42,8 +42,10 @@ func moduleValidationHandler() http.Handler {
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
 		ID:        "module-operations",
 		Validator: vf,
-		Logger:    nil,
-		Obj:       &v1alpha1.Module{},
+		// logger is nil, because webhook has Info level for reporting about http handler
+		// and we get a log of useless spam here. So we decided to use Noop logger here
+		Logger: nil,
+		Obj:    &v1alpha1.Module{},
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
