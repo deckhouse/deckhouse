@@ -420,7 +420,7 @@ metadata:
 			"registry-credentials-3-auth":  {Auths: map[string]authn.AuthConfig{"cr-3.example.com": {Username: "n-3", Password: "pwd-3", Auth: "bi0zOnB3ZC0z"}}},
 		}
 
-		FIt("parses secrets with .dockerconfigjson", func() {
+		It("parses secrets with .dockerconfigjson", func() {
 			got, err := parseDockerConfigsBySecretName(filterResults)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(got).To(Equal(want))
