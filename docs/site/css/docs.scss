@@ -366,8 +366,7 @@
     color: #000;
     text-decoration: none;
     position: relative;
-    display: flex;
-    align-items: center;
+    display: inline-flex;
 }
 
 .sidebar__item > a:hover {
@@ -379,10 +378,13 @@
 }
 
 .sidebar__item_parent > a {
-
+    position: relative;
+    padding-left: 15px;
 }
 
 .sidebar__item_parent > a::after {
+    position: absolute;
+    top: 8px;
     content: '';
     display: inline-block;
     width: 10px;
@@ -390,7 +392,7 @@
     background: url('../images/icons/dropdown.svg');
     background-repeat: no-repeat;
     background-size: contain;
-    margin-left: 5px;
+    margin-left: -15px;
     flex-shrink: 0;
 }
 
@@ -461,15 +463,15 @@ a.comparison-table__module-proprietaryOkmeter:after {
 }
 
 .sidebar__submenu-item > a {
-    display: flex;
-    align-items: center;
+    position: relative;
+    display: inline-flex;
     font-size: 14px;
     color: #00122C;
     letter-spacing: -0.26px;
     line-height: 16px;
     text-decoration: none;
     padding: 10px 0;
-    position: relative;
+    padding-left: 15px;
 }
 
 .sidebar__submenu-item > a:hover {
@@ -481,6 +483,8 @@ a.comparison-table__module-proprietaryOkmeter:after {
 }
 
 .sidebar__submenu-item_parent > a::after {
+    position: absolute;
+    top: 15px;
     content: '';
     display: inline-block;
     width: 7px;
@@ -488,7 +492,7 @@ a.comparison-table__module-proprietaryOkmeter:after {
     background: url('../images/icons/dropdown.svg');
     background-repeat: no-repeat;
     background-size: contain;
-    margin-left: 5px;
+    margin-left: -15px;
     flex-shrink: 0;
 }
 
