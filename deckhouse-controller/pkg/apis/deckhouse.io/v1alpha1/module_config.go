@@ -22,26 +22,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-const (
-	ModuleConfigKind     = "ModuleConfig"
-	ModuleConfigResource = "moduleconfigs"
-
-	// ModuleConfigAPIVersion xxx
-	// Deprecated: dont use
-	ModuleConfigAPIVersion = "deckhouse.io/v1alpha1"
-)
-
 var (
 	// ModuleConfigGVR GroupVersionResource
 	ModuleConfigGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
-		Resource: ModuleConfigResource,
+		Resource: "moduleconfigs",
 	}
 	ModuleConfigGVK = schema.GroupVersionKind{
 		Group:   SchemeGroupVersion.Group,
 		Version: SchemeGroupVersion.Version,
-		Kind:    ModuleConfigKind,
+		Kind:    "ModuleConfig",
 	}
 )
 

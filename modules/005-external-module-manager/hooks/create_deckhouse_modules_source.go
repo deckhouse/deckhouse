@@ -48,6 +48,38 @@ func filterDeckhouseSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}, nil
 }
 
+func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ms v1alpha1.ModuleSource
+
+	err := sdk.FromUnstructured(obj, &ms)
+	if err != nil {
+		return nil, err
+	}
+
+	if ms.Spec.Registry.Scheme == "" {
+		// fallback to default https protocol
+		ms.Spec.Registry.Scheme = "HTTPS"
+	}
+
+	// remove unused fields
+	newms := v1alpha1.ModuleSource{
+		TypeMeta: ms.TypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ms.Name,
+		},
+		Spec: ms.Spec,
+		Status: v1alpha1.ModuleSourceStatus{
+			ModuleErrors: ms.Status.ModuleErrors,
+		},
+	}
+
+	if newms.Spec.ReleaseChannel == "" {
+		newms.Spec.ReleaseChannel = "Stable"
+	}
+
+	return newms, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// ensure crds hook has order 5, for creating a module source we should use greater number
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
