@@ -50,6 +50,9 @@ data:
   {{- else }}
         in_cluster_url: ""
   {{- end }}
+{{- else }}
+      tracing:
+        enabled: false
 {{- end }}
     identity: {}
     istio_namespace: d8-{{ $.Chart.Name }}
@@ -65,3 +68,7 @@ data:
       metrics_port: 9090
       port: 20001
       web_root: /kiali
+    kiali_feature_flags:
+      istio_annotation_action: false
+      istio_injection_action: false
+      istio_upgrade_action: false
