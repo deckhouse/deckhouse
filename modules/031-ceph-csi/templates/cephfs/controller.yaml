@@ -111,6 +111,8 @@
   {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "cephfs_csi_controller_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "cephfs_csi_controller_volume_mounts" . | fromYamlArray) }}
 
+  {{- $_ := set $csiControllerConfig "livenessProbePort" 9808 }}
+
   {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
 
 {{- end }}
