@@ -141,8 +141,8 @@ spec:
 
 {{- include "project.namespace" ( list $projectValues.projectName $projectTypeValues.namespaceMetadata ) }}
 
-{{- /* $templates := include "prepare.templates" ( list $projectTypeValues.resourcesTemplate $projectValues.projectName $) /* }}
-{{- /* tpl $templates $projectValues /* }}
+{{- /* $templates := include "prepare.templates" ( list $projectTypeValues.resourcesTemplate $projectValues.projectName $) */ }}
+{{- /* tpl $templates $projectValues */ }}
 {{- tpl $projectTypeValues.resourcesTemplate $projectValues }}
 
 
