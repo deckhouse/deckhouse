@@ -88,6 +88,12 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 				isDisruptionUpdate = true
 			}
 		}
+		if ctrl.Version == "1.1" {
+			input.MetricsCollector.Set("deprecated-ingress-controller", 1.0, map[string]string{
+				"ingress_class":   ctrl.IngressClass,
+				"ingress_version": ctrl.Version,
+			})
+		}
 		ctrlVersion, err := semver.NewVersion(ctrl.Version)
 		if err != nil {
 			return err
