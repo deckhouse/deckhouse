@@ -2,8 +2,6 @@ module tools
 
 go 1.21
 
-toolchain go1.21.4
-
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/deckhouse/deckhouse v0.0.0
