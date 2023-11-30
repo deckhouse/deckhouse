@@ -68,7 +68,7 @@ func start(_ *kingpin.ParseContext) error {
 		os.Exit(1)
 	}
 
-	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager.ModulesDir, operator.ModuleManager.GetValuesValidator())
+	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

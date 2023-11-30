@@ -14,17 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package downloader
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 func TestOpenapiInjection(t *testing.T) {
@@ -47,7 +45,7 @@ properties:
     description: "System field, overwritten by Deckhouse. Don't use"
 `
 
-	sourceModule := v1alpha1.ModuleSource{}
+	sourceModule := &v1alpha1.ModuleSource{}
 	sourceModule.Spec.Registry.Repo = "test.deckhouse.io/foo/bar"
 	sourceModule.Spec.Registry.DockerCFG = "dGVzdG1lCg=="
 
@@ -79,27 +77,4 @@ properties:
         type: array
     type: object
 `, string(data))
-}
-
-func TestDownloadImage(t *testing.T) {
-	t.Skip("For manual run and check images")
-
-	dockerCfg := ""
-	repo := ""
-	tag := ""
-
-	opts := make([]cr.Option, 0)
-	opts = append(opts, cr.WithAuth(dockerCfg))
-
-	c, err := cr.NewClient(repo, opts...)
-	require.NoError(t, err)
-
-	img, err := c.Image(tag)
-	require.NoError(t, err)
-
-	err = os.MkdirAll("/tmp/module", 0777)
-	require.NoError(t, err)
-
-	err = copyModuleToFS("/tmp/module", img)
-	require.NoError(t, err)
 }

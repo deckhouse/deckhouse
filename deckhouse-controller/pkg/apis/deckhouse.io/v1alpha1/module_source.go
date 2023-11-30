@@ -18,6 +18,20 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+var (
+	ModuleSourceGVR = schema.GroupVersionResource{
+		Group:    SchemeGroupVersion.Group,
+		Version:  SchemeGroupVersion.Version,
+		Resource: "modulesources",
+	}
+	ModuleSourceGVK = schema.GroupVersionKind{
+		Group:   SchemeGroupVersion.Group,
+		Version: SchemeGroupVersion.Version,
+		Kind:    "ModuleSource",
+	}
 )
 
 // +genclient
@@ -74,4 +88,15 @@ type ModuleSourceList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ModuleSource `json:"items"`
+}
+
+type moduleSourceKind struct{}
+
+func (in *ModuleSourceStatus) GetObjectKind() schema.ObjectKind {
+	return &moduleSourceKind{}
+}
+
+func (f *moduleSourceKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
+func (f *moduleSourceKind) GroupVersionKind() schema.GroupVersionKind {
+	return ModuleSourceGVK
 }
