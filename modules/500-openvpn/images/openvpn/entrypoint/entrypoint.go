@@ -111,15 +111,15 @@ func main() {
 	}
 
 	var openvpnArgs []string
-	openvpnArgs = append(openvpnArgs, "--config")
-	openvpnArgs = append(openvpnArgs, "/etc/openvpn/openvpn.conf")
-	openvpnArgs = append(openvpnArgs, "--proto")
-	openvpnArgs = append(openvpnArgs, protocol)
-	openvpnArgs = append(openvpnArgs, "--management")
-	openvpnArgs = append(openvpnArgs, "127.0.0.1")
-	openvpnArgs = append(openvpnArgs, mgmtport)
-	openvpnArgs = append(openvpnArgs, "--dev")
-	openvpnArgs = append(openvpnArgs, fmt.Sprintf("tun-%s", protocol))
+	openvpnArgs = append(openvpnArgs, "--config /etc/openvpn/openvpn.conf")
+	//openvpnArgs = append(openvpnArgs, "/etc/openvpn/openvpn.conf")
+	openvpnArgs = append(openvpnArgs, fmt.Sprintf("--proto %s", protocol))
+	//openvpnArgs = append(openvpnArgs, protocol)
+	openvpnArgs = append(openvpnArgs, fmt.Sprintf("--management 127.0.0.1 %s", mgmtport))
+	//openvpnArgs = append(openvpnArgs, "127.0.0.1")
+	//openvpnArgs = append(openvpnArgs, mgmtport)
+	//openvpnArgs = append(openvpnArgs, "--dev")
+	openvpnArgs = append(openvpnArgs, fmt.Sprintf("--dev tun-%s", protocol))
 
 	err = unix.Exec("/openvpn", openvpnArgs, os.Environ())
 	if err != nil {
