@@ -24,6 +24,17 @@ func main() {
 	protocol := "tcp"
 	routeTable := 10
 	rulePriority := 1
+
+	if len(os.Args) == 1 {
+		log.Fatalln("Arg must be tcp or udp")
+	}
+
+	if os.Args[1] == "tcp" || os.Args[1] == "udp" {
+		protocol = os.Args[1]
+	} else {
+		log.Fatalln("Arg must be tcp or udp: ", os.Args[1])
+	}
+
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
 		log.Fatal(err)
