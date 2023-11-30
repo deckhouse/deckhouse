@@ -22,6 +22,7 @@ type iptablesRule struct {
 func main() {
 	network := "10.55.55.0/24"
 	protocol := "tcp"
+	mgmtport := "8989"
 	routeTable := 10
 	rulePriority := 1
 
@@ -33,6 +34,11 @@ func main() {
 		protocol = os.Args[1]
 	} else {
 		log.Fatalln("Arg must be tcp or udp: ", os.Args[1])
+	}
+
+	if protocol == "udp" {
+		mgmtport = "9090"
+		routeTable = 11
 	}
 
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
@@ -100,6 +106,22 @@ func main() {
 	}
 
 	err = mknodDevNetTun()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var openvpnArgs []string
+	openvpnArgs = append(openvpnArgs, "--config")
+	openvpnArgs = append(openvpnArgs, "/etc/openvpn/openvpn.conf")
+	openvpnArgs = append(openvpnArgs, "--proto")
+	openvpnArgs = append(openvpnArgs, protocol)
+	openvpnArgs = append(openvpnArgs, "--management")
+	openvpnArgs = append(openvpnArgs, "127.0.0.1")
+	openvpnArgs = append(openvpnArgs, mgmtport)
+	openvpnArgs = append(openvpnArgs, "--dev")
+	openvpnArgs = append(openvpnArgs, fmt.Sprintf("tun-%s", protocol))
+
+	err = unix.Exec("/openvpn", openvpnArgs, os.Environ())
 	if err != nil {
 		log.Fatal(err)
 	}
