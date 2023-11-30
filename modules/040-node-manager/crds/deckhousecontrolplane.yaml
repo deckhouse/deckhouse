@@ -7,22 +7,22 @@ metadata:
   labels:
     heritage: deckhouse
     module: node-manager
-    cluster.x-k8s.io/provider: infrastructure-static
+    cluster.x-k8s.io/provider: infrastructure-deckhouse
     cluster.x-k8s.io/v1beta1: v1alpha1
-  name: staticcontrolplanes.infrastructure.cluster.x-k8s.io
+  name: deckhousecontrolplanes.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
-    kind: StaticControlPlane
-    listKind: StaticControlPlaneList
-    plural: staticcontrolplanes
-    singular: staticcontrolplane
+    kind: DeckhouseControlPlane
+    listKind: DeckhouseControlPlaneList
+    plural: deckhousecontrolplanes
+    singular: deckhousecontrolplane
   scope: Namespaced
   versions:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: StaticControlPlane is the Schema for the Cluster API Provider Static
+          description: DeckhouseControlPlane is the Schema for the Cluster API
           properties:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation
@@ -37,10 +37,10 @@ spec:
             metadata:
               type: object
             spec:
-              description: StaticControlPlaneSpec defines the desired state of StaticControlPlane
+              description: DeckhouseControlPlaneSpec defines the desired state of DeckhouseControlPlane
               type: object
             status:
-              description: StaticControlPlaneStatus defines the observed state of StaticControlPlane
+              description: DeckhouseControlPlaneStatus defines the observed state of DeckhouseControlPlane
               properties:
                 externalManagedControlPlane:
                   description: |
