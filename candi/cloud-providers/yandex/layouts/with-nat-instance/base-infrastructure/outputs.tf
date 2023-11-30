@@ -24,6 +24,7 @@ output "cloud_discovery_data" {
     "zoneToSubnetIdMap" = module.vpc_components.zone_to_subnet_id_map
     "shouldAssignPublicIPAddress" = false
     "natInstanceName" = module.vpc_components.nat_instance_name
+    "natInstanceZone" = module.vpc_components.nat_instance_zone
     "monitoringAPIKey" = module.monitoring-service-account.apiKey
   }
 }
