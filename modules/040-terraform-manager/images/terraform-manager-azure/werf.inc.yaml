@@ -26,3 +26,4 @@ shell:
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-azurerm/version.ProviderVersion={{ .TF.azure.version }}"
     - mv /go/bin/terraform-provider-azurerm /terraform-provider-azure
     - chmod -R 755 /terraform-provider-azure
+    - chown 64535:64535 /terraform-provider-azure

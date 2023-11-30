@@ -43,3 +43,4 @@ ansible:
       chdir: /terraform-provider-gcp
     environment:
       CGO_ENABLED: "0"
+  - command: chown 64535:64535 /terraform-provider-gcp/terraform-provider-gcp
