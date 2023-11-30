@@ -79,14 +79,10 @@ func main() {
 	klog.Info("Server started")
 
 	if highAvailability {
-		if err := lManager.Create(ctx); err != nil {
-			klog.Fatalf("create leases: %v", err)
-		}
-
 		go func() {
 			err = lManager.Run(ctx)
 			if !errors.Is(err, context.Canceled) && err != nil {
-				klog.Fatalf("lease manager run: %s", err)
+				klog.Fatalf("run lease manager: %s", err)
 			}
 		}()
 	}
