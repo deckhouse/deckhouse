@@ -57,5 +57,6 @@ kind: ModuleConfig
 metadata:
   name: node-manager
 spec:
-  earlyOomEnabled: false
+  settings:
+    earlyOomEnabled: false
   version: 1
