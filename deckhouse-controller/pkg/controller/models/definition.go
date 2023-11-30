@@ -13,3 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+package models
+
+const (
+	ModuleDefinitionFile = "module.yaml"
+)
+
+type DeckhouseModuleDefinition struct {
+	Name        string   `yaml:"name"`
+	Weight      uint32   `yaml:"weight"`
+	Tags        []string `yaml:"tags"`
+	Description string   `yaml:"description"`
+
+	Path string `yaml:"-"`
+}

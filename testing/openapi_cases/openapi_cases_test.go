@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/flant/addon-operator/pkg/module_manager"
+	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -76,7 +76,7 @@ func ExecuteTestCases(testCases *TestCases) {
 	moduleName := filepath.Base(modulePath)
 
 	By("Read openAPI schemas")
-	configBytes, valuesBytes, err := module_manager.ReadOpenAPIFiles(testCases.dir)
+	configBytes, valuesBytes, err := utils.ReadOpenAPIFiles(testCases.dir)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Parse openAPI schemas")

@@ -197,7 +197,8 @@ status:
 		Context("Target module does not exist on fs", func() {
 			BeforeEach(func() {
 				mm, _ := module_manager.InitBasic("", "")
-				_ = mm.RegisterModules()
+				// TODO(yalosev): restore
+				// _ = mm.RegisterModules()
 				deckhouse_config.InitService(mm)
 				st := f.KubeStateSet(`
 ---

@@ -57,6 +57,8 @@ ModuleConfig status consists of:
     * ModuleError: ... - problem during installing helm chart.
 */
 
+// TODO: get rid of this hook
+// replace with event model
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/deckhouse/status-configs",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -65,7 +67,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "ModuleConfig",
 			FilterFunc:                   filterModuleConfigForStatus,
-			ExecuteHookOnSynchronization: pointer.Bool(true),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			ExecuteHookOnEvents:          pointer.Bool(false),
 		},
 	},
