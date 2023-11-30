@@ -47,7 +47,6 @@ var _ = Describe("Flant integration :: hooks :: license ::", func() {
 			registry := rand.String(8)
 			auth := getConfig()
 			password := auth.Password
-			auth.Password = ""
 			dockerCfg := prepareDockerConfig(auth, registry)
 
 			lic, err := parseLicenseKeyFromDockerCredentials(dockerCfg, registry)

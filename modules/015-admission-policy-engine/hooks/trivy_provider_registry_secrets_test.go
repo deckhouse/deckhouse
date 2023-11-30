@@ -113,11 +113,13 @@ data:
   "auths":{
     "registry.test-2.com":{
       "username":"test-2",
-      "password":"password-2"
+      "password":"password-2",
+      "auth": "dGVzdC0yOnBhc3N3b3JkLTI="
     },
     "registry.test-3.com": {
       "username": "test-3",
-      "password": "password-3"
+      "password": "password-3",
+      "auth": "dGVzdC0zOnBhc3N3b3JkLTM="
     }
   }
 }

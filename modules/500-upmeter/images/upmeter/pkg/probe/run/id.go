@@ -17,12 +17,10 @@ limitations under the License.
 package run
 
 import (
+	"github.com/spaolacci/murmur3"
 	"math/rand"
 	"os"
 	"strconv"
-	"time"
-
-	"github.com/spaolacci/murmur3"
 )
 
 const (
@@ -53,10 +51,6 @@ func nodeNameHash(nodeName string) string {
 	h32 := murmur3.New32WithSeed(seed)
 	_, _ = h32.Write([]byte(nodeName))
 	return strconv.FormatInt(int64(h32.Sum32()), 16)
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano()) // TODO: remove this after moving to go 1.20, see https://pkg.go.dev/math/rand#Seed
 }
 
 func randomAlphaNum(count int) string {
