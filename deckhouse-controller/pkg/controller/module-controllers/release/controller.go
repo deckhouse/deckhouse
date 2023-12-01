@@ -320,7 +320,8 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1
 
 	switch mr.Status.Phase {
 	case "":
-		if e := c.updateModuleReleaseStatus(ctx, mr, v1alpha1.PhasePending, ""); e != nil {
+		mr.Status.Phase = v1alpha1.PhasePending
+		if e := c.updateModuleReleaseStatus(ctx, mr); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
 
@@ -418,7 +419,9 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 		for _, index := range pred.skippedPatchesIndexes {
 			release := pred.releases[index]
 
-			if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhaseSuperseded, ""); e != nil {
+			release.Status.Phase = v1alpha1.PhaseSuperseded
+			release.Status.Message = ""
+			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
 		}
@@ -432,7 +435,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			// get policy spec
 			policy, err := c.moduleUpdatePoliciesLister.Get(policyName)
 			if err != nil {
-				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
+				if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -440,7 +443,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 
 			// if policy mode manual
 			if policy.Spec.Update.Mode == "Manual" && !isReleaseApproved(release) {
-				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, manualApprovalRequired); e != nil {
+				if e := c.updateModuleReleaseStatusMessage(ctx, release, manualApprovalRequired); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -448,7 +451,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 
 			// if policy mode auto
 			if policy.Spec.Update.Mode == "Auto" && !policy.Spec.Update.Windows.IsAllowed(ts) {
-				if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhasePending, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
+				if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -466,18 +469,23 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			}
 			// after deploying a new release, mark previous one (if any) as superseded
 			if pred.currentReleaseIndex >= 0 {
-				if e := c.updateModuleReleaseStatus(ctx, pred.releases[pred.currentReleaseIndex], v1alpha1.PhaseSuperseded, ""); e != nil {
+				release := pred.releases[pred.currentReleaseIndex]
+				release.Status.Phase = v1alpha1.PhaseSuperseded
+				release.Status.Phase = ""
+				if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
 			}
 
 			modulesChangedReason = "a new module release found"
 
-			if e := c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhaseDeployed, ""); e != nil {
+			release.Status.Phase = v1alpha1.PhaseDeployed
+			release.Status.Phase = ""
+			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
 		} else {
-			if e := c.updateModuleReleaseStatus(ctx, mr, v1alpha1.PhasePending, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
+			if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -548,7 +556,11 @@ func (c *Controller) suspendModuleVersionForRelease(ctx context.Context, release
 		err = errors.New("not found")
 	}
 
-	return c.updateModuleReleaseStatus(ctx, release, v1alpha1.PhaseSuspended, fmt.Sprintf("Desired version of the module met problems: %s", err))
+	release.Status.Phase = v1alpha1.PhaseSuspended
+	release.Status.Message = fmt.Sprintf("Desired version of the module met problems: %s", err)
+	release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+
+	return c.updateModuleReleaseStatus(ctx, release)
 }
 
 func enableModule(externalModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
@@ -627,23 +639,26 @@ func addLabels(mr *v1alpha1.ModuleRelease, labels map[string]string) {
 	}
 }
 
-func (c *Controller) updateModuleReleaseStatus(ctx context.Context, mrCopy *v1alpha1.ModuleRelease, phase, message string) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	if mrCopy.Status.Phase == phase && mrCopy.Status.Message == message {
+// updateModuleReleaseStatusMessage updates module release's `.status.message field
+func (c *Controller) updateModuleReleaseStatusMessage(ctx context.Context, mrCopy *v1alpha1.ModuleRelease, message string) error {
+	if mrCopy.Status.Message == message {
 		return nil
 	}
 
-	if mrCopy.Status.Phase != phase {
-		mrCopy.Status.Phase = phase
-		mrCopy.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+	mrCopy.Status.Message = message
+
+	err := c.updateModuleReleaseStatus(ctx, mrCopy)
+	if err != nil {
+		return err
 	}
 
-	if mrCopy.Status.Message != message {
-		mrCopy.Status.Message = message
-	}
+	return nil
+}
 
+func (c *Controller) updateModuleReleaseStatus(ctx context.Context, mrCopy *v1alpha1.ModuleRelease) error {
+	// NEVER modify objects from the store. It's a read-only, local cache.
+	// You can use DeepCopy() to make a deep copy of original object and modify this copy
+	// Or create a copy manually for better performance
 	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, mrCopy, metav1.UpdateOptions{})
 	if err != nil {
 		return err

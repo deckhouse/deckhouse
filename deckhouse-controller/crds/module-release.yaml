@@ -81,7 +81,7 @@ spec:
           type: string
           description: 'Current release status.'
         - name: update policy
-          jsonPath: .metadata.labels.module-update-policy
+          jsonPath: .metadata.labels.modules\.deckhouse\.io/update-policy
           type: string
           description: 'Associated update policy.'
         - name: transitionTime
