@@ -45,7 +45,7 @@ fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
   add: /ovpn-admin
-  to: /ovpn-admin
+  to: /app/ovpn-admin
   before: setup
 - artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
   add: /src/frontend/static
