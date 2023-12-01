@@ -321,6 +321,7 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1
 	switch mr.Status.Phase {
 	case "":
 		mr.Status.Phase = v1alpha1.PhasePending
+		mr.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
 		if e := c.updateModuleReleaseStatus(ctx, mr); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
@@ -421,6 +422,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 
 			release.Status.Phase = v1alpha1.PhaseSuperseded
 			release.Status.Message = ""
+			release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
 			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
@@ -472,6 +474,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				release := pred.releases[pred.currentReleaseIndex]
 				release.Status.Phase = v1alpha1.PhaseSuperseded
 				release.Status.Phase = ""
+				release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
 				if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
@@ -481,6 +484,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 
 			release.Status.Phase = v1alpha1.PhaseDeployed
 			release.Status.Phase = ""
+			release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
 			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
