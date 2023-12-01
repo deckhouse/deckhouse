@@ -106,6 +106,7 @@ spec:
 
   values:
     global:
+      operatorManageWebhooks: true
       istioNamespace: d8-{{ $.Chart.Name }}
       meshID: d8-istio-mesh
       network: {{ include "istioNetworkName" $ }}
