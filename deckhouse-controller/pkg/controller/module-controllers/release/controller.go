@@ -89,8 +89,12 @@ type Controller struct {
 }
 
 const (
+	UpdatePolicyLabel = "modules.deckhouse.io/update-policy"
+
 	defaultCheckInterval   = 15 * time.Second
-	approvalAnnotation     = "release.deckhouse.io/approved"
+	approvalAnnotation     = "modules.deckhouse.io/approved"
+	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
+	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
 	manualApprovalRequired = "Waiting for manual approval"
 	waitingForWindow       = "Release is waiting for the update window: %s"
 )
@@ -275,11 +279,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-const (
-	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
-	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
-)
-
 // only ModuleRelease with active finalizer can get here, we have to remove the module on filesystem and remove the finalizer
 func (c *Controller) deleteReconcile(ctx context.Context, roMR *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	// deleted release
@@ -429,7 +428,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 		release := pred.releases[pred.desiredReleaseIndex]
 		ts := time.Now().UTC()
 		// if release has associated update policy
-		if policyName, found := release.ObjectMeta.Labels["module-update-policy"]; found {
+		if policyName, found := release.ObjectMeta.Labels[UpdatePolicyLabel]; found {
 			// get policy spec
 			policy, err := c.moduleUpdatePoliciesLister.Get(policyName)
 			if err != nil {
@@ -478,7 +477,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				return ctrl.Result{Requeue: true}, e
 			}
 		} else {
-			if e := c.updateModuleReleaseStatus(ctx, mr, v1alpha1.PhasePending, "Update policy not set. Create a ModuleUpdatePolicy object and label the release 'module-update-policy=<policy_name>'"); e != nil {
+			if e := c.updateModuleReleaseStatus(ctx, mr, v1alpha1.PhasePending, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil

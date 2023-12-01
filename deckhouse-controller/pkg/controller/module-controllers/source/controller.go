@@ -48,6 +48,7 @@ import (
 	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	controllerUtils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
@@ -468,10 +469,10 @@ func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.Modul
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", moduleName, result.ModuleVersion),
 			Labels: map[string]string{
-				"module":               moduleName,
-				"source":               ms.Name,
-				"release-checksum":     checksum,
-				"module-update-policy": policyName,
+				"module":                  moduleName,
+				"source":                  ms.Name,
+				"release-checksum":        checksum,
+				release.UpdatePolicyLabel: policyName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
