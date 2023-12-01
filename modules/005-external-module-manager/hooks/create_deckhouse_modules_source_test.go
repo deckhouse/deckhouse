@@ -72,6 +72,7 @@ type: Opaque
 			Expect(ms.Field("spec.registry.CA").String()).To(Equal(""))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
 			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("Stable"))
 		})
 	})
 
@@ -81,7 +82,7 @@ type: Opaque
 			f.RunHook()
 		})
 
-		It("Should deploy the module source and updatep policy", func() {
+		It("Should deploy the module source and update policy", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
@@ -91,7 +92,8 @@ type: Opaque
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.CA").String()).To(Equal(""))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
-			Expect(ms.Field("spec.releaseChannel").String()).To(Equal("alpha"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("Alpha"))
 		})
 	})
 
@@ -145,12 +147,12 @@ type: Opaque
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.ca").String()).To(Equal("--- BEGIN ..."))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
-			Expect(ms.Field("spec.releaseChannel").String()).To(Equal("alpha"))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("Alpha"))
 		})
 	})
 
-	Context("With existed resource", func() {
-		existedModuleSource := `
+	Context("With existing ModuleSource", func() {
+		existingModuleSource := `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
@@ -159,14 +161,14 @@ metadata:
     heritage: deckhouse
   name: deckhouse
 spec:
-  releaseChannel: test
+  releaseChannel: EarlyAccess
   registry:
     repo: xxx
     dockerCfg: yyy
 `
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existedModuleSource))
+			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingModuleSource))
 			f.RunHook()
 		})
 
@@ -178,7 +180,163 @@ spec:
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
-			Expect(ms.Field("spec.releaseChannel").String()).To(Equal("test"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal("EarlyAccess"))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("EarlyAccess"))
+		})
+	})
+
+	Context("With existing ModuleSource and releaseChannel not set", func() {
+		existingModuleSource := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+spec:
+  registry:
+    repo: xxx
+    dockerCfg: yyy
+`
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingModuleSource))
+			f.RunHook()
+		})
+
+		It("Should update the module source and update policy", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
+			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
+			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("Alpha"))
+		})
+	})
+
+	Context("With existing ModuleSource and ModuleUpdatePolicy", func() {
+		existingResources := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+spec:
+  releaseChannel: EarlyAccess
+  registry:
+    repo: xxx
+    dockerCfg: yyy
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+spec:
+  releaseChannel: Stable
+  update:
+    mode: Auto
+`
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingResources))
+			f.RunHook()
+		})
+
+		It("Should update the module source and update policy", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
+			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
+			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal("EarlyAccess"))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("Stable"))
+		})
+	})
+
+	Context("With existing ModuleSource and ModuleUpdatePolicy, and releaseChannel not set", func() {
+		existingResources := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+spec:
+  registry:
+    repo: xxx
+    dockerCfg: yyy
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+spec:
+  releaseChannel: Beta
+  update:
+    mode: Auto
+`
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingResources))
+			f.RunHook()
+		})
+
+		It("Should update the module source and update policy", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
+			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
+			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("Beta"))
+		})
+	})
+
+	Context("With existing ModuleUpdatePolicy", func() {
+		existingResources := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+spec:
+  releaseChannel: Beta
+  update:
+    mode: Auto
+`
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingResources))
+			f.RunHook()
+		})
+
+		It("Should update the module source and update policy", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Exists()).To(BeTrue())
+			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
+			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("Beta"))
 		})
 	})
 

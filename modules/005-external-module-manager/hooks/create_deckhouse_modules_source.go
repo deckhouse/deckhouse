@@ -73,11 +73,11 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 		},
 	}
 
-	if newms.Spec.ReleaseChannel == "" {
-		newms.Spec.ReleaseChannel = "Stable"
-	}
-
 	return newms, nil
+}
+
+func filterPolicy(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return obj.GetName(), nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -96,6 +96,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterSource,
 		},
 		{
+			Name:                         "policies",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "ModuleUpdatePolicy",
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"deckhouse"},
+			},
+			FilterFunc: filterPolicy,
+		},
+		{
 			Name:       "deckhouse-secret",
 			ApiVersion: "v1",
 			Kind:       "Secret",
@@ -108,53 +119,58 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterDeckhouseSecret,
 		},
 	},
-}, createDeckhouseModuleSource)
+}, createDeckhouseModuleSourceAndPolicy)
 
-func createDeckhouseModuleSource(input *go_hook.HookInput) error {
+func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
+	ms := v1alpha1.ModuleSource{}
 	deckhouseRepo := input.Values.Get("global.modulesImages.registry.base").String() + "/modules"
 	deckhouseDockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	deckhouseCA := input.Values.Get("global.modulesImages.registry.CA").String()
-	releaseChannel := ""
-
-	// ensure deckhouse module update policy
-	deckhouseMup := &v1alpha1.ModuleUpdatePolicy{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ModuleUpdatePolicy",
-			APIVersion: "deckhouse.io/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "deckhouse",
-		},
-		Spec: v1alpha1.ModuleUpdatePolicySpec{
-			ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"source": "deckhouse",
-					},
-				},
-			},
-			ReleaseChannel: "Stable",
-			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-				Mode: "Auto",
-			},
-		},
-	}
-
-	input.PatchCollector.Create(deckhouseMup, object_patch.IgnoreIfExists())
+	releaseChannel := "Stable"
 
 	if len(input.Snapshots["deckhouse-secret"]) > 0 {
 		ds := input.Snapshots["deckhouse-secret"][0].(deckhouseSecret)
-		releaseChannel = strcase.ToKebab(ds.ReleaseChannel)
+		releaseChannel = strcase.ToCamel(ds.ReleaseChannel)
 	}
 
 	if len(input.Snapshots["sources"]) > 0 {
-		ms := input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
-		releaseChannel = ms.Spec.ReleaseChannel
+		ms = input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
+	}
 
-		if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
-			// return if ModuleSource deckhouse already exists and all params are equal
-			return nil
+	if len(input.Snapshots["policies"]) == 0 {
+		if len(ms.Spec.ReleaseChannel) > 0 {
+			// take releaseChannel from existing ModuleSource if it's set
+			releaseChannel = strcase.ToCamel(ms.Spec.ReleaseChannel)
 		}
+		// ensure deckhouse ModuleUpdatePolicy
+		deckhouseMup := &v1alpha1.ModuleUpdatePolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ModuleUpdatePolicy",
+				APIVersion: "deckhouse.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "deckhouse",
+			},
+			Spec: v1alpha1.ModuleUpdatePolicySpec{
+				ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"source": "deckhouse",
+						},
+					},
+				},
+				ReleaseChannel: releaseChannel,
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+			},
+		}
+		input.PatchCollector.Create(deckhouseMup, object_patch.UpdateIfExists())
+	}
+
+	if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
+		// return if ModuleSource deckhouse already exists and all params are equal
+		return nil
 	}
 
 	newms := v1alpha1.ModuleSource{
@@ -169,7 +185,7 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 			},
 		},
 		Spec: v1alpha1.ModuleSourceSpec{
-			ReleaseChannel: releaseChannel,
+			ReleaseChannel: ms.Spec.ReleaseChannel,
 			Registry: v1alpha1.ModuleSourceSpecRegistry{
 				Scheme:    "HTTPS",
 				Repo:      deckhouseRepo,
