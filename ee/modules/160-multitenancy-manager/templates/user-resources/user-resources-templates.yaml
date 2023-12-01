@@ -64,9 +64,9 @@ metadata:
   {{- $resultLines := list }}
   {{- $hasNamespace := false }}
   {{- range $line := $lines }}
-    {{- if hasPrefix $namePrefix $line }}
-      {{- $line = include "add.prefix.yaml.value" ( list $line $namePrefix $projectName $rootContext ) }}
-    {{- end }}
+    {{- /* if hasPrefix $namePrefix $line */ }}
+      {{- /* $line = include "add.prefix.yaml.value" ( list $line $namePrefix $projectName $rootContext ) */ }}
+    {{- /* end */ }}
 
     {{- if hasPrefix $namespacePrefix $line }}
       {{- $hasNamespace = true }}
@@ -141,7 +141,7 @@ spec:
 
 {{- include "project.namespace" ( list $projectValues.projectName $projectTypeValues.namespaceMetadata ) }}
 
-{{- tpl $projectTypeValues.resourcesTemplate $projectValues }}
-
+{{- $templates := include "prepare.templates" ( list $projectTypeValues.resourcesTemplate $projectValues.projectName $) }}
+{{- tpl $templates $projectValues }}
 
 {{- include "authorization.rules" (list $projectValues.projectName $projectTypeValues.subjects $)}}
