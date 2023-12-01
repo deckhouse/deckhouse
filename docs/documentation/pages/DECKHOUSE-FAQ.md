@@ -76,6 +76,19 @@ There are three possible update modes:
 * **Automatic + update windows are set.** The cluster will be updated in the nearest available window after the new version appears on the release channel.
 * **Manual.** [Manual action](modules/002-deckhouse/usage.html#manual-update-confirmation) is required to apply the update.
 
+### How to apply an update bypassing windows?
+
+To apply the update at the current moment, regardless of time restrictions, you need to add a special annotation release.deckhouse.io/apply-now with the value true to the [Deckhouse Release](modules/002-deckhouse/cr.html#deckhouserelease) object
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/apply-now: "true"
+...
+```
+
 ### How do I set the desired release channel?
 
 Change (set) the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter in the `deckhouse` module [configuration](modules/002-deckhouse/configuration.html) to automatically switch to another release channel.
