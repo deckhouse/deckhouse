@@ -76,10 +76,6 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	return newms, nil
 }
 
-func filterPolicy(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.GetName(), nil
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// ensure crds hook has order 5, for creating a module source we should use greater number
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
@@ -94,17 +90,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchNames: []string{"deckhouse"},
 			},
 			FilterFunc: filterSource,
-		},
-		{
-			Name:                         "policies",
-			ApiVersion:                   "deckhouse.io/v1alpha1",
-			Kind:                         "ModuleUpdatePolicy",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"deckhouse"},
-			},
-			FilterFunc: filterPolicy,
 		},
 		{
 			Name:       "deckhouse-secret",
@@ -122,7 +107,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, createDeckhouseModuleSourceAndPolicy)
 
 func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
-	ms := v1alpha1.ModuleSource{}
 	deckhouseRepo := input.Values.Get("global.modulesImages.registry.base").String() + "/modules"
 	deckhouseDockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	deckhouseCA := input.Values.Get("global.modulesImages.registry.CA").String()
@@ -133,40 +117,40 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 		releaseChannel = strcase.ToCamel(ds.ReleaseChannel)
 	}
 
+	ms := v1alpha1.ModuleSource{}
 	if len(input.Snapshots["sources"]) > 0 {
 		ms = input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
 	}
 
-	if len(input.Snapshots["policies"]) == 0 {
-		if len(ms.Spec.ReleaseChannel) > 0 {
-			// take releaseChannel from existing ModuleSource if it's set
-			releaseChannel = strcase.ToCamel(ms.Spec.ReleaseChannel)
-		}
-		// ensure deckhouse ModuleUpdatePolicy
-		deckhouseMup := &v1alpha1.ModuleUpdatePolicy{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ModuleUpdatePolicy",
-				APIVersion: "deckhouse.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "deckhouse",
-			},
-			Spec: v1alpha1.ModuleUpdatePolicySpec{
-				ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
-					LabelSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"source": "deckhouse",
-						},
+	if len(ms.Spec.ReleaseChannel) > 0 {
+		// take releaseChannel from existing ModuleSource if it's set
+		releaseChannel = strcase.ToCamel(ms.Spec.ReleaseChannel)
+	}
+
+	// if not exists, ensure deckhouse ModuleUpdatePolicy
+	deckhouseMup := &v1alpha1.ModuleUpdatePolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ModuleUpdatePolicy",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "deckhouse",
+		},
+		Spec: v1alpha1.ModuleUpdatePolicySpec{
+			ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"source": "deckhouse",
 					},
 				},
-				ReleaseChannel: releaseChannel,
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-					Mode: "Auto",
-				},
 			},
-		}
-		input.PatchCollector.Create(deckhouseMup, object_patch.UpdateIfExists())
+			ReleaseChannel: releaseChannel,
+			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+				Mode: "Auto",
+			},
+		},
 	}
+	input.PatchCollector.Create(deckhouseMup, object_patch.IgnoreIfExists())
 
 	if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
 		// return if ModuleSource deckhouse already exists and all params are equal
