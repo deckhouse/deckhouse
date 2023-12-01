@@ -58,7 +58,6 @@ spec:
                   type: string
                   enum:
                     - Pending
-                    - PolicyUndefined
                     - Deployed
                     - Superseded
                     - Suspended

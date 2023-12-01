@@ -473,7 +473,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			if pred.currentReleaseIndex >= 0 {
 				release := pred.releases[pred.currentReleaseIndex]
 				release.Status.Phase = v1alpha1.PhaseSuperseded
-				release.Status.Phase = ""
+				release.Status.Message = ""
 				release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
 				if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 					return ctrl.Result{Requeue: true}, e
@@ -483,7 +483,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			modulesChangedReason = "a new module release found"
 
 			release.Status.Phase = v1alpha1.PhaseDeployed
-			release.Status.Phase = ""
+			release.Status.Message = ""
 			release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
 			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 				return ctrl.Result{Requeue: true}, e
