@@ -30,6 +30,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
+const defaultReleaseChannel = "Stable"
+
 type deckhouseSecret struct {
 	Bundle         string
 	ReleaseChannel string
@@ -110,7 +112,7 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 	deckhouseRepo := input.Values.Get("global.modulesImages.registry.base").String() + "/modules"
 	deckhouseDockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	deckhouseCA := input.Values.Get("global.modulesImages.registry.CA").String()
-	releaseChannel := "Stable"
+	releaseChannel := defaultReleaseChannel
 
 	if len(input.Snapshots["deckhouse-secret"]) > 0 {
 		ds := input.Snapshots["deckhouse-secret"][0].(deckhouseSecret)
@@ -124,7 +126,7 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 
 	if len(ms.Spec.ReleaseChannel) > 0 {
 		// take releaseChannel from existing ModuleSource if it's set
-		releaseChannel = strcase.ToCamel(ms.Spec.ReleaseChannel)
+		releaseChannel = sanitizeReleaseChannel(strcase.ToCamel(ms.Spec.ReleaseChannel))
 	}
 
 	// if not exists, ensure deckhouse ModuleUpdatePolicy
@@ -203,4 +205,13 @@ func moduleSourceUpToDate(ms *v1alpha1.ModuleSource, repo, cfg, ca string) bool 
 	}
 
 	return true
+}
+
+func sanitizeReleaseChannel(rc string) string {
+	switch rc {
+	case "Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid":
+		return rc
+	default:
+		return defaultReleaseChannel
+	}
 }
