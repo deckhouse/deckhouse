@@ -64,9 +64,6 @@ metadata:
   {{- $resultLines := list }}
   {{- $hasNamespace := false }}
   {{- range $line := $lines }}
-    {{- /* if hasPrefix $namePrefix $line */ }}
-      {{- /* $line = include "add.prefix.yaml.value" ( list $line $namePrefix $projectName $rootContext ) */ }}
-    {{- /* end */ }}
 
     {{- if hasPrefix $namespacePrefix $line }}
       {{- $hasNamespace = true }}
