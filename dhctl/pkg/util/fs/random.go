@@ -19,16 +19,11 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 func RandomTmpFileName() string {
 	fileName := RandomNumberSuffix("dhctl-tst-touch")
 	return filepath.Join(os.TempDir(), fileName)
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano()) // TODO: remove this after moving to go 1.20, see https://pkg.go.dev/math/rand#Seed
 }
 
 // The suffix will consist of 128 bits of non-secure randomness composed in 32 hex digits, 16 bytes.

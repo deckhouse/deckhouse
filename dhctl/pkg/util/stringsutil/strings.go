@@ -18,12 +18,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/rand"
-	"time"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano()) // TODO: remove this after moving to go 1.20, see https://pkg.go.dev/math/rand#Seed
-}
 
 func RandomStrElement(list []string) (string, int) {
 	indx := rand.Intn(len(list)) // this call is thread safe
