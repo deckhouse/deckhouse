@@ -12,6 +12,7 @@ prometheus:
     max_wal_time: 360h
     scrape_configs:
     - job_name: 'deckhouse-telemetry'
+      metrics_path: /metrics/hooks
       static_configs:
       - targets:
         - deckhouse.d8-system.svc.{{ .Values.global.discovery.clusterDomain }}:8080
