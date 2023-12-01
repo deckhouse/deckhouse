@@ -50,8 +50,6 @@ type ModuleUpdatePolicy struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec ModuleUpdatePolicySpec `json:"spec"`
-
-	Status ModuleUpdatePolicyStatus `json:"status,omitempty"`
 }
 
 type ModuleUpdatePolicySpec struct {
@@ -67,11 +65,6 @@ type ModuleUpdatePolicySpecUpdate struct {
 
 type ModuleUpdatePolicySpecReleaseSelector struct {
 	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
-}
-
-type ModuleUpdatePolicyStatus struct {
-	MatchedModules string `json:"matchedModules"`
-	Errors         string `json:"errors"`
 }
 
 // +k8s:deepcopy-gen=true
