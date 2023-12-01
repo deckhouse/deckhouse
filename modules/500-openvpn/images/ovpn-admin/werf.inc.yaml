@@ -24,6 +24,8 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ovpn-admin
+    - chown 64535:64535 /ovpn-admin
+    - chmod 0755 /ovpn-admin
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
 from: {{ .Images.BASE_NODE_16_ALPINE }}
