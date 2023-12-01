@@ -11,8 +11,8 @@
       tier: cluster
     annotations:
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__node_filesustem_is_r_o: "NodeFilesystemIsRO,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__node_filesustem_is_r_o: "NodeFilesystemIsRO,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__node_filesustem_is_r_o_cluster: "NodeFilesystemIsROCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__node_filesustem_is_r_o_cluster: "NodeFilesystemIsROCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |-
         The file system has entered read-only mode.
 
