@@ -145,7 +145,13 @@ func setInternalValues(input *go_hook.HookInput) error {
 			version = defaultControllerVersion // it's used only for metrics
 		}
 		controllers = append(controllers, controller)
-
+		// REMOVE ME testing metrics
+		if version == deprecatedControllerVersion {
+			input.MetricsCollector.Set("deprecated-ingress-controller", 1.0, map[string]string{
+				"controller_name":    controller.Name,
+				"controller_version": version,
+			})
+		}
 		input.MetricsCollector.Set("d8_ingress_nginx_controller", 1, map[string]string{
 			"controller_name":    controller.Name,
 			"controller_version": version,
