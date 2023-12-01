@@ -259,7 +259,8 @@ spec:
           {{- if .Values.openvpn.tcpEnabled }}
         - --mgmt=tcp="127.0.0.1:8989"
           {{- end }}
-        - --ccd --ccd.path="/mnt/ccd"
+        - --ccd
+        - --ccd.path="/mnt/ccd"
           {{- $externalHost := "" }}
           {{- if hasKey .Values.openvpn "inlet" }}
             {{- if eq .Values.openvpn.inlet "ExternalIP" }}{{ $externalHost = .Values.openvpn.externalIP }}{{- end }}
