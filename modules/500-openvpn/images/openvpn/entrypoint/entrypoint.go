@@ -111,8 +111,8 @@ func main() {
 	}
 
 	var openvpnArgs []string
-	openvpnArgs = append(openvpnArgs, "--config")
-	openvpnArgs = append(openvpnArgs, "/etc/openvpn/openvpn.conf")
+	openvpnArgs = append(openvpnArgs, "--config /etc/openvpn/openvpn.conf")
+	//openvpnArgs = append(openvpnArgs, "/etc/openvpn/openvpn.conf")
 	openvpnArgs = append(openvpnArgs, "--proto")
 	openvpnArgs = append(openvpnArgs, protocol)
 	openvpnArgs = append(openvpnArgs, "--management")
