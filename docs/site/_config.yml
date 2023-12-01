@@ -63,6 +63,7 @@ defaults:
       path: ""
       type: "pages"
     values:
+      toc: false
       layout: "page"
       comments: false
       searchable: true
