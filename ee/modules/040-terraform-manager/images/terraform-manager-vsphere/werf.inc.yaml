@@ -7,23 +7,13 @@ git:
 import:
 - artifact: terraform-provider-vsphere
   add: /terraform-provider-vsphere/terraform-provider-vsphere
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vsphere
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64
   before: setup
-ansible:
-  install:
-  - name: "Create a directory for terraform provider vsphere"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64
-      state: directory
-  - apk:
-      name: ca-certificates
-      update_cache: yes
-  - command: rm -rf /var/cache/apk/*
 ---
 artifact: terraform-provider-vsphere
 from: {{ .Images.BASE_GOLANG_ALPINE }}
 git:
-- url: https://github.com/deckhouse/3p-terraform-provider-vsphere
+- url: {{ $.SOURCE_REPO }}/deckhouse/3p-terraform-provider-vsphere
   add: /
   to: /terraform-provider-vsphere
   tag: v{{ .TF.vsphere.version }}-flant.1
@@ -48,8 +38,9 @@ ansible:
       chdir: /terraform-provider-vsphere
 
   setup:
-  - command: go build -o terraform-provider-vsphere
+  - command: go build -o terraform-provider-vsphere -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-vsphere/version.ProviderVersion={{ .TF.vsphere.version }}"
     args:
       chdir: /terraform-provider-vsphere
     environment:
       CGO_ENABLED: "0"
+  - command: chown 64535:64535 /terraform-provider-vsphere/terraform-provider-vsphere
