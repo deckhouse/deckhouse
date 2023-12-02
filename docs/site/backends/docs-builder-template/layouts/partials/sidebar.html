@@ -54,6 +54,12 @@
 
       <ul class="sidebar" id="mysidebar">
 
+          {{ $overviewItem := $.GetPage "modules/" }}
+
+          <li class="sidebar__item {{ if eq $overviewItem $.Page }}active{{ end }}">
+              <a href='{{ relURL "" }}modules/'>{{ $overviewItem.LinkTitle }}</a>
+          </li>
+
         {{ range $sidebarItem := $sidebarRootMenu }}
             <li class="sidebar__item sidebar__item_parent {{ if $sidebarItem.isActive }}active{{ end }}">
                 <a href='#'>{{ $sidebarItem.title }}</a>

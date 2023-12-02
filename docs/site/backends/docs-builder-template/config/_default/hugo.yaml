@@ -41,14 +41,16 @@ markup:
       xhtml: false
 
 
-# "page", "home", "section", "taxonomy", "term", "RSS", "sitemap", "robotsTXT", "404".
+# "404" "home" "page" "robotsTXT" "RSS" "section" "sitemap" "taxonomy" "term"
 disableKinds:
-- RSS
 - "404"
 - home
+- robotsTXT
+- RSS
+#- section
+- sitemap
 - taxonomy
 - term
-- section
 
 languages:
   en:

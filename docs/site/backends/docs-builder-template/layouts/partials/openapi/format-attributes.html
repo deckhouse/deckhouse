@@ -10,5 +10,43 @@
   {{ $description =  $attributes.description | markdownify }}
 {{ end }}
 
+{{ if isset $attributes "x-doc-default" }}
+  {{ template "format-default" (index $attributes "x-doc-default") }}
+{{ else if isset $attributes "default" }}
+  {{ template "format-default" (index $attributes "default") }}
+{{ end }}
+
+{{ if or (isset $attributes "minimum") (isset $attributes "exclusiveMinimum") (isset $attributes "maximum") (isset $attributes "exclusiveMaximum") }}
+  {{ template "format-minmax" $attributes }}
+{{ end }}
 
 <div class="resources__prop_description">{{ $description }}</div>
+
+{{ define "format-default" }}
+  <p class="resources__attrs"><span class="resources__attrs_name">{{ T "default_value" | humanize }}:</span> <span class="resources__attrs_content"><code>
+  {{ if or (reflect.IsMap .) (reflect.IsSlice .) }}
+  {{ . | jsonify (dict "prefix" "" "indent" " " "noHTMLEscape" "false") | plainify }}
+  {{ else }}
+  {{ . | plainify }}
+  {{ end }}
+  </code></span></p>
+{{ end }}
+
+{{ define "format-minmax" }}
+  <p class="resources__attrs"><span class="resources__attrs_name">{{ T "allowed_values" | humanize }}:</span>
+  <span class="resources__attrs_content"><code>
+  {{ $rangeString := "" }}
+  {{ if isset . "minimum" }}
+    {{ $rangeString = printf "%s <= " (string (index . "minimum"))  }}
+  {{ else if isset . "exclusiveMinimum" }}
+    {{ $rangeString = printf "%s < " (string (index . "exclusiveMinimum"))  }}
+  {{ end }}
+  {{ $rangeString = printf "%sX " $rangeString }}
+  {{ if isset . "maximum" }}
+    {{ $rangeString = printf "%s<= %s" $rangeString (string (index . "maximum"))  }}
+  {{ else if isset . "exclusiveMaximum" }}
+    {{ $rangeString = printf "%s< %s" $rangeString (string (index . "exclusiveMaximum"))  }}
+  {{ end }}
+  {{ $rangeString }}
+  </code></span></p>
+{{ end }}

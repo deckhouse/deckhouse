@@ -1,9 +1,11 @@
+allowed_values: допустимые значения
 search-placeholder: Поиск...
 version: версия
 modules: модули
 deckhouse: deckhouse
 documentation: документация
 core: ядро
+default_value: по умолчанию
 platform: платформа
 moduleLinkTitleREADME: Описание
 moduleLinkTitleEXAMPLES: Примеры

@@ -1,0 +1,19 @@
+{{ define "main" }}
+<div class="docs">
+    <h1 class="docs__title">{{ .Title }}</h1>
+
+    <div class="post-content">
+
+        <!-- Maybe TOC will be generated in other way -->
+     {{.Content}}
+     {{ range .Pages }}
+          <div style="border: 1px solid black; margin:10px; padding:10px; ">
+               <div style="font-size:20px;">
+                    <a href=".URL">{{.Title}}</a>
+               </div>
+               <p style="font-size:18px;">{{.Summary}}</p>
+          </div>
+     {{ end }}
+    </div>
+</div>
+{{ end }}

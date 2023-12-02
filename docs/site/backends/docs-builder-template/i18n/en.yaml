@@ -1,9 +1,11 @@
+allowed_values: allowed values
 search-placeholder: Search...
 version: version
 modules: modules
 deckhouse: deckhouse
 documentation: documentation
 core: core
+default_value: default
 platform: platform
 moduleLinkTitleREADME: Description
 moduleLinkTitleEXAMPLES: Examples

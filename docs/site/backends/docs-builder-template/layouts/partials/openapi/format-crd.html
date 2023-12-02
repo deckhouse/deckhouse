@@ -5,22 +5,29 @@
 
 <h2>{{ $kind }}</h2>
 
+{{ $versions := slice }}
+{{- range $data.spec.versions }}
+  {{ $versions = $versions | append (.name | lower) }}<br>
+{{ end }}
+
+{{ $versionsSorted := split (partial "openapi/sort-api-versions" $versions ) "," }}
+
 {{ if gt ( $data.spec.versions | len ) 0 }}
   {{ if gt ( $data.spec.versions | len ) 1 }}
     <p><font size="-1">Scope: {{ $data.spec.scope }}</font></p>
     <div class="tabs">
     {{ $status := " active" }}
-    {{- range $data.spec.versions }}
-      <a href='javascript:void(0)' class='tabs__btn tabs__btn__{{ $kindDowncase }}{{ $status }}' onclick="openTab(event, 'tabs__btn__{{ $kindDowncase }}', 'tabs__content__{{ $kindDowncase }}', '{{ $kindDowncase }}_{{ .name | lower }}')">{{ .name | lower }}</a>
+    {{- range $versionsSorted }}
+      <a href='javascript:void(0)' class='tabs__btn tabs__btn__{{ $kindDowncase }}{{ $status }}' onclick="openTab(event, 'tabs__btn__{{ $kindDowncase }}', 'tabs__content__{{ $kindDowncase }}', '{{ $kindDowncase }}_{{ . | lower }}')">{{ . | lower }}</a>
       {{ $status = "" }}
     {{ end }}
     </div>
   {{ end }}
 
   {{ $status := " active" }}
-  {{- range  $data.spec.versions }}
-    {{ $versionName := .name }}
-    {{ $versionSchema := .schema.openAPIV3Schema }}
+  {{- range  $versionsSorted }}
+    {{ $versionName := . }}
+    {{ $versionSchema := ( index (where $data.spec.versions "name" .) 0 ).schema.openAPIV3Schema }}
 
     {{ if eq ( $data.spec.versions | len ) 1 }}
       <p><font size="-1">Scope: {{ $data.spec.scope }}
