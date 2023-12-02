@@ -1,0 +1,42 @@
+diff --git a/pkg/plugins/trivy/plugin.go b/pkg/plugins/trivy/plugin.go
+index 46d15adb..9db35b57 100644
+--- a/pkg/plugins/trivy/plugin.go
++++ b/pkg/plugins/trivy/plugin.go
+@@ -13,6 +13,7 @@ import (
+ 	containerimage "github.com/google/go-containerregistry/pkg/name"
+ 	"io"
+ 	"net/url"
++	"os"
+ 	"path/filepath"
+ 	"regexp"
+ 	"strconv"
+@@ -995,6 +996,14 @@ func (p *plugin) getPodSpecForClientServerMode(ctx trivyoperator.PluginContext,
+ 			constructEnvVarSourceFromSecret("TRIVY_TOKEN", trivyConfigName, keyTrivyServerToken),
+ 			constructEnvVarSourceFromSecret("TRIVY_CUSTOM_HEADERS", trivyConfigName, keyTrivyServerCustomHeaders),
+ 		}
++
++		if scanJobRegistryCA, ok := os.LookupEnv("OPERATOR_SCAN_JOB_REGISTRY_CA"); ok {
++			env = append(env, corev1.EnvVar{
++				Name:  "TRIVY_REGISTRY_CA",
++				Value: scanJobRegistryCA,
++			})
++		}
++
+ 		if len(config.GetSslCertDir()) > 0 {
+ 			env = append(env, corev1.EnvVar{
+ 				Name:  "SSL_CERT_DIR",
+@@ -1566,6 +1575,14 @@ func (p *plugin) getPodSpecForClientServerFSMode(ctx trivyoperator.PluginContext
+ 			constructEnvVarSourceFromSecret("TRIVY_CUSTOM_HEADERS", trivyConfigName, keyTrivyServerCustomHeaders),
+ 			constructEnvVarSourceFromConfigMap("TRIVY_JAVA_DB_REPOSITORY", trivyConfigName, keyTrivyJavaDBRepository),
+ 		}
++
++		if scanJobRegistryCA, ok := os.LookupEnv("OPERATOR_SCAN_JOB_REGISTRY_CA"); ok {
++			env = append(env, corev1.EnvVar{
++				Name:  "TRIVY_REGISTRY_CA",
++				Value: scanJobRegistryCA,
++			})
++		}
++
+ 		if len(config.GetSslCertDir()) > 0 {
+ 			env = append(env, corev1.EnvVar{
+ 				Name:  "SSL_CERT_DIR",
