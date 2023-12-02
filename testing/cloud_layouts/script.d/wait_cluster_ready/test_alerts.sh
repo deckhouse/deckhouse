@@ -18,7 +18,13 @@ set -Eeuo pipefail
 availability=""
 attempts=50
 
-allow_alerts=("D8DeckhouseIsNotOnReleaseChannel" "DeadMansSwitch")
+allow_alerts=(
+"D8DeckhouseIsNotOnReleaseChannel" # Tests may be made on dev branch
+"DeadMansSwitch" # Always active in system. Tells that monitoring works.
+"CertmanagerCertificateExpired" # On some system do not have DNS
+"CertmanagerCertificateExpiredSoon" # Same as above
+"DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
+)
 
 # With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
 for i in $(seq $attempts); do
