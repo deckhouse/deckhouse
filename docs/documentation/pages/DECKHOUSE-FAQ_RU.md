@@ -77,19 +77,6 @@ status:
 * **Автоматический + заданы окна обновлений.** Кластер обновится в ближайшее доступное окно после появления новой версии на канале обновлений.
 * **Ручной режим.** Для применения обновления требуются [ручные действия](modules/002-deckhouse/usage.html#ручное-подтверждение-обновлений).
 
-### Как применить обновление минуя окна?
-
-Чтобы применить обновление в текущий момент, не зависимо от временных ограничений, нужно добавить в объекте [Deckhouse Release](modules/002-deckhouse/cr.html#deckhouserelease) добавить специальную аннотацию release.deckhouse.io/apply-now со значением true
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DeckhouseRelease
-metadata:
-  annotations:
-    release.deckhouse.io/apply-now: "true"
-...
-```
-
 ### Как установить желаемый канал обновлений?
 
 Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse` изменить (установить) параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel).
@@ -118,6 +105,27 @@ spec:
 {% alert level="danger" %}
 Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
 {% endalert %}
+
+### Как применить обновление минуя окна обновлений?
+
+Чтобы применить обновление немедленно, не дожидаясь ближайшего окна обновлений, установите в соответствующем ресурсе [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+
+Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
+
+```shell
+kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
+```
+
+Пример ресурса с установленной аннотацией пропуска окон обновлений:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/apply-now: "true"
+...
+```
 
 ### Как понять, какие изменения содержит обновление и как это повлияет на работу кластера?
 
