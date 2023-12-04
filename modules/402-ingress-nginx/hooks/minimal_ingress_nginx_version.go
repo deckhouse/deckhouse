@@ -90,7 +90,7 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 			}
 		}
 		if ctrl.Version == deprecatedControllerVersion {
-			input.MetricsCollector.Set("deprecated-ingress-controller", 1.0, map[string]string{
+			input.MetricsCollector.Set("deprecated_ingress_controller", 1.0, map[string]string{
 				"ingress_class":   ctrl.IngressClass,
 				"ingress_version": ctrl.Version,
 			})
