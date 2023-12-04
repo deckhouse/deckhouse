@@ -25,7 +25,6 @@
         {{ $weight = add (mul 100 (int (index $r 1) )) (int $_w) }}
       {{ end }}
     {{ end }}
-    {{ . }} -> {{ $r }} -> {{ index $r 0 }}<br>
     {{ $t = $t | append (dict "version" . "weight" $weight ) }}
   {{ else }}
     {{ $unformatted = $unformatted | append . }}

@@ -7,7 +7,7 @@
 
 {{ $versions := slice }}
 {{- range $data.spec.versions }}
-  {{ $versions = $versions | append (.name | lower) }}<br>
+  {{ $versions = $versions | append (.name | lower) }}
 {{ end }}
 
 {{ $versionsSorted := split (partial "openapi/sort-api-versions" $versions ) "," }}
