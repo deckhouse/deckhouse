@@ -106,6 +106,7 @@ spec:
 
   values:
     global:
+      configValidation: false
       operatorManageWebhooks: true
       istioNamespace: d8-{{ $.Chart.Name }}
       meshID: d8-istio-mesh
