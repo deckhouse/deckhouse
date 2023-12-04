@@ -10,10 +10,12 @@ metadata:
 webhooks:
   - name: rev.validation.istio.io
     clientConfig:
+      caBundle: {{ .Values.istio.internal.ca.cert | b64enc }}
       service:
         name: istiod-{{ $revision }}
         namespace: d8-istio
         path: "/validate"
+        port: 443
     rules:
       - operations:
           - CREATE
@@ -27,8 +29,11 @@ webhooks:
           - "*"
         resources:
           - "*"
-    failurePolicy: Ignore
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    namespaceSelector: {}
     sideEffects: None
+    timeoutSeconds: 30
     admissionReviewVersions: ["v1"]
     objectSelector:
       matchExpressions:
