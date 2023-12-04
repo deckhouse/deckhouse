@@ -19,7 +19,9 @@
     {{ if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
     {{ $code := .code }}
     {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
-      {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
+      {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}
+      {{ else if .LinkTitle }}{{ $moduleTitle = .LinkTitle }}
+      {{ end }}
       {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
       {{ if not $moduleSummary }}{{ $moduleSummary = .Summary }}{{ end }}
     {{ end}}
@@ -40,7 +42,7 @@
      {{ range $sidebarItem := $sidebarRootMenu }}
           <div style="border: 1px solid black; margin:10px; padding:10px; ">
                <div style="font-size:20px;">
-                    <strong><a href="{{ printf "%s/%s/" $sidebarItem.module $sidebarItem.channel }}">{{ $sidebarItem.title }}</a></strong>{{ if ne $sidebarItem.module $sidebarItem.title }} ({{ T "module" }} <code>{{ $sidebarItem.module }}</code>){{ end }}
+                    <strong><a href="{{ printf "%s/%s/" $sidebarItem.module $sidebarItem.channel }}">{{ $sidebarItem.title }}</a></strong>{{/* if ne $sidebarItem.module $sidebarItem.title }} ({{ T "module" }} <code>{{ $sidebarItem.module }}</code>){{ end */}}
                </div>
                <p style="font-size:18px;">{{ $sidebarItem.summary }}</p>
           </div>
