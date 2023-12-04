@@ -7,6 +7,5 @@ _pdf
 .werf_secret_key
 backend/releasechannels
 backend/root
-/backends/docs-builder-template/content/
 /backends/docs-builder-template/public/
 .hugo_build.lock
