@@ -23,7 +23,6 @@
   admissionReviewVersions: ["v1"]
 {{- end }}
 
-{{- if not .Values.istio.internal.operatorManageWebhooks }}
 {{- range $version := (keys .Values.istio.internal.versionMap) }}
 {{- $baseArg := (list $ $version) }}
 ---
@@ -70,6 +69,4 @@ webhooks:
       operator: In
       values:
       - "{{ $revision }}"
-{{- end }}
-
 {{- end }}

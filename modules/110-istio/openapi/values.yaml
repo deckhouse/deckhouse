@@ -26,10 +26,6 @@ properties:
             isReady:
               type: boolean
               x-examples: [false]
-      operatorManageWebhooks:
-        type: boolean
-        x-examples: [true]
-        default: true
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
