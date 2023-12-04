@@ -45,11 +45,13 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 }
 
 func getSSHClient(initializeNewAgent bool) (*ssh.Client, error) {
-	mastersIPs, err := GetMasterHostsIPs()
-	if err != nil {
-		return nil, err
+	if len(app.SSHHosts) == 0 {
+		mastersIPs, err := GetMasterHostsIPs()
+		if err != nil {
+			return nil, err
+		}
+		app.SSHHosts = mastersIPs
 	}
-	app.SSHHosts = mastersIPs
 
 	bastionHost, err := GetBastionHostFromCache()
 	if err != nil {
