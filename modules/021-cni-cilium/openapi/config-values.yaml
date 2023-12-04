@@ -34,9 +34,12 @@ properties:
     type: boolean
     default: false
     description: |
-      Check source IP and validate it against Service's "loadBalancerSourceRanges".
+      For services with the `loadBalancer` type, enables checking the source IP for compliance with [loadBalancer.sourceRanges](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      The check is not performed if access is made from within the cluster or the `sourceRanges` parameter is empty/not specified.
+      Some cloud providers in their loadBalancer implementations support filtering of incoming traffic based on the `sourceRanges` parameter, in which case [cilium documentation](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
+      recommends disabling the `svcSourceRangeCheck` option.
 
-      Do not enable behind a load balancer that performs any form of SNAT.
+      Do not enable if there is another balancer or any type of SNAT in front of the services.
   policyAuditMode:
     type: boolean
     default: false
