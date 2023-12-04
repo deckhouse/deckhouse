@@ -1,3 +1,11 @@
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-openvpn-bin-artifact
+fromImage: common/alt
+shell:
+  install:
+    - apt-get update
+    - apt-get install -y openvpn
+    - /binary_replace.sh -i "/usr/sbin/openvpn" -o /relocate
 {{- $gitCommit := "9024405232350b469e89ebbbfc5b0a0a1f400523" }}
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-src-artifact
@@ -54,6 +62,10 @@ import:
 - artifact: {{ .ModuleName }}/ovpn-admin-src-artifact
   add: /src/version
   to: /app/version
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-openvpn-bin-artifact
+  add: /relocate
+  to: /
   before: setup
 docker:
   ENTRYPOINT: ["/ovpn-admin"]
