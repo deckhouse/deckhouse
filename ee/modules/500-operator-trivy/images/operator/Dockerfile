@@ -20,12 +20,10 @@ RUN go mod vendor
 COPY patches/001-add-registry-secret-as-dockerconfigjson.patch /src
 COPY patches/002-skip-some-checks.patch /src
 COPY patches/003-aws-ecr.patch /src
-COPY patches/004-scan-job-registry-ca.patch /src
 
 RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
     patch -p1 < 002-skip-some-checks.patch && \
-    patch -p1 < 003-aws-ecr.patch && \
-    patch -p1 < 004-scan-job-registry-ca.patch
+    patch -p1 < 003-aws-ecr.patch
 
 RUN go get -u golang.org/x/net@v0.17.0 && go mod tidy && go mod vendor
 RUN go build -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
