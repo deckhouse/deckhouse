@@ -1,10 +1,10 @@
 {{- define "mwh_common_revision" }}
   {{- $context := index . 0 }}
-  {{- $prefix := index . 1 }}
-  {{- $version := index . 2 }}
+  {{- $version := index . 1 }}
+  {{- $prefix := index . 2 }}
   {{- $versionInfo := get $context.Values.istio.internal.versionMap $version }}
   {{- $revision := get $versionInfo "revision" }}
-- name: {{.Prefix}}sidecar-injector.istio.io
+- name: {{ $prefix }}sidecar-injector.istio.io
   clientConfig:
     caBundle: {{ $context.Values.istio.internal.ca.cert | b64enc }}
     service:
@@ -25,6 +25,7 @@
 
 {{- if not .Values.istio.internal.operatorManageWebhooks }}
 {{- range $version := (keys .Values.istio.internal.versionMap) }}
+{{- $baseArg := (list $ $version) }}
 ---
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
 {{- $fullVersion := get $versionInfo "fullVersion" }}
@@ -39,7 +40,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list $ (dict "istio.deckhouse.io/full-version" $fullVersion) ) | nindent 2 }}
 webhooks:
 {{- /* Case 1: Namespace-wide injection */}}
-{{ include "mwh_common_revision" (list $ "namespace-" $version ) }}
+{{ include "mwh_common_revision" (append $baseArg "namespace-") }}
   namespaceSelector:
     matchExpressions:
     - key: istio.io/rev
@@ -55,7 +56,7 @@ webhooks:
       values:
       - "false"
 {{- /* Case 2: Injection for individual pods */}}
-{{ include "mwh_common_revision" (list $ "object-" $version) }}
+{{ include "mwh_common_revision" (append $baseArg "object-") }}
   namespaceSelector:
     matchExpressions:
     - key: istio.io/rev
