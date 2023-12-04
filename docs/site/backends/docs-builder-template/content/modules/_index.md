@@ -12,5 +12,3 @@ Deckhouse modules have a release cycle independent of Deckhouse, i.e. they can b
 
 This section provides information on Deckhouse modules that have passed preliminary compatibility testing and are approved for use in conjunction with Deckhouse. For each module, information about the module's authors, how to get technical support, and the terms of use of the module is also available.
 
-## Modules
-

@@ -21,17 +21,6 @@
              {{ partial "breadcrumbs" . }}
            </ol>
          </div>
-          <!-- <div id="doc-versions-menu" class="channel-menu submenu-parent">
-          {{ if .IsPage }}
-            {{ $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/.*$` .File.Dir 1 ) 0 }}
-            {{ $module := index $_pathElements 1 }}
-            {{ $channel := index $_pathElements 2 }}
-            {{ if and $module $channel }}
-              {{ partial "module-version-menu" (dict "ctx" $ "module" $module "channel" $channel ) }}
-            {{ end }}
-          {{ end }}
-          </div>
-          //-->
        </div>
 
        <div class="layout-sidebar">

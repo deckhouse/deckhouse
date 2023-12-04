@@ -39,7 +39,8 @@
     <div class="post-content">
 
      {{.Content}}
-     {{ range $sidebarItem := $sidebarRootMenu }}
+     {{/* range $sidebarItem := $sidebarRootMenu */}}
+     {{ range $sidebarItem := slice }}
           <div style="border: 1px solid black; margin:10px; padding:10px; ">
                <div style="font-size:20px;">
                     <strong><a href="{{ printf "%s/%s/" $sidebarItem.module $sidebarItem.channel }}">{{ $sidebarItem.title }}</a></strong>{{/* if ne $sidebarItem.module $sidebarItem.title }} ({{ T "module" }} <code>{{ $sidebarItem.module }}</code>){{ end */}}
