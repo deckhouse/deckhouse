@@ -1,151 +1,57 @@
 ---
-title: "Cloud provider - VMware vSphere: подготовка окружения"
-description: "Настройка VMware vSphere для работы облачного провайдера Deckhouse."
+title: "Cloud provider — Vcloud Director: подготовка окружения."
+description: "Подготовка окружения Vcloud Director для работы Deckhouse cloud provider."
 ---
 
-<!-- АВТОР! Не забудь актуализировать getting started, если это необходимо -->
+<!-- AUTHOR! Don't forget to update getting started if necessary -->
 
-## Список необходимых ресурсов vSphere
+##  Список необходимых ресурсов VCD
 
-* **User** с необходимым [набором прав](#создание-и-назначение-роли).
-* **Network** с DHCP и доступом в интернет.
-* **Datacenter** с соответствующим тегом [`k8s-region`](#создание-тегов-и-категорий-тегов).
-* **Cluster** с соответствующим тегом [`k8s-zone`](#создание-тегов-и-категорий-тегов).
-* **Datastore** в любом количестве с соответствующими [тегами](#конфигурация-datastore).
-* **Template** — [подготовленный](#подготовка-образа-виртуальной-машины) образ виртуальной машины.
+* **Organization**
+* **VirtualDataCenter**
+* **StoragePolicy**
+* **SizingPolicy**
+* **Network**
+* **EdgeRouter**
+* **Catalog**
 
-## Конфигурация vSphere
+### Добавление сети
 
-### Установка govc
+Create internal network and connect it to Edge Gateway.
 
-Для дальнейшей конфигурации vSphere вам понадобится vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation).
+[](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
+[](../../images/030-cloud-provider-vcd/network-setup/Screenshot2.png)
+[](../../images/030-cloud-provider-vcd/network-setup/Screenshot3.png)
+[](../../images/030-cloud-provider-vcd/network-setup/Screenshot4.png)
+[](../../images/030-cloud-provider-vcd/network-setup/Screenshot5.png)
+[](../../images/030-cloud-provider-vcd/network-setup/Screenshot6.png)
 
-После установки задайте переменные окружения для работы с vCenter:
+### Добавление vApp
 
-```shell
-export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
-export GOVC_INSECURE=1
-```
+[](../../images/030-cloud-provider-vcd/application-setup/Screenshot.png)
+[](../../images/030-cloud-provider-vcd/application-setup/Screenshot2.png)
 
-### Создание тегов и категорий тегов
+### Добавление сети к vApp
 
-В VMware vSphere нет понятий «регион» и «зона». «Регионом» в vSphere является `Datacenter`, а «зоной» — `Cluster`. Для создания этой связи используются теги.
+[](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
+[](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
 
-Создайте категории тегов с помощью команд:
+### Настройка правил DNAT на EDGE gateway
 
-```shell
-govc tags.category.create -d "Kubernetes Region" k8s-region
-govc tags.category.create -d "Kubernetes Zone" k8s-zone
-```
+[](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
+[](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
 
-Создайте теги в каждой категории. Если вы планируете использовать несколько «зон» (`Cluster`), создайте тег для каждой из них:
+## Каталог
 
-```shell
-govc tags.create -d "Kubernetes Region" -c k8s-region test-region
-govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
-govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
-```
-
-Назначьте тег «региона» на `Datacenter`:
-
-```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
-```
-
-Назначьте теги «зон» на объекты `Cluster`:
-
-```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
-```
-
-#### Конфигурация Datastore
-
-{% alert level="warning" %}
-Для динамического заказа `PersistentVolume` необходимо, чтобы `Datastore` был доступен на **каждом** хосте ESXi (shared datastore).
-{% endalert %}
-
-Для автоматического создания `StorageClass` в кластере Kubernetes назначьте созданные ранее теги «региона» и «зоны» на объекты `Datastore`:
-
-```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
-
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
-```
-
-### Создание и назначение роли
-
-{% alert %}
-Ввиду разнообразия подключаемых к vSphere SSO-провайдеров шаги по созданию пользователя в данной статье не рассматриваются.
-
-Роль, которую предлагается создать далее, включает в себя все возможные права для всех компонентов Deckhouse.
-Если нужны более гранулярные права, обратитесь в техподдержку Deckhouse.
-{% endalert %}
-
-Необходимо создать роль с указанными правами и прикрепить ее к `vCenter`, где нужно развернуть кластер Kubernetes.
-
-Создайте роль:
-
-```shell
-govc role.create deckhouse \
-   Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
-   Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
-   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
-```
-
-Назначьте пользователю роль на объекте `vCenter`:
-
-```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
-```
-
-### Подготовка образа виртуальной машины
-
-Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
-
-* [**Ubuntu**](https://cloud-images.ubuntu.com/)
-* [**Debian**](https://cloud.debian.org/images/cloud/)
-* [**CentOS**](https://cloud.centos.org/)
-* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция *Generic Cloud / OpenStack*)
-
-{% alert %}
-Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.
-{% endalert %}
-
-#### Требования к образу виртуальной машины
-
-Deckhouse использует `cloud-init` для настройки виртуальной машины после запуска. Для этого в образе должны быть установлены следующие пакеты:
-
-* cloud-init
-* open-vm-tools
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (для версий `cloud-init` старше 21.3)
-
-Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
-
-## Инфраструктура
-
-### Сети
-
-Для работы кластера необходим VLAN с DHCP и доступом в интернет:
-* Если VLAN публичный (публичные адреса), нужна вторая сеть, в которой необходимо развернуть сеть узлов кластера (в этой сети DHCP не нужен).
-* Если VLAN внутренний (приватные адреса), эта же сеть будет сетью узлов кластера.
+* Вы можете загрузить облачные образы дистрибутивов (например, https://cloud-images.ubuntu.com/) в Каталог и использовать их в дальнейшем при создании машин.
+* Облачный образ должен поддерживать cloud-init.
 
 ### Входящий трафик
 
-* Если у вас имеется внутренний балансировщик запросов, можно обойтись им и направлять трафик напрямую на frontend-узлы кластера.
-* Если балансировщика нет, для организации отказоустойчивых LoadBalancer'ов рекомендуется использовать MetalLB в режиме BGP. В кластере будут созданы frontend-узлы с двумя интерфейсами. Для этого дополнительно потребуются:
-  * отдельный VLAN для обмена трафиком между BGP-роутерами и MetalLB. В этом VLAN'e должны быть DHCP и доступ в интернет;
-  * IP-адреса BGP-роутеров;
-  * ASN (номер автономной системы) на BGP-роутере;
-  * ASN (номер автономной системы) в кластере;
-  * диапазон, из которого анонсировать адреса.
+* Вы должны направить входящий трафик на EDGE router (порты 80, 443) при помощи правил DNAT на выделенный адрес во внутренней сети.
+* Этот адрес поднимается при помощи MetalLB в L2 режиме на выделенных frontend-узлах.
 
-### Использование хранилища данных
+### Использование хранилища
 
-В кластере может одновременно использоваться различное количество типов хранилищ. В минимальной конфигурации потребуются:
-* `Datastore`, в котором Kubernetes-кластер будет заказывать `PersistentVolume`;
-* `Datastore`, в котором будут заказываться root-диски для виртуальной машины (это может быть тот же `Datastore`, что и для `PersistentVolume`).
+* VCD поддерживает CSI, диски создаются как VCD Independent Disks.
+* Известное ограничение - CSI диски не поддерживают ресайз.
