@@ -10,7 +10,7 @@ metadata:
 webhooks:
   - name: rev.validation.istio.io
     clientConfig:
-      caBundle: {{ .Values.istio.internal.ca.cert | b64enc }}
+      caBundle: {{ $.Values.istio.internal.ca.cert | b64enc }}
       service:
         name: istiod-{{ $revision }}
         namespace: d8-istio
