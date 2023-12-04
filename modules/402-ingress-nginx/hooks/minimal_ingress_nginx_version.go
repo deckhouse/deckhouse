@@ -43,10 +43,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverMinimalNginxVersion)
 
 const (
-	minVersionValuesKey         = "ingressNginx:minimalControllerVersion"
-	incompatibleVersionsKey     = "ingressNginx:hasIncompatibleIngressClass"
-	disruptionKey               = "ingressNginx:hasDisruption"
-	deprecatedControllerVersion = "1.1"
+	minVersionValuesKey     = "ingressNginx:minimalControllerVersion"
+	incompatibleVersionsKey = "ingressNginx:hasIncompatibleIngressClass"
+	disruptionKey           = "ingressNginx:hasDisruption"
 )
 
 func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -88,12 +87,6 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 			if ctrl.Version == "0.33" {
 				isDisruptionUpdate = true
 			}
-		}
-		if ctrl.Version == deprecatedControllerVersion {
-			input.MetricsCollector.Set("deprecated_ingress_controller", 1.0, map[string]string{
-				"ingress_class":   ctrl.IngressClass,
-				"ingress_version": ctrl.Version,
-			})
 		}
 		ctrlVersion, err := semver.NewVersion(ctrl.Version)
 		if err != nil {

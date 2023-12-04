@@ -170,7 +170,7 @@
         `Current Number of Nodes Scheduled`, check the pertinent Ingress Nginx Controller's 'nodeSelector' and 'toleration' settings,
         and compare them to the relevant nodes' 'labels' and 'taints' settings
   - alert: NginxIngressDeprecatedVersion
-    expr: max by (ingress_version) (deprecated_ingress_controller) == 1
+    expr: max by (controller_version) (d8_ingress_nginx_controller) == 1
     labels:
       severity_level: "4"
     annotations:
