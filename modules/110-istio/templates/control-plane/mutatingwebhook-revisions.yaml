@@ -1,5 +1,3 @@
-{{- if not .Values.istio.internal.operatorManageWebhooks }}
-
 {{- define "mwh_common_revision" }}
   {{- $context := index . 0 }}
   {{- $prefix := index . 1 }}
@@ -25,6 +23,7 @@
   admissionReviewVersions: ["v1"]
 {{- end }}
 
+{{- if not .Values.istio.internal.operatorManageWebhooks }}
 {{- range $version := (keys .Values.istio.internal.versionMap) }}
 ---
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
