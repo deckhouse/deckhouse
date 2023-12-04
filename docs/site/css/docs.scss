@@ -5,7 +5,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin: 25px 0;
+    margin: 25px 0 20px;
 }
 
 .breadcrumbs__left {
@@ -100,14 +100,19 @@
 .channel-menu > a.highlight {
     text-decoration: none;
     height: 30px;
-    padding: 3px 18px;
+    padding: 4px 18px;
     border-radius: 10px;
     font-weight: 600;
     background: #0066ff;
     color: #fff !important;
 }
+
 .channel-menu > a.highlight:after {
     filter: brightness(255);
+}
+
+.channel-menu:not(.disabled):hover > a.highlight:after {
+    transform: translateY(2px);
 }
 
 // search new classes
