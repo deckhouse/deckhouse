@@ -2,6 +2,7 @@ allowed_values: allowed values
 search-placeholder: Search...
 version: version
 modules: modules
+module: module
 deckhouse: deckhouse
 documentation: documentation
 core: core

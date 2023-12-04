@@ -1,4 +1,3 @@
-{{ $defaultChannel := "alpha" }}
 {{ $modulesList := .Site.Data.modules.channels }}
 {{ $channelsInfo := .Site.Data.channels.info }}
 {{ $sidebarRootMenu := slice }}
@@ -25,7 +24,7 @@
     {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
       {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
       {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
-      {{ if or ($.Page.IsAncestor .) (eq $.Page.File.Dir .File.Dir) (eq $.Page .) }}{{ $isActiveItem = true }}{{ end }}
+      {{/* if or ($.Page.IsAncestor .) (eq $.Page.File.Dir .File.Dir) (eq $.Page .) }}{{ $isActiveItem = true }}{{ end */}}
     {{ end}}
   {{ end}}
   {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
@@ -42,7 +41,7 @@
     <div id="doc-versions-menu" class="channel-menu submenu-parent">
       {{ if $.IsPage }}
       {{ if and $currentModuleName $currentModuleChannel }}
-      {{ partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
+        {{ partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
       {{ end }}
       {{ end }}
     </div>
