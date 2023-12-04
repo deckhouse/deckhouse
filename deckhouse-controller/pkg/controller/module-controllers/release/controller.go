@@ -687,7 +687,7 @@ func (c *Controller) RunPreflightCheck(ctx context.Context) error {
 		return nil
 	}
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced, c.moduleUpdatePoliciesSynced); !ok {
 		c.logger.Fatal("failed to wait for caches to sync")
 	}
 

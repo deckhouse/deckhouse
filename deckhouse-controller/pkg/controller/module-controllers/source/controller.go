@@ -170,7 +170,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	// Wait for the caches to be synced before starting workers
 	c.logger.Debug("Waiting for ModuleSourceInformer caches to sync")
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleSourcesSynced, c.moduleReleasesSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleSourcesSynced, c.moduleReleasesSynced, c.moduleUpdatePoliciesSynced); !ok {
 		c.logger.Fatal("failed to wait for caches to sync")
 	}
 
