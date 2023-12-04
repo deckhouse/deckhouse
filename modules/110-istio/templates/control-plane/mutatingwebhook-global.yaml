@@ -1,4 +1,4 @@
-{{- define "mwh_common" }}
+{{- define "mwh_common_global" }}
   {{- $context := index . 0 }}
   {{- $prefix := index . 1 }}
   {{- $versionInfo := get $context.Values.istio.internal.versionMap $context.Values.istio.internal.globalVersion }}
@@ -36,7 +36,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "istio.deckhouse.io/full-version" $fullVersion) ) | nindent 2 }}
 webhooks:
 {{- /* Case 1: Namespace-wide injection */}}
-{{ include "mwh_common" (list . "namespace-") }}
+{{ include "mwh_common_global" (list . "namespace-") }}
   namespaceSelector:
     matchExpressions:
     - key: istio-injection
@@ -52,7 +52,7 @@ webhooks:
       values:
       - "false"
 {{- /* Case 2: Injection for individual pods */}}
-{{ include "mwh_common" (list . "object-") }}
+{{ include "mwh_common_global" (list . "object-") }}
   namespaceSelector:
     matchExpressions:
       - key: istio-injection
