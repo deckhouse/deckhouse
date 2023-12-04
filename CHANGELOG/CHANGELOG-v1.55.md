@@ -38,10 +38,12 @@
     systemd-networkd.service will be restarted to apply the settings.
  - **[candi]** Do not wait Instance status patch indefinitely during bootstrap. [#6551](https://github.com/deckhouse/deckhouse/pull/6551)
  - **[candi]** Fixed wait apt update. [#6040](https://github.com/deckhouse/deckhouse/pull/6040)
+ - **[ceph-csi]** Use different liveness probe ports for csi-controller-cephfs and csi-controller-rbd. [#6727](https://github.com/deckhouse/deckhouse/pull/6727)
  - **[cloud-provider-azure]** Azure cloud-controller-manager has been updated to the latest versions for all supported Kubernetes versions. [#6574](https://github.com/deckhouse/deckhouse/pull/6574)
     cloud-controller-manager will restart.
  - **[cni-cilium]** Restore removed API versions in CRDs. [#6690](https://github.com/deckhouse/deckhouse/pull/6690)
  - **[common]** Fix vulnerabilities in csi-external-* images: `CVE-2023-44487`, `CVE-2022-41723`, `GHSA-m425-mq94-257g`. [#6313](https://github.com/deckhouse/deckhouse/pull/6313)
+ - **[control-plane-manager]** Remove the use of crictl when backing up etcd. [#6720](https://github.com/deckhouse/deckhouse/pull/6720)
  - **[deckhouse-controller]** Fix getting Deckhouse version in debugging. [#6517](https://github.com/deckhouse/deckhouse/pull/6517)
  - **[deckhouse-controller]** Fix CVE issues in deckhouse-controller image. [#6393](https://github.com/deckhouse/deckhouse/pull/6393)
  - **[extended-monitoring]** Add a job to sift metrics from custom exporters. [#5996](https://github.com/deckhouse/deckhouse/pull/5996)
@@ -49,6 +51,7 @@
  - **[loki]** Fix CVE issue in Loki image. [#6494](https://github.com/deckhouse/deckhouse/pull/6494)
  - **[monitoring-kubernetes]** Fix CVE issues in `node-exporter`, `kubelet-eviction-tresholds-exporter` image. [#6523](https://github.com/deckhouse/deckhouse/pull/6523)
  - **[monitoring-kubernetes]** Capacity Planning dashboard shows correct number of Pods usage [#5934](https://github.com/deckhouse/deckhouse/pull/5934)
+ - **[node-manager]** Add MachineHealthCheck for CAPS. [#6609](https://github.com/deckhouse/deckhouse/pull/6609)
  - **[node-manager]** Fix node-manager does not remove `node.deckhouse.io/unitialized` taint when using one taint with different effects. [#6671](https://github.com/deckhouse/deckhouse/pull/6671)
  - **[node-manager]** Fix nodeGroup validation webhook if global mc does not exists. [#6583](https://github.com/deckhouse/deckhouse/pull/6583)
  - **[node-manager]** Fix CVE issue in fix cve in `bashible-apiserver` image. [#6526](https://github.com/deckhouse/deckhouse/pull/6526)
