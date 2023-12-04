@@ -19,9 +19,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	"sort"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
@@ -417,8 +418,10 @@ func (c *NodeGroupController) populateNodeToHost() error {
 	}
 
 	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, func(msg string) bool {
-		return true // FIXME(dhctl-for-commander): must find another way to auto-approve
-		//return input.NewConfirmation().WithMessage(msg).Ask()
+		if c.commanderMode {
+			return true
+		}
+		return input.NewConfirmation().WithMessage(msg).Ask()
 	})
 
 	if err != nil {
