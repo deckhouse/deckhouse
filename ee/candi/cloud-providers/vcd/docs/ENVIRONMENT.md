@@ -19,27 +19,27 @@ description: "Configuring Vcloud Director for Deckhouse cloud provider operation
 
 Create internal network and connect it to Edge Gateway.
 
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot2.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot3.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot4.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot5.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot6.png)
+![](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
+![](../../images/030-cloud-provider-vcd/network-setup/Screenshot2.png)
+![](../../images/030-cloud-provider-vcd/network-setup/Screenshot3.png)
+![](../../images/030-cloud-provider-vcd/network-setup/Screenshot4.png)
+![](../../images/030-cloud-provider-vcd/network-setup/Screenshot5.png)
+![](../../images/030-cloud-provider-vcd/network-setup/Screenshot6.png)
 
 ### Adding vApp
 
-[](../../images/030-cloud-provider-vcd/application-setup/Screenshot.png)
-[](../../images/030-cloud-provider-vcd/application-setup/Screenshot2.png)
+![](../../images/030-cloud-provider-vcd/application-setup/Screenshot.png)
+![](../../images/030-cloud-provider-vcd/application-setup/Screenshot2.png)
 
 ### Adding internal network to vApp
 
-[](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
-[](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
+![](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
+![](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
 
 ### Setup DNAT rules on EDGE gateway
 
-[](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
-[](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
+![](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
+![](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
 
 ## Catalog
 
