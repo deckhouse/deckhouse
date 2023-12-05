@@ -23,6 +23,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch v{{ .TF.gcp.version }}-flant.1 {{ $.SOURCE_REPO }}/flant/terraform-provider-google.git /src
     - cd /src
+    - make fmt
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-google/version.ProviderVersion={{ .TF.gcp.version }}"
     - mv /go/bin/terraform-provider-gcp /terraform-provider-gcp
     - chmod -R 755 /terraform-provider-gcp
