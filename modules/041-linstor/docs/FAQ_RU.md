@@ -148,7 +148,7 @@ linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
 
 * Загрузите скрипт `evict.sh` на хост, имеющий доступ к API Kubernetes с правами администратора (для работы скрипта потребуются установленные `kubectl` и `jq`):
 
-  * Последнюю версию скрипта можно скачать с github: 
+  * Последнюю версию скрипта можно скачать с github:
 
   ```shell
   curl -fsSL -o evict.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/modules/041-linstor/tools/evict.sh
