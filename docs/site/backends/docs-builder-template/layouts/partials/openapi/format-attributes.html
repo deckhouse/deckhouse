@@ -10,6 +10,8 @@
   {{ $description =  $attributes.description | markdownify }}
 {{ end }}
 
+<div class="resources__prop_description">{{ $description }}</div>
+
 {{ if isset $attributes "x-doc-default" }}
   {{ template "format-default" (index $attributes "x-doc-default") }}
 {{ else if isset $attributes "default" }}
@@ -20,7 +22,25 @@
   {{ template "format-minmax" $attributes }}
 {{ end }}
 
-<div class="resources__prop_description">{{ $description }}</div>
+{{ if or (isset $attributes "minLength") (isset $attributes "maxLength") }}
+  {{ template "format-minmax-length" $attributes }}
+{{ end }}
+
+{{ if or (isset $attributes "enum") }}
+<p class="resources__attrs">
+  <span class="resources__attrs_name">{{ T "allowed_values" | humanize }}:</span> <span class="resources__attrs_content"><code>{{ delimit $attributes.enum "</code>, <code>" | safeHTML }}</code></span>
+</p>
+{{ end }}
+
+{{ if or (isset $attributes "pattern") }}
+<p class="resources__attrs">
+  <span class="resources__attrs_name">{{ T "pattern" | humanize }}:</span> <code class="resources__attrs_content">{{ $attributes.pattern }}</code>
+</p>
+{{ end }}
+
+{{ if or (isset $attributes "x-doc-examples") (isset $attributes "x-doc-example") (isset $attributes "example") (isset $attributes "x-examples") }}
+  {{ template "format-example" $attributes }}
+{{ end }}
 
 {{ define "format-default" }}
   <p class="resources__attrs"><span class="resources__attrs_name">{{ T "default_value" | humanize }}:</span> <span class="resources__attrs_content"><code>
@@ -33,20 +53,41 @@
 {{ end }}
 
 {{ define "format-minmax" }}
-  <p class="resources__attrs"><span class="resources__attrs_name">{{ T "allowed_values" | humanize }}:</span>
-  <span class="resources__attrs_content"><code>
-  {{ $rangeString := "" }}
-  {{ if isset . "minimum" }}
-    {{ $rangeString = printf "%s <= " (string (index . "minimum"))  }}
-  {{ else if isset . "exclusiveMinimum" }}
-    {{ $rangeString = printf "%s < " (string (index . "exclusiveMinimum"))  }}
-  {{ end }}
-  {{ $rangeString = printf "%sX " $rangeString }}
-  {{ if isset . "maximum" }}
-    {{ $rangeString = printf "%s<= %s" $rangeString (string (index . "maximum"))  }}
-  {{ else if isset . "exclusiveMaximum" }}
-    {{ $rangeString = printf "%s< %s" $rangeString (string (index . "exclusiveMaximum"))  }}
-  {{ end }}
-  {{ $rangeString }}
-  </code></span></p>
+  <p class="resources__attrs"><span class="resources__attrs_name">{{ T "allowed_values" | humanize }}:</span> <span class="resources__attrs_content">
+    <code>
+    {{ $rangeString := "" }}
+    {{ if isset . "minimum" }}
+      {{ $rangeString = printf "%s <= " (string (index . "minimum"))  }}
+    {{ else if isset . "exclusiveMinimum" }}
+      {{ $rangeString = printf "%s < " (string (index . "exclusiveMinimum"))  }}
+    {{ end }}
+    {{ $rangeString = printf "%sX " $rangeString }}
+    {{ if isset . "maximum" }}
+      {{ $rangeString = printf "%s<= %s" $rangeString (string (index . "maximum"))  }}
+    {{ else if isset . "exclusiveMaximum" }}
+      {{ $rangeString = printf "%s< %s" $rangeString (string (index . "exclusiveMaximum"))  }}
+    {{ end }}
+    {{ $rangeString }}
+    </code></span>
+  </p>
+{{ end }}
+
+{{ define "format-minmax-length" }}
+{{ $caption := "length" }}
+{{ $lengthValue := "" }}
+{{ if and (isset . "minLength" ) ( isset . "maxLength" ) }}
+  {{ $lengthValue = printf "%s..%s" (.minLength | jsonify) (.maxLength | jsonify) }}
+{{ else if isset . "minLength" }}
+  {{ $caption = "min_length" }}
+  {{ $lengthValue = ( .minLength | jsonify ) }}
+{{ else if isset . "maxLength" }}
+  {{ $caption = "max_length" }}
+  {{ $lengthValue = ( .maxLength | jsonify ) }}
+{{ end }}
+<p class="resources__attrs">
+  <span class="resources__attrs_name">{{ T $caption | humanize }}</span>: <span class="resources__attrs_content"><code>{{ $lengthValue }}</code></span>
+</p>
+{{ end }}
+
+{{ define "format-example" }}
 {{ end }}

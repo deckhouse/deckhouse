@@ -1,6 +1,5 @@
 allowed_values: допустимые значения
 search-placeholder: Поиск...
-version: версия
 modules: модули
 module: модуль
 deckhouse: deckhouse
@@ -8,6 +7,12 @@ documentation: документация
 core: ядро
 default_value: по умолчанию
 platform: платформа
+example: пример
+examples: примеры
+pattern: шаблон
+length: длина
+min_length: минимальная длина
+max_length: максимальная длина
 moduleLinkTitleREADME: Описание
 moduleLinkTitleEXAMPLES: Примеры
 moduleLinkTitleCONFIGURATION: Настройка
@@ -31,4 +36,5 @@ string: строка
 of_string: строк
 boolean: булевый
 of_boolean: булевых значений
+version: версия
 version_of_schema: Версия схемы

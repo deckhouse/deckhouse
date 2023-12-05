@@ -1,6 +1,5 @@
 allowed_values: allowed values
 search-placeholder: Search...
-version: version
 modules: modules
 module: module
 deckhouse: deckhouse
@@ -8,6 +7,12 @@ documentation: documentation
 core: core
 default_value: default
 platform: platform
+pattern: pattern
+example: example
+examples: examples
+length: length
+min_length: minimal length
+max_length: maximum length
 moduleLinkTitleREADME: Description
 moduleLinkTitleEXAMPLES: Examples
 moduleLinkTitleCONFIGURATION: Configuration
@@ -31,4 +36,5 @@ string: string
 of_string: of strings
 boolean: boolean
 of_boolean: of booleans
+version: version
 version_of_schema: Schema version
