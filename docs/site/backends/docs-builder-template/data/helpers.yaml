@@ -2,6 +2,7 @@ knownPageNames:
   - ADVANCED_USAGE
   - CONFIGURATION
   - CRD
+  - CR
   - EXAMPLES
   - FAQ
   - README
