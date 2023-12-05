@@ -193,6 +193,7 @@ linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
 Если необходимо снова разрешить размещать ресурсы и поды на узле, то необходимо выполнить команды:
 
 ```shell
+alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
 linstor node set-property "worker-1" AutoplaceTarget
 kubectl uncordon "worker-1"
 ```
@@ -200,6 +201,7 @@ kubectl uncordon "worker-1"
 Проверить параметр *AutoplaceTarget* у всех узлов можно так (поле AutoplaceTarget будет пустым у тех узлов, на которых разрешено размещать ресурсы LINSTOR):
 
 ```shell
+alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
 linstor node list -s AutoplaceTarget
 ```
 

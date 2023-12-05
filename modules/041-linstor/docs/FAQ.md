@@ -193,6 +193,7 @@ To run the `evict.sh` script in non-interactive mode, it is necessary to add the
 To allow resource and pod placement on the node again, execute:
 
 ```shell
+alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
 linstor node set-property "worker-1" AutoplaceTarget
 kubectl uncordon "worker-1"
 ```
@@ -200,6 +201,7 @@ kubectl uncordon "worker-1"
 To check the *AutoplaceTarget* property for all nodes (the AutoplaceTarget field will be empty for nodes where LINSTOR resource placement is allowed):
 
 ```shell
+alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
 linstor node list -s AutoplaceTarget
 ```
 
