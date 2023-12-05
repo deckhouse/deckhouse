@@ -33,11 +33,14 @@
 {{ $sidebarRootMenu = sort $sidebarRootMenu "title" "asc" }}
 
 
-<div class="docs">
-    <h1 class="docs__title">{{ .Title }}</h1>
+<div class="docs docs--modules">
+    <div class="docs__wrap-title">
+        <h1 class="docs__title">{{ .Title }}</h1>
+    </div>
 
     <div class="post-content">
 
+        <!-- Maybe TOC will be generated in other way -->
      {{.Content}}
      {{/* range $sidebarItem := $sidebarRootMenu */}}
      {{ range $sidebarItem := slice }}

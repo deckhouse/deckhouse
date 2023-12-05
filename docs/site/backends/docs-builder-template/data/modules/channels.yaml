@@ -1,0 +1,25 @@
+docs-example:
+  channels:
+    alpha:
+      version: v1.3
+deckhouse-admin:
+  channels:
+    alpha:
+      version: v1.3
+    beta:
+      version: v1.3
+    early-access:
+      version: v1.2
+    stable:
+      version: v1.1
+    rock-solid:
+      version: v1.1
+
+external-modules-kubectl-plugins:
+  channels:
+    alpha:
+      version: v1.0.6
+    beta:
+      version: v1.0.3
+    early-access:
+      version: v1.0.1
