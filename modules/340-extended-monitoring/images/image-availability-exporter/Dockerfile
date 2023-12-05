@@ -17,7 +17,7 @@ RUN git clone --depth 1 --branch v0.5.0 ${SOURCE_REPO}/deckhouse/k8s-image-avail
 COPY patches/001-support-legacy-annotation.patch /src/
 RUN patch -p1 < 001-support-legacy-annotation.patch
 RUN CGO_ENABLED=0 go build -a -ldflags '-s -w -extldflags "-static"' -o /k8s-image-availability-exporter main.go && \
-    chown -R 64535:64535 /src/ && \
+    chown -R 64535:64535 /k8s-image-availability-exporter && \
     chmod 0700 /k8s-image-availability-exporter
 
 FROM $BASE_DISTROLESS
