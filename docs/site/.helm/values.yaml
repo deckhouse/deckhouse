@@ -16,14 +16,14 @@ moduleWatcher:
     _default:
       - registry.deckhouse.io/deckhouse/fe/modules
       - registry.flant.com/team/foxtrot/docs-example
-    prod-sel:
+    web-production:
       - registry.deckhouse.io/deckhouse/fe/modules
   scanInterval:
     _default: 15s
-    prod-sel: 5m
+    web-production: 5m
   logLevel:
     _default: 1
-    prod-sel: 4
+    web-production: 4
 
 resources:
   requests:
