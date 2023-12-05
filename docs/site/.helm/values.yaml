@@ -22,6 +22,9 @@ moduleWatcher:
   scanInterval:
     _default: 15s
     production: 5m
+  logLevel:
+    _default: 1
+    production: 4
 
 resources:
   requests:
