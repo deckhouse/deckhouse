@@ -25,3 +25,5 @@ type ModuleConfigExpansion interface{}
 type ModuleReleaseExpansion interface{}
 
 type ModuleSourceExpansion interface{}
+
+type ModuleUpdatePolicyExpansion interface{}

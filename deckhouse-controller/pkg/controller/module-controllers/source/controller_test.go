@@ -237,9 +237,10 @@ func createFakeController(ctx context.Context) *Controller {
 	informerFactory := externalversions.NewSharedInformerFactory(cs, 15*time.Minute)
 	moduleSourceInformer := informerFactory.Deckhouse().V1alpha1().ModuleSources()
 	moduleReleaseInformer := informerFactory.Deckhouse().V1alpha1().ModuleReleases()
+	moduleUpdatePolicyInformer := informerFactory.Deckhouse().V1alpha1().ModuleUpdatePolicies()
 	defer informerFactory.Start(ctx.Done())
 
-	return NewController(cs, moduleSourceInformer, moduleReleaseInformer, nil)
+	return NewController(cs, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, nil)
 }
 
 func createFakeModuleSource(cs versioned.Interface, yamlObj string) (*v1alpha1.ModuleSource, error) {

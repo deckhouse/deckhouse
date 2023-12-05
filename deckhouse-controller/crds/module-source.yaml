@@ -35,7 +35,7 @@ spec:
                 releaseChannel:
                   type: string
                   description: Desirable default release channel for modules in the current source.
-                  default: "alpha"
+                  x-doc-deprecated: true
                 registry:
                   type: object
                   required:
@@ -64,14 +64,22 @@ spec:
               properties:
                 syncTime:
                   type: string
-                  description: 'When the repository was synchronized.'
+                  description: "When the repository was synchronized."
                 modulesCount:
                   type: integer
                   description: "Number of modules available."
-                availableModules:
+                modules:
                   type: array
+                  description: "List of modules available from the source and their update policies."
                   items:
-                    type: string
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: "Module name."
+                      policy:
+                        type: string
+                        description: "Policy name."
                 message:
                   type: string
                 moduleErrors:
@@ -86,10 +94,6 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: "release channel"
-          type: string
-          jsonPath: .spec.releaseChannel
-          description: "Default release channel for modules inside this source."
         - name: count
           type: integer
           jsonPath: .status.modulesCount

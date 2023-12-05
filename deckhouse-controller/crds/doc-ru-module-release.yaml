@@ -35,6 +35,10 @@ spec:
           jsonPath: .status.phase
           type: string
           description: 'Показывает текущий статус релиза.'
+        - name: update policy
+          jsonPath: .metadata.labels.modules\.deckhouse\.io/update-policy
+          type: string
+          description: 'Применяемая политика обновления.'
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date

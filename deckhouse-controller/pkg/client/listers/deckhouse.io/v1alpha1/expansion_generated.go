@@ -33,3 +33,7 @@ type ModuleReleaseListerExpansion interface{}
 // ModuleSourceListerExpansion allows custom methods to be added to
 // ModuleSourceLister.
 type ModuleSourceListerExpansion interface{}
+
+// ModuleUpdatePolicyListerExpansion allows custom methods to be added to
+// ModuleUpdatePolicyLister.
+type ModuleUpdatePolicyListerExpansion interface{}
