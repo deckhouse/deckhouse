@@ -20,6 +20,7 @@ moduleLinkTitleUSAGE: Примеры использования
 moduleLinkTitleSETUP: Настройка
 moduleLinkTitleFAQ: FAQ
 moduleLinkTitleCRD: Custom Resources
+moduleLinkTitleCR: Custom Resources
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
 element_of_array: элемент массива
