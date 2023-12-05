@@ -21,13 +21,13 @@ moduleWatcher:
       - registry.deckhouse.io/deckhouse/fe/modules
   scanInterval:
     _default: 15s
-    production: 3m
+    production: 5m
 
 resources:
   requests:
     memory:
-      _default: 30M
-      web-production: 50M
+      _default: 32M
+      web-production: 64M
 
 vrouter:
   defaultGroup: "v1"
