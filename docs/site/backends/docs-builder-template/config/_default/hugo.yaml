@@ -40,6 +40,22 @@ markup:
       unsafe: false
       xhtml: false
 
+markup:
+  highlight:
+    anchorLineNos: false
+    codeFences: true
+    guessSyntax: false
+    hl_Lines: ""
+    hl_inline: false
+    lineAnchors: ""
+    lineNoStart: 1
+    lineNos: false
+    lineNumbersInTable: true
+    noClasses: true
+    noHl: false
+    style: native
+    tabWidth: 4
+
 
 # "404" "home" "page" "robotsTXT" "RSS" "section" "sitemap" "taxonomy" "term"
 disableKinds:
