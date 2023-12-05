@@ -23,6 +23,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch v{{ .TF.vsphere.version }}-flant.1 {{ $.SOURCE_REPO }}/deckhouse/3p-terraform-provider-vsphere.git /src
     - cd /src
+    - make fmt
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-vsphere/version.ProviderVersion={{ .TF.vsphere.version }}"
     - mv /go/bin/terraform-provider-vsphere /terraform-provider-vsphere
     - chmod -R 755 /terraform-provider-vsphere
