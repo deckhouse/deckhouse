@@ -565,8 +565,8 @@ import:
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
   before: setup
 - artifact: terraform-provider-azure # from modules/040-terraform-manager/images/terraform-manager-azure/werf.inc.yaml
-  add: /terraform-provider-azure
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azure
+  add: /terraform-provider-azurerm
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
   before: setup
 - artifact: terraform-provider-gcp # from modules/040-terraform-manager/images/terraform-manager-gcp/werf.inc.yaml
   add: /terraform-provider-gcp
