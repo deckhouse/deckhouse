@@ -24,11 +24,12 @@
     {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
       {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
       {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
-      {{/* if or ($.Page.IsAncestor .) (eq $.Page.File.Dir .File.Dir) (eq $.Page .) }}{{ $isActiveItem = true }}{{ end */}}
     {{ end}}
   {{ end}}
   {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
-  {{ $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem ) }}
+  {{ if $moduleChannel }}
+    {{ $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem ) }}
+  {{ end }}
 {{ end}}
 
 {{ $sidebarRootMenu = sort $sidebarRootMenu "title" "asc" }}
