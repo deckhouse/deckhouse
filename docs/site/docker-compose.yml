@@ -25,6 +25,8 @@ services:
     #image: nginx:latest
     volumes:
       - ".werf/nginx-dev.conf:/etc/nginx/nginx.conf:ro"
+      - "./backends/docs-builder-template/public/en:/app/en/source:ro"
+      - "./backends/docs-builder-template/public/ru:/app/ru/source:ro"
     ports:
       - "80:80"
     networks:

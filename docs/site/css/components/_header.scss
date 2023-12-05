@@ -98,6 +98,7 @@ html {
 
     .sub-menu {
       display: flex;
+      min-width: 180px;
       padding: 18px 16px 20px;
       gap: .6rem;
       flex-direction: column;

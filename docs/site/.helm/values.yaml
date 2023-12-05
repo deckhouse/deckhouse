@@ -11,11 +11,25 @@ certificateClusterIssuer:
   _default: letsencrypt
   prod-sel: letsencrypt-nginx-tfprod
 
+moduleWatcher:
+  registries:
+    _default:
+      - registry.deckhouse.io/deckhouse/fe/modules
+      - registry.flant.com/team/foxtrot/docs-example
+    production:
+      - registry.deckhouse.io/deckhouse/fe/modules
+  scanInterval:
+    _default: 15s
+    production: 5m
+  logLevel:
+    _default: 1
+    production: 4
+
 resources:
   requests:
     memory:
-      _default: 30M
-      web-production: 50M
+      _default: 32M
+      web-production: 64M
 
 vrouter:
   defaultGroup: "v1"

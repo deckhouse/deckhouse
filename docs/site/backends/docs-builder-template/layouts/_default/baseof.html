@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  {{ "<!--#include virtual=\"/includes/head-site.html\" -->"  | safeHTML }}
+  </head>
+  <body>
+    <div class="content">
+     {{ "<!--#include virtual=\"/includes/header.html\" -->"  | safeHTML }}
+
+     {{ "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
+     <div class="container">
+
+       <div class="breadcrumbs-container">
+         <div class="breadcrumbs__left">
+           <ol class="breadcrumbs">
+             <li class="breadcrumbs__item">{{ T "documentation" | humanize }}</li>
+           </ol>
+         </div>
+         <div class="breadcrumbs__right">
+           <ol class="breadcrumbs">
+             {{ partial "breadcrumbs" . }}
+           </ol>
+         </div>
+       </div>
+
+       <div class="layout-sidebar">
+         <div class="layout-sidebar__sidebar">
+           {{ partial "sidebar" . }}
+         </div>
+         <div class="layout-sidebar__content">
+           {{ block "main" . }}
+           {{ end }}
+         </div>
+         <div class="layout-sidebar__sidebar_right">
+           {{ partial "toc" . }}
+         </div>
+       </div>
+     </div>
+
+     </div>
+     {{ "<!--#include virtual=\"/includes/footer.html\" -->"  | safeHTML }}
+  </body>
+</html>
