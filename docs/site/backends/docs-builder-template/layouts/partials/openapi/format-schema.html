@@ -1,4 +1,4 @@
-{{/* Renders a JSON schema. (Calls itself recursively) */}}
+{{/* Renders a JSON schema. Calls itself recursively. */}}
 
 {{ $name := .name  }} {{/* parameter name */}}
 {{ $data := .data }} {{/* A map, containing the JSON schema. */}}
@@ -63,7 +63,7 @@
 
 
 {{ if reflect.IsMap $data }}
-  {{ partial "openapi/format-attributes" ( dict "name" $name "attributes" $data "parent" $parent "langData" $langData) }}
+  {{ partial "openapi/format-attributes" ( dict "name" $name "attributes" $data "parent" $parent "langData" $langData "linkAnchor" $linkAnchor) }}
 {{ end }}
 
 {{ if and (reflect.IsMap $data) $data.properties }}

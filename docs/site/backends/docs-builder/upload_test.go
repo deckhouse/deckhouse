@@ -24,27 +24,27 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 	}{
 		{
 			"./docs/install.md",
-			"/app/hugo/content/moduleName/stable/install.md",
+			"/app/hugo/content/modules/moduleName/stable/install.md",
 			true,
 		},
 		{
 			"./docs",
-			"/app/hugo/content/moduleName/stable",
+			"/app/hugo/content/modules/moduleName/stable",
 			true,
 		},
 		{
 			"docs/install.md",
-			"/app/hugo/content/moduleName/stable/install.md",
+			"/app/hugo/content/modules/moduleName/stable/install.md",
 			true,
 		},
 		{
 			"docs/README_RU.md",
-			"/app/hugo/content/moduleName/stable/README.ru.md",
+			"/app/hugo/content/modules/moduleName/stable/README.ru.md",
 			true,
 		},
 		{
 			"docs",
-			"/app/hugo/content/moduleName/stable",
+			"/app/hugo/content/modules/moduleName/stable",
 			true,
 		},
 		{
