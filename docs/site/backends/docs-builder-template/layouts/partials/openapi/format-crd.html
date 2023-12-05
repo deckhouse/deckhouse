@@ -14,7 +14,7 @@
 
 {{ $versionsSorted := split (partial "openapi/sort-api-versions" $versions ) "," }}
 
-{{ if gt ( $data.spec.versions | len ) 0 }}
+{{ if and $data.spec.versions (gt ( $data.spec.versions | len ) 0) }}
   {{ if gt ( $data.spec.versions | len ) 1 }}
     <p><font size="-1">Scope: {{ $data.spec.scope }}</font></p>
     <div class="tabs">
