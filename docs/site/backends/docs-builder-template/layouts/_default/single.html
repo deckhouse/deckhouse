@@ -6,9 +6,6 @@
 
     <div class="post-content">
 
-        <!-- Maybe TOC will be generated in other way -->
-        {{/* partial "toc" . */}}
-
         {{.Content}}
 
         {{ if and .IsPage ( or (eq .File.ContentBaseName "CRD") (eq .File.ContentBaseName "CONFIGURATION") ) }} {{/* Render module CRDs */}}

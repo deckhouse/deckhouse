@@ -1,3 +1,5 @@
+{{/* Renders a CRD.* /}}
+
 {{ $data := .data }}
 {{ $langData := .langData }}
 {{ $kind := .data.spec.names.kind }}
@@ -76,11 +78,3 @@
   </ul>
   {{- end }}
 {{ end }}
-
-{{/*
-Renders a CRD.
-Context:
-.name — name of the CRD.
-.data — map, containing the content of the CRD.
-.langData — map, containing the preferable language data. Can be empty.
-*/}}
