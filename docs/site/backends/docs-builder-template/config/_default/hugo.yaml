@@ -6,7 +6,6 @@ sectionPagesMenu: main
 # Language settings
 defaultContentLanguage: 'en'
 defaultContentLanguageInSubdir: false
-#contentDir: "content/en"
 
 uglyURLs: true
 #relativeURLs: true
