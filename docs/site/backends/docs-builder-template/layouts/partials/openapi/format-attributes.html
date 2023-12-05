@@ -2,6 +2,7 @@
 {{ $attributes := .attributes }}
 {{ $parent := .parent }}
 {{ $langData := .langData }}
+{{ $linkAnchor := .linkAnchor }}
 
 {{ $description :=  "" }}
 {{ if $langData.description }}
@@ -39,7 +40,7 @@
 {{ end }}
 
 {{ if or (isset $attributes "x-doc-examples") (isset $attributes "x-doc-example") (isset $attributes "example") (isset $attributes "x-examples") }}
-  {{ template "format-example" $attributes }}
+  {{ template "format-example" ( dict "attributes" $attributes "linkAnchor" $linkAnchor "name" .name ) }}
 {{ end }}
 
 {{ define "format-default" }}
@@ -90,4 +91,60 @@
 {{ end }}
 
 {{ define "format-example" }}
+  {{ $name := .name }}
+  {{ $attributes := .attributes }}
+  {{ $linkAnchor := printf "%sL" .linkAnchor }}
+  {{ $isArray := false }}
+  {{ $keyToUse := "" }}
+  {{ $title := T "example" | humanize }}
+  {{ $hl_opts := dict "lineNos" "false" "anchorLineNos" "true" "lineAnchors" $linkAnchor "guessSyntax" "true" "style" "native" }}
+
+  {{ if isset $attributes "x-doc-examples" }}
+    {{ $keyToUse = "x-doc-examples" }}
+    {{ $isArray = true }}
+  {{ else if isset $attributes "x-doc-example" }}
+    {{ $keyToUse = "x-doc-example" }}
+  {{ else if isset $attributes "example" }}
+    {{ $keyToUse = "example" }}
+  {{ else if isset $attributes "x-examples" }}
+    {{ $keyToUse = "x-examples" }}
+    {{ $isArray = true }}
+  {{ end }}
+
+  {{ $example := index $attributes $keyToUse }}
+
+  <!-- $example ({{ reflect.IsMap $example }})- {{ $example }} -->
+
+  {{ if and $isArray ( gt ($example | len) 1) }}
+    {{ $title = T "examples" | humanize }}
+  {{ end }}
+
+<p class="resources__attrs"><span class="resources__attrs_name">{{ $title }}:</span>
+
+  {{ if and $isArray }}<br>
+    {{ range $example }}
+      {{ if reflect.IsMap . }}
+         <pre>{{ transform.Highlight ( transform.Remarshal "yaml" ( . | jsonify ) ) "yaml" $hl_opts }}</pre>
+      {{ else if reflect.IsSlice . }}
+         <pre>{{ transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}</pre>
+      {{ else }}
+         {{ if hasPrefix . "```" }}
+           <pre>{{ . | markdownify }}</pre>
+         {{ else }}
+           <pre>{{ transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}</pre>
+         {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ else if reflect.IsMap $example }}
+     <pre>{{ transform.Highlight ( transform.Remarshal "yaml" ( $example | jsonify ) ) "yaml" $hl_opts }}</pre>
+  {{ else if reflect.IsSlice $example }}
+     <pre>{{ transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}</pre>
+  {{ else }}
+     {{ if hasPrefix $example "```" }}
+       <pre>{{ $example | markdownify }}</pre>
+     {{ else }}
+       <pre>{{ transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}</pre>
+     {{ end }}
+  {{ end }}
 {{ end }}
+
