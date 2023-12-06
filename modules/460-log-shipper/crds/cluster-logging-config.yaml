@@ -106,8 +106,10 @@ spec:
                                   - operator
                                 properties:
                                   key:
+                                    description: A label name.
                                     type: string
                                   operator:
+                                    description: A comparison operator.
                                     type: string
                                     enum:
                                       - In
@@ -115,6 +117,7 @@ spec:
                                       - Exists
                                       - DoesNotExist
                                   values:
+                                    description: A label value.
                                     type: array
                                     items:
                                       type: string
@@ -161,8 +164,10 @@ spec:
                             required: ["operator"]
                             properties:
                               key:
+                                description: A label name.
                                 type: string
                               operator:
+                                description: A comparison operator.
                                 type: string
                                 enum:
                                   - In
@@ -170,6 +175,7 @@ spec:
                                   - Exists
                                   - DoesNotExist
                               values:
+                                description: A label value.
                                 type: array
                                 items:
                                   type: string

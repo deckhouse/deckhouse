@@ -36,6 +36,14 @@ spec:
                               description: Список label'ов, которые должен иметь namespace.
                             matchExpressions:
                               description: Список выражений для label, которые должен иметь namespace.
+                              items:
+                                properties:
+                                  key:
+                                    description: Имя метки.
+                                  operator:
+                                    description: Оператор сравнения.
+                                  values:
+                                    description: Значение метки.
                     labelSelector:
                       description: |
                         Настройка `labelSelector` позволяет задать фильтр по label'ам пода.
@@ -46,6 +54,14 @@ spec:
                           description: Список label'ов, которые должен иметь под.
                         matchExpressions:
                           description: Список выражений для label, которые должен иметь под.
+                          items:
+                            properties:
+                              key:
+                                description: Имя метки.
+                              operator:
+                                description: Оператор сравнения.
+                              values:
+                                description: Значение метки.
                 file:
                   properties:
                     include:
