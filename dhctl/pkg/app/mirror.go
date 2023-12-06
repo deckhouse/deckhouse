@@ -100,7 +100,7 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("skip-gost-digest", "Do not calculate GOST R 34.11-2012 STREEBOG digest for downloaded bundle").
 		Envar(configEnvName("MIRROR_SKIP_GOST_DIGESTS")).
 		BoolVar(&MirrorSkipGOSTHashing)
-	cmd.Flag("images-bundle-path", "Path of tar bundle with pulled images").
+	cmd.Flag("images-bundle-path", "Path of tar bundle with pulled images. Should be a path to tar archive (.tar)").
 		Short('i').
 		PlaceHolder("PATH").
 		Required().
@@ -137,6 +137,10 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 
 func validateImagesBundlePathFlag() error {
 	MirrorTarBundle = filepath.Clean(MirrorTarBundle)
+	if filepath.Ext(MirrorTarBundle) != ".tar" {
+		return errors.New("--images-bundle-path should be a path to tar archive (.tar)")
+	}
+
 	stats, err := os.Stat(MirrorTarBundle)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
