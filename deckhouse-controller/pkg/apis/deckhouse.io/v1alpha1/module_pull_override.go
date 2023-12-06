@@ -61,7 +61,7 @@ type ModulePullOverrideSpec struct {
 }
 
 type ModulePullOverrideStatus struct {
-	RenewAt     metav1.Time `json:"renewAt"`
+	UpdatedAt   metav1.Time `json:"updatedAt"`
 	Message     string      `json:"message"`
 	ImageDigest string      `json:"imageDigest"`
 }

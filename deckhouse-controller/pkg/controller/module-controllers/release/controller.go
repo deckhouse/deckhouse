@@ -62,11 +62,13 @@ type Controller struct {
 	d8ClientSet versioned.Interface
 
 	moduleReleasesLister       d8listers.ModuleReleaseLister
-	moduleSourcesLister        d8listers.ModuleSourceLister
-	moduleUpdatePoliciesLister d8listers.ModuleUpdatePolicyLister
 	moduleReleasesSynced       cache.InformerSynced
+	moduleSourcesLister        d8listers.ModuleSourceLister
 	moduleSourcesSynced        cache.InformerSynced
+	moduleUpdatePoliciesLister d8listers.ModuleUpdatePolicyLister
 	moduleUpdatePoliciesSynced cache.InformerSynced
+	modulePullOverridesLister  d8listers.ModulePullOverrideLister
+	modulePullOverridesSynced  cache.InformerSynced
 
 	// releasesWorkqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -105,6 +107,7 @@ func NewController(ks kubernetes.Interface,
 	moduleReleaseInformer d8informers.ModuleReleaseInformer,
 	moduleSourceInformer d8informers.ModuleSourceInformer,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
+	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -122,6 +125,8 @@ func NewController(ks kubernetes.Interface,
 		moduleSourcesSynced:        moduleSourceInformer.Informer().HasSynced,
 		moduleUpdatePoliciesLister: moduleUpdatePolicyInformer.Lister(),
 		moduleUpdatePoliciesSynced: moduleUpdatePolicyInformer.Informer().HasSynced,
+		modulePullOverridesLister:  modulePullOverridesInformer.Lister(),
+		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
 		releasesWorkqueue:          workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:                     lg,
 
@@ -213,7 +218,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	go c.restartLoop(ctx)
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced, c.moduleUpdatePoliciesSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced, c.moduleUpdatePoliciesSynced, c.modulePullOverridesSynced); !ok {
 		c.logger.Fatal("failed to wait for caches to sync")
 	}
 
@@ -373,8 +378,28 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1
 		return ctrl.Result{}, nil
 	}
 
+	// if ModulePullOverride is set, don't process pending release, to avoid fs override
+	exists, err := c.isModulePullOverrideExists(mr.GetModuleSource(), mr.Spec.ModuleName)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
+
+	if exists {
+		c.logger.Infof("ModulePullOverride for module %q exists. Skipping release processing", mr.Spec.ModuleName)
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
 	// process only pending releases
 	return c.reconcilePendingRelease(ctx, mr)
+}
+
+func (c *Controller) isModulePullOverrideExists(sourceName, moduleName string) (bool, error) {
+	res, err := c.modulePullOverridesLister.List(labels.SelectorFromValidatedSet(map[string]string{"source": sourceName, "module": moduleName}))
+	if err != nil {
+		return false, err
+	}
+
+	return len(res) > 0, nil
 }
 
 func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {

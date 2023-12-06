@@ -32,6 +32,7 @@ spec:
               type: object
               required:
                 - source
+                - imageTag
               properties:
                 source:
                   type: string
@@ -45,15 +46,15 @@ spec:
               properties:
                 message:
                   type: string
-                renewAt:
+                updatedAt:
                   type: string
                 imageDigest:
                   type: string
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: sync
+        - name: "Updated At"
           type: date
-          jsonPath: .status.renewAt
+          jsonPath: .status.updatedAt
           format: date-time
           description: 'TODO.'

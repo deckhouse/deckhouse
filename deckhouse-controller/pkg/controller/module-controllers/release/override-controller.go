@@ -224,6 +224,19 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	mo := moRO.DeepCopy()
 
+	// add labels if empty
+	// source and release controllers are looking for this labels
+	if _, ok := mo.Labels["module"]; !ok {
+		if len(mo.Labels) > 0 {
+			mo.Labels["module"] = mo.Name
+			mo.Labels["source"] = mo.Spec.Source
+		} else {
+			mo.SetLabels(map[string]string{"module": mo.Name, "source": mo.Spec.Source})
+		}
+		_, err := c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, err
+	}
+
 	ms, err := c.moduleSourcesLister.Get(mo.Spec.Source)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -290,7 +303,7 @@ func (c *ModulePullOverrideController) enableModule(moduleName, symlinkPath stri
 }
 
 func (c *ModulePullOverrideController) updateModulePullOverrideStatus(ctx context.Context, mo *v1alpha1.ModulePullOverride) error {
-	mo.Status.RenewAt = metav1.Now()
+	mo.Status.UpdatedAt = metav1.Now()
 	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().UpdateStatus(ctx, mo, metav1.UpdateOptions{})
 
 	return err

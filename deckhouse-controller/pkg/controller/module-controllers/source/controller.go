@@ -379,7 +379,7 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 		Overrided: false,
 	}
 	// check if we have ModulePullOverride for source/module
-	exists, err := c.getModulePullOverride(ms.Name, moduleName)
+	exists, err := c.isModulePullOverrideExists(ms.Name, moduleName)
 	if err != nil {
 		log.Warnf("Unexpected error on getting ModulePullOverride for %s/%s", ms.Name, moduleName)
 		return "", av, err
@@ -427,7 +427,7 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 	return downloadResult.Checksum, av, nil
 }
 
-func (c *Controller) getModulePullOverride(sourceName, moduleName string) (bool, error) {
+func (c *Controller) isModulePullOverrideExists(sourceName, moduleName string) (bool, error) {
 	res, err := c.modulePullOverridesLister.List(labels.SelectorFromValidatedSet(map[string]string{"source": sourceName, "module": moduleName}))
 	if err != nil {
 		return false, err
