@@ -29,11 +29,3 @@ spec:
                 imageDigest:
                   type: string
                   description: "Чексумма образа docker."
-      subresources:
-        status: {}
-      additionalPrinterColumns:
-        - name: "Updated At"
-          type: date
-          jsonPath: .status.updatedAt
-          format: date-time
-          description: 'Когда модуль был скачан в последний раз.'

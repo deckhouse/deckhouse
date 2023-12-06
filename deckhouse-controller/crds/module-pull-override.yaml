@@ -59,7 +59,7 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: "Updated At"
+        - name: "Updated"
           type: date
           jsonPath: .status.updatedAt
           format: date-time
