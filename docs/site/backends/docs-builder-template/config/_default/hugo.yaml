@@ -74,11 +74,11 @@ languages:
     languageName: ""
     title: Modules
     weight: 0
-    baseURL: https://deckhouse.io/source/
+    baseURL: https://deckhouse.io/
   ru:
     disabled: false
     languageDirection: ""
     languageName: ""
     weight: 1
     title: Модули
-    baseURL: https://deckhouse.ru/source/
+    baseURL: https://deckhouse.ru/
