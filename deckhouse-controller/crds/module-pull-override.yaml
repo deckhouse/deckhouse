@@ -36,7 +36,7 @@ spec:
               properties:
                 source:
                   type: string
-                  description: "Reference to the ModuleSource with module."
+                  description: "Reference to the ModuleSource with the module."
                 imageTag:
                   type: string
                   description: "Docker image tag for module, which will be pulled."
@@ -49,6 +49,7 @@ spec:
               properties:
                 message:
                   type: string
+                  description: "Details of the resource status."
                 updatedAt:
                   type: string
                   description: "When the module was last downloaded."
