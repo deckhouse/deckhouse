@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"sigs.k8s.io/yaml"
 
@@ -162,6 +163,8 @@ func PushModulesToRegistry(
 		return fmt.Errorf("Read modules directory: %w", err)
 	}
 
+	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(authProvider, insecure)
+
 	for i, entry := range dirEntries {
 		if !entry.IsDir() {
 			continue
@@ -191,6 +194,22 @@ func PushModulesToRegistry(
 			return fmt.Errorf("Push module to registry: %w", err)
 		}
 
+		log.InfoF("Pushing index tag for module %s...\n", moduleName)
+
+		imageRef, err := name.ParseReference(registryPath+":"+moduleName, refOpts...)
+		if err != nil {
+			return fmt.Errorf("Parse image reference: %w", err)
+		}
+
+		img, err := random.Image(16, 1)
+		if err != nil {
+			return fmt.Errorf("random.Image: %w", err)
+		}
+
+		if err = remote.Write(imageRef, img, remoteOpts...); err != nil {
+			return fmt.Errorf("Write module index tag: %w", err)
+		}
+
 		log.InfoF("✅Module %s pushed successfully\n", moduleName)
 	}
 
@@ -203,13 +222,7 @@ func pushLayoutToRepo(
 	authProvider authn.Authenticator,
 	insecure bool,
 ) error {
-	refOpts, remoteOpts := []name.Option{}, []remote.Option{}
-	if insecure {
-		refOpts = append(refOpts, name.Insecure)
-	}
-	if authProvider != nil {
-		remoteOpts = append(remoteOpts, remote.WithAuth(authProvider))
-	}
+	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(authProvider, insecure)
 
 	index, err := imagesLayout.ImageIndex()
 	if err != nil {
