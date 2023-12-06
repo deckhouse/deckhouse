@@ -3,25 +3,20 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          type: object
           description: |
             Определяет режим и настройки обновления модуля.
           properties:
             spec:
-              type: object
               properties:
                 releaseChannel:
-                  type: string
                   description: |
                     Желаемый канал обновления модуля.
                     Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
                 update:
-                  type: object
                   description: |
                     Режим и настройки обновления модуля.
                   properties:
                     mode:
-                      type: string
                       description: |
                         Режим обновления минорных версий модуля.
                         - `Auto` (автоматический) — все обновления применяются автоматически.
@@ -31,29 +26,23 @@ spec:
 
                           Для подтверждения обновления в соответствующем ресурсе modulereleases.deckhouse.io необходимо установить поле `approved` в `true`.
                     windows:
-                      type: array
                       description: |
                         Расписание окон обновления модуля.
                       items:
-                        type: object
                         properties:
                           from:
-                            type: string
                             description: |
                               Время начала окна обновления (в часовом поясе UTC).
 
                               Должно быть меньше времени окончания окна обновления.
                           to:
-                            type: string
                             description: |
                               Время окончания окна обновления (в часовом поясе UTC).
 
                               Должно быть больше времени начала окна обновления.
                           days:
-                            type: array
                             description: Дни недели, в которые применяется окно обновлений.
                             items:
-                              type: string
                               description: День недели.
                 moduleReleaseSelector:
                   type: object
@@ -90,15 +79,10 @@ spec:
                             additionalProperties:
                               type: string
             status:
-              type: object
               properties:
                 matchedModules:
-                  type: string
                   description: Список модулей подпадающих под данные настройки обновления.
                 errors:
-                  type: string
-                  items:
-                    type: string
                   description: Список сообщений об ошибках.
       subresources:
         status: {}

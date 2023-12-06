@@ -18,4 +18,4 @@ spec:
                 source:
                   description: 'Имя ModuleSource, если модуль скачан из него (иначе пусто).'
                 description:
-                  description: 'Описание модуля'
+                  description: 'Описание модуля.'
