@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -57,9 +55,9 @@ type ModulePullOverride struct {
 }
 
 type ModulePullOverrideSpec struct {
-	Source       string        `json:"source"`
-	ImageTag     string        `json:"imageTag"`
-	ScanInterval time.Duration `json:"scanInterval"`
+	Source       string   `json:"source"`
+	ImageTag     string   `json:"imageTag"`
+	ScanInterval Duration `json:"scanInterval"`
 }
 
 type ModulePullOverrideStatus struct {
