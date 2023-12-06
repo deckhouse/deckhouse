@@ -304,5 +304,5 @@ spec:
   {{- end }}
   parameters:
     ranges:
-      - min_replicas: {{- $cr.spec.policies.replicaLimits.min_replicas | default 1 }}
-        max_replicas: {{- $cr.spec.policies.replicaLimits.max_replicas | default 10 }}
+      - min_replicas: 1
+        max_replicas: 10
