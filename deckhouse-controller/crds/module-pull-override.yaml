@@ -47,6 +47,8 @@ spec:
                   type: string
                 renewAt:
                   type: string
+                imageDigest:
+                  type: string
       subresources:
         status: {}
       additionalPrinterColumns:

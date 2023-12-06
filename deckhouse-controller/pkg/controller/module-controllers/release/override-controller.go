@@ -20,7 +20,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
 
@@ -65,10 +64,6 @@ type ModulePullOverrideController struct {
 
 	externalModulesDir string
 	symlinksDir        string
-
-	m sync.RWMutex
-	// <override-name>/<imageTag>: <image checksum>
-	checksums map[string]string
 }
 
 // NewModulePullOverrideController returns a new sample controller
@@ -96,7 +91,6 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 
 		logger: lg,
 
-		checksums:          make(map[string]string),
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
 	}
@@ -150,20 +144,6 @@ func (c *ModulePullOverrideController) Run(ctx context.Context, workers int) {
 
 	<-ctx.Done()
 	c.logger.Info("Shutting down workers")
-}
-
-func (c *ModulePullOverrideController) getChecksum(moduleName, imageTag string) string {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	return c.checksums[moduleName+"/"+imageTag]
-}
-
-func (c *ModulePullOverrideController) setChecksum(moduleName, imageTag, checksum string) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	c.checksums[moduleName+"/"+imageTag] = checksum
 }
 
 func (c *ModulePullOverrideController) enqueueModuleOverride(obj interface{}) {
@@ -254,7 +234,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	}
 
 	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, c.getChecksum(mo.Name, mo.Spec.ImageTag))
+	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()
 		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
@@ -268,8 +248,6 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
-	c.setChecksum(mo.Name, mo.Spec.ImageTag, newChecksum)
-
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleDef.Weight, mo.Name))
 	err = c.enableModule(mo.Name, symlinkPath)
 	if err != nil {
@@ -282,6 +260,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	}
 
 	mo.Status.Message = ""
+	mo.Status.ImageDigest = newChecksum
 
 	if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
 		return ctrl.Result{Requeue: true}, e

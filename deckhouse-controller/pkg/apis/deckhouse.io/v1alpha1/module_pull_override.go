@@ -61,8 +61,9 @@ type ModulePullOverrideSpec struct {
 }
 
 type ModulePullOverrideStatus struct {
-	RenewAt metav1.Time `json:"renewAt"`
-	Message string      `json:"message"`
+	RenewAt     metav1.Time `json:"renewAt"`
+	Message     string      `json:"message"`
+	ImageDigest string      `json:"imageDigest"`
 }
 
 // +k8s:deepcopy-gen=true
