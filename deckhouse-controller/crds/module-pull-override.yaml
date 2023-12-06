@@ -46,7 +46,7 @@ spec:
                 message:
                   type: string
                 renewAt:
-                  type: date
+                  type: string
       subresources:
         status: {}
       additionalPrinterColumns:
