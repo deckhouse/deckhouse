@@ -292,7 +292,7 @@ spec:
   match:
     kinds:
       - apiGroups: [ "apps" ]
-        kinds: [ "Deployment" ]
+        kinds: [ "Deployment", "ReplicaSet", "StatefulSet" ]
     { { - include "constraint_selector" (list $cr) } }
   { { - end } }
   parameters:
