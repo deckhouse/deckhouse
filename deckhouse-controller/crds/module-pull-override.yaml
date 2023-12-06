@@ -64,3 +64,7 @@ spec:
           jsonPath: .status.updatedAt
           format: date-time
           description: 'When the module was last downloaded.'
+        - name: msg
+          type: string
+          jsonPath: .status.message
+          description: 'Detailed description.'
