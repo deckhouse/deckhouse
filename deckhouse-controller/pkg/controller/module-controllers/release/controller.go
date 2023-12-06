@@ -70,12 +70,12 @@ type Controller struct {
 	modulePullOverridesLister  d8listers.ModulePullOverrideLister
 	modulePullOverridesSynced  cache.InformerSynced
 
-	// releasesWorkqueue is a rate limited work queue. This is used to queue work to be
+	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
 	// time, and makes it easy to ensure we are never processing the same item
 	// simultaneously in two different workers.
-	releasesWorkqueue workqueue.RateLimitingInterface
+	workqueue workqueue.RateLimitingInterface
 
 	logger logger.Logger
 
@@ -127,7 +127,7 @@ func NewController(ks kubernetes.Interface,
 		moduleUpdatePoliciesSynced: moduleUpdatePolicyInformer.Informer().HasSynced,
 		modulePullOverridesLister:  modulePullOverridesInformer.Lister(),
 		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
-		releasesWorkqueue:          workqueue.NewRateLimitingQueue(ratelimiter),
+		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:                     lg,
 
 		sourceModules: make(map[string]string),
@@ -169,7 +169,7 @@ func (c *Controller) enqueueModuleRelease(obj interface{}) {
 		return
 	}
 	c.logger.Debugf("enqueue ModuleRelease: %s", key)
-	c.releasesWorkqueue.Add(key)
+	c.workqueue.Add(key)
 }
 
 func (c *Controller) emitRestart(msg string) {
@@ -208,7 +208,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	}
 
 	defer utilruntime.HandleCrash()
-	defer c.releasesWorkqueue.ShutDown()
+	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
 	c.logger.Info("Starting ModuleRelease controller")
@@ -237,7 +237,7 @@ func (c *Controller) runWorker(ctx context.Context) {
 }
 
 func (c *Controller) processNextWorkItem(ctx context.Context) bool {
-	obj, shutdown := c.releasesWorkqueue.Get()
+	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
 	}
@@ -250,7 +250,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 		// not call Forget if a transient error occurs, instead the item is
 		// put back on the workqueue and attempted again after a back-off
 		// period.
-		defer c.releasesWorkqueue.Done(obj)
+		defer c.workqueue.Done(obj)
 		var key string
 		var ok bool
 		// We expect strings to come off the workqueue. These are of the
@@ -262,7 +262,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			// As the item in the workqueue is actually invalid, we call
 			// Forget here else we'd go into a loop of attempting to
 			// process a work item that is invalid.
-			c.releasesWorkqueue.Forget(obj)
+			c.workqueue.Forget(obj)
 			c.logger.Errorf("expected string in workqueue but got %#v", obj)
 			return nil
 		}
@@ -271,14 +271,14 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 		result, err := c.Reconcile(ctx, key)
 		switch {
 		case result.RequeueAfter != 0:
-			c.releasesWorkqueue.AddAfter(key, result.RequeueAfter)
+			c.workqueue.AddAfter(key, result.RequeueAfter)
 
 		case result.Requeue:
 			// Put the item back on the workqueue to handle any transient errors.
-			c.releasesWorkqueue.AddRateLimited(key)
+			c.workqueue.AddRateLimited(key)
 
 		default:
-			c.releasesWorkqueue.Forget(key)
+			c.workqueue.Forget(key)
 		}
 
 		return err

@@ -36,10 +36,13 @@ spec:
               properties:
                 source:
                   type: string
+                  description: "Reference to the ModuleSource with module."
                 imageTag:
                   type: string
+                  description: "Docker image tag for module, which will be pulled."
                 scanInterval:
                   type: string
+                  description: "Scan interval for checking the image digest. If digest is changed, module will be pulled."
                   default: 15s
             status:
               type: object
@@ -48,8 +51,10 @@ spec:
                   type: string
                 updatedAt:
                   type: string
+                  description: "When the module was last downloaded."
                 imageDigest:
                   type: string
+                  description: "Digest of the module image."
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -57,4 +62,4 @@ spec:
           type: date
           jsonPath: .status.updatedAt
           format: date-time
-          description: 'TODO.'
+          description: 'When the module was last downloaded.'

@@ -57,7 +57,7 @@ type ModulePullOverrideController struct {
 	modulePullOverridesLister d8listers.ModulePullOverrideLister
 	modulePullOverridesSynced cache.InformerSynced
 
-	overridesWorkqueue workqueue.RateLimitingInterface
+	workqueue workqueue.RateLimitingInterface
 
 	logger logger.Logger
 
@@ -86,7 +86,7 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 		modulePullOverridesLister: modulePullOverridesInformer.Lister(),
 		modulePullOverridesSynced: modulePullOverridesInformer.Informer().HasSynced,
 
-		overridesWorkqueue: workqueue.NewRateLimitingQueue(ratelimiter),
+		workqueue: workqueue.NewRateLimitingQueue(ratelimiter),
 
 		logger: lg,
 
@@ -124,7 +124,7 @@ func (c *ModulePullOverrideController) Run(ctx context.Context, workers int) {
 	}
 
 	defer utilruntime.HandleCrash()
-	defer c.overridesWorkqueue.ShutDown()
+	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
 	c.logger.Info("Starting controller")
@@ -153,7 +153,7 @@ func (c *ModulePullOverrideController) enqueueModuleOverride(obj interface{}) {
 		return
 	}
 	c.logger.Debugf("enqueue ModuleOverride: %s", key)
-	c.overridesWorkqueue.Add(key)
+	c.workqueue.Add(key)
 }
 
 func (c *ModulePullOverrideController) runWorker(ctx context.Context) {
@@ -162,18 +162,18 @@ func (c *ModulePullOverrideController) runWorker(ctx context.Context) {
 }
 
 func (c *ModulePullOverrideController) processNextModuleOverride(ctx context.Context) bool {
-	obj, shutdown := c.overridesWorkqueue.Get()
+	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
 	}
 
 	err := func(obj interface{}) error {
-		defer c.overridesWorkqueue.Done(obj)
+		defer c.workqueue.Done(obj)
 		var key string
 		var ok bool
 
 		if key, ok = obj.(string); !ok {
-			c.overridesWorkqueue.Forget(obj)
+			c.workqueue.Forget(obj)
 			c.logger.Errorf("expected string in workqueue but got %#v", obj)
 			return nil
 		}
@@ -182,14 +182,14 @@ func (c *ModulePullOverrideController) processNextModuleOverride(ctx context.Con
 		result, err := c.OverrideReconcile(ctx, key)
 		switch {
 		case result.RequeueAfter != 0:
-			c.overridesWorkqueue.AddAfter(key, result.RequeueAfter)
+			c.workqueue.AddAfter(key, result.RequeueAfter)
 
 		case result.Requeue:
 			// Put the item back on the workqueue to handle any transient errors.
-			c.overridesWorkqueue.AddRateLimited(key)
+			c.workqueue.AddRateLimited(key)
 
 		default:
-			c.overridesWorkqueue.Forget(key)
+			c.workqueue.Forget(key)
 		}
 
 		return err
@@ -239,6 +239,10 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	ms, err := c.moduleSourcesLister.Get(mo.Spec.Source)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			mo.Status.Message = fmt.Sprintf("ModuleSource %q not found", mo.Spec.Source)
+			if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 		}
 
