@@ -257,12 +257,12 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
-		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval}, nil
+		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
 	if newChecksum == "" {
 		// module is up-to-date
-		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval}, nil
+		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
 	c.setChecksum(mo.Name, mo.Spec.ImageTag, newChecksum)
@@ -290,7 +290,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		c.logger.Fatalf("Send SIGUSR2 signal failed: %s", err)
 	}
 
-	return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval}, nil
+	return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 }
 
 func (c *ModulePullOverrideController) enableModule(moduleName, symlinkPath string) error {
