@@ -15,7 +15,7 @@
               },
               {
                 "title": "Modules",
-                "url": "/source/modules/",
+                "url": "/modules/",
                 "target": ""
               }
             ]
@@ -121,7 +121,7 @@
               },
               {
                 "title": "Модули",
-                "url": "/source/modules/",
+                "url": "/modules/",
                 "target": ""
               }
             ]

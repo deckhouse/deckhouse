@@ -45,9 +45,9 @@ spec:
               path: /healthz
               port: 8080
           volumeMounts:
-            - mountPath: /app/en/source
+            - mountPath: /app/en
               name: modules-docs-en
-            - mountPath: /app/ru/source
+            - mountPath: /app/ru
               name: modules-docs-ru
         - name: builder
           command: ["/app/server", "-highAvailability"]
