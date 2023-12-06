@@ -108,6 +108,9 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 			oldM := old.(*v1alpha1.ModulePullOverride)
 
 			if newM.Spec == oldM.Spec {
+				if _, ok := newM.Labels["renew"]; ok {
+					controller.enqueueModuleOverride(newM)
+				}
 				return
 			}
 
@@ -282,6 +285,11 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 
 	if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
 		return ctrl.Result{Requeue: true}, e
+	}
+
+	if _, ok := mo.Labels["renew"]; ok {
+		delete(mo.Labels, "renew")
+		_, _ = c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
 	}
 
 	c.logger.Infof("Restarting Deckhouse because %q ModulePullOverride image was updated", mo.Name)
