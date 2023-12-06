@@ -81,6 +81,9 @@ spec:
                       policy:
                         type: string
                         description: "Policy name."
+                      overrided:
+                        type: boolean
+                        description: "If ModulePullOverride for this module exists."
                 message:
                   type: string
                 moduleErrors:
