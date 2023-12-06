@@ -303,7 +303,6 @@ spec:
     {{- include "constraint_selector" (list $cr) }}
   {{- end }}
   parameters:
-    replicas:
-      ranges:
-        - min_replicas: 1
-          max_replicas: 10
+    ranges:
+      - min_replicas: 1
+        max_replicas: 10
