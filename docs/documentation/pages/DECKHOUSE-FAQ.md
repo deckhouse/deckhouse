@@ -105,17 +105,17 @@ In this case, Deckhouse does not check for updates and even doesn't apply patch 
 It is highly not recommended to disable automatic updates! It will block updates to patch releases that may contain critical vulnerabilities and bugs fixes.
 {% endalert %}
 
-### How to apply an update bypassing update windows?
+### How do I apply an update without having to wait for the update window?
 
-To apply an update immediately, regardless update windows, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) resource.
+To apply an update immediately without having to wait for the update window, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) resource.
 
-An example of the  command to set the annotation of skipping update windows for version `v1.56.2`:
+An example of a command to set the annotation to skip the update windows for version `v1.56.2`:
 
 ```shell
 kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
 ```
 
-An example of a resource with the annotation of skipping update windows:
+An example of a resource with the update window skipping annotation in place:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
