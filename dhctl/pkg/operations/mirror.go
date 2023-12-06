@@ -17,12 +17,14 @@ package operations
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -102,7 +104,7 @@ func validateLayoutsIfRequired(layouts *mirror.ImageLayouts, validationMode mirr
 
 func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 	log.InfoF("Find Deckhouse images to push...\t")
-	ociLayouts, err := findLayoutsToPush(mirrorCtx)
+	ociLayouts, modulesList, err := findLayoutsToPush(mirrorCtx)
 	if err != nil {
 		return fmt.Errorf("Find OCI Image Layouts to push: %w", err)
 	}
@@ -113,6 +115,8 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 		return fmt.Errorf("OCI Image Layouts are invalid: %w", err)
 	}
 	log.InfoLn("✅")
+
+	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 
 	for originalRepo, ociLayout := range ociLayouts {
 		log.InfoLn("Mirroring", originalRepo)
@@ -138,7 +142,6 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 				return fmt.Errorf("read image: %w", err)
 			}
 
-			refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 			ref, err := name.ParseReference(imageRef, refOpts...)
 			if err != nil {
 				return fmt.Errorf("parse oci layout reference: %w", err)
@@ -152,10 +155,44 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 		log.InfoF("Repo %s is mirrored ✅\n", originalRepo)
 	}
 
+	log.InfoF("All repositories are mirrored ✅\nPushing modules tags...\n")
+
+	if err = pushModulesTags(mirrorCtx, modulesList); err != nil {
+		return fmt.Errorf("Push modules tags: %w", err)
+	}
+
+	log.InfoF("All modules tags are pushed ✅\n")
+
 	return nil
 }
 
-func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, error) {
+func pushModulesTags(mirrorCtx *mirror.Context, modulesList []string) error {
+	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
+	modulesRepo := path.Join(mirrorCtx.RegistryHost, mirrorCtx.RegistryPath, "modules")
+	pushCount := 1
+	for _, moduleName := range modulesList {
+		log.InfoF("[%d / %d] Pushing module tag for %s...\t", pushCount, len(modulesList), moduleName)
+
+		imageRef, err := name.ParseReference(modulesRepo+":"+moduleName, refOpts...)
+		if err != nil {
+			return fmt.Errorf("Parse image reference: %w", err)
+		}
+
+		img, err := random.Image(32, 1)
+		if err != nil {
+			return fmt.Errorf("random.Image: %w", err)
+		}
+
+		if err = remote.Write(imageRef, img, remoteOpts...); err != nil {
+			return fmt.Errorf("Write module index tag: %w", err)
+		}
+		log.InfoLn("✅")
+		pushCount++
+	}
+	return nil
+}
+
+func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, []string, error) {
 	deckhouseIndexRef := mirrorCtx.DeckhouseRegistryRepo
 	installersIndexRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "install")
 	releasesIndexRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "release-channel")
@@ -166,15 +203,15 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, error
 
 	deckhouseLayout, err := layout.FromPath(deckhouseLayoutPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	installersLayout, err := layout.FromPath(installersLayoutPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	releasesLayout, err := layout.FromPath(releasesLayoutPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	modulesPath := filepath.Join(mirrorCtx.UnpackedImagesPath, mirrorCtx.DeckhouseRegistryRepo, "modules")
@@ -185,26 +222,29 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, error
 	}
 
 	dirs, err := os.ReadDir(modulesPath)
+	modulesNames := make([]string, 0)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, dir := range dirs {
 		if !dir.IsDir() {
 			continue
 		}
 
-		moduleRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "modules", dir.Name())
-		moduleReleasesRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "modules", dir.Name(), "release")
-		moduleLayout, err := layout.FromPath(filepath.Join(modulesPath, dir.Name()))
+		moduleName := dir.Name()
+		modulesNames = append(modulesNames, moduleName)
+		moduleRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "modules", moduleName)
+		moduleReleasesRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "modules", moduleName, "release")
+		moduleLayout, err := layout.FromPath(filepath.Join(modulesPath, moduleName))
 		if err != nil {
-			return nil, fmt.Errorf("create module layout from path: %w", err)
+			return nil, nil, fmt.Errorf("create module layout from path: %w", err)
 		}
-		moduleReleaseLayout, err := layout.FromPath(filepath.Join(modulesPath, dir.Name(), "release"))
+		moduleReleaseLayout, err := layout.FromPath(filepath.Join(modulesPath, moduleName, "release"))
 		if err != nil {
-			return nil, fmt.Errorf("create module release layout from path: %w", err)
+			return nil, nil, fmt.Errorf("create module release layout from path: %w", err)
 		}
 		ociLayouts[moduleRef] = moduleLayout
 		ociLayouts[moduleReleasesRef] = moduleReleaseLayout
 	}
-	return ociLayouts, nil
+	return ociLayouts, modulesNames, nil
 }
