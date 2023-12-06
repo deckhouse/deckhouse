@@ -106,6 +106,27 @@ spec:
 Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
 {% endalert %}
 
+### Как применить обновление минуя окна обновлений?
+
+Чтобы применить обновление немедленно, не дожидаясь ближайшего окна обновлений, установите в соответствующем ресурсе [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+
+Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
+
+```shell
+kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
+```
+
+Пример ресурса с установленной аннотацией пропуска окон обновлений:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/apply-now: "true"
+...
+```
+
 ### Как понять, какие изменения содержит обновление и как это повлияет на работу кластера?
 
 Информацию о всех версиях Deckhouse можно найти в [списке релизов](https://github.com/deckhouse/deckhouse/releases) Deckhouse.
