@@ -103,7 +103,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
-		SkipGOSTDigests:       app.MirrorSkipGOSTHashing,
+		DoGOSTDigests:         app.MirrorDoGOSTDigest,
 		RegistryHost:          app.MirrorRegistryHost,
 		DeckhouseRegistryRepo: app.MirrorDeckhouseRegistryRepo,
 		RegistryAuth: authn.FromConfig(authn.AuthConfig{
@@ -154,28 +154,25 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 		return err
 	}
 
-	err = log.Process("mirror", "Compute GOST digest", func() error {
-		if mirrorCtx.SkipGOSTDigests {
-			log.InfoLn("GOST digest calculation skipped")
+	if mirrorCtx.DoGOSTDigests {
+		err = log.Process("mirror", "Compute GOST digest", func() error {
+			tarBundle, err := os.Open(mirrorCtx.TarBundlePath)
+			if err != nil {
+				return fmt.Errorf("Read tar bundle: %w", err)
+			}
+			gostDigest, err := mirror.CalculateBlobGostDigest(bufio.NewReaderSize(tarBundle, 128*1024))
+			if err != nil {
+				return fmt.Errorf("Calculate GOST Checksum: %w", err)
+			}
+			if err = os.WriteFile(mirrorCtx.TarBundlePath+".gostsum", []byte(gostDigest), 0666); err != nil {
+				return fmt.Errorf("Write GOST Checksum: %w", err)
+			}
+			log.InfoF("Digest: %s\nWritten to %s\n", gostDigest, mirrorCtx.TarBundlePath+".gostsum")
 			return nil
-		}
-
-		tarBundle, err := os.Open(mirrorCtx.TarBundlePath)
+		})
 		if err != nil {
-			return fmt.Errorf("Read tar bundle: %w", err)
+			return err
 		}
-		gostDigest, err := mirror.CalculateBlobGostDigest(bufio.NewReaderSize(tarBundle, 128*1024))
-		if err != nil {
-			return fmt.Errorf("Calculate GOST Checksum: %w", err)
-		}
-		if err = os.WriteFile(mirrorCtx.TarBundlePath+".gostsum", []byte(gostDigest), 0666); err != nil {
-			return fmt.Errorf("Write GOST Checksum: %w", err)
-		}
-		log.InfoF("Digest: %s\nWritten to %s\n", gostDigest, mirrorCtx.TarBundlePath+".gostsum")
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	if err = os.RemoveAll(app.TmpDirName); err != nil {
