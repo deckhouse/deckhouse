@@ -37,7 +37,7 @@
     {{- include "container_duplicates_policy" (list $context $cr) }}
   {{- end }}
   {{- if hasKey $cr.spec.policies "replicaLimits" }}
-    {{ - include "replica_limits_policy" (list $context $cr) }}
+    {{- include "replica_limits_policy" (list $context $cr) }}
   {{- end }}
 {{- end }}
 
