@@ -56,7 +56,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"priorityClassNames":["foo","bar"],
 			"checkHostNetworkDNSPolicy":true,
 			"checkContainerDuplicates":true,
-			"replicaLimits":{"min_replicas": 1, "max_replicas": 10}
+			"replicaLimits":{"replicas": 2}
 		},
 		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
 		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
