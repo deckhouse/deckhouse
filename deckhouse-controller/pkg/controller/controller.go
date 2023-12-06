@@ -59,9 +59,10 @@ type DeckhouseController struct {
 	sourceModules map[string]string
 
 	// separate controllers
-	informerFactory         externalversions.SharedInformerFactory
-	moduleSourceController  *source.Controller
-	moduleReleaseController *release.Controller
+	informerFactory              externalversions.SharedInformerFactory
+	moduleSourceController       *source.Controller
+	moduleReleaseController      *release.Controller
+	modulePullOverrideController *release.ModulePullOverrideController
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager) (*DeckhouseController, error) {
@@ -79,6 +80,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	moduleSourceInformer := informerFactory.Deckhouse().V1alpha1().ModuleSources()
 	moduleReleaseInformer := informerFactory.Deckhouse().V1alpha1().ModuleReleases()
 	moduleUpdatePolicyInformer := informerFactory.Deckhouse().V1alpha1().ModuleUpdatePolicies()
+	modulePullOverrideInformer := informerFactory.Deckhouse().V1alpha1().ModulePullOverrides()
 
 	return &DeckhouseController{
 		ctx:        ctx,
@@ -89,9 +91,10 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		deckhouseModules: make(map[string]*models.DeckhouseModule),
 		sourceModules:    make(map[string]string),
 
-		informerFactory:         informerFactory,
-		moduleSourceController:  source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, mm),
-		moduleReleaseController: release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer),
+		informerFactory:              informerFactory,
+		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm),
+		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer),
+		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer),
 	}, nil
 }
 
@@ -114,6 +117,7 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 
 	go dml.moduleSourceController.Run(dml.ctx, 3)
 	go dml.moduleReleaseController.Run(dml.ctx, 3)
+	go dml.modulePullOverrideController.Run(dml.ctx, 1)
 
 	return nil
 }

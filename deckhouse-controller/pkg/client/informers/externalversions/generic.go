@@ -57,6 +57,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().Modules().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("moduleconfigs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleConfigs().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("modulepulloverrides"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModulePullOverrides().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("modulereleases"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleReleases().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("modulesources"):

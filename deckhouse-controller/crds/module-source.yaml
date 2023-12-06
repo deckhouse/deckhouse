@@ -4,7 +4,8 @@ metadata:
   name: modulesources.deckhouse.io
   labels:
     heritage: deckhouse
-    module: external-module-manager
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
 spec:
   group: deckhouse.io
   scope: Cluster

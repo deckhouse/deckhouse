@@ -68,12 +68,12 @@ type Controller struct {
 	moduleSourcesSynced        cache.InformerSynced
 	moduleUpdatePoliciesSynced cache.InformerSynced
 
-	// workqueue is a rate limited work queue. This is used to queue work to be
+	// releasesWorkqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
 	// time, and makes it easy to ensure we are never processing the same item
 	// simultaneously in two different workers.
-	workqueue workqueue.RateLimitingInterface
+	releasesWorkqueue workqueue.RateLimitingInterface
 
 	logger logger.Logger
 
@@ -100,7 +100,12 @@ const (
 )
 
 // NewController returns a new sample controller
-func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, moduleReleaseInformer d8informers.ModuleReleaseInformer, moduleSourceInformer d8informers.ModuleSourceInformer, moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer) *Controller {
+func NewController(ks kubernetes.Interface,
+	d8ClientSet versioned.Interface,
+	moduleReleaseInformer d8informers.ModuleReleaseInformer,
+	moduleSourceInformer d8informers.ModuleSourceInformer,
+	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
+) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
 		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(50), 300)},
@@ -117,7 +122,7 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, mod
 		moduleSourcesSynced:        moduleSourceInformer.Informer().HasSynced,
 		moduleUpdatePoliciesLister: moduleUpdatePolicyInformer.Lister(),
 		moduleUpdatePoliciesSynced: moduleUpdatePolicyInformer.Informer().HasSynced,
-		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
+		releasesWorkqueue:          workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:                     lg,
 
 		sourceModules: make(map[string]string),
@@ -125,11 +130,11 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, mod
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
 
-		delayTimer: time.NewTimer(5 * time.Second),
+		delayTimer: time.NewTimer(3 * time.Second),
 	}
 
 	// Set up an event handler for when ModuleRelease resources change
-	_, _ = moduleReleaseInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := moduleReleaseInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueModuleRelease,
 		UpdateFunc: func(old, new interface{}) {
 			newMS := new.(*v1alpha1.ModuleRelease)
@@ -144,6 +149,9 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, mod
 		},
 		DeleteFunc: controller.enqueueModuleRelease,
 	})
+	if err != nil {
+		log.Fatalf("add event handler failed: %s", err)
+	}
 
 	return controller
 }
@@ -156,12 +164,12 @@ func (c *Controller) enqueueModuleRelease(obj interface{}) {
 		return
 	}
 	c.logger.Debugf("enqueue ModuleRelease: %s", key)
-	c.workqueue.Add(key)
+	c.releasesWorkqueue.Add(key)
 }
 
 func (c *Controller) emitRestart(msg string) {
 	c.m.Lock()
-	c.delayTimer.Reset(5 * time.Second)
+	c.delayTimer.Reset(3 * time.Second)
 	c.restartReason = msg
 	c.m.Unlock()
 }
@@ -178,7 +186,7 @@ func (c *Controller) restartLoop(ctx context.Context) {
 					c.logger.Fatalf("Send SIGUSR2 signal failed: %s", err)
 				}
 			}
-			c.delayTimer.Reset(5 * time.Second)
+			c.delayTimer.Reset(3 * time.Second)
 
 		case <-ctx.Done():
 			return
@@ -195,7 +203,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	}
 
 	defer utilruntime.HandleCrash()
-	defer c.workqueue.ShutDown()
+	defer c.releasesWorkqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
 	c.logger.Info("Starting ModuleRelease controller")
@@ -205,7 +213,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	go c.restartLoop(ctx)
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced, c.moduleUpdatePoliciesSynced); !ok {
 		c.logger.Fatal("failed to wait for caches to sync")
 	}
 
@@ -224,7 +232,7 @@ func (c *Controller) runWorker(ctx context.Context) {
 }
 
 func (c *Controller) processNextWorkItem(ctx context.Context) bool {
-	obj, shutdown := c.workqueue.Get()
+	obj, shutdown := c.releasesWorkqueue.Get()
 	if shutdown {
 		return false
 	}
@@ -237,7 +245,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 		// not call Forget if a transient error occurs, instead the item is
 		// put back on the workqueue and attempted again after a back-off
 		// period.
-		defer c.workqueue.Done(obj)
+		defer c.releasesWorkqueue.Done(obj)
 		var key string
 		var ok bool
 		// We expect strings to come off the workqueue. These are of the
@@ -249,7 +257,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			// As the item in the workqueue is actually invalid, we call
 			// Forget here else we'd go into a loop of attempting to
 			// process a work item that is invalid.
-			c.workqueue.Forget(obj)
+			c.releasesWorkqueue.Forget(obj)
 			c.logger.Errorf("expected string in workqueue but got %#v", obj)
 			return nil
 		}
@@ -258,14 +266,14 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 		result, err := c.Reconcile(ctx, key)
 		switch {
 		case result.RequeueAfter != 0:
-			c.workqueue.AddAfter(key, result.RequeueAfter)
+			c.releasesWorkqueue.AddAfter(key, result.RequeueAfter)
 
 		case result.Requeue:
 			// Put the item back on the workqueue to handle any transient errors.
-			c.workqueue.AddRateLimited(key)
+			c.releasesWorkqueue.AddRateLimited(key)
 
 		default:
-			c.workqueue.Forget(key)
+			c.releasesWorkqueue.Forget(key)
 		}
 
 		return err
@@ -756,9 +764,6 @@ func (c *Controller) readModulesFromFS(dir string) (map[string]string, error) {
 
 // restoreAbsentSourceModules checks ModuleReleases with Deployed status and restore them on the FS
 func (c *Controller) restoreAbsentSourceModules() error {
-	// directory for symlinks will actual versions to all external-modules
-	symlinksDir := filepath.Join(c.externalModulesDir, "modules")
-
 	releaseList, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
@@ -770,7 +775,7 @@ func (c *Controller) restoreAbsentSourceModules() error {
 			continue
 		}
 
-		moduleDir := filepath.Join(symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, item.Spec.ModuleName))
+		moduleDir := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, item.Spec.ModuleName))
 		_, err = os.Stat(moduleDir)
 		if err != nil && os.IsNotExist(err) {
 			log.Infof("Module %q is absent on file system. Restoring it from source %q", item.Spec.ModuleName, item.GetModuleSource())
@@ -793,7 +798,7 @@ func (c *Controller) restoreAbsentSourceModules() error {
 
 			// restore symlink
 			moduleRelativePath := filepath.Join("../", moduleName, moduleVersion)
-			symlinkPath := filepath.Join(symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, moduleName))
+			symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, moduleName))
 			err = restoreModuleSymlink(c.externalModulesDir, symlinkPath, moduleRelativePath)
 			if err != nil {
 				log.Warnf("Create symlink for module %q failed: %s", moduleName, err)
