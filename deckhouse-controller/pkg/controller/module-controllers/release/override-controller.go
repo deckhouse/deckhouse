@@ -233,7 +233,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 			mo.SetLabels(map[string]string{"module": mo.Name, "source": mo.Spec.Source})
 		}
 		_, err := c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
-		return ctrl.Result{RequeueAfter: 1 * time.Second}, err
+		return ctrl.Result{RequeueAfter: 500 * time.Millisecond}, err
 	}
 
 	ms, err := c.moduleSourcesLister.Get(mo.Spec.Source)
