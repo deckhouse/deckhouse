@@ -54,6 +54,14 @@ func TestTransformSnippet(t *testing.T) {
 		})
 
 		filters = append(filters, v1alpha1.Filter{
+			Field:    "",
+			Operator: v1alpha1.FilterOpIn,
+			Values: []interface{}{
+				".*",
+			},
+		})
+
+		filters = append(filters, v1alpha1.Filter{
 			Field:    "severity",
 			Operator: v1alpha1.FilterOpIn,
 			Values: []interface{}{
@@ -88,7 +96,7 @@ func TestTransformSnippet(t *testing.T) {
 		tr, err := BuildFromMapSlice("prefix", "testit", transforms)
 		require.NoError(t, err)
 
-		assert.Len(t, tr, 5)
+		assert.Len(t, tr, 6)
 		assert.Len(t, tr[0].GetInputs(), 0)
 
 		data, err := json.MarshalIndent(tr, "", "\t")
