@@ -39,10 +39,10 @@ spec:
                   description: "Reference to the ModuleSource with the module."
                 imageTag:
                   type: string
-                  description: "Docker image tag for module, which will be pulled."
+                  description: "Module container image tag, which will be pulled."
                 scanInterval:
                   type: string
-                  description: "Scan interval for checking the image digest. If digest is changed, module will be pulled."
+                  description: "Scan interval for checking the image digest. If the digest changes, the module is updated."
                   default: 15s
             status:
               type: object
@@ -52,7 +52,7 @@ spec:
                   description: "Details of the resource status."
                 updatedAt:
                   type: string
-                  description: "When the module was last downloaded."
+                  description: "When the module was last updated."
                 imageDigest:
                   type: string
                   description: "Digest of the module image."
@@ -63,7 +63,7 @@ spec:
           type: date
           jsonPath: .status.updatedAt
           format: date-time
-          description: 'When the module was last downloaded.'
+          description: 'When the module was last updated.'
         - name: msg
           type: string
           jsonPath: .status.message
