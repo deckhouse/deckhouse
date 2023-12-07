@@ -4,7 +4,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: PrivilegedUser
-  name: d8:user-authz:cni-cilium:privilegeduser
+  name: d8:user-authz:cni-cilium:privileged-user
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
@@ -40,7 +40,7 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: ClusterEditor
-  name: d8:user-authz:cni-cilium:clustereditor
+  name: d8:user-authz:cni-cilium:cluster-editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
