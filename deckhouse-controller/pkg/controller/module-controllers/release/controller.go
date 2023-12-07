@@ -579,12 +579,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	return ctrl.Result{}, nil
 }
 
-// nolint: revive
 func (c *Controller) sendDocumentation(ctx context.Context, _ string) {
-	return
-	// TODO: placeholder for documentation
-
-	// nolint: govet
 	list, err := c.kubeclientset.DiscoveryV1().EndpointSlices("d8-system").List(ctx, metav1.ListOptions{LabelSelector: "app=documentation"})
 	if err != nil {
 		// TODO: handle error
@@ -594,8 +589,7 @@ func (c *Controller) sendDocumentation(ctx context.Context, _ string) {
 	for _, eps := range list.Items {
 		var port int32
 		for _, p := range eps.Ports {
-			// TODO: find builder port
-			if *p.Name == "???" {
+			if p.Name != nil && *p.Name == "builder-http" {
 				port = *p.Port
 			}
 		}
