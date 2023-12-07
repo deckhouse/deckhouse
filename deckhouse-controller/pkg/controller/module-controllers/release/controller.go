@@ -758,7 +758,6 @@ func (c *Controller) deleteModulesWithAbsentRelease() error {
 			c.logger.Warnf("Module %q has neither ModuleRelease nor ModuleOverride. Purging from FS", module)
 			_ = os.RemoveAll(moduleLinkPath)
 		}
-
 	}
 
 	return nil
