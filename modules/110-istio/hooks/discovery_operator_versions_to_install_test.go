@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
