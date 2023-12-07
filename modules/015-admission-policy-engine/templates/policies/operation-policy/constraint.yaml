@@ -298,10 +298,10 @@ metadata:
 spec:
   match:
     kinds:
-      - apiGroups: [ "apps" ]
-        kinds: [ "Deployment", "ReplicaSet", "StatefulSet" ]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"]
     {{- include "constraint_selector" (list $cr) }}
-  {{- end }}
+{{- end }}
   parameters:
     ranges:
     - min_replicas: 1
