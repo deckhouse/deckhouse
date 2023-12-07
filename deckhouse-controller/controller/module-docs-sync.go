@@ -28,8 +28,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
 	log "github.com/sirupsen/logrus"
