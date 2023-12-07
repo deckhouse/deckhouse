@@ -18,10 +18,12 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -73,6 +75,10 @@ func createModuleUpdatePolicies(input *go_hook.HookInput, dc dependency.Containe
 		if err != nil {
 			return err
 		}
+		rc, err := camelCaseReleaseChannel(moduleSource.Spec.ReleaseChannel)
+		if err != nil {
+			continue
+		}
 
 		// if not exists, ensure ModuleUpdatePolicy
 		deckhouseMup := &v1alpha1.ModuleUpdatePolicy{
@@ -91,7 +97,7 @@ func createModuleUpdatePolicies(input *go_hook.HookInput, dc dependency.Containe
 						},
 					},
 				},
-				ReleaseChannel: moduleSource.Spec.ReleaseChannel,
+				ReleaseChannel: rc,
 				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 					Mode: "Auto",
 				},
@@ -111,4 +117,14 @@ func createModuleUpdatePolicies(input *go_hook.HookInput, dc dependency.Containe
 	input.PatchCollector.MergePatch(d8SystemPatch, "v1", "Namespace", "", "d8-system")
 
 	return nil
+}
+
+func camelCaseReleaseChannel(channel string) (string, error) {
+	releaseChannel := strcase.ToCamel(channel)
+	switch releaseChannel {
+	case "Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid":
+		return releaseChannel, nil
+	default:
+		return "", fmt.Errorf("couldn't properly camelcase release channel")
+	}
 }

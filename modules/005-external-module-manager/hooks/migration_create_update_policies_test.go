@@ -78,6 +78,7 @@ spec:
     dockerCfg: cfg
     repo: dev-registry.deckhouse.io/sys/deckhouse-oss/modules
     scheme: HTTPS
+  releaseChannel: Stable
 `
 		customMss = `
 ---
@@ -92,6 +93,7 @@ spec:
     dockerCfg: cfg
     repo: dev-registry.deckhouse.io/sys/deckhouse-oss/modules
     scheme: HTTPS
+  releaseChannel: Stable
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
@@ -103,6 +105,7 @@ spec:
     dockerCfg: cfg
     repo: dev-registry.deckhouse.io/sys/deckhouse-oss/modules
     scheme: HTTPS
+  releaseChannel: Alfa
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
@@ -114,6 +117,7 @@ spec:
     dockerCfg: cfg
     repo: dev-registry.deckhouse.io/sys/deckhouse-oss/modules
     scheme: HTTPS
+  releaseChannel: RockSolid
 `
 	)
 
