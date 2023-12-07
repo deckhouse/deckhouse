@@ -64,6 +64,8 @@ type Controller struct {
 	moduleReleasesSynced       cache.InformerSynced
 	moduleUpdatePoliciesLister d8listers.ModuleUpdatePolicyLister
 	moduleUpdatePoliciesSynced cache.InformerSynced
+	modulePullOverridesLister  d8listers.ModulePullOverrideLister
+	modulePullOverridesSynced  cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -92,6 +94,7 @@ func NewController(
 	moduleSourceInformer d8informers.ModuleSourceInformer,
 	moduleReleaseInformer d8informers.ModuleReleaseInformer,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
+	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 	mv moduleValidator) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -108,6 +111,8 @@ func NewController(
 		moduleReleasesSynced:       moduleReleaseInformer.Informer().HasSynced,
 		moduleUpdatePoliciesLister: moduleUpdatePolicyInformer.Lister(),
 		moduleUpdatePoliciesSynced: moduleUpdatePolicyInformer.Informer().HasSynced,
+		modulePullOverridesLister:  modulePullOverridesInformer.Lister(),
+		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
 		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
 
 		logger: lg,
@@ -170,7 +175,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	// Wait for the caches to be synced before starting workers
 	c.logger.Debug("Waiting for ModuleSourceInformer caches to sync")
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleSourcesSynced, c.moduleReleasesSynced, c.moduleUpdatePoliciesSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleSourcesSynced, c.moduleReleasesSynced, c.moduleUpdatePoliciesSynced, c.modulePullOverridesSynced); !ok {
 		c.logger.Fatal("failed to wait for caches to sync")
 	}
 
@@ -312,12 +317,8 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 	sort.Strings(moduleNames)
 
 	// form available modules structure
-	availableModules := make([]v1alpha1.AvailableModule, len(moduleNames))
-	for idx, module := range moduleNames {
-		availableModules[idx].Name = module
-	}
+	availableModules := make([]v1alpha1.AvailableModule, 0, len(moduleNames))
 
-	ms.Status.AvailableModules = availableModules
 	ms.Status.ModulesCount = len(moduleNames)
 
 	modulesChecksums := c.getModuleSourceChecksum(ms.Name)
@@ -336,50 +337,21 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 			continue
 		}
 
-		// check if we have an update policy for the moduleName
-		policy, err := getReleasePolicy(ms.Name, moduleName, policies)
-		if err != nil {
-			// if policy not found - drop all previous module's errors
-			if errors.Is(err, ErrNoPolicyFound) {
-				delete(modulesErrorsMap, moduleName)
-				// if another error - update module's error status field
-			} else {
-				modulesErrorsMap[moduleName] = err.Error()
-			}
-			updateAvailableModules(ms.Status.AvailableModules, moduleName, "")
-			continue
-		}
-		updateAvailableModules(ms.Status.AvailableModules, moduleName, policy.Name)
-
-		checksum := modulesChecksums[moduleName]
-		downloadResult, err := md.DownloadFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, checksum)
+		newChecksum, av, err := c.processSourceModule(ctx, md, ms, moduleName, modulesChecksums[moduleName], policies)
+		availableModules = append(availableModules, av)
 		if err != nil {
 			modulesErrorsMap[moduleName] = err.Error()
 			continue
 		}
 
-		if downloadResult.ModuleDefinition != nil {
-			err = c.validateModule(downloadResult.ModuleDefinition)
-			if err != nil {
-				modulesErrorsMap[moduleName] = err.Error()
-				continue
-			}
-		}
-
 		delete(modulesErrorsMap, moduleName)
 
-		if downloadResult.Checksum == checksum {
-			c.logger.Infof("Module %s checksum has not been changed. Skip update.", moduleName)
-			continue
+		if newChecksum != "" {
+			modulesChecksums[moduleName] = newChecksum
 		}
-
-		err = c.createModuleRelease(ctx, ms, moduleName, policy.Name, downloadResult)
-		if err != nil {
-			// if module release creation failed, we have to restart the reconcile loop
-			return ctrl.Result{Requeue: true}, err
-		}
-		modulesChecksums[moduleName] = downloadResult.Checksum
 	}
+
+	ms.Status.AvailableModules = availableModules
 
 	if len(modulesErrorsMap) > 0 {
 		ms.Status.Msg = "Some errors occurred. Inspect status for details"
@@ -398,6 +370,70 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 
 	// everything is ok, check source on the other iteration
 	return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+}
+
+func (c *Controller) processSourceModule(ctx context.Context, md *downloader.ModuleDownloader, ms *v1alpha1.ModuleSource, moduleName, moduleChecksum string, policies []*v1alpha1.ModuleUpdatePolicy) ( /*checksum*/ string, v1alpha1.AvailableModule, error) {
+	av := v1alpha1.AvailableModule{
+		Name:      moduleName,
+		Policy:    "",
+		Overrided: false,
+	}
+	// check if we have ModulePullOverride for source/module
+	exists, err := c.isModulePullOverrideExists(ms.Name, moduleName)
+	if err != nil {
+		log.Warnf("Unexpected error on getting ModulePullOverride for %s/%s", ms.Name, moduleName)
+		return "", av, err
+	}
+
+	if exists {
+		av.Overrided = true
+		return "", av, nil
+	}
+
+	// check if we have an update policy for the moduleName
+	policy, err := getReleasePolicy(ms.Name, moduleName, policies)
+	if err != nil {
+		// if policy not found - drop all previous module's errors
+		if errors.Is(err, ErrNoPolicyFound) {
+			return "", av, nil
+			// if another error - update module's error status field
+		}
+		return "", av, err
+	}
+	av.Policy = policy.Name
+
+	downloadResult, err := md.DownloadFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, moduleChecksum)
+	if err != nil {
+		return "", av, err
+	}
+
+	if downloadResult.ModuleDefinition != nil {
+		err = c.validateModule(downloadResult.ModuleDefinition)
+		if err != nil {
+			return "", av, err
+		}
+	}
+
+	if downloadResult.Checksum == moduleChecksum {
+		c.logger.Infof("Module %s checksum has not been changed. Skip update.", moduleName)
+		return "", av, nil
+	}
+
+	err = c.createModuleRelease(ctx, ms, moduleName, policy.Name, downloadResult)
+	if err != nil {
+		return "", av, err
+	}
+
+	return downloadResult.Checksum, av, nil
+}
+
+func (c *Controller) isModulePullOverrideExists(sourceName, moduleName string) (bool, error) {
+	res, err := c.modulePullOverridesLister.List(labels.SelectorFromValidatedSet(map[string]string{"source": sourceName, "module": moduleName}))
+	if err != nil {
+		return false, err
+	}
+
+	return len(res) > 0, nil
 }
 
 func (c *Controller) Reconcile(ctx context.Context, sourceName string) (ctrl.Result, error) {
@@ -567,14 +603,4 @@ func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.Module
 	}
 
 	return matchedPolicy, nil
-}
-
-// updateAvailableModules updates a ModuleSource's status field Modules with applied policies
-func updateAvailableModules(availableModules []v1alpha1.AvailableModule, moduleName, policyName string) {
-	for idx, module := range availableModules {
-		if module.Name == moduleName {
-			availableModules[idx].Policy = policyName
-			break
-		}
-	}
 }

@@ -4,7 +4,8 @@ metadata:
   name: modulesources.deckhouse.io
   labels:
     heritage: deckhouse
-    module: external-module-manager
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -80,6 +81,9 @@ spec:
                       policy:
                         type: string
                         description: "Policy name."
+                      overrided:
+                        type: boolean
+                        description: "If ModulePullOverride for this module exists."
                 message:
                   type: string
                 moduleErrors:

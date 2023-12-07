@@ -1,0 +1,70 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: modulepulloverrides.deckhouse.io
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: modulepulloverrides
+    singular: modulepulloverride
+    kind: ModulePullOverride
+    shortNames:
+      - mpo
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - source
+                - imageTag
+              properties:
+                source:
+                  type: string
+                  description: "Reference to the ModuleSource with the module."
+                imageTag:
+                  type: string
+                  description: "Module container image tag, which will be pulled."
+                scanInterval:
+                  type: string
+                  description: "Scan interval for checking the image digest. If the digest changes, the module is updated."
+                  default: 15s
+            status:
+              type: object
+              properties:
+                message:
+                  type: string
+                  description: "Details of the resource status."
+                updatedAt:
+                  type: string
+                  description: "When the module was last updated."
+                imageDigest:
+                  type: string
+                  description: "Digest of the module image."
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: "Updated"
+          type: date
+          jsonPath: .status.updatedAt
+          format: date-time
+          description: 'When the module was last updated.'
+        - name: msg
+          type: string
+          jsonPath: .status.message
+          description: 'Detailed description.'

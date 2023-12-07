@@ -24,7 +24,6 @@ import (
 	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,9 +34,9 @@ type FakeModuleReleases struct {
 	Fake *FakeDeckhouseV1alpha1
 }
 
-var modulereleasesResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "modulereleases"}
+var modulereleasesResource = v1alpha1.SchemeGroupVersion.WithResource("modulereleases")
 
-var modulereleasesKind = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleRelease"}
+var modulereleasesKind = v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease")
 
 // Get takes name of the moduleRelease, and returns the corresponding moduleRelease object, and an error if there is any.
 func (c *FakeModuleReleases) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ModuleRelease, err error) {

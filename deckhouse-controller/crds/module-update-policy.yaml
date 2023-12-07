@@ -4,7 +4,8 @@ metadata:
   name: moduleupdatepolicies.deckhouse.io
   labels:
     heritage: deckhouse
-    module: external-module-manager
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -39,7 +40,7 @@ spec:
                     Desirable module release channel.
                     The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
                   default: Stable
-                  enum: 
+                  enum:
                     - Alpha
                     - Beta
                     - EarlyAccess
@@ -125,7 +126,7 @@ spec:
                           type: array
                           description: An array of set-based expressions.
                           items:
-                            required: 
+                            required:
                               - key
                               - operator
                             oneOf:

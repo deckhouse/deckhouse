@@ -43,8 +43,8 @@ spec:
                       policy:
                         type: string
                         description: Имя политики.
-                  type: array
-                  description: Список доступных для установки модулей в данном репозитории.
+                      overrided:
+                        description: Показывает, есть ли ресурс ModulePullOverride для данного модуля.
                 message:
                   type: string
                   description: Сообщение с детальной ошибкой.

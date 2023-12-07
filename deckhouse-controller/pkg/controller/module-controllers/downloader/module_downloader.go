@@ -64,6 +64,37 @@ type ModuleDownloadResult struct {
 	ModuleDefinition *models.DeckhouseModuleDefinition
 }
 
+// DownloadDevImageTag downloads image tag and store it in the .../<moduleName>/dev fs path
+// if checksum is equal to a module image digest - do nothing
+// otherwise return new digest
+func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *models.DeckhouseModuleDefinition, error) {
+	moduleStorePath := path.Join(md.externalModulesDir, moduleName, "dev")
+
+	img, err := md.fetchImage(moduleName, imageTag)
+	if err != nil {
+		return "", nil, err
+	}
+
+	digest, err := img.Digest()
+	if err != nil {
+		return "", nil, err
+	}
+
+	if digest.String() == checksum {
+		// module is up-to-date
+		return "", nil, nil
+	}
+
+	err = md.fetchAndCopyModuleByVersion(moduleName, imageTag, moduleStorePath)
+	if err != nil {
+		return "", nil, err
+	}
+
+	def := md.fetchModuleDefinition(moduleName, moduleStorePath)
+
+	return digest.String(), def, nil
+}
+
 func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion string) error {
 	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
 
@@ -92,18 +123,7 @@ func (md *ModuleDownloader) DownloadFromReleaseChannel(moduleName, releaseChanne
 		return res, err
 	}
 
-	moduleDef := md.fetchModuleDefinition(moduleVersionPath)
-	if moduleDef == nil {
-		moduleDef = &models.DeckhouseModuleDefinition{
-			Name:   moduleName,
-			Weight: defaultModuleWeight,
-			Path:   moduleVersionPath,
-		}
-	}
-
-	if moduleDef.Weight == 0 {
-		moduleDef.Weight = defaultModuleWeight
-	}
+	moduleDef := md.fetchModuleDefinition(moduleName, moduleVersionPath)
 
 	res.ModuleWeight = moduleDef.Weight
 	res.ModuleDefinition = moduleDef
@@ -111,33 +131,41 @@ func (md *ModuleDownloader) DownloadFromReleaseChannel(moduleName, releaseChanne
 	return res, nil
 }
 
-func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath string) error {
-	// TODO: if module exists on fs - skip this step
-
+func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, error) {
 	regCli, err := cr.NewClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
 	if err != nil {
-		return fmt.Errorf("fetch module error: %v", err)
+		return nil, fmt.Errorf("fetch module error: %v", err)
 	}
 
-	img, err := regCli.Image(moduleVersion)
-	if err != nil {
-		return fmt.Errorf("fetch module version error: %v", err)
-	}
+	return regCli.Image(imageTag)
+}
 
-	_ = os.RemoveAll(moduleVersionPath)
+func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) error {
+	_ = os.RemoveAll(moduleStorePath)
 
-	err = md.copyModuleToFS(moduleVersionPath, img)
+	err := md.copyModuleToFS(moduleStorePath, img)
 	if err != nil {
 		return fmt.Errorf("copy module error: %v", err)
 	}
 
 	// inject registry to values
-	err = injectRegistryToModuleValues(moduleVersionPath, md.ms)
+	err = injectRegistryToModuleValues(moduleStorePath, md.ms)
 	if err != nil {
 		return fmt.Errorf("inject registry error: %v", err)
 	}
 
 	return nil
+}
+
+func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath string) error {
+	// TODO: if module exists on fs - skip this step
+
+	img, err := md.fetchImage(moduleName, moduleVersion)
+	if err != nil {
+		return err
+	}
+
+	return md.storeModule(moduleVersionPath, img)
 }
 
 func (md *ModuleDownloader) copyModuleToFS(rootPath string, img v1.Image) error {
@@ -241,24 +269,34 @@ func (md *ModuleDownloader) fetchModuleVersionFromReleaseChannel(moduleName, rel
 	return "v" + moduleMetadata.Version.String(), digest.String(), nil
 }
 
-func (md *ModuleDownloader) fetchModuleDefinition(moduleVersionPath string) *models.DeckhouseModuleDefinition {
+func (md *ModuleDownloader) fetchModuleDefinition(moduleName, moduleVersionPath string) *models.DeckhouseModuleDefinition {
+	defaultModuleDefinition := &models.DeckhouseModuleDefinition{
+		Name:   moduleName,
+		Weight: defaultModuleWeight,
+		Path:   moduleVersionPath,
+	}
+
 	moduleDefFile := path.Join(moduleVersionPath, models.ModuleDefinitionFile)
 
 	if _, err := os.Stat(moduleDefFile); err != nil {
-		return nil
+		return defaultModuleDefinition
 	}
 
 	var def models.DeckhouseModuleDefinition
 
 	f, err := os.Open(moduleDefFile)
 	if err != nil {
-		return nil
+		return defaultModuleDefinition
 	}
 	defer f.Close()
 
 	err = yaml.NewDecoder(f).Decode(&def)
 	if err != nil {
-		return nil
+		return defaultModuleDefinition
+	}
+
+	if def.Weight == 0 {
+		def.Weight = defaultModuleWeight
 	}
 
 	return &def
