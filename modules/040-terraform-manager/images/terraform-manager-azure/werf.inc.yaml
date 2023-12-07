@@ -5,8 +5,8 @@ git:
   to: /deckhouse/candi/cloud-providers/azure
 import:
 - artifact: terraform-provider-azure
-  add: /terraform-provider-azure
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64
+  add: /terraform-provider-azurerm
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
   before: setup
 ---
 artifact: terraform-provider-azure
@@ -24,6 +24,6 @@ shell:
     - cd /src
     - make fmt
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-azurerm/version.ProviderVersion={{ .TF.azure.version }}"
-    - mv /go/bin/terraform-provider-azurerm /terraform-provider-azure
-    - chmod -R 755 /terraform-provider-azure
-    - chown 64535:64535 /terraform-provider-azure
+    - mv /go/bin/terraform-provider-azurerm /terraform-provider-azurerm
+    - chmod -R 755 /terraform-provider-azurerm
+    - chown 64535:64535 /terraform-provider-azurerm
