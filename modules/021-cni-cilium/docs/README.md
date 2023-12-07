@@ -50,4 +50,4 @@ If you change the Cilium operating mode (the [tunnelMode](configuration.html#par
 
 ## A note about disabling the kube-proxy module
 
-Cilium completely replaces the functionality of the kube-proxy module, so it is automatically turned off when cni-cilium module is enabled.
+Cilium has the same functionality as the `kube-proxy` module, so the latter is automatically disabled when the `cni-cilium` module is enabled.
