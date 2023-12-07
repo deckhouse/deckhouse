@@ -27,6 +27,6 @@ ADD https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.im
 
 ## How do I disable the virtualization module?
 
-Before the virtualization module can be disabled, you must uninstall all virtual machines and disks.
+Before you can disable the virtualization module, all virtual machines and disks must first be uninstalled.
 
-Use the [script](https://github.com/deckhouse/deckhouse/blob/main/modules/490-virtualization/hack/remove-module.sh) to disable the module.
+To disable the module, use the following [script](https://github.com/deckhouse/deckhouse/blob/main/tools/virtualization/remove-module.sh).

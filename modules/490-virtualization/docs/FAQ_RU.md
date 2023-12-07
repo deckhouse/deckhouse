@@ -27,6 +27,6 @@ ADD https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.im
 
 ## Как выключить модуль виртуализации?
 
-Прежде чем выключить модуль виртуализации, необходимо предварительно удалить все виртуальные машины и диски.
+Прежде чем выключить модуль виртуализации, все виртуальные машины и диски должны быть предварительно удалены.
 
-Для удаления модуля воспользуйтесь следующим [скриптом](https://github.com/deckhouse/deckhouse/blob/main/modules/490-virtualization/hack/remove-module.sh).
+Для удаления модуля, воспользуйтесь следующим [скриптом](https://github.com/deckhouse/deckhouse/blob/main/tools/virtualization/remove-module.sh).
