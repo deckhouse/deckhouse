@@ -38,6 +38,8 @@ metadata:
   name: cloud-controller-manager
   namespace: d8-cloud-provider-vcd
   {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+  annotations:
+    checksum/config: { { printf "%s%s" (include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum } }
 spec:
   maxUnavailable: 1
   selector:
