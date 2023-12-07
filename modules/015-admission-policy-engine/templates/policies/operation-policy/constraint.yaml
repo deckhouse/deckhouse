@@ -293,7 +293,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8ReplicaLimits
 metadata:
-  name: replica-limits
+  name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   match:
