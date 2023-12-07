@@ -492,6 +492,18 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 			}
 
+			// download desired module version
+			ms, err := c.moduleSourcesLister.Get(mr.GetModuleSource())
+			if err != nil {
+				return ctrl.Result{Requeue: true}, err
+			}
+
+			md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+			err = md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
+			if err != nil {
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+			}
+
 			modulePath := generateModulePath(moduleName, release.Spec.Version.String())
 			newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
 

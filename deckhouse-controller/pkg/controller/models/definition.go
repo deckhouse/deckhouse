@@ -22,7 +22,7 @@ const (
 
 type DeckhouseModuleDefinition struct {
 	Name        string   `yaml:"name"`
-	Weight      uint32   `yaml:"weight"`
+	Weight      uint32   `yaml:"weight,omitempty"`
 	Tags        []string `yaml:"tags"`
 	Description string   `yaml:"description"`
 
