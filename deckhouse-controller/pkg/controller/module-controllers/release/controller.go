@@ -720,7 +720,7 @@ func (c *Controller) RunPreflightCheck(ctx context.Context) error {
 		return nil
 	}
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced, c.moduleUpdatePoliciesSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced, c.moduleUpdatePoliciesSynced, c.modulePullOverridesSynced); !ok {
 		c.logger.Fatal("failed to wait for caches to sync")
 	}
 
@@ -752,11 +752,13 @@ func (c *Controller) deleteModulesWithAbsentRelease() error {
 		delete(fsModulesLinks, release.Spec.ModuleName)
 	}
 
-	if len(fsModulesLinks) > 0 {
-		for module, moduleLinkPath := range fsModulesLinks {
-			c.logger.Warnf("Module %q has no releases. Purging from FS", module)
+	for module, moduleLinkPath := range fsModulesLinks {
+		_, err = c.modulePullOverridesLister.Get(module)
+		if err != nil && apierrors.IsNotFound(err) {
+			c.logger.Warnf("Module %q has neither ModuleRelease nor ModuleOverride. Purging from FS", module)
 			_ = os.RemoveAll(moduleLinkPath)
 		}
+
 	}
 
 	return nil
