@@ -1,63 +1,12 @@
 {
-  "__inputs": [
-    {
-      "name": "ds_prometheus",
-      "label": "main",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__requires": [
-    {
-      "type": "panel",
-      "id": "gauge",
-      "name": "Gauge",
-      "version": ""
-    },
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "8.2.6"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph (old)",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -72,18 +21,20 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
-  "gnetId": null,
   "graphTooltip": 2,
-  "id": null,
-  "iteration": 1659360879340,
+  "id": 38,
+  "iteration": 1701959751046,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -96,7 +47,237 @@
       "type": "row"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 0,
+        "y": 1
+      },
+      "id": 36,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "count(linstor_node_state{nodetype=\"SATELLITE\",node=~\"$node\"} == 2) OR on() vector(0)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Nodes",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 3,
+        "y": 1
+      },
+      "id": 38,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "count(linstor_storage_pool_capacity_total_bytes{driver!=\"DISKLESS\",node=~\"$node\"}) OR on() vector(0)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Storage Pools",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 6,
+        "y": 1
+      },
+      "id": 35,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(linstor_resource_definition_count{}) OR on() vector(0)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Resource Definitions",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 9,
+        "y": 1
+      },
+      "id": 37,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "count(linstor_resource_state) OR on() vector(0)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Resources",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -122,9 +303,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 10,
-        "w": 18,
-        "x": 0,
+        "h": 9,
+        "w": 6,
+        "x": 12,
         "y": 1
       },
       "id": 41,
@@ -141,7 +322,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -155,7 +336,9 @@
       "type": "gauge"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -176,7 +359,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 6,
         "x": 18,
         "y": 1
@@ -197,7 +380,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -211,7 +394,197 @@
       "type": "stat"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 0,
+        "y": 4
+      },
+      "id": 51,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "count(linstor_node_state{nodetype=\"SATELLITE\", node=~\"$node\"} != 2) OR on() vector(0)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Offline Nodes",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 4,
+        "y": 4
+      },
+      "id": 50,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "count(linstor_storage_pool_error_count{driver!=\"DISKLESS\", node=~\"$node\"} != 0) OR on() vector(0)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Failed Storage Pools",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 8,
+        "y": 4
+      },
+      "id": 49,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "exemplar": true,
+          "expr": "count((linstor_volume_state != 1) != 4) OR on() vector(0)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Failed Resources",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -233,10 +606,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 6,
         "x": 18,
-        "y": 5
+        "y": 4
       },
       "id": 44,
       "options": {
@@ -254,7 +627,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -268,7 +641,80 @@
       "type": "stat"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "dark-yellow",
+                "value": 6
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 52,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (module) (round(increase(linstor_error_reports_count{module!=\"\", node=~\"$node\"}[$__interval_sx4])))",
+          "instant": false,
+          "legendFormat": "{{ module }}",
+          "refId": "A"
+        }
+      ],
+      "title": "New Error Reports",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -289,10 +735,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 6,
         "x": 18,
-        "y": 9
+        "y": 7
       },
       "id": 42,
       "options": {
@@ -310,7 +756,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -324,20 +770,50 @@
       "type": "stat"
     },
     {
-      "datasource": "${ds_prometheus}",
-      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "5": {
+                  "index": 0,
+                  "text": "Inconsistent"
+                },
+                "6": {
+                  "index": 2,
+                  "text": "Failed"
+                },
+                "-1": {
+                  "index": 1,
+                  "text": "DUnknown"
+                }
+              },
+              "type": "value"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
               }
             ]
           }
@@ -345,206 +821,68 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 3,
+        "h": 8,
+        "w": 12,
         "x": 0,
-        "y": 11
+        "y": 10
       },
-      "id": 36,
+      "id": 54,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+        "footer": {
           "fields": "",
-          "values": false
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "text": {},
-        "textMode": "auto"
+        "frameIndex": 0,
+        "showHeader": true
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
-          "exemplar": true,
-          "expr": "count(linstor_node_state{nodetype=\"SATELLITE\",node=~\"$node\"} == 2) OR on() vector(0)",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Nodes",
-      "type": "stat"
-    },
-    {
-      "datasource": "${ds_prometheus}",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 3,
-        "y": 11
-      },
-      "id": 38,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.6",
-      "targets": [
-        {
           "exemplar": true,
-          "expr": "count(linstor_storage_pool_capacity_total_bytes{driver!=\"DISKLESS\",node=~\"$node\"}) OR on() vector(0)",
+          "expr": "max by (node, resource) ((linstor_volume_state != 1) != 4)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Storage Pools",
-      "type": "stat"
-    },
-    {
-      "datasource": "${ds_prometheus}",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 6,
-        "y": 11
-      },
-      "id": 35,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.6",
-      "targets": [
+      "title": "Linstor Resources not happen",
+      "transformations": [
         {
-          "exemplar": true,
-          "expr": "sum(linstor_resource_definition_count{}) OR on() vector(0)",
-          "legendFormat": "",
-          "refId": "A"
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value #A": "Quorum?",
+              "instance": "Instance",
+              "name": "DRBD Resource",
+              "node": "Node"
+            }
+          }
         }
       ],
-      "title": "Resource Definitions",
-      "type": "stat"
+      "type": "table"
     },
     {
-      "datasource": "${ds_prometheus}",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
+      "datasource": {
+        "uid": "${ds_prometheus}"
       },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 9,
-        "y": 11
-      },
-      "id": 37,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.6",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "count(linstor_resource_state) OR on() vector(0)",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Resources",
-      "type": "stat"
-    },
-    {
-      "datasource": "${ds_prometheus}",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -593,10 +931,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 6,
+        "h": 8,
+        "w": 12,
         "x": 12,
-        "y": 11
+        "y": 10
       },
       "id": 40,
       "options": {
@@ -606,7 +944,8 @@
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "pluginVersion": "8.2.6",
@@ -622,259 +961,16 @@
       "type": "timeseries"
     },
     {
-      "datasource": "${ds_prometheus}",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "dark-yellow",
-                "value": 6
-              },
-              {
-                "color": "orange",
-                "value": 10
-              },
-              {
-                "color": "red",
-                "value": 20
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 13
-      },
-      "id": 52,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.6",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum by (module) (round(increase(linstor_error_reports_count{module!=\"\", node=~\"$node\"}[$__interval_sx4])))",
-          "instant": false,
-          "legendFormat": "{{ module }}",
-          "refId": "A"
-        }
-      ],
-      "title": "New Error Reports",
-      "transformations": [],
-      "type": "stat"
-    },
-    {
-      "datasource": "${ds_prometheus}",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 0,
-        "y": 14
-      },
-      "id": 51,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.6",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "count(linstor_node_state{nodetype=\"SATELLITE\", node=~\"$node\"} != 2) OR on() vector(0)",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Offline Nodes",
-      "type": "stat"
-    },
-    {
-      "datasource": "${ds_prometheus}",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 4,
-        "y": 14
-      },
-      "id": 50,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.6",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "count(linstor_storage_pool_error_count{driver!=\"DISKLESS\", node=~\"$node\"} != 0) OR on() vector(0)",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Failed Storage Pools",
-      "type": "stat"
-    },
-    {
-      "datasource": "${ds_prometheus}",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 8,
-        "y": 14
-      },
-      "id": 49,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.6",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "count((linstor_volume_state != 1) != 4) OR on() vector(0)",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Failed Resources",
-      "type": "stat"
-    },
-    {
       "collapsed": false,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 18
       },
       "id": 46,
       "panels": [],
@@ -886,7 +982,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "binBps"
@@ -899,7 +997,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 19
       },
       "hiddenSeries": false,
       "id": 24,
@@ -919,7 +1017,7 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -937,9 +1035,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Write Rate (5 Most Active Volumes)",
       "tooltip": {
         "shared": true,
@@ -948,9 +1044,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -958,25 +1052,18 @@
         {
           "$$hashKey": "object:104",
           "format": "binBps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:105",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -984,7 +1071,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "binBps"
@@ -997,7 +1086,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 19
       },
       "hiddenSeries": false,
       "id": 25,
@@ -1017,7 +1106,7 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1035,9 +1124,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Read Rate (5 Most Active Volumes)",
       "tooltip": {
         "shared": true,
@@ -1046,9 +1133,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1056,35 +1141,30 @@
         {
           "$$hashKey": "object:254",
           "format": "binBps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:255",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
       "collapsed": false,
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 27
       },
       "id": 8,
       "panels": [],
@@ -1092,8 +1172,9 @@
       "type": "row"
     },
     {
-      "cacheTimeout": null,
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1116,7 +1197,7 @@
         "h": 11,
         "w": 16,
         "x": 0,
-        "y": 35
+        "y": 28
       },
       "id": 6,
       "links": [],
@@ -1134,7 +1215,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "$$hashKey": "object:470",
@@ -1159,7 +1240,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "s"
@@ -1172,7 +1255,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 35
+        "y": 28
       },
       "hiddenSeries": false,
       "id": 27,
@@ -1192,7 +1275,7 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1209,9 +1292,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Scrape Duration",
       "tooltip": {
         "shared": true,
@@ -1220,9 +1301,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1230,29 +1309,24 @@
         {
           "$$hashKey": "object:158",
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:159",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "description": "DRBD data out of sync with a peer",
       "fieldConfig": {
         "defaults": {
@@ -1281,7 +1355,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 43
+        "y": 36
       },
       "id": 12,
       "options": {
@@ -1299,7 +1373,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1308,13 +1382,13 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "out-of-sync data",
       "type": "stat"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1341,7 +1415,7 @@
         "h": 3,
         "w": 4,
         "x": 0,
-        "y": 46
+        "y": 39
       },
       "id": 14,
       "options": {
@@ -1359,7 +1433,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": false,
@@ -1368,13 +1442,13 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "disconnected",
       "type": "stat"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1412,7 +1486,7 @@
         "h": 3,
         "w": 4,
         "x": 4,
-        "y": 46
+        "y": 39
       },
       "id": 20,
       "options": {
@@ -1430,7 +1504,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1449,13 +1523,13 @@
           "refId": "B"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "without quorum",
       "type": "stat"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -1483,7 +1557,7 @@
         "h": 3,
         "w": 4,
         "x": 8,
-        "y": 46
+        "y": 39
       },
       "id": 4,
       "options": {
@@ -1501,7 +1575,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1510,13 +1584,13 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "storage failure",
       "type": "stat"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "description": "DRBD data out of sync with a peer",
       "fieldConfig": {
         "defaults": {
@@ -1545,7 +1619,7 @@
         "h": 3,
         "w": 4,
         "x": 12,
-        "y": 46
+        "y": 39
       },
       "id": 29,
       "options": {
@@ -1563,7 +1637,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1572,22 +1646,23 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "out-of-sync",
       "type": "stat"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "custom": {
-            "align": null,
+            "align": "auto",
             "displayMode": "auto",
-            "filterable": false
+            "filterable": false,
+            "inspect": false
           },
           "mappings": [
             {
@@ -1619,11 +1694,17 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 49
+        "y": 42
       },
       "id": 22,
-      "maxDataPoints": null,
       "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "frameIndex": 0,
         "showHeader": true,
         "sortBy": [
@@ -1633,7 +1714,7 @@
           }
         ]
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1645,8 +1726,6 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Disconnected DRBD Resources",
       "transformations": [
         {
@@ -1695,16 +1774,19 @@
       "type": "table"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "custom": {
-            "align": null,
+            "align": "auto",
             "displayMode": "auto",
-            "filterable": false
+            "filterable": false,
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -1761,15 +1843,22 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 42
       },
       "id": 16,
       "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "frameIndex": 0,
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": false,
@@ -1820,16 +1909,19 @@
       "type": "table"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "custom": {
-            "align": null,
+            "align": "auto",
             "displayMode": "auto",
-            "filterable": false
+            "filterable": false,
+            "inspect": false
           },
           "mappings": [
             {
@@ -1861,15 +1953,21 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 57
+        "y": 50
       },
       "id": 31,
-      "maxDataPoints": null,
       "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "frameIndex": 0,
         "showHeader": true
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1881,8 +1979,6 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "DRBD Resources Without Quorum",
       "transformations": [
         {
@@ -1909,16 +2005,19 @@
       "type": "table"
     },
     {
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "custom": {
-            "align": null,
+            "align": "auto",
             "displayMode": "auto",
-            "filterable": false
+            "filterable": false,
+            "inspect": false
           },
           "mappings": [
             {
@@ -1950,15 +2049,21 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 57
+        "y": 50
       },
       "id": 30,
-      "maxDataPoints": null,
       "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "frameIndex": 0,
         "showHeader": true
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "exemplar": true,
@@ -1970,8 +2075,6 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "DRBD Resources with Storage Failure",
       "transformations": [
         {
@@ -2007,7 +2110,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 32,
+  "schemaVersion": 36,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -2018,8 +2121,6 @@
           "text": "default",
           "value": "default"
         },
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Prometheus",
@@ -2034,15 +2135,22 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
-        "current": {},
-        "datasource": "${ds_prometheus}",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${ds_prometheus}"
+        },
         "definition": "label_values(linstor_node_state{nodetype=\"SATELLITE\"}, node)",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
-        "label": null,
         "multi": true,
         "name": "node",
         "options": [],
@@ -2067,7 +2175,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "LINSTOR / DRBD",
-  "uid": "f_tZtVlMz",
-  "version": 19
+  "title": "LINSTOR / DRBD -test",
+  "uid": "f_tZtVlMzczc",
+  "version": 3,
+  "weekStart": ""
 }

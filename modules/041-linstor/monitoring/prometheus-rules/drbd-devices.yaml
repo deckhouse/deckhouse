@@ -1,7 +1,7 @@
 - name: kubernetes.drbd.device_state
   rules:
     - alert: D8LinstorVolumeIsNotHealthy
-      expr: max by (exported_node, resource) (linstor_volume_state != 1 and linstor_volume_state != 4)
+      expr: max by (node, resource) ((linstor_volume_state != 1) != 4)
       for: 5m
       labels:
         severity_level: "6"
@@ -13,7 +13,7 @@
         plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: LINSTOR volume is not healthy
         description: |
-          LINSTOR volume {{ $labels.resource }} on node {{ $labels.exported_node }} is not healthy
+          LINSTOR volume {{ $labels.resource }} on node {{ $labels.node }} is not healthy
 
           The recommended course of action:
           1. Login into node with the problem:
@@ -25,7 +25,7 @@
           2. Check the LINSTOR node state:
 
              ```
-             linstor node list -n {{ $labels.exported_node }}
+             linstor node list -n {{ $labels.node }}
              ```
 
           3. Check the LINSTOR resource states:
