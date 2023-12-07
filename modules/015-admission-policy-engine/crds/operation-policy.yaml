@@ -173,16 +173,16 @@ spec:
                       description: "Check container names and env variables for duplicates."
                     replicaLimits:
                       type: array
-                      description: Allowed ranges for numbers of replicas.  Values are inclusive.
+                      description: "Allowed ranges for numbers of replicas.  Values are inclusive."
                       items:
                         type: object
-                        description: A range of allowed replicas.  Values are inclusive.
+                        description: "A range of allowed replicas.  Values are inclusive."
                         properties:
                           min_replicas:
-                            description: The minimum number of replicas allowed, inclusive.
+                            description: "The minimum number of replicas allowed, inclusive."
                             type: integer
                           max_replicas:
-                            description: The maximum number of replicas allowed, inclusive.
+                            description: "The maximum number of replicas allowed, inclusive."
                             type: integer
                 match:
                   type: object
