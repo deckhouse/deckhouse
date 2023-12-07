@@ -402,7 +402,7 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 	}
 	av.Policy = policy.Name
 
-	downloadResult, err := md.DownloadFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, moduleChecksum)
+	downloadResult, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, moduleChecksum)
 	if err != nil {
 		return "", av, err
 	}
@@ -415,7 +415,7 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 	}
 
 	if downloadResult.Checksum == moduleChecksum {
-		c.logger.Infof("Module %s checksum has not been changed. Skip update.", moduleName)
+		c.logger.Infof("Module %q checksum in the %q release channel has not been changed. Skip update.", moduleName, policy.Spec.ReleaseChannel)
 		return "", av, nil
 	}
 
@@ -533,6 +533,11 @@ func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.Modul
 			prev, err := c.kubeClient.DeckhouseV1alpha1().ModuleReleases().Get(ctx, rl.Name, metav1.GetOptions{})
 			if err != nil {
 				return err
+			}
+
+			// seems weird to update already deployed/suspended release
+			if prev.Status.Phase != v1alpha1.PhasePending {
+				return nil
 			}
 
 			prev.Spec = rl.Spec

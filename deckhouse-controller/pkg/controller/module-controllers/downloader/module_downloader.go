@@ -90,18 +90,23 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, err
 	}
 
-	def := md.fetchModuleDefinition(moduleName, moduleStorePath)
+	def := md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath)
 
 	return digest.String(), def, nil
 }
 
 func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion string) error {
+	if !strings.HasPrefix(moduleVersion, "v") {
+		moduleVersion = "v" + moduleVersion
+	}
 	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
 
 	return md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath)
 }
 
-func (md *ModuleDownloader) DownloadFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
+// DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
+// does not fetch and install the desired version on the module, only fetches its module definition
+func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
 	res := ModuleDownloadResult{}
 	moduleVersion, checksum, err := md.fetchModuleVersionFromReleaseChannel(moduleName, releaseChannel, moduleChecksum)
 	if err != nil {
@@ -116,17 +121,18 @@ func (md *ModuleDownloader) DownloadFromReleaseChannel(moduleName, releaseChanne
 		return res, nil
 	}
 
-	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
-
-	err = md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath)
+	img, err := md.fetchImage(moduleName, moduleVersion)
 	if err != nil {
 		return res, err
 	}
 
-	moduleDef := md.fetchModuleDefinition(moduleName, moduleVersionPath)
+	def, err := md.fetchModuleDefinitionFromImage(moduleName, img)
+	if err != nil {
+		return res, err
+	}
 
-	res.ModuleWeight = moduleDef.Weight
-	res.ModuleDefinition = moduleDef
+	res.ModuleWeight = def.Weight
+	res.ModuleDefinition = def
 
 	return res, nil
 }
@@ -269,8 +275,8 @@ func (md *ModuleDownloader) fetchModuleVersionFromReleaseChannel(moduleName, rel
 	return "v" + moduleMetadata.Version.String(), digest.String(), nil
 }
 
-func (md *ModuleDownloader) fetchModuleDefinition(moduleName, moduleVersionPath string) *models.DeckhouseModuleDefinition {
-	defaultModuleDefinition := &models.DeckhouseModuleDefinition{
+func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *models.DeckhouseModuleDefinition {
+	def := &models.DeckhouseModuleDefinition{
 		Name:   moduleName,
 		Weight: defaultModuleWeight,
 		Path:   moduleVersionPath,
@@ -279,59 +285,62 @@ func (md *ModuleDownloader) fetchModuleDefinition(moduleName, moduleVersionPath 
 	moduleDefFile := path.Join(moduleVersionPath, models.ModuleDefinitionFile)
 
 	if _, err := os.Stat(moduleDefFile); err != nil {
-		return defaultModuleDefinition
+		return def
 	}
-
-	var def models.DeckhouseModuleDefinition
 
 	f, err := os.Open(moduleDefFile)
 	if err != nil {
-		return defaultModuleDefinition
+		return def
 	}
 	defer f.Close()
 
 	err = yaml.NewDecoder(f).Decode(&def)
 	if err != nil {
-		return defaultModuleDefinition
+		return def
 	}
 
-	if def.Weight == 0 {
-		def.Weight = defaultModuleWeight
+	return def
+}
+
+func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img v1.Image) (*models.DeckhouseModuleDefinition, error) {
+	def := &models.DeckhouseModuleDefinition{
+		Name:   moduleName,
+		Weight: defaultModuleWeight,
 	}
 
-	return &def
+	rc := mutate.Extract(img)
+	defer rc.Close()
+
+	buf := bytes.NewBuffer(nil)
+
+	err := untarModuleDefinition(rc, buf)
+	if err != nil {
+		return def, err
+	}
+
+	if buf.Len() == 0 {
+		return def, nil
+	}
+
+	err = json.Unmarshal(buf.Bytes(), &def)
+	if err != nil {
+		return def, err
+	}
+
+	return def, nil
 }
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
-	buf := bytes.NewBuffer(nil)
 	var meta moduleReleaseMetadata
 
-	layers, err := img.Layers()
+	rc := mutate.Extract(img)
+	defer rc.Close()
+
+	buf := bytes.NewBuffer(nil)
+
+	err := untarMetadata(rc, buf)
 	if err != nil {
 		return meta, err
-	}
-
-	for _, layer := range layers {
-		size, err := layer.Size()
-		if err != nil {
-			// dcr.logger.Warnf("couldn't calculate layer size")
-			return meta, err
-		}
-		if size == 0 {
-			// skip some empty werf layers
-			continue
-		}
-		rc, err := layer.Uncompressed()
-		if err != nil {
-			return meta, err
-		}
-
-		err = untarMetadata(rc, buf)
-		if err != nil {
-			return meta, err
-		}
-
-		rc.Close()
 	}
 
 	err = json.Unmarshal(buf.Bytes(), &meta)
@@ -356,6 +365,35 @@ func untarMetadata(rc io.ReadCloser, rw io.Writer) error {
 
 		switch hdr.Name {
 		case "version.json":
+			_, err = io.Copy(rw, tr)
+			if err != nil {
+				return err
+			}
+			return nil
+
+		default:
+			continue
+		}
+	}
+}
+
+func untarModuleDefinition(rc io.ReadCloser, rw io.Writer) error {
+	tr := tar.NewReader(rc)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			// end of archive
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if strings.HasPrefix(hdr.Name, ".werf") {
+			continue
+		}
+
+		switch hdr.Name {
+		case "module.yaml":
 			_, err = io.Copy(rw, tr)
 			if err != nil {
 				return err
