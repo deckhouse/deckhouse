@@ -286,17 +286,21 @@ spec:
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
 
+{{- define "replica_limits_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8ReplicaLimits
 metadata:
   name: replica-limits
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   match:
     kinds:
       - apiGroups: ["apps"]
         kinds: ["Deployment"]
+    {{- include "constraint_selector" (list $cr) }}
   parameters:
-    ranges:
-    - min_replicas: 1
-      max_replicas: 10
+    {{- $cr.spec.policies.replicaLimits | toYaml | nindent 6 }}
+{{- end }}
