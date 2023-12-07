@@ -80,9 +80,10 @@ spec:
         - --listen-address=127.0.0.1:8081
         env:
         - name: VCD_INSECURE
-          secretKeyRef:
-            key: insecure
-            name: cloud-data-discoverer
+          valueFrom:
+            secretKeyRef:
+              key: insecure
+              name: cloud-data-discoverer
         - name: VCD_HREF
           valueFrom:
             secretKeyRef:

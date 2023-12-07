@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vmware/go-vcloud-director/v2/govcd"
@@ -71,6 +72,11 @@ func parseEnvToConfig() (*Config, error) {
 	if href == "" {
 		return nil, fmt.Errorf("VCD_HREF env should be set")
 	}
+
+	if !strings.HasSuffix(href, "api") {
+		href = href + "/api"
+	}
+
 	c.Href = href
 
 	return c, nil
