@@ -499,7 +499,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			}
 
 			md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-			err = md.DownloadByModuleVersion(release.Spec.ModuleName, "v"+release.Spec.Version.String())
+			err = md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 			if err != nil {
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
 			}
