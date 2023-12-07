@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Определяет конфигурацию релизов сторонних модулей Deckhouse.
+            Определяет конфигурацию релизов модулей Deckhouse.
           properties:
             spec:
               properties:
@@ -19,7 +19,7 @@ spec:
                 phase:
                   description: Текущий статус релиза.
                 message:
-                  description: Детальное сообщение об ошибки или статусе релиза.
+                  description: Детальное сообщение об ошибке или статусе релиза.
                 transitionTime:
                   description: Время изменения статуса релиза.
                 approved:

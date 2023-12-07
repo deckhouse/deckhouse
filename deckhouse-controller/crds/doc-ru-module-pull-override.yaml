@@ -14,18 +14,18 @@ spec:
             spec:
               properties:
                 source:
-                  description: "Ссылка на объект ModuleSource с модулем."
+                  description: "Ссылка на объект ModuleSource модуля."
                 imageTag:
-                  description: "Тег образа Docker для модуля, который будет скачан и установлен."
+                  description: "Тег образа контейнера модуля, который будет скачан и установлен."
                 scanInterval:
-                  description: "Интервал сканирования для проверки изменения образа docker. Если образ изменился, модуль будет скачен и обновлен."
+                  description: "Интервал сканирования для проверки изменения образа контейнера. Если образ изменился, модуль будет обновлен."
             status:
               properties:
                 message:
                   type: string
                 updatedAt:
                   type: string
-                  description: "Когда модуль был скачан в последний раз."
+                  description: "Когда модуль был обновлен в последний раз."
                 imageDigest:
                   type: string
-                  description: "Чексумма образа docker."
+                  description: "Контрольная сумма образа контейнера."

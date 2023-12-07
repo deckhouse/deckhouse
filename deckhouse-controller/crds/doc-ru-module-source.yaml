@@ -44,7 +44,7 @@ spec:
                         type: string
                         description: Имя политики.
                       overrided:
-                        description: Показывает, есть ли ModulePullOverride ресурс для данного модуля.
+                        description: Показывает, есть ли ресурс ModulePullOverride для данного модуля.
                 message:
                   type: string
                   description: Сообщение с детальной ошибкой.
