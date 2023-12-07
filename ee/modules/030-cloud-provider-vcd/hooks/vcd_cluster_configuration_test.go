@@ -29,7 +29,7 @@ cloudProviderVcd:
 		stateACloudDiscoveryData = `
 {
    "apiVersion": "deckhouse.io/v1alpha1",
-   "kind": "VCDCloudDiscoveryData"
+   "kind": "VCDCloudProviderDiscoveryData"
 }
 `
 		stateAClusterConfiguration1 = `
