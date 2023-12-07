@@ -34,7 +34,7 @@ cloudProviderYandex:
     providerClusterConfiguration:
       apiVersion: deckhouse.io/v1
       kind: YandexClusterConfiguration
-      layout: Stardard
+      layout: Standard
       masterNodeGroup:
         instanceClass:
           cores: 4
@@ -241,7 +241,7 @@ cloudProviderYandex:
 				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{"name": "d8-nat-instance", "zone": "ru-central1-c"},
 				Action: "set",
-				// Group:  metricName,
+				Group:  metricName,
 			}))
 
 		})
