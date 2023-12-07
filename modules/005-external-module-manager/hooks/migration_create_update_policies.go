@@ -25,7 +25,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -38,10 +37,8 @@ const (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// ensure crds hook has order 5, for creating a module source we should use greater number
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
+	OnStartup: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(createModuleUpdatePolicies))
-
-var msResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "modulesources"}
 
 func createModuleUpdatePolicies(input *go_hook.HookInput, dc dependency.Container) error {
 	k8sCli, err := dc.GetK8sClient()
@@ -79,6 +76,7 @@ func createModuleUpdatePolicies(input *go_hook.HookInput, dc dependency.Containe
 		// check if source releaseChannel can be camelCased correctly
 		rc, err := camelCaseReleaseChannel(moduleSource.Spec.ReleaseChannel)
 		if err != nil {
+			input.LogEntry.Warnf("Couldn't create a ModuleUpdatePolicy for %s ModuleSource: %v", moduleSource.ObjectMeta.Name, err)
 			continue
 		}
 
