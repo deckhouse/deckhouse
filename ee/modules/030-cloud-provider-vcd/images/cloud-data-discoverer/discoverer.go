@@ -180,18 +180,22 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 		if s.VdcComputePolicyV2.Name == "" {
 			continue
 		}
+		var cpuCount, memory int64
+		if s.VdcComputePolicyV2.CPUCount != nil {
+			cpuCount = int64(*s.VdcComputePolicyV2.CPUCount)
+		}
+		if s.VdcComputePolicyV2.Memory != nil {
+			memory = int64(*s.VdcComputePolicyV2.Memory)
+		}
+
 		instanceTypes = append(instanceTypes, v1alpha1.InstanceType{
 			Name:     s.VdcComputePolicyV2.Name,
-			CPU:      resource.MustParse(strconv.FormatInt(int64(*s.VdcComputePolicyV2.CPUCount), 10)),
-			Memory:   resource.MustParse(strconv.FormatInt(int64(*s.VdcComputePolicyV2.Memory), 10) + "Mi"),
-			RootDisk: resource.MustParse("0"),
+			CPU:      resource.MustParse(strconv.FormatInt(cpuCount, 10)),
+			Memory:   resource.MustParse(strconv.FormatInt(memory, 10) + "Mi"),
+			RootDisk: resource.MustParse("0Gi"),
 		})
 	}
 	return instanceTypes, nil
-}
-
-type VCDCloudProviderDiscoveryData struct {
-	SizingPolicies []string `json:"sizingPolicies,omitempty" yaml:"sizingPolicies,omitempty"`
 }
 
 // removeDuplicates removes duplicates from slice and sort it
