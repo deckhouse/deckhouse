@@ -31,7 +31,6 @@ const (
 
 func init() {
 	checkRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-
 		desiredVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
 			return false, err
