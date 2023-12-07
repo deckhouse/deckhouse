@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: generate_admission_webhook_cert ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.1", "internal": {"admissionCertificate": {}}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.6", "internal": {"admissionCertificate": {}}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 
 	Context("Fresh cluster", func() {
