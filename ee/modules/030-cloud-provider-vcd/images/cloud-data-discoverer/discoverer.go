@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -20,9 +21,8 @@ import (
 )
 
 type Discoverer struct {
-	logger       *log.Entry
-	config       *Config
-	moduleConfig []byte
+	logger *log.Entry
+	config *Config
 }
 
 type Config struct {
@@ -108,21 +108,14 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		logger.Fatalf("Cannnot get opts from env: %v", err)
 	}
 
-	moduleConfig := os.Getenv("MODULE_CONFIG")
-
 	return &Discoverer{
-		logger:       logger,
-		config:       config,
-		moduleConfig: []byte(moduleConfig),
+		logger: logger,
+		config: config,
 	}
 }
 
 func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	var discoveryData VCDCloudDiscoveryData
-
-	if len(cloudProviderDiscoveryData) == 0 {
-		cloudProviderDiscoveryData = d.moduleConfig
-	}
+	discoveryData := &v1alpha1.VCDCloudProviderDiscoveryData{}
 
 	if len(cloudProviderDiscoveryData) > 0 {
 		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
@@ -141,11 +134,9 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		return nil, fmt.Errorf("failed to get sizing policies: %v", err)
 	}
 
-	discoveryDataJson, err := json.Marshal(v1alpha1.VCDCloudProviderDiscoveryData{
-		APIVersion:     "deckhouse.io/v1alpha1",
-		Kind:           "VCDCloudProviderDiscoveryData",
-		SizingPolicies: sizingPolicies,
-	})
+	discoveryData.SizingPolicies = sizingPolicies
+
+	discoveryDataJson, err := json.Marshal(discoveryData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
 	}
@@ -175,10 +166,11 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 	return nil, nil
 }
 
-type VCDCloudDiscoveryData struct {
+type VCDCloudProviderDiscoveryData struct {
 	SizingPolicies []string `json:"sizingPolicies,omitempty" yaml:"sizingPolicies,omitempty"`
 }
 
+// removeDuplicates removes duplicates from slice and sort it
 func removeDuplicates(list []string) []string {
 	var (
 		keys       = make(map[string]struct{})
@@ -196,5 +188,6 @@ func removeDuplicates(list []string) []string {
 		}
 	}
 
+	sort.Strings(uniqueList)
 	return uniqueList
 }

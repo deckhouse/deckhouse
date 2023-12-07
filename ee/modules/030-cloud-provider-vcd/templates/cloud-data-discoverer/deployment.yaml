@@ -99,11 +99,6 @@ spec:
             secretKeyRef:
               key: org
               name: cloud-data-discoverer
-        - name: MODULE_CONFIG
-          valueFrom:
-            secretKeyRef:
-              key: moduleConfig
-              name: cloud-data-discoverer
         - name: VCD_USER
           valueFrom:
             secretKeyRef:

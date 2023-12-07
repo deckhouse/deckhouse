@@ -29,7 +29,7 @@ func TestRemoveDuplicates(t *testing.T) {
 		},
 		{
 			args: []string{"one", "two", "three", "four", "two", "four", "five"},
-			want: []string{"one", "two", "three", "four", "five"},
+			want: []string{"five", "four", "one", "three", "two"},
 		},
 	}
 
