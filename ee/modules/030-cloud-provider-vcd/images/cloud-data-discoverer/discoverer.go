@@ -150,6 +150,7 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
 	}
 
+	d.logger.Debugf("discovery data: %v", discoveryDataJson)
 	return discoveryDataJson, nil
 }
 
