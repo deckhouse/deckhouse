@@ -318,14 +318,18 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 		return def, err
 	}
 
+	fmt.Println("MMM DEF BUF", buf.String())
+
 	if buf.Len() == 0 {
 		return def, nil
 	}
 
-	err = json.Unmarshal(buf.Bytes(), &def)
+	err = yaml.NewDecoder(buf).Decode(&def)
 	if err != nil {
 		return def, err
 	}
+
+	fmt.Println("MMM DEF ", def)
 
 	return def, nil
 }
@@ -343,7 +347,11 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (moduleRele
 		return meta, err
 	}
 
+	fmt.Println("MMM UNTAR META", buf.String())
+
 	err = json.Unmarshal(buf.Bytes(), &meta)
+
+	fmt.Println("MMM AFTER JSON", meta)
 
 	return meta, err
 }
