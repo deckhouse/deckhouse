@@ -26,7 +26,6 @@ import (
 	"github.com/flant/docs-builder/pkg/k8s"
 
 	"github.com/gorilla/mux"
-	apierror "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 )
 
