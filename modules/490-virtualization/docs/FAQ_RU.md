@@ -24,3 +24,9 @@ kubectl delete virtualmachineinstance <vmName>
 FROM scratch
 ADD https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img /disk/jammy-server-cloudimg-amd64.img
 ```
+
+## Как выключить модуль виртуализации?
+
+Прежде чем выключить модуль виртуализации, необходимо предварительно удалить все виртуальные машины и диски.
+
+Для удаления модуля воспользуйтесь следующим [скриптом](https://github.com/deckhouse/deckhouse/blob/main/modules/490-virtualization/hack/remove-module.sh).
