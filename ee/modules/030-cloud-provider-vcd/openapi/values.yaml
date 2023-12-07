@@ -306,4 +306,4 @@ properties:
             enum: [ deckhouse.io/v1alpha1 ]
           kind:
             type: string
-            enum: [ VCDCloudDiscoveryData ]
+            enum: [ VCDCloudProviderDiscoveryData ]
