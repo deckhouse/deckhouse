@@ -73,7 +73,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	var operatorVersionsToInstall = make([]string, 0)
 	var unsupportedRevisions = make([]string, 0)
-	var minInstalledVersion *semver.Version
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 
@@ -88,14 +87,6 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 		if !versionMap.IsRevisionSupported(iopInfo.Revision) {
 			unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
 			continue
-		} else {
-			iopVerSem, err := semver.NewVersion(iopVer)
-			if err != nil {
-				return err
-			}
-			if minInstalledVersion == nil || iopVerSem.LessThan(minInstalledVersion) {
-				minInstalledVersion = iopVerSem
-			}
 		}
 		if !lib.Contains(operatorVersionsToInstall, iopVer) {
 			operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
@@ -110,10 +101,22 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	sort.Strings(operatorVersionsToInstall)
 	input.Values.Set("istio.internal.operatorVersionsToInstall", operatorVersionsToInstall)
 
-	if minInstalledVersion == nil {
+	// Getting minVersion
+	var minVersion *semver.Version
+	for _, ovti := range operatorVersionsToInstall {
+		iopVerSem, err := semver.NewVersion(ovti)
+		if err != nil {
+			return err
+		}
+		if minVersion == nil || iopVerSem.LessThan(minVersion) {
+			minVersion = iopVerSem
+		}
+	}
+	if minVersion == nil {
 		requirements.RemoveValue(minVersionValuesKey)
 	} else {
-		requirements.SaveValue(minVersionValuesKey, minInstalledVersion.String())
+		requirements.SaveValue(minVersionValuesKey, minVersion.String())
 	}
+
 	return nil
 }

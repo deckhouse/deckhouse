@@ -52,8 +52,9 @@ internal:
 
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").String()).To(MatchJSON(`["1.1"]`))
 
-			_, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeFalse())
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.1.0"))
 		})
 	})
 
@@ -157,6 +158,7 @@ spec:
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
 			Expect(f.GoHookError).To(MatchError("unsupported revisions: [v1x0,v1x9]"))
+
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("1.2.0"))
