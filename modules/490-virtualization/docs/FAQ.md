@@ -24,3 +24,9 @@ Example of a `Dockerfile`:
 FROM scratch
 ADD https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img /disk/jammy-server-cloudimg-amd64.img
 ```
+
+## How do I disable the virtualization module?
+
+Before you can disable the virtualization module, all virtual machines and disks must first be uninstalled.
+
+To disable the module, use the following [script](https://github.com/deckhouse/deckhouse/blob/main/modules/490-virtualization/hack/remove-module.sh).
