@@ -60,7 +60,8 @@ var (
 
 	MirrorValidationMode = ""
 
-	MirrorSkipGOSTHashing = false
+	MirrorSkipGOSTHashing         = false
+	MirrorDontContinuePartialPull = false
 )
 
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
@@ -106,6 +107,8 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		Required().
 		Envar(configEnvName("MIRROR_IMAGES_BUNDLE")).
 		StringVar(&MirrorTarBundle)
+	cmd.Flag("no-pull-resume", "Do not continue last unfinished pull operation.").
+		BoolVar(&MirrorDontContinuePartialPull)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
 		BoolVar(&MirrorInsecure)
 
