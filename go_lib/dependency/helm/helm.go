@@ -17,8 +17,12 @@ limitations under the License.
 package helm
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
+	"maps"
 	"time"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -28,6 +32,7 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 )
 
 const helmDriver = "secret"
@@ -112,11 +117,16 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		ch.Templates = append(ch.Templates, &chartFile)
 	}
 
+	hashsum := getMD5Hash(templates, values)
+
 	upgradeObject := action.NewUpgrade(client.actionConfig)
 	upgradeObject.Namespace = client.options.Namespace
 	upgradeObject.Install = true
 	upgradeObject.MaxHistory = int(client.options.HistoryMax)
 	upgradeObject.Timeout = client.options.Timeout
+	upgradeObject.Labels = map[string]string{
+		"hashsum": hashsum,
+	}
 
 	releases, err := action.NewHistory(client.actionConfig).Run(releaseName)
 	if err == driver.ErrReleaseNotFound {
@@ -125,6 +135,9 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		installObject.Timeout = client.options.Timeout
 		installObject.ReleaseName = releaseName
 		installObject.UseReleaseName = true
+		installObject.Labels = map[string]string{
+			"hashsum": hashsum,
+		}
 
 		_, err = installObject.Run(ch, values)
 		return err
@@ -133,6 +146,13 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 	if len(releases) > 0 {
 		releaseutil.Reverse(releases, releaseutil.SortByRevision)
 		latestRelease := releases[0]
+		val, ok := latestRelease.Labels["hashsum"]
+		if ok {
+			if val == hashsum {
+				klog.Warningf("the hashes matched")
+				return nil
+			}
+		}
 
 		if latestRelease.Info.Status.IsPending() {
 			client.rollbackLatestRelease(releases)
@@ -212,4 +232,22 @@ func getActionConfig(namespace string) (*action.Configuration, error) {
 		return nil, err
 	}
 	return actionConfig, nil
+}
+
+func getMD5Hash(templates, values map[string]interface{}) string {
+	sum := make(map[string]interface{})
+	maps.Copy(sum, templates)
+	for k, v := range values {
+		sum[k] = v
+	}
+
+	// TODO is not an ideal algorithm, since the order of elements in map is not
+	// guaranteed and may lead to a different hash result.
+	byteResult, err := json.Marshal(sum)
+	if err != nil {
+		klog.Errorf("sum template and values marshal error: %v", err)
+	}
+
+	hash := md5.Sum(byteResult)
+	return hex.EncodeToString(hash[:])
 }
