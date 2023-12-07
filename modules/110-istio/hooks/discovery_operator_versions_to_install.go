@@ -21,12 +21,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
 
 	"github.com/Masterminds/semver/v3"
 

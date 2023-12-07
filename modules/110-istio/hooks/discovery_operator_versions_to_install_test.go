@@ -17,9 +17,10 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -156,7 +157,6 @@ spec:
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
 			Expect(f.GoHookError).To(MatchError("unsupported revisions: [v1x0,v1x9]"))
-
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("1.2.0"))
