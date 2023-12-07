@@ -75,6 +75,8 @@ func createModuleUpdatePolicies(input *go_hook.HookInput, dc dependency.Containe
 		if err != nil {
 			return err
 		}
+
+		// check if source releaseChannel can be camelCased correctly
 		rc, err := camelCaseReleaseChannel(moduleSource.Spec.ReleaseChannel)
 		if err != nil {
 			continue

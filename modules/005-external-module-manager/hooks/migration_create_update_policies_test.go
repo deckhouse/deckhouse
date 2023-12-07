@@ -105,7 +105,7 @@ spec:
     dockerCfg: cfg
     repo: dev-registry.deckhouse.io/sys/deckhouse-oss/modules
     scheme: HTTPS
-  releaseChannel: Alfa
+  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
@@ -118,6 +118,34 @@ spec:
     repo: dev-registry.deckhouse.io/sys/deckhouse-oss/modules
     scheme: HTTPS
   releaseChannel: RockSolid
+`
+		customMssWithCustomReleaseChannels = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  labels:
+  name: gtaV
+spec:
+  registry:
+    ca: ""
+    dockerCfg: cfg
+    repo: dev-registry.deckhouse.io/sys/deckhouse-oss/modules
+    scheme: HTTPS
+  releaseChannel: early-access
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: sleepingDogs
+spec:
+spec:
+  registry:
+    ca: ""
+    dockerCfg: cfg
+    repo: dev-registry.deckhouse.io/sys/deckhouse-oss/modules
+    scheme: HTTPS
+  releaseChannel: rocksolid
 `
 	)
 
@@ -165,7 +193,7 @@ spec:
 		})
 	})
 
-	Context("A cluster with client's ModuleSources without annotation", func() {
+	Context("A cluster with client's ModuleSources", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(d8SystemWithoutAnnotation + deckhouseMs + customMss))
 
@@ -193,6 +221,38 @@ spec:
 		})
 	})
 
+	Context("A cluster with client's ModuleSources and custom release channels", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(d8SystemWithoutAnnotation + deckhouseMs + customMss + customMssWithCustomReleaseChannels))
+
+			err := createNs(d8SystemWithoutAnnotation)
+			if err != nil {
+				Fail(err.Error())
+			}
+
+			f.RunHook()
+		})
+
+		It("Should create ModuleUpdatePolicies for ModulesSources with correct release channels and annotate d8-system", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			mupDeckhouse := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mupDeckhouse.Exists()).To(BeFalse())
+			msDeckhouse := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(msDeckhouse.Exists()).To(BeTrue())
+			for _, ms := range []string{"tetris", "pingpong", "tictactoe", "gtaV"} {
+				mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", ms)
+				Expect(mup.Exists()).To(BeTrue())
+			}
+			for _, ms := range []string{"sleepingDogs"} {
+				mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", ms)
+				Expect(mup.Exists()).To(BeFalse())
+			}
+			ns := f.KubernetesGlobalResource("Namespace", "d8-system")
+			Expect(ns.Field(`metadata.annotations.modules\.deckhouse\.io/ensured-update-policies`).Exists()).To(BeTrue())
+		})
+	})
+
 	Context("A cluster with client's ModuleSources with annotation", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(d8SystemWithAnnotation + deckhouseMs + customMss))
@@ -205,7 +265,7 @@ spec:
 			f.RunHook()
 		})
 
-		It("Shouldn't create/update ModuleUpdatePolicies", func() {
+		It("Shouldn't create/update any ModuleUpdatePolicies", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			mupDeckhouse := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
