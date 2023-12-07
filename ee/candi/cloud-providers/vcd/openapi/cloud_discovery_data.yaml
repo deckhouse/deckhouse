@@ -1,4 +1,4 @@
-kind: VCDCloudDiscoveryData
+kind: VCDCloudProviderDiscoveryData
 apiVersions:
 - apiVersion: deckhouse.io/v1alpha1
   openAPISpec:
@@ -12,3 +12,10 @@ apiVersions:
       kind:
         type: string
         enum: [VCDCloudDiscoveryData]
+      sizingPolicies:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        description: List of flavors.
+        uniqueItems: true

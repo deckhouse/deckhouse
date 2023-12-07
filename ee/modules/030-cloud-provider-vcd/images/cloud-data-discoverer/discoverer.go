@@ -163,9 +163,12 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 	policies := make([]string, len(sizingPolicies))
 
 	for _, s := range sizingPolicies {
+		if s.VdcComputePolicyV2.Name == "" || s.VdcComputePolicyV2.Name == "System Default" {
+			continue
+		}
 		policies = append(policies, s.VdcComputePolicyV2.Name)
 	}
-	return policies, nil
+	return removeDuplicates(policies), nil
 }
 
 func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, error) {
@@ -174,4 +177,24 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 
 type VCDCloudDiscoveryData struct {
 	SizingPolicies []string `json:"sizingPolicies,omitempty" yaml:"sizingPolicies,omitempty"`
+}
+
+func removeDuplicates(list []string) []string {
+	var (
+		keys       = make(map[string]struct{})
+		uniqueList []string
+	)
+
+	for _, elem := range list {
+		if elem == "" {
+			continue
+		}
+
+		if _, ok := keys[elem]; !ok {
+			keys[elem] = struct{}{}
+			uniqueList = append(uniqueList, elem)
+		}
+	}
+
+	return uniqueList
 }
