@@ -21,13 +21,20 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+
+	"github.com/Masterminds/semver/v3"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+const (
+	minVersionValuesKey = "istio:minimalIstioOperatorVersion"
 )
 
 type IstioOperatorCrdInfo struct {
@@ -65,6 +72,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	var operatorVersionsToInstall = make([]string, 0)
 	var unsupportedRevisions = make([]string, 0)
+	var minInstalledVersion *semver.Version
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 
@@ -79,6 +87,14 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 		if !versionMap.IsRevisionSupported(iopInfo.Revision) {
 			unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
 			continue
+		} else {
+			iopVerSem, err := semver.NewVersion(iopVer)
+			if err != nil {
+				return err
+			}
+			if minInstalledVersion == nil || iopVerSem.LessThan(minInstalledVersion) {
+				minInstalledVersion = iopVerSem
+			}
 		}
 		if !lib.Contains(operatorVersionsToInstall, iopVer) {
 			operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
@@ -93,5 +109,10 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	sort.Strings(operatorVersionsToInstall)
 	input.Values.Set("istio.internal.operatorVersionsToInstall", operatorVersionsToInstall)
 
+	if minInstalledVersion == nil {
+		requirements.RemoveValue(minVersionValuesKey)
+	} else {
+		requirements.SaveValue(minVersionValuesKey, minInstalledVersion.String())
+	}
 	return nil
 }
