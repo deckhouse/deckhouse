@@ -1,4 +1,4 @@
-{{- define "openstack_cloud_data_discoverer_resources" }}
+{{- define "vcd_cloud_data_discoverer_resources" }}
 cpu: 25m
 memory: 50Mi
 {{- end }}
@@ -22,7 +22,7 @@ spec:
     containerPolicies:
     - containerName: "cloud-data-discoverer"
       minAllowed:
-        {{- include "openstack_cloud_data_discoverer_resources" . | nindent 8 }}
+        {{- include "vcd_cloud_data_discoverer_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 50Mi
@@ -128,7 +128,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "openstack_cloud_data_discoverer_resources" . | nindent 12 }}
+            {{- include "vcd_cloud_data_discoverer_resources" . | nindent 12 }}
           {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
