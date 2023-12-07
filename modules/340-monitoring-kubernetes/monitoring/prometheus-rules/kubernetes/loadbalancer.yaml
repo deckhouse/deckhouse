@@ -1,0 +1,19 @@
+- name: kubernetes.node
+  rules:
+    - alert: LoadBalancerServiceWithoutExternalIP
+      expr: sum(kube_service_status_load_balancer_ingress or vector(0)) < sum(kube_service_spec_type{type="LoadBalancer"})
+      for: 30m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cluster_has_node_alerts: "LoadBalancerServiceWithoutExternalIP,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cluster_has_node_alerts: "LoadBalancerServiceWithoutExternalIP,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        description: |-
+          Check does service LoadBalancer were started.
+
+          On some providers system sometimes cant create node for LoadBalancer service.
+
+          You can check unloaded resource with command kubectl get svc -A
+        summary: Load balancer does not starts
