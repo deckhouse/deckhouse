@@ -60,7 +60,7 @@ func createModuleUpdatePolicies(input *go_hook.HookInput, dc dependency.Containe
 	}
 
 	// get all modulesources
-	moduleSources, err := k8sCli.Dynamic().Resource(msResource).List(context.TODO(), metav1.ListOptions{})
+	moduleSources, err := k8sCli.Dynamic().Resource(v1alpha1.ModuleSourceGVR).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
