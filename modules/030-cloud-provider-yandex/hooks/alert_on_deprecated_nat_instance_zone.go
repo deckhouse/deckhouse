@@ -17,14 +17,9 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -33,33 +28,8 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "deprecatedNatInstanceZone",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-provider-cluster-configuration"},
-			},
-			FilterFunc: cloudProviderDiscoveryDataFromSecret,
-		},
-	},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 21},
 }, alertOnDeprecatedNatInstanceZone)
-
-func cloudProviderDiscoveryDataFromSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert Kubernetes secret to secret struct: %v", err)
-	}
-
-	return secret.Data["cloud-provider-discovery-data.json"], nil
-}
 
 func alertOnDeprecatedNatInstanceZone(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricName)
