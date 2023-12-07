@@ -12,10 +12,12 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vmware/go-vcloud-director/v2/govcd"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
@@ -151,10 +153,10 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 		return nil, err
 	}
 
-	policies := make([]string, len(sizingPolicies))
+	policies := make([]string, 0, len(sizingPolicies))
 
 	for _, s := range sizingPolicies {
-		if s.VdcComputePolicyV2.Name == "" || s.VdcComputePolicyV2.Name == "System Default" {
+		if s.VdcComputePolicyV2.Name == "" {
 			continue
 		}
 		policies = append(policies, s.VdcComputePolicyV2.Name)
@@ -163,7 +165,29 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 }
 
 func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, error) {
-	return nil, nil
+	vcdClient, err := d.config.client()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create vcd client: %v", err)
+	}
+
+	sizingPolicies, err := vcdClient.GetAllVdcComputePoliciesV2(url.Values{})
+	if err != nil {
+		return nil, err
+	}
+
+	instanceTypes := make([]v1alpha1.InstanceType, 0, len(sizingPolicies))
+	for _, s := range sizingPolicies {
+		if s.VdcComputePolicyV2.Name == "" {
+			continue
+		}
+		instanceTypes = append(instanceTypes, v1alpha1.InstanceType{
+			Name:     s.VdcComputePolicyV2.Name,
+			CPU:      resource.MustParse(strconv.FormatInt(int64(*s.VdcComputePolicyV2.CPUCount), 10)),
+			Memory:   resource.MustParse(strconv.FormatInt(int64(*s.VdcComputePolicyV2.Memory), 10) + "Mi"),
+			RootDisk: resource.MustParse("0"),
+		})
+	}
+	return instanceTypes, nil
 }
 
 type VCDCloudProviderDiscoveryData struct {
