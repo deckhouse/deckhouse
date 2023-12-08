@@ -522,9 +522,9 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			}
 			err = validateModule(c.modulesValidator, def)
 			if err != nil {
-				// TODO: maybe we have to suspend such release, because it couldn't be fixed in the runtime
 				c.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, "Openapi config is invalid"); e != nil {
+				release.Status.Phase = v1alpha1.PhaseSuspended
+				if e := c.updateModuleReleaseStatusMessage(ctx, release, "validation failed: "+err.Error()); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
 
