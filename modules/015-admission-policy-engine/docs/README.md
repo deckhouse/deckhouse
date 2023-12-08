@@ -24,7 +24,7 @@ The type of cluster policy to use by default is determined based on the followin
 
 **Note** that upgrading Deckhouse in a cluster to v1.55 does not automatically result in a default policy change. 
 
-Default policy can be overridden either globally ([in the module settings](configuration.html#parameters-podsecuritystandards-defaultPolicy)) or on a per-namespace basis (using the `security.deckhouse.io/pod-policy=<POLICY_NAME>` label for the corresponding namespace).
+Default policy can be overridden either globally ([in the module settings](configuration.html#parameters-podsecuritystandards-defaultpolicy)) or on a per-namespace basis (using the `security.deckhouse.io/pod-policy=<POLICY_NAME>` label for the corresponding namespace).
 
 Example of the command to set the `Restricted` policy for all Pods in the `my-namespace` Namespace.
 
@@ -32,7 +32,7 @@ Example of the command to set the `Restricted` policy for all Pods in the `my-na
 kubectl label ns my-namespace security.deckhouse.io/pod-policy=restricted
 ```
 
-By default, Pod Security Standards policies have their enforcement actions set to "Deny" which means any workload pods not compliant to the selected policy won't be able to run. This behavior can be adjusted either for the whole cluster or per namespace. For setting PSS enforcement action cluster-wide check [configuration](configuration.html#parameters-podsecuritystandards-enforcementaction). In case you want to override default enforcement action for a namespace, set label `security.deckhouse.io/pod-policy-acion =<POLICY_ACTION>` to the corresponding namespace. The list of possible enforcement actions consists of the following values: "dryrun", "warn", "deny".
+By default, Pod Security Standards policies have their enforcement actions set to "Deny" which means any workload pods not compliant to the selected policy won't be able to run. This behavior can be adjusted either for the whole cluster or per namespace. For setting PSS enforcement action cluster-wide check [configuration](configuration.html#parameters-podsecuritystandards-enforcementaction). In case you want to override default enforcement action for a namespace, set label `security.deckhouse.io/pod-policy-action =<POLICY_ACTION>` to the corresponding namespace. The list of possible enforcement actions consists of the following values: "dryrun", "warn", "deny".
 
 Below is an example of setting the "warn" PSS policy mode for all pods in the `my-namespace` namespace:
 
