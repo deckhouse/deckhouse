@@ -149,7 +149,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		val, ok := latestRelease.Labels["hashsum"]
 		if ok {
 			if val == hashsum {
-				klog.Warningf("the hashes matched")
+				klog.Info("the hashes matched")
 				return nil
 			}
 		}
@@ -180,14 +180,11 @@ func (client *helmClient) Delete(releaseName string) error {
 func (client *helmClient) rollbackLatestRelease(releases []*release.Release) {
 	latestRelease := releases[0]
 
-	// TODO fix logger client.LogEntry.Infof("Trying to rollback '%s'", nsReleaseName)
-
 	if latestRelease.Version == 1 || client.options.HistoryMax == 1 || len(releases) == 1 {
 		uninstallObject := action.NewUninstall(client.actionConfig)
 		uninstallObject.KeepHistory = false
 		_, err := uninstallObject.Run(latestRelease.Name)
 		if err != nil {
-			// TODO fix logger client.LogEntry.Warnf("Failed to uninstall pending release %s: %s", nsReleaseName, err)
 			return
 		}
 	} else {
@@ -203,12 +200,9 @@ func (client *helmClient) rollbackLatestRelease(releases []*release.Release) {
 		rollbackObject.CleanupOnFail = true
 		err := rollbackObject.Run(latestRelease.Name)
 		if err != nil {
-			// TODO fix logger client.LogEntry.Warnf("Failed to rollback pending release %s: %s", nsReleaseName, err)
 			return
 		}
 	}
-
-	// TODO fix logger client.LogEntry.Infof("Rollback '%s' successful", nsReleaseName)
 }
 
 func getActionConfig(namespace string) (*action.Configuration, error) {
