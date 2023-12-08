@@ -11,9 +11,11 @@
         plk_create_group_if_not_exists__cluster_has_node_alerts: "LoadBalancerServiceWithoutExternalIP,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__cluster_has_node_alerts: "LoadBalancerServiceWithoutExternalIP,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         description: |-
-          Check does service LoadBalancer were started.
+          Checks whether the Load Balancer service has been started.
 
-          On some providers system sometimes cant create node for LoadBalancer service.
+          On some cloud providers sometimes can't create node for LoadBalancer service.
 
-          You can check unloaded resource with command kubectl get svc -A
+          You can check services LoadBalancer status with command:
+          kubectl get svc -A -o json | jq -r '.items[] | select(.spec.allocateLoadBalancerNodePorts == true) | "name: \(.metadata.name), ip: \(.status.loadBalancer.ingress[0].ip)"'
+          For more information about not started LoadBalancer you can watch logs of cloud-controller-manager
         summary: Load balancer does not starts
