@@ -31,7 +31,6 @@ import (
 )
 
 const (
-	defaultUpdateMode   = "Auto"
 	migrationAnnotation = "modules.deckhouse.io/ensured-update-policies"
 )
 
