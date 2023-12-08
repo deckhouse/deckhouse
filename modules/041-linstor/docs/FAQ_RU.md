@@ -148,19 +148,19 @@ linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
 
 * Загрузите скрипт `evict.sh` на хост, имеющий доступ к API Kubernetes с правами администратора (для работы скрипта потребуются установленные `kubectl` и `jq`):
 
-  * Последнюю версию скрипта можно скачать с github:
+  * Последнюю версию скрипта можно скачать с GitHub:
 
-  ```shell
-  curl -fsSL -o evict.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/modules/041-linstor/tools/evict.sh
-  chmod 700 evict.sh
-  ```
+    ```shell
+    curl -fsSL -o evict.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/modules/041-linstor/tools/evict.sh
+    chmod 700 evict.sh
+    ```
 
-  * Так же скрипт можно скачать из пода deckhouse:
+  * Также скрипт можно скачать из пода `deckhouse`:
 
-  ```shell
-  kubectl -n d8-system cp -c deckhouse $(kubectl -n d8-system get po -l app=deckhouse -o jsonpath='{.items[0].metadata.name}'):/deckhouse/modules/041-linstor/tools/evict.sh ./evict.sh
-  chmod 700 evict.sh
-  ```
+    ```shell
+    kubectl -n d8-system cp -c deckhouse $(kubectl -n d8-system get po -l app=deckhouse -o jsonpath='{.items[0].metadata.name}'):/deckhouse/modules/041-linstor/tools/evict.sh ./evict.sh
+    chmod 700 evict.sh
+    ```
 
 * Исправьте все ошибочные ресурсы LINSTOR в кластере. Чтобы найти их, выполните следующую команду:
 

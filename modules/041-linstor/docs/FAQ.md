@@ -150,17 +150,17 @@ To configure Prometheus to use LINSTOR for storing data:
 
   * Download the latest version of the script from GitHub:
 
-  ```shell
-  curl -fsSL -o evict.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/modules/041-linstor/tools/evict.sh
-  chmod 700 evict.sh
-  ```
+    ```shell
+    curl -fsSL -o evict.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/modules/041-linstor/tools/evict.sh
+    chmod 700 evict.sh
+    ```
 
-  * Alternatively, download the script from a deckhouse pod:
+  * Alternatively, download the script from the `deckhouse` pod:
 
-  ```shell
-  kubectl -n d8-system cp -c deckhouse $(kubectl -n d8-system get po -l app=deckhouse -o jsonpath='{.items[0].metadata.name}'):/deckhouse/modules/041-linstor/tools/evict.sh ./evict.sh
-  chmod 700 evict.sh
-  ```
+    ```shell
+    kubectl -n d8-system cp -c deckhouse $(kubectl -n d8-system get po -l app=deckhouse -o jsonpath='{.items[0].metadata.name}'):/deckhouse/modules/041-linstor/tools/evict.sh ./evict.sh
+    chmod 700 evict.sh
+    ```
 
 * Fix all faulty LINSTOR resources in the cluster. To identify them, execute the following command:
 
@@ -190,7 +190,7 @@ To run the `evict.sh` script in non-interactive mode, it is necessary to add the
 
 > **Note!** After the script completes, the node will remain in Kubernetes with the status *SchedulingDisabled*, and in LINSTOR, the node will have the property *AutoplaceTarget=false* set, preventing the LINSTOR scheduler from creating resources on this node.
 
-To allow resource and pod placement on the node again, execute:
+Run the following command to allow resource and pod placement on the node again:
 
 ```shell
 alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
@@ -198,7 +198,7 @@ linstor node set-property "worker-1" AutoplaceTarget
 kubectl uncordon "worker-1"
 ```
 
-To check the *AutoplaceTarget* property for all nodes (the AutoplaceTarget field will be empty for nodes where LINSTOR resource placement is allowed):
+Run the following command to check the *AutoplaceTarget* property for all nodes (the AutoplaceTarget field will be empty for nodes where LINSTOR resource placement is allowed):
 
 ```shell
 alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
