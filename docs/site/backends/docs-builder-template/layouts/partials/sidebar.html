@@ -12,23 +12,27 @@
   {{ $moduleTitle := "" }}
   {{ $moduleChannel := "" }}
   {{ $isActiveItem := false }}
+  {{ $d8Edition := "" }}
 
   {{ if eq $currentModuleName $module }}
     {{ $moduleChannel = $currentModuleChannel }}
     {{ $isActiveItem = true }}
   {{ end}}
 
-  {{ range sort $channelsInfo "stability" "asc" }}
-    {{ if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
+  {{ range sort $channelsInfo "stability" "desc" }}
     {{ $code := .code }}
+    {{ if eq $code "rock-solid" }}{{ continue }}{{ end }}
+    {{ if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
     {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
       {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
+      {{ if .Params.d8Edition }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
       {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
     {{ end}}
   {{ end}}
   {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
+  {{ if not $d8Edition }}{{ $d8Edition = "ce" }}{{ end }}
   {{ if $moduleChannel }}
-    {{ $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem ) }}
+    {{ $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem "d8Edition" $d8Edition) }}
   {{ end }}
 {{ end}}
 
@@ -61,7 +65,7 @@
           </li>
 
         {{ range $sidebarItem := $sidebarRootMenu }}
-            <li class="sidebar__item sidebar__item_parent {{ if $sidebarItem.isActive }}active{{ end }}">
+            <li class="sidebar__item sidebar__item_parent{{ if ne $sidebarItem.d8Edition "ce" }} sidebar__item_{{ lower $sidebarItem.d8Edition }}{{ end }}{{ if $sidebarItem.isActive }} active{{ end }}">
                 <a href='#'>{{ $sidebarItem.title }}</a>
                   {{ template "subpages" (dict "parent" $sidebarItem "pages" $pages "ctx" $ctx) }}
             </li>
