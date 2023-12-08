@@ -1,10 +1,28 @@
 {{ define "main" }}
+{{ $channelsInfo := .Site.Data.channels.info }}
+{{ $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` $.File.Dir 1 ) 0 }}
+{{ $currentModuleName := index $_pathElements 1 }}
+{{ $currentModuleChannel := index $_pathElements 2 }}
+
+{{ $d8Edition := "" }}
+
+{{ range sort $channelsInfo "stability" "desc" }}
+  {{ if eq .code "rock-solid" }}{{ continue }}{{ end }}
+  {{ with $.GetPage ( printf "modules/%s/%s/README.md" $currentModuleName .code  ) }}
+    {{ if .Params.d8Edition }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
+  {{ end}}
+{{ end}}
+
 <div class="docs docs--modules">
     <div class="docs__wrap-title">
         <h1 class="docs__title">{{ .Title }}</h1>
     </div>
 
     <div class="post-content">
+
+        {{ if eq $d8Edition "ee" }}
+          {{ partial "alert" ( dict "level" "info" "content" (T "module_is_available_in_ee_only") ) }}
+        {{ end }}
 
         {{.Content}}
 
