@@ -101,13 +101,13 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 
 	// Getting minVersion
 	var minVersion *semver.Version
-	for _, ovti := range operatorVersionsToInstall {
-		iopVerSem, err := semver.NewVersion(ovti)
+	for _, version := range operatorVersionsToInstall {
+		versionSemver, err := semver.NewVersion(version)
 		if err != nil {
 			return err
 		}
-		if minVersion == nil || iopVerSem.LessThan(minVersion) {
-			minVersion = iopVerSem
+		if minVersion == nil || versionSemver.LessThan(minVersion) {
+			minVersion = versionSemver
 		}
 	}
 	if minVersion == nil {
