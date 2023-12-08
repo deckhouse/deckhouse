@@ -196,7 +196,7 @@ func (c *ModulePullOverrideController) processNextModuleOverride(ctx context.Con
 	}(obj)
 
 	if err != nil {
-		c.logger.Errorf("ModuleRelease reconcile error: %s", err.Error())
+		c.logger.Errorf("ModulePullOverride reconcile error: %s", err.Error())
 		return true
 	}
 
