@@ -25,10 +25,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,7 +43,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	d8informers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/deckhouse.io/v1alpha1"
 	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	controllerUtils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -76,16 +72,10 @@ type Controller struct {
 
 	logger logger.Logger
 
-	mv                 moduleValidator
 	externalModulesDir string
 
 	rwlock                sync.RWMutex
 	moduleSourcesChecksum sourceChecksum
-}
-
-type moduleValidator interface {
-	ValidateModule(m *modules.BasicModule) error
-	GetValuesValidator() *validation.ValuesValidator
 }
 
 // NewController returns a new ModuleSource controller
@@ -95,7 +85,7 @@ func NewController(
 	moduleReleaseInformer d8informers.ModuleReleaseInformer,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
-	mv moduleValidator) *Controller {
+) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
 		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(50), 300)},
@@ -117,7 +107,6 @@ func NewController(
 
 		logger: lg,
 
-		mv:                    mv,
 		externalModulesDir:    os.Getenv("EXTERNAL_MODULES_DIR"),
 		moduleSourcesChecksum: make(sourceChecksum),
 	}
@@ -407,13 +396,6 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 		return "", av, err
 	}
 
-	if downloadResult.ModuleDefinition != nil {
-		err = c.validateModule(downloadResult.ModuleDefinition)
-		if err != nil {
-			return "", av, err
-		}
-	}
-
 	if downloadResult.Checksum == moduleChecksum {
 		c.logger.Infof("Module %q checksum in the %q release channel has not been changed. Skip update.", moduleName, policy.Spec.ReleaseChannel)
 		return "", av, nil
@@ -564,20 +546,6 @@ func (c *Controller) updateModuleSourceStatus(msCopy *v1alpha1.ModuleSource) err
 
 	_, err := c.kubeClient.DeckhouseV1alpha1().ModuleSources().UpdateStatus(context.TODO(), msCopy, metav1.UpdateOptions{})
 	return err
-}
-
-func (c *Controller) validateModule(def *models.DeckhouseModuleDefinition) error {
-	if def.Weight < 900 || def.Weight > 999 {
-		return fmt.Errorf("external module weight must be between 900 and 999")
-	}
-
-	dm := models.NewDeckhouseModule(*def, utils.Values{}, c.mv.GetValuesValidator())
-	err := c.mv.ValidateModule(dm.GetBasicModule())
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.

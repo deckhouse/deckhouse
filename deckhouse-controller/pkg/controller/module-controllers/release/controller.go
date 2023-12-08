@@ -29,7 +29,10 @@ import (
 	"syscall"
 	"time"
 
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -48,6 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	d8informers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/deckhouse.io/v1alpha1"
 	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
@@ -82,6 +86,7 @@ type Controller struct {
 	// <module-name>: <module-source>
 	sourceModules map[string]string
 
+	modulesValidator   moduleValidator
 	externalModulesDir string
 	symlinksDir        string
 
@@ -108,6 +113,7 @@ func NewController(ks kubernetes.Interface,
 	moduleSourceInformer d8informers.ModuleSourceInformer,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
+	mv moduleValidator,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -132,6 +138,7 @@ func NewController(ks kubernetes.Interface,
 
 		sourceModules: make(map[string]string),
 
+		modulesValidator:   mv,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
 
@@ -504,10 +511,27 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
 			}
 
-			modulePath := generateModulePath(moduleName, release.Spec.Version.String())
+			moduleVersionPath := path.Join(c.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
+			relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
 			newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
 
-			err = enableModule(c.externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
+			def := models.DeckhouseModuleDefinition{
+				Name:   moduleName,
+				Weight: release.Spec.Weight,
+				Path:   moduleVersionPath,
+			}
+			err = validateModule(c.modulesValidator, def)
+			if err != nil {
+				// TODO: maybe we have to suspend such release, because it couldn't be fixed in the runtime
+				c.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
+				if e := c.updateModuleReleaseStatusMessage(ctx, release, "Openapi config is invalid"); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+
+				return ctrl.Result{}, nil
+			}
+
+			err = enableModule(c.externalModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
 			if err != nil {
 				c.logger.Errorf("Module deploy failed: %v", err)
 				if e := c.suspendModuleVersionForRelease(ctx, release, err); e != nil {
@@ -850,6 +874,24 @@ func (c *Controller) restoreAbsentSourceModules() error {
 	return nil
 }
 
+func validateModule(validator moduleValidator, def models.DeckhouseModuleDefinition) error {
+	if def.Weight < 900 || def.Weight > 999 {
+		return fmt.Errorf("external module weight must be between 900 and 999")
+	}
+
+	if def.Path == "" {
+		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
+	}
+
+	dm := models.NewDeckhouseModule(def, addonutils.Values{}, validator.GetValuesValidator())
+	err := validator.ValidateModule(dm.GetBasicModule())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath string) error {
 	// make absolute path for versioned module
 	moduleAbsPath := filepath.Join(externalModulesDir, strings.TrimPrefix(moduleRelativePath, "../"))
@@ -884,4 +926,9 @@ func isReleaseApproved(release *v1alpha1.ModuleRelease) bool {
 		return value
 	}
 	return false
+}
+
+type moduleValidator interface {
+	ValidateModule(m *addonmodules.BasicModule) error
+	GetValuesValidator() *validation.ValuesValidator
 }
