@@ -16,6 +16,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vmware/go-vcloud-director/v2/govcd"
+	"github.com/vmware/go-vcloud-director/v2/types/v56"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
@@ -183,23 +184,21 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 }
 
 func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]string, error) {
-	vdcs, err := vcdClient.QueryProviderVdcs()
+	results, err := vcdClient.QueryWithNotEncodedParams(nil, map[string]string{
+		"type": types.QtOrgVdcStorageProfile,
+	})
+
 	if err != nil {
 		return nil, err
 	}
+	if len(results.Results.OrgVdcStorageProfileRecord) == 0 {
+		return nil, fmt.Errorf("storage profiles not found")
+	}
 
-	profiles := make([]string, 0)
+	profiles := make([]string, 0, len(results.Results.OrgVdcStorageProfileRecord))
 
-	for _, pv := range vdcs {
-
-		storageProfiles, err := vcdClient.Client.QueryProviderVdcStorageProfiles(pv.HREF)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, p := range storageProfiles {
-			profiles = append(profiles, p.Name)
-		}
+	for _, p := range results.Results.OrgVdcStorageProfileRecord {
+		profiles = append(profiles, p.Name)
 	}
 	return profiles, nil
 }
