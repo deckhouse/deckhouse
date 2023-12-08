@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	minVersionValuesKey = "istio:minimalIstioOperatorVersion"
+	minVersionValuesKey = "istio:minimalVersion"
 )
 
 type IstioOperatorCrdInfo struct {

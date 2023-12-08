@@ -26,7 +26,7 @@ import (
 
 const (
 	requirementsKey     = "istioVer"
-	minVersionValuesKey = "istio:minimalIstioOperatorVersion"
+	minVersionValuesKey = "istio:minimalVersion"
 )
 
 func init() {
