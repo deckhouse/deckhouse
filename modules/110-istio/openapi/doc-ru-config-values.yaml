@@ -1,7 +1,7 @@
 type: object
 properties:
   globalVersion:
-    description: Явно заданная версия control plane Istio, который обслуживает data plane с неявной версией (namespace с лейблом `istio-injection=enabled`, но не `istio.io/rev=`).
+    description: Явно заданная версия control plane Istio, который обслуживает data plane по умолчанию (namespace с лейблом `istio-injection=enabled`, но не `istio.io/rev=`).
   additionalVersions:
     description: Дополнительные версии control plane Istio, которые будут установлены. Они будут обслуживать namespace'ы, где явно указана версия с помощью лейбла `istio.io/rev=`.
   enableHTTP10:
