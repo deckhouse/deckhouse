@@ -221,7 +221,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 					assertExporterDeploymentSecret(f, true)
 				})
 
-				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+				It("Should deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					assertDeployNatInstanceMonitoring(f, true)

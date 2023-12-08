@@ -42,7 +42,7 @@
 
               Get `providerClusterConfiguration.withNATInstance`:
               ```
-              kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
+              kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
               ```
 
               1. If you specified `withNATInstance.natInstanceInternalAddress` and/or `withNATInstance.internalSubnetID` in providerClusterConfiguration, you need to remove them with the following command:
@@ -71,13 +71,13 @@
               1. Get route table name
 
                   ```
-                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
+                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
                   ```
 
               1. Get NAT Instance name:
 
                   ```
-                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
+                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
                   ```
 
               1. Get NAT Instance internal IP
