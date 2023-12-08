@@ -183,27 +183,24 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 }
 
 func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]string, error) {
-	adminOrg, err := vcdClient.GetAdminOrgByName(d.config.Org)
+	vdcs, err := vcdClient.QueryProviderVdcs()
 	if err != nil {
 		return nil, err
 	}
 
-	adminVDC, err := adminOrg.GetAdminVDCByName(d.config.VDC, true)
-	if err != nil {
-		return nil, err
+	profiles := make([]string, 0)
+
+	for _, pv := range vdcs {
+
+		storageProfiles, err := vcdClient.Client.QueryProviderVdcStorageProfiles(pv.HREF)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, p := range storageProfiles {
+			profiles = append(profiles, p.Name)
+		}
 	}
-
-	storageProfiles, err := adminVDC.QueryCompatibleStorageProfiles()
-	if err != nil {
-		return nil, err
-	}
-
-	profiles := make([]string, 0, len(storageProfiles))
-
-	for _, p := range storageProfiles {
-		profiles = append(profiles, p.Name)
-	}
-
 	return profiles, nil
 }
 
