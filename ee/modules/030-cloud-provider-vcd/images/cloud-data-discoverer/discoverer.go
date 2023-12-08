@@ -183,7 +183,7 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 }
 
 func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]string, error) {
-	storageProfiles, err := vcdClient.Client.QueryAllProviderVdcStorageProfiles()
+	storageProfiles, err := vcdClient.Client.QueryProviderVdcStorageProfiles("")
 
 	if err != nil {
 		return nil, err

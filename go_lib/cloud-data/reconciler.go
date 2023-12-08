@@ -78,8 +78,8 @@ func (c *Reconciler) Start() {
 	defer c.logger.Infoln("Stop cloud data discoverer fully")
 
 	c.logger.Infoln("Start cloud data discoverer")
-	c.logger.Infoln("Address: ", c.listenAddress)
-	c.logger.Infoln("Checks interval: ", c.checkInterval)
+	c.logger.Infoln("Address:", c.listenAddress)
+	c.logger.Infoln("Checks interval:", c.checkInterval)
 
 	// channels to stop converge loop
 	doneCh := make(chan struct{})
