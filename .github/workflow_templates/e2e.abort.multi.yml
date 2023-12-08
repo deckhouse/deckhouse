@@ -48,7 +48,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 {!{/* Template with e2e jobs for one provider. */}!}
 {!{- define "e2e_clean_workflow_template" -}!}
 {!{- $ctx := . -}!}
-{!{- $workflowName := printf "remove failed e2e cluster: %s" $ctx.providerName -}!}
+{!{- $workflowName := printf "destroy cluster: %s" $ctx.providerName -}!}
 # <template: e2e_workflow_template>
 name: '{!{ $workflowName }!}'
 on:
