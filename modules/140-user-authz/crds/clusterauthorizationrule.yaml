@@ -159,6 +159,8 @@ spec:
           type: object
           description: |
             This object manages RBAC and namespace-based authorization.
+
+            The settings determine which access level is assigned to the user and/or group.
           required:
           - spec
           properties:
@@ -246,6 +248,9 @@ spec:
                                 values:
                                   - production
                                   - staging
+                              - key: tier
+                                operator: NotIn
+                                values: [production]
                           items:
                             oneOf:
                               - properties:
@@ -259,7 +264,6 @@ spec:
                                     enum: [ In, NotIn ]
                                 required: [ key, operator, values ]
                             type: object
-                            required: [ "operator" ]
                             properties:
                               key:
                                 description: A label name.
@@ -277,6 +281,9 @@ spec:
                                 type: array
                                 items:
                                   type: string
+                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                  minLength: 1
+                                  maxLength: 63
                         matchLabels:
                           type: object
                           description: A set of labels a namespace must have to match.

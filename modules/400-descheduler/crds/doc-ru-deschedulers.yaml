@@ -38,7 +38,20 @@ spec:
                             будут компактно распределены по меньшему количеству узлов.
                           properties:
                             nodeFilter: &node-filter
-                              description: Ограничивает список узлов, к которым применится эта стратегия.
+                              description: Фильтр, ограничивающий список узлов, к которым применится эта стратегия.
+                              labelSelector:
+                                properties:
+                                  matchExpressions:
+                                    description: |
+                                      Список выражений для меток, которые должен иметь узел, чтобы подпадать под условие фильтра.
+                                    items:
+                                      properties:
+                                        key:
+                                          description: Имя метки.
+                                        operator:
+                                          description: Оператор сравнения.
+                                        values:
+                                          description: Значение метки.
                             priorityFilter: &priority-filter
                               description: Только поды с `priority` будут учитываться в этой стратегии.
                             namespaceFilter: &namespace-filter
