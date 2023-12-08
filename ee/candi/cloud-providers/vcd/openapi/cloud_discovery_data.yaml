@@ -22,7 +22,14 @@ apiVersions:
       storageProfiles:
         type: array
         items:
-          type: string
-          minLength: 1
+          type: object
+          required: [name]
+          properties:
+            name:
+              type: string
+              minLength: 1
+            isEnabled:
+              type: boolean
+            isDefaultStorageProfile:
+              type: boolean
         description: List of storage classes.
-        uniqueItems: true

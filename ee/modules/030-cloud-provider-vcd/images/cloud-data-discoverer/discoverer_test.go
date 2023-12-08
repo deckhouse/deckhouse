@@ -35,7 +35,7 @@ func TestRemoveDuplicates(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			if got := removeDuplicates(test.args); !reflect.DeepEqual(got, test.want) {
+			if got := removeDuplicatesString(test.args); !reflect.DeepEqual(got, test.want) {
 				t.Errorf("removeDuplicates() = %v, want %v", got, test.want)
 			}
 		})

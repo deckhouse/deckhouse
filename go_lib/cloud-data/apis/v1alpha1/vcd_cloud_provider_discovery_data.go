@@ -18,6 +18,12 @@ type VCDCloudProviderDiscoveryData struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 
-	SizingPolicies  []string `json:"sizingPolicies,omitempty"`
-	StorageProfiles []string `json:"storageProfiles,omitempty"`
+	SizingPolicies  []string            `json:"sizingPolicies,omitempty"`
+	StorageProfiles []VCDStorageProfile `json:"storageProfiles,omitempty"`
+}
+
+type VCDStorageProfile struct {
+	Name                    string `json:"name"`
+	IsEnabled               bool   `json:"isEnabled,omitempty"`
+	IsDefaultStorageProfile bool   `json:"isDefaultStorageProfile,omitempty"`
 }

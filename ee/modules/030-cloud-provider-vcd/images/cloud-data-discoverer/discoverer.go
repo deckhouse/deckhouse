@@ -140,7 +140,7 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		if discoveryData.SizingPolicies != nil {
 			sizingPolicies = append(sizingPolicies, discoveryData.SizingPolicies...)
 		}
-		sizingPolicies = removeDuplicates(sizingPolicies)
+		sizingPolicies = removeDuplicatesString(sizingPolicies)
 	}
 
 	discoveryData.SizingPolicies = sizingPolicies
@@ -154,7 +154,7 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		if discoveryData.StorageProfiles != nil {
 			storageProfiles = append(storageProfiles, discoveryData.StorageProfiles...)
 		}
-		storageProfiles = removeDuplicates(storageProfiles)
+		storageProfiles = removeDuplicatesStorageProfiles(storageProfiles)
 	}
 
 	discoveryData.StorageProfiles = storageProfiles
@@ -183,7 +183,7 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 	return policies, nil
 }
 
-func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]string, error) {
+func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]v1alpha1.VCDStorageProfile, error) {
 	results, err := vcdClient.QueryWithNotEncodedParams(nil, map[string]string{
 		"type": types.QtOrgVdcStorageProfile,
 	})
@@ -195,10 +195,17 @@ func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]string, e
 		return nil, fmt.Errorf("storage profiles not found")
 	}
 
-	profiles := make([]string, 0, len(results.Results.OrgVdcStorageProfileRecord))
+	profiles := make([]v1alpha1.VCDStorageProfile, 0, len(results.Results.OrgVdcStorageProfileRecord))
 
 	for _, p := range results.Results.OrgVdcStorageProfileRecord {
-		profiles = append(profiles, p.Name)
+		if p.Name == "" {
+			continue
+		}
+		profiles = append(profiles, v1alpha1.VCDStorageProfile{
+			Name:                    p.Name,
+			IsEnabled:               p.IsEnabled,
+			IsDefaultStorageProfile: p.IsDefaultStorageProfile,
+		})
 	}
 	return profiles, nil
 }
@@ -238,7 +245,7 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 }
 
 // removeDuplicates removes duplicates from slice and sort it
-func removeDuplicates(list []string) []string {
+func removeDuplicatesString(list []string) []string {
 	var (
 		keys       = make(map[string]struct{})
 		uniqueList []string
@@ -255,5 +262,26 @@ func removeDuplicates(list []string) []string {
 		}
 	}
 
+	return uniqueList
+}
+
+func removeDuplicatesStorageProfiles(list []v1alpha1.VCDStorageProfile) []v1alpha1.VCDStorageProfile {
+	var uniqueList []v1alpha1.VCDStorageProfile
+	for _, elem := range list {
+		if elem.Name == "" {
+			continue
+		}
+		skip := false
+		for _, uniq := range uniqueList {
+			if elem.Name == uniq.Name {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+		uniqueList = append(uniqueList, elem)
+	}
 	return uniqueList
 }
