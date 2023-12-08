@@ -374,9 +374,9 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 
 func (c *Controller) processSourceModule(ctx context.Context, md *downloader.ModuleDownloader, ms *v1alpha1.ModuleSource, moduleName, moduleChecksum string, policies []*v1alpha1.ModuleUpdatePolicy) ( /*checksum*/ string, v1alpha1.AvailableModule, error) {
 	av := v1alpha1.AvailableModule{
-		Name:      moduleName,
-		Policy:    "",
-		Overrided: false,
+		Name:       moduleName,
+		Policy:     "",
+		Overridden: false,
 	}
 	// check if we have ModulePullOverride for source/module
 	exists, err := c.isModulePullOverrideExists(ms.Name, moduleName)
@@ -386,7 +386,7 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 	}
 
 	if exists {
-		av.Overrided = true
+		av.Overridden = true
 		return "", av, nil
 	}
 

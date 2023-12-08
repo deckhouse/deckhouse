@@ -86,6 +86,11 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 				if err != nil {
 					return err
 				}
+			} else {
+				log.Warnf("no openapi spec for %q module", valuesModuleName)
+				fmt.Println(def.Path)
+				fmt.Println(cb)
+				fmt.Println(vb)
 			}
 
 			if _, ok := dml.deckhouseModules[def.Name]; ok {
