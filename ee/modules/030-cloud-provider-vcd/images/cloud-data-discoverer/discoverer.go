@@ -183,8 +183,17 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 }
 
 func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]string, error) {
-	storageProfiles, err := vcdClient.Client.QueryProviderVdcStorageProfiles("")
+	adminOrg, err := vcdClient.GetAdminOrgByName(d.config.Org)
+	if err != nil {
+		return nil, err
+	}
 
+	adminVDC, err := adminOrg.GetAdminVDCByName(d.config.VDC, true)
+	if err != nil {
+		return nil, err
+	}
+
+	storageProfiles, err := adminVDC.QueryCompatibleStorageProfiles()
 	if err != nil {
 		return nil, err
 	}
