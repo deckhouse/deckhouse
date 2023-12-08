@@ -79,6 +79,10 @@ spec:
             value: "false"
           - name: OPERATOR_SCAN_JOB_TIMEOUT
             value: "5m"
+          {{- if $.Values.global.modulesImages.registry.CA }}
+          - name: OPERATOR_SCAN_JOB_REGISTRY_CA
+            value: | {{ $.Values.global.modulesImages.registry.CA | nindent 14 }}
+          {{- end }}
           - name: OPERATOR_CONCURRENT_SCAN_JOBS_LIMIT
             value: "10"
           - name: OPERATOR_SCAN_JOB_RETRY_AFTER
