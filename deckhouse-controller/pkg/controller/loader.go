@@ -83,6 +83,10 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 
 			if cb != nil && vb != nil {
 				log.Infof("Add openapi schema for %q module", valuesModuleName)
+				if valuesModuleName == "parca" {
+					fmt.Println("ICB", string(cb))
+					fmt.Println("IVB", string(vb))
+				}
 				err = dml.mm.GetValuesValidator().SchemaStorage.AddModuleValuesSchemas(valuesModuleName, cb, vb)
 				if err != nil {
 					log.Warnf("Add schema for module %q failed: %s", valuesModuleName, err)
