@@ -31,7 +31,6 @@ import (
 )
 
 const (
-	defaultUpdateMode   = "Auto"
 	migrationAnnotation = "modules.deckhouse.io/ensured-update-policies"
 )
 
@@ -63,10 +62,6 @@ func createModuleUpdatePolicies(input *go_hook.HookInput, dc dependency.Containe
 	}
 
 	for _, source := range moduleSources.Items {
-		// skip deckhouse source as its update policy is ensured by another hook
-		if source.GetName() == "deckhouse" {
-			continue
-		}
 		moduleSource := &v1alpha1.ModuleSource{}
 		err := sdk.FromUnstructured(&source, moduleSource)
 		if err != nil {

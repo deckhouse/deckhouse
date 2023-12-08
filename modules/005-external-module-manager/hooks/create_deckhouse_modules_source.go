@@ -15,40 +15,16 @@
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"github.com/iancoleman/strcase"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
-
-const defaultReleaseChannel = "Stable"
-
-type deckhouseSecret struct {
-	Bundle         string
-	ReleaseChannel string
-}
-
-func filterDeckhouseSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &corev1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
-	}
-
-	return deckhouseSecret{
-		Bundle:         string(secret.Data["bundle"]),
-		ReleaseChannel: string(secret.Data["releaseChannel"]),
-	}, nil
-}
 
 func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ms v1alpha1.ModuleSource
@@ -93,18 +69,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterSource,
 		},
-		{
-			Name:       "deckhouse-secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"deckhouse-discovery"},
-			},
-			FilterFunc: filterDeckhouseSecret,
-		},
 	},
 }, createDeckhouseModuleSourceAndPolicy)
 
@@ -112,47 +76,11 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 	deckhouseRepo := input.Values.Get("global.modulesImages.registry.base").String() + "/modules"
 	deckhouseDockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	deckhouseCA := input.Values.Get("global.modulesImages.registry.CA").String()
-	releaseChannel := defaultReleaseChannel
-
-	if len(input.Snapshots["deckhouse-secret"]) > 0 {
-		ds := input.Snapshots["deckhouse-secret"][0].(deckhouseSecret)
-		releaseChannel = strcase.ToCamel(ds.ReleaseChannel)
-	}
 
 	ms := v1alpha1.ModuleSource{}
 	if len(input.Snapshots["sources"]) > 0 {
 		ms = input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
 	}
-
-	if len(ms.Spec.ReleaseChannel) > 0 {
-		// take releaseChannel from existing ModuleSource if it's set
-		releaseChannel = sanitizeReleaseChannel(strcase.ToCamel(ms.Spec.ReleaseChannel))
-	}
-
-	// if not exists, ensure deckhouse ModuleUpdatePolicy
-	deckhouseMup := &v1alpha1.ModuleUpdatePolicy{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ModuleUpdatePolicy",
-			APIVersion: "deckhouse.io/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "deckhouse",
-		},
-		Spec: v1alpha1.ModuleUpdatePolicySpec{
-			ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"source": "deckhouse",
-					},
-				},
-			},
-			ReleaseChannel: releaseChannel,
-			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-				Mode: "Auto",
-			},
-		},
-	}
-	input.PatchCollector.Create(deckhouseMup, object_patch.IgnoreIfExists())
 
 	if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
 		// return if ModuleSource deckhouse already exists and all params are equal
@@ -205,13 +133,4 @@ func moduleSourceUpToDate(ms *v1alpha1.ModuleSource, repo, cfg, ca string) bool 
 	}
 
 	return true
-}
-
-func sanitizeReleaseChannel(rc string) string {
-	switch rc {
-	case "Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid":
-		return rc
-	default:
-		return defaultReleaseChannel
-	}
 }
