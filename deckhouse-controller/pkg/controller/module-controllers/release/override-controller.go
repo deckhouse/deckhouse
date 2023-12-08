@@ -61,6 +61,7 @@ type ModulePullOverrideController struct {
 
 	logger logger.Logger
 
+	modulesValidator   moduleValidator
 	externalModulesDir string
 	symlinksDir        string
 }
@@ -70,6 +71,7 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 	d8ClientSet versioned.Interface,
 	moduleSourceInformer d8informers.ModuleSourceInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
+	modulesValidator moduleValidator,
 ) *ModulePullOverrideController {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -90,6 +92,7 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 
 		logger: lg,
 
+		modulesValidator:   modulesValidator,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
 	}
@@ -196,7 +199,7 @@ func (c *ModulePullOverrideController) processNextModuleOverride(ctx context.Con
 	}(obj)
 
 	if err != nil {
-		c.logger.Errorf("ModuleRelease reconcile error: %s", err.Error())
+		c.logger.Errorf("ModulePullOverride reconcile error: %s", err.Error())
 		return true
 	}
 
@@ -262,6 +265,18 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	if newChecksum == "" {
 		// module is up-to-date
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
+	}
+
+	if moduleDef != nil {
+		err = validateModule(c.modulesValidator, *moduleDef)
+		if err != nil {
+			mo.Status.Message = "Openapi config is invalid"
+			if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+
+			return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
+		}
 	}
 
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleDef.Weight, mo.Name))

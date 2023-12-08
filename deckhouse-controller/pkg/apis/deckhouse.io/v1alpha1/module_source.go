@@ -75,9 +75,9 @@ type ModuleSourceStatus struct {
 }
 
 type AvailableModule struct {
-	Name      string `json:"name"`
-	Policy    string `json:"policy,omitempty"`
-	Overrided bool   `json:"overrided,omitempty"`
+	Name       string `json:"name"`
+	Policy     string `json:"policy,omitempty"`
+	Overridden bool   `json:"overridden,omitempty"`
 }
 
 type ModuleError struct {
