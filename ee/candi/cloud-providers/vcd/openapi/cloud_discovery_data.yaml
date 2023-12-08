@@ -19,3 +19,10 @@ apiVersions:
           minLength: 1
         description: List of flavors.
         uniqueItems: true
+      storageProfiles:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        description: List of storage classes.
+        uniqueItems: true

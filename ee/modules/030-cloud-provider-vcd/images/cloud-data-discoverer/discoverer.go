@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -136,7 +135,28 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		return nil, fmt.Errorf("failed to get sizing policies: %v", err)
 	}
 
+	if sizingPolicies != nil {
+		if discoveryData.SizingPolicies != nil {
+			sizingPolicies = append(sizingPolicies, discoveryData.SizingPolicies...)
+		}
+		sizingPolicies = removeDuplicates(sizingPolicies)
+	}
+
 	discoveryData.SizingPolicies = sizingPolicies
+
+	storageProfiles, err := d.getStorageProfiles(vcdClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get storage profiles: %v", err)
+	}
+
+	if storageProfiles != nil {
+		if discoveryData.StorageProfiles != nil {
+			storageProfiles = append(storageProfiles, discoveryData.StorageProfiles...)
+		}
+		storageProfiles = removeDuplicates(storageProfiles)
+	}
+
+	discoveryData.StorageProfiles = storageProfiles
 
 	discoveryDataJson, err := json.Marshal(discoveryData)
 	if err != nil {
@@ -156,12 +176,26 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 	policies := make([]string, 0, len(sizingPolicies))
 
 	for _, s := range sizingPolicies {
-		if s.VdcComputePolicyV2.Name == "" {
-			continue
-		}
 		policies = append(policies, s.VdcComputePolicyV2.Name)
 	}
-	return removeDuplicates(policies), nil
+
+	return policies, nil
+}
+
+func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]string, error) {
+	storageProfiles, err := vcdClient.Client.QueryAllProviderVdcStorageProfiles()
+
+	if err != nil {
+		return nil, err
+	}
+
+	profiles := make([]string, 0, len(storageProfiles))
+
+	for _, p := range storageProfiles {
+		profiles = append(profiles, p.Name)
+	}
+
+	return profiles, nil
 }
 
 func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, error) {
@@ -216,6 +250,5 @@ func removeDuplicates(list []string) []string {
 		}
 	}
 
-	sort.Strings(uniqueList)
 	return uniqueList
 }
