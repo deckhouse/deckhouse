@@ -187,7 +187,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			mupDeckhouse := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
-			Expect(mupDeckhouse.Exists()).To(BeFalse())
+			Expect(mupDeckhouse.Exists()).To(BeTrue())
 			msDeckhouse := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(msDeckhouse.Exists()).To(BeTrue())
 		})
@@ -209,7 +209,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			mupDeckhouse := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
-			Expect(mupDeckhouse.Exists()).To(BeFalse())
+			Expect(mupDeckhouse.Exists()).To(BeTrue())
 			msDeckhouse := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(msDeckhouse.Exists()).To(BeTrue())
 			for _, ms := range []string{"tetris", "pingpong", "tictactoe"} {
@@ -237,7 +237,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			mupDeckhouse := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
-			Expect(mupDeckhouse.Exists()).To(BeFalse())
+			Expect(mupDeckhouse.Exists()).To(BeTrue())
 			msDeckhouse := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(msDeckhouse.Exists()).To(BeTrue())
 			for _, ms := range []string{"tetris", "pingpong", "tictactoe", "gtaV"} {
