@@ -71,7 +71,7 @@ metadata:
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
-  name: {{ list $kebabCaseAuthName $rootContext | include "slugify" | replace "--" "-" }}
+  name: {{ list $kebabCaseAuthName $rootContext | replace "--" "-" }}
   namespace: {{ $projectName }}
 spec:
   accessLevel: {{ $values.role }}
