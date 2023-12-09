@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -265,23 +266,23 @@ func removeDuplicatesString(list []string) []string {
 	return uniqueList
 }
 
+// removeDupluicatesStorageProfiles removes duplicates from slice and sort it
 func removeDuplicatesStorageProfiles(list []v1alpha1.VCDStorageProfile) []v1alpha1.VCDStorageProfile {
-	var uniqueList []v1alpha1.VCDStorageProfile
+	uniqueMap := make(map[string]v1alpha1.VCDStorageProfile, len(list))
 	for _, elem := range list {
 		if elem.Name == "" {
 			continue
 		}
-		skip := false
-		for _, uniq := range uniqueList {
-			if elem.Name == uniq.Name {
-				skip = true
-				break
-			}
-		}
-		if skip {
-			continue
-		}
+		uniqueMap[elem.Name] = elem
+	}
+
+	uniqueList := make([]v1alpha1.VCDStorageProfile, 0, len(list))
+	for _, elem := range uniqueMap {
 		uniqueList = append(uniqueList, elem)
 	}
+
+	sort.Slice(uniqueList, func(i, j int) bool {
+		return uniqueList[i].Name < uniqueList[j].Name
+	})
 	return uniqueList
 }
