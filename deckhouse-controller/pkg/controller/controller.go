@@ -35,6 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/coordination-controllers/lease"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
@@ -64,6 +65,7 @@ type DeckhouseController struct {
 	moduleSourceController       *source.Controller
 	moduleReleaseController      *release.Controller
 	modulePullOverrideController *release.ModulePullOverrideController
+	leaseController              *lease.Controller
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager) (*DeckhouseController, error) {
@@ -96,6 +98,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer),
 		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm),
 		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm),
+		leaseController:              lease.NewController(cs, mcClient),
 	}, nil
 }
 
@@ -119,6 +122,7 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 	go dml.moduleSourceController.Run(dml.ctx, 3)
 	go dml.moduleReleaseController.Run(dml.ctx, 3)
 	go dml.modulePullOverrideController.Run(dml.ctx, 1)
+	go dml.leaseController.Run(dml.ctx, 3)
 
 	return nil
 }
