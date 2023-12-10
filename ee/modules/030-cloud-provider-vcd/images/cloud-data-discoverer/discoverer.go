@@ -146,7 +146,7 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		sizingPolicies = append(sizingPolicies, discoveryData.SizingPolicies...)
 	}
 
-	sizingPolicies = removeDuplicatesString(sizingPolicies)
+	sizingPolicies = removeDuplicatesStrings(sizingPolicies)
 
 	discoveryData.SizingPolicies = sizingPolicies
 
@@ -163,7 +163,7 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	if discoveryData.InternalNetworks != nil {
 		networks = append(networks, discoveryData.InternalNetworks...)
 	}
-	networks = removeDuplicatesString(networks)
+	networks = removeDuplicatesStrings(networks)
 	discoveryData.InternalNetworks = networks
 
 	storageProfiles := make([]v1alpha1.VCDStorageProfile, 0)
@@ -301,13 +301,13 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 }
 
 // removeDuplicates removes duplicates from slice and sort it
-func removeDuplicatesString(list []string) []string {
+func removeDuplicatesStrings(list []string) []string {
 	if len(list) == 0 {
 		return nil
 	}
 
 	keys := make(map[string]struct{})
-	uniqueList := make([]string, len(list))
+	uniqueList := make([]string, 0, len(list))
 
 	for _, elem := range list {
 		if elem == "" {
@@ -320,6 +320,7 @@ func removeDuplicatesString(list []string) []string {
 		}
 	}
 
+	sort.Strings(uniqueList)
 	return uniqueList
 }
 
