@@ -119,7 +119,6 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 
 func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
 	discoveryData := &v1alpha1.VCDCloudProviderDiscoveryData{}
-
 	if len(cloudProviderDiscoveryData) > 0 {
 		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
 		if err != nil {
@@ -132,32 +131,56 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		return nil, fmt.Errorf("failed to create vcd client: %v", err)
 	}
 
-	sizingPolicies, err := d.getSizingPolicies(vcdClient)
+	sizingPolicies := make([]string, 0)
+
+	sp, err := d.getSizingPolicies(vcdClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sizing policies: %v", err)
 	}
 
-	if sizingPolicies != nil {
-		if discoveryData.SizingPolicies != nil {
-			sizingPolicies = append(sizingPolicies, discoveryData.SizingPolicies...)
-		}
-		sizingPolicies = removeDuplicatesString(sizingPolicies)
+	if sp != nil {
+		sizingPolicies = append(sizingPolicies, sp...)
 	}
+
+	if discoveryData.SizingPolicies != nil {
+		sizingPolicies = append(sizingPolicies, discoveryData.SizingPolicies...)
+	}
+
+	sizingPolicies = removeDuplicatesString(sizingPolicies)
 
 	discoveryData.SizingPolicies = sizingPolicies
 
-	storageProfiles, err := d.getStorageProfiles(vcdClient)
+	networks := make([]string, 0)
+	nt, err := d.getInternalNetworks(vcdClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get internal networks: %v", err)
+	}
+
+	if nt != nil {
+		networks = append(networks, nt...)
+	}
+
+	if discoveryData.InternalNetworks != nil {
+		networks = append(networks, discoveryData.InternalNetworks...)
+	}
+	networks = removeDuplicatesString(networks)
+	discoveryData.InternalNetworks = networks
+
+	storageProfiles := make([]v1alpha1.VCDStorageProfile, 0)
+	st, err := d.getStorageProfiles(vcdClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get storage profiles: %v", err)
 	}
 
-	if storageProfiles != nil {
-		if discoveryData.StorageProfiles != nil {
-			storageProfiles = append(storageProfiles, discoveryData.StorageProfiles...)
-		}
-		storageProfiles = removeDuplicatesStorageProfiles(storageProfiles)
+	if st != nil {
+		storageProfiles = append(storageProfiles, st...)
 	}
 
+	if discoveryData.StorageProfiles != nil {
+		storageProfiles = append(storageProfiles, discoveryData.StorageProfiles...)
+	}
+
+	storageProfiles = removeDuplicatesStorageProfiles(storageProfiles)
 	discoveryData.StorageProfiles = storageProfiles
 
 	discoveryDataJson, err := json.Marshal(discoveryData)
@@ -175,6 +198,10 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 		return nil, err
 	}
 
+	if len(sizingPolicies) == 0 {
+		return nil, nil
+	}
+
 	policies := make([]string, 0, len(sizingPolicies))
 
 	for _, s := range sizingPolicies {
@@ -182,6 +209,27 @@ func (d *Discoverer) getSizingPolicies(vcdClient *govcd.VCDClient) ([]string, er
 	}
 
 	return policies, nil
+}
+
+func (d *Discoverer) getInternalNetworks(vcdClient *govcd.VCDClient) ([]string, error) {
+	results, err := vcdClient.QueryWithNotEncodedParams(nil, map[string]string{
+		"type": types.QtOrgVdcNetwork,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(results.Results.OrgVdcNetworkRecord) == 0 {
+		return nil, nil
+	}
+
+	networks := make([]string, 0, len(results.Results.OrgVdcNetworkRecord))
+
+	for _, n := range results.Results.OrgVdcNetworkRecord {
+		networks = append(networks, n.Name)
+	}
+
+	return networks, nil
 }
 
 func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]v1alpha1.VCDStorageProfile, error) {
@@ -192,8 +240,9 @@ func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]v1alpha1.
 	if err != nil {
 		return nil, err
 	}
+
 	if len(results.Results.OrgVdcStorageProfileRecord) == 0 {
-		return nil, fmt.Errorf("storage profiles not found")
+		return nil, nil
 	}
 
 	profiles := make([]v1alpha1.VCDStorageProfile, 0, len(results.Results.OrgVdcStorageProfileRecord))
@@ -222,6 +271,10 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 		return nil, err
 	}
 
+	if len(sizingPolicies) == 0 {
+		return nil, nil
+	}
+
 	instanceTypes := make([]v1alpha1.InstanceType, 0, len(sizingPolicies))
 	for _, s := range sizingPolicies {
 		if s.VdcComputePolicyV2.Name == "" {
@@ -242,15 +295,19 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 			RootDisk: resource.MustParse("0Gi"),
 		})
 	}
+
+	instanceTypes = removeDuplicatesInstanceTypes(instanceTypes)
 	return instanceTypes, nil
 }
 
 // removeDuplicates removes duplicates from slice and sort it
 func removeDuplicatesString(list []string) []string {
-	var (
-		keys       = make(map[string]struct{})
-		uniqueList []string
-	)
+	if len(list) == 0 {
+		return nil
+	}
+
+	keys := make(map[string]struct{})
+	uniqueList := make([]string, len(list))
 
 	for _, elem := range list {
 		if elem == "" {
@@ -268,6 +325,10 @@ func removeDuplicatesString(list []string) []string {
 
 // removeDupluicatesStorageProfiles removes duplicates from slice and sort it
 func removeDuplicatesStorageProfiles(list []v1alpha1.VCDStorageProfile) []v1alpha1.VCDStorageProfile {
+	if len(list) == 0 {
+		return nil
+	}
+
 	uniqueMap := make(map[string]v1alpha1.VCDStorageProfile, len(list))
 	for _, elem := range list {
 		if elem.Name == "" {
@@ -277,6 +338,31 @@ func removeDuplicatesStorageProfiles(list []v1alpha1.VCDStorageProfile) []v1alph
 	}
 
 	uniqueList := make([]v1alpha1.VCDStorageProfile, 0, len(list))
+	for _, elem := range uniqueMap {
+		uniqueList = append(uniqueList, elem)
+	}
+
+	sort.Slice(uniqueList, func(i, j int) bool {
+		return uniqueList[i].Name < uniqueList[j].Name
+	})
+	return uniqueList
+}
+
+// removeDuplicatesInstanceTypes removes duplicates from slice and sort it
+func removeDuplicatesInstanceTypes(list []v1alpha1.InstanceType) []v1alpha1.InstanceType {
+	if len(list) == 0 {
+		return nil
+	}
+
+	uniqueMap := make(map[string]v1alpha1.InstanceType, len(list))
+	for _, elem := range list {
+		if elem.Name == "" {
+			continue
+		}
+		uniqueMap[elem.Name] = elem
+	}
+
+	uniqueList := make([]v1alpha1.InstanceType, 0, len(list))
 	for _, elem := range uniqueMap {
 		uniqueList = append(uniqueList, elem)
 	}

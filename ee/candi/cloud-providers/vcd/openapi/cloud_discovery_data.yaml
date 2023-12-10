@@ -19,6 +19,13 @@ apiVersions:
           minLength: 1
         description: List of flavors.
         uniqueItems: true
+      internalNetworks:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        description: List of internal networks.
+        uniqueItems: true
       storageProfiles:
         type: array
         items:
