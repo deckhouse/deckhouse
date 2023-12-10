@@ -90,15 +90,6 @@ func start(_ *kingpin.ParseContext) error {
 	// Init deckhouse-config service with ModuleManager instance.
 	d8config.InitService(operator.ModuleManager)
 
-	//TODO:
-	//moduleDocsSyncer, err := controller.NewModuleDocsSyncer()
-	//if err != nil {
-	//	fmt.Println(err)
-	//	os.Exit(1)
-	//}
-	//
-	//go moduleDocsSyncer.Run(ctx)
-
 	// Block main thread by waiting signals from OS.
 	utils_signal.WaitForProcessInterruption(func() {
 		operator.Stop()

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 	"io"
 	"os"
 	"path"
@@ -135,6 +136,20 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 	res.ModuleDefinition = def
 
 	return res, nil
+}
+
+func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion string) (io.ReadCloser, error) {
+	regCli, err := cr.NewClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("fetch module error: %v", err)
+	}
+
+	img, err := regCli.Image(moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("fetch module version error: %v", err)
+	}
+
+	return module.ExtractDocs(img), nil
 }
 
 func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, error) {

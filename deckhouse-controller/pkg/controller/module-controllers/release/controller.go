@@ -17,6 +17,7 @@ package release
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -338,6 +339,11 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1
 	// Or create a copy manually for better performance
 	mr := roMR.DeepCopy()
 
+	err := c.buildDocumentation(ctx, mr)
+	if err != nil {
+		log.Warnf("send documentation error: %v", err)
+	}
+
 	switch mr.Status.Phase {
 	case "":
 		mr.Status.Phase = v1alpha1.PhasePending
@@ -570,32 +576,6 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (c *Controller) sendDocumentation(ctx context.Context, _ string) {
-	list, err := c.kubeclientset.DiscoveryV1().EndpointSlices("d8-system").List(ctx, metav1.ListOptions{LabelSelector: "app=documentation"})
-	if err != nil {
-		// TODO: handle error
-		panic(err)
-	}
-
-	for _, eps := range list.Items {
-		var port int32
-		for _, p := range eps.Ports {
-			if p.Name != nil && *p.Name == "builder-http" {
-				port = *p.Port
-			}
-		}
-
-		if port == 0 {
-			continue
-		}
-		for _, ep := range eps.Endpoints {
-			for _, addr := range ep.Addresses {
-				_, _ = http.DefaultClient.Post(fmt.Sprintf("http://%s:%d/???", addr, port), "TODO", nil)
-			}
-		}
-	}
 }
 
 func (c *Controller) Reconcile(ctx context.Context, releaseName string) (ctrl.Result, error) {
@@ -925,4 +905,99 @@ func isReleaseApproved(release *v1alpha1.ModuleRelease) bool {
 type moduleValidator interface {
 	ValidateModule(m *addonmodules.BasicModule) error
 	GetValuesValidator() *validation.ValuesValidator
+}
+
+func (c *Controller) getDocsBuilderAddresses(ctx context.Context) (addresses []string, err error) {
+	list, err := c.kubeclientset.DiscoveryV1().EndpointSlices("d8-system").List(ctx, metav1.ListOptions{LabelSelector: "app=documentation"})
+	if err != nil {
+		return nil, fmt.Errorf("list endpoint slices: %w", err)
+	}
+
+	for _, eps := range list.Items {
+		var port int32
+		for _, p := range eps.Ports {
+			if p.Name != nil && *p.Name == "builder-http" {
+				port = *p.Port
+			}
+		}
+
+		if port == 0 {
+			continue
+		}
+		for _, ep := range eps.Endpoints {
+			for _, addr := range ep.Addresses {
+				addresses = append(addresses, fmt.Sprintf("http://%s:%d", addr, port))
+			}
+		}
+	}
+
+	return
+}
+
+func (c *Controller) buildDocumentation(ctx context.Context, mr *v1alpha1.ModuleRelease) error {
+	addrs, err := c.getDocsBuilderAddresses(ctx)
+	if err != nil {
+		return fmt.Errorf("get docs builder addresses: %w", err)
+	}
+
+	if len(addrs) == 0 {
+		return nil
+	}
+
+	ms, err := c.moduleSourcesLister.Get(mr.GetModuleSource())
+	if err != nil {
+		return fmt.Errorf("get module source: %w", err)
+	}
+
+	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	for _, addr := range addrs {
+		err := buildDocumentation(addr, md, mr.Spec.ModuleName, mr.Spec.Version.Original())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func buildDocumentation(baseAddr string, md *downloader.ModuleDownloader, moduleName, moduleVersion string) error {
+	docsArchive, err := md.GetDocumentationArchive(moduleName, moduleVersion)
+	if err != nil {
+		return fmt.Errorf("get documentation archive: %w", err)
+	}
+	defer docsArchive.Close()
+
+	url := fmt.Sprintf("%s/loadDocArchive/%s/%s", baseAddr, moduleName, moduleVersion)
+	response, statusCode, err := httpPost(url, docsArchive)
+	if err != nil {
+		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
+	}
+
+	url = fmt.Sprintf("%s/build", baseAddr)
+	response, statusCode, err = httpPost(url, nil)
+	if err != nil {
+		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
+	}
+
+	return nil
+}
+
+func httpPost(url string, body io.Reader) ([]byte, int, error) {
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer res.Body.Close()
+
+	dataBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return dataBytes, res.StatusCode, nil
 }
