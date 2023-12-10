@@ -107,9 +107,9 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface) *Co
 }
 
 func (c *Controller) enqueueLease(obj interface{}) {
-	var key string
+	var key cache.ObjectName
 	var err error
-	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+	if key, err = cache.ObjectToName(obj); err != nil {
 		utilruntime.HandleError(err)
 		return
 	}
@@ -150,17 +150,18 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 
 	err := func(obj interface{}) error {
 		defer c.workqueue.Done(obj)
-		var key string
+		var key cache.ObjectName
 		var ok bool
+		var req ctrl.Request
 
-		if key, ok = obj.(string); !ok {
+		if key, ok = obj.(cache.ObjectName); !ok {
 			c.workqueue.Forget(obj)
-			c.logger.Errorf("expected string in workqueue but got %#v", obj)
+			c.logger.Errorf("expected cache.ObjectName in workqueue but got %#v", obj)
 			return nil
 		}
 
-		// run reconcile loop
-		result, err := c.Reconcile(ctx, key)
+		req.Namespace, req.Name = key.Parts()
+		result, err := c.Reconcile(ctx, req)
 		switch {
 		case result.RequeueAfter != 0:
 			c.workqueue.AddAfter(key, result.RequeueAfter)
@@ -184,9 +185,8 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-func (c *Controller) Reconcile(ctx context.Context, name string) (ctrl.Result, error) {
-	nameList := strings.SplitN(name, "/", 1)
-	lease, err := c.lister.Leases(nameList[0]).Get(nameList[1])
+func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	lease, err := c.lister.Leases(req.Namespace).Get(req.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -214,7 +214,6 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 	}
 
 	for _, item := range list.Items {
-		//TODO: use downloader
 		opts := controllerUtils.GenerateRegistryOptions(&item)
 
 		regCli, err := cr.NewClient(item.Spec.Registry.Repo, opts...)
