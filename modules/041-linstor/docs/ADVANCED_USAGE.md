@@ -11,7 +11,7 @@ The module is guaranteed to work only in the following cases:
 In all other cases, the module may work, but its full functionality is not guaranteed.
 {% endalert %}
 
-[The simplified guide](configuration.html#linstor-storage-configuration) contains steps that automatically create storage pools and StorageClasses when an LVM volume group or LVMThin pool with the tag `linstor-<name_pool>` appears on the node. Next, we consider the steps for manually creating storage pools and StorageClasses.
+[The simplified guide](usage.html#linstor-storage-configuration)) contains steps that automatically create storage pools and StorageClasses when an LVM volume group or LVMThin pool with the tag `linstor-<name_pool>` appears on the node. Next, we consider the steps for manually creating storage pools and StorageClasses.
 
 To proceed further, the `linstor` CLI utility is required. Use one of the following options to use the `linstor` utility:
 - Install the [kubectl-linstor](https://github.com/piraeusdatastore/kubectl-linstor) plugin.
