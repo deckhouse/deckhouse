@@ -428,8 +428,8 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
-   > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded and download will continue. This will only happen if no more than 24 hours has passed since the download interruption.
-   > If you want to start the download from scratch, use the `--no-pull-resume` flag.
+   > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
+   > Use the `--no-pull-resume` flag, to start the download from scratch.
 
    To pull all Deckhouse images starting from a particular version, specify it in the `--min-version` parameter in the `X.Y` format.
 
