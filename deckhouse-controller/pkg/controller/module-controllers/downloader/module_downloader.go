@@ -139,14 +139,13 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 }
 
 func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion string) (io.ReadCloser, error) {
-	regCli, err := cr.NewClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
-	if err != nil {
-		return nil, fmt.Errorf("fetch module error: %v", err)
+	if !strings.HasPrefix(moduleVersion, "v") {
+		moduleVersion = "v" + moduleVersion
 	}
 
-	img, err := regCli.Image(moduleVersion)
+	img, err := md.fetchImage(moduleName, moduleVersion)
 	if err != nil {
-		return nil, fmt.Errorf("fetch module version error: %v", err)
+		return nil, fmt.Errorf("fetch image: %w", err)
 	}
 
 	return module.ExtractDocs(img), nil
