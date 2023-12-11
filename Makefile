@@ -136,6 +136,11 @@ tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered wit
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
 
+.PHONY: tests-doc-links
+tests-doc-links: ## Build documentation and run checker of html links.
+	bash tools/doc_check_links.sh
+
+
 .PHONY: validate
 validate: ## Check common patterns through all modules.
 	go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
@@ -222,10 +227,6 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development
 	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development
 	echo "Open http://localhost to access the documentation..."
-
-.PHONY: docs-check-links
-docs-check-links: ## Build documentation and run link checker.
-	bash tools/doc_check_links.sh
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
