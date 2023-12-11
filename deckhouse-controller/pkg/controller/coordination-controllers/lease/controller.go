@@ -63,7 +63,7 @@ type Controller struct {
 	d8ClientSet   versioned.Interface
 	workqueue     workqueue.RateLimitingInterface
 	lister        coordinationv1.LeaseLister
-	hasSync       cache.InformerSynced
+	informer      cache.SharedIndexInformer
 	httpClient    d8http.Client
 	logger        logger.Logger
 }
@@ -95,7 +95,7 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface) *Co
 		d8ClientSet:   d8ClientSet,
 		workqueue:     workqueue.NewRateLimitingQueue(ratelimiter),
 		lister:        lister,
-		hasSync:       informer.HasSynced,
+		informer:      informer,
 		httpClient:    httpClient,
 		logger:        lg,
 	}
@@ -125,7 +125,8 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.logger.Info("Starting Lease controller")
 
 	c.logger.Debug("Waiting for lease caches to sync")
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.hasSync); !ok {
+	go c.informer.Run(ctx.Done())
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced); !ok {
 		c.logger.Fatal("failed to wait for caches to sync")
 	}
 
