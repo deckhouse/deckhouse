@@ -18,7 +18,6 @@
   - '040-node-manager/crds/staticcontrolplane.yaml'
   - '040-node-manager/crds/staticmachine*.yaml'
   - '110-istio/crds/istio'
-  - '490-virtualization/crds/kubevirt.yaml'
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
 - add: /modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/ce
