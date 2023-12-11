@@ -68,7 +68,6 @@ type Controller struct {
 	logger        logger.Logger
 }
 
-// NewController returns a new sample controller
 func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -85,7 +84,9 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface) *Co
 			options.LabelSelector = leaseLabel
 		}),
 	)
-	informer := factory.Coordination().V1().Leases()
+	leaseInformer := factory.Coordination().V1().Leases()
+	lister := leaseInformer.Lister()
+	informer := leaseInformer.Informer()
 
 	httpClient := d8http.NewClient(d8http.WithTimeout(3 * time.Minute))
 
@@ -93,13 +94,13 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface) *Co
 		kubeclientset: ks,
 		d8ClientSet:   d8ClientSet,
 		workqueue:     workqueue.NewRateLimitingQueue(ratelimiter),
-		lister:        informer.Lister(),
-		hasSync:       informer.Informer().HasSynced,
+		lister:        lister,
+		hasSync:       informer.HasSynced,
 		httpClient:    httpClient,
 		logger:        lg,
 	}
 
-	_, _ = informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueLease,
 	})
 
