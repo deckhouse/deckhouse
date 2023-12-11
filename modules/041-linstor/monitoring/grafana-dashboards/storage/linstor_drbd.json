@@ -24,8 +24,8 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 2,
-  "id": 48,
-  "iteration": 1702300458163,
+  "id": 36,
+  "iteration": 1702301893505,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -1019,17 +1019,17 @@
           "mappings": [
             {
               "options": {
-                "5": {
-                  "index": 0,
-                  "text": "Inconsistent"
+                "0": {
+                  "index": 1,
+                  "text": "secondary"
                 },
-                "6": {
+                "1": {
                   "index": 2,
-                  "text": "Failed"
+                  "text": "primary"
                 },
                 "-1": {
-                  "index": 1,
-                  "text": "DUnknown"
+                  "index": 0,
+                  "text": "Unknown"
                 }
               },
               "type": "value"
