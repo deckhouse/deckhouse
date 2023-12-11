@@ -192,9 +192,9 @@ Using the data in the [staticInstances](cr.html#nodegroup-v1-spec-staticinstance
 ## Custom node settings
 
 The [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource allows you to automate actions on group nodes. It supports running bash scripts on nodes (you can use the [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set) as well as the [Go Template](https://pkg.go.dev/text/template) templating engine, and is a great way to automate operations such as:
-- installing and configuring additional OS packages ([example of installing the plugin for kubectl](examples.html#an-example-of-install-cert-manager-plugin-for-kubectl-on-master-nodes), [example of installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support))
+- installing and configuring additional OS packages ([example of installing the plugin for kubectl](examples.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes), [example of installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support))
 - updating the OS kernel to a specific version ([example](faq.html#how-do-i-update-kernel-on-nodes));
-- modifying OS parameters ([example of customizing the sysctl parameter](examples.html#an-example-of-tune-sysctl-parameter));
+- modifying OS parameters ([example of customizing the sysctl parameter](examples.html#tuning-sysctl-parameters));
 - collecting information on a node and carrying out other similar tasks.
 
 The `NodeGroupConfiguration` resource allows you to assign [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) to scripts being run or limit them to running on specific [node groups](cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) and [OS types](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).

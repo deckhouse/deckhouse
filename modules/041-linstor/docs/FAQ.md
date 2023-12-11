@@ -102,7 +102,7 @@ kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-defa
 ## How to add existing LVM or LVMThin pool?
 
 {% alert %}
-The general method is described in`[LINSTOR storage configuration](configuration.html#linstor-storage-configuration) page.
+The general method is described in`[LINSTOR storage configuration](usage.html#linstor-storage-configuration) page.
 Unlike commands listed below it will automatically configure the StorageClasses as well.
 {% endalert %}
 
@@ -124,7 +124,7 @@ You can also add pools with some volumes have already been created. LINSTOR will
 
 To configure Prometheus to use LINSTOR for storing data:
 
-- [Configure](configuration.html#linstor-storage-configuration) storage-pools and StorageClass;
+- [Configure](usage.html#linstor-storage-configuration) storage-pools and StorageClass;
 - Specify the [longtermStorageClass](../300-prometheus/configuration.html#parameters-longtermstorageclass) and [storageClass](../300-prometheus/configuration.html#parameters-storageclass) parameters in the [prometheus](../300-prometheus/) module configuration. E.g.:
 
   Example:
