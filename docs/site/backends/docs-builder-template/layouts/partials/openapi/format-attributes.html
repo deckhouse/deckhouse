@@ -126,26 +126,26 @@
   {{ if and $isArray }}<br>
     {{ range $example }}
       {{ if reflect.IsMap . }}
-         <pre>{{ transform.Highlight ( transform.Remarshal "yaml" ( . | jsonify ) ) "yaml" $hl_opts }}</pre>
+         {{ transform.Highlight ( transform.Remarshal "yaml" ( . | jsonify ) ) "yaml" $hl_opts }}
       {{ else if reflect.IsSlice . }}
-         <pre>{{ transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}</pre>
+         {{ transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
       {{ else }}
          {{ if hasPrefix . "```" }}
-           <pre>{{ . | markdownify }}</pre>
+           {{ . | markdownify }}
          {{ else }}
-           <pre>{{ transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}</pre>
+           {{ transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
          {{ end }}
       {{ end }}
     {{ end }}
   {{ else if reflect.IsMap $example }}
-     <pre>{{ transform.Highlight ( transform.Remarshal "yaml" ( $example | jsonify ) ) "yaml" $hl_opts }}</pre>
+     {{ transform.Highlight ( transform.Remarshal "yaml" ( $example | jsonify ) ) "yaml" $hl_opts }}
   {{ else if reflect.IsSlice $example }}
-     <pre>{{ transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}</pre>
+     {{ transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
   {{ else }}
      {{ if hasPrefix $example "```" }}
-       <pre>{{ $example | markdownify }}</pre>
+       {{ $example | markdownify }}
      {{ else }}
-       <pre>{{ transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}</pre>
+       {{ transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
      {{ end }}
   {{ end }}
 {{ end }}
