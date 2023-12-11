@@ -24,8 +24,8 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 2,
-  "id": 35,
-  "iteration": 1702296316755,
+  "id": 48,
+  "iteration": 1702300458163,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -771,119 +771,6 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "${ds_prometheus}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "displayMode": "auto",
-            "filterable": false,
-            "inspect": false
-          },
-          "mappings": [
-            {
-              "options": {
-                "5": {
-                  "index": 0,
-                  "text": "Inconsistent"
-                },
-                "6": {
-                  "index": 2,
-                  "text": "Failed"
-                },
-                "-1": {
-                  "index": 1,
-                  "text": "DUnknown"
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 10
-      },
-      "id": 54,
-      "options": {
-        "footer": {
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "frameIndex": 0,
-        "showHeader": true
-      },
-      "pluginVersion": "8.5.13",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "max by (node, resource) ((linstor_volume_state != 1) != 4)",
-          "format": "table",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Linstor Resources not happen",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "Value": false
-            },
-            "indexByName": {},
-            "renameByName": {
-              "Value": "Status",
-              "Value #A": "Quorum?",
-              "instance": "Instance",
-              "name": "DRBD Resource",
-              "node": "Node"
-            }
-          }
-        }
-      ],
-      "type": "table"
-    },
-    {
-      "datasource": {
         "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
@@ -935,8 +822,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 24,
+        "x": 0,
         "y": 10
       },
       "id": 40,
@@ -964,6 +851,306 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "5": {
+                  "index": 0,
+                  "text": "Inconsistent"
+                },
+                "6": {
+                  "index": 2,
+                  "text": "Failed"
+                },
+                "-1": {
+                  "index": 1,
+                  "text": "DUnknown"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Node"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 230
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "resource"
+            },
+            "properties": [
+              {
+                "id": "custom.width"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 128
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 54,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max by (node, resource) ((linstor_volume_state != 1) != 4)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Linstor Volumes not happen",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": false
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value": "Status",
+              "Value #A": "Quorum?",
+              "instance": "Instance",
+              "name": "DRBD Resource",
+              "node": "Node"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "5": {
+                  "index": 0,
+                  "text": "Inconsistent"
+                },
+                "6": {
+                  "index": 2,
+                  "text": "Failed"
+                },
+                "-1": {
+                  "index": 1,
+                  "text": "DUnknown"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Node"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 230
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "resource"
+            },
+            "properties": [
+              {
+                "id": "custom.width"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 128
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 55,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max by (node, resource) (linstor_resource_state == -1)",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Linstor Resources not happen",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": false
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value": "Status",
+              "Value #A": "Quorum?",
+              "instance": "Instance",
+              "name": "DRBD Resource",
+              "node": "Node"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
@@ -973,7 +1160,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 26
       },
       "id": 46,
       "panels": [],
@@ -1000,7 +1187,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 27
       },
       "hiddenSeries": false,
       "id": 24,
@@ -1089,7 +1276,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 27
       },
       "hiddenSeries": false,
       "id": 25,
@@ -1167,7 +1354,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 35
       },
       "id": 8,
       "panels": [],
@@ -1175,75 +1362,12 @@
       "type": "row"
     },
     {
-      "datasource": {
-        "uid": "${ds_prometheus}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 11,
-        "w": 16,
-        "x": 0,
-        "y": 28
-      },
-      "id": 6,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
-      },
-      "pluginVersion": "8.5.13",
-      "targets": [
-        {
-          "$$hashKey": "object:470",
-          "aggregation": "Last",
-          "decimals": 2,
-          "displayAliasType": "Warning / Critical",
-          "displayType": "Regular",
-          "displayValueWithAlias": "Never",
-          "exemplar": true,
-          "expr": "drbd_resource_resources",
-          "legendFormat": "{{instance}}",
-          "refId": "A",
-          "units": "none",
-          "valueHandler": "Number Threshold"
-        }
-      ],
-      "title": "Number of DRBD Resources",
-      "type": "gauge"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": {
+        "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
@@ -1256,9 +1380,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 28
+        "w": 24,
+        "x": 0,
+        "y": 36
       },
       "hiddenSeries": false,
       "id": 27,
@@ -1288,9 +1412,15 @@
       "steppedLine": true,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
           "exemplar": true,
           "expr": "avg_over_time(scrape_duration_seconds{job=\"linstor-node\"}[$__interval_sx3])",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "{{node}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1328,9 +1458,9 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "DRBD data out of sync with a peer",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1343,28 +1473,22 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
               }
             ]
-          },
-          "unit": "bytes"
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 36
+        "h": 13,
+        "w": 24,
+        "x": 0,
+        "y": 44
       },
-      "id": 12,
+      "id": 6,
+      "links": [],
+      "maxDataPoints": 100,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1373,20 +1497,35 @@
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "auto"
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
       },
       "pluginVersion": "8.5.13",
       "targets": [
         {
+          "$$hashKey": "object:470",
+          "aggregation": "Last",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "decimals": 2,
+          "displayAliasType": "Warning / Critical",
+          "displayType": "Regular",
+          "displayValueWithAlias": "Never",
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(max by(name, volume) (drbd_peerdevice_outofsync_bytes > 0)) OR on() vector(0)",
-          "legendFormat": "",
-          "refId": "A"
+          "expr": "drbd_resource_resources",
+          "legendFormat": "{{node}}",
+          "range": true,
+          "refId": "A",
+          "units": "none",
+          "valueHandler": "Number Threshold"
         }
       ],
-      "title": "out-of-sync data",
-      "type": "stat"
+      "title": "Number of DRBD Resources",
+      "type": "gauge"
     },
     {
       "datasource": {
@@ -1418,7 +1557,7 @@
         "h": 3,
         "w": 4,
         "x": 0,
-        "y": 39
+        "y": 57
       },
       "id": 14,
       "options": {
@@ -1489,7 +1628,7 @@
         "h": 3,
         "w": 4,
         "x": 4,
-        "y": 39
+        "y": 57
       },
       "id": 20,
       "options": {
@@ -1560,7 +1699,7 @@
         "h": 3,
         "w": 4,
         "x": 8,
-        "y": 39
+        "y": 57
       },
       "id": 4,
       "options": {
@@ -1622,7 +1761,7 @@
         "h": 3,
         "w": 4,
         "x": 12,
-        "y": 39
+        "y": 57
       },
       "id": 29,
       "options": {
@@ -1650,6 +1789,68 @@
         }
       ],
       "title": "out-of-sync",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${ds_prometheus}"
+      },
+      "description": "DRBD data out of sync with a peer",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 8,
+        "x": 16,
+        "y": 57
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(max by(name, volume) (drbd_peerdevice_outofsync_bytes > 0)) OR on() vector(0)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "out-of-sync data",
       "type": "stat"
     },
     {
@@ -1697,7 +1898,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 42
+        "y": 60
       },
       "id": 22,
       "options": {
@@ -1778,6 +1979,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
@@ -1811,8 +2013,7 @@
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 279
+                "id": "custom.width"
               }
             ]
           },
@@ -1823,8 +2024,7 @@
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 238
+                "id": "custom.width"
               }
             ]
           },
@@ -1846,7 +2046,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 60
       },
       "id": 16,
       "options": {
@@ -1864,6 +2064,10 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
           "exemplar": false,
           "expr": "sum(drbd_peerdevice_outofsync_bytes) by(name, node) > 0",
           "format": "table",
@@ -1956,7 +2160,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 50
+        "y": 68
       },
       "id": 31,
       "options": {
@@ -2052,7 +2256,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 50
+        "y": 68
       },
       "id": 30,
       "options": {
@@ -2180,6 +2384,6 @@
   "timezone": "",
   "title": "LINSTOR / DRBD",
   "uid": "f_tZtVlMz",
-  "version": 20,
+  "version": 21,
   "weekStart": ""
 }
