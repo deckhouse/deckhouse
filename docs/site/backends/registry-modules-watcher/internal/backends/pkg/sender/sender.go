@@ -23,9 +23,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
+	"github.com/cenkalti/backoff"
 	"k8s.io/klog"
 )
+
+const maxElapsedTime = 15 // minutes
+const maxRetries = 10
 
 type sender struct {
 	client *http.Client
@@ -33,13 +36,12 @@ type sender struct {
 
 // New
 func New() *sender {
-	retryClient := retryablehttp.NewClient()
-	retryClient.RetryMax = 5
-
-	// TODO переделать на cenkalti/backoff
-	// https://github.com/cenkalti/backoff/blob/v4/example_test.go#L8
-	client := retryClient.StandardClient()
-	client.Timeout = 30 * time.Second
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: true,
+	}
+	client := &http.Client{Transport: tr}
 
 	return &sender{
 		client: client,
@@ -81,12 +83,23 @@ func (s *sender) loadDocArchive(ctx context.Context, url string, tarFile []byte)
 
 	req.Header.Set("Content-Type", "application/tar")
 
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("client: error making http request: %s", err)
+	operation := func() error {
+		resp, err := s.client.Do(req)
+		if err != nil {
+			return fmt.Errorf("client: error making http request: %s", err)
+		}
+
+		klog.V(2).Infof("SendTars resp: %s", resp.Status)
+		return nil
 	}
 
-	klog.V(2).Infof("SendTars resp: %s", resp.Status)
+	b := backoff.NewExponentialBackOff()
+	b.MaxElapsedTime = maxElapsedTime * time.Minute
+	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -99,12 +112,22 @@ func (s *sender) build(ctx context.Context, url string) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("client: error making http request: %s", err)
+	operation := func() error {
+		resp, err := s.client.Do(req)
+		if err != nil {
+			return fmt.Errorf("client: error making http request: %s", err)
+		}
+
+		klog.V(2).Info("SendBuild resp: ", resp.StatusCode)
+		return nil
 	}
 
-	klog.V(2).Info("SendBuild resp: ", resp.StatusCode)
+	b := backoff.NewExponentialBackOff()
+	b.MaxElapsedTime = maxElapsedTime * time.Minute
+	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
