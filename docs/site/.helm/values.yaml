@@ -14,7 +14,7 @@ certificateClusterIssuer:
 moduleWatcher:
   registries:
     _default:
-      - registry.deckhouse.io/deckhouse/fe/modules
+      - dev-registry.deckhouse.io/sys/deckhouse-oss/modules
       - registry.flant.com/team/foxtrot/docs-example
     web-production:
       - registry.deckhouse.io/deckhouse/fe/modules
