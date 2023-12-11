@@ -29,6 +29,7 @@ data "vcd_vm_sizing_policy" "vmsp" {
 }
 
 data "vcd_org_vdc" "vdc" {
+  count = local.placement_policy == "" ? 0 : 1
   name = var.providerClusterConfiguration.virtualDataCenter
   org = var.providerClusterConfiguration.organization
 }
@@ -36,7 +37,7 @@ data "vcd_org_vdc" "vdc" {
 data "vcd_vm_placement_policy" "vmpp" {
   count = local.placement_policy == "" ? 0 : 1
   name = local.placement_policy
-  vdc_id = data.vcd_org_vdc.vdc.id
+  vdc_id = data.vcd_org_vdc.vdc[0].id
 }
 
 resource "vcd_vm_internal_disk" "kubernetes_data"{
@@ -81,5 +82,6 @@ resource "vcd_vapp_vm" "master" {
     "instance-id"         = join("-", [local.prefix, "master", var.nodeIndex])
     "local-hostname"      = join("-", [local.prefix, "master", var.nodeIndex])
     "public-keys"         = var.providerClusterConfiguration.sshPublicKey
+    "disk.EnableUUID"     = "1"
   }
 }

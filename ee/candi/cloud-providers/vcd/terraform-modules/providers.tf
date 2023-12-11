@@ -2,7 +2,7 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 provider "vcd" {
-  url = endswith(var.providerClusterConfiguration.provider.server, "/api") ? var.providerClusterConfiguration.provider.server : join("/", [var.providerClusterConfiguration.provider.server, "api"])
+  url = join("/", [trimsuffix(var.providerClusterConfiguration.provider.server, "/api"), "api"])
   org = var.providerClusterConfiguration.organization
   vdc = var.providerClusterConfiguration.virtualDataCenter
   user = var.providerClusterConfiguration.provider.username
