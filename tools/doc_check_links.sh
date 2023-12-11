@@ -56,7 +56,7 @@ docker run --rm -v "${_TMPDIR}/site_en:/src:ro" klakegg/html-proofer:3.19.2 \
            --allow-hash-href --check-html --empty-alt-ignore \
            --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
            --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
-           --file_ignore "/404.html" \
+           --file_ignore "404.html" \
            --http-status-ignore "0,429" ${1}
 
 echo "Checking links (Russian language)"
@@ -64,7 +64,7 @@ docker run --rm -v "${_TMPDIR}/site_ru:/src:ro" klakegg/html-proofer:3.19.2 \
            --allow-hash-href --check-html --empty-alt-ignore \
            --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
            --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
-           --file_ignore "/404.html" \
+           --file_ignore "404.html" \
            --http-status-ignore "0,429" ${1}
 
 echo "Cleaning..."
