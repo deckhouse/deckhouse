@@ -74,7 +74,7 @@ languages:
     languageName: ""
     title: Deckhouse modules
     weight: 0
-    baseURL: https://deckhouse.io/
+    baseURL: https://deckhouse.io
     params:
       description: "Kubernetes is flexibly and rapidly expanded by Deckhouse modules."
   ru:
@@ -83,6 +83,6 @@ languages:
     languageName: ""
     weight: 1
     title: Модули Deckhouse
-    baseURL: https://deckhouse.ru/
+    baseURL: https://deckhouse.ru
     params:
       description: "Kubernetes гибко и быстро расширяется модулями Deckhouse."
