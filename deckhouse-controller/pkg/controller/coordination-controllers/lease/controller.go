@@ -20,8 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/iancoleman/strcase"
 	"io"
 	"net/http"
 	"path"
@@ -31,6 +29,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/iancoleman/strcase"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	coordination "k8s.io/api/coordination/v1"
@@ -176,7 +176,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 
 		return err
 	}(obj)
-
 	if err != nil {
 		c.logger.Errorf("Lease reconcile error: %s", err.Error())
 		return true
