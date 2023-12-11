@@ -24,8 +24,8 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 2,
-  "id": 38,
-  "iteration": 1701959751046,
+  "id": 35,
+  "iteration": 1702296316755,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -845,12 +845,14 @@
             "type": "prometheus",
             "uid": "P0D6E4079E36703EB"
           },
-          "exemplar": true,
+          "editorMode": "code",
+          "exemplar": false,
           "expr": "max by (node, resource) ((linstor_volume_state != 1) != 4)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "legendFormat": "",
+          "range": false,
           "refId": "A"
         }
       ],
@@ -865,10 +867,11 @@
           "options": {
             "excludeByName": {
               "Time": true,
-              "Value": true
+              "Value": false
             },
             "indexByName": {},
             "renameByName": {
+              "Value": "Status",
               "Value #A": "Quorum?",
               "instance": "Instance",
               "name": "DRBD Resource",
@@ -2175,8 +2178,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "LINSTOR / DRBD -test",
-  "uid": "f_tZtVlMzczc",
-  "version": 3,
+  "title": "LINSTOR / DRBD",
+  "uid": "f_tZtVlMz",
+  "version": 20,
   "weekStart": ""
 }
