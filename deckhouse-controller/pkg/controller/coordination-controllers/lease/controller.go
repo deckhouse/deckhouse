@@ -371,7 +371,7 @@ func (c *Controller) getDocsBuilderAddresses(ctx context.Context) (addresses []s
 		}
 		for _, ep := range eps.Endpoints {
 			for _, addr := range ep.Addresses {
-				addresses = append(addresses, fmt.Sprintf("http://%s:%d/???", addr, port))
+				addresses = append(addresses, fmt.Sprintf("http://%s:%d", addr, port))
 			}
 		}
 	}
