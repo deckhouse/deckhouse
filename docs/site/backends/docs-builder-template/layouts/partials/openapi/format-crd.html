@@ -62,19 +62,4 @@
     {{ if gt ( $data.spec.versions | len ) 1 }}</div>{{ end }}
 
   {{ end }}{{/* range $data.spec.versions */}}
-{{ else }}
-
-  <p><font size="-1">Scope: {{ .data.spec.scope }}</font></p>
-  {{- range $version, $versionData := .data.spec.versions }}
-  <br/>Version: {{ .name }}
-  {{ $description :=  .schema.openAPIV3Schema.description }}
-  {{ if index $langData.spec.versions $version }}
-    {{ $preferedLanguage := ( index $langData.spec.versions $version ).schema.openAPIV3Schema.description }}
-    {{ if $preferedLanguage }}{{ $description = $preferedLanguage }}{{ end }}
-  {{- end }}
-  <div class="resources__prop_description">{{ $description }}</div>
-  <ul class="resources">
-  {{ partial "openapi/crd-properties" .schema.openAPIV3Schema.properties }}
-  </ul>
-  {{- end }}
 {{ end }}
