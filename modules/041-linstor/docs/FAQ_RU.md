@@ -102,7 +102,7 @@ kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-defa
 ## Как добавить существующий LVM- или LVMThin-пул?
 
 {% alert %}
-Основной метод описан на странице [конфигурации хранилища LINSTOR](configuration.html#конфигурация-хранилища-linstor).
+Основной метод описан на странице [конфигурации хранилища LINSTOR](usage.html#конфигурация-хранилища-linstor).
 В отличие от команд, перечисленных ниже, он также автоматически настроит StorageClass'ы.
 {% endalert %}
 
@@ -124,7 +124,7 @@ linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
 
 Чтобы настроить Prometheus на использование хранилища LINSTOR, необходимо:
 
-- [Настроить](configuration.html#конфигурация-хранилища-linstor) пулы хранения и StorageClass.
+- [Настроить](usage.html#конфигурация-хранилища-linstor) пулы хранения и StorageClass.
 - Указать параметры [longtermStorageClass](../300-prometheus/configuration.html#parameters-longtermstorageclass) и [storageClass](../300-prometheus/configuration.html#parameters-storageclass) в конфигурации модуля [prometheus](../300-prometheus/).
 
   Пример:

@@ -27,7 +27,7 @@ spec:
           description: |
             Executes bash scripts on nodes.
 
-            Read more in the [module documentation](./#custom-nodes-settings).
+            Read more in the [module documentation](./#custom-node-settings).
           properties:
             spec:
               type: object

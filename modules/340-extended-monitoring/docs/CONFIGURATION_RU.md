@@ -13,7 +13,7 @@ force_searchable: true
 - поставить руками (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`);
 - настроить через [namespace-configurator](/documentation/v1/modules/600-namespace-configurator/) модуль.
 
-Сразу же после этого для всех поддерживаемых Kubernetes-объектов в данном namespace в Prometheus появятся default-метрики + любые кастомные с префиксом `threshold.extended-monitoring.deckhouse.io/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes-объектов, описанных ниже, мониторинг включается автоматически.
+Сразу же после этого для всех поддерживаемых Kubernetes-объектов в данном namespace в Prometheus появятся default-метрики + любые кастомные с префиксом `threshold.extended-monitoring.deckhouse.io/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-объекты) Kubernetes-объектов, описанных ниже, мониторинг включается автоматически.
 
 К Kubernetes-объектам `threshold.extended-monitoring.deckhouse.io/что-то свое` можно добавить любые другие лейблы с указанным значением. Пример: `kubectl label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
 В таком случае значение из лейбла заменит значение по умолчанию.
