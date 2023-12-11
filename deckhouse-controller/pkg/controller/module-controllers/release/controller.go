@@ -186,6 +186,7 @@ func (c *Controller) emitRestart(msg string) {
 	c.restartReason = msg
 	c.m.Unlock()
 }
+
 func (c *Controller) restartLoop(ctx context.Context) {
 	for {
 		c.m.Lock()
@@ -291,7 +292,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 
 		return err
 	}(obj)
-
 	if err != nil {
 		c.logger.Errorf("ModuleRelease reconcile error: %s", err.Error())
 		return true
@@ -341,7 +341,7 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1
 
 	err := c.buildDocumentation(ctx, mr)
 	if err != nil {
-		log.Warnf("send documentation error: %v", err)
+		c.logger.Warnf("send documentation error: %v", err)
 	}
 
 	switch mr.Status.Phase {
@@ -814,7 +814,7 @@ func (c *Controller) restoreAbsentSourceModules() error {
 		moduleDir := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, item.Spec.ModuleName))
 		_, err = os.Stat(moduleDir)
 		if err != nil && os.IsNotExist(err) {
-			log.Infof("Module %q is absent on file system. Restoring it from source %q", item.Spec.ModuleName, item.GetModuleSource())
+			c.logger.Infof("Module %q is absent on file system. Restoring it from source %q", item.Spec.ModuleName, item.GetModuleSource())
 			moduleVersion := "v" + item.Spec.Version.String()
 			moduleName := item.Spec.ModuleName
 			moduleSource := item.GetModuleSource()
@@ -828,7 +828,7 @@ func (c *Controller) restoreAbsentSourceModules() error {
 			md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 			err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 			if err != nil {
-				log.Warnf("Download module %q with version %s failed: %s. Skipping", moduleName, moduleVersion, err)
+				c.logger.Warnf("Download module %q with version %s failed: %s. Skipping", moduleName, moduleVersion, err)
 				continue
 			}
 
@@ -837,11 +837,11 @@ func (c *Controller) restoreAbsentSourceModules() error {
 			symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, moduleName))
 			err = restoreModuleSymlink(c.externalModulesDir, symlinkPath, moduleRelativePath)
 			if err != nil {
-				log.Warnf("Create symlink for module %q failed: %s", moduleName, err)
+				c.logger.Warnf("Create symlink for module %q failed: %s", moduleName, err)
 				continue
 			}
 
-			log.Infof("Module %s:%s restored", moduleName, moduleVersion)
+			c.logger.Infof("Module %s:%s restored", moduleName, moduleVersion)
 		}
 	}
 
