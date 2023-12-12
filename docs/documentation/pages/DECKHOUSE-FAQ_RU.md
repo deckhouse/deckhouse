@@ -240,23 +240,23 @@ Patch-релизы (например, обновление на версию `1.
 * Проверьте, что [настроен](#как-установить-желаемый-канал-обновлений) нужный канал обновлений.
 * Проверьте корректность разрешения DNS-имени хранилища образов Deckhouse.
 
-  Получите и сравните IP-адреса хранилища образов Deckhouse (`registry.deckhouse.io`) на одном из узлов и в поде Deckhouse. Они должны совпадать.
+  Получите и сравните IP-адреса хранилища образов Deckhouse (`registry.deckhouse.ru`) на одном из узлов и в поде Deckhouse. Они должны совпадать.
 
   Пример получения IP-адреса хранилища образов Deckhouse на узле:
 
   ```shell
-  $ getent ahosts registry.deckhouse.io
-  46.4.145.194    STREAM registry.deckhouse.io
-  46.4.145.194    DGRAM
-  46.4.145.194    RAW
+  $ getent ahosts registry.deckhouse.ru
+  185.193.90.38    STREAM registry.deckhouse.ru
+  185.193.90.38    DGRAM
+  185.193.90.38    RAW
   ```
 
   Пример получения IP-адреса хранилища образов Deckhouse в поде Deckhouse:
   
   ```shell
-  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
-  46.4.145.194    STREAM registry.deckhouse.io
-  46.4.145.194    DGRAM  registry.deckhouse.io
+  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.ru
+  185.193.90.38    STREAM registry.deckhouse.ru
+  185.193.90.38    DGRAM  registry.deckhouse.ru
   ```
   
   Если полученные IP-адреса не совпадают, проверьте настройки DNS на узле. В частности, обратите внимание на список доменов в параметре `search` файла `/etc/resolv.conf` (он влияет на разрешение имен в поде Deckhouse). Если в параметре `search` файла `/etc/resolv.conf` указан домен, в котором настроено разрешение wildcard-записей, это может привести к неверному разрешению IP-адреса хранилища образов Deckhouse (см. пример).
@@ -275,9 +275,9 @@ Patch-релизы (например, обновление на версию `1.
 
 - В DNS-зоне `company.my` настроено разрешение wildcard-записей `*.company.my` в адрес `10.0.0.100`. То есть любое DNS-имя в зоне `company.my`, для которого нет конкретной записи в DNS, разрешается в адрес `10.0.0.100`.
 
-Тогда с учетом параметра `search`, указанного в файле `/etc/resolv.conf`, при обращении на адрес `registry.deckhouse.io` на узле система попробует получить IP-адрес для имени `registry.deckhouse.io` (так как считает его полностью определенным, учитывая настройку по умолчанию параметра `options ndots:1`).
+Тогда с учетом параметра `search`, указанного в файле `/etc/resolv.conf`, при обращении на адрес `registry.deckhouse.ru` на узле система попробует получить IP-адрес для имени `registry.deckhouse.ru` (так как считает его полностью определенным, учитывая настройку по умолчанию параметра `options ndots:1`).
 
-При обращении же на адрес `registry.deckhouse.io` **из пода** Kubernetes, учитывая параметры `options ndots:5` (используется в Kubernetes по умолчанию) и `search`, система первоначально попробует получить IP-адрес для имени `registry.deckhouse.io.company.my`. Имя `registry.deckhouse.io.company.my` разрешится в IP-адрес `10.0.0.100`, так как в DNS-зоне `company.my` настроено разрешение wildcard-записей `*.company.my` в адрес `10.0.0.100`. В результате к хосту `registry.deckhouse.io` будет невозможно подключиться и скачать информацию о доступных обновлениях Deckhouse.  
+При обращении же на адрес `registry.deckhouse.ru` **из пода** Kubernetes, учитывая параметры `options ndots:5` (используется в Kubernetes по умолчанию) и `search`, система первоначально попробует получить IP-адрес для имени `registry.deckhouse.ru.company.my`. Имя `registry.deckhouse.ru.company.my` разрешится в IP-адрес `10.0.0.100`, так как в DNS-зоне `company.my` настроено разрешение wildcard-записей `*.company.my` в адрес `10.0.0.100`. В результате к хосту `registry.deckhouse.ru` будет невозможно подключиться и скачать информацию о доступных обновлениях Deckhouse.  
 {% endofftopic %}
 
 ## Закрытое окружение, работа через proxy и сторонние registry
@@ -302,7 +302,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
 Установите следующие параметры в ресурсе `InitConfiguration`:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — адрес образа Deckhouse EE в стороннем registry. Пример: `imagesRepo: registry.deckhouse.io/deckhouse/ee`;
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — адрес образа Deckhouse EE в стороннем registry. Пример: `imagesRepo: registry.deckhouse.ru/deckhouse/ee`;
 * `registryDockerCfg: <BASE64>` — права доступа к стороннему registry, зашифрованные в Base64.
 
 Если разрешен анонимный доступ к образам Deckhouse в стороннем registry, `registryDockerCfg` должен выглядеть следующим образом:
@@ -352,14 +352,14 @@ Deckhouse поддерживает работу только с Bearer token-с�
 * Включите `Docker Bearer Token Realm`:
   ![Включение `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
 
-* Создайте проксирующий репозиторий Docker, указывающий на [Deckhouse registry](https://registry.deckhouse.io/):
+* Создайте проксирующий репозиторий Docker, указывающий на [Deckhouse registry](https://registry.deckhouse.ru/):
   ![Создание проксирующего репозитория Docker](images/registry/nexus/nexus-repository.png)
 
 * Заполните поля страницы создания следующим образом:
   * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`.
   * `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например `8123` или иной.
   * `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) авторизация с помощью Bearer-токенов, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в *Settings* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
-  * `Remote storage` должно иметь значение `https://registry.deckhouse.io/`.
+  * `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
   * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
   * `Maximum Metadata Age` должно быть равно 0.
   * Если планируется использовать Deckhouse Enterprise Edition, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
@@ -388,7 +388,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
   * `Administration -> Registries -> New Endpoint`.
   * `Provider`: `Docker Registry`.
   * `Name` — укажите любое, на ваше усмотрение.
-  * `Endpoint URL`: `https://registry.deckhouse.io`.
+  * `Endpoint URL`: `https://registry.deckhouse.ru`.
   * Укажите `Access ID` и `Access Secret` для Deckhouse Enterprise Edition.
 
   ![Настройка Registry](images/registry/harbor/harbor1.png)
@@ -405,16 +405,20 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
 ### Ручная загрузка образов в изолированный приватный registry
 
-1. При необходимости авторизуйтесь в container registry `registry.deckhouse.io` с помощью вашего лицензионного ключа.
+{% alert level="warning" %}
+Доступно только в Enterprise Edition.
+{% endalert %}
+
+1. При необходимости авторизуйтесь в container registry `registry.deckhouse.ru` (или `registry.deckhouse.io`) с помощью вашего лицензионного ключа.
 
    ```shell
-   docker login -u license-token registry.deckhouse.io
+   docker login -u license-token registry.deckhouse.ru
    ```
 
 1. Запустите установщик Deckhouse версии 1.54.3 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.3 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.54.3 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы Deckhouse.
@@ -467,9 +471,9 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
    Если ваш registry не требует авторизации, флаги `--registry-login`/`--registry-password` указывать не нужно.
 
-1. После загрузки образов в изолированный registry можно переходить к установке Deckhouse. Воспользуйтесь [руководством по быстрому старту](/gs/bm-private/step2.html).
+1. После загрузки образов в изолированный registry можно переходить к установке Deckhouse (доступно только в Enterprise Edition). Воспользуйтесь [руководством по быстрому старту](/gs/bm-private/step2.html).
 
-   При запуске установщика используйте его образ из registry, в который ранее были загружены образы Deckhouse, а не из публичного registry. Например, используйте адрес вида `your.private.registry.com:5000/deckhouse/ee/install:stable` вместо `registry.deckhouse.io/deckhouse/ee/install:stable`.
+   При запуске установщика используйте его образ из registry, в который ранее были загружены образы Deckhouse, а не из публичного registry. Например, используйте адрес вида `your.private.registry.com:5000/deckhouse/ee/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
    В ресурсе `InitConfiguration` при установке также используйте адрес вашего registry и данные авторизации (параметры [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3](/gs/bm-private/step3.html) руководства по быстрому старту).
 
@@ -478,7 +482,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 1. Запустите установщик Deckhouse версии 1.56.0 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.56.0 bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.ru/deckhouse/ce/install:v1.56.0 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы модулей и YAML-манифест ModuleSource, описывающий источник сторонних модулей.
@@ -530,6 +534,10 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
+{% alert level="warning" %}
+Использование registry отличных от `registry.deckhouse.io` и `registry.deckhouse.ru` доступно только в Enterprise Edition.
+{% endalert %}
+
 Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
 
 * Выполните команду `deckhouse-controller helper change-registry` из пода Deckhouse с параметрами нового registry.
@@ -552,7 +560,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password YUvio925tyxFNBnqhfcx89nABwcnTP1K registry.deckhouse.io/deckhouse --ca-file <(cat <<<$CA_CONTENT)
+    $ kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password YUvio925tyxFNBnqhfcx89nABwcnTP1K registry.deckhouse.ru/deckhouse --ca-file <(cat <<<$CA_CONTENT)
     ```
 
 * Дождитесь перехода пода Deckhouse в статус `Ready`. Если под будет находиться в статусе `ImagePullBackoff`, перезапустите его.
@@ -676,8 +684,8 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 
 ### Как переключить Deckhouse EE на CE?
 
-{% alert %}
-Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+{% alert level="warning" %}
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. Использование registry отличных от `registry.deckhouse.io` и `registry.deckhouse.ru` доступно только в Enterprise Edition.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -691,7 +699,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 1. Выполните следующую команду:
 
    ```shell
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.ru/deckhouse/ce
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready`:
@@ -761,7 +769,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).
 
 {% alert %}
-Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 {% endalert %}
 
 Для переключения кластера Deckhouse Community Edition на Enterprise Edition выполните следующие действия:
@@ -770,7 +778,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
+   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.ru/deckhouse/ee
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready`:
