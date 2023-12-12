@@ -59,9 +59,10 @@ var (
 	MirrorDeckhouseRegistryRepo = enterpriseEditionRepo
 
 	MirrorValidationMode = ""
-
-	MirrorSkipGOSTHashing         = false
+	
+	MirrorDoGOSTDigest = false
 	MirrorDontContinuePartialPull = false
+	
 )
 
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
@@ -98,9 +99,9 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		Default(mirrorFastValidation).
 		Envar(configEnvName("MIRROR_VALIDATION")).
 		EnumVar(&MirrorValidationMode, mirrorNoValidation, mirrorFastValidation, mirrorFullValidation)
-	cmd.Flag("skip-gost-digest", "Do not calculate GOST R 34.11-2012 STREEBOG digest for downloaded bundle").
-		Envar(configEnvName("MIRROR_SKIP_GOST_DIGESTS")).
-		BoolVar(&MirrorSkipGOSTHashing)
+	cmd.Flag("gost-digest", "Calculate GOST R 34.11-2012 STREEBOG digest for downloaded bundle").
+		Envar(configEnvName("MIRROR_DO_GOST_DIGESTS")).
+		BoolVar(&MirrorDoGOSTDigest)
 	cmd.Flag("images-bundle-path", "Path of tar bundle with pulled images. Should be a path to tar archive (.tar)").
 		Short('i').
 		PlaceHolder("PATH").

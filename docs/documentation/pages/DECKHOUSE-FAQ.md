@@ -441,6 +441,9 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
 
+   `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function, use the `--gost-digest` parameter to calculate it.
+   The checksum will be logged and written to a file with the `.tar.gostsum` extension next to the tar-archive containing the Deckhouse images.
+
 1. Optional: Copy the `dhctl` binary from the container to the directory where Deckhouse images were pulled.
 
    ```shell
