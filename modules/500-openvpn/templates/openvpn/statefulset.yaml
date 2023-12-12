@@ -246,7 +246,8 @@ spec:
         - "8000"
         - --role
         - "master"
-        - --ovpn.network="{{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}"
+        - --ovpn.network
+        - "{{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}"
           {{- if hasKey .Values.openvpn "inlet" }}
             {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
         - --ovpn.server.behindLB
