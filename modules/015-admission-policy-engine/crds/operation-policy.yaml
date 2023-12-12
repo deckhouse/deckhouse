@@ -172,7 +172,7 @@ spec:
                       type: boolean
                       description: "Check container names and env variables for duplicates."
                     replicaLimits:
-                      type: array
+                      type: object
                       description: "Allowed ranges for numbers of replicas.  Values are inclusive."
                       items:
                         type: object
