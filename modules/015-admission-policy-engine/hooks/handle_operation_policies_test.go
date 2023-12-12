@@ -84,8 +84,8 @@ spec:
     checkHostNetworkDNSPolicy: true
     checkContainerDuplicates: true
 	replicaLimits:
-		minReplicas: 1
-		maxReplicas: 3
+	  minReplicas: 1
+	  maxReplicas: 3
   match:
     namespaceSelector:
       matchNames:
