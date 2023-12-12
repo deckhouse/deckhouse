@@ -89,7 +89,7 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface) *Co
 	lister := leaseInformer.Lister()
 	informer := leaseInformer.Informer()
 
-	httpClient := d8http.NewClient(d8http.WithTimeout(3 * time.Minute))
+	httpClient := d8http.NewClient(d8http.WithTimeout(time.Minute))
 
 	controller := &Controller{
 		kubeclientset: ks,
