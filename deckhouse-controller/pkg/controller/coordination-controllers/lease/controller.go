@@ -204,20 +204,16 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 		return ctrl.Result{Requeue: true}, fmt.Errorf("list: %w", err)
 	}
 
+	for _, item := range list.Items {
+		err = c.processModuleSource(ctx, item)
+		if err != nil {
+			c.logger.Warnf("process module source %s error: %v", item.Name, err)
+		}
+	}
+
 	addrs, err := c.getDocsBuilderAddresses(ctx)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("get builder addresses: %w", err)
-	}
-
-	if len(addrs) == 0 {
-		return ctrl.Result{}, nil
-	}
-
-	for _, item := range list.Items {
-		err = c.processModuleSource(item, addrs)
-		if err != nil {
-			c.logger.Warnf("process module source error: %v", err)
-		}
 	}
 
 	for _, addr := range addrs {
@@ -230,7 +226,7 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 	return ctrl.Result{}, nil
 }
 
-func (c *Controller) processModuleSource(ms deckhouseiov1alpha1.ModuleSource, addrs []string) error {
+func (c *Controller) processModuleSource(ctx context.Context, ms deckhouseiov1alpha1.ModuleSource) error {
 	opts := controllerUtils.GenerateRegistryOptions(&ms)
 
 	regCli, err := cr.NewClient(ms.Spec.Registry.Repo, opts...)
@@ -255,12 +251,17 @@ func (c *Controller) processModuleSource(ms deckhouseiov1alpha1.ModuleSource, ad
 			return fmt.Errorf("fetch module version: %w", err)
 		}
 
-		for _, addr := range addrs {
-			img, err := regCli.Image(moduleVersion)
-			if err != nil {
-				return fmt.Errorf("fetch module %s %s image: %v", moduleName, moduleVersion, err)
-			}
+		img, err := regCli.Image(moduleVersion)
+		if err != nil {
+			return fmt.Errorf("fetch module %s %s image: %v", moduleName, moduleVersion, err)
+		}
 
+		addrs, err := c.getDocsBuilderAddresses(ctx)
+		if err != nil {
+			return fmt.Errorf("get builder addresses: %w", err)
+		}
+
+		for _, addr := range addrs {
 			err = c.sendDocumentation(addr, img, moduleName, moduleVersion)
 			if err != nil {
 				return fmt.Errorf("send documentation for %s %s: %w", moduleName, moduleVersion, err)
