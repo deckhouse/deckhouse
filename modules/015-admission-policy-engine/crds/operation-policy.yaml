@@ -178,9 +178,11 @@ spec:
                         minReplicas:
                           description: "The minimum number of replicas allowed, inclusive."
                           type: integer
+                          default: 1
                         maxReplicas:
                           description: "The maximum number of replicas allowed, inclusive."
                           type: integer
+                          default: 30
                 match:
                   type: object
                   required: ["namespaceSelector"]
