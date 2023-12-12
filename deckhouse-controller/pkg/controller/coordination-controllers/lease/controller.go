@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -217,10 +216,10 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 	}
 
 	for _, item := range list.Items {
-		err = errors.Join(err, c.processModuleSource(item, addrs))
-	}
-	if err != nil {
-		c.logger.Warnf("process module source error: %w", err)
+		err = c.processModuleSource(item, addrs)
+		if err != nil {
+			c.logger.Warnf("process module source error: %w", err)
+		}
 	}
 
 	for _, addr := range addrs {
