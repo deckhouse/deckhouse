@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -110,25 +111,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var openvpnArgs []string
-	//openvpnArgs = append(openvpnArgs, "--config")
-	//openvpnArgs = append(openvpnArgs, "/etc/openvpn/openvpn.conf")
-	//openvpnArgs = append(openvpnArgs, "--proto")
-	//openvpnArgs = append(openvpnArgs, protocol)
-	//openvpnArgs = append(openvpnArgs, "--management")
-	//openvpnArgs = append(openvpnArgs, "127.0.0.1")
-	//openvpnArgs = append(openvpnArgs, mgmtport)
-	//openvpnArgs = append(openvpnArgs, "--dev")
-	//openvpnArgs = append(openvpnArgs, fmt.Sprintf("tun-%s", protocol))
-	openvpnArgs = append(openvpnArgs, "--config /etc/openvpn/openvpn.conf")
-	openvpnArgs = append(openvpnArgs, fmt.Sprintf("--proto %s", protocol))
-	openvpnArgs = append(openvpnArgs, fmt.Sprintf("--management 127.0.0.1 %s", mgmtport))
-	openvpnArgs = append(openvpnArgs, fmt.Sprintf("--dev tun-%s", protocol))
-	log.Println(openvpnArgs)
+	var args []string
+	args = append(args, "--config")
+	args = append(args, "/home/v.snurnitsin/store/dev/go/exec-unix-args/openvpn.conf")
+	args = append(args, fmt.Sprintf("--proto"))
+	args = append(args, protocol)
+	args = append(args, "--management")
+	args = append(args, "127.0.0.1")
+	args = append(args, mgmtport)
+	args = append(args, "--dev")
+	args = append(args, fmt.Sprintf("tun-%s", protocol))
+	log.Println(args)
 
-	err = unix.Exec("/openvpn", openvpnArgs, os.Environ())
+	cmd := exec.Command("/usr/sbin/openvpn", args...)
+	cmd.Stdout = os.Stdout
+	err = cmd.Start()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
