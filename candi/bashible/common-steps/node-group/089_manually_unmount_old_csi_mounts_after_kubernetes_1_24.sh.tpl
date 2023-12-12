@@ -73,6 +73,22 @@ for mount in "${old_mounts[@]}"; do
         echo_err "Mountpoint $mount failed to unmount: $out"
     fi
 done
+
+
+declare -a mounted_elsewhere_pvcs
+mapfile -t mounted_elsewhere_pvcs < <(journalctl --since "$log_period_minutes min ago" -u kubelet.service |
+  grep "device already in use and mounted elsewhere" | \
+  grep -oE "pvc-[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}" | \
+  sort -u)
+
+for pvc in "${mounted_elsewhere_pvcs[@]}"; do
+    mount="$(mount | grep -oE "/var/lib/kubelet/plugins/kubernetes.io/csi/pv/$pvc/globalmount")"
+    if out=$(umount "$mount" 2>&1); then
+        echo_err "Mountpoint $mount successfully unmounted"
+    else
+        echo_err "Mountpoint $mount failed to unmount: $out"
+    fi
+done
 EOF
 
 chmod +x /var/lib/bashible/old-csi-mount-cleaner.sh
