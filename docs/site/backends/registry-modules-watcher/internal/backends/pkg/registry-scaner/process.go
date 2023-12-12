@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -34,7 +33,8 @@ func (s *registryscaner) processRegistries(ctx context.Context) {
 	for _, registry := range s.registryClients {
 		modules, err := registry.Modules()
 		if err != nil {
-			klog.Fatal(err)
+			klog.Errorf("registry %v is unavailable. err: %v", registry.Name(), err)
+			continue
 		}
 		klog.V(4).Infof("found modules: %v in %q", modules, registry.Name())
 
@@ -46,7 +46,8 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 	for _, module := range modules {
 		tags, err := registry.ListTags(module)
 		if err != nil {
-			klog.Fatal(err)
+			klog.Error(err)
+			continue
 		}
 
 		s.processReleaseChannels(ctx, registry.Name(), module, filterReleaseChannelsFromTags(tags))
@@ -57,13 +58,15 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 	for _, releaseChannel := range releaseChannels {
 		releaseImage, err := s.registryClients[registry].ReleaseImage(module, releaseChannel)
 		if err != nil {
-			klog.Fatal(err)
+			klog.Error(err)
+			continue
 		}
 
 		// if the checksum for the release channel matches - skip processing of the release channel
 		releaseDigest, err := releaseImage.Digest()
 		if err != nil {
-			klog.Fatal(err)
+			klog.Error(err)
+			continue
 		}
 		releaseChecksum, ok := s.cache.GetReleaseChecksum(registry, module, releaseChannel)
 		if ok && releaseChecksum == releaseDigest.String() {
@@ -74,7 +77,8 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 
 		version, err := extractVersionFromImage(releaseImage)
 		if err != nil {
-			klog.Fatal(err) // mb not fatal
+			klog.Error(err)
+			continue
 		}
 
 		s.processVersion(ctx, registry, module, version, releaseChannel)
@@ -84,12 +88,14 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 func (s *registryscaner) processVersion(ctx context.Context, registry, module, version, releaseChannel string) {
 	image, err := s.registryClients[registry].Image(module, version)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Error(err)
+		return
 	}
 
 	tarFile, err := extractDocumentation(image)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Error(err)
+		return
 	}
 
 	s.cache.SetTar(registry, module, version, releaseChannel, tarFile)
@@ -110,17 +116,19 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 		Mode:     0700,
 	})
 	if err != nil {
-		log.Fatal(err)
+		klog.Error(err)
+		return nil, err
 	}
 
-	// "docs" directory
+	// "openapi" directory
 	err = tarWriter.WriteHeader(&tar.Header{
 		Typeflag: tar.TypeDir,
 		Name:     "openapi",
 		Mode:     0700,
 	})
 	if err != nil {
-		log.Fatal(err)
+		klog.Error(err)
+		return nil, err
 	}
 
 	// "crds" directory
@@ -130,7 +138,8 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 		Mode:     0700,
 	})
 	if err != nil {
-		log.Fatal(err)
+		klog.Error(err)
+		return nil, err
 	}
 
 	for {
@@ -146,45 +155,45 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 		if strings.Contains(hdr.Name, "docs/") {
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
-				klog.Fatal(err)
+				klog.Error(err)
 			}
 
 			if err := tarWriter.WriteHeader(hdr); err != nil {
-				log.Fatal(err)
+				klog.Error(err)
 			}
 
 			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
-				log.Fatal(err)
+				klog.Error(err)
 			}
 		}
 
 		if strings.Contains(hdr.Name, "openapi/") {
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
-				klog.Fatal(err)
+				klog.Error(err)
 			}
 
 			if err := tarWriter.WriteHeader(hdr); err != nil {
-				log.Fatal(err)
+				klog.Error(err)
 			}
 
 			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
-				log.Fatal(err)
+				klog.Error(err)
 			}
 		}
 
 		if strings.Contains(hdr.Name, "crds/") {
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
-				klog.Fatal(err)
+				klog.Error(err)
 			}
 
 			if err := tarWriter.WriteHeader(hdr); err != nil {
-				log.Fatal(err)
+				klog.Error(err)
 			}
 
 			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
-				log.Fatal(err)
+				klog.Error(err)
 			}
 		}
 	}
