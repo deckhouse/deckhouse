@@ -218,7 +218,7 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 	for _, item := range list.Items {
 		err = c.processModuleSource(item, addrs)
 		if err != nil {
-			c.logger.Warnf("process module source error: %w", err)
+			c.logger.Warnf("process module source error: %v", err)
 		}
 	}
 
