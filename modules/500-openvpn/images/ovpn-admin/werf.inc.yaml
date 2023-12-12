@@ -10,14 +10,21 @@ shell:
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-src-artifact
 from: {{ .Images.BASE_ALPINE }}
-
+git:
+- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
-  install:
+  beforeInstall:
     - apk add --no-cache git
+  install:
     - mkdir -p /src
     - cd /src
     - git clone https://github.com/flant/ovpn-admin.git .
     - git checkout {{ $gitCommit }}
+    - find /patches -name '*.patch' -exec git apply {} \;
     - echo {{ $gitCommit }} > version
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
@@ -27,24 +34,17 @@ import:
   add: /src
   to: /src
   before: install
-git:
-- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   install:
     - cd /src
-    - find /patches -name '*.patch' -exec git apply {} \;
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /openvpn-web-ui
-    - chown 64535:64535 /openvpn-web-ui
-    - chmod 0755 /openvpn-web-ui
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ovpn-admin
+    - chown 64535:64535 /ovpn-admin
+    - chmod 0755 /ovpn-admin
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
 from: {{ .Images.BASE_NODE_16_ALPINE }}
@@ -63,7 +63,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
-  add: /openvpn-web-ui
+  add: /ovpn-admin
   to: /app/ovpn-admin
   before: setup
 - artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
