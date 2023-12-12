@@ -83,6 +83,9 @@ mapfile -t mounted_elsewhere_pvcs < <(journalctl --since "$log_period_minutes mi
 
 for pvc in "${mounted_elsewhere_pvcs[@]}"; do
     mount="$(mount | grep -oE "/var/lib/kubelet/plugins/kubernetes.io/csi/pv/$pvc/globalmount")"
+    if [ "$mount" == "" ]; then
+      continue
+    fi
     if out=$(umount "$mount" 2>&1); then
         echo_err "Mountpoint $mount successfully unmounted"
     else
