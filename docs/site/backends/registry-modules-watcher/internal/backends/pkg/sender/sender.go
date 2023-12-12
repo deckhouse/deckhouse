@@ -37,9 +37,8 @@ type sender struct {
 // New
 func New() *sender {
 	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: true,
+		MaxIdleConns:    10,
+		IdleConnTimeout: 30 * time.Second,
 	}
 	client := &http.Client{Transport: tr}
 
