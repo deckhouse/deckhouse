@@ -383,6 +383,10 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
 ### Manually uploading images to an air-gapped registry
 
+{% alert level="warning" %}
+This feature is available in Enterprise Edition only.
+{% endalert %}
+
 1. If necessary, log in to the container registry `registry.deckhouse.io` using your license key.
 
    ```shell
@@ -439,13 +443,17 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
    If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
 
-1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
+1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it (is available in Enterprise Edition only). Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
    To run the installer, use its image from your private registry where Deckhouse images reside, rather than from the public registry. In other words, your address should look something like `your.private.registry.com:5000/deckhouse/ee/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
    During installation, add your registry address and authorization data to the `InitConfiguration` resource (the [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3](/gs/bm-private/step3.html) of the Getting started guide as well).
 
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
+
+{% alert level="warning" %}
+Using a registry other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in the Enterprise Edition.
+{% endalert %}
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
@@ -592,8 +600,8 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 
 ### How to switch Deckhouse EE to CE?
 
-{% alert %}
-The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+{% alert level="warning" %}
+The instruction implies using the public address of the container registry: `registry.deckhouse.io`. Using a registry other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in the Enterprise Edition.
 {% endalert %}
 
 {% alert level="warning" %}
