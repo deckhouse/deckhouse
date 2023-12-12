@@ -56,7 +56,7 @@ fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/openvpn-artifact
   add: /src/openvpn/src/openvpn/openvpn
-  to: /openvpn
+  to: /usr/sbin/openvpn
   before: setup
 - artifact: {{ .ModuleName }}/entrypoint-artifact
   add: /entrypoint
