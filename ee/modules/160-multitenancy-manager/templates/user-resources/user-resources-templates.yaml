@@ -91,7 +91,7 @@ metadata:
   {{- $projectName := index . 0 }}
   {{- $values := index . 1 }}
   {{- $rootContext := index . 2 }}
-  {{- $kebabCaseAuthName := printf "%s-%s-%s-%s" $projectName $values.role $values.kind $values.name | kebabcase }}
+  {{- $kebabCaseAuthName := printf "%s-%s-%s" $values.role $values.kind $values.name | kebabcase }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
