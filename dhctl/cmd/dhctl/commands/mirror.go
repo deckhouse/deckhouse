@@ -68,7 +68,7 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		})
 	}
 
-	defer os.RemoveAll(app.TmpDirName)
+	defer os.RemoveAll(mirrorCtx.UnpackedImagesPath)
 
 	if err := mirror.ValidateWriteAccessForRepo(
 		mirrorCtx.RegistryHost+mirrorCtx.RegistryPath,
@@ -96,6 +96,11 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 }
 
 func mirrorPullDeckhouseToLocalFilesystem() error {
+	pulledEdition := "ee"
+	if app.MirrorFlantEdition {
+		pulledEdition = "fe"
+	}
+
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
 		SkipGOSTDigests:       app.MirrorSkipGOSTHashing,
@@ -106,12 +111,16 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 			Password: app.MirrorDHLicenseToken,
 		}),
 		TarBundlePath:      app.MirrorTarBundle,
-		UnpackedImagesPath: filepath.Join(app.TmpDirName, time.Now().Format("mirror_tmp_02-01-2006_15-04-05")),
+		UnpackedImagesPath: filepath.Join(app.TmpDirName, "mirror_pull_"+pulledEdition),
 		ValidationMode:     mirror.ValidationMode(app.MirrorValidationMode),
 		MinVersion:         app.MirrorMinVersion,
 	}
 
-	defer os.RemoveAll(mirrorCtx.UnpackedImagesPath)
+	if app.MirrorDontContinuePartialPull || lastPullWasTooLongAgoToRetry(mirrorCtx) {
+		if err := os.RemoveAll(mirrorCtx.UnpackedImagesPath); err != nil {
+			return fmt.Errorf("Cleanup last unfinished pull data: %w", err)
+		}
+	}
 
 	if err := mirror.ValidateReadAccessForImage(mirrorCtx.DeckhouseRegistryRepo+":rock-solid", mirrorCtx.RegistryAuth, mirrorCtx.Insecure); err != nil {
 		return fmt.Errorf("License token validation failure: %w", err)
@@ -132,7 +141,6 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	}
 
 	err = log.Process("mirror", "Pull images", func() error {
-		log.InfoLn("Working directory:", mirrorCtx.UnpackedImagesPath)
 		return operations.MirrorDeckhouseToLocalFS(mirrorCtx, versionsToMirror)
 	})
 	if err != nil {
@@ -170,5 +178,18 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 		return err
 	}
 
+	if err = os.RemoveAll(app.TmpDirName); err != nil {
+		return fmt.Errorf("Cleanup temporary data after mirroring: %w", err)
+	}
+
 	return nil
+}
+
+func lastPullWasTooLongAgoToRetry(mirrorCtx *mirror.Context) bool {
+	s, err := os.Lstat(mirrorCtx.UnpackedImagesPath)
+	if err != nil {
+		return false
+	}
+
+	return time.Since(s.ModTime()) > 24*time.Hour
 }

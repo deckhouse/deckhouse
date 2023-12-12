@@ -55,12 +55,13 @@ var (
 	mirrorMinVersionString                 = ""
 	MirrorMinVersion       *semver.Version = nil
 
-	mirrorFlantEdition          = false
+	MirrorFlantEdition          = false
 	MirrorDeckhouseRegistryRepo = enterpriseEditionRepo
 
 	MirrorValidationMode = ""
 
-	MirrorSkipGOSTHashing = false
+	MirrorSkipGOSTHashing         = false
+	MirrorDontContinuePartialPull = false
 )
 
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
@@ -85,7 +86,7 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		StringVar(&MirrorRegistryPassword)
 	cmd.Flag("fe", "Copy Flant Edition images instead of Enterprise Edition.").
 		Envar(configEnvName("MIRROR_FE")).
-		BoolVar(&mirrorFlantEdition)
+		BoolVar(&MirrorFlantEdition)
 	cmd.Flag("min-version", "Minimal Deckhouse release to copy. Cannot be above current Rock Solid release.").
 		Short('v').
 		Envar(configEnvName("MIRROR_MIN_VERSION")).
@@ -106,6 +107,8 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		Required().
 		Envar(configEnvName("MIRROR_IMAGES_BUNDLE")).
 		StringVar(&MirrorTarBundle)
+	cmd.Flag("no-pull-resume", "Do not continue last unfinished pull operation.").
+		BoolVar(&MirrorDontContinuePartialPull)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
 		BoolVar(&MirrorInsecure)
 
@@ -127,7 +130,7 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 			return err
 		}
 
-		if mirrorFlantEdition {
+		if MirrorFlantEdition {
 			MirrorDeckhouseRegistryRepo = flantEditionRepo
 		}
 
@@ -169,7 +172,7 @@ func parseAndValidateRegistryURLFlag() error {
 		}
 		if MirrorRegistryPath == "" {
 			MirrorRegistryPath = enterpriseEditionRepoPath
-			if mirrorFlantEdition {
+			if MirrorFlantEdition {
 				MirrorRegistryPath = flantEditionRepoPath
 			}
 		}
