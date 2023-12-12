@@ -20,6 +20,7 @@ if [ -z $1 ] || [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ]; 
   exit 1
 fi
 
+systemctl disable bashible.service bashible.timer
 systemctl stop bashible.service bashible.timer
 for pid in $(ps ax | grep "bash /var/lib/bashible/bashible" | grep -v grep | awk '{print $1}'); do
   kill $pid
