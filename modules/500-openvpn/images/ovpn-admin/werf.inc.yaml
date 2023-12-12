@@ -42,9 +42,9 @@ shell:
     - find /patches -name '*.patch' -exec git apply {} \;
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ovpn-admin
-    - chown 64535:64535 /ovpn-admin
-    - chmod 0755 /ovpn-admin
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /openvpn-web-ui
+    - chown 64535:64535 /openvpn-web-ui
+    - chmod 0755 /openvpn-web-ui
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
 from: {{ .Images.BASE_NODE_16_ALPINE }}
@@ -63,7 +63,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
-  add: /ovpn-admin
+  add: /openvpn-web-ui
   to: /app/ovpn-admin
   before: setup
 - artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
