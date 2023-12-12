@@ -48,6 +48,10 @@ const globalValues = `
 
 const moduleValuesA = `
     internal:
+      capcdControllerManagerWebhookCert:
+        ca: ca
+        crt: crt
+        key: key
       providerClusterConfiguration:
         apiVersion: deckhouse.io/v1alpha1
         kind: VCDClusterConfiguration
@@ -55,7 +59,7 @@ const moduleValuesA = `
           username: myuname
           password: myPaSsWd
           insecure: true
-          server: "http://server/api"
+          server: "http://server/api/"
         layout: Standard
         sshPublicKey: rsa-aaaa
         organization: org

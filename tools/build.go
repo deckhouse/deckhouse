@@ -135,6 +135,8 @@ func writeSections(settings writeSettings) {
 
 		buildFile := filepath.Join(file, ".build.yaml")
 
+		fmt.Fprintf(os.Stderr, "build file: %s\n", buildFile)
+
 		ok, err := fileExists(buildFile)
 		if err != nil {
 			log.Fatal(err)
@@ -151,6 +153,8 @@ func writeSections(settings writeSettings) {
 				continue
 			}
 
+			fmt.Fprintf(os.Stderr, "build file found:\n%s\n", content)
+
 			// if build.yaml exists and not empty, try to add instruction
 			// from it instead adding the entry for whole module
 			scanner := bufio.NewScanner(bytes.NewReader(content))
@@ -162,10 +166,12 @@ func writeSections(settings writeSettings) {
 				}
 
 				for _, additionalFile := range additionalFiles {
+					fmt.Fprintf(os.Stderr, "add entry file: %s\n", additionalFile)
 					addNewFileEntry(additionalFile)
 				}
 			}
 		} else {
+			fmt.Fprintf(os.Stderr, "build add entry file: %s\n", file)
 			addNewFileEntry(file)
 		}
 	}

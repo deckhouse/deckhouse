@@ -7,6 +7,7 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-vcd
     cluster.x-k8s.io/provider: vcd
+    cluster.x-k8s.io/v1beta1: v1beta2
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   name: vcdclusters.infrastructure.cluster.x-k8s.io

@@ -68,7 +68,7 @@ spec:
         control-plane: controller-manager
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "capcd-controller-manager")) | nindent 6 }}
@@ -80,6 +80,11 @@ spec:
       - name: capcd-controller-manager
         image: {{ $autoscalerImage }}
         imagePullPolicy: IfNotPresent
+        env:
+          - name: CAPVCD_SKIP_RDE
+            value: "true"
+          - name: CONTROL_PLANE_IP
+            value: {{ .Values.cloudProviderVcd.internal.apiServerIp | quote }}
         ports:
         - containerPort: 9443
           name: webhook-server

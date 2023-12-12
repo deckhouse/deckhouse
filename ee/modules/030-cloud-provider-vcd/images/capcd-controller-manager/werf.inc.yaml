@@ -24,8 +24,10 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - mkdir -p /src
-    - git clone --depth 1 --branch v1.1.1 {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director.git /src
+    # todo rewrite to source repo after debug
+    - git clone https://github.com/deckhouse/3p-cluster-api-provider-cloud-director /src
     - cd /src
+    - git reset c659815679bcb268e7436396cb01e4816b68353b --hard
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /cluster-api-provider-cloud-director
   {{- end }}
 {{- end }}
