@@ -78,9 +78,9 @@ func barrier(writer *hash.Hash) {
 	(*writer).Write(barrierValue)
 }
 
-func sortedKeys(json map[string]interface{}) []string {
+func sortedKeys(sum map[string]interface{}) []string {
 	var keys []string
-	for k := range json {
+	for k := range sum {
 		keys = append(keys, k)
 	}
 
