@@ -1,4 +1,4 @@
-{{- $gitCommit := "9024405232350b469e89ebbbfc5b0a0a1f400523" }}
+{{- $gitCommit := "dbc48ef3f1141caa7769488dd3273cff530c9df7" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-openvpn-bin-artifact
 fromImage: common/alt
