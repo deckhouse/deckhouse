@@ -10,6 +10,12 @@ shell:
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-src-artifact
 from: {{ .Images.BASE_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
   install:
     - apk add --no-cache git
@@ -18,6 +24,7 @@ shell:
     - git clone https://github.com/flant/ovpn-admin.git .
     - git checkout {{ $gitCommit }}
     - echo {{ $gitCommit }} > version
+    - find /patches -name '*.patch' -exec git apply {} \;
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
