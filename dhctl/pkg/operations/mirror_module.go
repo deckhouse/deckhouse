@@ -71,14 +71,14 @@ func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string) err
 		}
 
 		log.InfoLn("Beginning to pull module contents")
-		err = mirror.PullImageSet(authProvider, moduleLayout, moduleImageSet, insecure)
+		err = mirror.PullImageSet(authProvider, moduleLayout, moduleImageSet, insecure, false)
 		if err != nil {
 			return fmt.Errorf("Pull images: %w", err)
 		}
 		log.InfoLn("✅ Module contents pulled successfully")
 
 		log.InfoLn("Beginning to pull module releases")
-		err = mirror.PullImageSet(authProvider, moduleReleasesLayout, releasesImageSet, insecure)
+		err = mirror.PullImageSet(authProvider, moduleReleasesLayout, releasesImageSet, insecure, false)
 		if err != nil {
 			return fmt.Errorf("Pull images: %w", err)
 		}
