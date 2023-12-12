@@ -19,7 +19,6 @@ package helm
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"time"
@@ -236,8 +235,14 @@ func getMD5Hash(templates, values map[string]interface{}) string {
 
 	// TODO is not an ideal algorithm, since the order of elements in map is not
 	// guaranteed and may lead to a different hash result.
-	byteResult, _ := json.Marshal(sum)
+	// byteResult, _ := json.Marshal(sum)
 
-	hash := md5.Sum(byteResult)
-	return hex.EncodeToString(hash[:])
+	hash := md5.New()
+	hashObject(sum, &hash)
+	res := md5.Sum(nil)
+
+	return hex.EncodeToString(res[:])
+
+	// hash := md5.Sum(byteResult)
+	// return hex.EncodeToString(hash[:])
 }
