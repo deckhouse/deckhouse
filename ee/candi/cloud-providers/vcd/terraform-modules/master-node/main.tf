@@ -41,7 +41,7 @@ data "vcd_vm_placement_policy" "vmpp" {
 }
 
 resource "vcd_vm_internal_disk" "kubernetes_data"{
-  vapp_name       = local.prefix
+  vapp_name       = local.vapp_name
   vm_name         = vcd_vapp_vm.master.name
   size_in_mb      = local.master_instance_class.etcdDiskSizeGb * 1024
   iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.master_instance_class.etcdDiskSizeGb

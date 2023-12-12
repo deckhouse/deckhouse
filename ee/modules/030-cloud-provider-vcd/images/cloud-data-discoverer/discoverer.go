@@ -343,7 +343,7 @@ func removeDuplicatesStorageProfiles(list []v1alpha1.VCDStorageProfile) []v1alph
 		uniqueList = append(uniqueList, elem)
 	}
 
-	sort.Slice(uniqueList, func(i, j int) bool {
+	sort.SliceStable(uniqueList, func(i, j int) bool {
 		return uniqueList[i].Name < uniqueList[j].Name
 	})
 	return uniqueList
@@ -368,7 +368,7 @@ func removeDuplicatesInstanceTypes(list []v1alpha1.InstanceType) []v1alpha1.Inst
 		uniqueList = append(uniqueList, elem)
 	}
 
-	sort.Slice(uniqueList, func(i, j int) bool {
+	sort.SliceStable(uniqueList, func(i, j int) bool {
 		return uniqueList[i].Name < uniqueList[j].Name
 	})
 	return uniqueList

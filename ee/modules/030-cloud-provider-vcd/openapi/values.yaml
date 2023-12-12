@@ -307,3 +307,42 @@ properties:
           kind:
             type: string
             enum: [ VCDCloudProviderDiscoveryData ]
+          sizingPolicies:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: List of flavors.
+            uniqueItems: true
+          internalNetworks:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: List of internal networks.
+            uniqueItems: true
+          storageProfiles:
+            type: array
+            items:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                isEnabled:
+                  type: boolean
+                isDefaultStorageProfile:
+                  type: boolean
+            description: List of storage classes.
+      storageClasses:
+        type: array
+        items:
+          type: object
+          properties:
+            storageProfile:
+              type: string
+            name:
+              type: string
+      defaultStorageClass:
+        type: string
