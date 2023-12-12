@@ -22,8 +22,6 @@ spec:
                 credentialsRef:
                   description: |
                     Ссылка на ресурс [SSHCredentials](cr.html#sshcredentials).
-
-                    В ресурсе `SSHCredentials` указываются параметры, необходимые для подключения по SSH от Cluster API Provider Static к серверу (виртуальной машине).
                   properties:
                     apiVersion:
                       description: Версия API ресурса.
