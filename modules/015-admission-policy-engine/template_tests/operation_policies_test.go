@@ -57,10 +57,8 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"checkHostNetworkDNSPolicy":true,
 			"checkContainerDuplicates":true,
 			"replicaLimits":{
-				{
 					"min_replicas":1,
 					"max_replicas":10
-				}
 			}
 		},
 		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
