@@ -21,6 +21,5 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	}
 	input.Values.Set("cloudProviderVcd.internal.providerClusterConfiguration", metaCfg.ProviderClusterConfig)
 	input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", providerDiscoveryData.Object)
-
 	return nil
 })
