@@ -8,7 +8,7 @@ shell:
     - apt-get install -y openvpn
     - /binary_replace.sh -i "/usr/sbin/openvpn /bin/bash" -o /relocate
 ---
-artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
+artifact: {{ .ModuleName }}/ovpn-admin-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -59,7 +59,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
+- artifact: {{ .ModuleName }}/ovpn-admin-artifact
   add: /ovpn-admin
   to: /app/ovpn-admin
   before: setup
@@ -67,7 +67,7 @@ import:
   add: /src/frontend/static
   to: /app/frontend/static
   before: setup
-- artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
+- artifact: {{ .ModuleName }}/ovpn-admin-artifact
   add: /src/version
   to: /app/version
   before: setup
