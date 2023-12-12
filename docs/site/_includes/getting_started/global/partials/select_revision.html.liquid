@@ -79,6 +79,7 @@ Create the `resources.yml` file.
 
 <script>
 $(document).ready(function() {
+  $.cookie('lang', '{{ page.lang }}');
   $('#enter-license-key').click((e)=> {
     e.preventDefault();
     let licenseToken = $('[license-token]').val()
