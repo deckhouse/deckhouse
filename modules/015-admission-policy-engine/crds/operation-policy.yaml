@@ -175,10 +175,10 @@ spec:
                       type: object
                       description: "A range of allowed replicas.  Values are inclusive."
                       properties:
-                        min_replicas:
+                        minReplicas:
                           description: "The minimum number of replicas allowed, inclusive."
                           type: integer
-                        max_replicas:
+                        maxReplicas:
                           description: "The maximum number of replicas allowed, inclusive."
                           type: integer
                 match:
