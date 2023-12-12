@@ -23,12 +23,9 @@ import (
 )
 
 func hashObject(sum map[string]interface{}, hash *hash.Hash) {
-
-	barrier(hash)
 	var keys = sortedKeys(sum)
 	for _, key := range keys {
 		v := sum[key]
-
 		escapeKey(key, hash)
 		switch o := v.(type) {
 		case map[string]interface{}:
@@ -39,14 +36,10 @@ func hashObject(sum map[string]interface{}, hash *hash.Hash) {
 			escapeValue(o, hash)
 		}
 	}
-	barrier(hash)
 }
 
 func hashArray(array []interface{}, hash *hash.Hash) {
-
-	barrier(hash)
 	for _, v := range array {
-
 		switch o := v.(type) {
 		case map[string]interface{}:
 			hashObject(o, hash)
@@ -56,26 +49,15 @@ func hashArray(array []interface{}, hash *hash.Hash) {
 			escapeValue(o, hash)
 		}
 	}
-	barrier(hash)
 }
 
 func escapeKey(key string, writer *hash.Hash) {
 	(*writer).Write([]byte(key))
-	barrier(writer)
 }
 
 func escapeValue(value interface{}, writer *hash.Hash) {
 	(*writer).Write([]byte(fmt.Sprintf(`%T`, value)))
-	barrier(writer)
 	(*writer).Write([]byte(fmt.Sprintf("%v", value)))
-	barrier(writer)
-}
-
-// an invalide utf8 byte is used as a barrier
-var barrierValue = []byte{byte('\255')}
-
-func barrier(writer *hash.Hash) {
-	(*writer).Write(barrierValue)
 }
 
 func sortedKeys(sum map[string]interface{}) []string {
