@@ -469,7 +469,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     content: 'Proprietary';
 }
 
-.sidebar .sidebar__item_ee > a::after {
+.sidebar > span.sidebar__item_ee {
     content: 'EE Only';
 }
 

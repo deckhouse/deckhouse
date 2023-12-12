@@ -65,9 +65,10 @@
           </li>
 
         {{ range $sidebarItem := $sidebarRootMenu }}
-            <li class="sidebar__item sidebar__item_parent{{ if ne $sidebarItem.d8Edition "ce" }} sidebar__item_{{ lower $sidebarItem.d8Edition }}{{ end }}{{ if $sidebarItem.isActive }} active{{ end }}">
+            <li class="sidebar__item sidebar__item_parent{{ if $sidebarItem.isActive }} active{{ end }}">
                 <a href='#'>{{ $sidebarItem.title }}</a>
                   {{ template "subpages" (dict "parent" $sidebarItem "pages" $pages "ctx" $ctx) }}
+                  {{- if ne $sidebarItem.d8Edition "ce" }} <span class="sidebar__badge_{{ lower $sidebarItem.d8Edition }}"></span>{{ end }}
             </li>
         {{ end }}
       </ul>
