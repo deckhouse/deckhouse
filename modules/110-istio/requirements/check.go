@@ -19,7 +19,6 @@ limitations under the License.
 package requirements
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -49,7 +48,7 @@ func init() {
 		}
 
 		if currentVersion.LessThan(desiredVersion) {
-			return false, errors.New(fmt.Sprintf("installed Istio version '%s' is lower than required", currentVersionStr))
+			return false, fmt.Errorf("installed Istio version '%s' is lower than required", currentVersionStr)
 		}
 
 		return true, nil
