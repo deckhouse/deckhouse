@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -45,6 +46,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	controllerUtils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -215,42 +217,10 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 	}
 
 	for _, item := range list.Items {
-		opts := controllerUtils.GenerateRegistryOptions(&item)
-
-		regCli, err := cr.NewClient(item.Spec.Registry.Repo, opts...)
-		if err != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("get regestry client: %w", err)
-		}
-
-		tags, err := regCli.ListTags()
-		if err != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("list tags: %w", err)
-		}
-
-		sort.Strings(tags)
-		for _, moduleName := range tags {
-			regCli, err := cr.NewClient(path.Join(item.Spec.Registry.Repo, moduleName), opts...)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, fmt.Errorf("fetch module %s: %v", moduleName, err)
-			}
-
-			moduleVersion, err := fetchModuleVersion(item.Spec.ReleaseChannel, item.Spec.Registry.Repo, moduleName, opts)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, fmt.Errorf("fetch module version: %w", err)
-			}
-
-			for _, addr := range addrs {
-				img, err := regCli.Image(moduleVersion)
-				if err != nil {
-					return ctrl.Result{Requeue: true}, fmt.Errorf("fetch module %s %s image: %v", moduleName, moduleVersion, err)
-				}
-
-				err = c.sendDocumentation(addr, img, moduleName, moduleVersion)
-				if err != nil {
-					return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation for %s %s: %w", moduleName, moduleVersion, err)
-				}
-			}
-		}
+		err = errors.Join(err, c.processModuleSource(item, addrs))
+	}
+	if err != nil {
+		c.logger.Warnf("process module source error: %w", err)
 	}
 
 	for _, addr := range addrs {
@@ -261,6 +231,46 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (c *Controller) processModuleSource(ms deckhouseiov1alpha1.ModuleSource, addrs []string) error {
+	opts := controllerUtils.GenerateRegistryOptions(&ms)
+
+	regCli, err := cr.NewClient(ms.Spec.Registry.Repo, opts...)
+	if err != nil {
+		return fmt.Errorf("get regestry client: %w", err)
+	}
+
+	tags, err := regCli.ListTags()
+	if err != nil {
+		return fmt.Errorf("list tags: %w", err)
+	}
+
+	sort.Strings(tags)
+	for _, moduleName := range tags {
+		regCli, err := cr.NewClient(path.Join(ms.Spec.Registry.Repo, moduleName), opts...)
+		if err != nil {
+			return fmt.Errorf("fetch module %s: %v", moduleName, err)
+		}
+
+		moduleVersion, err := fetchModuleVersion(ms.Spec.ReleaseChannel, ms.Spec.Registry.Repo, moduleName, opts)
+		if err != nil {
+			return fmt.Errorf("fetch module version: %w", err)
+		}
+
+		for _, addr := range addrs {
+			img, err := regCli.Image(moduleVersion)
+			if err != nil {
+				return fmt.Errorf("fetch module %s %s image: %v", moduleName, moduleVersion, err)
+			}
+
+			err = c.sendDocumentation(addr, img, moduleName, moduleVersion)
+			if err != nil {
+				return fmt.Errorf("send documentation for %s %s: %w", moduleName, moduleVersion, err)
+			}
+		}
+	}
+	return nil
 }
 
 func fetchModuleVersion(releaseChannel, repo, moduleName string, registryOptions []cr.Option) (moduleVersion string, err error) {
