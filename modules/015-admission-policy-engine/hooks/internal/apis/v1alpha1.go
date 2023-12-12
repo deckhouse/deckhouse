@@ -135,8 +135,8 @@ type OperationPolicySpec struct {
 		CheckHostNetworkDNSPolicy bool     `json:"checkHostNetworkDNSPolicy,omitempty"`
 		CheckContainerDuplicates  bool     `json:"checkContainerDuplicates,omitempty"`
 		ReplicaLimits             struct {
-			MinReplicas string `json:"minReplicas,omitempty"`
-			MaxReplicas string `json:"maxReplicas,omitempty"`
+			MinReplicas int `json:"minReplicas,omitempty"`
+			MaxReplicas int `json:"maxReplicas,omitempty"`
 		} `json:"replicaLimits,omitempty"`
 	} `json:"policies"`
 	Match struct {
