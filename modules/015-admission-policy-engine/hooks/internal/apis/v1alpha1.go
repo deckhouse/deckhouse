@@ -134,6 +134,10 @@ type OperationPolicySpec struct {
 		PriorityClassNames        []string `json:"priorityClassNames,omitempty"`
 		CheckHostNetworkDNSPolicy bool     `json:"checkHostNetworkDNSPolicy,omitempty"`
 		CheckContainerDuplicates  bool     `json:"checkContainerDuplicates,omitempty"`
+		ReplicaLimits             struct {
+			MinReplicas string `json:"minReplicas,omitempty"`
+			MaxReplicas string `json:"maxReplicas,omitempty"`
+		} `json:"replicaLimits,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
