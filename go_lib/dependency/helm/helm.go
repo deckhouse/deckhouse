@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"maps"
 	"time"
 
@@ -222,7 +221,7 @@ func getActionConfig(namespace string) (*action.Configuration, error) {
 	kubeConfig.BearerToken = &config.BearerToken
 	kubeConfig.CAFile = &config.CAFile
 	kubeConfig.Namespace = &namespace
-	if err := actionConfig.Init(kubeConfig, namespace, helmDriver, log.Printf); err != nil { // TODO <-- logger replace
+	if err := actionConfig.Init(kubeConfig, namespace, helmDriver, klog.Infof); err != nil {
 		return nil, err
 	}
 	return actionConfig, nil
@@ -237,10 +236,7 @@ func getMD5Hash(templates, values map[string]interface{}) string {
 
 	// TODO is not an ideal algorithm, since the order of elements in map is not
 	// guaranteed and may lead to a different hash result.
-	byteResult, err := json.Marshal(sum)
-	if err != nil {
-		klog.Errorf("sum template and values marshal error: %v", err)
-	}
+	byteResult, _ := json.Marshal(sum)
 
 	hash := md5.Sum(byteResult)
 	return hex.EncodeToString(hash[:])
