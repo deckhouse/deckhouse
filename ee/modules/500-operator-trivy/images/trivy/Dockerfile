@@ -17,6 +17,8 @@ WORKDIR /src
 RUN git clone --depth 1 --branch ${TRIVY_DB_VERSION} ${SOURCE_REPO}/aquasecurity/trivy-db.git && \
     git clone --depth 1 --branch ${TRIVY_VERSION} ${SOURCE_REPO}/aquasecurity/trivy.git && \
     cd trivy && \
+    go get -u github.com/zclconf/go-cty@v1.13.2 && \
+    go mod tidy && \
     go build -ldflags '-s -w -extldflags "-static"' -o trivy ./cmd/trivy/main.go
 
 RUN chown 64535:64535 trivy
