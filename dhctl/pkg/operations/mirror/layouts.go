@@ -271,6 +271,10 @@ func fetchVersionsFromModuleReleaseChannels(
 }
 
 func isImageNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+
 	errMsg := err.Error()
 	return strings.Contains(errMsg, "MANIFEST_UNKNOWN") || strings.Contains(errMsg, "404 Not Found")
 }
