@@ -26,6 +26,16 @@ properties:
             isReady:
               type: boolean
               x-examples: [false]
+      istioToK8sCompatibilityMap:
+        type: object
+        default:
+          "1.13": ["1.20", "1.21", "1.22", "1.23"]
+          "1.16": ["1.22", "1.23", "1.24", "1.25"]
+          "1.19": ["1.25", "1.26", "1.27", "1.28"]
+        additionalProperties:
+          type: array
+          items:
+            type: string
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
