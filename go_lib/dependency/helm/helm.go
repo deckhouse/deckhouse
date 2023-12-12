@@ -237,5 +237,5 @@ func getMD5Hash(templates, values map[string]interface{}) string {
 	hashObject(sum, &hash)
 	res := hash.Sum(nil)
 
-	return hex.EncodeToString(res[:])
+	return hex.EncodeToString(res)
 }
