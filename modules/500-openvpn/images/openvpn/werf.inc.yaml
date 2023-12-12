@@ -66,5 +66,3 @@ import:
   add: /relocate
   to: /
   before: setup
-docker:
-  ENTRYPOINT: ["/openvpn"]
