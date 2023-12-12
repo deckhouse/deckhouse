@@ -9,11 +9,11 @@ env:
 
 jobs:
   deploy_channels_cm_prod_new:
-    name: Deploy to production (new DC)
+    name: Deploy to production
     runs-on: [self-hosted, regular]
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -27,31 +27,12 @@ jobs:
         WERF_NAMESPACE: "deckhouse-web-production"
         WERF_DIR: "ci"
 
-  deploy_channels_cm_prod:
-    name: Deploy to production (old DC)
-    runs-on: [self-hosted, regular]
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
-    - name: Converge
-      uses: werf/actions/converge@v1.2
-      with:
-        channel: ${{env.WERF_CHANNEL}}
-        kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD }}"
-        env: web-production
-      env:
-        WERF_NAMESPACE: "deckhouse-web-production"
-        WERF_DIR: "ci"
-
   deploy_channels_cm_stage:
     name: Deploy to Stage
     runs-on: [self-hosted, regular]
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
