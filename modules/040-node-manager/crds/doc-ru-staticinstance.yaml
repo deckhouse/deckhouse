@@ -18,10 +18,10 @@ spec:
               properties:
                 address:
                   description: |
-                    IP-адрес сервера.
+                    IP-адрес сервера (виртуальной машины) для подключения.
                 credentialsRef:
                   description: |
-                    Ссылка на ресурс `SSHCredentials` для использования при подключении по SSH.
+                    Ссылка на ресурс [SSHCredentials](cr.html#sshcredentials).
                   properties:
                     apiVersion:
                       description: Версия API ресурса.
