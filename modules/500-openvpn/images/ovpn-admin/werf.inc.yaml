@@ -21,7 +21,7 @@ shell:
     - echo {{ $gitCommit }} > version
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
-from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 import:
 - artifact: {{ .ModuleName }}/ovpn-admin-src-artifact
   add: /src
@@ -33,6 +33,9 @@ git:
   stageDependencies:
     install:
       - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   install:
     - cd /src
