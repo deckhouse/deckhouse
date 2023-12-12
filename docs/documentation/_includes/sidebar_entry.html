@@ -37,8 +37,19 @@
 {%- if entry.folders %}
 <li class="{{ folder_entry_class }}">
     <a href="#">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}
-    {%- if entry.featureStatus %} <span class="sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' }}"></span>
-    {%- elsif entry.d8Revision and entry.d8Revision != "ce" %} <span class="sidebar__badge_{{ entry.d8Revision }}" title="{{ site.data.i18n.features[entry.d8Revision][page.lang] | strip_html | regex_replace: '.$', '' }}"></span>
+    {%- if entry.featureStatus %}<span class="sidebar__badge sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' }}">
+        {%- if entry.featureStatus == "experimental" %}
+          experimental
+        {%- elsif entry.featureStatus == "temporaryDeprecated" %}
+          Temporary deprecated
+        {%- elsif entry.featureStatus == "proprietaryOkmeter" %}
+          Proprietary
+        {%- else %}
+          NEW!
+        {%- endif %}
+      </span>
+    {%- endif %}
+    {%- if entry.d8Revision and entry.d8Revision != "ce" %}<span class="sidebar__badge sidebar__badge_{{ entry.d8Revision }}" title="{{ site.data.i18n.features[entry.d8Revision][page.lang] | strip_html | regex_replace: '.$', '' }}">EE Only</span>
     {%- endif %}
     </a>
     <ul class="sidebar__submenu">

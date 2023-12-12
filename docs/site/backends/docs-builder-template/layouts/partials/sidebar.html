@@ -68,7 +68,7 @@
             <li class="sidebar__item sidebar__item_parent{{ if $sidebarItem.isActive }} active{{ end }}">
                 <a href='#'>{{ $sidebarItem.title }}</a>
                   {{ template "subpages" (dict "parent" $sidebarItem "pages" $pages "ctx" $ctx) }}
-                  {{- if ne $sidebarItem.d8Edition "ce" }} <span class="sidebar__badge_{{ lower $sidebarItem.d8Edition }}"></span>{{ end }}
+                  {{- if ne $sidebarItem.d8Edition "ce" }} <span class="sidebar__badge_{{ lower $sidebarItem.d8Edition }}">EE Only</span>{{ end }}
             </li>
         {{ end }}
       </ul>
