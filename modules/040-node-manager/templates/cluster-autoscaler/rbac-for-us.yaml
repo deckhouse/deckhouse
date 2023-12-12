@@ -32,6 +32,16 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+    - machinedeployments
+    - machines
+    - machinesets
+  verbs:
+    - get
+    - list
+    - watch
 # leader election
 - apiGroups: [""]
   resources: ["endpoints"]
@@ -49,6 +59,14 @@ rules:
   verbs: ["get", "update", "patch", "delete"]
 - apiGroups:
   - machine.sapcloud.io
+  resources:
+  - machinedeployments
+  - machines
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - cluster.x-k8s.io
   resources:
   - machinedeployments
   - machines
