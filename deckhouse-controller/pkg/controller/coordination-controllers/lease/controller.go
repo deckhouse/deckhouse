@@ -69,7 +69,7 @@ type Controller struct {
 	logger        logger.Logger
 }
 
-func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface) *Controller {
+func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, httpClient d8http.Client) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
 		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(50), 300)},
@@ -88,8 +88,6 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface) *Co
 	leaseInformer := factory.Coordination().V1().Leases()
 	lister := leaseInformer.Lister()
 	informer := leaseInformer.Informer()
-
-	httpClient := d8http.NewClient(d8http.WithTimeout(time.Minute))
 
 	controller := &Controller{
 		kubeclientset: ks,

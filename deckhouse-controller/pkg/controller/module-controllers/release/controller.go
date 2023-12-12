@@ -56,6 +56,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 )
 
 // Controller is the controller implementation for ModuleRelease resources
@@ -94,6 +95,7 @@ type Controller struct {
 	m             sync.Mutex
 	delayTimer    *time.Timer
 	restartReason string
+	httpClient    d8http.Client
 }
 
 const (
@@ -115,6 +117,7 @@ func NewController(ks kubernetes.Interface,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 	mv moduleValidator,
+	httpClient d8http.Client,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -136,6 +139,7 @@ func NewController(ks kubernetes.Interface,
 		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
 		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:                     lg,
+		httpClient:                 httpClient,
 
 		sourceModules: make(map[string]string),
 
@@ -339,9 +343,9 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1
 	// Or create a copy manually for better performance
 	mr := roMR.DeepCopy()
 
-	err := c.buildDocumentation(ctx, mr)
+	err := c.sendDocumentation(ctx, mr)
 	if err != nil {
-		c.logger.Warnf("send documentation error: %v", err)
+		return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation error: %v", err)
 	}
 
 	switch mr.Status.Phase {
@@ -934,7 +938,7 @@ func (c *Controller) getDocsBuilderAddresses(ctx context.Context) (addresses []s
 	return
 }
 
-func (c *Controller) buildDocumentation(ctx context.Context, mr *v1alpha1.ModuleRelease) error {
+func (c *Controller) sendDocumentation(ctx context.Context, mr *v1alpha1.ModuleRelease) error {
 	addrs, err := c.getDocsBuilderAddresses(ctx)
 	if err != nil {
 		return fmt.Errorf("get docs builder addresses: %w", err)
@@ -951,7 +955,7 @@ func (c *Controller) buildDocumentation(ctx context.Context, mr *v1alpha1.Module
 
 	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	for _, addr := range addrs {
-		err := buildDocumentation(addr, md, mr.Spec.ModuleName, mr.Spec.Version.Original())
+		err := c.buildDocumentation(addr, md, mr.Spec.ModuleName, mr.Spec.Version.Original())
 		if err != nil {
 			return err
 		}
@@ -960,7 +964,7 @@ func (c *Controller) buildDocumentation(ctx context.Context, mr *v1alpha1.Module
 	return nil
 }
 
-func buildDocumentation(baseAddr string, md *downloader.ModuleDownloader, moduleName, moduleVersion string) error {
+func (c *Controller) buildDocumentation(baseAddr string, md *downloader.ModuleDownloader, moduleName, moduleVersion string) error {
 	docsArchive, err := md.GetDocumentationArchive(moduleName, moduleVersion)
 	if err != nil {
 		return fmt.Errorf("get documentation archive: %w", err)
@@ -968,13 +972,13 @@ func buildDocumentation(baseAddr string, md *downloader.ModuleDownloader, module
 	defer docsArchive.Close()
 
 	url := fmt.Sprintf("%s/loadDocArchive/%s/%s", baseAddr, moduleName, moduleVersion)
-	response, statusCode, err := httpPost(url, docsArchive)
+	response, statusCode, err := c.httpPost(url, docsArchive)
 	if err != nil {
 		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
 	}
 
 	url = fmt.Sprintf("%s/build", baseAddr)
-	response, statusCode, err = httpPost(url, nil)
+	response, statusCode, err = c.httpPost(url, nil)
 	if err != nil {
 		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
 	}
@@ -982,13 +986,13 @@ func buildDocumentation(baseAddr string, md *downloader.ModuleDownloader, module
 	return nil
 }
 
-func httpPost(url string, body io.Reader) ([]byte, int, error) {
+func (c *Controller) httpPost(url string, body io.Reader) ([]byte, int, error) {
 	req, err := http.NewRequest(http.MethodPost, url, body)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, 0, err
 	}
