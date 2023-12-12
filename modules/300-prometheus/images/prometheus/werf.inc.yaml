@@ -79,7 +79,7 @@ shell:
   - chmod 0700 /prometheus/prometheus/prometheus
   - chmod 0700 /prometheus/prometheus/promtool
 ---
-{{ $binariesList := "/usr/bin/curl /bin/sh" }}
+{{ $binariesList := "/usr/bin/curl /bin/sh /bin/df" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt
