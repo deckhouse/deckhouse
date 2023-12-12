@@ -27,7 +27,10 @@ shell:
     - cd /src
     - git clone https://github.com/flant/ovpn-admin.git .
     - git checkout {{ $gitCommit }}
+    - ls -l /patches
     - find /patches -name '*.patch' -exec git apply {} \;
+    - git status
+    - git diff
     - echo {{ $gitCommit }} > version
     - echo "rebuild 123"
     - export GO_VERSION=${GOLANG_VERSION}
