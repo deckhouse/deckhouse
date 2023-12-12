@@ -1,3 +1,4 @@
+{{- $gitCommit := "9024405232350b469e89ebbbfc5b0a0a1f400523" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-openvpn-bin-artifact
 fromImage: common/alt
@@ -6,10 +7,36 @@ shell:
     - apt-get update
     - apt-get install -y openvpn
     - /binary_replace.sh -i "/usr/sbin/openvpn /bin/bash" -o /relocate
-{{- $gitCommit := "9024405232350b469e89ebbbfc5b0a0a1f400523" }}
 ---
-artifact: {{ .ModuleName }}/ovpn-admin-src-artifact
-from: {{ .Images.BASE_ALPINE }}
+artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+    - apk add --no-cache git
+  install:
+    - mkdir -p /src
+    - cd /src
+    - git clone https://github.com/flant/ovpn-admin.git .
+    - git checkout {{ $gitCommit }}
+    - find /patches -name '*.patch' -exec git apply {} \;
+    - echo {{ $gitCommit }} > version
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ovpn-admin
+    - chown 64535:64535 /ovpn-admin
+    - chmod 0755 /ovpn-admin
+---
+artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
+from: {{ .Images.BASE_NODE_16_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -24,37 +51,6 @@ shell:
     - cd /src
     - git clone https://github.com/flant/ovpn-admin.git .
     - git checkout {{ $gitCommit }}
-    - find /patches -name '*.patch' -exec git apply {} \;
-    - echo {{ $gitCommit }} > version
----
-artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
-import:
-- artifact: {{ .ModuleName }}/ovpn-admin-src-artifact
-  add: /src
-  to: /src
-  before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  install:
-    - cd /src
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ovpn-admin
-    - chown 64535:64535 /ovpn-admin
-    - chmod 0755 /ovpn-admin
----
-artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
-from: {{ .Images.BASE_NODE_16_ALPINE }}
-import:
-- artifact: {{ .ModuleName }}/ovpn-admin-src-artifact
-  add: /src
-  to: /src
-  before: install
-shell:
-  install:
     - cd /src/frontend
     - npm install
     - npm run build
@@ -70,7 +66,7 @@ import:
   add: /src/frontend/static
   to: /app/frontend/static
   before: setup
-- artifact: {{ .ModuleName }}/ovpn-admin-src-artifact
+- artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
   add: /src/version
   to: /app/version
   before: setup
@@ -78,5 +74,3 @@ import:
   add: /relocate
   to: /
   before: setup
-docker:
-  ENTRYPOINT: ["/ovpn-admin"]
