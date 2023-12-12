@@ -58,6 +58,9 @@ spec:
     - type: Ready
       status: Unknown
       timeout: 5m
+    - type: Ready
+      status: "False"
+      timeout: 5m
 {{- end }}
 
 

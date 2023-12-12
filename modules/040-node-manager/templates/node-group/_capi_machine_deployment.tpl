@@ -24,5 +24,8 @@ spec:
         apiVersion: {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion | quote }}
         kind:  {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateKind | quote }}
         name: {{ $template_name }}
+      nodeDrainTimeout: 5m
+      nodeDeletionTimeout: 5m
+      nodeVolumeDetachTimeout: 5m
   selector: {}
 {{- end }}
