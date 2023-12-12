@@ -37,6 +37,7 @@ shell:
   install:
     - cd /src
     - find /patches -name '*.patch' -exec git apply {} \;
+    - echo "AAAAA"
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ovpn-admin
