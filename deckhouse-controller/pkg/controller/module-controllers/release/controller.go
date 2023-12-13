@@ -17,8 +17,6 @@ package release
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -57,6 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 // Controller is the controller implementation for ModuleRelease resources
@@ -66,6 +65,8 @@ type Controller struct {
 
 	// d8ClientSet is a clientset for our own API group
 	d8ClientSet versioned.Interface
+
+	docsBuilder *module.DocsBuilderClient
 
 	moduleReleasesLister       d8listers.ModuleReleaseLister
 	moduleReleasesSynced       cache.InformerSynced
@@ -129,6 +130,7 @@ func NewController(ks kubernetes.Interface,
 	controller := &Controller{
 		kubeclientset:              ks,
 		d8ClientSet:                d8ClientSet,
+		docsBuilder:                module.NewDocsBuilderClient(httpClient),
 		moduleReleasesLister:       moduleReleaseInformer.Lister(),
 		moduleReleasesSynced:       moduleReleaseInformer.Informer().HasSynced,
 		moduleSourcesLister:        moduleSourceInformer.Lister(),
@@ -139,7 +141,6 @@ func NewController(ks kubernetes.Interface,
 		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
 		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:                     lg,
-		httpClient:                 httpClient,
 
 		sourceModules: make(map[string]string),
 
@@ -955,7 +956,7 @@ func (c *Controller) sendDocumentation(ctx context.Context, mr *v1alpha1.ModuleR
 
 	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	for _, addr := range addrs {
-		err := c.buildDocumentation(addr, md, mr.Spec.ModuleName, mr.Spec.Version.Original())
+		err := c.buildDocumentation(addr, md, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
 		if err != nil {
 			return err
 		}
@@ -971,37 +972,15 @@ func (c *Controller) buildDocumentation(baseAddr string, md *downloader.ModuleDo
 	}
 	defer docsArchive.Close()
 
-	url := fmt.Sprintf("%s/loadDocArchive/%s/%s", baseAddr, moduleName, moduleVersion)
-	response, statusCode, err := c.httpPost(url, docsArchive)
+	err = c.docsBuilder.SendDocumentation(baseAddr, moduleName, moduleVersion, docsArchive)
 	if err != nil {
-		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
+		return fmt.Errorf("send documentation: %w", err)
 	}
 
-	url = fmt.Sprintf("%s/build", baseAddr)
-	response, statusCode, err = c.httpPost(url, nil)
+	err = c.docsBuilder.BuildDocumentation(baseAddr)
 	if err != nil {
-		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
+		return fmt.Errorf("build documentation: %w", err)
 	}
 
 	return nil
-}
-
-func (c *Controller) httpPost(url string, body io.Reader) ([]byte, int, error) {
-	req, err := http.NewRequest(http.MethodPost, url, body)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer res.Body.Close()
-
-	dataBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return dataBytes, res.StatusCode, nil
 }
