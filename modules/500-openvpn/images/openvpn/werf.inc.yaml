@@ -47,7 +47,7 @@ shell:
     - cd /src
     - git clone --depth 1 -b openssl-3.1.3 https://github.com/openssl/openssl.git
     - cd openssl
-    - ./Configure gcc -static -no-shared --prefix=/openssl
+    - ./Configure gcc -static -no-shared
     - make -j4
     - make install
     - cd /src
