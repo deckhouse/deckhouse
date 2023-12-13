@@ -7,6 +7,17 @@ memory: 150Mi
 {{- $autoscalerImageName := join "" (list "clusterAutoscaler" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
 {{- $autoscalerImage := include "helm_lib_module_image_no_fail" (list . $autoscalerImageName) }}
 
+{{- define "cluster_autoscaler_provider" }}
+  {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+    {{- if hasKey $.Values.nodeManager.internal.cloudProvider "vcd" }}
+- --cloud-provider=clusterapi
+    {{- else }}
+- --cloud-provider=mcm
+{{- include "cluster_autoscaler_nodes" . }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- define "cluster_autoscaler_nodes" }}
   {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
     {{- if eq $ng.nodeType "CloudEphemeral" }}
@@ -92,9 +103,8 @@ spec:
         image: {{ $autoscalerImage }}
         args:
         - --namespace=d8-cloud-instance-manager
-        - --cloud-provider=mcm
+        {{- include "cluster_autoscaler_provider" . | nindent 8 }}
         - --write-status-configmap=false
-        {{- include "cluster_autoscaler_nodes" . | nindent 8 }}
         - --stderrthreshold=info
         - --skip-nodes-with-system-pods=false
         - --skip-nodes-with-local-storage=false
