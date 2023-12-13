@@ -18,4 +18,4 @@
 
           Check the cloud-controller-manager logs in the 'd8-cloud-provider-*' namespace
           If you are using a bare-metal cluster with the metallb module enabled, check that the address space of the pool has not been exhausted.
-        summary: A load balancer does not start.
+        summary: A load balancer has not been created.
