@@ -41,5 +41,9 @@ spec:
       nodeDrainTimeout: 5m
       nodeDeletionTimeout: 5m
       nodeVolumeDetachTimeout: 5m
-  selector: {}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ $ng.cloudInstances.maxSurgePerZone | default "1" }}
+      maxUnavailable: {{ $ng.cloudInstances.maxUnavailablePerZone | default "0" }}
 {{- end }}
