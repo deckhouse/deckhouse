@@ -54,9 +54,9 @@ deckhouse:
             kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Section containing the parameters of the cloud provider.
-# [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
+# [<en>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/cluster_configuration.html
 # [<ru>] Секция, описывающая параметры облачного провайдера.
-# [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
