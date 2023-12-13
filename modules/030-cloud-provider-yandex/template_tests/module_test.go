@@ -40,7 +40,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-yandex"]
+  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-yandex", "operator-prometheus-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -139,7 +139,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			monitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "yandex-nat-instance-metrics")
 
 			Expect(monitor.Exists()).To(Equal(exists))
-			Expect(prometheusRuleExists).To(Equal(exists))
+			Expect(prometheusRuleExists).To(BeTrue())
 			Expect(grafanaDashboardExists).To(Equal(exists))
 		}
 

@@ -1,4 +1,3 @@
-{{- if and .Values.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName .Values.cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey }}
 - name: nat-instance.general
   rules:
   - alert: D8YandexNatInstanceConnectionsQuotaUtilization
@@ -13,4 +12,3 @@
       plk_markup_format: "markdown"
       description: Nat-instance connections quota should be increased by Yandex technical support.
       summary: Yandex nat-instance connections quota utilization is above 85% over the last 5 minutes.
-{{- end }}
