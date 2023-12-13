@@ -49,7 +49,7 @@ shell:
     - cd openssl
     - ./Configure gcc -static -no-shared --prefix=/openssl
     - make -j4
-    - make install_sw
+    - make install
     - cd /src
     - mkdir lzo
     - cd lzo
