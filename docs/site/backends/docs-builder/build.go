@@ -62,14 +62,14 @@ func (b *buildHandler) build() error {
 	}
 
 	for _, lang := range []string{"ru", "en"} {
-		glob := filepath.Join(b.dst, "public", lang, "*")
+		glob := filepath.Join(b.dst, "public", lang, "modules/*")
 		err = removeGlob(glob)
 		if err != nil {
 			return fmt.Errorf("clear %s: %w", b.dst, err)
 		}
 
-		oldLocation := filepath.Join(b.src, "public", lang)
-		newLocation := filepath.Join(b.dst, "public", lang)
+		oldLocation := filepath.Join(b.src, "public", lang, "modules")
+		newLocation := filepath.Join(b.dst, "public", lang, "modules")
 		err = fsync.Sync(newLocation, oldLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
