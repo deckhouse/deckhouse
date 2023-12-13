@@ -20,7 +20,7 @@ bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 # Use d8-curl if installed, fallback to system package if not
 bb-rp-curl() {
   if command -v d8-curl > /dev/null ; then
-    d8-curl --parallel "$@"
+    d8-curl --remove-on-error --parallel "$@"
   else
     curl "$@"
   fi
@@ -202,6 +202,12 @@ bb-rp-install() {
     local TMP_DIR=""
     TMP_DIR="$(mktemp -d)"
     tar -xf "${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGE}/${DIGEST}.tar.gz" -C "${TMP_DIR}"
+    if bb-error?
+    then
+        rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+        bb-log-error "Failed to unpack package '${PACKAGE}', it may be corrupted. The package will be refetched on the next attempt"
+        return $BB_ERROR
+    fi
 
     bb-log-info "Installing package '${PACKAGE}'"
     # shellcheck disable=SC2164
