@@ -95,7 +95,7 @@ spec:
     # [<en>] Default Storage Class.
     # [<ru>] Storage Class по-умолчанию.
     storageClass:
-      default: fast.ru-7a
+      default: fast.ru-3a
 ---
 # [<en>] Section containing the parameters of the cloud provider.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
