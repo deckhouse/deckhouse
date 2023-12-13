@@ -36,13 +36,14 @@ rules:
 - apiGroups:
   - cluster.x-k8s.io
   resources:
-    - machinedeployments
-    - machines
-    - machinesets
+  - machinedeployments
+  - machines
+  - machinesets
+  - machinedeployments/scale
   verbs:
-    - get
-    - list
-    - watch
+  - get
+  - list
+  - watch
 # leader election
 - apiGroups: [""]
   resources: ["endpoints"]
@@ -63,6 +64,7 @@ rules:
   resources:
   - machinedeployments
   - machines
+  - machinedeployments/scale
   verbs:
   - patch
   - update
