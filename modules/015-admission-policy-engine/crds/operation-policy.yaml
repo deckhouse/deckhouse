@@ -171,6 +171,16 @@ spec:
                     checkContainerDuplicates:
                       type: boolean
                       description: "Check container names and env variables for duplicates."
+                    replicaLimits:
+                      type: object
+                      description: "A range of allowed replicas.  Values are inclusive."
+                      properties:
+                        minReplicas:
+                          description: "The minimum number of replicas allowed, inclusive."
+                          type: integer
+                        maxReplicas:
+                          description: "The maximum number of replicas allowed, inclusive."
+                          type: integer
                 match:
                   type: object
                   required: ["namespaceSelector"]

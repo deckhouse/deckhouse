@@ -55,7 +55,11 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"imagePullPolicy":"Always",
 			"priorityClassNames":["foo","bar"],
 			"checkHostNetworkDNSPolicy":true,
-			"checkContainerDuplicates":true
+			"checkContainerDuplicates":true,
+			"replicaLimits":{
+					"minReplicas":1,
+					"maxReplicas":10
+			}
 		},
 		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
 		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
@@ -83,6 +87,8 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8RequiredLabels", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8RequiredAnnotations", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
+
 		})
 	})
 })
