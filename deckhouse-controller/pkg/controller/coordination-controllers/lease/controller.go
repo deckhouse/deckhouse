@@ -190,22 +190,15 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return c.createReconcile(ctx, lease)
 }
 
-func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease) (ctrl.Result, error) {
+func (c *Controller) createReconcile(ctx context.Context, lease *coordination.Lease) (ctrl.Result, error) {
+	if lease == nil || lease.Spec.HolderIdentity == nil {
+		return ctrl.Result{}, nil
+	}
+	addr := *lease.Spec.HolderIdentity
+
 	list, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleSources().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("list: %w", err)
-	}
-
-	builderAddresses, err := c.getDocsBuilderAddresses(ctx)
-	if err != nil {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("get builder addresses: %w", err)
-	}
-	for _, addr := range builderAddresses {
-		err := c.docsBuilder.CheckBuilderHealth(ctx, addr)
-		if err != nil {
-			c.logger.Debugf("check builder health: %s", err.Error())
-			return ctrl.Result{Requeue: true}, nil
-		}
 	}
 
 	for _, ms := range list.Items {
@@ -216,20 +209,16 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 		}
 
 		for moduleName, moduleVersion := range versions {
-			for _, addr := range builderAddresses {
-				err = c.sendDocumentation(addr, md, moduleName, moduleVersion)
-				if err != nil {
-					return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation for %s %s: %w", moduleName, moduleVersion, err)
-				}
+			err = c.sendDocumentation(addr, md, moduleName, moduleVersion)
+			if err != nil {
+				return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation for %s %s: %w", moduleName, moduleVersion, err)
 			}
 		}
 	}
 
-	for _, addr := range builderAddresses {
-		err = c.docsBuilder.BuildDocumentation(addr)
-		if err != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("build documentation %w", err)
-		}
+	err = c.docsBuilder.BuildDocumentation(addr)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, fmt.Errorf("build documentation %w", err)
 	}
 
 	return ctrl.Result{}, nil
@@ -253,33 +242,6 @@ func (c *Controller) fetchModuleVersions(ms deckhouseiov1alpha1.ModuleSource, md
 	}
 
 	return versions, nil
-}
-
-func (c *Controller) getDocsBuilderAddresses(ctx context.Context) (addresses []string, err error) {
-	list, err := c.kubeclientset.DiscoveryV1().EndpointSlices("d8-system").List(ctx, metav1.ListOptions{LabelSelector: "app=documentation"})
-	if err != nil {
-		return nil, fmt.Errorf("list endpoint slices: %w", err)
-	}
-
-	for _, eps := range list.Items {
-		var port int32
-		for _, p := range eps.Ports {
-			if p.Name != nil && *p.Name == "builder-http" {
-				port = *p.Port
-			}
-		}
-
-		if port == 0 {
-			continue
-		}
-		for _, ep := range eps.Endpoints {
-			for _, addr := range ep.Addresses {
-				addresses = append(addresses, fmt.Sprintf("http://%s:%d", addr, port))
-			}
-		}
-	}
-
-	return
 }
 
 func (c *Controller) sendDocumentation(baseAddr string, md *downloader.ModuleDownloader, moduleName, moduleVersion string) error {
