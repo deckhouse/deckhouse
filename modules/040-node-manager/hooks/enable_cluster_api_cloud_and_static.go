@@ -27,13 +27,6 @@ import (
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
-const (
-	clusterAPINamespace                = "d8-cloud-instance-manager"
-	clusterAPIStaticServiceAccountName = "capi-controller-manager"
-	clusterAPIStaticClusterName        = "static"
-	clusterAPICloudServiceAccountName  = "capi-cloud-cluster-controller-manager"
-)
-
 type hookParam struct {
 	serviceAccount string
 	cluster        string
