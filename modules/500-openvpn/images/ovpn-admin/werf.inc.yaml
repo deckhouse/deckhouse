@@ -75,7 +75,7 @@ import:
   before: setup
 - artifact: {{ .ModuleName }}/openssl-artifact
   add: /openssl
-  to: /usr
+  to: /
   before: setup
 - artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
   add: /src/frontend/static
