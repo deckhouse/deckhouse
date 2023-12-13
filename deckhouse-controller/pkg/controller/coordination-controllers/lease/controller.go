@@ -194,7 +194,7 @@ func (c *Controller) createReconcile(ctx context.Context, lease *coordination.Le
 	if lease == nil || lease.Spec.HolderIdentity == nil {
 		return ctrl.Result{}, nil
 	}
-	addr := *lease.Spec.HolderIdentity
+	addr := "http://" + *lease.Spec.HolderIdentity
 
 	list, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleSources().List(ctx, metav1.ListOptions{})
 	if err != nil {
