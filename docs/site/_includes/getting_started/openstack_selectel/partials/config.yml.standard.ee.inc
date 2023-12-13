@@ -51,7 +51,7 @@ metadata:
   name: global
 spec:
   version: 1
-  settings: # <-- Параметры модуля из раздела "Параметры" ниже.
+  settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
       # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
@@ -60,6 +60,8 @@ spec:
       # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
+# [<en>] Section containing ModuleConfigs resources.
+# [<ru>] Секция, описывающая параметры ресурсы модулей ModuleConfigs.
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -82,6 +84,19 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-openstack
+spec:
+  version: 1
+  enabled: true
+  settings:
+    # [<en>] Default Storage Class.
+    # [<ru>] Storage Class по-умолчанию.
+    storageClass:
+      default: fast.ru-7a
+---
 # [<en>] Section containing the parameters of the cloud provider.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
 # [<ru>] Секция, описывающая параметры облачного провайдера.
@@ -90,9 +105,20 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
 standard:
-  # [<en>] Network name for external communication.
-  # [<ru>] Имя сети для внешнего взаимодействия.
-  externalNetworkName: *!CHANGE_EXT_NET*
+  # [<en>] Clusters in Selectel VPC should be installed with a bastion host because Security Groups are not supported.
+  # [<en>] Otherwise ports on master nodes will be exposed to WAN.
+  # [<ru>] Кластера в Selectel VPC должны устанавливаться с bastion-хостом в целях безопасности, из-за отсутствия поддержки Security Groups.
+  # [<ru>] В противном случае в WAN будут открыты порты на master-нодах.
+  bastion:
+    zone: ru-3a
+    volumeType: fast.ru-3a
+    instanceClass:
+      flavorName: c2m2-d0
+      imageName: ubuntu-22-04
+      rootDiskSize: 20
+  # [<en>] Network name for external communication. Default is external-network
+  # [<ru>] Имя сети для внешнего взаимодействия. Значение по-умолчанию: external-network
+  externalNetworkName: external-network
   # [<en>] Addressing for the internal network of the cluster nodes.
   # [<ru>] Адресация для внутренней сети узлов кластера.
   internalNetworkCIDR: 192.168.198.0/24
@@ -103,9 +129,9 @@ standard:
   internalNetworkDNSServers:
     - 8.8.8.8
     - 8.8.4.4
-  # [<en>] A flag that determines whether SecurityGroups and AllowedAddressPairs should be configured on internal network ports.
-  # [<ru>] Флаг, который определяет необходимо ли настраивать SecurityGroups и AllowedAddressPairs на портах внутренней сети.
-  internalNetworkSecurity: true
+  # [<en>] SecurityGroups are not supported by Selectel VPC.
+  # [<ru>] SecurityGroups не поддерживаются в Selectel VPC.
+  internalNetworkSecurity: false
 # [<en>] OpenStack API access parameters
 # [<ru>] параметры доступа к OpenStack API
 provider:
@@ -146,6 +172,8 @@ masterNodeGroup:
     # [<ru>] Используемый образ виртуальной машины.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
+    # [<en>] Don't use images provided by Selectel VPC. Upload and use cloud images, provided by distribution maintainer.
+    # [<ru>] Не используйте образа, предоставленные Selectel VPC. Загружайте и используйте cloudimg, предоставленные разработчиком дистрибутива.
     imageName: ubuntu-22.04
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
