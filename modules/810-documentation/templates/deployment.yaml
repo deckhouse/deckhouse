@@ -59,7 +59,6 @@ spec:
         image: {{ include "helm_lib_module_image" (list $ "docsBuilder" "docs-builder") }}
         command:
           - "/app/server"
-          - "-highAvailability"
         env:
           - name: POD_IP
             valueFrom:
