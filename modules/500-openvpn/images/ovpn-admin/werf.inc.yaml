@@ -66,11 +66,15 @@ import:
   add: /ovpn-admin
   to: /app/ovpn-admin
   before: setup
-- artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
-  add: /src/frontend/static
-  to: /app/frontend/static
-  before: setup
 - artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
   add: /src/version
   to: /app/version
+  before: setup
+- artifact: {{ .ModuleName }}/openvpn-artifact
+  add: /src/openvpn/src/openvpn/openvpn
+  to: /usr/sbin/openvpn
+  before: setup
+- artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
+  add: /src/frontend/static
+  to: /app/frontend/static
   before: setup
