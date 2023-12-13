@@ -78,7 +78,7 @@ spec:
               port: 8081
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /healthz/ready
               port: 8081
           volumeMounts:
             - mountPath: "/mount/public/en/modules"

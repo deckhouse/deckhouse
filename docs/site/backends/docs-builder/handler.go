@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"net/http"
 	"sync/atomic"
 
@@ -15,7 +16,8 @@ func newHandler(highAvailability bool) *mux.Router {
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/healthz", newHealthzHandler(&isReady))
+	r.Handle("/healthz/ready", newHealthzHandler(&isReady))
+	r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = io.WriteString(w, "OK") })
 	r.Handle("/loadDocArchive/{moduleName}/{version}", newLoadHandler(src)).Methods(http.MethodPost)
 	r.Handle("/build", newBuildHandler(src, dst, &isReady)).Methods(http.MethodPost)
 
