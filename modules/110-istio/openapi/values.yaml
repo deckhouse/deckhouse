@@ -10,22 +10,32 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.13": { "fullVersion": "1.13.33", "revision": "1x13", "imageSuffix": "V1x13x7", "isReady": false } } # must be real
+          - {"1.19": { "fullVersion": "1.19.4", "revision": "1x19", "imageSuffix": "V1x19x4", "isReady": false } } # must be real
         additionalProperties:
           type: object
           properties:
             fullVersion:
               type: string
-              x-examples: ["1.13.33"]
+              x-examples: ["1.19.4"]
             revision:
               type: string
-              x-examples: ["v1x13"]
+              x-examples: ["v1x19"]
             imageSuffix:
               type: string
-              x-examples: ["V1x13x7"]
+              x-examples: ["V1x19x4"]
             isReady:
               type: boolean
               x-examples: [false]
+      istioToK8sCompatibilityMap:
+        type: object
+        default:
+          "1.13": ["1.20", "1.21", "1.22", "1.23"]
+          "1.16": ["1.22", "1.23", "1.24", "1.25"]
+          "1.19": ["1.25", "1.26", "1.27", "1.28"]
+        additionalProperties:
+          type: array
+          items:
+            type: string
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
@@ -118,15 +128,15 @@ properties:
               minimum: 1
               maximum: 9
         default:
-          - version: "1.12"
-            alertSeverity: 4
           - version: "1.13"
+            alertSeverity: 4
+          - version: "1.16"
             alertSeverity: 6
         x-examples:
-          - [{version: "1.12", alertSeverity: 7}, {version: "1.13", alertSeverity: 9}]
+          - [{version: "1.13", alertSeverity: 4}, {version: "1.16", alertSeverity: 6}]
       globalVersion:
         type: string
-        x-examples: ["1.13"] # must be real
+        x-examples: ["1.19"] # must be real
       isGlobalVersionIstiodReady:
         type: boolean
         default: false
@@ -137,14 +147,14 @@ properties:
           type: string
         default: []
         x-examples:
-        - ["1.13"] # must be real
+        - ["1.19"] # must be real
       operatorVersionsToInstall:
         type: array
         items:
           type: string
         default: []
         x-examples:
-        - ["1.13"] # must be real
+        - ["1.19"] # must be real
       applicationNamespaces:
         type: array
         items:

@@ -12,6 +12,7 @@ data:
     auth:
       strategy: anonymous
     deployment:
+      namespace: d8-{{ $.Chart.Name }}
       accessible_namespaces:
       - '**'
       additional_service_yaml: {}
@@ -26,7 +27,9 @@ data:
           enabled: false
         root_namespace: d8-{{ $.Chart.Name }}
         url_service_version: http://istiod.d8-istio:15014/version
-        config_map_name: istio-{{ $revision  }}
+        istiod_deployment_name: istiod-{{ $revision }}
+        config_map_name: istio-{{ $revision }}
+        istio_sidecar_injector_config_map_name: istio-sidecar-injector-{{ $revision }}
       prometheus:
         url: https://trickster.d8-monitoring/trickster/main
         auth:
@@ -47,6 +50,9 @@ data:
   {{- else }}
         in_cluster_url: ""
   {{- end }}
+{{- else }}
+      tracing:
+        enabled: false
 {{- end }}
     identity: {}
     istio_namespace: d8-{{ $.Chart.Name }}
@@ -62,3 +68,7 @@ data:
       metrics_port: 9090
       port: 20001
       web_root: /kiali
+    kiali_feature_flags:
+      istio_annotation_action: false
+      istio_injection_action: false
+      istio_upgrade_action: false

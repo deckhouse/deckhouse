@@ -18,7 +18,7 @@ searchable: false
 * Добавить images по аналогии с предыдущими версиями.
 * Добавить новую версию в openapi/values.yaml (`istio.supportedVersions`) и поправить значение default у `globalVersion`.
 * Актуализировать crd-all.gen.yaml и crd-operator.yaml в папке crds.
-* Чтобы обновить istio-дашборды необходимо выполнить скрипт: `istio-grafana-dashboard.sh`, что делает скрипт:
+* Чтобы обновить istio-дашборды необходимо выполнить скрипт `istio-grafana-dashboard.sh` и сложить в полученные json-ки в `monitoring/grafana-dashboards/istio/`. Что делает скрипт:
   * Клонирует репозиторий istio с необходимой версией.
   * Заменяет все range'и `$__interval_sx4`.
   * Заменяет `irate` на `rate`.

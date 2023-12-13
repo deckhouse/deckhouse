@@ -69,6 +69,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	_ "github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 	_ "github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
+	_ "github.com/deckhouse/deckhouse/modules/110-istio/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/140-user-authz/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/150-user-authn/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/150-user-authn/hooks/https"
