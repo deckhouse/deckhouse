@@ -21,9 +21,16 @@ import (
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/kubeconfig"
 )
 
+const (
+	clusterAPINamespace                = "d8-cloud-instance-manager"
+	clusterAPIStaticServiceAccountName = "capi-controller-manager"
+	clusterAPIStaticClusterName        = "static"
+	clusterAPICloudServiceAccountName  = "capi-cloud-cluster-controller-manager"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:       "/modules/node-manager",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 100},
+	Queue:        "/modules/node-manager",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "capi_static_kubeconfig_secret",
@@ -115,6 +122,21 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 }
 
 func createCAPIServiceAccount(k8sClient k8s.Client, saName string) error {
+	namespace := &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "d8-cloud-instance-manager",
+		},
+	}
+
+	_, err := k8sClient.CoreV1().Namespaces().Create(context.TODO(), namespace, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+
 	serviceAccount := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -126,7 +148,7 @@ func createCAPIServiceAccount(k8sClient k8s.Client, saName string) error {
 		},
 	}
 
-	_, err := k8sClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
+	_, err = k8sClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return errors.Wrap(err, "failed to create service account")
