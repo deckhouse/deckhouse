@@ -3,7 +3,6 @@ package hooks
 
 var auditPolicyBasicNamespaces = []string{
 	"d8-admission-policy-engine",
-	"d8-cdi",
 	"d8-ceph-csi",
 	"d8-cert-manager",
 	"d8-chrony",
@@ -41,7 +40,6 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-upmeter",
 	"d8-user-authn",
 	"d8-user-authz",
-	"d8-virtualization",
 	"kube-system",
 }
 var auditPolicyBasicServiceAccounts = []string{
@@ -120,7 +118,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"ui",
 	"upmeter",
 	"upmeter-agent",
-	"vmi-router",
 	"webhook",
 	"webhook-handler",
 }
