@@ -138,6 +138,11 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 	return res, nil
 }
 
+func (md *ModuleDownloader) FetchModuleVersionFromReleaseChannel(moduleName string, releaseChannel string) (moduleVersion string, err error) {
+	moduleVersion, _, err = md.fetchModuleVersionFromReleaseChannel(moduleName, releaseChannel, "")
+	return
+}
+
 func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion string) (io.ReadCloser, error) {
 	if !strings.HasPrefix(moduleVersion, "v") {
 		moduleVersion = "v" + moduleVersion
@@ -360,6 +365,15 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (moduleRele
 	err = json.Unmarshal(buf.Bytes(), &meta)
 
 	return meta, err
+}
+
+func (md *ModuleDownloader) ListModules() ([]string, error) {
+	regCli, err := cr.NewClient(md.ms.Spec.Registry.Repo, md.registryOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("get regestry client: %w", err)
+	}
+
+	return regCli.ListTags()
 }
 
 func untarMetadata(rc io.ReadCloser, rw io.Writer) error {

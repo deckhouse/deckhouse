@@ -15,22 +15,12 @@
 package lease
 
 import (
-	"archive/tar"
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"path"
-	"sort"
-	"strings"
+	"os"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/iancoleman/strcase"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	coordination "k8s.io/api/coordination/v1"
@@ -47,8 +37,8 @@ import (
 
 	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	controllerUtils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 )
@@ -62,11 +52,13 @@ const (
 type Controller struct {
 	kubeclientset kubernetes.Interface
 	d8ClientSet   versioned.Interface
+	docsBuilder   *module.DocsBuilderClient
 	workqueue     workqueue.RateLimitingInterface
 	lister        coordinationv1.LeaseLister
 	informer      cache.SharedIndexInformer
-	httpClient    d8http.Client
 	logger        logger.Logger
+
+	externalModulesDir string
 }
 
 func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, httpClient d8http.Client) *Controller {
@@ -90,13 +82,14 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, htt
 	informer := leaseInformer.Informer()
 
 	controller := &Controller{
-		kubeclientset: ks,
-		d8ClientSet:   d8ClientSet,
-		workqueue:     workqueue.NewRateLimitingQueue(ratelimiter),
-		lister:        lister,
-		informer:      informer,
-		httpClient:    httpClient,
-		logger:        lg,
+		kubeclientset:      ks,
+		d8ClientSet:        d8ClientSet,
+		workqueue:          workqueue.NewRateLimitingQueue(ratelimiter),
+		lister:             lister,
+		informer:           informer,
+		docsBuilder:        module.NewDocsBuilderClient(httpClient),
+		logger:             lg,
+		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 	}
 
 	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -168,7 +161,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			c.workqueue.AddAfter(key, result.RequeueAfter)
 
 		case result.Requeue:
-			// Put the item back on the workqueue to handle any transient errors.
 			c.workqueue.AddRateLimited(key)
 
 		default:
@@ -204,20 +196,37 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 		return ctrl.Result{Requeue: true}, fmt.Errorf("list: %w", err)
 	}
 
-	for _, item := range list.Items {
-		err = c.processModuleSource(ctx, item)
-		if err != nil {
-			c.logger.Warnf("process module source %s error: %v", item.Name, err)
-		}
-	}
-
-	addrs, err := c.getDocsBuilderAddresses(ctx)
+	builderAddresses, err := c.getDocsBuilderAddresses(ctx)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("get builder addresses: %w", err)
 	}
+	for _, addr := range builderAddresses {
+		err := c.docsBuilder.CheckBuilderHealth(ctx, addr)
+		if err != nil {
+			c.logger.Debugf("check builder health: %s", err.Error())
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
 
-	for _, addr := range addrs {
-		err = c.buildDocumentation(addr)
+	for _, ms := range list.Items {
+		md := downloader.NewModuleDownloader(c.externalModulesDir, &ms, controllerUtils.GenerateRegistryOptions(&ms))
+		versions, err := c.fetchModuleVersions(ms, md)
+		if err != nil {
+			return ctrl.Result{Requeue: true}, fmt.Errorf("process module source %s error: %v", ms.Name, err)
+		}
+
+		for moduleName, moduleVersion := range versions {
+			for _, addr := range builderAddresses {
+				err = c.sendDocumentation(addr, md, moduleName, moduleVersion)
+				if err != nil {
+					return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation for %s %s: %w", moduleName, moduleVersion, err)
+				}
+			}
+		}
+	}
+
+	for _, addr := range builderAddresses {
+		err = c.docsBuilder.BuildDocumentation(addr)
 		if err != nil {
 			return ctrl.Result{Requeue: true}, fmt.Errorf("build documentation %w", err)
 		}
@@ -226,138 +235,24 @@ func (c *Controller) createReconcile(ctx context.Context, _ *coordination.Lease)
 	return ctrl.Result{}, nil
 }
 
-func (c *Controller) processModuleSource(ctx context.Context, ms deckhouseiov1alpha1.ModuleSource) error {
-	opts := controllerUtils.GenerateRegistryOptions(&ms)
-
-	regCli, err := cr.NewClient(ms.Spec.Registry.Repo, opts...)
+func (c *Controller) fetchModuleVersions(ms deckhouseiov1alpha1.ModuleSource, md *downloader.ModuleDownloader) (map[string]string, error) {
+	versions := make(map[string]string)
+	modules, err := md.ListModules()
 	if err != nil {
-		return fmt.Errorf("get regestry client: %w", err)
+		return nil, fmt.Errorf("list modules: %w", err)
 	}
 
-	tags, err := regCli.ListTags()
-	if err != nil {
-		return fmt.Errorf("list tags: %w", err)
-	}
-
-	sort.Strings(tags)
-	for _, moduleName := range tags {
-		regCli, err := cr.NewClient(path.Join(ms.Spec.Registry.Repo, moduleName), opts...)
+	for _, moduleName := range modules {
+		moduleVersion, err := md.FetchModuleVersionFromReleaseChannel(moduleName, ms.Spec.ReleaseChannel)
 		if err != nil {
-			return fmt.Errorf("fetch module %s: %v", moduleName, err)
-		}
-
-		moduleVersion, err := fetchModuleVersion(ms.Spec.ReleaseChannel, ms.Spec.Registry.Repo, moduleName, opts)
-		if err != nil {
-			return fmt.Errorf("fetch module version: %w", err)
-		}
-
-		img, err := regCli.Image(moduleVersion)
-		if err != nil {
-			return fmt.Errorf("fetch module %s %s image: %v", moduleName, moduleVersion, err)
-		}
-
-		addrs, err := c.getDocsBuilderAddresses(ctx)
-		if err != nil {
-			return fmt.Errorf("get builder addresses: %w", err)
-		}
-
-		for _, addr := range addrs {
-			err = c.sendDocumentation(addr, img, moduleName, moduleVersion)
-			if err != nil {
-				return fmt.Errorf("send documentation for %s %s: %w", moduleName, moduleVersion, err)
-			}
-		}
-	}
-	return nil
-}
-
-func fetchModuleVersion(releaseChannel, repo, moduleName string, registryOptions []cr.Option) (moduleVersion string, err error) {
-	regCli, err := cr.NewClient(path.Join(repo, moduleName, "release"), registryOptions...)
-	if err != nil {
-		return "", fmt.Errorf("fetch release image error: %v", err)
-	}
-
-	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
-	if err != nil {
-		return "", fmt.Errorf("fetch image error: %v", err)
-	}
-
-	moduleMetadata, err := fetchModuleReleaseMetadata(img)
-	if err != nil {
-		return "", fmt.Errorf("fetch release metadata error: %v", err)
-	}
-
-	return "v" + moduleMetadata.Version.String(), nil
-}
-
-type moduleReleaseMetadata struct {
-	Version *semver.Version `json:"version"`
-}
-
-func fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
-	buf := bytes.NewBuffer(nil)
-	var meta moduleReleaseMetadata
-
-	layers, err := img.Layers()
-	if err != nil {
-		return meta, err
-	}
-
-	for _, layer := range layers {
-		size, err := layer.Size()
-		if err != nil {
-			// dcr.logger.Warnf("couldn't calculate layer size")
-			return meta, err
-		}
-		if size == 0 {
-			// skip some empty werf layers
-			continue
-		}
-		rc, err := layer.Uncompressed()
-		if err != nil {
-			return meta, err
-		}
-
-		err = untarMetadata(rc, buf)
-		if err != nil {
-			return meta, err
-		}
-
-		rc.Close()
-	}
-
-	err = json.Unmarshal(buf.Bytes(), &meta)
-
-	return meta, err
-}
-
-func untarMetadata(rc io.ReadCloser, rw io.Writer) error {
-	tr := tar.NewReader(rc)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// end of archive
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if strings.HasPrefix(hdr.Name, ".werf") {
+			c.logger.Warnf("fetch module '%s' version: %v", moduleName, err)
 			continue
 		}
 
-		switch hdr.Name {
-		case "version.json":
-			_, err = io.Copy(rw, tr)
-			if err != nil {
-				return err
-			}
-			return nil
-
-		default:
-			continue
-		}
+		versions[moduleName] = moduleVersion
 	}
+
+	return versions, nil
 }
 
 func (c *Controller) getDocsBuilderAddresses(ctx context.Context) (addresses []string, err error) {
@@ -387,45 +282,12 @@ func (c *Controller) getDocsBuilderAddresses(ctx context.Context) (addresses []s
 	return
 }
 
-func (c *Controller) sendDocumentation(docsBuilderBasePath string, img v1.Image, moduleName, moduleVersion string) error {
-	rc := module.ExtractDocs(img)
-	defer rc.Close()
-
-	url := fmt.Sprintf("%s/loadDocArchive/%s/%s", docsBuilderBasePath, moduleName, moduleVersion)
-	response, statusCode, err := c.httpPost(url, rc)
+func (c *Controller) sendDocumentation(baseAddr string, md *downloader.ModuleDownloader, moduleName, moduleVersion string) error {
+	docsArchive, err := md.GetDocumentationArchive(moduleName, moduleVersion)
 	if err != nil {
-		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
+		return fmt.Errorf("get documentation archive: %w", err)
 	}
+	defer docsArchive.Close()
 
-	return nil
-}
-
-func (c *Controller) buildDocumentation(docsBuilderBasePath string) error {
-	url := fmt.Sprintf("%s/build", docsBuilderBasePath)
-	response, statusCode, err := c.httpPost(url, nil)
-	if err != nil {
-		return fmt.Errorf("POST %q return %d %q: %w", url, statusCode, response, err)
-	}
-
-	return nil
-}
-
-func (c *Controller) httpPost(url string, body io.Reader) ([]byte, int, error) {
-	req, err := http.NewRequest(http.MethodPost, url, body)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer res.Body.Close()
-
-	dataBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return dataBytes, res.StatusCode, nil
+	return c.docsBuilder.SendDocumentation(baseAddr, moduleName, moduleVersion, docsArchive)
 }
