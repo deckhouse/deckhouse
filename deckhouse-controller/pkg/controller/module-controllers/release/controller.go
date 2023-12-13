@@ -55,7 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
-	"github.com/deckhouse/deckhouse/go_lib/module"
+	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 )
 
 // Controller is the controller implementation for ModuleRelease resources
@@ -66,7 +66,7 @@ type Controller struct {
 	// d8ClientSet is a clientset for our own API group
 	d8ClientSet versioned.Interface
 
-	docsBuilder *module.DocsBuilderClient
+	docsBuilder *docs_builder.Client
 
 	moduleReleasesLister       d8listers.ModuleReleaseLister
 	moduleReleasesSynced       cache.InformerSynced
@@ -130,7 +130,7 @@ func NewController(ks kubernetes.Interface,
 	controller := &Controller{
 		kubeclientset:              ks,
 		d8ClientSet:                d8ClientSet,
-		docsBuilder:                module.NewDocsBuilderClient(httpClient),
+		docsBuilder:                docs_builder.NewClient(httpClient),
 		moduleReleasesLister:       moduleReleaseInformer.Lister(),
 		moduleReleasesSynced:       moduleReleaseInformer.Informer().HasSynced,
 		moduleSourcesLister:        moduleSourceInformer.Lister(),
