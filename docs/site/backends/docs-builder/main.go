@@ -49,12 +49,7 @@ func main() {
 	ctx, stopNotify := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopNotify()
 
-	var (
-		lManager *k8s.LeasesManager
-		err      error
-	)
-
-	lManager, err = k8s.NewLeasesManager()
+	lManager, err := k8s.NewLeasesManager()
 	if err != nil {
 		klog.Fatalf("new leases manager: %s", err)
 	}
