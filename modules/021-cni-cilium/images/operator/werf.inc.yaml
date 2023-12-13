@@ -1,4 +1,4 @@
-{{- $ciliumVersion := "1.14.4" }}
+{{- $ciliumVersion := "1.14.5" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: quay.io/cilium/operator:v{{- $ciliumVersion }}@sha256:56cc1822109c4b34d192784a3106150cfb645252ce0b34aab67e9c820ac41bab
