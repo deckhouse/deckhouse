@@ -32,9 +32,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, checkIstioK8sVersionCompatibility)
 
 func checkIstioK8sVersionCompatibility(input *go_hook.HookInput) error {
-	// var istioVersions []string
-	// var k8sVersion string
-	// var compatibilityMap map[string]k8sVersionsMap
 	compatibilityMap := make(map[string][]string)
 
 	// Major.Minor
@@ -45,24 +42,18 @@ func checkIstioK8sVersionCompatibility(input *go_hook.HookInput) error {
 	if err != nil {
 		return err
 	}
-	k8sVersionMajor := strconv.FormatUint(k8sVersionSemver.Major(), 10)
-	k8sVersionMinor := strconv.FormatUint(k8sVersionSemver.Minor(), 10)
-	k8sVersionMajorMinor := k8sVersionMajor + "." + k8sVersionMinor
-	// Major.Minor vs Major.Minor
+	k8sVersionMajorMinor := fmt.Sprintf("%d.%d", k8sVersionSemver.Major(), k8sVersionSemver.Minor())
 	compatibilityMapStr := input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()
 	_ = json.Unmarshal([]byte(compatibilityMapStr), &compatibilityMap)
-	// compatibilityMap = input.Values.Get("istio.internal.versionCompatibilityMap")
 
+	OUTER:
 	for _, istioVersion := range istioVersions {
-		compVer := 0
 		for _, k8sCompVersion := range compatibilityMap[istioVersion.String()] {
 			if k8sCompVersion == k8sVersionMajorMinor {
-				compVer++
+				continue OUTER
 			}
 		}
-		if compVer == 0 {
-			return fmt.Errorf("istio version '%s' is incompatible with k8s version '%s'", istioVersion, k8sVersion)
-		}
+		return fmt.Errorf("istio version '%s' is incompatible with k8s version '%s'", istioVersion, k8sVersion)
 	}
 
 	return nil
