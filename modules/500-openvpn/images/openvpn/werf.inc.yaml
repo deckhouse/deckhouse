@@ -43,7 +43,7 @@ from: {{ .Images.BASE_ALPINE }}
 import:
 - artifact: {{ .ModuleName }}/openssl-artifact
   add: /openssl
-  to: /usr
+  to: /
   before: setup
 shell:
   install:
