@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 
 	"github.com/spf13/fsync"
 	"k8s.io/klog/v2"
@@ -26,16 +27,18 @@ import (
 	"github.com/flant/docs-builder/pkg/hugo"
 )
 
-func newBuildHandler(src, dst string) *buildHandler {
+func newBuildHandler(src, dst string, wasCalled *atomic.Bool) *buildHandler {
 	return &buildHandler{
-		src: src,
-		dst: dst,
+		src:       src,
+		dst:       dst,
+		wasCalled: wasCalled,
 	}
 }
 
 type buildHandler struct {
-	src string
-	dst string
+	src       string
+	dst       string
+	wasCalled *atomic.Bool
 }
 
 func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, _ *http.Request) {
@@ -76,6 +79,7 @@ func (b *buildHandler) build() error {
 		}
 	}
 
+	b.wasCalled.Store(true)
 	return nil
 }
 
