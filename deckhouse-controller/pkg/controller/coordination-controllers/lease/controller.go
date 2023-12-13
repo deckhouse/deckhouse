@@ -40,7 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	controllerUtils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
-	"github.com/deckhouse/deckhouse/go_lib/module"
+	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 )
 
 const (
@@ -52,7 +52,7 @@ const (
 type Controller struct {
 	kubeclientset kubernetes.Interface
 	d8ClientSet   versioned.Interface
-	docsBuilder   *module.DocsBuilderClient
+	docsBuilder   *docs_builder.Client
 	workqueue     workqueue.RateLimitingInterface
 	lister        coordinationv1.LeaseLister
 	informer      cache.SharedIndexInformer
@@ -87,7 +87,7 @@ func NewController(ks kubernetes.Interface, d8ClientSet versioned.Interface, htt
 		workqueue:          workqueue.NewRateLimitingQueue(ratelimiter),
 		lister:             lister,
 		informer:           informer,
-		docsBuilder:        module.NewDocsBuilderClient(httpClient),
+		docsBuilder:        docs_builder.NewClient(httpClient),
 		logger:             lg,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 	}
