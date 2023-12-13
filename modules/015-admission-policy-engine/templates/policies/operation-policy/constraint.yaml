@@ -302,5 +302,6 @@ spec:
         kinds: ["Deployment"]
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    {{- $cr.spec.policies.replicaLimits | toYaml | nindent 6 }}
+    ranges:
+      - {{- $cr.spec.policies.replicaLimits | toYaml | nindent 8 }}
 {{- end }}
