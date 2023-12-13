@@ -4,13 +4,27 @@
   {{- $zone_name := index . 2 }}
   {{- $template_name := index . 3 }}
   {{- $bootstrap_secret_name := index . 4 }}
+  {{- $hash := (printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8) }}
+  {{- $machineDeploymentSuffix := (printf "%s-%s" $ng.name $hash) }}
+  {{- $machineDeploymentName := $machineDeploymentSuffix }}
+  {{- if $context.Values.nodeManager.internal.instancePrefix }}
+    {{- $instancePrefix := $context.Values.nodeManager.internal.instancePrefix }}
+    {{- $machineDeploymentName = (printf "%s-%s" $instancePrefix $machineDeploymentSuffix) }}
+  {{- end }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager
-  name: {{ $ng.name | quote }}
+  name: {{ $machineDeploymentName | quote }}
   {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 2 }}
+  annotations:
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: {{ $ng.cloudInstances.minPerZone | quote }}
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: {{ $ng.cloudInstances.maxPerZone | quote }}
+  {{- if $ng.nodeCapacity }}
+    capacity.cluster-autoscaler.kubernetes.io/cpu: {{ $ng.nodeCapacity.cpu | quote }}
+    capacity.cluster-autoscaler.kubernetes.io/memory: {{ $ng.nodeCapacity.memory | quote }}
+  {{- end }}
 spec:
   clusterName: {{ $context.Values.nodeManager.internal.cloudProvider.capiClusterName | quote }}
   template:
