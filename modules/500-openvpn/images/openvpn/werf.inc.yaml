@@ -25,7 +25,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint entrypoint.go
 ---
-artifact: {{ .ModuleName }}/openvpn-artifact
+artifact: {{ .ModuleName }}/openssl-artifact
 from: {{ .Images.BASE_ALPINE }}
 shell:
   install:
@@ -34,9 +34,20 @@ shell:
     - cd /src
     - git clone --depth 1 -b openssl-3.1.3 https://github.com/openssl/openssl.git
     - cd openssl
-    - ./Configure gcc -static -no-shared
+    - ./Configure gcc -static -no-shared --prefix=/openssl
     - make -j4
-    - make install
+    - make install_sw
+---
+artifact: {{ .ModuleName }}/openvpn-artifact
+from: {{ .Images.BASE_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/openssl-artifact
+  add: /openssl
+  to: /usr
+  before: setup
+shell:
+  install:
+    - mkdir -p /src
     - cd /src
     - mkdir lzo
     - cd lzo

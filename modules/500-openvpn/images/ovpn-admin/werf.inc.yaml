@@ -27,7 +27,6 @@ shell:
     - cd /src
     - git clone https://github.com/flant/ovpn-admin.git .
     - git checkout {{ $gitCommit }}
-    - ls -l /patches
     - find /patches -name '*.patch' -exec git apply {} \;
     - git status
     - git diff
@@ -73,6 +72,10 @@ import:
 - artifact: {{ .ModuleName }}/openvpn-artifact
   add: /src/openvpn/src/openvpn/openvpn
   to: /usr/sbin/openvpn
+  before: setup
+- artifact: {{ .ModuleName }}/openssl-artifact
+  add: /openssl
+  to: /usr
   before: setup
 - artifact: {{ .ModuleName }}/ovpn-admin-frontend-artifact
   add: /src/frontend/static
