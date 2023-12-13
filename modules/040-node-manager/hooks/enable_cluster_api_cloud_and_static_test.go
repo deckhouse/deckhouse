@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"os"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -26,14 +24,6 @@ import (
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: cluster_api_deployment_required ::", func() {
-	BeforeEach(func() {
-		os.Setenv("TEST_SKIP_GENERATE_KUBECONFIG", "yes")
-	})
-
-	AfterEach(func() {
-		os.Unsetenv("TEST_SKIP_GENERATE_KUBECONFIG")
-	})
-
 	const (
 		nodeGroupCloudEphemeral = `
 ---
