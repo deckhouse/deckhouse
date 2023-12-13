@@ -29,10 +29,10 @@ spec:
                 type: object
                 description: A range of allowed replicas.  Values are inclusive.
                 properties:
-                  min_replicas:
+                  minReplicas:
                     description: The minimum number of replicas allowed, inclusive.
                     type: integer
-                  max_replicas:
+                  maxReplicas:
                     description: The maximum number of replicas allowed, inclusive.
                     type: integer
   targets:
@@ -57,16 +57,16 @@ spec:
         }
 
         value_within_range(range, value) {
-            range.min_replicas <= value
-            range.max_replicas >= value
+            range.minReplicas <= value
+            range.maxReplicas >= value
         }
 
         value_within_range(range, value) {
-            not range.min_replicas
-            range.max_replicas >= value
+            not range.minReplicas
+            range.maxReplicas >= value
         }
 
         value_within_range(range, value) {
-            range.min_replicas <= value
-            not range.max_replicas
+            range.minReplicas <= value
+            not range.maxReplicas
         }
