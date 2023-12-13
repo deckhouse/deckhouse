@@ -46,6 +46,7 @@ istio:
 
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("istio version '1.12' is incompatible with k8s version '1.25.4'"))
 		})
 	})
 
@@ -60,6 +61,22 @@ istio:
 
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("istio version '1.16' is incompatible with k8s version '1.28.4'"))
+		})
+	})
+
+	Context("istio version 1.13, but incompatible with current k8s version", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.13"]`))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.28.4")
+
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
 		})
 	})
 

@@ -19,7 +19,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -46,10 +45,13 @@ func checkIstioK8sVersionCompatibility(input *go_hook.HookInput) error {
 	compatibilityMapStr := input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()
 	_ = json.Unmarshal([]byte(compatibilityMapStr), &compatibilityMap)
 
-	OUTER:
+OUTER:
 	for _, istioVersion := range istioVersions {
+		if istioVersion.String() == "1.13" {
+			continue OUTER
+		}
 		for _, k8sCompVersion := range compatibilityMap[istioVersion.String()] {
-			if k8sCompVersion == k8sVersionMajorMinor {
+			if k8sVersionMajorMinor == k8sCompVersion {
 				continue OUTER
 			}
 		}
