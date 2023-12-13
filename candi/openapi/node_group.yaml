@@ -238,7 +238,7 @@ spec:
                         List of availability zones to create instances in.
 
                         The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
-                      x-doc-x-doc-examples: [[Helsinki, Espoo, Tampere]]
+                      x-doc-examples: [[Helsinki, Espoo, Tampere]]
                       type: array
                       items:
                         type: string
