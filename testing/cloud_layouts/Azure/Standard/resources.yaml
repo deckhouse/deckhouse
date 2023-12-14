@@ -39,3 +39,13 @@ spec:
   tolerations:
     - effect: NoSchedule
       operator: Exists
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: node-manager
+spec:
+  enabled: true
+  settings:
+    earlyOomEnabled: false
+  version: 1
