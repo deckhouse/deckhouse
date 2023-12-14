@@ -10,7 +10,6 @@ data:
   cluster-name: default # make sense only for cluster mesh
 
   debug: {{ .Values.cniCilium.debugLogging | quote }}
-  pprof: "true"
 
   metrics: "+cilium_bpf_map_pressure"
 
