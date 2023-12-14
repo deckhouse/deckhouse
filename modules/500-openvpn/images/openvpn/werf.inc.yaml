@@ -37,6 +37,7 @@ shell:
     - ./Configure gcc -static -no-shared
     - make -j4
     - make install_sw DESTDIR=/openssl
+    - echo aaa123
     - tree /openssl
 ---
 artifact: {{ .ModuleName }}/openvpn-artifact
