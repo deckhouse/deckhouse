@@ -76,17 +76,21 @@ EOF
 }
 
 function __main__() {
+  operationType="$(context::jq -r '.review.request.operation')"
+
   clusterType="$(context::jq -r '.snapshots.cluster_config[0].filterResult.clusterType')"
   if [[ "$clusterType" == "Cloud" ]]; then
     clusterPrefixLen="$(context::jq -r '.snapshots.cluster_config[0].filterResult.clusterPrefixLen')"
     nodeGroupNameLen=$(context::jq -r '.review.request.object.metadata.name | length')
-    # Dynamic node name is <clusterPrefix>-<nodeGroupName>-<hashes> and one of kubernetes node label contains it.
-    # Label value must be >= 63 characters
-    if [[ $(( 63 - clusterPrefixLen - 1 - nodeGroupNameLen - 21 )) -lt 0 ]]; then
-      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+    if [[ "${operationType}" == "CREATE" ]]; then
+      # Dynamic node name is <clusterPrefix>-<nodeGroupName>-<hashes> and one of kubernetes node label contains it.
+      # Label value must be >= 63 characters
+      if [[ $(( 63 - clusterPrefixLen - 1 - nodeGroupNameLen - 21 )) -lt 0 ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"it is forbidden for this cluster to set (cluster prefix + node group name) longer then 42 symbols"}
 EOF
-      return 0
+        return 0
+      fi
     fi
   fi
 
@@ -170,7 +174,6 @@ EOF
   fi
 
   # Only update operation checks
-  operationType="$(context::jq -r '.review.request.operation')"
   if [[ "${operationType}" == "UPDATE" ]]; then
     # Forbid changing nodeType
     newNodeType="$(context::jq -r '.review.request.object.spec.nodeType')"
