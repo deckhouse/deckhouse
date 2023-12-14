@@ -447,19 +447,22 @@ a.comparison-table__module::after {
 }
 
 .sidebar__badge {
-  display: inline;
+  display: inline-flex;
   vertical-align: middle;
   font-size: 8px;
   font-weight: 700;
   line-height: 16px;
   letter-spacing: 1px;
-  height: fit-content;
   color: #fff;
-  margin-left: 10px;
-  padding: 2px 4px 3px;
+  margin-right: 10px;
+  padding: 0 4px;
   background: #0066FF;
   border-radius: 4px;
   white-space: nowrap;
+}
+
+.sidebar__badge:nth-child(2) {
+  margin-left: 10px;
 }
 
 a.comparison-table__module {
