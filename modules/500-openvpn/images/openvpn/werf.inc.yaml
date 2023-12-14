@@ -46,11 +46,11 @@ import:
 - artifact: {{ .ModuleName }}/openssl-artifact
   add: /openssl
   to: /
-  before: setup
+  before: install
 - artifact: {{ .ModuleName }}/openssl-artifact
   add: /openssl
   to: /openssl
-  before: setup
+  before: install
 shell:
   install:
     - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
