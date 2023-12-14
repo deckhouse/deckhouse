@@ -37,8 +37,6 @@ shell:
     - ./Configure gcc -static -no-shared
     - make -j4
     - make install_sw DESTDIR=/openssl
-    - echo aaa123
-    - tree /openssl
 ---
 artifact: {{ .ModuleName }}/openvpn-artifact
 from: {{ .Images.BASE_ALPINE }}
@@ -47,14 +45,9 @@ import:
   add: /openssl
   to: /
   before: install
-- artifact: {{ .ModuleName }}/openssl-artifact
-  add: /openssl
-  to: /openssl
-  before: install
 shell:
   install:
     - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
-    - tree /openssl
     - mkdir -p /src
     - cd /src
     - mkdir lzo
