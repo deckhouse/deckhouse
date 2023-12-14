@@ -869,16 +869,48 @@
           "mappings": [
             {
               "options": {
+                "1": {
+                  "index": 1,
+                  "text": "UpToDate"
+                },
+                "2": {
+                  "index": 2,
+                  "text": "Created"
+                },
+                "3": {
+                  "index": 3,
+                  "text": "Attached"
+                },
+                "4": {
+                  "index": 4,
+                  "text": "Diskless"
+                },
                 "5": {
-                  "index": 0,
+                  "index": 5,
                   "text": "Inconsistent"
                 },
                 "6": {
-                  "index": 2,
+                  "index": 6,
                   "text": "Failed"
                 },
+                "7": {
+                  "index": 7,
+                  "text": "To: Creating"
+                },
+                "8": {
+                  "index": 8,
+                  "text": "To: Attachable"
+                },
+                "9": {
+                  "index": 9,
+                  "text": "To: Attaching"
+                },
+                "90": {
+                  "index": 10,
+                  "text": "Diskless(Detached)"
+                },
                 "-1": {
-                  "index": 1,
+                  "index": 0,
                   "text": "DUnknown"
                 }
               },
@@ -907,8 +939,7 @@
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 230
+                "id": "custom.width"
               }
             ]
           },
@@ -919,7 +950,8 @@
             },
             "properties": [
               {
-                "id": "custom.width"
+                "id": "custom.width",
+                "value": 330
               }
             ]
           },
@@ -930,8 +962,11 @@
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 128
+                "id": "custom.width"
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 98
               }
             ]
           }
