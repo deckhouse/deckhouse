@@ -13,4 +13,4 @@
 # limitations under the License.
 
 # On AltLinux, scripts under /etc/profile.d should be executable.
-chmod +x /etc/profile.d/02-deckhouse-path.sh {{ if .proxy -}} /etc/profile.d/d8-system-proxy.sh {{- end }}
+chmod +x /etc/profile.d/*.sh
