@@ -45,9 +45,14 @@ import:
   add: /openssl
   to: /
   before: setup
+- artifact: {{ .ModuleName }}/openssl-artifact
+  add: /openssl
+  to: /openssl
+  before: setup
 shell:
   install:
-    - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev
+    - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
+    - tree /openssl
     - mkdir -p /src
     - cd /src
     - mkdir lzo
