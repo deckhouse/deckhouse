@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"golang.org/x/sys/unix"
 	"log"
@@ -140,10 +141,21 @@ func main() {
 	log.Println(args)
 
 	cmd := exec.Command("/usr/sbin/openvpn", args...)
-	cmd.Stdout = os.Stdout
-	err = cmd.Start()
+	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
+	}
+	scanner := bufio.NewScanner(cmdReader)
+	go func() {
+		for scanner.Scan() {
+			log.Println(scanner.Text())
+		}
+	}()
+	if err := cmd.Start(); err != nil {
+		log.Fatal(err)
+	}
+	if err := cmd.Wait(); err != nil {
+		log.Fatal(err)
 	}
 }
 
