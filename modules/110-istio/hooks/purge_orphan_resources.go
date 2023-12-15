@@ -321,8 +321,8 @@ func purgeOrphanResources(input *go_hook.HookInput) error {
 		input.PatchCollector.Delete(obj.APIVersion, obj.Kind, obj.Namespace, obj.Name, object_patch.InForeground())
 	}
 
-	if len(input.Snapshots["namespace"]) > 0 {
-		ns := input.Snapshots["namespace"][0].(removeObject)
+	if len(input.Snapshots["clwNamespace"]) > 0 {
+		ns := input.Snapshots["clwNamespace"][0].(removeObject)
 		if !ns.DeletionTimestampExists {
 			input.PatchCollector.Delete(ns.APIVersion, ns.Kind, "", ns.Name, object_patch.InForeground())
 		}

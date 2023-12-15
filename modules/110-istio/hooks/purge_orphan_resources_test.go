@@ -100,66 +100,66 @@ kind: EnvoyFilter
 metadata:
   name: tcp-stats-filter-1.13-v1x16
   namespace: d8-istio
-  ---
-  apiVersion: apps/v1
-  kind: Deployment
-  metadata:
-	name: istiod-v1x16
-	namespace: d8-istio
-  ---
-  apiVersion: v1
-  kind: Service
-  metadata:
-	name: istiod-v1x16
-	namespace: d8-istio
-  ---
-  apiVersion: v1
-  kind: ConfigMap
-  metadata:
-	name: istiod-v1x16
-	namespace: d8-istio
-  ---
-  apiVersion: policy/v1
-  kind: PodDisruptionBudget
-  metadata:
-	name: istiod-v1x16
-	namespace: d8-istio
-  ---
-  apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-	name: istiod-service-account
-	namespace: d8-istio
-  ---
-  apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-	name: istiod-v1x16
-	namespace: d8-istio
-  ---
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-	name: istiod-d8-istio
-	namespace: d8-istio
-  ---
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-	name: istiod-v1x16
-	namespace: d8-istio
-  ---
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-	name: istiod-d8-istio
-	namespace: d8-istio
-  ---
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-	name: istiod-v1x16
-	namespace: d8-istio
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istiod-v1x16
+  namespace: d8-istio
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: istiod-v1x16
+  namespace: d8-istio
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istiod-v1x16
+  namespace: d8-istio
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: istiod-v1x16
+  namespace: d8-istio
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istiod-service-account
+  namespace: d8-istio
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istiod-v1x16
+  namespace: d8-istio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istiod-d8-istio
+  namespace: d8-istio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istiod-v1x16
+  namespace: d8-istio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: istiod-d8-istio
+  namespace: d8-istio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: istiod-v1x16
+  namespace: d8-istio
 `
 	)
 
@@ -169,6 +169,7 @@ metadata:
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
 
@@ -181,6 +182,7 @@ metadata:
 	Context("Cluster with minimal settings and orphan iop", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(iop)
+			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
 			f.RunHook()
 		})
 
@@ -194,6 +196,7 @@ metadata:
 	Context("Cluster with minimal settings and orphan istio resources", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(ns + iop + clwRes + nsdRes)
+			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
 			f.RunHook()
 		})
 
