@@ -91,9 +91,11 @@ func (b *buildHandler) buildHugo() error {
 			return nil
 		}
 
-		if !b.removeBrokenFile(err) {
-			return err
+		if b.removeBrokenFile(err) {
+			continue
 		}
+
+		return err
 	}
 }
 
