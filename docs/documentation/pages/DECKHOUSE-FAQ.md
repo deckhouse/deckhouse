@@ -414,10 +414,10 @@ This feature is available in Enterprise Edition only.
    docker login -u license-token registry.deckhouse.io
    ```
 
-1. Run the Deckhouse installer version 1.54.3 or higher.
+1. Run the Deckhouse installer. This guide is written for version 1.56.0 or higher.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.3 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.56.0 bash
    ```
 
    Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball.
@@ -445,7 +445,20 @@ This feature is available in Enterprise Edition only.
 
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
 
-   `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function, use the `--gost-digest` parameter to calculate it.
+   To pull Deckhouse images from a specific registry repository you can specify that repository with the `--source` flag.
+   There are also optional flags `--source-login` and `--source-password` used to authenticate into provided registry.
+   If they are omitted, mirroring will be performed anonymously.
+
+   For example, here is how to pull Flant Edition images instead of the default Enterprise Edition:
+
+   ```shell
+   dhctl mirror --source="registry.deckhouse.io/deckhouse/fe" --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar
+   ```
+
+   > Note: `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
+   > If you specify both license and login+password pair for source registry, the latter will be used.
+
+   `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function, add the `--gost-digest` parameter to calculate it after download.
    The checksum will be logged and written to a file with the `.tar.gostsum` extension next to the tar-archive containing the Deckhouse images.
 
 1. Optional: Copy the `dhctl` binary from the container to the directory where Deckhouse images were pulled.
