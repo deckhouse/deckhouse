@@ -130,7 +130,7 @@ func main() {
 
 	var args []string
 	args = append(args, "--config")
-	args = append(args, "/home/v.snurnitsin/store/dev/go/exec-unix-args/openvpn.conf")
+	args = append(args, "/etc/openvpn/openvpn.conf")
 	args = append(args, fmt.Sprintf("--proto"))
 	args = append(args, protocol)
 	args = append(args, "--management")
