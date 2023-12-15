@@ -28,6 +28,9 @@ import (
 	"github.com/flant/docs-builder/pkg/hugo"
 )
 
+var assembleErrorRegexp = regexp.MustCompile(`error building site: assemble: "(?P<path>.+):(?P<line>\d+):(?P<column>\d+)":`)
+var assembleErrorWithColorRegexp = regexp.MustCompile(`error building site: assemble: \x1b\[1;36m"(?P<path>.+):(?P<line>\d+):(?P<column>\d+)"\x1b\[0m:`)
+
 func newBuildHandler(src, dst string, wasCalled *atomic.Bool) *buildHandler {
 	return &buildHandler{
 		src:       src,
@@ -91,7 +94,13 @@ func (b *buildHandler) buildHugo() error {
 			return nil
 		}
 
-		if b.removeBrokenFile(err) {
+		if path, ok := getAssembleErrorPath(err.Error()); ok {
+			err = os.Remove(path)
+			if err != nil {
+				return fmt.Errorf("remove broken source file: %w", err)
+			}
+
+			klog.Warningf("removed broken source file %q", path)
 			continue
 		}
 
@@ -99,24 +108,19 @@ func (b *buildHandler) buildHugo() error {
 	}
 }
 
-func (b *buildHandler) removeBrokenFile(err error) bool {
-	match := assembleErrorRegexp.FindStringSubmatch(err.Error())
-	if match == nil || len(match) != 4 {
-		return false
+func getAssembleErrorPath(errorMessage string) (string, bool) {
+	match := assembleErrorRegexp.FindStringSubmatch(errorMessage)
+	if match != nil && len(match) == 4 {
+		return match[1], true
 	}
 
-	path := match[1]
-	err = os.Remove(path)
-	if err != nil {
-		klog.Errorf("remove broken source file: %s", err.Error())
-		return false
+	match = assembleErrorWithColorRegexp.FindStringSubmatch(errorMessage)
+	if match != nil && len(match) == 4 {
+		return match[1], true
 	}
 
-	klog.Warningf("removed broken source file %q", path)
-	return true
+	return "", false
 }
-
-var assembleErrorRegexp = regexp.MustCompile(`error building site: assemble: \x1b\[1;36m"(?P<path>.+):(?P<line>\d+):(?P<column>\d+)"\x1b\[0m:`)
 
 func removeGlob(path string) error {
 	contents, err := filepath.Glob(path)
