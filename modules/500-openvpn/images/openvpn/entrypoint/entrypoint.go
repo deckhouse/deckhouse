@@ -18,6 +18,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"golang.org/x/sys/unix"
 	"log"
@@ -25,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/vishvananda/netlink"
@@ -128,10 +130,22 @@ func main() {
 		log.Fatal(err)
 	}
 
+	requiredFiles := []string{
+		"/etc/openvpn/certs/pki/ca.crt",
+		"/etc/openvpn/certs/pki/private/server.key",
+		"/etc/openvpn/certs/pki/issued/server.crt",
+		"/etc/openvpn/certs/pki/ta.key",
+		"/etc/openvpn/certs/pki/dh.pem",
+		"/etc/openvpn/certs/pki/crl.pem",
+	}
+	for _, path := range requiredFiles {
+		waitingForFile(path)
+	}
+
 	var args []string
 	args = append(args, "--config")
 	args = append(args, "/etc/openvpn/openvpn.conf")
-	args = append(args, fmt.Sprintf("--proto"))
+	args = append(args, "--proto")
 	args = append(args, protocol)
 	args = append(args, "--management")
 	args = append(args, "127.0.0.1")
@@ -248,4 +262,16 @@ func parseIPNet(address string) (*net.IPNet, error) {
 		return nil, err
 	}
 	return IPNet, nil
+}
+
+func waitingForFile(path string) {
+	for {
+		_, err := os.Stat(path)
+		if errors.Is(err, os.ErrNotExist) {
+			log.Println("waiting for", path)
+			time.Sleep(2 * time.Second)
+		} else {
+			break
+		}
+	}
 }
