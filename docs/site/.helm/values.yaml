@@ -22,8 +22,8 @@ moduleWatcher:
     _default: 15s
     web-production: 5m
   logLevel:
-    _default: 1
-    web-production: 4
+    _default: 4
+    web-production: 1
 
 resources:
   requests:
