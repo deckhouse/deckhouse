@@ -130,6 +130,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = netLinkCreateTuntap(fmt.Sprintf("tun-%s", protocol), 1400)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	requiredFiles := []string{
 		"/etc/openvpn/certs/pki/ca.crt",
 		"/etc/openvpn/certs/pki/private/server.key",
@@ -218,7 +223,7 @@ func mknodDevNetTun() error {
 	return nil
 }
 
-func netLinkCreateTuntap(name string, mtu int) {
+func netLinkCreateTuntap(name string, mtu int) error {
 	linkAttrs := netlink.NewLinkAttrs()
 	linkAttrs.Name = name
 	linkAttrs.MTU = mtu
@@ -229,14 +234,15 @@ func netLinkCreateTuntap(name string, mtu int) {
 	}
 	err := netlink.LinkAdd(l)
 	if err != nil {
-		log.Println(err)
+		return err
 	}
 
 	link, _ := netlink.LinkByName(linkAttrs.Name)
 	err = netlink.LinkSetUp(link)
 	if err != nil {
-		log.Println(err)
+		return err
 	}
+	return nil
 }
 
 func routeAdd(dst string, gw string, table int) {
