@@ -209,17 +209,18 @@ func mknodDevNetTun() error {
 		}
 	}
 
-	path := "/dev/net/tun"
-	var mode uint32 = 0666
-	var major uint32 = 10
-	var minor uint32 = 200
-	dev := int(unix.Mkdev(major, minor))
-	err = unix.Mknod(path, mode, dev)
+	command := fmt.Sprintf("/bin/mknod")
+	var args []string
+	args = append(args, "/dev/net/tun")
+	args = append(args, "c")
+	args = append(args, "10")
+	args = append(args, "200")
+	cmd := exec.Command(command, args...)
+	_, err = cmd.CombinedOutput()
 	if err != nil {
-		if !os.IsExist(err) {
-			return fmt.Errorf("error making device %s: %v", path, err)
-		}
+		return fmt.Errorf("error create /dev/net/tun: %v", err)
 	}
+
 	return nil
 }
 
