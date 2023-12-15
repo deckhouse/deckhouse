@@ -25,7 +25,6 @@ import (
 
 	"github.com/flant/docs-builder/pkg/k8s"
 
-	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
 )
 
@@ -50,25 +49,16 @@ func main() {
 	ctx, stopNotify := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopNotify()
 
-	var (
-		lManager *k8s.LeasesManager
-		err      error
-	)
-	if highAvailability {
-		lManager, err = k8s.NewLeasesManager()
-		if err != nil {
-			klog.Fatalf("new leases manager: %s", err)
-		}
+	lManager, err := k8s.NewLeasesManager()
+	if err != nil {
+		klog.Fatalf("new leases manager: %s", err)
 	}
 
-	r := mux.NewRouter()
-	r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
-	r.Handle("/loadDocArchive/{moduleName}/{version}", newLoadHandler(src)).Methods(http.MethodPost)
-	r.Handle("/build", newBuildHandler(src, dst)).Methods(http.MethodPost)
+	h := newHandler(highAvailability)
 
 	srv := &http.Server{
 		Addr:    listenAddress,
-		Handler: r,
+		Handler: h,
 	}
 
 	go func() {
@@ -78,14 +68,12 @@ func main() {
 	}()
 	klog.Info("Server started")
 
-	if highAvailability {
-		go func() {
-			err = lManager.Run(ctx)
-			if !errors.Is(err, context.Canceled) && err != nil {
-				klog.Fatalf("run lease manager: %s", err)
-			}
-		}()
-	}
+	go func() {
+		err = lManager.Run(ctx)
+		if !errors.Is(err, context.Canceled) && err != nil {
+			klog.Fatalf("run lease manager: %s", err)
+		}
+	}()
 
 	<-ctx.Done()
 	klog.Info("Server stopped")
@@ -93,11 +81,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if highAvailability {
-		err = lManager.Remove(ctx)
-		if err != nil {
-			klog.Errorf("lease removing failed: %v", err)
-		}
+	err = lManager.Remove(ctx)
+	if err != nil {
+		klog.Errorf("lease removing failed: %v", err)
 	}
 
 	err = srv.Shutdown(ctx)

@@ -25,6 +25,11 @@ moduleWatcher:
     _default: 4
     web-production: 1
 
+docsBuilder:
+  highAvailability:
+    _default: false
+    web-production: true
+
 resources:
   requests:
     memory:

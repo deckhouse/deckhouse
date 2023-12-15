@@ -50,7 +50,9 @@ spec:
             - mountPath: /app/ru/modules
               name: modules-docs-ru
         - name: builder
-          command: ["/app/server", "-highAvailability"]
+          command:
+            - "/app/server"
+            - "-highAvailability={{pluck .Values.werf.env .Values.docsBuilder.highAvailability | first | default .Values.docsBuilder.highAvailability._default}}"
           image: {{ index .Values.werf.image "docs-builder" }}
           {{- include "resources" . | nindent 10 }}
           env:
@@ -78,7 +80,7 @@ spec:
               port: 8081
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /readyz
               port: 8081
           volumeMounts:
             - mountPath: "/mount/public/en/modules"
