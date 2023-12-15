@@ -67,4 +67,4 @@ Run from the docs/site folder of the project (or run docs/site/backend/debug.sh)
 werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'
 ```
 
-Connect to localhost:2345
+Connect to `localhost:2345`
