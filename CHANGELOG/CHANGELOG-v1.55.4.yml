@@ -1,0 +1,20 @@
+candi:
+  fixes:
+    - summary: Run chmod on file only if it exists.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6880
+    - summary: Handle registry packages fetch errors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6860
+cni-cilium:
+  fixes:
+    - summary: Cilium version bumped to 1.14.5
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6881
+      impact: Cilium agents will restart, during restart some policies won't work.
+docs:
+  fixes:
+    - summary: Fix the wrong field name in the NodeGroup schema.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6866
+node-manager:
+  fixes:
+    - summary: add NodeGroup name validation only for 'CREATE' operation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6879
+
