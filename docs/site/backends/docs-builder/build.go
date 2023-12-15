@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync/atomic"
 
 	"github.com/spf13/fsync"
@@ -53,13 +54,7 @@ func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, _ *http.Request) {
 }
 
 func (b *buildHandler) build() error {
-	flags := hugo.Flags{
-		LogLevel: "debug",
-		Source:   b.src,
-		CfgDir:   filepath.Join(b.src, "config"),
-	}
-
-	err := hugo.Build(flags)
+	err := b.buildHugo()
 	if err != nil {
 		return fmt.Errorf("hugo build: %w", err)
 	}
@@ -82,6 +77,44 @@ func (b *buildHandler) build() error {
 	b.wasCalled.Store(true)
 	return nil
 }
+
+func (b *buildHandler) buildHugo() error {
+	flags := hugo.Flags{
+		LogLevel: "debug",
+		Source:   b.src,
+		CfgDir:   filepath.Join(b.src, "config"),
+	}
+
+	for {
+		err := hugo.Build(flags)
+		if err == nil {
+			return nil
+		}
+
+		if !b.removeBrokenFile(err) {
+			return err
+		}
+	}
+}
+
+func (b *buildHandler) removeBrokenFile(err error) bool {
+	match := assembleErrorRegexp.FindStringSubmatch(err.Error())
+	if match == nil || len(match) != 4 {
+		return false
+	}
+
+	path := match[1]
+	err = os.Remove(path)
+	if err != nil {
+		klog.Errorf("remove broken source file: %s", err.Error())
+		return false
+	}
+
+	klog.Warningf("removed broken source file %q", path)
+	return true
+}
+
+var assembleErrorRegexp = regexp.MustCompile(`error building site: assemble: \x1b\[1;36m"(?P<path>.+):(?P<line>\d+):(?P<column>\d+)"\x1b\[0m:`)
 
 func removeGlob(path string) error {
 	contents, err := filepath.Glob(path)
