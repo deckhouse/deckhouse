@@ -445,11 +445,11 @@ This feature is available in Enterprise Edition only.
 
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
 
-   To pull Deckhouse images from a specific registry repository you can specify that repository with the `--source` flag.
-   There are also optional flags `--source-login` and `--source-password` used to authenticate into provided registry.
+   To pull Deckhouse images from a specific registry repository, specify that repository with the `--source` flag.
+   The optional `--source-login` and `--source-password` flags are used to authenticate to a given registry.
    If they are omitted, mirroring will be performed anonymously.
 
-   For example, here is how to pull Flant Edition images instead of the default Enterprise Edition:
+   For example, here is how you can pull Flant Edition images instead of the default Enterprise Edition ones:
 
    ```shell
    dhctl mirror --source="registry.deckhouse.io/deckhouse/fe" --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar
