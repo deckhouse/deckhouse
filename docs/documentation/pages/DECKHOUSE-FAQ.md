@@ -414,7 +414,7 @@ This feature is available in Enterprise Edition only.
    docker login -u license-token registry.deckhouse.io
    ```
 
-1. Run the Deckhouse installer. This guide is written for version 1.56.0 or higher.
+1. Run the Deckhouse installer. This guide is for version 1.56.0 or higher.
 
    ```shell
    docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.56.0 bash
