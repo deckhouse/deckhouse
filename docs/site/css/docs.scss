@@ -389,8 +389,9 @@
     color: #000;
     text-decoration: none;
     position: relative;
-    display: inline-flex;
-    align-items: center;
+    display: block;
+    //display: inline-flex;
+    //align-items: center;
     padding-left: 15px;
 }
 
@@ -413,8 +414,8 @@
     display: inline-block;
     width: 10px;
     height: 10px;
-    background: url('../images/icons/dropdown.svg');
-    background-repeat: no-repeat;
+    background: url('../images/icons/dropdown.svg') no-repeat;
+    //background-repeat: no-repeat;
     background-size: contain;
     margin-left: -15px;
     flex-shrink: 0;
@@ -431,17 +432,37 @@
 .sidebar .sidebar__item_experimental > a::after,
 .sidebar .sidebar__item_temporaryDeprecated > a::after,
 a.comparison-table__module::after {
-    font-size: 8px;
-    color: #fff;
-    background: #0066FF;
-    padding: 0px 4px;
-    border-radius: 4px;
-    margin-left: 10px;
     display: inline-block;
+    font-size: 8px;
     font-weight: 700;
-    white-space: nowrap;
-    letter-spacing: 1px;
     line-height: 16px;
+    letter-spacing: 1px;
+    height: fit-content;
+    color: #fff;
+    margin-left: 10px;
+    padding: 0 4px;
+    background: #0066FF;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.sidebar__badge {
+  display: inline-flex;
+  vertical-align: middle;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 1px;
+  color: #fff;
+  margin-right: 10px;
+  padding: 0 4px;
+  background: #0066FF;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.sidebar__badge:nth-child(2) {
+  margin-left: 10px;
 }
 
 a.comparison-table__module {
@@ -469,7 +490,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     content: 'Proprietary';
 }
 
-.sidebar .sidebar__item_ee > a::after {
+.sidebar > span.sidebar__item_ee {
     content: 'EE Only';
 }
 
@@ -481,13 +502,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .sidebar__submenu .sidebar__submenu {
-    padding-top: 0px;
+    padding-top: 0;
 }
 
 .sidebar__submenu-item > a {
     position: relative;
-    display: inline-flex;
-    align-items: center;
+    display: block;
+    //display: inline-flex;
+    //align-items: center;
     font-size: 14px;
     color: #00122C;
     letter-spacing: -0.26px;
