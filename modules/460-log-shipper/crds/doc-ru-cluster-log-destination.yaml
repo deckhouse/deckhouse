@@ -56,6 +56,11 @@ spec:
                               description: Закодированный в Base64 пароль для ключа.
                         verifyHostname:
                           description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: |
+                            Проверка TLS-сертификата удаленного хоста.
+
+                            Если параметр установлен в `false`, сертификат не проверяется на наличие в списке отозванных сертификатов (Certificate Revocation Lists).
                 elasticsearch:
                   properties:
                     auth:

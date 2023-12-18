@@ -7,7 +7,10 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
-  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "StatefulSet" .Chart.Name "loki" .Values.loki.resourcesManagement ) | nindent 2}}
+  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "StatefulSet" .Chart.Name "loki" .Values.loki.resourcesManagement ) | nindent 2 }}
+  {{- if eq (.Values.loki.resourcesManagement.mode) "VPA" }}
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- end }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -31,6 +34,7 @@ spec:
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
+      serviceAccountName: {{ .Chart.Name }}
       terminationGracePeriodSeconds: 4800
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -66,22 +70,96 @@ spec:
             mountPath: /loki
           - name: tmp
             mountPath: /tmp
-        ports:
-          - name: http-metrics
-            containerPort: 3100
-            protocol: TCP
         livenessProbe:
           httpGet:
             path: /ready
-            port: http-metrics
+            port: 3100
+            scheme: HTTPS
           initialDelaySeconds: 45
         readinessProbe:
           httpGet:
             path: /ready
-            port: http-metrics
+            port: 3100
+            scheme: HTTPS
           initialDelaySeconds: 45
         resources:
           {{ include "helm_lib_resources_management_pod_resources" (list $.Values.loki.resourcesManagement) | nindent 10 }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):3100"
+          - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              excludePaths:
+              - /ready
+              upstreams:
+              - upstream: http://127.0.0.1:3101/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-monitoring
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: statefulsets
+                    subresource: prometheus-metrics
+                    name: loki
+              - upstream: http://127.0.0.1:3101/
+                path: /
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-monitoring
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: statefulsets
+                    subresource: http
+                    name: loki
+              - upstream: http://127.0.0.1:3101/loki/api/v1/push
+                path: /loki/api/v1/push
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-monitoring
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: statefulsets
+                    subresource: http-create
+                    name: loki
+              - upstream: http://127.0.0.1:3101/loki/api/v1/delete
+                path: /-/protected-endpoint-404
+        ports:
+          - containerPort: 3100
+            name: https-metrics
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3100
+            scheme: HTTPS
+          initialDelaySeconds: 45
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 3100
+            scheme: HTTPS
+          initialDelaySeconds: 45
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
+        volumeMounts:
+          - name: kube-rbac-proxy-ca
+            mountPath: /etc/kube-rbac-proxy
       volumes:
       - name: config
         configMap:
@@ -89,6 +167,10 @@ spec:
           defaultMode: 0644
       - name: tmp
         emptyDir: {}
+      - name: kube-rbac-proxy-ca
+        configMap:
+          defaultMode: 420
+          name: kube-rbac-proxy-ca.crt
 {{- $storageClass := .Values.loki.internal.effectiveStorageClass }}
 {{- if $storageClass }}
   volumeClaimTemplates:
