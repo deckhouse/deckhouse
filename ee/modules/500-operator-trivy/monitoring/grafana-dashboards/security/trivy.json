@@ -22,11 +22,12 @@
     ]
   },
   "description": "A dashboard to visualise trivy image vulnerabilities using metrics from trivy-operator.",
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "gnetId": 16742,
   "graphTooltip": 0,
-  "iteration": 1693577505286,
+  "id": 39,
+  "iteration": 1702933974309,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -338,6 +339,18 @@
                 "value": 1
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "resource"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Package name"
+              }
+            ]
           }
         ]
       },
@@ -375,7 +388,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(trivy_vulnerability_id{namespace=~\"$namespace\",severity=~\"$severity\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\"}) by (image_repository,image_tag,severity, vuln_id, namespace, resource_kind, resource_name,vuln_title)",
+          "expr": "sum(trivy_vulnerability_id{namespace=~\"$namespace\",severity=~\"$severity\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"}) by (image_repository,image_tag,severity, vuln_id, namespace, resource_kind, resource, resource_name,vuln_title)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -407,18 +420,7 @@
               "Value": true,
               "vuln_id_hidden": false
             },
-            "indexByName": {
-              "Time": 0,
-              "Value": 8,
-              "image_repository": 1,
-              "namespace": 2,
-              "resource_kind": 3,
-              "resource_name": 4,
-              "severity": 5,
-              "vuln_id": 6,
-              "vuln_title": 7
-            },
-	    "indexByName": {},
+            "indexByName": {},
             "renameByName": {
               "image_repository": ""
             }
@@ -436,8 +438,8 @@
       {
         "current": {
           "selected": false,
-          "text": "main",
-          "value": "main"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "includeAll": false,
@@ -446,6 +448,7 @@
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
+        "queryValue": "",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -454,7 +457,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -486,7 +489,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -518,7 +521,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -551,7 +554,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -579,6 +582,48 @@
         "skipUrlSync": false,
         "sort": 1,
         "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${ds_prometheus}"
+        },
+        "definition": "label_values(trivy_vulnerability_id, resource)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Package name",
+        "multi": true,
+        "name": "resource",
+        "options": [],
+        "query": {
+          "query": "label_values(trivy_vulnerability_id, resource)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${ds_prometheus}"
+        },
+        "filters": [],
+        "hide": 0,
+        "name": "Filters",
+        "skipUrlSync": false,
+        "type": "adhoc"
       }
     ]
   },
