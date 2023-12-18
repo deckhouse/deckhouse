@@ -415,10 +415,10 @@ Deckhouse поддерживает работу только с Bearer token-с�
    docker login -u license-token registry.deckhouse.ru
    ```
 
-1. Запустите установщик Deckhouse. Данное руководство составлено для версий 1.56.0 или выше.
+1. Запустите установщик Deckhouse. Данное руководство составлено для версий 1.57.0 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.56.0 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.57.0 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы Deckhouse.
@@ -452,10 +452,10 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Существуют также дополнительные флаги `--source-login` и `--source-password`, используемые для аутентификации в предоставленном registry.
    Если они не указаны, `dhctl mirror` будет обращаться к registry анонимно.
 
-   Например, вот как можно загрузить образы Flant Edition вместо Enterprise Edition:
+   Например, вот как можно загрузить образы из стороннего репозитория:
 
    ```shell
-   dhctl mirror --source="registry.deckhouse.io/deckhouse/fe" --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar
+   dhctl mirror --source="corp.company.ru/sys/deckhouse" --source-login="user" --source-password="password" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
    > Параметр `--license` действует как сокращение для параметров `--source-login` и `--source-password` и предназначен для использования с официальным registry Deckhouse.

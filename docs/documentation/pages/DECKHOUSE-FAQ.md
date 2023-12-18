@@ -414,10 +414,10 @@ This feature is available in Enterprise Edition only.
    docker login -u license-token registry.deckhouse.io
    ```
 
-1. Run the Deckhouse installer. This guide is for version 1.56.0 or higher.
+1. Run the Deckhouse installer. This guide is for version 1.57.0 or higher.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.56.0 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.57.0 bash
    ```
 
    Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball.
@@ -449,10 +449,10 @@ This feature is available in Enterprise Edition only.
    The optional `--source-login` and `--source-password` flags are used to authenticate to a given registry.
    If they are omitted, mirroring will be performed anonymously.
 
-   For example, here is how you can pull Flant Edition images instead of the default Enterprise Edition ones:
+   For example, here is how you can pull images from a third-party registry:
 
    ```shell
-   dhctl mirror --source="registry.deckhouse.io/deckhouse/fe" --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar
+   dhctl mirror --source="corp.company.com/sys/deckhouse" --source-login="user" --source-password="password" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
    > Note: `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
