@@ -23,6 +23,12 @@ kubernetesVersion: "Automatic"
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
 ---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.ru/deckhouse/ce
+  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

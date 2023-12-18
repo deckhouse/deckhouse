@@ -1,35 +1,83 @@
 {% if page.lang == 'ru' -%}
 {% offtopic title="Как явно включить или отключить модуль..." %}
-> **Обратите внимание,** что при установке Deckhouse для явного включения/отключения и настройки модуля используется параметр [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides) ресурса *InitConfiguration*, а не *ModuleConfig*.
->
-> Чтобы явно включить или выключить модуль `{{ include.moduleKebabName }}` при установке Deckhouse, укажите `{{ include.moduleSnakeName }}Enabled: true` или `{{ include.moduleSnakeName }}Enabled: false` в секции [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides).
->
-> Чтобы задать настройки модуля при установке Deckhouse, используйте секцию `{{ moduleSnakeName }}` параметра [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides).
+Чтобы явно включить или выключить модуль `{{ include.moduleKebabName }}`, установите `spec.enabled` в `true` или `false` в `ModuleConfig/{{ moduleKebabName }}` (создайте, при необходимости), или воспользуйтесь командой `deckhouse-controller module` в поде `d8-system/deckhouse`.
 
-Чтобы явно включить или выключить модуль `{{ include.moduleKebabName }}`, установите `spec.enabled` в `true` или `false` в `ModuleConfig/{{ moduleKebabName }}`.
+Пример **включения** модуля:
+- с помощью ресурса ModuleConfig:
 
-Пример включения модуля `{{ include.moduleKebabName }}`:
-{% include module-enable-snippet.liquid moduleKebabName=include.moduleKebabName enabled="true" %}
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: {{ include.moduleKebabName }}
+  spec:
+    enabled: true
+  ```
 
-Пример выключения модуля `{{ include.moduleKebabName }}`:
-{% include module-enable-snippet.liquid moduleKebabName=include.moduleKebabName enabled="false" %}
+- с помощью команды `deckhouse-controller` (требуется kubectl, настроенный на работу с кластером):
+
+  ```shell
+  kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
+  ```
+
+Пример **выключения** модуля:
+
+- с помощью ресурса ModuleConfig:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: {{ include.moduleKebabName }}
+  spec:
+    enabled: false
+  ```
+
+- с помощью команды `deckhouse-controller` (требуется kubectl, настроенный на работу с кластером):
+
+  ```shell
+  kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
+  ```
 
 {% endofftopic %}
 {% else %}
 {% offtopic title="How to explicitly enable the module..." %}
-> **Note** that the [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides) parameter of the *InitConfiguration* resource is used when installing Deckhouse, not *ModuleConfig*.
->
-> Set the `{{ include.moduleSnakeName }}Enabled: true` or `{{ include.moduleSnakeName }}Enabled: false` in the [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides) parameter to explicitly enable or disable the module when installing Deckhouse.
->
-> Use the `{{ moduleSnakeName }}` section of the [configOverrides](../../installing/configuration.html#initconfiguration-deckhouse-configoverrides) parameter to configure the module when installing Deckhouse.
+Set the `spec.enabled` [module parameter]({{ "/#configuring-the-module" | true_relative_url }}) to `true` or `false` in the `ModuleConfig/{{ moduleKebabName }}` resource (create it, if necessary) to explicitly enable or disable the module, or use the `deckhouse-controller module` command in the `d8-system/deckhouse` pod.
 
-Set the `spec.enabled` [module parameter]({{ "/#configuring-the-module" | true_relative_url }}) to `true` or `false` to explicitly enable or disable the module.
+Example of enabling the module:
+- by using the ModuleConfig resource:
 
-Example of enabling the `{{ include.moduleKebabName }}` module:
-{% include module-enable-snippet.liquid moduleKebabName=include.moduleKebabName enabled="true" %}
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: {{ include.moduleKebabName }}
+  spec:
+    enabled: true
+  ```
 
-Example of disabling the `{{ include.moduleKebabName }}` module:
-{% include module-enable-snippet.liquid moduleKebabName=include.moduleKebabName enabled="false" %}
+- by using the `deckhouse-controller` command (you need a kubectl, configured to work with the cluster):
 
+  ```shell
+  kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
+  ```
+
+Example of disabling the module:
+- by using the ModuleConfig resource:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: {{ include.moduleKebabName }}
+  spec:
+    enabled: false
+  ```
+
+- by using the `deckhouse-controller` command (you need a kubectl, configured to work with the cluster):
+
+  ```shell
+  kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
+  ```
 {% endofftopic %}
 {% endif %}

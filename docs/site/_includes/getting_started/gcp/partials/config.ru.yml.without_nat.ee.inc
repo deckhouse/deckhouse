@@ -21,6 +21,18 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
+# [<en>] Section for bootstrapping the Deckhouse cluster.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] Секция первичной инициализации кластера Deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.ru/deckhouse/ee
+  # [<en>] A special string with your token to access Docker registry (generated automatically for your license token).
+  # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
+  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -30,19 +42,7 @@ spec:
   enabled: true
   settings:
     bundle: Default
-    # [<ru>] Канал обновлений Deckhouse. По умолчанию установлен канал EarlyAccess — рекомендуемый канал обновлений,
-    # [<ru>] если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются,
-    # [<ru>] дорабатываются новые приложения и т. п.). Он достаточно стабилен для продакшена, но если планируется
-    # [<ru>] использовать несколько кластеров, то рекомендуется установить на них последовательные каналы обновлений,
-    # [<ru>] чтобы обновления происходили по очереди. Это позволит минимизировать риски в будущем.
-    # [<ru>] Подробнее о каналах обновлений: https://deckhouse.ru/documentation/v1/deckhouse-release-channels.html
-    # [<en>] Канал обновлений Deckhouse. По умолчанию установлен канал EarlyAccess — рекомендуемый канал обновлений,
-    # [<en>] если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются,
-    # [<en>] дорабатываются новые приложения и т. п.). Он достаточно стабилен для продакшена, но если планируется
-    # [<en>] использовать несколько кластеров, то рекомендуется установить на них последовательные каналы обновлений,
-    # [<en>] чтобы обновления происходили по очереди. Это позволит минимизировать риски в будущем.
-    # [<en>] Подробнее о каналах обновлений: https://deckhouse.io/documentation/v1/deckhouse-release-channels.html
-    releaseChannel: EarlyAccess
+    releaseChannel: Stable
     logLevel: Info
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -83,9 +83,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Section containing the parameters of the cloud provider.
-# [<en>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/cluster_configuration.html
+# [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
 # [<ru>] Секция, описывающая параметры облачного провайдера.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/cluster_configuration.html
+# [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: WithoutNAT

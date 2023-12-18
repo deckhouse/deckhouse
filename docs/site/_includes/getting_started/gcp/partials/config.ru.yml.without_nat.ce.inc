@@ -6,22 +6,26 @@ apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
-  provider: AWS
+  provider: GCP
   # [<en>] A prefix of objects that are created in the cloud during the installation.
   # [<en>] You might consider changing this.
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
   # [<ru>] Возможно, захотите изменить.
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
-# [<ru>] Адресное пространство подов кластера.
+# [<ru>] Адресное пространство Pod’ов кластера.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
-# [<ru>] Адресное пространство сети сервисов кластера.
+# [<ru>] Адресное пространство для service’ов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
-# [<en>] Cluster domain (used for local routing).
-# [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.ru/deckhouse/ce
+  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -84,76 +88,60 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-cilium
-spec:
-  version: 1
-  # [<en>] Enable cni-cilium module
-  # [<ru>] Включить модуль cni-cilium
-  enabled: true
-  settings:
-    # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
-    # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
-    tunnelMode: VXLAN
----
 # [<en>] Section containing the parameters of the cloud provider.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
 # [<ru>] Секция, описывающая параметры облачного провайдера.
 # [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
 apiVersion: deckhouse.io/v1
-kind: AWSClusterConfiguration
+kind: GCPClusterConfiguration
 layout: WithoutNAT
-# [<en>] AWS EC2 access parameters.
-# [<ru>] Параметры доступа к AWS EC2.
+# [<en>] GCP access parameters.
+# [<ru>] Параметры доступа к облаку GCP.
 provider:
-  providerAccessKeyId: *!CHANGE_MYACCESSKEY*
-  providerSecretAccessKey: *!CHANGE_mYsEcReTkEy*
+  # [<en>] Example of serviceAccountJSON:
+  # [<ru>] Пример заполнения serviceAccountJSON:
+  # serviceAccountJSON: |
+  #    {
+  #      "type": "service_account",
+  #      "project_id": "somproject-sandbox",
+  #      "private_key_id": "***",
+  #      "private_key": "***",
+  #      "client_email": "mail@somemail.com",
+  #      "client_id": "<client_id>",
+  #      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  #      "token_uri": "https://oauth2.googleapis.com/token",
+  #      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  #      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/somproject-sandbox.gserviceaccount.com"
+  #    }
+  serviceAccountJSON: *!CHANGE_ServiceAccountJSON*
   # [<en>] Cluster region.
   # [<ru>] Регион привязки кластера.
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  region: eu-central-1
+  region: europe-west3
+# [<en>] List of labels to attach to cluster resources.
+# [<ru>] Список меток ресурсов кластера, используются для идентификации в качестве префиксов ресурсов.
+labels:
+  kube: d8-demo
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    # [<en>] Master node VM disk size.
-    # [<ru>] Размер диска для виртуальной машины master-узла.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    diskSizeGb: 30
-    # [<en>] Master node VM disk type to use.
-    # [<ru>] Используемый тип диска для виртуальной машины master-узла.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    diskType: gp3
     # [<en>] Type of the instance.
     # [<ru>] Тип используемого инстанса.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    instanceType: c5.xlarge
-    # [<en>] Amazon Machine Image ID.
-    # [<en>] The example uses the Ubuntu Server 22.04 image for the 'eu-central-1' region.
-    # [<en>] Change the AMI ID if you use a different region (the 'provider.region' parameter).
-    # [<en>] AMI Catalog in the AWS console: EC2 -> AMI Catalog.
-    # [<ru>] ID образа виртуальной машины в Amazon.
-    # [<ru>] В примере используется образ Ubuntu Server 22.04 для региона 'eu-central-1'.
-    # [<ru>] Измените AMI ID, если используете другой регион в параметре 'provider.region'.
-    # [<ru>] Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
+    machineType: n1-standard-4
+    # [<en>] Image ID.
+    # [<ru>] Используемый образ.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    ami: ami-0caef02b518350c8b
-# [<en>] Address space of the AWS cloud.
-# [<ru>] Адресное пространство облака внутри AWS.
-vpcNetworkCIDR: "10.241.0.0/16"
-# [<en>] Address space of the cluster's nodes.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20221206
+    disableExternalIP: false
+# [<en>] A subnet to use for cluster nodes.
 # [<ru>] Адресное пространство узлов кластера.
-nodeNetworkCIDR: "10.241.32.0/20"
+subnetworkCIDR: 10.0.0.0/24
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
 # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
-sshPublicKey: *!CHANGE_SSH_KEY*
+sshKey: *!CHANGE_SSH_KEY*
