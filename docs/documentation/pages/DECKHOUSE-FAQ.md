@@ -458,7 +458,7 @@ This feature is available in Enterprise Edition only.
    > Note: `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
    > If you specify both license and login+password pair for source registry, the latter will be used.
 
-   `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function, add the `--gost-digest` parameter to calculate it after download.
+   `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function (the `--gost-digest` parameter).
    The checksum will be logged and written to a file with the `.tar.gostsum` extension next to the tar-archive containing the Deckhouse images.
 
 1. Optional: Copy the `dhctl` binary from the container to the directory where Deckhouse images were pulled.
