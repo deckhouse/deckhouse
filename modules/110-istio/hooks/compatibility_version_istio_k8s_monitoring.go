@@ -30,12 +30,12 @@ import (
 )
 
 var (
-	monitoringMetricsGroup = "monitoring"
+	monitoringMetricsGroup = "k8s_version_compatibility"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        lib.Queue(monitoringMetricsGroup),
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:        lib.Queue("monitoring"),
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // The hook relies on operatorVersionsToInstall value discovered in discovery_operator_versions_to_install.go before.
 }, versionCompatibilityMonitoringHook)
 
 func versionCompatibilityMonitoringHook(input *go_hook.HookInput) error {

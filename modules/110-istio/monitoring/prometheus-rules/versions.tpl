@@ -21,7 +21,7 @@
     - alert: D8IstioVersionIsIncompatibleWithK8sVersion
       annotations:
         description: |
-          The current istio version `{{"{{$labels.istio_version}}"}}` may not work properly with the current k8s version `{{"{{$labels.k8s_version}}"}}`, because it officially  unsupported.
+          The current istio version `{{"{{$labels.istio_version}}"}}` may not work properly with the current k8s version `{{"{{$labels.k8s_version}}"}}`, because it is unsupported officially.
           Please upgrade istio as soon as possible.
           Upgrading instructions — https://deckhouse.io/documentation/{{ $.Values.global.deckhouseVersion }}/modules/110-istio/examples.html#upgrading-istio.
         plk_markup_format: markdown
