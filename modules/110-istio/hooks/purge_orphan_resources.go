@@ -316,14 +316,17 @@ func purgeOrphanResources(input *go_hook.HookInput) error {
 	for _, objRaw := range objects {
 		obj := objRaw.(removeObject)
 		if obj.FinalizersExists {
+			input.LogEntry.Infof("Remove finalizers from %s/%s in namespace %s", obj.Kind, obj.Name, obj.Namespace)
 			input.PatchCollector.MergePatch(deleteFinalizersPatch, obj.APIVersion, obj.Kind, obj.Namespace, obj.Name)
 		}
+		input.LogEntry.Infof("Delete %s/%s in namespace %s", obj.Kind, obj.Name, obj.Namespace)
 		input.PatchCollector.Delete(obj.APIVersion, obj.Kind, obj.Namespace, obj.Name, object_patch.InForeground())
 	}
 
 	if len(input.Snapshots["clwNamespace"]) > 0 {
 		ns := input.Snapshots["clwNamespace"][0].(removeObject)
 		if !ns.DeletionTimestampExists {
+			input.LogEntry.Infof("Delete namespace %s", ns.Name)
 			input.PatchCollector.Delete(ns.APIVersion, ns.Kind, "", ns.Name, object_patch.InForeground())
 		}
 	}

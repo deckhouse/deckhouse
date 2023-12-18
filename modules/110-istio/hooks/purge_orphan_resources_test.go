@@ -81,7 +81,7 @@ metadata:
     install.operator.istio.io/owning-resource-namespace: d8-istio
 ---
 apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
+kind: ValidatingWebhookConfiguration
 metadata:
   name: istio-validator-v1x16-d8-istio
   labels:
@@ -188,7 +188,9 @@ metadata:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LogrusOutput.Contents())).ToNot(HaveLen(0))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Remove finalizers from IstioOperator/v1x16 in namespace d8-istio"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete IstioOperator/v1x16 in namespace d8-istio"))
 			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x16").Exists()).To(BeFalse())
 		})
 	})
@@ -202,32 +204,52 @@ metadata:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LogrusOutput.Contents())).ToNot(HaveLen(0))
 			Expect(f.KubernetesGlobalResource("Namespace", "d8-istio").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Remove finalizers from IstioOperator/v1x16 in namespace d8-istio"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete IstioOperator/v1x16 in namespace d8-istio"))
 
 			Expect(f.KubernetesResource("EnvoyFilter", "d8-istio", "stats-filter-1.13-v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete EnvoyFilter/stats-filter-1.13-v1x16 in namespace d8-istio"))
 			Expect(f.KubernetesResource("EnvoyFilter", "d8-istio", "tcp-stats-filter-1.13-v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete EnvoyFilter/tcp-stats-filter-1.13-v1x16 in namespace d8-istio"))
 
 			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete Deployment/istiod-v1x16 in namespace d8-istio"))
 			Expect(f.KubernetesResource("Service", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete Service/istiod-v1x16 in namespace d8-istio"))
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ConfigMap/istiod-v1x16 in namespace d8-istio"))
 			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete PodDisruptionBudget/istiod-v1x16 in namespace d8-istio"))
 
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "istiod-service-account").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ServiceAccount/istiod-service-account in namespace d8-istio"))
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ServiceAccount/istiod-v1x16 in namespace d8-istio"))
 			Expect(f.KubernetesResource("Role", "d8-istio", "istiod-d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete Role/istiod-d8-istio in namespace d8-istio"))
 			Expect(f.KubernetesResource("Role", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete Role/istiod-v1x16 in namespace d8-istio"))
 			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "istiod-d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete RoleBinding/istiod-d8-istio in namespace d8-istio"))
 			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete RoleBinding/istiod-v1x16 in namespace d8-istio"))
 
 			Expect(f.KubernetesGlobalResource("ClusterRole", "istio-reader-d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRole/istio-reader-d8-istio in namespace "))
 			Expect(f.KubernetesGlobalResource("ClusterRole", "istio-reader-clusterrole-v1x16-d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRole/istio-reader-clusterrole-v1x16-d8-istio in namespace "))
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "istio-reader-d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRoleBinding/istio-reader-d8-istio in namespace "))
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "istio-reader-clusterrole-v1x16-d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRoleBinding/istio-reader-clusterrole-v1x16-d8-istio in namespace "))
 			Expect(f.KubernetesGlobalResource("MutatingWebhookConfiguration", "istio-sidecar-injector-v1x16-d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete MutatingWebhookConfiguration/istio-sidecar-injector-v1x16-d8-istio in namespace "))
 			Expect(f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "istio-validator-v1x16-d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ValidatingWebhookConfiguration/istio-validator-v1x16-d8-istio in namespace "))
 		})
 	})
 
