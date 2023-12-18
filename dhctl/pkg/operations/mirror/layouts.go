@@ -53,7 +53,6 @@ type ModuleImageLayout struct {
 }
 
 func CreateOCIImageLayoutsForDeckhouse(
-	registryRepo string,
 	rootFolder string,
 	modules []Module,
 ) (*ImageLayouts, error) {
@@ -61,9 +60,9 @@ func CreateOCIImageLayoutsForDeckhouse(
 	layouts := &ImageLayouts{Modules: map[string]ModuleImageLayout{}}
 
 	fsPaths := map[*layout.Path]string{
-		&layouts.Deckhouse:      filepath.Join(rootFolder, registryRepo),
-		&layouts.Install:        filepath.Join(rootFolder, registryRepo, "install"),
-		&layouts.ReleaseChannel: filepath.Join(rootFolder, registryRepo, "release-channel"),
+		&layouts.Deckhouse:      rootFolder,
+		&layouts.Install:        filepath.Join(rootFolder, "install"),
+		&layouts.ReleaseChannel: filepath.Join(rootFolder, "release-channel"),
 	}
 	for layoutPtr, fsPath := range fsPaths {
 		*layoutPtr, err = CreateEmptyImageLayoutAtPath(fsPath)
@@ -73,13 +72,13 @@ func CreateOCIImageLayoutsForDeckhouse(
 	}
 
 	for _, module := range modules {
-		path := filepath.Join(rootFolder, registryRepo, "modules", module.Name)
+		path := filepath.Join(rootFolder, "modules", module.Name)
 		moduleLayout, err := CreateEmptyImageLayoutAtPath(path)
 		if err != nil {
 			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)
 		}
 
-		path = filepath.Join(rootFolder, registryRepo, "modules", module.Name, "release")
+		path = filepath.Join(rootFolder, "modules", module.Name, "release")
 		moduleReleasesLayout, err := CreateEmptyImageLayoutAtPath(path)
 		if err != nil {
 			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)

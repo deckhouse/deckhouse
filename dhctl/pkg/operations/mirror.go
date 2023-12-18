@@ -44,7 +44,7 @@ func MirrorDeckhouseToLocalFS(
 	log.InfoLn("✅")
 
 	log.InfoF("Creating OCI Image Layouts...\t")
-	layouts, err := mirror.CreateOCIImageLayoutsForDeckhouse(mirrorCtx.DeckhouseRegistryRepo, mirrorCtx.UnpackedImagesPath, modules)
+	layouts, err := mirror.CreateOCIImageLayoutsForDeckhouse(mirrorCtx.UnpackedImagesPath, modules)
 	if err != nil {
 		return fmt.Errorf("create OCI Image Layouts: %w", err)
 	}
@@ -193,13 +193,13 @@ func pushModulesTags(mirrorCtx *mirror.Context, modulesList []string) error {
 }
 
 func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, []string, error) {
-	deckhouseIndexRef := mirrorCtx.DeckhouseRegistryRepo
-	installersIndexRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "install")
-	releasesIndexRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "release-channel")
+	deckhouseIndexRef := mirrorCtx.RegistryHost + mirrorCtx.RegistryPath
+	installersIndexRef := filepath.Join(deckhouseIndexRef, "install")
+	releasesIndexRef := filepath.Join(deckhouseIndexRef, "release-channel")
 
-	deckhouseLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, deckhouseIndexRef)
-	installersLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, installersIndexRef)
-	releasesLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, releasesIndexRef)
+	deckhouseLayoutPath := mirrorCtx.UnpackedImagesPath
+	installersLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, "install")
+	releasesLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, "release-channel")
 
 	deckhouseLayout, err := layout.FromPath(deckhouseLayoutPath)
 	if err != nil {
@@ -214,7 +214,7 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, []str
 		return nil, nil, err
 	}
 
-	modulesPath := filepath.Join(mirrorCtx.UnpackedImagesPath, mirrorCtx.DeckhouseRegistryRepo, "modules")
+	modulesPath := filepath.Join(mirrorCtx.UnpackedImagesPath, "modules")
 	ociLayouts := map[string]layout.Path{
 		deckhouseIndexRef:  deckhouseLayout,
 		installersIndexRef: installersLayout,
@@ -233,7 +233,7 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, []str
 
 		moduleName := dir.Name()
 		modulesNames = append(modulesNames, moduleName)
-		moduleRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "modules", moduleName)
+		moduleRef := filepath.Join(mirrorCtx.RegistryHost+mirrorCtx.RegistryPath, "modules", moduleName)
 		moduleReleasesRef := filepath.Join(mirrorCtx.DeckhouseRegistryRepo, "modules", moduleName, "release")
 		moduleLayout, err := layout.FromPath(filepath.Join(modulesPath, moduleName))
 		if err != nil {

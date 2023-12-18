@@ -16,6 +16,7 @@ package commands
 
 import (
 	"bufio"
+	"crypto/md5"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -55,8 +56,8 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		Insecure:              app.MirrorInsecure,
 		RegistryHost:          app.MirrorRegistryHost,
 		RegistryPath:          app.MirrorRegistryPath,
-		DeckhouseRegistryRepo: app.MirrorDeckhouseRegistryRepo,
-		TarBundlePath:         app.MirrorTarBundle,
+		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
+		TarBundlePath:         app.MirrorTarBundlePath,
 		UnpackedImagesPath:    filepath.Join(app.TmpDirName, time.Now().Format("mirror_tmp_02-01-2006_15-04-05")),
 		ValidationMode:        mirror.ValidationMode(app.MirrorValidationMode),
 	}
@@ -96,24 +97,20 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 }
 
 func mirrorPullDeckhouseToLocalFilesystem() error {
-	pulledEdition := "ee"
-	if app.MirrorFlantEdition {
-		pulledEdition = "fe"
-	}
-
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
 		DoGOSTDigests:         app.MirrorDoGOSTDigest,
 		RegistryHost:          app.MirrorRegistryHost,
-		DeckhouseRegistryRepo: app.MirrorDeckhouseRegistryRepo,
-		RegistryAuth: authn.FromConfig(authn.AuthConfig{
-			Username: "license-token",
-			Password: app.MirrorDHLicenseToken,
-		}),
-		TarBundlePath:      app.MirrorTarBundle,
-		UnpackedImagesPath: filepath.Join(app.TmpDirName, "mirror_pull_"+pulledEdition),
-		ValidationMode:     mirror.ValidationMode(app.MirrorValidationMode),
-		MinVersion:         app.MirrorMinVersion,
+		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
+		RegistryAuth:          getSourceRegistryAuthProvider(),
+		TarBundlePath:         app.MirrorTarBundlePath,
+		UnpackedImagesPath: filepath.Join(
+			app.TmpDirName,
+			"mirror_pull",
+			fmt.Sprintf("%x", md5.Sum([]byte(app.MirrorSourceRegistryRepo))),
+		),
+		ValidationMode: mirror.ValidationMode(app.MirrorValidationMode),
+		MinVersion:     app.MirrorMinVersion,
 	}
 
 	if app.MirrorDontContinuePartialPull || lastPullWasTooLongAgoToRetry(mirrorCtx) {
@@ -123,7 +120,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	}
 
 	if err := mirror.ValidateReadAccessForImage(mirrorCtx.DeckhouseRegistryRepo+":rock-solid", mirrorCtx.RegistryAuth, mirrorCtx.Insecure); err != nil {
-		return fmt.Errorf("License token validation failure: %w", err)
+		return fmt.Errorf("Source registry access validation failure: %w", err)
 	}
 
 	var versionsToMirror []*semver.Version
@@ -189,4 +186,22 @@ func lastPullWasTooLongAgoToRetry(mirrorCtx *mirror.Context) bool {
 	}
 
 	return time.Since(s.ModTime()) > 24*time.Hour
+}
+
+func getSourceRegistryAuthProvider() authn.Authenticator {
+	if app.MirrorSourceRegistryLogin != "" {
+		return authn.FromConfig(authn.AuthConfig{
+			Username: app.MirrorSourceRegistryLogin,
+			Password: app.MirrorSourceRegistryPassword,
+		})
+	}
+
+	if app.MirrorDHLicenseToken != "" {
+		return authn.FromConfig(authn.AuthConfig{
+			Username: "license-token",
+			Password: app.MirrorDHLicenseToken,
+		})
+	}
+
+	return authn.Anonymous
 }
