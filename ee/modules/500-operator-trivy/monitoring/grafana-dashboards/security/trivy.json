@@ -424,13 +424,13 @@
               "Value": 8,
               "image_repository": 1,
               "namespace": 2,
-              "resource_kind": 3,
+              "resource": 3,
+              "resource_kind": 9,
               "resource_name": 4,
               "severity": 5,
               "vuln_id": 6,
               "vuln_title": 7
             },
-	    "indexByName": {},
             "renameByName": {
               "image_repository": ""
             }
