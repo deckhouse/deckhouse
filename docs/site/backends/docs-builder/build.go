@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync/atomic"
 
 	"github.com/spf13/fsync"
@@ -30,18 +31,20 @@ import (
 
 var assembleErrorRegexp = regexp.MustCompile(`error building site: assemble: (\x1b\[1;36m)?"(?P<path>.+):(?P<line>\d+):(?P<column>\d+)"(\x1b\[0m)?:`)
 
-func newBuildHandler(src, dst string, wasCalled *atomic.Bool) *buildHandler {
+func newBuildHandler(src, dst string, wasCalled *atomic.Bool, channelMappingEditor *channelMappingEditor) *buildHandler {
 	return &buildHandler{
-		src:       src,
-		dst:       dst,
-		wasCalled: wasCalled,
+		src:                  src,
+		dst:                  dst,
+		wasCalled:            wasCalled,
+		channelMappingEditor: channelMappingEditor,
 	}
 }
 
 type buildHandler struct {
-	src       string
-	dst       string
-	wasCalled *atomic.Bool
+	src                  string
+	dst                  string
+	wasCalled            *atomic.Bool
+	channelMappingEditor *channelMappingEditor
 }
 
 func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, _ *http.Request) {
@@ -100,12 +103,24 @@ func (b *buildHandler) buildHugo() error {
 				return fmt.Errorf("remove module: %w", err)
 			}
 
+			moduleName, channel := parseModulePath(modulePath)
+			err = b.removeModuleFromChannelMapping(moduleName, channel)
+			if err != nil {
+				return fmt.Errorf("remove module from channel mapping: %w", err)
+			}
+
 			klog.Warningf("removed broken module %q", modulePath)
 			continue
 		}
 
 		return err
 	}
+}
+
+func (b *buildHandler) removeModuleFromChannelMapping(moduleName, channel string) error {
+	return b.channelMappingEditor.edit(func(m channelMapping) {
+		delete(m[moduleName]["channels"], channel)
+	})
 }
 
 func getAssembleErrorPath(errorMessage string) (string, bool) {
@@ -119,6 +134,16 @@ func getAssembleErrorPath(errorMessage string) (string, bool) {
 
 func getModulePath(filePath string) string {
 	return filepath.Dir(filePath)
+}
+
+func parseModulePath(modulePath string) (moduleName, channel string) {
+	s := strings.Split(modulePath, "/")
+	if len(s) < 2 {
+		klog.Error("failed to parse", modulePath)
+		return "", ""
+	}
+
+	return s[len(s)-2], s[len(s)-1]
 }
 
 func removeGlob(path string) error {

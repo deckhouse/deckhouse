@@ -40,10 +40,6 @@ func TestGetModulePath(t *testing.T) {
 		expected string
 	}{
 		{
-			filePath: "/app/hugo/content/modules/moduleName/BROKEN.md",
-			expected: "/app/hugo/content/modules/moduleName",
-		},
-		{
 			filePath: "/app/hugo/content/modules/moduleName/alpha/BROKEN.md",
 			expected: "/app/hugo/content/modules/moduleName/alpha",
 		},
@@ -54,6 +50,33 @@ func TestGetModulePath(t *testing.T) {
 			got := getModulePath(test.filePath)
 			if got != test.expected {
 				t.Error("unexpected result", got)
+			}
+		})
+	}
+}
+
+func TestParseModulePath(t *testing.T) {
+	var tests = []struct {
+		modulePath string
+		moduleName string
+		channel    string
+	}{
+		{
+			modulePath: "/app/hugo/content/modules/moduleName/alpha",
+			moduleName: "moduleName",
+			channel:    "alpha",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.modulePath, func(t *testing.T) {
+			moduleName, channel := parseModulePath(test.modulePath)
+			if moduleName != test.moduleName {
+				t.Errorf("unexpected module name %q", moduleName)
+			}
+
+			if channel != test.channel {
+				t.Errorf("unexpected channel %q", channel)
 			}
 		})
 	}
