@@ -7,7 +7,7 @@
           "type": "prometheus",
           "uid": "P0D6E4079E36703EB"
         },
-        "enable": false,
+        "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
@@ -22,7 +22,7 @@
     ]
   },
   "description": "A dashboard to visualise trivy image vulnerabilities using metrics from trivy-operator.",
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "gnetId": 16742,
   "graphTooltip": 0,
@@ -532,7 +532,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
