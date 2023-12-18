@@ -7,7 +7,7 @@
           "type": "prometheus",
           "uid": "P0D6E4079E36703EB"
         },
-        "enable": true,
+        "enable": false,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
@@ -420,7 +420,18 @@
               "Value": true,
               "vuln_id_hidden": false
             },
-            "indexByName": {},
+            "indexByName": {
+              "Time": 0,
+              "Value": 8,
+              "image_repository": 1,
+              "namespace": 2,
+              "resource_kind": 3,
+              "resource_name": 4,
+              "severity": 5,
+              "vuln_id": 6,
+              "vuln_title": 7
+            },
+	    "indexByName": {},
             "renameByName": {
               "image_repository": ""
             }
@@ -438,8 +449,8 @@
       {
         "current": {
           "selected": false,
-          "text": "default",
-          "value": "default"
+          "text": "main",
+          "value": "main"
         },
         "hide": 0,
         "includeAll": false,
@@ -457,7 +468,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -489,7 +500,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -554,7 +565,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
