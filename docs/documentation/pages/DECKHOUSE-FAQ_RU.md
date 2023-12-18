@@ -518,10 +518,10 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
     ```shell
     kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry \
-      --user my-user --password my-password registry.example.com/deckhouse
+      --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
     ```
 
-  * Если registry использует самоподписные сертификаты, положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` в поде Deckhouse и добавьте к вызову опцию `--ca-file ca.crt` или вставьте содержимое CA в переменную:
+  * Если registry использует самоподписные сертификаты, положите корневой сертификат соответствующего сертификата registry в файл `/tmp/ca.crt` в поде Deckhouse и добавьте к вызову опцию `--ca-file /tmp/ca.crt`, или вставьте содержимое CA в переменную, как в примере ниже:
 
     ```shell
     $ CA_CONTENT=$(cat <<EOF
@@ -533,7 +533,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password YUvio925tyxFNBnqhfcx89nABwcnTP1K registry.deckhouse.ru/deckhouse --ca-file <(cat <<<$CA_CONTENT)
+    $ kubectl exec  -n d8-system deploy/deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
 
 * Дождитесь перехода пода Deckhouse в статус `Ready`. Если под будет находиться в статусе `ImagePullBackoff`, перезапустите его.
