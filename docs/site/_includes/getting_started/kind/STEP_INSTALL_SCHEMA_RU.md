@@ -2,7 +2,7 @@
 
 Установка Deckhouse на kind, рассматриваемая далее, позволит вам за менее чем 15 минут получить локальный кластер Kubernetes с установленным Deckhouse. Такой вариант развертывания Deckhouse позволит вам быстро развернуть Deckhouse и познакомиться с основными его возможностями.
 
-Deckhouse будет установлен в **минимальной** конфигурации с включенным [мониторингом](/documentation/v1/modules/300-prometheus/) на базе Grafana. Некоторые функции, такие как [управление узлами](/documentation/v1/modules/040-node-manager/) и [управление control-plane](/documentation/v1/modules/040-control-plane-manager/), работать не будут. Для упрощения при работе с DNS используется сервис [sslip.io](https://sslip.io). 
+Deckhouse будет установлен в **минимальной** конфигурации с включенным [мониторингом](/documentation/v1/modules/300-prometheus/) на базе Grafana. Некоторые функции, такие как [управление узлами](/documentation/v1/modules/040-node-manager/) и [управление control-plane](/documentation/v1/modules/040-control-plane-manager/), работать не будут. Для упрощения при работе с DNS используется сервис [sslip.io](https://sslip.io).
 
 {% alert level="warning" %}
 Некоторые провайдеры блокируют работу sslip.io и подобных сервисов. Если вы столкнулись с такой проблемой, пропишите нужные домены в `hosts`-файл локально, или направьте реальный домен и исправьте [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).
@@ -13,16 +13,16 @@ Deckhouse будет установлен в **минимальной** конф
 {% endcomment %}
 
 {% offtopic title="Минимальные требования к компьютеру..." %}
-- Операционная система macOS или Linux (работа на Windows не поддерживается). 
+- Операционная система macOS или Linux (работа на Windows не поддерживается).
 - Установленный container runtime (docker, containerd) и docker-клиент.
     - Для работы контейнеров должно быть выделено не менее 4 CPU и 8 Гб оперативной памяти (_Settings -> Resources_ в Docker Desktop)
-    - В macOS должен быть включен параметр `Enable privileged port mapping` (_Settings -> Advanced -> Enable privileged port mapping_ в Docker Desktop).  
-- HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.io`.
+    - В macOS должен быть включен параметр `Enable privileged port mapping` (_Settings -> Advanced -> Enable privileged port mapping_ в Docker Desktop).
+- HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`.
 {% endofftopic %}
 
 ## Установка
 
-Развертывание кластера Kubernetes и установка в него Deckhouse выполняются с помощью [Shell-скрипта](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh): 
+Развертывание кластера Kubernetes и установка в него Deckhouse выполняются с помощью [Shell-скрипта](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh):
 - Выполните следующую команду для установки Deckhouse **Community Edition**:
   {% snippetcut selector="kind-install" %}
 ```shell

@@ -15,6 +15,32 @@ kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
+# [<en>] Proxy server settings.
+# [<ru>] Настройки proxy-сервера.
+proxy:
+  httpProxy: <HTTP_PROXY_ADDRESS>
+  httpsProxy: <HTTPS_PROXY_ADDRESS>
+  noProxy: <NO_PROXY_LIST>
+---
+# [<en>] Section for bootstrapping the Deckhouse cluster.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] Секция первичной инициализации кластера Deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  # [<en>] Address of the Docker registry where the Deckhouse images are located.
+  # [<ru>] Адрес Docker registry с образами Deckhouse.
+  imagesRepo: <IMAGES_REPO_URI>
+  # [<en>] A special string with your token to access the Docker registry.
+  # [<ru>] Строка с ключом для доступа к Docker registry.
+  registryDockerCfg: <YOUR_PRIVATE_ACCESS_STRING_IS_HERE>
+  # [<en>] Registry access scheme (HTTP or HTTPS).
+  # [<ru>] Протокол доступа к registry (HTTP или HTTPS).
+  registryScheme: HTTPS
+  # [<en>] Root CA certificate to validate the registry’s HTTPS certificate (if self-signed certificates are used).
+  # [<ru>] Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
+  registryCA: <REGISTRY_CA>
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -25,19 +51,7 @@ spec:
   enabled: true
   settings:
     bundle: Default
-    # [<ru>] Канал обновлений Deckhouse. По умолчанию установлен канал EarlyAccess — рекомендуемый канал обновлений,
-    # [<ru>] если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются,
-    # [<ru>] дорабатываются новые приложения и т. п.). Он достаточно стабилен для продакшена, но если планируется
-    # [<ru>] использовать несколько кластеров, то рекомендуется установить на них последовательные каналы обновлений,
-    # [<ru>] чтобы обновления происходили по очереди. Это позволит минимизировать риски в будущем.
-    # [<ru>] Подробнее о каналах обновлений: https://deckhouse.ru/documentation/v1/deckhouse-release-channels.html
-    # [<en>] Канал обновлений Deckhouse. По умолчанию установлен канал EarlyAccess — рекомендуемый канал обновлений,
-    # [<en>] если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются,
-    # [<en>] дорабатываются новые приложения и т. п.). Он достаточно стабилен для продакшена, но если планируется
-    # [<en>] использовать несколько кластеров, то рекомендуется установить на них последовательные каналы обновлений,
-    # [<en>] чтобы обновления происходили по очереди. Это позволит минимизировать риски в будущем.
-    # [<en>] Подробнее о каналах обновлений: https://deckhouse.io/documentation/v1/deckhouse-release-channels.html
-    releaseChannel: EarlyAccess
+    releaseChannel: Stable
     logLevel: Info
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -55,6 +69,13 @@ spec:
       # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
+      # [<en>] The HTTPS implementation used by the Deckhouse modules.
+      # [<ru>] Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+      https:
+        certManager:
+          # [<en>] Use self-signed certificates for Deckhouse modules.
+          # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
+          clusterIssuerName: selfsigned
     # [<en>] The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
     # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
     storageClass: localpath-deckhouse-system
@@ -68,7 +89,7 @@ spec:
   enabled: true
   settings:
     controlPlaneConfigurator:
-      dexCAMode: DoNotNeed
+      dexCAMode: FromIngressSecret
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
     # [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
@@ -83,18 +104,32 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: cni-cilium
+  name: cert-manager
 spec:
   version: 1
-  # [<en>] Enable cni-cilium module
-  # [<ru>] Включить модуль cni-cilium
   enabled: true
   settings:
-    # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
-    # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
-    tunnelMode: VXLAN
+    disableLetsencrypt: true
+---
+# [<en>] Enable the cni-flannel module.
+# [<ru>] Включить модуль cni-flannel.
+# [<en>] You might consider changing this.
+# [<ru>] Возможно, захотите изменить.
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-flannel
+spec:
+  version: 1
+  enabled: true
+  # [<en>] Cni-flannel module settings.
+  # [<ru>] Настройки модуля cni-flannel.
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+  settings:
+    # [<en>] Flannel backend, available values are VXLAN (if your servers have L3 connectivity) and HostGW (for L2 networks).
+    # [<ru>] Режим работы flannel, допустимые значения VXLAN (если ваши сервера имеют связность L3) или HostGW (для L2-сетей).
+    podNetworkMode: VXLAN
 ---
 # [<en>] Section with the parameters of the static cluster.
 # [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#staticclusterconfiguration

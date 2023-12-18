@@ -1,21 +1,3 @@
-# [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
-# [<ru>] Секция с общими параметрами кластера.
-# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-# [<en>] Address space of the cluster's Pods.
-# [<ru>] Адресное пространство подов кластера.
-podSubnetCIDR: 10.111.0.0/16
-# [<en>] Address space of the cluster's services.
-# [<ru>] Адресное пространство сети сервисов кластера.
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-# [<en>] Cluster domain (used for local routing).
-# [<ru>] Домен кластера.
-clusterDomain: "cluster.local"
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -24,7 +6,7 @@ spec:
   version: 1
   enabled: true
   settings:
-    bundle: Default
+    bundle: Minimal
     # [<ru>] Канал обновлений Deckhouse. По умолчанию установлен канал EarlyAccess — рекомендуемый канал обновлений,
     # [<ru>] если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются,
     # [<ru>] дорабатываются новые приложения и т. п.). Он достаточно стабилен для продакшена, но если планируется
@@ -39,6 +21,12 @@ spec:
     # [<en>] Подробнее о каналах обновлений: https://deckhouse.io/documentation/v1/deckhouse-release-channels.html
     releaseChannel: EarlyAccess
     logLevel: Info
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.ru/deckhouse/ce
+  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -55,60 +43,32 @@ spec:
       # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
-    # [<en>] The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-    # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
-    storageClass: localpath-deckhouse-system
+      # [<ru>] If necessary, specify in the customTolerationKeys array
+      # [<ru>] all the tains to which Deckhouse should have toleration.
+      # [<ru>] The following is an example for the case if you need Deckhouse and its components to be able
+      # [<ru>] to run on nodes that have taint SystemLoad.
+      # [<ru>] При необходимости, укажите в массиве customTolerationKeys все taint'ы
+      # [<ru>] к которым Deckhouse должен иметь toleration.
+      # [<ru>] Далее приведен пример для случая, если нужно чтобы Deckhouse и его компоненты смогли запускаться
+      # [<ru>] на узлах, имеющих taint SystemLoad
+      # [<en>] You might consider changing this.
+      # [<ru>] Возможно, захотите изменить.
+      placement:
+        customTolerationKeys:
+        - SystemLoad
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: user-authn
+  name: cert-manager
 spec:
   version: 1
   enabled: true
-  settings:
-    controlPlaneConfigurator:
-      dexCAMode: DoNotNeed
-    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
-    # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enable: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: cni-cilium
+  name: documentation
 spec:
   version: 1
-  # [<en>] Enable cni-cilium module
-  # [<ru>] Включить модуль cni-cilium
   enabled: true
-  settings:
-    # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
-    # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
-    tunnelMode: VXLAN
----
-# [<en>] Section with the parameters of the static cluster.
-# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#staticclusterconfiguration
-# [<ru>] Секция с параметрами статического кластера.
-# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#staticclusterconfiguration
-apiVersion: deckhouse.io/v1
-kind: StaticClusterConfiguration
-# [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is
-# [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.).
-# [<en>] If every node in cluster has only one network interface
-# [<en>] StaticClusterConfiguration resource can be skipped.
-# [<ru>] Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
-# [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
-# [<ru>] Если каждый узел в кластере имеет только один сетевой интерфейс,
-# [<ru>] ресурс StaticClusterConfiguration можно не создавать.
-internalNetworkCIDRs:
-- *!CHANGE_internalNetworkCIDRs*

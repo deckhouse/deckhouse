@@ -6,22 +6,26 @@ apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
-  provider: AWS
+  provider: Azure
   # [<en>] A prefix of objects that are created in the cloud during the installation.
   # [<en>] You might consider changing this.
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
   # [<ru>] Возможно, захотите изменить.
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
-# [<ru>] Адресное пространство подов кластера.
+# [<ru>] Адресное пространство Pod’ов кластера.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
-# [<ru>] Адресное пространство сети сервисов кластера.
+# [<ru>] Адресное пространство для service’ов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
-# [<en>] Cluster domain (used for local routing).
-# [<ru>] Домен кластера.
-clusterDomain: "cluster.local"
+clusterDomain: cluster.local
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.ru/deckhouse/ce
+  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -84,76 +88,55 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-cilium
-spec:
-  version: 1
-  # [<en>] Enable cni-cilium module
-  # [<ru>] Включить модуль cni-cilium
-  enabled: true
-  settings:
-    # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
-    # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
-    tunnelMode: VXLAN
----
 # [<en>] Section containing the parameters of the cloud provider.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
 # [<ru>] Секция, описывающая параметры облачного провайдера.
 # [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
 apiVersion: deckhouse.io/v1
-kind: AWSClusterConfiguration
-layout: WithoutNAT
-# [<en>] AWS EC2 access parameters.
-# [<ru>] Параметры доступа к AWS EC2.
-provider:
-  providerAccessKeyId: *!CHANGE_MYACCESSKEY*
-  providerSecretAccessKey: *!CHANGE_mYsEcReTkEy*
-  # [<en>] Cluster region.
-  # [<ru>] Регион привязки кластера.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  region: eu-central-1
-masterNodeGroup:
-  replicas: 1
-  instanceClass:
-    # [<en>] Master node VM disk size.
-    # [<ru>] Размер диска для виртуальной машины master-узла.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    diskSizeGb: 30
-    # [<en>] Master node VM disk type to use.
-    # [<ru>] Используемый тип диска для виртуальной машины master-узла.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    diskType: gp3
-    # [<en>] Type of the instance.
-    # [<ru>] Тип используемого инстанса.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    instanceType: c5.xlarge
-    # [<en>] Amazon Machine Image ID.
-    # [<en>] The example uses the Ubuntu Server 22.04 image for the 'eu-central-1' region.
-    # [<en>] Change the AMI ID if you use a different region (the 'provider.region' parameter).
-    # [<en>] AMI Catalog in the AWS console: EC2 -> AMI Catalog.
-    # [<ru>] ID образа виртуальной машины в Amazon.
-    # [<ru>] В примере используется образ Ubuntu Server 22.04 для региона 'eu-central-1'.
-    # [<ru>] Измените AMI ID, если используете другой регион в параметре 'provider.region'.
-    # [<ru>] Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    ami: ami-0caef02b518350c8b
-# [<en>] Address space of the AWS cloud.
-# [<ru>] Адресное пространство облака внутри AWS.
-vpcNetworkCIDR: "10.241.0.0/16"
-# [<en>] Address space of the cluster's nodes.
-# [<ru>] Адресное пространство узлов кластера.
-nodeNetworkCIDR: "10.241.32.0/20"
+kind: AzureClusterConfiguration
+layout: Standard
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
 # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
 sshPublicKey: *!CHANGE_SSH_KEY*
+# [<en>] Address space of the Azure cloud
+# [<ru>] Адресное пространство облака внутри Azure
+vNetCIDR: 10.241.0.0/16
+# [<en>] Address space of the cluster's nodes.
+# [<ru>] Адресное пространство узлов кластера.
+subnetCIDR: 10.241.0.0/24
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    # [<en>] Type of the instance.
+    # [<ru>] Тип используемого инстанса.
+    # [<en>] You might consider changing this.
+    # [<ru>] Возможно, захотите изменить.
+    machineSize: Standard_D4ds_v4
+    # [<en>] Azure image URN.
+    # [<en>] How to find a URN: https://learn.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage
+    # [<ru>] URN образа виртуальной машины в Azure.
+    # [<ru>] Как найти URN: https://learn.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage
+    # [<en>] You might consider changing this.
+    # [<ru>] Возможно, захотите изменить.
+    urn: Canonical:0001-com-ubuntu-server-jammy:22_04-lts:22.04.202212140
+    enableExternalIP: true
+provider:
+  # [<en>] Subscription ID.
+  # [<ru>] Идентификатор подписки.
+  subscriptionId: *!CHANGE_ME*
+  # [<en>] Application (client) ID.
+  # [<ru>] Идентификатор приложения.
+  clientId: *!CHANGE_ME*
+  # [<en>] Application (client) secret.
+  # [<ru>] Секрет приложения.
+  clientSecret: *!CHANGE_ME*
+  # [<en>] Directory (tenant) ID.
+  # [<ru>] Идентификатор каталога (клиента).
+  tenantId: *!CHANGE_ME*
+  # [<en>] Cluster region.
+  # [<ru>] Регион привязки кластера.
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+  location: westeurope
