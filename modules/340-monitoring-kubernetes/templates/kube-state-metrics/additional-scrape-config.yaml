@@ -12,9 +12,9 @@ spec:
   relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
-    - target_label: scrape_endpoint
+    - targetLabel: scrape_endpoint
       replacement: main
-    - target_label: job
+    - targetLabel: job
       replacement: kube-state-metrics
   metricsPath: '/main/metrics'
 ---
@@ -31,8 +31,8 @@ spec:
   relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
-    - target_label: scrape_endpoint
+    - targetLabel: scrape_endpoint
       replacement: main
-    - target_label: job
+    - targetLabel: job
       replacement: kube-state-metrics
   metricsPath: '/self/metrics'
