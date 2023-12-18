@@ -33,3 +33,28 @@ func TestAssembleErrorWithColorRegexp(t *testing.T) {
 		t.Fatalf("unedxpcted path %q", path)
 	}
 }
+
+func TestGetModulePath(t *testing.T) {
+	var tests = []struct {
+		filePath string
+		expected string
+	}{
+		{
+			filePath: "/app/hugo/content/modules/moduleName/BROKEN.md",
+			expected: "/app/hugo/content/modules/moduleName",
+		},
+		{
+			filePath: "/app/hugo/content/modules/moduleName/alpha/BROKEN.md",
+			expected: "/app/hugo/content/modules/moduleName/alpha",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.filePath, func(t *testing.T) {
+			got := getModulePath(test.filePath)
+			if got != test.expected {
+				t.Error("unexpected result", got)
+			}
+		})
+	}
+}
