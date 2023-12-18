@@ -130,8 +130,6 @@ spec:
                                 requireTLS:
                                   description: |
                                     Использовать SMTP TLS.
-
-                                    Обратите внимание, что Go не поддерживает незашифрованные SMTP-подключения.
                                 sendResolved:
                                   description: Уведомлять или нет о том, что алерт более не активен.
                                 smarthost:
