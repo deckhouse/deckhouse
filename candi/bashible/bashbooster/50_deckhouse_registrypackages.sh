@@ -20,7 +20,7 @@ bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 # Use d8-curl if installed, fallback to system package if not
 bb-rp-curl() {
   if command -v d8-curl > /dev/null ; then
-    d8-curl --remove-on-error --parallel "$@"
+    d8-curl -4 --remove-on-error --parallel "$@"
   else
     curl "$@"
   fi
