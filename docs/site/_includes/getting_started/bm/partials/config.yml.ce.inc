@@ -25,18 +25,12 @@ spec:
   enabled: true
   settings:
     bundle: Default
-    # [<ru>] Канал обновлений Deckhouse. По умолчанию установлен канал EarlyAccess — рекомендуемый канал обновлений,
-    # [<ru>] если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются,
-    # [<ru>] дорабатываются новые приложения и т. п.). Он достаточно стабилен для продакшена, но если планируется
-    # [<ru>] использовать несколько кластеров, то рекомендуется установить на них последовательные каналы обновлений,
-    # [<ru>] чтобы обновления происходили по очереди. Это позволит минимизировать риски в будущем.
-    # [<ru>] Подробнее о каналах обновлений: https://deckhouse.ru/documentation/v1/deckhouse-release-channels.html
-    # [<en>] Канал обновлений Deckhouse. По умолчанию установлен канал EarlyAccess — рекомендуемый канал обновлений,
-    # [<en>] если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются,
-    # [<en>] дорабатываются новые приложения и т. п.). Он достаточно стабилен для продакшена, но если планируется
-    # [<en>] использовать несколько кластеров, то рекомендуется установить на них последовательные каналы обновлений,
-    # [<en>] чтобы обновления происходили по очереди. Это позволит минимизировать риски в будущем.
-    # [<en>] Подробнее о каналах обновлений: https://deckhouse.io/documentation/v1/deckhouse-release-channels.html
+    # [<ru>] Канал обновлений Deckhouse. Канал Early Access достаточно стабилен, его можно использовать в продуктивных окружениях.
+    # [<ru>] Если планируется использовать несколько кластеров, то рекомендуется установить на них разные каналы обновлений.
+    # [<ru>] Подробнее: https://deckhouse.ru/documentation/v1/deckhouse-release-channels.html
+    # [<en>] Deckhouse release channel. The Early Access channel is stable enough to be used in productive environments.
+    # [<en>] If you plan to use several clusters, it is recommended to use different release channels on them.
+    # [<en>] More info: https://deckhouse.io/documentation/v1/deckhouse-release-channels.html
     releaseChannel: EarlyAccess
     logLevel: Info
 ---
