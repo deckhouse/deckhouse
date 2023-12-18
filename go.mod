@@ -62,6 +62,7 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-openapi/validate v0.19.12
+	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/slok/kubewebhook/v2 v2.5.0
 	golang.org/x/mod v0.12.0
 	golang.org/x/time v0.5.0

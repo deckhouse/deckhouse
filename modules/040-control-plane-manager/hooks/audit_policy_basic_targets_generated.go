@@ -90,6 +90,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"linstor-scheduler-admission",
 	"local-path-provisioner",
 	"log-shipper",
+	"loki",
 	"machine-controller-manager",
 	"monitoring-ping",
 	"multicluster-api-proxy",

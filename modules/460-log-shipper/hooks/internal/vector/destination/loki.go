@@ -39,7 +39,7 @@ type Loki struct {
 
 	Auth LokiAuth `json:"auth,omitempty"`
 
-	TLS CommonTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls"`
 
 	Labels map[string]string `json:"labels,omitempty"`
 
