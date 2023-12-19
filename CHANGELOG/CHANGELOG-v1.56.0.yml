@@ -105,6 +105,10 @@ flant-integration:
       pull_request: https://github.com/deckhouse/deckhouse/pull/6750
 go_lib:
   fixes:
+    - summary: Fix modules order on startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6952
+    - summary: Restore `.global.enabledModules` values field for source modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6935
     - summary: Limit registry client operations with 30 seconds timeout.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6701
 istio:
@@ -114,6 +118,11 @@ istio:
       impact: >-
         In environments where legacy versions of istio are used, the D8 update will be blocked, and
         the `D8IstioDeprecatedIstioVersionInstalled` alert will be fired.
+  fixes:
+    - summary: Adding alert about istio and K8s versions incompatibility.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6919
+    - summary: Remove istio/k8s compatibility check.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6914
 linstor:
   fixes:
     - summary: Fix the `D8DrbdPeerDeviceIsOutOfSync` alert.
