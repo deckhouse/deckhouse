@@ -370,7 +370,7 @@ module Jekyll
                 lengthValue = "#{attributes['maxLength'].to_json}"
             end
             unless attributes['type'] == 'string' && caption == 'min_length'
-                description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term(caption).capitalize}</span>: <span class="resources__attrs_content"><code>#{lengthValue}</code></span></p>)
+                description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term(caption).capitalize}:</span> <span class="resources__attrs_content"><code>#{lengthValue}</code></span></p>)
                 result.push(CONVERTER.convert(description.to_s))
             end
         end
