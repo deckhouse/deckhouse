@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"golang.org/x/sys/unix"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -40,25 +39,28 @@ type iptablesRule struct {
 }
 
 func main() {
-	network := "10.55.55.0/24"
-	protocol := "tcp"
-	mgmtport := "8989"
-	routeTable := 10
-	rulePriority := 1
-
-	if len(os.Args) == 1 {
-		log.Fatalln("Arg must be tcp or udp")
+	network, ok := os.LookupEnv("TUNNEL_NETWORK")
+	if !ok {
+		log.Fatal("The TUNNEL_NETWORK environment variable does not exist.")
 	}
 
-	if os.Args[1] == "tcp" || os.Args[1] == "udp" {
-		protocol = os.Args[1]
-	} else {
-		log.Fatalln("Arg must be tcp or udp: ", os.Args[1])
+	protocol, ok := os.LookupEnv("OPENVPN_PROTO")
+	if !ok {
+		log.Fatal("The TUNNEL_NETWORK environment variable does not exist.")
 	}
 
-	if protocol == "udp" {
+	var mgmtport string
+	var routeTable int
+
+	switch protocol {
+	case "tcp":
+		mgmtport = "8989"
+		routeTable = 10
+	case "udp":
 		mgmtport = "9090"
 		routeTable = 11
+	default:
+		log.Fatalf("OPENVPN_PROTO env value must be tcp or udp: %s", protocol)
 	}
 
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
@@ -115,7 +117,7 @@ func main() {
 
 	rule := netlink.NewRule()
 	rule.Table = routeTable
-	rule.Priority = rulePriority
+	rule.Priority = 1
 	rule.Mark = routeTable
 	err = netlink.RuleAdd(rule)
 
@@ -244,31 +246,6 @@ func netLinkCreateTuntap(name string, mtu int) error {
 		return err
 	}
 	return nil
-}
-
-func routeAdd(dst string, gw string, table int) {
-	dstIPNet, err := parseIPNet(dst)
-	if err != nil {
-		fmt.Println("error parse IPNet: ", err)
-	}
-
-	route := netlink.Route{Gw: net.ParseIP(gw), Dst: dstIPNet, Table: table}
-	err = netlink.RouteAdd(&route)
-	if err != nil {
-		fmt.Printf("add route: %s error: %s\n", route.String(), err.Error())
-	}
-}
-
-func parseIPNet(address string) (*net.IPNet, error) {
-	ip := net.ParseIP(address)
-	if ip != nil {
-		return &net.IPNet{IP: ip, Mask: net.CIDRMask(32, 8*net.IPv4len)}, nil
-	}
-	_, IPNet, err := net.ParseCIDR(address)
-	if err != nil {
-		return nil, err
-	}
-	return IPNet, nil
 }
 
 func waitingForFile(path string) {

@@ -137,7 +137,7 @@ spec:
       - name: openvpn-tcp
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "openvpn") }}
-        command: [ '/entrypoint', 'tcp' ]
+        command: [ '/entrypoint' ]
         ports:
         - name: ovpn-tcp
           containerPort: 1194
@@ -147,6 +147,11 @@ spec:
           hostPort: {{ .Values.openvpn.hostPort | default 5416 }}
             {{- end }}
           {{- end }}
+        env:
+        - name: TUNNEL_NETWORK
+          value: {{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}
+        - name: OPENVPN_PROTO
+          value: tcp
         volumeMounts:
           - name: certs
             mountPath: /etc/openvpn/certs
@@ -155,10 +160,6 @@ spec:
           - name: config
             mountPath: /etc/openvpn/openvpn.conf
             subPath: openvpn.conf
-            readOnly: true
-          - name: scripts
-            mountPath: /entrypoint.sh
-            subPath: entrypoint.sh
             readOnly: true
         resources:
           requests:
@@ -172,7 +173,7 @@ spec:
       - name: openvpn-udp
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "openvpn") }}
-        command: [ '/entrypoint', 'udp' ]
+        command: [ '/entrypoint' ]
         ports:
         - name: ovpn-udp
           containerPort: 1194
@@ -182,6 +183,11 @@ spec:
           hostPort: {{ .Values.openvpn.hostPort | default 5416 }}
             {{- end }}
           {{- end }}
+        env:
+        - name: TUNNEL_NETWORK
+          value: {{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}
+        - name: OPENVPN_PROTO
+          value: udp
         volumeMounts:
           - name: certs
             mountPath: /etc/openvpn/certs
@@ -190,10 +196,6 @@ spec:
           - name: config
             mountPath: /etc/openvpn/openvpn.conf
             subPath: openvpn.conf
-            readOnly: true
-          - name: scripts
-            mountPath: /entrypoint.sh
-            subPath: entrypoint.sh
             readOnly: true
         resources:
           requests:
@@ -369,10 +371,6 @@ spec:
         configMap:
           name: openvpn
           defaultMode: 0644
-      - name: scripts
-        configMap:
-          name: openvpn
-          defaultMode: 0755
       - name: tmp
         emptyDir:
           medium: Memory
