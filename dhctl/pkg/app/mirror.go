@@ -59,10 +59,9 @@ var (
 	MirrorDeckhouseRegistryRepo = enterpriseEditionRepo
 
 	MirrorValidationMode = ""
-	
-	MirrorDoGOSTDigest = false
+
+	MirrorDoGOSTDigest            = false
 	MirrorDontContinuePartialPull = false
-	
 )
 
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
