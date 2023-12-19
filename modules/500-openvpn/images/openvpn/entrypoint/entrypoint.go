@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"golang.org/x/sys/unix"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -137,6 +138,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	routeAdd(network, fmt.Sprintf("tun-%s", protocol), routeTable)
+
 	requiredFiles := []string{
 		"/etc/openvpn/certs/pki/ca.crt",
 		"/etc/openvpn/certs/pki/private/server.key",
@@ -246,6 +249,35 @@ func netLinkCreateTuntap(name string, mtu int) error {
 		return err
 	}
 	return nil
+}
+
+func routeAdd(dstNet string, linkName string, table int) {
+	dstIPNet, err := parseIPNet(dstNet)
+	if err != nil {
+		log.Fatal("error parse IPNet: ", err)
+	}
+
+	link, _ := netlink.LinkByName(linkName)
+	if err != nil {
+		log.Fatal("error parse IPNet: ", err)
+	}
+	route := netlink.Route{Dst: dstIPNet, Table: table, LinkIndex: link.Attrs().Index}
+	err = netlink.RouteAdd(&route)
+	if err != nil {
+		log.Fatalf("add route: %s error: %s\n", route.String(), err.Error())
+	}
+}
+
+func parseIPNet(address string) (*net.IPNet, error) {
+	ip := net.ParseIP(address)
+	if ip != nil {
+		return &net.IPNet{IP: ip, Mask: net.CIDRMask(32, 8*net.IPv4len)}, nil
+	}
+	_, IPNet, err := net.ParseCIDR(address)
+	if err != nil {
+		return nil, err
+	}
+	return IPNet, nil
 }
 
 func waitingForFile(path string) {
