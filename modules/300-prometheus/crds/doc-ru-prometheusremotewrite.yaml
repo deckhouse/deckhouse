@@ -63,6 +63,8 @@ spec:
                   properties:
                     insecureSkipVerify:
                       description: Отключить проверку сертификата.
+                    ca:
+                      description: СA cертификат для проверки сертификата API сервера.
       additionalPrinterColumns: &additionalPrinterColumns
         - name: URL
           type: string
