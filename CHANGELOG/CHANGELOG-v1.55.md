@@ -39,6 +39,7 @@
 
 
  - **[admission-policy-engine]** Fixed labels in anti-affinity for `gatekeeper-controller`. [#6555](https://github.com/deckhouse/deckhouse/pull/6555)
+ - **[candi]** Resolve names to IPv4 addresses with d8-curl. [#6944](https://github.com/deckhouse/deckhouse/pull/6944)
  - **[candi]** Run chmod on file only if it exists. [#6880](https://github.com/deckhouse/deckhouse/pull/6880)
  - **[candi]** Handle registry packages fetch errors. [#6860](https://github.com/deckhouse/deckhouse/pull/6860)
  - **[candi]** Disable managing "foreign" ip rules by systemd-networkd. [#6561](https://github.com/deckhouse/deckhouse/pull/6561)
@@ -60,6 +61,7 @@
  - **[loki]** Fix CVE issue in Loki image. [#6494](https://github.com/deckhouse/deckhouse/pull/6494)
  - **[monitoring-kubernetes]** Fix CVE issues in `node-exporter`, `kubelet-eviction-tresholds-exporter` image. [#6523](https://github.com/deckhouse/deckhouse/pull/6523)
  - **[monitoring-kubernetes]** Capacity Planning dashboard shows correct number of Pods usage [#5934](https://github.com/deckhouse/deckhouse/pull/5934)
+ - **[node-manager]** Remove the validating webhook for the Node deletion operation. [#6938](https://github.com/deckhouse/deckhouse/pull/6938)
  - **[node-manager]** add NodeGroup name validation only for 'CREATE' operation. [#6879](https://github.com/deckhouse/deckhouse/pull/6879)
  - **[node-manager]** Add MachineHealthCheck for CAPS. [#6609](https://github.com/deckhouse/deckhouse/pull/6609)
  - **[node-manager]** Fix node-manager does not remove `node.deckhouse.io/unitialized` taint when using one taint with different effects. [#6671](https://github.com/deckhouse/deckhouse/pull/6671)

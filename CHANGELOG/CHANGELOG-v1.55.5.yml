@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - summary: Resolve names to IPv4 addresses with d8-curl.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6944
+node-manager:
+  fixes:
+    - summary: Remove the validating webhook for the Node deletion operation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6938
+
