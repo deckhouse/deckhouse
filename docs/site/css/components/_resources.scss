@@ -25,8 +25,10 @@
       padding: 0;
     }
 
-    &_name > .ancestors, &_title > .ancestors {
+    &_name > .ancestors,
+    &_title > .ancestors {
       opacity: 55%;
+      word-break: break-all;
     }
 
     &_type {
@@ -59,6 +61,9 @@
   &__attrs {
     margin-top: rem(7px);
     margin-bottom: 0;
+    display: flex;
+    gap: 7px;
+    overflow-x: hidden;
 
     &_name {
       font-weight: $font-weight-regular;
@@ -73,6 +78,7 @@
     &_content {
       line-height: 1.2rem;
       font-size: 0.9rem;
+      overflow: auto;
     }
   }
 }
