@@ -5,11 +5,13 @@
 {{ $currentModuleChannel := index $_pathElements 2 }}
 
 {{ $d8Edition := "" }}
+{{ $moduleStatus := "" }}
 
 {{ range sort $channelsInfo "stability" "desc" }}
   {{ if eq .code "rock-solid" }}{{ continue }}{{ end }}
   {{ with $.GetPage ( printf "modules/%s/%s/README.md" $currentModuleName .code  ) }}
-    {{ if .Params.d8Edition }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
+    {{ if and .Params.d8Edition ( not $d8Edition ) }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
+    {{ if and .Params.moduleStatus ( not $moduleStatus ) }}{{ $moduleStatus = .Params.moduleStatus }}{{ end }}
   {{ end}}
 {{ end}}
 
@@ -21,7 +23,10 @@
     <div class="post-content">
 
         {{ if eq $d8Edition "ee" }}
-          {{ partial "alert" ( dict "level" "info" "content" (T "module_is_available_in_ee_only") ) }}
+          {{ partial "alert" ( dict "level" "warn" "content" (T "module_is_available_in_ee_only") ) }}
+        {{ end }}
+        {{ if eq $moduleStatus "experimental" }}
+          {{ partial "alert" ( dict "level" "warn" "content" (T "module_alert_experimental") ) }}
         {{ end }}
 
         {{.Content}}

@@ -22,6 +22,7 @@ moduleLinkTitleFAQ: FAQ
 moduleLinkTitleCRD: Custom Resources
 moduleLinkTitleCR: Custom Resources
 module_is_available_in_ee_only: Модуль доступен только в Deckhouse Enterprise Edition.
+module_alert_experimental: Модуль находится в процессе активного развития. Функциональность может существенно измениться.
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
 element_of_array: элемент массива
