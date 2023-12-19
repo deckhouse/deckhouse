@@ -85,6 +85,8 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			return fmt.Errorf("path traversal detected in the module archive: malicious path %v", header.Name)
 		}
 
+		klog.Infof("process %q", header.Name)
+
 		switch header.Typeflag {
 		case tar.TypeDir:
 			for _, channel := range channels {
