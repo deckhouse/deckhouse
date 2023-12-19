@@ -48,7 +48,7 @@
       {{ if $langVersionData.schema.openAPIV3Schema.description }}{{ $description = $langVersionData.schema.openAPIV3Schema.description }}{{ end }}
     {{- end }}
 
-    <div class="resources__prop_description">{{ $description }}</div>
+    <div class="resources__prop_description">{{ $description | markdownify }}</div>
     <ul class="resources">
       {{ range $property, $propertyData := $versionSchema.properties }}
         {{ if eq $property "status" }}{{ continue }}{{ end }} {{/* skip .status for now*/}}

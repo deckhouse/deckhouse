@@ -8,12 +8,12 @@
 
 {{ $description :=  "" }}
 {{ if $langData.description }}
-  {{ $description = $langData.description | markdownify }}
+  {{ $description = $langData.description }}
 {{ else }}
-  {{ $description =  $attributes.description | markdownify }}
+  {{ $description =  $attributes.description }}
 {{ end }}
 
-<div class="resources__prop_description">{{ $description }}</div>
+<div class="resources__prop_description">{{ $description | markdownify }}</div>
 
 {{ if isset $attributes "x-doc-default" }}
   {{ template "format-default" (index $attributes "x-doc-default") }}
