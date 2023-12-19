@@ -29,7 +29,7 @@ var (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        lib.Queue(versionsMonitoringMetricsGroup),
+	Queue:        lib.Queue("monitoring"),
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, versionMonitoringHook)
 
