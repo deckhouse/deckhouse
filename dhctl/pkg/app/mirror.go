@@ -58,8 +58,8 @@ var (
 	MirrorSourceRegistryPassword = ""
 
 	MirrorValidationMode = ""
-	
-	MirrorDoGOSTDigest = false
+
+	MirrorDoGOSTDigest            = false
 	MirrorDontContinuePartialPull = false
 )
 
