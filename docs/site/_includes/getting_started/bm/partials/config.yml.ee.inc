@@ -1,6 +1,6 @@
 # [<en>] General cluster parameters.
 # [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
-# [<ru>] Секция с общими параметрами кластера.
+# [<ru>] Общие параметры кластера.
 # [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
@@ -16,9 +16,9 @@ kubernetesVersion: "Automatic"
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
 ---
-# [<en>] Section for bootstrapping the Deckhouse cluster.
+# [<en>] Settings for the bootstrapping the Deckhouse cluster
 # [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#initconfiguration
-# [<ru>] Секция первичной инициализации кластера Deckhouse.
+# [<ru>] Настройки первичной инициализации кластера Deckhouse.
 # [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
@@ -30,6 +30,10 @@ deckhouse:
   # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа)
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
 ---
+# [<en>] Deckhouse module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/002-deckhouse/configuration.html
+# [<ru>] Настройки модуля deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/002-deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -42,13 +46,17 @@ spec:
     releaseChannel: Stable
     logLevel: Info
 ---
+# [<en>] Global Deckhouse settings.
+# [<en>] https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters
+# [<ru>] Глобальные настройки Deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
 spec:
   version: 1
-  settings: # <-- Параметры модуля из раздела "Параметры" ниже.
+  settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
       # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
@@ -61,6 +69,10 @@ spec:
     # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
     storageClass: localpath-deckhouse-system
 ---
+# [<en>] user-authn module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html
+# [<ru>] Настройки модуля user-authn.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -82,6 +94,10 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
+# [<en>] cni-cilium module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
+# [<ru>] Настройки модуля cni-cilium.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -98,9 +114,9 @@ spec:
     # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
     tunnelMode: VXLAN
 ---
-# [<en>] Section with the parameters of the static cluster.
+# [<en>] Static cluster settings.
 # [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#staticclusterconfiguration
-# [<ru>] Секция с параметрами статического кластера.
+# [<ru>] Параметры статического кластера.
 # [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#staticclusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration

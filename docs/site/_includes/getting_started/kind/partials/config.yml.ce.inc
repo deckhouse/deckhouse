@@ -30,7 +30,7 @@ metadata:
   name: global
 spec:
   version: 1
-  settings: # <-- Параметры модуля из раздела "Параметры" ниже.
+  settings:
     modules:
       # [<en>] Template for Ingress resources of Deckhouse modules.
       # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
