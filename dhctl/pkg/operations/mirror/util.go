@@ -17,6 +17,7 @@ package mirror
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io/fs"
 
@@ -30,9 +31,16 @@ func readFileFromImage(img v1.Image, fileName string) (*bytes.Buffer, error) {
 	}
 
 	for _, layer := range layers {
-		decompressedLayer, err := layer.Uncompressed()
+		// Do not use layer.Uncompressed() here.
+		// We decompress layers ourselves because decompressor that is built into go-containerregistry is bugged and sometimes returns closed streams.
+		gzipLayer, err := layer.Compressed()
 		if err != nil {
-			return nil, fmt.Errorf("decompress layer: %w", err)
+			return nil, fmt.Errorf("read layer: %w", err)
+		}
+
+		decompressedLayer, err := gzip.NewReader(gzipLayer)
+		if err != nil {
+			return nil, fmt.Errorf("unzip layer: %w", err)
 		}
 
 		tr := tar.NewReader(decompressedLayer)
