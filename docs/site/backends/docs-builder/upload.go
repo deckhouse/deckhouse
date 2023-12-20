@@ -161,19 +161,8 @@ func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string
 		fileName = strings.Replace(fileName, "_RU.md", ".ru.md", 1)
 	}
 
-	if strings.HasSuffix(fileName, "_RU.md") {
-		fileName = strings.Replace(fileName, "_RU.md", ".ru.md", 1)
-	}
-
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
 		return filepath.Join(u.baseDir, "content/modules", moduleName, channel, fileName), true
-	}
-
-	if strings.HasPrefix(fileName, "crds") ||
-		fileName == "openapi" ||
-		fileName == "openapi/config-values.yaml" ||
-		docConfValuesRegexp.MatchString(fileName) {
-		return filepath.Join(u.baseDir, "data/modules", moduleName, channel, fileName), true
 	}
 
 	if strings.HasPrefix(fileName, "crds") ||
