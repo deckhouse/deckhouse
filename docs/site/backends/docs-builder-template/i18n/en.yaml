@@ -4,6 +4,7 @@ modules: modules
 module: module
 deckhouse: deckhouse
 documentation: documentation
+modules_documentation: Modules documentation
 core: core
 default_value: default
 platform: platform

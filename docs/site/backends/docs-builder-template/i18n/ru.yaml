@@ -4,6 +4,7 @@ modules: модули
 module: модуль
 deckhouse: deckhouse
 documentation: документация
+modules_documentation: Документация модулей
 core: ядро
 default_value: по умолчанию
 platform: платформа
