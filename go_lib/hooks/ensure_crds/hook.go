@@ -229,6 +229,8 @@ func (cp *CRDsInstaller) getCRDFromCluster(ctx context.Context, crdName string) 
 	return crd, nil
 }
 
+// NewCRDsInstaller creates new installer for CRDs
+// crdsGlob example: "/deckhouse/modules/002-deckhouse/crds/*.yaml"
 func NewCRDsInstaller(client k8s.Client, crdsGlob string) (*CRDsInstaller, error) {
 	crds, err := filepath.Glob(crdsGlob)
 	if err != nil {
