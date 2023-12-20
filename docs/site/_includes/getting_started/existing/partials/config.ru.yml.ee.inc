@@ -1,6 +1,6 @@
-# [<en>] Section for bootstrapping the Deckhouse cluster.
+# [<en>] Settings for the bootstrapping the Deckhouse cluster
 # [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#initconfiguration
-# [<ru>] Секция первичной инициализации кластера Deckhouse.
+# [<ru>] Настройки первичной инициализации кластера Deckhouse.
 # [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
@@ -12,6 +12,10 @@ deckhouse:
   # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
 ---
+# [<en>] Deckhouse module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/002-deckhouse/configuration.html
+# [<ru>] Настройки модуля deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/002-deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -24,6 +28,10 @@ spec:
     releaseChannel: Stable
     logLevel: Info
 ---
+# [<en>] Global Deckhouse settings.
+# [<en>] https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters
+# [<ru>] Глобальные настройки Deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -53,6 +61,10 @@ spec:
         customTolerationKeys:
         - SystemLoad
 ---
+# [<en>] cert-manager module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/101-cert-manager/configuration.html
+# [<ru>] Настройки модуля user-authn.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/101-cert-manager/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -61,6 +73,10 @@ spec:
   version: 1
   enabled: true
 ---
+# [<en>] documentation module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/810-documentation/configuration.html
+# [<ru>] Настройки модуля documentation.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/810-documentation/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
