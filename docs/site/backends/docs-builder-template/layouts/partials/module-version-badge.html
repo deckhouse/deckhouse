@@ -1,20 +1,20 @@
-{{ $module := .module }}
-{{ $moduleChannel := .channel }}
-{{ $versionPrev := "" }}
-{{ $moduleChannelsData := (index .ctx.Site.Data.modules.channels $module).channels }}
-{{ $channelsInfo := .ctx.Site.Data.channels.info }}
-{{ $urlFileName := replaceRE `^.*/` "" .ctx.Page.RelPermalink 1 }}
+{{- $module := .module }}
+{{- $moduleChannel := .channel }}
+{{- $versionPrev := "" }}
+{{- $moduleChannelsData := (index .ctx.Site.Data.modules.channels $module).channels }}
+{{- $channelsInfo := .ctx.Site.Data.channels.info }}
+{{- $urlFileName := replaceRE `^.*/` "" .ctx.Page.RelPermalink 1 }}
 
-{{ if $moduleChannelsData }}
+{{- if $moduleChannelsData }}
 <a data-proofer-ignore="" href="#" class="highlight">{{ (index ( where $channelsInfo "code" $moduleChannel ) 0 ).title }}</a>
 <div class="submenu-container">
     <ul class="submenu">
 
-{{ range sort $channelsInfo "stability" "desc" }}
-  {{ if and (index $moduleChannelsData .code) ( ( index $moduleChannelsData .code ).version ) }}
-    {{ $version := ( index $moduleChannelsData .code ).version  }}
-    {{ $channelName := .title }}
-    {{ $channel := .code }}
+{{- range sort $channelsInfo "stability" "desc" }}
+  {{- if and (index $moduleChannelsData .code) ( ( index $moduleChannelsData .code ).version ) }}
+    {{- $version := ( index $moduleChannelsData .code ).version  }}
+    {{- $channelName := .title }}
+    {{- $channel := .code }}
     <li class="submenu-item">
         <a data-proofer-ignore='' class='submenu-item-link' href='../{{ $channel }}/{{ replaceRE "^readme.html$" "" $urlFileName }}'>
             <span class="submenu-item-channel">{{ $channelName }}</span>
@@ -22,9 +22,9 @@
             <span class="submenu-item-release">{{ $version }}</span>
         </a>
     </li>
-    {{ $versionPrev = $version }}
-  {{ end }}
-{{ end }}
+    {{- $versionPrev = $version }}
+  {{- end }}
+{{- end }}
     </ul>
 </div>
-{{ end }}
+{{- end }}
