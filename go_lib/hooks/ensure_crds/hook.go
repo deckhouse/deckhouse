@@ -75,18 +75,17 @@ func EnsureCRDs(crdsGlob string, dc dependency.Container) *multierror.Error {
 		return result
 	}
 
-	crds, err := filepath.Glob(crdsGlob)
+	cp, err := NewCRDsInstaller(client, crdsGlob)
 	if err != nil {
 		result = multierror.Append(result, err)
 		return result
 	}
 
-	cp := newCRDsProcessor(client, crds)
-
-	return cp.Run()
+	return cp.Run(context.TODO())
 }
 
-type crdsProcessor struct {
+// CRDsInstaller simultaneously installs CRDs from specified directory
+type CRDsInstaller struct {
 	k8sClient    k8s.Client
 	crdFilesPath []string
 	buffer       []byte
@@ -95,7 +94,7 @@ type crdsProcessor struct {
 	k8sTasks *multierror.Group
 }
 
-func (cp *crdsProcessor) Run() *multierror.Error {
+func (cp *CRDsInstaller) Run(ctx context.Context) *multierror.Error {
 	result := new(multierror.Error)
 
 	for _, crdFilePath := range cp.crdFilesPath {
@@ -103,7 +102,7 @@ func (cp *crdsProcessor) Run() *multierror.Error {
 			continue
 		}
 
-		err := cp.processCRD(crdFilePath)
+		err := cp.processCRD(ctx, crdFilePath)
 		if err != nil {
 			err = fmt.Errorf("error occurred during processing %q file: %w", crdFilePath, err)
 			result = multierror.Append(result, err)
@@ -119,7 +118,7 @@ func (cp *crdsProcessor) Run() *multierror.Error {
 	return result
 }
 
-func (cp *crdsProcessor) processCRD(crdFilePath string) error {
+func (cp *CRDsInstaller) processCRD(ctx context.Context, crdFilePath string) error {
 	crdFileReader, err := os.Open(crdFilePath)
 	if err != nil {
 		return err
@@ -144,7 +143,7 @@ func (cp *crdsProcessor) processCRD(crdFilePath string) error {
 			continue
 		}
 		rd := bytes.NewReader(data)
-		err = cp.putCRDToCluster(rd, n)
+		err = cp.putCRDToCluster(ctx, rd, n)
 		if err != nil {
 			return err
 		}
@@ -153,7 +152,7 @@ func (cp *crdsProcessor) processCRD(crdFilePath string) error {
 	return nil
 }
 
-func (cp *crdsProcessor) putCRDToCluster(crdReader io.Reader, bufferSize int) error {
+func (cp *CRDsInstaller) putCRDToCluster(ctx context.Context, crdReader io.Reader, bufferSize int) error {
 	var crd *v1.CustomResourceDefinition
 
 	err := apimachineryYaml.NewYAMLOrJSONDecoder(crdReader, bufferSize).Decode(&crd)
@@ -171,15 +170,15 @@ func (cp *crdsProcessor) putCRDToCluster(crdReader io.Reader, bufferSize int) er
 	}
 
 	cp.k8sTasks.Go(func() error {
-		return cp.updateOrInsertCRD(crd)
+		return cp.updateOrInsertCRD(ctx, crd)
 	})
 
 	return nil
 }
 
-func (cp *crdsProcessor) updateOrInsertCRD(crd *v1.CustomResourceDefinition) error {
+func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomResourceDefinition) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		existCRD, err := cp.getCRDFromCluster(crd.GetName())
+		existCRD, err := cp.getCRDFromCluster(ctx, crd.GetName())
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				ucrd, err := sdk.ToUnstructured(crd)
@@ -187,7 +186,7 @@ func (cp *crdsProcessor) updateOrInsertCRD(crd *v1.CustomResourceDefinition) err
 					return err
 				}
 
-				_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Create(context.TODO(), ucrd, apimachineryv1.CreateOptions{})
+				_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Create(ctx, ucrd, apimachineryv1.CreateOptions{})
 				return err
 			}
 
@@ -209,15 +208,15 @@ func (cp *crdsProcessor) updateOrInsertCRD(crd *v1.CustomResourceDefinition) err
 			return err
 		}
 
-		_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Update(context.TODO(), ucrd, apimachineryv1.UpdateOptions{})
+		_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Update(ctx, ucrd, apimachineryv1.UpdateOptions{})
 		return err
 	})
 }
 
-func (cp *crdsProcessor) getCRDFromCluster(crdName string) (*v1.CustomResourceDefinition, error) {
+func (cp *CRDsInstaller) getCRDFromCluster(ctx context.Context, crdName string) (*v1.CustomResourceDefinition, error) {
 	crd := &v1.CustomResourceDefinition{}
 
-	o, err := cp.k8sClient.Dynamic().Resource(crdGVR).Get(context.TODO(), crdName, apimachineryv1.GetOptions{})
+	o, err := cp.k8sClient.Dynamic().Resource(crdGVR).Get(ctx, crdName, apimachineryv1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -230,14 +229,21 @@ func (cp *crdsProcessor) getCRDFromCluster(crdName string) (*v1.CustomResourceDe
 	return crd, nil
 }
 
-func newCRDsProcessor(client k8s.Client, paths []string) *crdsProcessor {
-	return &crdsProcessor{
+// NewCRDsInstaller creates new installer for CRDs
+// crdsGlob example: "/deckhouse/modules/002-deckhouse/crds/*.yaml"
+func NewCRDsInstaller(client k8s.Client, crdsGlob string) (*CRDsInstaller, error) {
+	crds, err := filepath.Glob(crdsGlob)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CRDsInstaller{
 		k8sClient:    client,
-		crdFilesPath: paths,
+		crdFilesPath: crds,
 		// 1Mb - maximum size of kubernetes object
 		// if we take less, we have to handle io.ErrShortBuffer error and increase the buffer
 		// take more does not make any sense due to kubernetes limitations
 		buffer:   make([]byte, 1*1024*1024),
 		k8sTasks: &multierror.Group{},
-	}
+	}, nil
 }
