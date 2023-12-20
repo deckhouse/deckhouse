@@ -16,8 +16,10 @@ package mirror
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
@@ -47,17 +49,26 @@ func ExtractImageDigestsFromDeckhouseInstaller(
 		return nil, fmt.Errorf("cannot read image from index: %w", err)
 	}
 
-	imagesDigestsJSON, err := readFileFromImage(img, "deckhouse/candi/images_digests.json")
-	if err != nil {
+	tagsCompatMode := false
+	imagesJSON, err := readFileFromImage(img, "deckhouse/candi/images_digests.json")
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		// Older images had lists of deckhouse images tags instead of digests
+		tagsCompatMode = true
+		imagesJSON, err = readFileFromImage(img, "deckhouse/candi/images_tags.json")
+		if err != nil {
+			return nil, fmt.Errorf("read tags from %q: %w", installerTag, err)
+		}
+	case err != nil:
 		return nil, fmt.Errorf("read digests from %q: %w", installerTag, err)
 	}
 
-	digests := map[string]struct{}{}
-	if err = parseDigestsFromImagesDigestsJSON(mirrorCtx.DeckhouseRegistryRepo, imagesDigestsJSON, digests); err != nil {
-		return nil, fmt.Errorf("cannot parse images_digests.json: %w", err)
+	images := map[string]struct{}{}
+	if err = parseImagesFromJSON(mirrorCtx.DeckhouseRegistryRepo, imagesJSON, images, tagsCompatMode); err != nil {
+		return nil, fmt.Errorf("cannot parse images list from json: %w", err)
 	}
 
-	return digests, nil
+	return images, nil
 }
 
 func findDigestForInstallerTag(installerTag string, indexManifest *v1.IndexManifest) *v1.Hash {
@@ -72,14 +83,19 @@ func findDigestForInstallerTag(installerTag string, indexManifest *v1.IndexManif
 	return nil
 }
 
-func parseDigestsFromImagesDigestsJSON(registryRepo string, jsonDigests io.Reader, dst map[string]struct{}) error {
+func parseImagesFromJSON(registryRepo string, jsonDigests io.Reader, dst map[string]struct{}, tagsCompatMode bool) error {
 	digestsByModule := map[string]map[string]string{}
 	if err := json.NewDecoder(jsonDigests).Decode(&digestsByModule); err != nil {
-		return fmt.Errorf("parse images_digests.json: %w", err)
+		return fmt.Errorf("parse images from json: %w", err)
 	}
 
 	for _, nameDigestTuple := range digestsByModule {
 		for _, imageID := range nameDigestTuple {
+			if tagsCompatMode {
+				dst[registryRepo+":"+imageID] = struct{}{}
+				continue
+			}
+
 			dst[registryRepo+"@"+imageID] = struct{}{}
 		}
 	}
