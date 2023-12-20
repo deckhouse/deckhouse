@@ -9,8 +9,6 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /csi-node-driver-registrar
     to: /csi-node-driver-registrar
-    includePaths:
-      - csi-node-driver-registrar
     before: setup
 docker:
   ENTRYPOINT: ["/csi-node-driver-registrar"]
