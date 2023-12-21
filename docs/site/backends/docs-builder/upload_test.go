@@ -80,7 +80,7 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.fileName, func(t *testing.T) {
-			u := newLoadHandler("/app/hugo/")
+			u := newLoadHandler("/app/hugo/", nil)
 
 			got, ok := u.getLocalPath("moduleName", "stable", tt.fileName)
 			if got != tt.want || ok != tt.wantOK {

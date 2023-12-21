@@ -16,29 +16,26 @@ package main
 
 import (
 	"archive/tar"
-	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
 )
 
-func newLoadHandler(baseDir string) *loadHandler {
-	return &loadHandler{baseDir: baseDir}
+func newLoadHandler(baseDir string, channelMappingEditor *channelMappingEditor) *loadHandler {
+	return &loadHandler{baseDir: baseDir, channelMappingEditor: channelMappingEditor}
 }
 
 type loadHandler struct {
 	baseDir string
 
-	channelMappingMu sync.Mutex
+	channelMappingEditor *channelMappingEditor
 }
 
 func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -139,56 +136,20 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 }
 
 func (u *loadHandler) generateChannelMapping(moduleName, version string, channels []string) error {
-	u.channelMappingMu.Lock()
-	defer u.channelMappingMu.Unlock()
+	return u.channelMappingEditor.edit(func(m channelMapping) {
+		var versions = make(map[string]versionEntity)
+		if _, ok := m[moduleName]; ok {
+			versions = m[moduleName]["channels"]
+		}
 
-	path := filepath.Join(u.baseDir, "data/modules/channels.yaml")
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
-	if err != nil {
-		return fmt.Errorf("open %q: %w", path, err)
-	}
+		for _, ch := range channels {
+			versions[ch] = versionEntity{version}
+		}
 
-	type entity struct {
-		Version string `json:"version" yaml:"version"`
-	}
-
-	// moduleName - "channels" - channelCode
-	var m = make(map[string]map[string]map[string]entity)
-
-	err = yaml.NewDecoder(f).Decode(&m)
-	if err != nil && !errors.Is(err, io.EOF) {
-		return fmt.Errorf("decode json: %w", err)
-	}
-
-	var versions = make(map[string]entity)
-	if _, ok := m[moduleName]; ok {
-		versions = m[moduleName]["channels"]
-	}
-
-	for _, ch := range channels {
-		versions[ch] = entity{version}
-	}
-
-	m[moduleName] = map[string]map[string]entity{
-		"channels": versions,
-	}
-
-	err = f.Truncate(0)
-	if err != nil {
-		return fmt.Errorf("truncate %q: %w", path, err)
-	}
-
-	_, err = f.Seek(0, io.SeekStart)
-	if err != nil {
-		return fmt.Errorf("seek %q: %w", path, err)
-	}
-
-	err = yaml.NewEncoder(f).Encode(m)
-	if err != nil {
-		return fmt.Errorf("encode json: %w", err)
-	}
-
-	return nil
+		m[moduleName] = map[string]map[string]versionEntity{
+			"channels": versions,
+		}
+	})
 }
 
 func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string, bool) {
