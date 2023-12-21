@@ -86,7 +86,7 @@ type: Opaque
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.CA").String()).To(Equal(""))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
-			Expect(ms.Field("spec.releaseChannel").String()).To(Equal("alpha"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
 		})
 	})
 
@@ -134,12 +134,11 @@ type: Opaque
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.ca").String()).To(Equal("--- BEGIN ..."))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
-			Expect(ms.Field("spec.releaseChannel").String()).To(Equal("alpha"))
 		})
 	})
 
-	Context("With existed resource", func() {
-		existedModuleSource := `
+	Context("With existing ModuleSource", func() {
+		existingModuleSource := `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
@@ -148,14 +147,75 @@ metadata:
     heritage: deckhouse
   name: deckhouse
 spec:
-  releaseChannel: test
+  releaseChannel: EarlyAccess
   registry:
     repo: xxx
     dockerCfg: yyy
 `
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existedModuleSource))
+			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingModuleSource))
+			f.RunHook()
+		})
+
+		It("Should update the module source ", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
+			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
+		})
+	})
+
+	Context("With existing ModuleSource and releaseChannel not set", func() {
+		existingModuleSource := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+spec:
+  registry:
+    repo: xxx
+    dockerCfg: yyy
+`
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingModuleSource))
+			f.RunHook()
+		})
+
+		It("Should update the module source ", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
+			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
+		})
+	})
+
+	Context("With existing ModuleSource", func() {
+		existingResources := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+spec:
+  releaseChannel: EarlyAccess
+  registry:
+    repo: xxx
+    dockerCfg: yyy
+`
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingResources))
 			f.RunHook()
 		})
 
@@ -165,8 +225,37 @@ spec:
 			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
-			Expect(ms.Field("spec.releaseChannel").String()).To(Equal("test"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
 		})
 	})
 
+	Context("With existing ModuleSource and releaseChannel not set", func() {
+		existingResources := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+spec:
+  registry:
+    repo: xxx
+    dockerCfg: yyy
+`
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingResources))
+			f.RunHook()
+		})
+
+		It("Should update the module source", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
+			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
+		})
+	})
 })

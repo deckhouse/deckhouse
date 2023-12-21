@@ -27,27 +27,23 @@ import (
 )
 
 const (
-	PhasePending    = "Pending"
-	PhaseDeployed   = "Deployed"
-	PhaseSuperseded = "Superseded"
-	PhaseSuspended  = "Suspended"
-)
-
-const (
-	ModuleReleaseKind     = "ModuleRelease"
-	ModuleReleaseResource = "modulereleases"
+	PhasePending         = "Pending"
+	PhasePolicyUndefined = "PolicyUndefined"
+	PhaseDeployed        = "Deployed"
+	PhaseSuperseded      = "Superseded"
+	PhaseSuspended       = "Suspended"
 )
 
 var (
 	ModuleReleaseGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
-		Resource: ModuleReleaseResource,
+		Resource: "modulereleases",
 	}
 	ModuleReleaseGVK = schema.GroupVersionKind{
 		Group:   SchemeGroupVersion.Group,
 		Version: SchemeGroupVersion.Version,
-		Kind:    ModuleReleaseKind,
+		Kind:    "ModuleRelease",
 	}
 )
 
@@ -67,6 +63,17 @@ type ModuleRelease struct {
 	Spec ModuleReleaseSpec `json:"spec"`
 
 	Status ModuleReleaseStatus `json:"status,omitempty"`
+}
+
+// GetModuleSource returns module source for this release
+func (mr *ModuleRelease) GetModuleSource() string {
+	for _, ref := range mr.GetOwnerReferences() {
+		if ref.APIVersion == ModuleSourceGVK.GroupVersion().String() && ref.Kind == ModuleSourceGVK.Kind {
+			return ref.Name
+		}
+	}
+
+	return mr.Labels["source"]
 }
 
 type ModuleReleaseSpec struct {

@@ -51,7 +51,7 @@ metadata:
   name: global
 spec:
   version: 1
-  settings: # <-- Параметры модуля из раздела "Параметры" ниже.
+  settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
       # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
@@ -82,9 +82,9 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
-# [<en>] Section containing the parameters of the cloud provider.
+# [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
-# [<ru>] Секция, описывающая параметры облачного провайдера.
+# [<ru>] Настройки облачного провайдера..
 # [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration

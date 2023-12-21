@@ -22,6 +22,7 @@ spec:
       imagePullSecrets:
         - name: deckhouse-registry-site
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
+      serviceAccountName: docs-builder
       containers:
         - name: frontend
           command: ["nginx", "-g", "daemon off;"]
@@ -43,6 +44,55 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
+          volumeMounts:
+            - mountPath: /app/en/modules
+              name: modules-docs-en
+            - mountPath: /app/ru/modules
+              name: modules-docs-ru
+        - name: builder
+          command:
+            - "/app/server"
+            - "-highAvailability={{pluck .Values.werf.env .Values.docsBuilder.highAvailability | first | default .Values.docsBuilder.highAvailability._default}}"
+          image: {{ index .Values.werf.image "docs-builder" }}
+          {{- include "resources" . | nindent 10 }}
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+          ports:
+          - containerPort: 8081
+            name: http
+            protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+          volumeMounts:
+            - mountPath: "/mount/public/en/modules"
+              name: modules-docs-en
+            - mountPath: "/mount/public/ru/modules"
+              name: modules-docs-ru
+      volumes:
+        - name: modules-docs-en
+          emptyDir: {}
+        - name: modules-docs-ru
+          emptyDir: {}
+
 ---
 apiVersion: v1
 kind: Service

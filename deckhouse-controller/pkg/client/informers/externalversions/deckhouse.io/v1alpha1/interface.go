@@ -28,10 +28,14 @@ type Interface interface {
 	Modules() ModuleInformer
 	// ModuleConfigs returns a ModuleConfigInformer.
 	ModuleConfigs() ModuleConfigInformer
+	// ModulePullOverrides returns a ModulePullOverrideInformer.
+	ModulePullOverrides() ModulePullOverrideInformer
 	// ModuleReleases returns a ModuleReleaseInformer.
 	ModuleReleases() ModuleReleaseInformer
 	// ModuleSources returns a ModuleSourceInformer.
 	ModuleSources() ModuleSourceInformer
+	// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
+	ModuleUpdatePolicies() ModuleUpdatePolicyInformer
 }
 
 type version struct {
@@ -55,6 +59,11 @@ func (v *version) ModuleConfigs() ModuleConfigInformer {
 	return &moduleConfigInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
+// ModulePullOverrides returns a ModulePullOverrideInformer.
+func (v *version) ModulePullOverrides() ModulePullOverrideInformer {
+	return &modulePullOverrideInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
 // ModuleReleases returns a ModuleReleaseInformer.
 func (v *version) ModuleReleases() ModuleReleaseInformer {
 	return &moduleReleaseInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
@@ -63,4 +72,9 @@ func (v *version) ModuleReleases() ModuleReleaseInformer {
 // ModuleSources returns a ModuleSourceInformer.
 func (v *version) ModuleSources() ModuleSourceInformer {
 	return &moduleSourceInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
+func (v *version) ModuleUpdatePolicies() ModuleUpdatePolicyInformer {
+	return &moduleUpdatePolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

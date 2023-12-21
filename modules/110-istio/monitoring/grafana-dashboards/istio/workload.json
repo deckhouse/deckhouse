@@ -2555,8 +2555,7 @@
         "label": "Reporter",
         "multi": true,
         "name": "qrep",
-        "options": [],
-        "query": "label_values(reporter)",
+        "query": "source,destination",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -2564,7 +2563,7 @@
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
-        "type": "query",
+        "type": "custom",
         "useTags": false
       },
       {

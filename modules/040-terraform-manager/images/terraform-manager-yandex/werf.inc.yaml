@@ -6,22 +6,23 @@ git:
 import:
 - artifact: terraform-provider-yandex
   add: /terraform-provider-yandex
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
   before: setup
-shell:
-  install:
-    - "apk update && apk add ca-certificates"
-    - "rm -rf /var/cache/apk/*"
 ---
 artifact: terraform-provider-yandex
-# we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
-# current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: {{ .Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   beforeInstall:
-    - apt-get update && apt install -y wget unzip
-    - |
-      mkdir /out
-      wget -q https://releases.hashicorp.com/terraform-provider-yandex/{{ .TF.yandex.version }}/terraform-provider-yandex_{{ .TF.yandex.version }}_linux_amd64.zip -O /terraform-provider-yandex.zip
-      unzip -d /terraform-provider-yandex /terraform-provider-yandex.zip
-      chmod -R 755 /terraform-provider-yandex
+    - apk add --no-cache make patch git bash
+  install:
+    - mkdir /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v{{ .TF.yandex.version }} {{ $.SOURCE_REPO }}/yandex-cloud/terraform-provider-yandex.git /src
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"
+    - mv /go/bin/terraform-provider-yandex /terraform-provider-yandex
+    - chmod -R 755 /terraform-provider-yandex
+    - chown 64535:64535 /terraform-provider-yandex

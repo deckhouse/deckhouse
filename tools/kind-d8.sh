@@ -388,7 +388,7 @@ spec:
   enabled: true
   settings:
     bundle: Minimal
-    releaseChannel: Stable
+    releaseChannel: EarlyAccess
     logLevel: Info
 ---
 apiVersion: deckhouse.io/v1alpha1

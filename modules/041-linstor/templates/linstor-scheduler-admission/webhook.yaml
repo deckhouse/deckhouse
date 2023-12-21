@@ -50,8 +50,6 @@ webhooks:
       - d8-log-shipper
       - d8-pod-reloader
       - d8-chrony
-      - d8-virtualization
-      - d8-cdi
       - d8-okmeter
       - d8-openvpn
   rules:

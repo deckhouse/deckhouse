@@ -15,14 +15,10 @@
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"github.com/iancoleman/strcase"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -30,22 +26,32 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-type deckhouseSecret struct {
-	Bundle         string
-	ReleaseChannel string
-}
+func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ms v1alpha1.ModuleSource
 
-func filterDeckhouseSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &corev1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
+	err := sdk.FromUnstructured(obj, &ms)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
+		return nil, err
 	}
 
-	return deckhouseSecret{
-		Bundle:         string(secret.Data["bundle"]),
-		ReleaseChannel: string(secret.Data["releaseChannel"]),
-	}, nil
+	if ms.Spec.Registry.Scheme == "" {
+		// fallback to default https protocol
+		ms.Spec.Registry.Scheme = "HTTPS"
+	}
+
+	// remove unused fields
+	newms := v1alpha1.ModuleSource{
+		TypeMeta: ms.TypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ms.Name,
+		},
+		Spec: ms.Spec,
+		Status: v1alpha1.ModuleSourceStatus{
+			ModuleErrors: ms.Status.ModuleErrors,
+		},
+	}
+
+	return newms, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -63,40 +69,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterSource,
 		},
-		{
-			Name:       "deckhouse-secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"deckhouse-discovery"},
-			},
-			FilterFunc: filterDeckhouseSecret,
-		},
 	},
-}, createDeckhouseModuleSource)
+}, createDeckhouseModuleSourceAndPolicy)
 
-func createDeckhouseModuleSource(input *go_hook.HookInput) error {
+func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 	deckhouseRepo := input.Values.Get("global.modulesImages.registry.base").String() + "/modules"
 	deckhouseDockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	deckhouseCA := input.Values.Get("global.modulesImages.registry.CA").String()
-	releaseChannel := ""
 
-	if len(input.Snapshots["deckhouse-secret"]) > 0 {
-		ds := input.Snapshots["deckhouse-secret"][0].(deckhouseSecret)
-		releaseChannel = strcase.ToKebab(ds.ReleaseChannel)
+	ms := v1alpha1.ModuleSource{}
+	if len(input.Snapshots["sources"]) > 0 {
+		ms = input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
 	}
 
-	if len(input.Snapshots["sources"]) > 0 {
-		ms := input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
-		releaseChannel = ms.Spec.ReleaseChannel
-
-		if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
-			// return if ModuleSource deckhouse already exists and all params are equal
-			return nil
-		}
+	if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
+		// return if ModuleSource deckhouse already exists and all params are equal
+		return nil
 	}
 
 	newms := v1alpha1.ModuleSource{
@@ -111,7 +99,7 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 			},
 		},
 		Spec: v1alpha1.ModuleSourceSpec{
-			ReleaseChannel: releaseChannel,
+			ReleaseChannel: ms.Spec.ReleaseChannel,
 			Registry: v1alpha1.ModuleSourceSpecRegistry{
 				Scheme:    "HTTPS",
 				Repo:      deckhouseRepo,

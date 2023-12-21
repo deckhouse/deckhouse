@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -49,6 +50,10 @@ internal:
 			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").String()).To(MatchJSON(`["1.1"]`))
+
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.1.0"))
 		})
 	})
 
@@ -94,6 +99,10 @@ spec:
 		It("Should count all namespaces and revisions properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.2", "1.3", "1.4", "1.8"}))
+
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.2.0"))
 		})
 	})
 
@@ -148,6 +157,10 @@ spec:
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
 			Expect(f.GoHookError).To(MatchError("unsupported revisions: [v1x0,v1x9]"))
+
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.2.0"))
 		})
 	})
 })

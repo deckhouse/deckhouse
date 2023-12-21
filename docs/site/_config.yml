@@ -63,6 +63,7 @@ defaults:
       path: ""
       type: "pages"
     values:
+      toc: false
       layout: "page"
       comments: false
       searchable: true
@@ -165,11 +166,6 @@ defaults:
       type: "pages"
     values:
       featureStatus: experimental
-  - scope:
-      path: "*/490-virtualization"
-      type: "pages"
-    values:
-      featureStatus: temporaryDeprecated
   - scope:
       path: "*/160-multitenancy-manager"
       type: "pages"

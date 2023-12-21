@@ -60,6 +60,7 @@ spec:
       name: node-exporter
       annotations:
         container.apparmor.security.beta.kubernetes.io/node-exporter: "unconfined"
+        container.apparmor.security.beta.kubernetes.io/kubelet-eviction-thresholds-exporter: "unconfined"
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

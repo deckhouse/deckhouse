@@ -30,15 +30,9 @@ type Module struct {
 	Releases     []string
 }
 
-func GetDeckhouseModules(mirrorCtx *Context) ([]Module, error) {
-	nameOpts, remoteOpts := []name.Option{}, []remote.Option{}
-	if mirrorCtx.Insecure {
-		nameOpts = append(nameOpts, name.Insecure)
-	}
-	if mirrorCtx.RegistryAuth != nil {
-		remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
-	}
-
+func GetDeckhouseExternalModules(mirrorCtx *Context) ([]Module, error) {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
+	// modulesRepo, err := name.NewRepository(mirrorCtx.DeckhouseRegistryRepo+"/modules", nameOpts...)
 	repoPathBuildFuncForDeckhouseModule := func(repo, moduleName string) string {
 		return fmt.Sprintf("%s/modules/%s", mirrorCtx.DeckhouseRegistryRepo, moduleName)
 	}
@@ -57,14 +51,7 @@ func GetDeckhouseModules(mirrorCtx *Context) ([]Module, error) {
 }
 
 func GetExternalModulesFromRepo(repo string, registryAuth authn.Authenticator, insecure bool) ([]Module, error) {
-	nameOpts, remoteOpts := []name.Option{}, []remote.Option{}
-	if insecure {
-		nameOpts = append(nameOpts, name.Insecure)
-	}
-	if registryAuth != nil {
-		remoteOpts = append(remoteOpts, remote.WithAuth(registryAuth))
-	}
-
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(registryAuth, insecure)
 	repoPathBuildFuncForExternalModule := func(repo, moduleName string) string {
 		return fmt.Sprintf("%s/%s", repo, moduleName)
 	}
@@ -115,13 +102,7 @@ func getModulesForRepo(
 }
 
 func FindExternalModuleImages(mod *Module, authProvider authn.Authenticator, insecure bool) (moduleImages, releaseImages map[string]struct{}, err error) {
-	nameOpts, remoteOpts := []name.Option{}, []remote.Option{}
-	if insecure {
-		nameOpts = append(nameOpts, name.Insecure)
-	}
-	if authProvider != nil {
-		remoteOpts = append(remoteOpts, remote.WithAuth(authProvider))
-	}
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure)
 
 	moduleImages = map[string]struct{}{}
 	releaseImages, err = getAvailableReleaseChannelsImagesForModule(mod, nameOpts, remoteOpts)

@@ -4,7 +4,8 @@ metadata:
   name: modulereleases.deckhouse.io
   labels:
     heritage: deckhouse
-    module: external-module-manager
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -79,6 +80,10 @@ spec:
           jsonPath: .status.phase
           type: string
           description: 'Current release status.'
+        - name: update policy
+          jsonPath: .metadata.labels.modules\.deckhouse\.io/update-policy
+          type: string
+          description: 'Associated update policy.'
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date

@@ -7,7 +7,8 @@ webIfaces:
 Currently supported Istio versions:
 * 1.12 (deprecated)
 * 1.13 (deprecated)
-* 1.16
+* 1.16 (deprecated)
+* 1.19
 
 ## What issues does Istio help to resolve?
 
@@ -176,7 +177,7 @@ The main purpose of the activation is to add a sidecar container to the applicat
 The sidecar-injector is a recommended way to add sidecars. Istio can inject sidecar containers into user Pods using the [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) mechanism. You can configure it using labels and annotations:
 * A label attached to a **namespace** allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
   * `istio-injection=enabled` — use the latest installed version of Istio;
-  * `istio.io/rev=v1x13` — use the specific Istio version for a given namespace.
+  * `istio.io/rev=v1x16` — use the specific Istio version for a given namespace.
 * The `sidecar.istio.io/inject` (`"true"` or `"false"`) **Pod** annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
 
 It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
@@ -233,7 +234,12 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 
 To establish a federation, you must:
 * Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
-* Add the `federation.istio.deckhouse.io/public-service=` label to each resource that is considered public within the federation.
+  * After successful auto-negotiation between clusters, the status of `IstioFederation` resoure will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
+* Add the `federation.istio.deckhouse.io/public-service=` label to each resource(`service`) that is considered public within the federation.
+* In the other federation clusters, a corresponding `ServiceEntry` will be created for each `service`, leading to the `ingressgateway` of the original cluster.
+* ```
+
+> It is important, that in these `services`, in the `.spec.ports` section, each port must have the `name` field filled.
 
 ### Multicluster
 
@@ -266,5 +272,5 @@ To create a multicluster, you need to create a set of `IstioMulticluster` resour
 
 ## Estimating overhead
 
-A rough estimate of overhead when using Istio is available [here](https://istio.io/v1.16/docs/ops/deployment/performance-and-scalability/).
+A rough estimate of overhead when using Istio is available [here](https://istio.io/v1.19/docs/ops/deployment/performance-and-scalability/).
 You can use the [Sidecar](istio-cr.html#sidecar) resource to limit resource consumption by limiting the field of view of a sidecar.

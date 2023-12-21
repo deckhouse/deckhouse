@@ -53,7 +53,6 @@ type ModuleImageLayout struct {
 }
 
 func CreateOCIImageLayoutsForDeckhouse(
-	registryRepo string,
 	rootFolder string,
 	modules []Module,
 ) (*ImageLayouts, error) {
@@ -61,9 +60,9 @@ func CreateOCIImageLayoutsForDeckhouse(
 	layouts := &ImageLayouts{Modules: map[string]ModuleImageLayout{}}
 
 	fsPaths := map[*layout.Path]string{
-		&layouts.Deckhouse:      filepath.Join(rootFolder, registryRepo),
-		&layouts.Install:        filepath.Join(rootFolder, registryRepo, "install"),
-		&layouts.ReleaseChannel: filepath.Join(rootFolder, registryRepo, "release-channel"),
+		&layouts.Deckhouse:      rootFolder,
+		&layouts.Install:        filepath.Join(rootFolder, "install"),
+		&layouts.ReleaseChannel: filepath.Join(rootFolder, "release-channel"),
 	}
 	for layoutPtr, fsPath := range fsPaths {
 		*layoutPtr, err = CreateEmptyImageLayoutAtPath(fsPath)
@@ -73,13 +72,13 @@ func CreateOCIImageLayoutsForDeckhouse(
 	}
 
 	for _, module := range modules {
-		path := filepath.Join(rootFolder, registryRepo, "modules", module.Name)
+		path := filepath.Join(rootFolder, "modules", module.Name)
 		moduleLayout, err := CreateEmptyImageLayoutAtPath(path)
 		if err != nil {
 			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)
 		}
 
-		path = filepath.Join(rootFolder, registryRepo, "modules", module.Name, "release")
+		path = filepath.Join(rootFolder, "modules", module.Name, "release")
 		moduleReleasesLayout, err := CreateEmptyImageLayoutAtPath(path)
 		if err != nil {
 			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)
@@ -200,14 +199,7 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 			moduleData.ReleaseImages[mirrorCtx.DeckhouseRegistryRepo+"/modules/"+moduleName+"/release:"+moduleVersion] = struct{}{}
 		}
 
-		nameOpts := []name.Option{}
-		remoteOpts := []remote.Option{}
-		if mirrorCtx.Insecure {
-			nameOpts = append(nameOpts, name.Insecure)
-		}
-		if mirrorCtx.RegistryAuth != nil {
-			remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
-		}
+		nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 		fetchDigestsFrom := maputil.Clone(moduleData.ModuleImages)
 		for imageTag := range fetchDigestsFrom {
 			ref, err := name.ParseReference(imageTag, nameOpts...)
@@ -242,15 +234,9 @@ func fetchVersionsFromModuleReleaseChannels(
 	authProvider authn.Authenticator,
 	insecure bool,
 ) (map[string]string, error) {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure)
 	channelVersions := map[string]string{}
 	for imageTag := range releaseChannelImages {
-		nameOpts, remoteOpts := []name.Option{}, []remote.Option{}
-		if insecure {
-			nameOpts = append(nameOpts, name.Insecure)
-		}
-		if authProvider != nil {
-			remoteOpts = append(remoteOpts, remote.WithAuth(authProvider))
-		}
 
 		ref, err := name.ParseReference(imageTag, nameOpts...)
 		if err != nil {
@@ -284,6 +270,10 @@ func fetchVersionsFromModuleReleaseChannels(
 }
 
 func isImageNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+
 	errMsg := err.Error()
 	return strings.Contains(errMsg, "MANIFEST_UNKNOWN") || strings.Contains(errMsg, "404 Not Found")
 }

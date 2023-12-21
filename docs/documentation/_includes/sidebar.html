@@ -1,5 +1,29 @@
 {% unless page.hide_sidebar %}
 {%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
+
+  {% unless site.mode == "local" %}
+    <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
+      <div class="channel-menu submenu-parent">
+
+        <!-- documentation-section-badge -->
+        <a data-proofer-ignore="" href="#" class="highlight">{{ site.data.i18n.common.platform[page.lang] | capitalize }}</a>
+        <div class="submenu-container">
+          <ul class="submenu">
+            <li class="submenu-item">
+              <a data-proofer-ignore='' class='submenu-item-link' href='/modules/'>
+                <span class="submenu-item-channel">{{ site.data.i18n.common.modules[page.lang] | capitalize }}</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- module-version-badge -->
+      <div id="doc-versions-menu" class="channel-menu submenu-parent">
+        <!--#include virtual="/includes/channel-menu-v2.html" -->
+      </div>
+    </div>
+  {% endunless %}
   <div class="sidebar__wrapper-inner">
     <nav class="sidebar__container">
 

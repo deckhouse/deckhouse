@@ -110,6 +110,12 @@ common:
   no_description:
     en: There is no description...
     ru: Нет описания...
+  documentation:
+    en: Documentation
+    ru: Документация
+  platform:
+    en: Platform
+    ru: Платформа
   search_placeholder_text:
     en: Search...
     ru: Поиск...
@@ -158,6 +164,12 @@ common:
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
+  deckhouse:
+    en: deckhouse
+    ru: deckhouse
+  modules:
+    en: modules
+    ru: модули
 
 comparison:
   except_parameters:

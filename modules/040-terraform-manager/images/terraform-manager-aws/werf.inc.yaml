@@ -6,22 +6,23 @@ git:
 import:
 - artifact: terraform-provider-aws
   add: /terraform-provider-aws
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
   before: setup
-shell:
-  install:
-    - "apk update && apk add ca-certificates"
-    - "rm -rf /var/cache/apk/*"
 ---
 artifact: terraform-provider-aws
-# we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
-# current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: {{ .Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   beforeInstall:
-    - apt-get update && apt install -y wget unzip
-    - |
-      mkdir /terraform-provider-aws
-      wget -q https://releases.hashicorp.com/terraform-provider-aws/{{ .TF.aws.version }}/terraform-provider-aws_{{ .TF.aws.version }}_linux_amd64.zip -O /terraform-provider-aws.zip
-      unzip -d /terraform-provider-aws /terraform-provider-aws.zip
-      chmod -R 755 /terraform-provider-aws
+    - apk add --no-cache make patch git bash
+  install:
+    - mkdir /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v{{ .TF.aws.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-aws.git /src
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ .TF.aws.version }}"
+    - mv /go/bin/terraform-provider-aws /terraform-provider-aws
+    - chmod -R 755 /terraform-provider-aws
+    - chown 64535:64535 /terraform-provider-aws

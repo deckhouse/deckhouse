@@ -18,6 +18,20 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+var (
+	ModuleSourceGVR = schema.GroupVersionResource{
+		Group:    SchemeGroupVersion.Group,
+		Version:  SchemeGroupVersion.Version,
+		Resource: "modulesources",
+	}
+	ModuleSourceGVK = schema.GroupVersionKind{
+		Group:   SchemeGroupVersion.Group,
+		Version: SchemeGroupVersion.Version,
+		Kind:    "ModuleSource",
+	}
 )
 
 // +genclient
@@ -53,11 +67,17 @@ type ModuleSourceSpecRegistry struct {
 }
 
 type ModuleSourceStatus struct {
-	SyncTime         metav1.Time   `json:"syncTime"`
-	ModulesCount     int           `json:"modulesCount"`
-	AvailableModules []string      `json:"availableModules"`
-	Msg              string        `json:"message"`
-	ModuleErrors     []ModuleError `json:"moduleErrors"`
+	SyncTime         metav1.Time       `json:"syncTime"`
+	ModulesCount     int               `json:"modulesCount"`
+	AvailableModules []AvailableModule `json:"modules"`
+	Msg              string            `json:"message"`
+	ModuleErrors     []ModuleError     `json:"moduleErrors"`
+}
+
+type AvailableModule struct {
+	Name       string `json:"name"`
+	Policy     string `json:"policy,omitempty"`
+	Overridden bool   `json:"overridden,omitempty"`
 }
 
 type ModuleError struct {
@@ -74,4 +94,15 @@ type ModuleSourceList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ModuleSource `json:"items"`
+}
+
+type moduleSourceKind struct{}
+
+func (in *ModuleSourceStatus) GetObjectKind() schema.ObjectKind {
+	return &moduleSourceKind{}
+}
+
+func (f *moduleSourceKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
+func (f *moduleSourceKind) GroupVersionKind() schema.GroupVersionKind {
+	return ModuleSourceGVK
 }

@@ -132,8 +132,8 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 	// Create new ModuleConfig if absent.
 	newCfg := &v1alpha1.ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       v1alpha1.ModuleConfigKind,
-			APIVersion: v1alpha1.ModuleConfigAPIVersion,
+			Kind:       v1alpha1.ModuleConfigGVK.Kind,
+			APIVersion: v1alpha1.ModuleConfigGVK.GroupVersion().String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

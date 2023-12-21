@@ -3,9 +3,8 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          type: object
           description: |
-            Определяет конфигурацию релизов сторонних модулей Deckhouse.
+            Определяет конфигурацию релизов модулей Deckhouse.
           properties:
             spec:
               properties:
@@ -14,15 +13,13 @@ spec:
                 version:
                   description: Версия модуля в данном релизе.
                 weight:
-                  type: number
                   description: _Вес_ (приоритет) модуля.
             status:
               properties:
                 phase:
                   description: Текущий статус релиза.
                 message:
-                  type: string
-                  description: Детальное сообщение об ошибки или статусе релиза.
+                  description: Детальное сообщение об ошибке или статусе релиза.
                 transitionTime:
                   description: Время изменения статуса релиза.
                 approved:
@@ -35,6 +32,10 @@ spec:
           jsonPath: .status.phase
           type: string
           description: 'Показывает текущий статус релиза.'
+        - name: update policy
+          jsonPath: .metadata.labels.modules\.deckhouse\.io/update-policy
+          type: string
+          description: 'Применяемая политика обновления.'
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date

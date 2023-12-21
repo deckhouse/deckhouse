@@ -1226,29 +1226,6 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/450-network-gateway/configuration.html
-        - title: virtualization
-          featureStatus: temporaryDeprecated
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/490-virtualization/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/490-virtualization/examples.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/490-virtualization/configuration.html
-                - title: Custom Resources
-                  url: /modules/490-virtualization/cr.html
-            - title: FAQ
-              url: /modules/490-virtualization/faq.html
     - title:
         en: Used software
         ru: Используемое ПО

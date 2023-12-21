@@ -16,3 +16,10 @@ In ClientServer mode scan pods can't retrive images from Amazon Elastic Containe
 This patch is fixing this behaviour.
 
 [PR](https://github.com/aquasecurity/trivy-operator/pull/1613)
+
+
+### 004-scan-job-registry-ca.patch
+
+This patch adds the ability to specify CA for scan jobs via environment variables.
+
+[Issue](https://github.com/deckhouse/deckhouse/issues/4950)

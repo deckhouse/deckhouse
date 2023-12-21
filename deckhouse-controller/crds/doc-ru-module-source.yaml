@@ -11,6 +11,7 @@ spec:
               properties:
                 releaseChannel:
                   description: Желаемый канал обновлений по-умолчанию для модулей данного container registry.
+                  x-doc-deprecated: true
                 registry:
                   properties:
                     scheme:
@@ -26,10 +27,24 @@ spec:
             status:
               properties:
                 syncTime:
-                  description: 'Время последней синхронизации с container registry.'
-                availableModules:
+                  description: Время последней синхронизации с container registry.
+                modulesCount:
+                  type: integer
+                  description: Колличество доступых модулей.
+                modules:
                   type: array
-                  description: Список доступных для установки модулей в данном репозитории.
+                  description: Список доступных для установки модулей и их политики обновления.
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Имя модуля.
+                      policy:
+                        type: string
+                        description: Имя политики.
+                      overridden:
+                        description: Показывает, есть ли ресурс ModulePullOverride для данного модуля.
                 message:
                   type: string
                   description: Сообщение с детальной ошибкой.

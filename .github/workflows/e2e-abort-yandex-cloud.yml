@@ -3,7 +3,7 @@
 #
 
 # <template: e2e_workflow_template>
-name: 'e2e destroy failed: Yandex.Cloud'
+name: 'destroy cluster: Yandex.Cloud'
 on:
   workflow_dispatch:
     inputs:
@@ -74,7 +74,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_24:
-    name: "e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.24"
+    name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.24"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.24' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
@@ -108,7 +108,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.24';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.24';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -321,7 +321,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.24';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.24';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -342,7 +342,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_25:
-    name: "e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.25"
+    name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.25"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.25' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
@@ -376,7 +376,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.25';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.25';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -589,7 +589,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.25';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.25';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -610,7 +610,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_26:
-    name: "e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.26"
+    name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.26"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.26' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
@@ -644,7 +644,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.26';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.26';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -857,7 +857,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.26';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.26';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -878,7 +878,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_27:
-    name: "e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.27"
+    name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.27"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.27' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
@@ -912,7 +912,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.27';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.27';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1125,7 +1125,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.27';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.27';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1146,7 +1146,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_28:
-    name: "e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.28"
+    name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.28"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.28' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
@@ -1180,7 +1180,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.28';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.28';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1393,7 +1393,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.28';
+            const name = 'destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.28';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1420,7 +1420,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"run_containerd_1_24":"e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.24","run_containerd_1_25":"e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.25","run_containerd_1_26":"e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.26","run_containerd_1_27":"e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.27","run_containerd_1_28":"e2e destroy failed: Yandex.Cloud, Containerd, Kubernetes 1.28"}
+        {"run_containerd_1_24":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.24","run_containerd_1_25":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.25","run_containerd_1_26":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.26","run_containerd_1_27":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.27","run_containerd_1_28":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.28"}
     steps:
 
       # <template: checkout_step>
@@ -1442,7 +1442,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'workflow,final,no-skipped,restore-separate';
-            const name = 'e2e destroy failed: Yandex.Cloud';
+            const name = 'destroy cluster: Yandex.Cloud';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);

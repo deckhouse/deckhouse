@@ -20,11 +20,6 @@ module Jekyll
         item['linkAnchor'] = linkAnchor
         item['resourceType'] = resourceType
         item['title'] = %Q(#{if resourceType == 'crd' and  resourceName then resourceName + ":&nbsp;" end}#{parameterName})
-        if resourceType == 'moduleConfig' then
-          puts %Q(moduleName - #{moduleName},
-          resourceName - #{resourceName},
-          parameterName - #{parameterName})
-        end
         if get_hash_value(@context.registers[:site].data['modules'], 'modules', moduleName, %Q(parameters-#{revision})) == nil then
           @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})] = Hash.new
         end
@@ -375,7 +370,7 @@ module Jekyll
                 lengthValue = "#{attributes['maxLength'].to_json}"
             end
             unless attributes['type'] == 'string' && caption == 'min_length'
-                description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term(caption).capitalize}</span>: <span class="resources__attrs_content"><code>#{lengthValue}</code></span></p>)
+                description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term(caption).capitalize}:</span> <span class="resources__attrs_content"><code>#{lengthValue}</code></span></p>)
                 result.push(CONVERTER.convert(description.to_s))
             end
         end
@@ -479,7 +474,7 @@ module Jekyll
 
         result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
 
-        if attributes.has_key?('x-doc-d8Revision')
+        if (@moduleName != '') and attributes.has_key?('x-doc-d8Revision')
           case attributes['x-doc-d8Revision']
           when "ee"
             addRevisionParameter(@moduleName, 'ee', @resourceType, resourceName, name, linkAnchor)

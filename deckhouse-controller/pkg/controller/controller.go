@@ -20,18 +20,23 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"time"
 
+	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 )
 
 const (
@@ -45,36 +50,63 @@ var (
 type DeckhouseController struct {
 	ctx context.Context
 
-	dirs            []string
-	valuesValidator *validation.ValuesValidator
-	kubeClient      *versioned.Clientset
+	dirs       []string
+	mm         *module_manager.ModuleManager // probably it's better to set it via the interface
+	kubeClient *versioned.Clientset
 
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
 	sourceModules map[string]string
+
+	// separate controllers
+	informerFactory              externalversions.SharedInformerFactory
+	moduleSourceController       *source.Controller
+	moduleReleaseController      *release.Controller
+	modulePullOverrideController *release.ModulePullOverrideController
 }
 
-func NewDeckhouseController(ctx context.Context, config *rest.Config, moduleDirs string, vv *validation.ValuesValidator) (*DeckhouseController, error) {
+func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager) (*DeckhouseController, error) {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
+
+	cs, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	informerFactory := externalversions.NewSharedInformerFactory(mcClient, 15*time.Minute)
+	moduleSourceInformer := informerFactory.Deckhouse().V1alpha1().ModuleSources()
+	moduleReleaseInformer := informerFactory.Deckhouse().V1alpha1().ModuleReleases()
+	moduleUpdatePolicyInformer := informerFactory.Deckhouse().V1alpha1().ModuleUpdatePolicies()
+	modulePullOverrideInformer := informerFactory.Deckhouse().V1alpha1().ModulePullOverrides()
+
 	return &DeckhouseController{
-		ctx:             ctx,
-		kubeClient:      mcClient,
-		dirs:            utils.SplitToPaths(moduleDirs),
-		valuesValidator: vv,
+		ctx:        ctx,
+		kubeClient: mcClient,
+		dirs:       utils.SplitToPaths(mm.ModulesDir),
+		mm:         mm,
 
 		deckhouseModules: make(map[string]*models.DeckhouseModule),
 		sourceModules:    make(map[string]string),
+
+		informerFactory:              informerFactory,
+		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer),
+		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm),
+		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm),
 	}, nil
 }
 
 func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
-	err := dml.RestoreAbsentSourceModules()
+	dml.informerFactory.Start(dml.ctx.Done())
+
+	err := dml.moduleReleaseController.RunPreflightCheck(dml.ctx)
 	if err != nil {
 		return err
 	}
+
+	dml.sourceModules = dml.moduleReleaseController.GetModuleSources()
 
 	err = dml.searchAndLoadDeckhouseModules()
 	if err != nil {
@@ -82,6 +114,10 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 	}
 
 	go dml.runEventLoop(ec)
+
+	go dml.moduleSourceController.Run(dml.ctx, 3)
+	go dml.moduleReleaseController.Run(dml.ctx, 3)
+	go dml.modulePullOverrideController.Run(dml.ctx, 1)
 
 	return nil
 }
@@ -143,8 +179,8 @@ func (dml *DeckhouseController) handleModulePurge(m *models.DeckhouseModule) err
 
 func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		source := dml.sourceModules[m.GetBasicModule().GetName()]
-		newModule := m.AsKubeObject(source)
+		src := dml.sourceModules[m.GetBasicModule().GetName()]
+		newModule := m.AsKubeObject(src)
 		newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
 
 		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, newModule.GetName(), v1.GetOptions{})

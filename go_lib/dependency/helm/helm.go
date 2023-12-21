@@ -17,8 +17,10 @@ limitations under the License.
 package helm
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
-	"log"
+	"maps"
 	"time"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -28,6 +30,7 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 )
 
 const helmDriver = "secret"
@@ -112,11 +115,16 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		ch.Templates = append(ch.Templates, &chartFile)
 	}
 
+	hashsum := getMD5Hash(templates, values)
+
 	upgradeObject := action.NewUpgrade(client.actionConfig)
 	upgradeObject.Namespace = client.options.Namespace
 	upgradeObject.Install = true
 	upgradeObject.MaxHistory = int(client.options.HistoryMax)
 	upgradeObject.Timeout = client.options.Timeout
+	upgradeObject.Labels = map[string]string{
+		"hashsum": hashsum,
+	}
 
 	releases, err := action.NewHistory(client.actionConfig).Run(releaseName)
 	if err == driver.ErrReleaseNotFound {
@@ -125,6 +133,9 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		installObject.Timeout = client.options.Timeout
 		installObject.ReleaseName = releaseName
 		installObject.UseReleaseName = true
+		installObject.Labels = map[string]string{
+			"hashsum": hashsum,
+		}
 
 		_, err = installObject.Run(ch, values)
 		return err
@@ -133,6 +144,13 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 	if len(releases) > 0 {
 		releaseutil.Reverse(releases, releaseutil.SortByRevision)
 		latestRelease := releases[0]
+		val, ok := latestRelease.Labels["hashsum"]
+		if ok {
+			if val == hashsum {
+				klog.Info("the hashes matched")
+				return nil
+			}
+		}
 
 		if latestRelease.Info.Status.IsPending() {
 			client.rollbackLatestRelease(releases)
@@ -160,14 +178,11 @@ func (client *helmClient) Delete(releaseName string) error {
 func (client *helmClient) rollbackLatestRelease(releases []*release.Release) {
 	latestRelease := releases[0]
 
-	// TODO fix logger client.LogEntry.Infof("Trying to rollback '%s'", nsReleaseName)
-
 	if latestRelease.Version == 1 || client.options.HistoryMax == 1 || len(releases) == 1 {
 		uninstallObject := action.NewUninstall(client.actionConfig)
 		uninstallObject.KeepHistory = false
 		_, err := uninstallObject.Run(latestRelease.Name)
 		if err != nil {
-			// TODO fix logger client.LogEntry.Warnf("Failed to uninstall pending release %s: %s", nsReleaseName, err)
 			return
 		}
 	} else {
@@ -183,12 +198,9 @@ func (client *helmClient) rollbackLatestRelease(releases []*release.Release) {
 		rollbackObject.CleanupOnFail = true
 		err := rollbackObject.Run(latestRelease.Name)
 		if err != nil {
-			// TODO fix logger client.LogEntry.Warnf("Failed to rollback pending release %s: %s", nsReleaseName, err)
 			return
 		}
 	}
-
-	// TODO fix logger client.LogEntry.Infof("Rollback '%s' successful", nsReleaseName)
 }
 
 func getActionConfig(namespace string) (*action.Configuration, error) {
@@ -208,8 +220,22 @@ func getActionConfig(namespace string) (*action.Configuration, error) {
 	kubeConfig.BearerToken = &config.BearerToken
 	kubeConfig.CAFile = &config.CAFile
 	kubeConfig.Namespace = &namespace
-	if err := actionConfig.Init(kubeConfig, namespace, helmDriver, log.Printf); err != nil { // TODO <-- logger replace
+	if err := actionConfig.Init(kubeConfig, namespace, helmDriver, klog.Infof); err != nil {
 		return nil, err
 	}
 	return actionConfig, nil
+}
+
+func getMD5Hash(templates, values map[string]interface{}) string {
+	sum := make(map[string]interface{})
+	maps.Copy(sum, templates)
+	for k, v := range values {
+		sum[k] = v
+	}
+
+	hash := md5.New()
+	hashObject(sum, &hash)
+	res := hash.Sum(nil)
+
+	return hex.EncodeToString(res)
 }

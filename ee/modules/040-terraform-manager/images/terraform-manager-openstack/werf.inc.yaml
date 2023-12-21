@@ -6,22 +6,24 @@ git:
 import:
 - artifact: terraform-provider-openstack
   add: /terraform-provider-openstack
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
   before: setup
-shell:
-  install:
-    - "apk update && apk add ca-certificates"
-    - "rm -rf /var/cache/apk/*"
 ---
 artifact: terraform-provider-openstack
-# we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
-# current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: {{ .Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   beforeInstall:
-    - apt-get update && apt install -y wget unzip
-    - |
-      mkdir /out
-      wget -q https://releases.hashicorp.com/terraform-provider-openstack/{{ .TF.openstack.version }}/terraform-provider-openstack_{{ .TF.openstack.version }}_linux_amd64.zip -O /terraform-provider-openstack.zip
-      unzip -d /terraform-provider-openstack /terraform-provider-openstack.zip
-      chmod -R 755 /terraform-provider-openstack
+    - apk add --no-cache make patch git bash
+  install:
+    - mkdir /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v{{ .TF.openstack.version }} {{ $.SOURCE_REPO }}/terraform-provider-openstack/terraform-provider-openstack.git /src
+    - cd /src
+    - make fmt
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/terraform-provider-openstack/terraform-provider-openstack/version.ProviderVersion={{ .TF.openstack.version }}"
+    - mv /go/bin/terraform-provider-openstack /terraform-provider-openstack
+    - chmod -R 755 /terraform-provider-openstack
+    - chown 64535:64535 /terraform-provider-openstack
