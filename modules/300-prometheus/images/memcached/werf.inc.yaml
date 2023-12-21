@@ -10,7 +10,7 @@ shell:
   install:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
-  - git clone --depth 1 --branch v{{ $memcachedVersion }} {{ $.SOURCE_REPO }}/memcached/memcached.git memcached
+  - git clone --depth 1 --branch {{ $memcachedVersion }} {{ $.SOURCE_REPO }}/memcached/memcached.git memcached
   - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ $.SOURCE_REPO }}/prometheus/memcached_exporter.git memcached_exporter
 
 ---
@@ -35,8 +35,6 @@ shell:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /usr/src/app/memcached_exporter
   - make
-
-
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
