@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mimir-query-frontend
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "mimir-query-frontend")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  ports:
+  - port: 443
+    name: https
+    targetPort: 8443
+  selector:
+    app: mimir-query-frontend

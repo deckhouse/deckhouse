@@ -135,10 +135,10 @@ internal:
 			Expect(additionalDataSourcesExists).To(BeFalse())
 		},
 
-		Entry("High availability and longterm enabled", true, 1, 4, 4),
-		Entry("High availability enabled, longterm disabled", true, 0, 3, 5),
-		Entry("High availability disabled, longterm enabled", false, 1, 2, 2),
-		Entry("High availability and longterm disabled", false, 0, 1, 3),
+		Entry("High availability and longterm enabled", true, 1, 5, 4),
+		Entry("High availability enabled, longterm disabled", true, 0, 4, 5),
+		Entry("High availability disabled, longterm enabled", false, 1, 3, 2),
+		Entry("High availability and longterm disabled", false, 0, 2, 3),
 	)
 
 	Describe("Check Scrape Interval", func() {
