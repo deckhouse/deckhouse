@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mimir-config
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "mimir-query-frontend")) | nindent 2 }}
+data:
+  config.yaml: |
+    multitenancy_enabled: false
+
+    api:
+      prometheus_http_prefix: ''
+    server:
+      http_listen_address: 127.0.0.1
+      http_listen_port: 8080
+      grpc_listen_address: 127.0.0.1
+      grpc_listen_port: 9095
+      log_format: "json"
+
+    frontend:
+      cache_results: true
+      log_queries_longer_than: 0
+      align_queries_with_step: false
+      results_cache:
+        backend: "memcached"
+        memcached:
+          addresses: dns+memcached.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:11211
+      downstream_url: https://promxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.

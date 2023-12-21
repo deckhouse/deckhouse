@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {{- define "memcached_resources" }}
 cpu: 25m
 memory: 256Mi
@@ -20,6 +21,8 @@ spec:
     updateMode: "Off"
 {{- end }}
 
+=======
+>>>>>>> b5bad2f0d ([prometheus] aggregating proxy)
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -53,6 +56,11 @@ spec:
         - "240"
         - -c
         - "32768"
+<<<<<<< HEAD
+=======
+        - -t
+        - "8"
+>>>>>>> b5bad2f0d ([prometheus] aggregating proxy)
         ports:
         - name: memcached
           containerPort: 11211
@@ -68,10 +76,17 @@ spec:
           timeoutSeconds: 1
         resources:
           requests:
+<<<<<<< HEAD
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "memcached_resources" . | nindent 12 }}
 {{- end }}
+=======
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            memory: 256Mi
+>>>>>>> b5bad2f0d ([prometheus] aggregating proxy)
       - name: exporter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "memcachedExporter") }}
@@ -82,7 +97,10 @@ spec:
           protocol: TCP
         resources:
           requests:
+<<<<<<< HEAD
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+=======
+>>>>>>> b5bad2f0d ([prometheus] aggregating proxy)
             cpu: 10m
             memory: 64Mi
           limits:
