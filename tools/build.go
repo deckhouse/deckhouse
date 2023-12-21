@@ -48,6 +48,8 @@ var defaultModulesExcludes = []string{
 	"images",
 	"hooks/**/*.go",
 	"hooks/*.go",
+	"*.go",
+	"hack",
 	"template_tests",
 	".namespace",
 	"values_matrix_test.yaml",
