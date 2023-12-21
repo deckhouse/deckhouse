@@ -6,7 +6,7 @@ index 5575009ea..e931706c8 100644
  	emptyUID         = "-1"
  )
  
-+var tmpDir = os.TempDir() + "/nginx"
++var tmpDir = os.TempDir() + "/nginx/"
 +
  // NewNGINXController creates a new NGINX Ingress controller.
  func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXController {
