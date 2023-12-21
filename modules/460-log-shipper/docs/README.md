@@ -55,7 +55,7 @@ The main goal of this architecture is to send messages to the queue system as qu
 
 ## Metadata
 
-On collecting, all sources enrich logs with metadata. 
+On collecting, all sources enrich logs with metadata. The enrichment takes place at the `Source` stage.
 
 ### Kubernetes
 
