@@ -1,3 +1,6 @@
+{{/* KubeDNS is not installed on the bootstrap phase and kube-apiserver will fail on a DNS resolution request */}}
+{{/*   because it doesn't know `deckhouse.d8-system.svc` address yet.*/}}
+{{- if .Values.global.clusterIsBootstrapped }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -10,3 +13,4 @@ spec:
   selector:
     matchLabels:
       app: webhook-handler
+{{- end }}
