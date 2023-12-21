@@ -118,6 +118,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "0 * * * *", // every hour
 		},
 	},
+	OnStartup: &go_hook.OrderedConfig{
+		Order: 1,
+	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
 
 func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error {
