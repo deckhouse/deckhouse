@@ -48,6 +48,7 @@ var defaultModulesExcludes = []string{
 	"images",
 	"hooks/**/*.go",
 	"hooks/*.go",
+	"hack",
 	"template_tests",
 	".namespace",
 	"values_matrix_test.yaml",
@@ -109,7 +110,7 @@ func writeSections(settings writeSettings) {
 		log.Fatalf("globbing: %v", err)
 	}
 	addNewFileEntry := func(file string) {
-		hooksPathRegex := regexp.MustCompile(`\d+-\w+\/hooks`)
+		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)
 		// we do not want to add hooks to the modules-with-exclude include
 		// this include is used in the dev-prebuild image, which does not use the hooks folder
 		if settings.SaveTo == modulesWithExcludeFileName && hooksPathRegex.Match([]byte(file)) {
