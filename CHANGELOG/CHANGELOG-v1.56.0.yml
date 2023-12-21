@@ -68,6 +68,8 @@ dhctl:
     - summary: ModuleSource mirroring via `dhctl`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6603
   fixes:
+    - summary: Fix for pulling older Deckhouse versions with tags instead of digests in installers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6932
     - summary: Allow missing module release channels.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6848
     - summary: Fix mirror not adding module-named tags at modules repo root.
@@ -197,4 +199,8 @@ tools:
   fixes:
     - summary: Fix remove module script location
       pull_request: https://github.com/deckhouse/deckhouse/pull/6875
+user-authn:
+  fixes:
+    - summary: OIDC allows unverified email.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6964
 
