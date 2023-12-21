@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -27,6 +28,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverDeckhouseVersion)
 
 func discoverDeckhouseVersion(input *go_hook.HookInput) error {
+	if true {
+		return fmt.Errorf("Test error")
+	}
 	versionFile := "/deckhouse/version"
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		versionFile = os.Getenv("D8_VERSION_TMP_FILE")
