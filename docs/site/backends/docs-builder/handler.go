@@ -29,11 +29,13 @@ func newHandler(highAvailability bool) *mux.Router {
 		isReady.Store(true)
 	}
 
+	channelMappingEditor := newChannelMappingEditor(src)
+
 	r := mux.NewRouter()
 	r.Handle("/readyz", newReadinessHandler(&isReady))
 	r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = io.WriteString(w, "OK") })
-	r.Handle("/loadDocArchive/{moduleName}/{version}", newLoadHandler(src)).Methods(http.MethodPost)
-	r.Handle("/build", newBuildHandler(src, dst, &isReady)).Methods(http.MethodPost)
+	r.Handle("/loadDocArchive/{moduleName}/{version}", newLoadHandler(src, channelMappingEditor)).Methods(http.MethodPost)
+	r.Handle("/build", newBuildHandler(src, dst, &isReady, channelMappingEditor)).Methods(http.MethodPost)
 
 	return r
 }
