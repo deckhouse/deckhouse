@@ -44,6 +44,8 @@
  - **[ceph-csi]** Use different liveness probe ports for csi-controller-cephfs and csi-controller-rbd. [#6727](https://github.com/deckhouse/deckhouse/pull/6727)
  - **[cloud-provider-azure]** Azure cloud-controller-manager has been updated to the latest versions for all supported Kubernetes versions. [#6574](https://github.com/deckhouse/deckhouse/pull/6574)
     cloud-controller-manager will restart.
+ - **[cni-cilium]** Fixed pprof listen address for cilium-agents. [#6989](https://github.com/deckhouse/deckhouse/pull/6989)
+    cilium-agents will restart. Some fqdn-basic network policies will blink awile.
  - **[cni-cilium]** Cilium version bumped to 1.14.5 [#6881](https://github.com/deckhouse/deckhouse/pull/6881)
     Cilium agents will restart, during restart some policies won't work.
  - **[cni-cilium]** Restore removed API versions in CRDs. [#6690](https://github.com/deckhouse/deckhouse/pull/6690)
