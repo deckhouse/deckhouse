@@ -17,7 +17,6 @@ package hooks
 
 import (
 	"context"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -114,7 +113,12 @@ metadata:
 		iopGVR = schema.GroupVersionResource{
 			Group:    "install.istio.io",
 			Version:  "v1alpha1",
-			Resource: "IstioOperator",
+			Resource: "istiooperators",
+		}
+		iopGVK = schema.GroupVersionKind{
+			Group:   "install.istio.io",
+			Version: "v1alpha1",
+			Kind:    "IstioOperator",
 		}
 		ns   *corev1.Namespace
 		cr1  *rbacv1.ClusterRole
@@ -124,8 +128,6 @@ metadata:
 		mwc  *admissionregistrationv1.MutatingWebhookConfiguration
 		vwc  *admissionregistrationv1.ValidatingWebhookConfiguration
 		iop  *unstructured.Unstructured
-
-		// clusterState string
 	)
 	BeforeEach(func() {
 		_ = yaml.Unmarshal([]byte(iopYAML), &iop)
@@ -139,15 +141,16 @@ metadata:
 	})
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
+	f.RegisterCRD(iopGVK.Group, iopGVK.Version, iopGVK.Kind, true)
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
 			f.KubeStateSet(``)
-			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
 
-		FIt("Hook must execute successfully", func() {
+		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
 		})
@@ -155,15 +158,8 @@ metadata:
 
 	Context("Cluster with minimal settings and orphan iop", func() {
 		BeforeEach(func() {
-			f.RegisterCRD(iopGVR.Group, iopGVR.Version, iopGVR.Resource, true)
-			// f.KubeStateSet(iop)
-			// f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
-			clusterState := strings.Join([]string{
-				string(nsYAML),
-				string(iopYAML),
-			}, "---\n")
-			f.BindingContexts.Set(f.KubeStateSet(clusterState))
-			// f.BindingContexts.Set(f.KubeStateSet(``))
+			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
+			f.KubeStateSet("")
 
 			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 			_, _ = f.KubeClient().Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Create(context.TODO(), iop, metav1.CreateOptions{})
@@ -184,13 +180,11 @@ metadata:
 
 	Context("Cluster with minimal settings and orphan istio resources", func() {
 		BeforeEach(func() {
-			// f.KubeStateSet(ns + iop + clwRes)
-			// f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
-			f.RegisterCRD(iopGVR.Group, iopGVR.Version, iopGVR.Resource, true)
-			f.KubeStateSet(``)
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
+			f.KubeStateSet("")
 
 			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
+			_, _ = f.KubeClient().Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Create(context.TODO(), iop, metav1.CreateOptions{})
 			_, _ = f.KubeClient().RbacV1().ClusterRoles().Create(context.TODO(), cr1, metav1.CreateOptions{})
 			_, _ = f.KubeClient().RbacV1().ClusterRoles().Create(context.TODO(), cr2, metav1.CreateOptions{})
 			_, _ = f.KubeClient().RbacV1().ClusterRoleBindings().Create(context.TODO(), crb1, metav1.CreateOptions{})
@@ -212,17 +206,17 @@ metadata:
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete IstioOperator/v1x16 in namespace d8-istio"))
 
 			Expect(f.KubernetesGlobalResource("ClusterRole", "istio-reader-d8-istio").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRole/istio-reader-d8-istio in namespace "))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRole/istio-reader-d8-istio"))
 			Expect(f.KubernetesGlobalResource("ClusterRole", "istio-reader-clusterrole-v1x16-d8-istio").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRole/istio-reader-clusterrole-v1x16-d8-istio in namespace "))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRole/istio-reader-clusterrole-v1x16-d8-istio"))
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "istio-reader-d8-istio").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRoleBinding/istio-reader-d8-istio in namespace "))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRoleBinding/istio-reader-d8-istio"))
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "istio-reader-clusterrole-v1x16-d8-istio").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRoleBinding/istio-reader-clusterrole-v1x16-d8-istio in namespace "))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRoleBinding/istio-reader-clusterrole-v1x16-d8-istio"))
 			Expect(f.KubernetesGlobalResource("MutatingWebhookConfiguration", "istio-sidecar-injector-v1x16-d8-istio").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete MutatingWebhookConfiguration/istio-sidecar-injector-v1x16-d8-istio in namespace "))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete MutatingWebhookConfiguration/istio-sidecar-injector-v1x16-d8-istio"))
 			Expect(f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "istio-validator-v1x16-d8-istio").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ValidatingWebhookConfiguration/istio-validator-v1x16-d8-istio in namespace "))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ValidatingWebhookConfiguration/istio-validator-v1x16-d8-istio"))
 		})
 	})
 
