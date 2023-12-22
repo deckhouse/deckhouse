@@ -800,7 +800,7 @@ status:
 
 Remember the special alert `DeadMansSwitch` — its presence in the cluster indicates that Prometheus is working.
 
-## How to add additional endpoints to scrape config. New way with CRD
+## How do I add additional endpoints to a scrape config?
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1alpha1
