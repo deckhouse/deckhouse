@@ -1,3 +1,26 @@
+{{- define "memcached_resources" }}
+cpu: 25m
+memory: 256Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: memcached
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "memcached")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: memcached
+  updatePolicy:
+    updateMode: "Off"
+{{- end }}
+
+
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -47,10 +70,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-            cpu: 50m
-            memory: 256Mi
-          limits:
-            memory: 256Mi
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "memcached_resources" . | nindent 12 }}
+{{- end }}
       - name: exporter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "memcachedExporter") }}
