@@ -31,8 +31,6 @@ spec:
         - "240"
         - -c
         - "32768"
-        - -t
-        - "8"
         ports:
         - name: memcached
           containerPort: 11211
@@ -48,6 +46,7 @@ spec:
           timeoutSeconds: 1
         resources:
           requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             cpu: 50m
             memory: 256Mi
           limits:
@@ -62,6 +61,7 @@ spec:
           protocol: TCP
         resources:
           requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             cpu: 10m
             memory: 64Mi
           limits:
