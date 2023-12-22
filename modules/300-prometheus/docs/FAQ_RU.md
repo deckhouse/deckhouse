@@ -797,7 +797,7 @@ status:
 
 Помните о специальном алерте `DeadMansSwitch` — его присутствие в кластере говорит о работоспособности Prometheus.
 
-## Как добавить дополнительные эндпойнты в scrape config
+## Как добавить дополнительные эндпойнты в scrape config?
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1alpha1
