@@ -23,3 +23,10 @@ This patch is fixing this behaviour.
 This patch adds the ability to specify CA for scan jobs via environment variables.
 
 [Issue](https://github.com/deckhouse/deckhouse/issues/4950)
+
+
+### 005-cis-benchmark-on-startup.patch
+
+The first check begins instantly when the operator starts
+
+[Issue](https://github.com/deckhouse/deckhouse/issues/5174)
