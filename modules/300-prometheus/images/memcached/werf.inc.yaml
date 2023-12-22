@@ -30,7 +30,7 @@ shell:
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /usr/src/app/memcached_exporter
-  - make
+  - make build
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
