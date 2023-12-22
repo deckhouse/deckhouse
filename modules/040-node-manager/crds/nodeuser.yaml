@@ -64,7 +64,8 @@ spec:
                     Node user SSH public keys.
 
                     Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
-                  x-doc-examples: [ 'ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC' ]
+                  x-doc-examples:
+                  - ['ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC']
                 passwordHash:
                   type: string
                   x-doc-required: true
