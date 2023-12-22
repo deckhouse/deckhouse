@@ -1,5 +1,4 @@
 ---
-{{ $memcachedVersion := "1.6.22" }}
 {{ $memcachedExporterVersion := "0.14.1" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
@@ -34,7 +33,10 @@ shell:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: memcached:{{ $memcachedVersion }}-alpine
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  install:
+  - apk add --no-cache memcached
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
