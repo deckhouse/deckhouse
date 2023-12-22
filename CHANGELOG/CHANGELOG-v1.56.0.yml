@@ -199,8 +199,4 @@ tools:
   fixes:
     - summary: Fix remove module script location
       pull_request: https://github.com/deckhouse/deckhouse/pull/6875
-user-authn:
-  fixes:
-    - summary: OIDC allows unverified email.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/6964
 

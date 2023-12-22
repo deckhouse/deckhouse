@@ -63,7 +63,6 @@
  - **[operator-trivy]** Fixed trivy working with private container registry with self-signed CA. [#6747](https://github.com/deckhouse/deckhouse/pull/6747)
  - **[prometheus]** Add df utility to an image. [#6757](https://github.com/deckhouse/deckhouse/pull/6757)
  - **[runtime-audit-engine]** Fixed vulnerabilities: GHSA-62mh-w5cv-p88c, CVE-2021-3127, GHSA-j756-f273-xhp4, CVE-2022-21698, CVE-2020-29652, CVE-2021-43565, CVE-2022-27191, CVE-2021-33194, CVE-2022-27664, CVE-2022-41723, CVE-2023-39325, CVE-2021-38561, CVE-2022-32149, GHSA-m425-mq94-257g, CVE-2022-28948. [#6501](https://github.com/deckhouse/deckhouse/pull/6501)
- - **[user-authn]** OIDC allows unverified email. [#6964](https://github.com/deckhouse/deckhouse/pull/6964)
 
 ## Chore
 
