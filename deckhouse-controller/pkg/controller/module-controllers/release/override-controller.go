@@ -264,6 +264,13 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 
 	if newChecksum == "" {
 		// module is up-to-date
+		if mo.Status.Message != "" {
+			// drop error message, if exists
+			mo.Status.Message = ""
+			if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+		}
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
