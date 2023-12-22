@@ -17,27 +17,22 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"encoding/json"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 const (
-	istioSystemNs = "d8-istio"
+	istioSystemNs                = "d8-istio"
+	istioComponentsLabelSelector = "install.operator.istio.io/owning-resource-namespace=d8-istio"
 )
-
-type removeObject struct {
-	APIVersion              string
-	Kind                    string
-	Namespace               string
-	Name                    string
-	DeletionTimestampExists bool
-	FinalizersExists        bool
-}
 
 var (
 	deleteFinalizersPatch = map[string]interface{}{
@@ -45,289 +40,89 @@ var (
 			"finalizers": nil,
 		},
 	}
+	iopGVR = schema.GroupVersionResource{
+		Group:    "install.istio.io",
+		Version:  "v1alpha1",
+		Resource: "IstioOperator",
+	}
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:                         "clwNamespace",
-			ApiVersion:                   "v1",
-			Kind:                         "Namespace",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveNsFilter,
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{istioSystemNs},
-			},
-		},
-		{
-			Name:                         "clwClusterRole",
-			ApiVersion:                   "rbac.authorization.k8s.io/v1",
-			Kind:                         "ClusterRole",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"install.operator.istio.io/owning-resource-namespace": "d8-istio",
-				},
-			},
-		},
-		{
-			Name:                         "clwClusterRoleBinding",
-			ApiVersion:                   "rbac.authorization.k8s.io/v1",
-			Kind:                         "ClusterRoleBinding",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"install.operator.istio.io/owning-resource-namespace": "d8-istio",
-				},
-			},
-		},
-		{
-			Name:                         "clwMutatingWebhookConfiguration",
-			ApiVersion:                   "admissionregistration.k8s.io/v1",
-			Kind:                         "MutatingWebhookConfiguration",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"install.operator.istio.io/owning-resource-namespace": "d8-istio",
-				},
-			},
-		},
-		{
-			Name:                         "clwValidatingWebhookConfiguration",
-			ApiVersion:                   "admissionregistration.k8s.io/v1",
-			Kind:                         "ValidatingWebhookConfiguration",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"install.operator.istio.io/owning-resource-namespace": "d8-istio",
-				},
-			},
-		},
-		{
-			Name:                         "nsdServiceAccount",
-			ApiVersion:                   "v1",
-			Kind:                         "ServiceAccount",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdRole",
-			ApiVersion:                   "rbac.authorization.k8s.io/v1",
-			Kind:                         "Role",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdRoleBinding",
-			ApiVersion:                   "rbac.authorization.k8s.io/v1",
-			Kind:                         "RoleBinding",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdIstioOperator",
-			ApiVersion:                   "install.istio.io/v1alpha1",
-			Kind:                         "IstioOperator",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdEnvoyFilter",
-			ApiVersion:                   "networking.istio.io/v1alpha3",
-			Kind:                         "EnvoyFilter",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdDeployment",
-			ApiVersion:                   "apps/v1",
-			Kind:                         "Deployment",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdReplicaSet",
-			ApiVersion:                   "apps/v1",
-			Kind:                         "ReplicaSet",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdPod",
-			ApiVersion:                   "v1",
-			Kind:                         "Pod",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdConfigMap",
-			ApiVersion:                   "v1",
-			Kind:                         "ConfigMap",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdPodDisruptionBudget",
-			ApiVersion:                   "policy/v1",
-			Kind:                         "PodDisruptionBudget",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-		{
-			Name:                         "nsdService",
-			ApiVersion:                   "v1",
-			Kind:                         "Service",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyRemoveObjectFilter,
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{istioSystemNs},
-				},
-			},
-		},
-	},
-}, purgeOrphanResources)
+}, dependency.WithExternalDependencies(purgeOrphanResources))
 
-func applyRemoveNsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	_, deletionTimestampExists := obj.GetAnnotations()["deletionTimestamp"]
-
-	var RemoveNsInfo = removeObject{
-		APIVersion:              obj.GetAPIVersion(),
-		Kind:                    obj.GetKind(),
-		Name:                    obj.GetName(),
-		DeletionTimestampExists: deletionTimestampExists,
+func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) error {
+	patch, err := json.Marshal(deleteFinalizersPatch)
+	if err != nil {
+		return err
 	}
-
-	return RemoveNsInfo, nil
-}
-
-func applyRemoveObjectFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	_, deletionTimestampExists := obj.GetAnnotations()["deletionTimestamp"]
-	// _, finalizersExists := obj.GetFinalizers()
-	var finalizersExists bool
-	if len(obj.GetFinalizers()) == 0 {
-		finalizersExists = false
-	} else {
-		finalizersExists = true
+	k8sClient, err := dc.GetK8sClient()
+	if err != nil {
+		return err
 	}
-
-	var RemoveObjectInfo = removeObject{
-		APIVersion:              obj.GetAPIVersion(),
-		Kind:                    obj.GetKind(),
-		Namespace:               obj.GetNamespace(),
-		Name:                    obj.GetName(),
-		FinalizersExists:        finalizersExists,
-		DeletionTimestampExists: deletionTimestampExists,
-	}
-
-	return RemoveObjectInfo, nil
-}
-
-func purgeOrphanResources(input *go_hook.HookInput) error {
-	objects := make([]go_hook.FilterResult, 0)
-	objects = append(objects, input.Snapshots["clwClusterRole"]...)
-	objects = append(objects, input.Snapshots["clwClusterRoleBinding"]...)
-	objects = append(objects, input.Snapshots["clwMutatingWebhookConfiguration"]...)
-	objects = append(objects, input.Snapshots["clwValidatingWebhookConfiguration"]...)
-	objects = append(objects, input.Snapshots["nsdServiceAccount"]...)
-	objects = append(objects, input.Snapshots["nsdRole"]...)
-	objects = append(objects, input.Snapshots["nsdRoleBinding"]...)
-	objects = append(objects, input.Snapshots["nsdIstioOperator"]...)
-	objects = append(objects, input.Snapshots["nsdEnvoyFilter"]...)
-	objects = append(objects, input.Snapshots["nsdDeployment"]...)
-	// objects = append(objects, input.Snapshots["nsdReplicaSet"]...)
-	// objects = append(objects, input.Snapshots["nsdPod"]...)
-	objects = append(objects, input.Snapshots["nsdConfigMap"]...)
-	objects = append(objects, input.Snapshots["nsdPodDisruptionBudget"]...)
-	objects = append(objects, input.Snapshots["nsdService"]...)
-	objects = append(objects, input.Snapshots["nsdConfigMap"]...)
-
-	for _, objRaw := range objects {
-		obj := objRaw.(removeObject)
-		if obj.FinalizersExists {
-			input.LogEntry.Infof("Remove finalizers from %s/%s in namespace %s", obj.Kind, obj.Name, obj.Namespace)
-			input.PatchCollector.MergePatch(deleteFinalizersPatch, obj.APIVersion, obj.Kind, obj.Namespace, obj.Name)
+	// remove finalizers and delete iop in ns d8-istio
+	iops, err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).List(context.TODO(), metav1.ListOptions{})
+	if err == nil {
+		for _, iop := range iops.Items {
+			_, err = k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Patch(context.TODO(), iop.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+			if err == nil {
+				input.LogEntry.Infof("Remove finalizers from IstioOperator/%s in namespace %s", iop.GetName(), istioSystemNs)
+			}
+			err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Delete(context.TODO(), iop.GetName(), metav1.DeleteOptions{})
+			if err == nil {
+				input.LogEntry.Infof("Delete IstioOperator/%s in namespace %s", iop.GetName(), istioSystemNs)
+			}
 		}
-		input.LogEntry.Infof("Delete %s/%s in namespace %s", obj.Kind, obj.Name, obj.Namespace)
-		input.PatchCollector.Delete(obj.APIVersion, obj.Kind, obj.Namespace, obj.Name, object_patch.InForeground())
 	}
-
-	if len(input.Snapshots["clwNamespace"]) > 0 {
-		ns := input.Snapshots["clwNamespace"][0].(removeObject)
-		if !ns.DeletionTimestampExists {
-			input.LogEntry.Infof("Delete namespace %s", ns.Name)
-			input.PatchCollector.Delete(ns.APIVersion, ns.Kind, "", ns.Name, object_patch.InForeground())
+	// delete ClusterRole
+	icrs, err := k8sClient.RbacV1().ClusterRoles().List(context.TODO(), metav1.ListOptions{LabelSelector: istioComponentsLabelSelector})
+	if err == nil {
+		for _, icr := range icrs.Items {
+			err := k8sClient.RbacV1().ClusterRoles().Delete(context.TODO(), icr.GetName(), metav1.DeleteOptions{})
+			if err == nil {
+				input.LogEntry.Infof("Delete ClusterRoles/%s", icr.GetName())
+			}
+		}
+	}
+	// delete ClusterRoleBinding
+	icrbs, err := k8sClient.RbacV1().ClusterRoleBindings().List(context.TODO(), metav1.ListOptions{LabelSelector: istioComponentsLabelSelector})
+	if err == nil {
+		for _, icrb := range icrbs.Items {
+			err := k8sClient.RbacV1().ClusterRoleBindings().Delete(context.TODO(), icrb.GetName(), metav1.DeleteOptions{})
+			if err == nil {
+				input.LogEntry.Infof("Delete ClusterRoleBindings/%s", icrb.GetName())
+			}
+		}
+	}
+	// delete MutatingWebhookConfiguration
+	imwcs, err := k8sClient.AdmissionregistrationV1().MutatingWebhookConfigurations().List(context.TODO(), metav1.ListOptions{LabelSelector: istioComponentsLabelSelector})
+	if err == nil {
+		for _, imwc := range imwcs.Items {
+			err := k8sClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.TODO(), imwc.GetName(), metav1.DeleteOptions{})
+			if err == nil {
+				input.LogEntry.Infof("Delete MutatingWebhookConfigurations/%s", imwc.GetName())
+			}
+		}
+	}
+	// delete ValidatingWebhookConfiguration
+	ivwcs, err := k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().List(context.TODO(), metav1.ListOptions{LabelSelector: istioComponentsLabelSelector})
+	if err == nil {
+		for _, ivwc := range ivwcs.Items {
+			err := k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(context.TODO(), ivwc.GetName(), metav1.DeleteOptions{})
+			if err == nil {
+				input.LogEntry.Infof("Delete MutatingWebhookConfigurations/%s", ivwc.GetName())
+			}
+		}
+	}
+	// delete NS
+	ns, err := k8sClient.CoreV1().Namespaces().Get(context.TODO(), istioSystemNs, metav1.GetOptions{})
+	if err == nil {
+		_, nsDeletionTimestampExists := ns.GetAnnotations()["deletionTimestamp"]
+		if !nsDeletionTimestampExists {
+			err := k8sClient.CoreV1().Namespaces().Delete(context.TODO(), ns.GetName(), metav1.DeleteOptions{})
+			if err == nil {
+				input.LogEntry.Infof("Delete namespace %s", ns.GetName())
+			}
 		}
 	}
 

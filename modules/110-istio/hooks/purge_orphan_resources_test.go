@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,12 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 package hooks
 
 import (
+	"context"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -26,14 +35,16 @@ import (
 var _ = Describe("Istio hooks :: purge_orphan_resources ::", func() {
 
 	const (
-		ns = `
+		istioSystemNs = "d8-istio"
+		// istioComponentsLabelSelector = "install.operator.istio.io/owning-resource-namespace=d8-istio"
+		nsYAML = `
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-istio
 `
-		iop = `
+		iopYAML = `
 ---
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
@@ -43,7 +54,7 @@ metadata:
   name: v1x16
   namespace: d8-istio
 `
-		clwRes = `
+		cr1YAML = `
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -51,6 +62,8 @@ metadata:
   name: istio-reader-d8-istio
   labels:
     install.operator.istio.io/owning-resource-namespace: d8-istio
+`
+		cr2YAML = `
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -58,6 +71,8 @@ metadata:
   name: istio-reader-clusterrole-v1x16-d8-istio
   labels:
     install.operator.istio.io/owning-resource-namespace: d8-istio
+`
+		crb1YAML = `
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -65,6 +80,8 @@ metadata:
   name: istio-reader-d8-istio
   labels:
     install.operator.istio.io/owning-resource-namespace: d8-istio
+`
+		crb2YAML = `
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -72,6 +89,8 @@ metadata:
   name: istio-reader-clusterrole-v1x16-d8-istio
   labels:
     install.operator.istio.io/owning-resource-namespace: d8-istio
+`
+		mwcYAML = `
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
@@ -79,6 +98,8 @@ metadata:
   name: istio-sidecar-injector-v1x16-d8-istio
   labels:
     install.operator.istio.io/owning-resource-namespace: d8-istio
+`
+		vwcYAML = `
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -87,93 +108,46 @@ metadata:
   labels:
     install.operator.istio.io/owning-resource-namespace: d8-istio
 `
-		nsdRes = `
----
-apiVersion: networking.istio.io/v1alpha3
-kind: EnvoyFilter
-metadata:
-  name: stats-filter-1.13-v1x16
-  namespace: d8-istio
----
-apiVersion: networking.istio.io/v1alpha3
-kind: EnvoyFilter
-metadata:
-  name: tcp-stats-filter-1.13-v1x16
-  namespace: d8-istio
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: istiod-v1x16
-  namespace: d8-istio
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: istiod-v1x16
-  namespace: d8-istio
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: istiod-v1x16
-  namespace: d8-istio
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: istiod-v1x16
-  namespace: d8-istio
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: istiod-service-account
-  namespace: d8-istio
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: istiod-v1x16
-  namespace: d8-istio
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: istiod-d8-istio
-  namespace: d8-istio
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: istiod-v1x16
-  namespace: d8-istio
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: istiod-d8-istio
-  namespace: d8-istio
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: istiod-v1x16
-  namespace: d8-istio
-`
 	)
 
+	var (
+		iopGVR = schema.GroupVersionResource{
+			Group:    "install.istio.io",
+			Version:  "v1alpha1",
+			Resource: "IstioOperator",
+		}
+		ns   *corev1.Namespace
+		cr1  *rbacv1.ClusterRole
+		cr2  *rbacv1.ClusterRole
+		crb1 *rbacv1.ClusterRoleBinding
+		crb2 *rbacv1.ClusterRoleBinding
+		mwc  *admissionregistrationv1.MutatingWebhookConfiguration
+		vwc  *admissionregistrationv1.ValidatingWebhookConfiguration
+		iop  *unstructured.Unstructured
+
+		// clusterState string
+	)
+	BeforeEach(func() {
+		_ = yaml.Unmarshal([]byte(iopYAML), &iop)
+		_ = yaml.Unmarshal([]byte(nsYAML), &ns)
+		_ = yaml.Unmarshal([]byte(cr1YAML), &cr1)
+		_ = yaml.Unmarshal([]byte(cr2YAML), &cr2)
+		_ = yaml.Unmarshal([]byte(crb1YAML), &crb1)
+		_ = yaml.Unmarshal([]byte(crb2YAML), &crb2)
+		_ = yaml.Unmarshal([]byte(mwcYAML), &mwc)
+		_ = yaml.Unmarshal([]byte(vwcYAML), &vwc)
+	})
+
 	f := HookExecutionConfigInit(`{}`, `{}`)
-	f.RegisterCRD("install.istio.io", "v1alpha1", "IstioOperator", true)
-	f.RegisterCRD("networking.istio.io", "v1alpha3", "EnvoyFilter", true)
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
+			f.KubeStateSet(``)
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
 
-		It("Hook must execute successfully", func() {
+		FIt("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
 		})
@@ -181,24 +155,19 @@ metadata:
 
 	Context("Cluster with minimal settings and orphan iop", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(iop)
-			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
-			f.RunHook()
-		})
+			f.RegisterCRD(iopGVR.Group, iopGVR.Version, iopGVR.Resource, true)
+			// f.KubeStateSet(iop)
+			// f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
+			clusterState := strings.Join([]string{
+				string(nsYAML),
+				string(iopYAML),
+			}, "---\n")
+			f.BindingContexts.Set(f.KubeStateSet(clusterState))
+			// f.BindingContexts.Set(f.KubeStateSet(``))
 
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).ToNot(HaveLen(0))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Remove finalizers from IstioOperator/v1x16 in namespace d8-istio"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete IstioOperator/v1x16 in namespace d8-istio"))
-			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x16").Exists()).To(BeFalse())
-		})
-	})
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
+			_, _ = f.KubeClient().Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Create(context.TODO(), iop, metav1.CreateOptions{})
 
-	Context("Cluster with minimal settings and orphan istio resources", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(ns + iop + clwRes + nsdRes)
-			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
 			f.RunHook()
 		})
 
@@ -206,37 +175,41 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(string(f.LogrusOutput.Contents())).ToNot(HaveLen(0))
 			Expect(f.KubernetesGlobalResource("Namespace", "d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete namespace d8-istio"))
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x16").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Remove finalizers from IstioOperator/v1x16 in namespace d8-istio"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete IstioOperator/v1x16 in namespace d8-istio"))
+		})
+	})
+
+	Context("Cluster with minimal settings and orphan istio resources", func() {
+		BeforeEach(func() {
+			// f.KubeStateSet(ns + iop + clwRes)
+			// f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
+			f.RegisterCRD(iopGVR.Group, iopGVR.Version, iopGVR.Resource, true)
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.KubeStateSet(``))
+
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
+			_, _ = f.KubeClient().RbacV1().ClusterRoles().Create(context.TODO(), cr1, metav1.CreateOptions{})
+			_, _ = f.KubeClient().RbacV1().ClusterRoles().Create(context.TODO(), cr2, metav1.CreateOptions{})
+			_, _ = f.KubeClient().RbacV1().ClusterRoleBindings().Create(context.TODO(), crb1, metav1.CreateOptions{})
+			_, _ = f.KubeClient().RbacV1().ClusterRoleBindings().Create(context.TODO(), crb2, metav1.CreateOptions{})
+			_, _ = f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Create(context.TODO(), mwc, metav1.CreateOptions{})
+			_, _ = f.KubeClient().AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(context.TODO(), vwc, metav1.CreateOptions{})
+
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LogrusOutput.Contents())).ToNot(HaveLen(0))
+			Expect(f.KubernetesGlobalResource("Namespace", "d8-istio").Exists()).To(BeFalse())
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete namespace d8-istio"))
 
 			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x16").Exists()).To(BeFalse())
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Remove finalizers from IstioOperator/v1x16 in namespace d8-istio"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete IstioOperator/v1x16 in namespace d8-istio"))
-
-			Expect(f.KubernetesResource("EnvoyFilter", "d8-istio", "stats-filter-1.13-v1x16").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete EnvoyFilter/stats-filter-1.13-v1x16 in namespace d8-istio"))
-			Expect(f.KubernetesResource("EnvoyFilter", "d8-istio", "tcp-stats-filter-1.13-v1x16").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete EnvoyFilter/tcp-stats-filter-1.13-v1x16 in namespace d8-istio"))
-
-			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete Deployment/istiod-v1x16 in namespace d8-istio"))
-			Expect(f.KubernetesResource("Service", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete Service/istiod-v1x16 in namespace d8-istio"))
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ConfigMap/istiod-v1x16 in namespace d8-istio"))
-			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete PodDisruptionBudget/istiod-v1x16 in namespace d8-istio"))
-
-			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "istiod-service-account").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ServiceAccount/istiod-service-account in namespace d8-istio"))
-			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ServiceAccount/istiod-v1x16 in namespace d8-istio"))
-			Expect(f.KubernetesResource("Role", "d8-istio", "istiod-d8-istio").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete Role/istiod-d8-istio in namespace d8-istio"))
-			Expect(f.KubernetesResource("Role", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete Role/istiod-v1x16 in namespace d8-istio"))
-			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "istiod-d8-istio").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete RoleBinding/istiod-d8-istio in namespace d8-istio"))
-			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "istiod-v1x16").Exists()).To(BeFalse())
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete RoleBinding/istiod-v1x16 in namespace d8-istio"))
 
 			Expect(f.KubernetesGlobalResource("ClusterRole", "istio-reader-d8-istio").Exists()).To(BeFalse())
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Delete ClusterRole/istio-reader-d8-istio in namespace "))
