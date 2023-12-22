@@ -291,7 +291,7 @@ kind: NodeUser
 metadata:
   name: testuser
 spec:
-  uid: 1001
+  uid: 1100
   sshPublicKey: "<SSH_PUBLIC_KEY>"
   passwordHash: <PASSWORD_HASH>
   isSudoer: true
