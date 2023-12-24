@@ -61,8 +61,8 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt
 git:
-- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
-  to: /
+- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/templates
+  to: /app/templates
   stageDependencies:
     install:
       - '**/*'
