@@ -81,3 +81,5 @@ import:
   add: /src/frontend/static
   to: /app/frontend/static
   before: setup
+docker:
+  WORKDIR: /app
