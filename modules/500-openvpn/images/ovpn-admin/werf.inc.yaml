@@ -60,6 +60,12 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt
+git:
+- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
+  to: /
+  stageDependencies:
+    install:
+      - '**/*'
 import:
 - artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
   add: /ovpn-admin
