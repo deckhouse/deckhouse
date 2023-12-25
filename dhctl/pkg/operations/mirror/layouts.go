@@ -143,7 +143,7 @@ type ociLayout struct {
 	ImageLayoutVersion string `json:"imageLayoutVersion"`
 }
 
-func FillLayoutsImages(mirrorCtx *Context, layouts *ImageLayouts, deckhouseVersions []*semver.Version) {
+func FillLayoutsImages(mirrorCtx *Context, layouts *ImageLayouts, deckhouseVersions []semver.Version) {
 	layouts.DeckhouseImages = map[string]struct{}{
 		mirrorCtx.DeckhouseRegistryRepo + ":alpha":        {},
 		mirrorCtx.DeckhouseRegistryRepo + ":beta":         {},
