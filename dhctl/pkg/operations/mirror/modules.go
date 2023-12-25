@@ -77,6 +77,9 @@ func getModulesForRepo(
 
 	modules, err := remote.List(modulesRepo, remoteOpts...)
 	if err != nil {
+		if isRepoNotFoundError(err) {
+			return []Module{}, nil
+		}
 		return nil, fmt.Errorf("Get Deckhouse modules list from %s: %w", repo, err)
 	}
 
