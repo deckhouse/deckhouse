@@ -53,6 +53,11 @@ func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string) err
 		return fmt.Errorf("Get external modules from %q: %w", src.Spec.Registry.Repo, err)
 	}
 
+	if len(modules) == 0 {
+		log.WarnLn("No modules found in ModuleSource")
+		return nil
+	}
+
 	for i, module := range modules {
 		log.InfoF("[%d / %d] Pulling module %s...\n", i+1, len(modules), module.RegistryPath)
 
