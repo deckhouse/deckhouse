@@ -34,7 +34,7 @@ import (
 
 func MirrorDeckhouseToLocalFS(
 	mirrorCtx *mirror.Context,
-	versions []*semver.Version,
+	versions []semver.Version,
 ) error {
 	log.InfoF("Fetching Deckhouse modules list...\t")
 	modules, err := mirror.GetDeckhouseExternalModules(mirrorCtx)
