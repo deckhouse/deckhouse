@@ -15,7 +15,9 @@
 package operations
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -155,18 +157,26 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 		log.InfoF("Repo %s is mirrored ✅\n", originalRepo)
 	}
 
-	log.InfoF("All repositories are mirrored ✅\nPushing modules tags...\n")
+	log.InfoLn("All repositories are mirrored ✅")
 
+	if len(modulesList) == 0 {
+		return nil
+	}
+
+	log.InfoLn("Pushing modules tags...")
 	if err = pushModulesTags(mirrorCtx, modulesList); err != nil {
 		return fmt.Errorf("Push modules tags: %w", err)
 	}
-
 	log.InfoF("All modules tags are pushed ✅\n")
 
 	return nil
 }
 
 func pushModulesTags(mirrorCtx *mirror.Context, modulesList []string) error {
+	if len(modulesList) == 0 {
+		return nil
+	}
+
 	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 	modulesRepo := path.Join(mirrorCtx.RegistryHost, mirrorCtx.RegistryPath, "modules")
 	pushCount := 1
@@ -221,11 +231,15 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, []str
 		releasesIndexRef:   releasesLayout,
 	}
 
-	dirs, err := os.ReadDir(modulesPath)
 	modulesNames := make([]string, 0)
-	if err != nil {
+	dirs, err := os.ReadDir(modulesPath)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return ociLayouts, []string{}, nil
+	case err != nil:
 		return nil, nil, err
 	}
+
 	for _, dir := range dirs {
 		if !dir.IsDir() {
 			continue
