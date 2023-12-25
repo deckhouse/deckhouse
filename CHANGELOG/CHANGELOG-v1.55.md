@@ -1,9 +1,5 @@
 # Changelog v1.55
 
-## [MALFORMED]
-
-
- - #6536 unknown section "virtualization"
 
 ## Know before update
 
