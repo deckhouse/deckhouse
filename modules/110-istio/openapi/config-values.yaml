@@ -28,9 +28,9 @@ properties:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     description: |
-      The class of the Ingress controller used for the Istio.
+      The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
 
-      Optional. By default, the `modules.ingressClass` global value is used
+      Optional. By default, the `modules.ingressClass` global value is used.
   enableHTTP10:
     type: boolean
     default: false
