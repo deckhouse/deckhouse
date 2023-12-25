@@ -151,7 +151,7 @@ spec:
         condition: (always_true)
     - macro:
         name: trusted_sa
-        condition: (always_true)
+        condition: ka.target.name in ({{ join "," .Values.runtimeAuditEngine.internal.trustedServiceAccounts }})
     - macro:
         name: system_namespace
         condition: ((ka.target.namespace in (kube-system, kube-public, default)) or (ka.target.name startswith "d8-"))

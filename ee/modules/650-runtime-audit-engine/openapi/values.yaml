@@ -19,3 +19,9 @@ properties:
             type: string
           crt:
             type: string
+      trustedServiceAccounts:
+        type: array
+        items:
+          type: string
+        x-examples:
+        - ["test1", "test2"]
