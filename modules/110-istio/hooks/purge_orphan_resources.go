@@ -46,11 +46,6 @@ var (
 		Version:  "v1alpha1",
 		Resource: "istiooperators",
 	}
-	crdGVR = schema.GroupVersionResource{
-		Group:    "apiextensions.k8s.io",
-		Version:  "v1",
-		Resource: "customresourcedefinitions",
-	}
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -69,8 +64,6 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 
 	ns, _ := k8sClient.CoreV1().Namespaces().Get(context.TODO(), istioSystemNs, metav1.GetOptions{})
 	if ns != nil {
-		// iopcrd, _ := k8sClient.Dynamic().Resource(crdGVR).Get(context.TODO(), iopCrdName, metav1.GetOptions{})
-		// if iopcrd != nil {
 		// remove finalizers and delete iop in ns d8-istio
 		iops, err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
@@ -82,11 +75,14 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 				return err
 			}
 			input.LogEntry.Infof("Remove finalizers from IstioOperator/%s in namespace %s", iop.GetName(), istioSystemNs)
-			err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Delete(context.TODO(), iop.GetName(), metav1.DeleteOptions{})
-			if err != nil {
-				return err
+			_, iopDeletionTimestampExists := iop.GetAnnotations()["deletionTimestamp"]
+			if !iopDeletionTimestampExists {
+				err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Delete(context.TODO(), iop.GetName(), metav1.DeleteOptions{})
+				if err != nil {
+					return err
+				}
+				input.LogEntry.Infof("Delete IstioOperator/%s in namespace %s", iop.GetName(), istioSystemNs)
 			}
-			input.LogEntry.Infof("Delete IstioOperator/%s in namespace %s", iop.GetName(), istioSystemNs)
 		}
 		// }
 		// delete NS
