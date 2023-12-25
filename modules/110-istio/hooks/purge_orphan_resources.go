@@ -74,17 +74,16 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 			if err != nil {
 				return err
 			}
-			input.LogEntry.Infof("Remove finalizers from IstioOperator/%s in namespace %s", iop.GetName(), istioSystemNs)
+			input.LogEntry.Infof("Finalizers from IstioOperator/%s in namespace %s removed", iop.GetName(), istioSystemNs)
 			_, iopDeletionTimestampExists := iop.GetAnnotations()["deletionTimestamp"]
 			if !iopDeletionTimestampExists {
 				err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Delete(context.TODO(), iop.GetName(), metav1.DeleteOptions{})
 				if err != nil {
 					return err
 				}
-				input.LogEntry.Infof("Delete IstioOperator/%s in namespace %s", iop.GetName(), istioSystemNs)
+				input.LogEntry.Infof("IstioOperator/%s deleted from namespace %s", iop.GetName(), istioSystemNs)
 			}
 		}
-		// }
 		// delete NS
 		_, nsDeletionTimestampExists := ns.GetAnnotations()["deletionTimestamp"]
 		if !nsDeletionTimestampExists {
@@ -92,7 +91,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 			if err != nil {
 				return err
 			}
-			input.LogEntry.Infof("Delete namespace %s", ns.GetName())
+			input.LogEntry.Infof("Namespace %s deleted", ns.GetName())
 		}
 	}
 
@@ -106,7 +105,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		if err != nil {
 			return err
 		}
-		input.LogEntry.Infof("Delete ClusterRole/%s", icr.GetName())
+		input.LogEntry.Infof("ClusterRole/%s deleted", icr.GetName())
 	}
 
 	// delete ClusterRoleBinding
@@ -119,7 +118,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		if err != nil {
 			return err
 		}
-		input.LogEntry.Infof("Delete ClusterRoleBinding/%s", icrb.GetName())
+		input.LogEntry.Infof("ClusterRoleBinding/%s deleted", icrb.GetName())
 	}
 
 	// delete MutatingWebhookConfiguration
@@ -132,7 +131,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		if err != nil {
 			return err
 		}
-		input.LogEntry.Infof("Delete MutatingWebhookConfiguration/%s", imwc.GetName())
+		input.LogEntry.Infof("MutatingWebhookConfiguration/%s deleted", imwc.GetName())
 	}
 
 	// delete ValidatingWebhookConfiguration
@@ -145,7 +144,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		if err != nil {
 			return err
 		}
-		input.LogEntry.Infof("Delete ValidatingWebhookConfiguration/%s", ivwc.GetName())
+		input.LogEntry.Infof("ValidatingWebhookConfiguration/%s deleted", ivwc.GetName())
 	}
 
 	return nil
