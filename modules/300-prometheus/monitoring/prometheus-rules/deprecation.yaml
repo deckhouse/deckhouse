@@ -41,5 +41,5 @@
         summary: |-
           AdditionalScrapeConfigs from secrets will be deprecated in soon
         description: |-
-          Old way for describing additional scrape config via secrets will be deprecated in prometheus-operator > v0.65.1. Please use CRD instead.
+          Old way for describing additional scrape config via secrets will be deprecated in prometheus-operator > v0.65.1. Please use CRD ScrapeConfig instead.
           ```https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md```
