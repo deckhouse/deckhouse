@@ -4,10 +4,10 @@
 010-prometheus-crd/         @nabokihms
 015-admission-policy-engine/ @yalosev
 021-cni-cilium/             @RomanenkoDenys @apolovov
-030-cloud-provider-openstack/ @konstantin-axenov
+030-cloud-provider-openstack/ @RomanenkoDenys @name212
 030-cloud-provider-vsphere/ @RomanenkoDenys
 041-linstor/                @AleksZimin
-031-local-path-provisioner/ @RomanenkoDenys
+031-local-path-provisioner/ @RomanenkoDenys @name212
 040-control-plane-manager/  @RomanenkoDenys @name212
 040-node-manager/           @RomanenkoDenys @name212
 040-terraform-manager/      @name212
@@ -35,9 +35,9 @@
 600-flant-integration/      @nabokihms
 650-runtime-audit-engine/   @nabokihms
 810-documentation/          @z9r5 @nabokihms @konstantin-axenov
-bashible-apiserver/         @yalosev @RomanenkoDenys
-candi/                      @RomanenkoDenys
-cloud-controller-manager/   @RomanenkoDenys
+bashible-apiserver/         @RomanenkoDenys @name212
+candi/                      @RomanenkoDenys @name212
+cloud-controller-manager/   @RomanenkoDenys @name212
 csi/                        @AleksZimin
 deckhouse-controller/       @yalosev
 dhctl/                      @name212
