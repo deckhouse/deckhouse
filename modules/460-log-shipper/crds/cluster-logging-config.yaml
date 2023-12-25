@@ -55,6 +55,8 @@ spec:
                     `File` source reads local file from node filesystem.
                 kubernetesPods:
                   type: object
+                  description: |
+                    Describes a rule for collecting logs from the cluster's pods.
                   properties:
                     namespaceSelector:
                       oneOf:
@@ -62,22 +64,25 @@ spec:
                       - required: [excludeNames]
                       - required: [labelSelector]
                       type: object
-                      description: Specifies the namespace selector to filter Pods with.
+                      description: |
+                        Specifies the namespace selector to filter Pods with.
+
+                        The filter can use one of the three available ways to set the condition (parameters `matchNames`, `excludeNames`, `labelSelector`)
                       properties:
                         matchNames:
                           type: array
-                          description: "Include only a particular set of namespaces."
+                          description: A list of namespaces from whose pods logs should be collected.
                           items:
                             type: string
                         excludeNames:
                           type: array
-                          description: "Include all namespaces except a particular set."
+                          description: A list of namespaces, from the pods of which you need to exclude the collection of logs, but collect from the rest.
                           items:
                             type: string
                         labelSelector:
                           type: object
                           description: |
-                            Specifies the label selector to filter namespaces.
+                            Specifies the label selector to filter namespaces from which logs should be collected.
 
                             You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           anyOf:
@@ -86,13 +91,13 @@ spec:
                           properties:
                             matchLabels:
                               type: object
-                              description: List of labels which a namespace should have.
+                              description: List of labels that a namespace should have to qualify for the filter condition.
                               x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                               additionalProperties:
                                 type: string
                             matchExpressions:
                               type: array
-                              description: List of label expressions for namespaces.
+                              description: List of label expressions that a namespace should have to qualify for the filter condition.
                               x-doc-examples:
                               - - key: tier
                                   operator: In
@@ -106,8 +111,10 @@ spec:
                                   - operator
                                 properties:
                                   key:
+                                    description: A label name.
                                     type: string
                                   operator:
+                                    description: A comparison operator.
                                     type: string
                                     enum:
                                       - In
@@ -115,6 +122,7 @@ spec:
                                       - Exists
                                       - DoesNotExist
                                   values:
+                                    description: A label value.
                                     type: array
                                     items:
                                       type: string
@@ -145,6 +153,9 @@ spec:
                               values:
                               - production
                               - staging
+                            - key: tier
+                              operator: NotIn
+                              values: [production]
                           items:
                             oneOf:
                               - properties:
@@ -158,12 +169,13 @@ spec:
                                     enum: [In, NotIn]
                                 required: [key, operator, values]
                             type: object
-                            required: ["operator"]
                             properties:
                               key:
                                 type: string
+                                description: A label name.
                               operator:
                                 type: string
+                                description: A comparison operator.
                                 enum:
                                   - In
                                   - NotIn
@@ -171,20 +183,32 @@ spec:
                                   - DoesNotExist
                               values:
                                 type: array
+                                description: A label value.
                                 items:
                                   type: string
+                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                  minLength: 1
+                                  maxLength: 63
                 file:
                   type: object
+                  description: |
+                    Describes a rule for collecting logs from files on a node.
                   properties:
                     include:
                       type: array
-                      description: Array of file patterns to include.
+                      description: |
+                        Array of file patterns to include.
+
+                        Wildcards are supported
                       x-doc-examples: ["/var/log/*.log", "/var/log/nginx/*.log"]
                       items:
                         type: string
                     exclude:
                       type: array
-                      description: Array of file patterns to exclude.
+                      description: |
+                        Array of file patterns to exclude when collecting logs.
+
+                        Wildcards are supported.
                       x-doc-examples: ["/var/log/nginx/error.log", "/var/log/audit.log"]
                       items:
                         type: string
@@ -195,7 +219,7 @@ spec:
                 labelFilter:
                   type: array
                   description: |
-                    Rules to filter log lines by their labels.
+                    Rules to filter log lines by their [metadata labels](./#metadata).
                   x-doc-examples:
                   - - field: container
                       operator: In
@@ -215,6 +239,7 @@ spec:
                       field:
                         description: |
                           Label name for filtering.
+
                           Must not be empty.
                         type: string
                         pattern: '.+'
@@ -260,7 +285,7 @@ spec:
                 logFilter:
                   type: array
                   description: |
-                    List of filter for logs.
+                    A list of filters for logs that are applied to messages in JSON format.
 
                     Only matched lines would be stored to log destination.
                   x-doc-examples:

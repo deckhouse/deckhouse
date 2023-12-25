@@ -18,49 +18,81 @@ spec:
 
                     `File` позволяет читать локальные файлы, доступные на узле.
                 kubernetesPods:
+                  description: |
+                    Описывает правило сбора логов из подов кластера.
                   properties:
                     namespaceSelector:
-                      description: Задать фильтр по Namespace.
+                      description: |
+                        Задает фильтр по пространствам имен.
+
+                        Фильтр может использовать какой-то один способ задания условия из трех доступных (параметры `matchNames`, `excludeNames`, `labelSelector`).
                       properties:
                         matchNames:
-                          description: Собирать логи только с указанных namespace.
+                          description: Список пространств имен, с подов которого нужно собирать логи.
                         excludeNames:
-                          description: Собирать логи со всех namespace, кроме указанных в списке.
+                          description: Список пространств имен, с подов которого нужно исключить сбор логов.
                         labelSelector:
                           description: |
-                            Настройка `labelSelector` позволяет задать фильтр по namespace labels.
+                            Фильтр по меткам пространств имен, с которых нужно собирать логи.
 
                             Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           properties:
                             matchLabels:
-                              description: Список label'ов, которые должен иметь namespace.
+                              description: Список меток, которые должно иметь пространство имен, чтобы подпадать под условие фильтра.
                             matchExpressions:
-                              description: Список выражений для label, которые должен иметь namespace.
+                              description: Список выражений для меток, которые должно иметь пространство имен, чтобы подпадать под условие фильтра.
+                              items:
+                                properties:
+                                  key:
+                                    description: Имя метки.
+                                  operator:
+                                    description: Оператор сравнения.
+                                  values:
+                                    description: Значение метки.
                     labelSelector:
                       description: |
-                        Настройка `labelSelector` позволяет задать фильтр по label'ам пода.
+                        Задает фильтр по меткам пода.
 
                         Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
                         matchLabels:
-                          description: Список label'ов, которые должен иметь под.
+                          description: Список меток, которые должен иметь под, чтобы подпадать под условие фильтра.
                         matchExpressions:
-                          description: Список выражений для label, которые должен иметь под.
+                          description: Список выражений для меток, которые должен иметь под, чтобы подпадать под условие фильтра.
+                          items:
+                            properties:
+                              key:
+                                description: Имя метки.
+                              operator:
+                                description: Оператор сравнения.
+                              values:
+                                description: Значение метки.
                 file:
+                  description: |
+                    Описывает правило сбора логов из файлов на узле.
                   properties:
                     include:
-                      description: Список путей и паттернов для чтения. Поддерживаются wildcards.
+                      description: |
+                        Список шаблонов путей к файлам для сбора логов.
+
+                        Поддерживаются wildcards.
                     exclude:
-                      description: Список путей и паттернов файлов, которые читать не требуется. Поддерживаются wildcards.
+                      description: |
+                        Список шаблонов путей к файлам, которые нужно исключить при сборе логов.
+
+                        Поддерживаются wildcards.
                     lineDelimiter:
-                      description: Задание символа новой строки.
+                      description: Символ новой строки, который использовать при парсинге логов.
                 labelFilter:
                   description: |
-                    Список правил для фильтрации логов по их лейблам.
+                    Список правил для фильтрации логов по их [меткам метаданных](./#метаданные).
                   items:
                     properties:
                       field:
-                        description: Имя лейбла для фильтрации.
+                        description: |
+                          Имя метки для использования в фильтре.
+
+                          Не должно быть пустым.
                       operator:
                         description: |
                           Оператор, который можно применить для фильтрации:
@@ -77,7 +109,7 @@ spec:
                           Можно использовать целые числа или строки. Поля с числами с плавающей запятой и поля логического типа будут преобразованы в строки при сравнении.
                 logFilter:
                   description: |
-                    Список фильтров для логов.
+                    Список фильтров для логов, которые применяются к полям сообщения в формате JSON.
 
                     Только логи, подпадающие под правила, будут сохранены в хранилище.
                   items:

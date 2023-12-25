@@ -11,11 +11,9 @@ All the configuration of access rights is performed using [Custom Resources](cr.
 ## Module features
 
 - Manages user and group access control using Kubernetes RBAC;
-- Manages access to scaling tools (the `allowScale` parameter of the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) Custom Resource);
-- Manages access to port forwarding (the `portForwarding` parameter of the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) Custom Resource);
-- Manages the list of allowed namespaces with a labelSelector (the `namespaceSelector` parameter of the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) Custom Resource);
-- Manages the list of allowed namespaces as regular expressions (the `limitNamespaces` deprecated parameter of the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) Custom Resource);
-- Manages access to system namespaces such as `kube-system`, etc., (the `allowAccessToSystemNamespaces` parameter of the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) Custom Resource);
+- Manages access to scaling tools (the `allowScale` parameter of the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-allowscale) Custom Resource);
+- Manages access to port forwarding (the `portForwarding` parameter of the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-portforwarding) Custom Resource);
+- Manages the list of allowed namespaces with a labelSelector (the `namespaceSelector` parameter of the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) Custom Resource);
 
 ## Role model
 
