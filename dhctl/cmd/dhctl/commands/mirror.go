@@ -123,7 +123,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 		return fmt.Errorf("Source registry access validation failure: %w", err)
 	}
 
-	var versionsToMirror []*semver.Version
+	var versionsToMirror []semver.Version
 	var err error
 	err = log.Process("mirror", "Looking for required Deckhouse releases", func() error {
 		versionsToMirror, err = mirror.VersionsToCopy(mirrorCtx)

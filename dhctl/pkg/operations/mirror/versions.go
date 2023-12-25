@@ -21,13 +21,22 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 )
 
-func VersionsToCopy(mirrorCtx *Context) ([]*semver.Version, error) {
-	rockSolidVersion, err := getRockSolidVersionFromRegistry(mirrorCtx)
-	if err != nil {
-		return nil, fmt.Errorf("get rock-solid release version from registry: %w", err)
+func VersionsToCopy(mirrorCtx *Context) ([]semver.Version, error) {
+	releaseChannelsToCopy := []string{"alpha", "beta", "early-access", "stable", "rock-solid"}
+	releaseChannelsVersions := make([]*semver.Version, len(releaseChannelsToCopy))
+	for i, channel := range releaseChannelsToCopy {
+		v, err := getReleaseChannelVersionFromRegistry(mirrorCtx, channel)
+		if err != nil {
+			return nil, fmt.Errorf("get %s release version from registry: %w", channel, err)
+		}
+		releaseChannelsVersions[i] = v
 	}
+
+	rockSolidVersion := releaseChannelsVersions[len(releaseChannelsToCopy)-1]
 	mirrorFromVersion := *rockSolidVersion
 	if mirrorCtx.MinVersion != nil {
 		mirrorFromVersion = *mirrorCtx.MinVersion
@@ -36,7 +45,7 @@ func VersionsToCopy(mirrorCtx *Context) ([]*semver.Version, error) {
 		}
 	}
 
-	tags, err := getTagsFromRegistry(mirrorCtx)
+	tags, err := getReleasedTagsFromRegistry(mirrorCtx)
 	if err != nil {
 		return nil, fmt.Errorf("get releases from github: %w", err)
 	}
@@ -44,10 +53,10 @@ func VersionsToCopy(mirrorCtx *Context) ([]*semver.Version, error) {
 	versionsAboveMinimal := parseAndFilterVersionsAboveMinimal(&mirrorFromVersion, tags)
 	versionsAboveMinimal = filterOnlyLatestPatches(versionsAboveMinimal)
 
-	return versionsAboveMinimal, nil
+	return deduplicateVersions(append(releaseChannelsVersions, versionsAboveMinimal...)), nil
 }
 
-func getTagsFromRegistry(mirrorCtx *Context) ([]string, error) {
+func getReleasedTagsFromRegistry(mirrorCtx *Context) ([]string, error) {
 	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 	repo, err := name.NewRepository(mirrorCtx.DeckhouseRegistryRepo+"/release-channel", nameOpts...)
 	if err != nil {
@@ -90,25 +99,25 @@ func filterOnlyLatestPatches(versions []*semver.Version) []*semver.Version {
 	return topPatches
 }
 
-func getRockSolidVersionFromRegistry(mirrorCtx *Context) (*semver.Version, error) {
+func getReleaseChannelVersionFromRegistry(mirrorCtx *Context, releaseChannel string) (*semver.Version, error) {
 	refOpts := []name.Option{name.StrictValidation}
 	if mirrorCtx.Insecure {
 		refOpts = append(refOpts, name.Insecure)
 	}
 
-	ref, err := name.ParseReference(mirrorCtx.DeckhouseRegistryRepo+"/release-channel:rock-solid", refOpts...)
+	ref, err := name.ParseReference(mirrorCtx.DeckhouseRegistryRepo+"/release-channel:"+releaseChannel, refOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parse rock solid release ref: %w", err)
 	}
 
 	rockSolidReleaseImage, err := remote.Image(ref, remote.WithAuth(mirrorCtx.RegistryAuth))
 	if err != nil {
-		return nil, fmt.Errorf("get rock-solid release channel data: %w", err)
+		return nil, fmt.Errorf("get %s release channel data: %w", releaseChannel, err)
 	}
 
 	versionJSON, err := readFileFromImage(rockSolidReleaseImage, "version.json")
 	if err != nil {
-		return nil, fmt.Errorf("cannot get rock-solid release channel version: %w", err)
+		return nil, fmt.Errorf("cannot get %s release channel version: %w", releaseChannel, err)
 	}
 
 	tmp := &struct {
@@ -123,5 +132,13 @@ func getRockSolidVersionFromRegistry(mirrorCtx *Context) (*semver.Version, error
 		return nil, fmt.Errorf("cannot find release channel version: %w", err)
 	}
 	return ver, nil
+}
 
+func deduplicateVersions(versions []*semver.Version) []semver.Version {
+	m := map[semver.Version]struct{}{}
+	for _, v := range versions {
+		m[*v] = struct{}{}
+	}
+
+	return maputil.Keys(m)
 }
