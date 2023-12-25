@@ -130,7 +130,20 @@ properties:
             The format is [`matchLabels` or `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
           properties:
             matchExpressions:
+              type: array
               items:
+                oneOf:
+                  - properties:
+                      operator:
+                        enum: [ Exists, DoesNotExist ]
+                    required: [ key, operator ]
+                    not:
+                      required: [ values ]
+                  - properties:
+                      operator:
+                        enum: [ In, NotIn ]
+                    required: [ key, operator, values ]
+                type: object
                 properties:
                   key:
                     type: string
@@ -140,11 +153,6 @@ properties:
                     items:
                       type: string
                     type: array
-                required:
-                - key
-                - operator
-                type: object
-              type: array
             matchLabels:
               additionalProperties:
                 type: string

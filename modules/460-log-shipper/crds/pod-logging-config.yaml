@@ -71,12 +71,13 @@ spec:
                                 enum: [In, NotIn]
                             required: [key, operator, values]
                         type: object
-                        required: ["operator"]
                         properties:
                           key:
                             type: string
+                            description: A label name.
                           operator:
                             type: string
+                            description: A comparison operator.
                             enum:
                               - In
                               - NotIn
@@ -84,12 +85,16 @@ spec:
                               - DoesNotExist
                           values:
                             type: array
+                            description: A label value.
                             items:
                               type: string
+                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                              minLength: 1
+                              maxLength: 63
                 labelFilter:
                   type: array
                   description: |
-                    Rules to filter log lines by their labels.
+                    Rules to filter log lines by their [metadata labels](./#metadata).
                   x-doc-examples:
                   - - field: container
                       operator: In
@@ -109,6 +114,7 @@ spec:
                       field:
                         description: |
                           Label name for filtering.
+
                           Must not be empty.
                         type: string
                         pattern: '.+'
@@ -154,7 +160,7 @@ spec:
                 logFilter:
                   type: array
                   description: |
-                    List of filter for logs.
+                    A list of filters for logs that are applied to messages in JSON format.
 
                     Only matched lines would be stored to log destination.
                   x-doc-examples:

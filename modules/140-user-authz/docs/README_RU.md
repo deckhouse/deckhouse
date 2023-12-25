@@ -11,11 +11,9 @@ title: "Модуль user-authz"
 ## Возможности модуля
 
 - Управление доступом пользователей и групп на базе механизма RBAC Kubernetes.
-- Управление доступом к инструментам масштабирования (параметр `allowScale` custom resource [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule)).
-- Управление доступом к форвардингу портов (параметр `portForwarding` custom resource [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule)).
-- Управление списком разрешенных namespace в формате labelSelector (параметр `namespaceSelector` custom resource [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule)).
-- Управление списком разрешенных namespace в формате регулярных выражений (устаревший параметр `limitNamespaces` custom resource [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule)).
-- Управление доступом к системным namespace (параметр `allowAccessToSystemNamespaces` custom resource [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule)), таким как `kube-system` и пр.
+- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-allowscale)).
+- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-portforwarding)).
+- Управление списком разрешенных namespace в формате labelSelector (параметр `namespaceSelector` custom resource [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 ## Ролевая модель
 
