@@ -265,11 +265,11 @@ spec:
         {{- end }}
         {{- if .Values.openvpn.udpEnabled }}
         - --mgmt
-        - udp="127.0.0.1:9090"
+        - udp=127.0.0.1:9090
         {{- end }}
         {{- if .Values.openvpn.tcpEnabled }}
         - --mgmt
-        - tcp="127.0.0.1:8989"
+        - tcp=127.0.0.1:8989
         {{- end }}
         - --ccd
         - --ccd.path
@@ -286,11 +286,11 @@ spec:
         {{- if ne $externalHost "" }}
           {{- if .Values.openvpn.udpEnabled }}
         - --ovpn.server
-        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 | quote }}:udp
+        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:udp
           {{- end }}
           {{- if .Values.openvpn.tcpEnabled }}
         - --ovpn.server
-        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 | quote }}:tcp
+        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:tcp
           {{- end }}
         {{- end }}
         env:
