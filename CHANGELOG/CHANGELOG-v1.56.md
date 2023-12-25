@@ -69,6 +69,7 @@
 ## Chore
 
 
+ - **[candi]** Fix release requirements. [#7003](https://github.com/deckhouse/deckhouse/pull/7003)
  - **[cni-cilium]** Enabled pprof interface in cilium-agent. [#6874](https://github.com/deckhouse/deckhouse/pull/6874)
     cillium-agent pods will restart.
  - **[cni-simple-bridge]** Use distroless based image. [#6469](https://github.com/deckhouse/deckhouse/pull/6469)
