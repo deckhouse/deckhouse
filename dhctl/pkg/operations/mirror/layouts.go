@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -267,13 +266,4 @@ func fetchVersionsFromModuleReleaseChannels(
 	}
 
 	return channelVersions, nil
-}
-
-func isImageNotFoundError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	errMsg := err.Error()
-	return strings.Contains(errMsg, "MANIFEST_UNKNOWN") || strings.Contains(errMsg, "404 Not Found")
 }
