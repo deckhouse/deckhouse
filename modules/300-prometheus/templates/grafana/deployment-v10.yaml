@@ -1,0 +1,296 @@
+{{- define "grafana_resources" }}
+cpu: 35m
+memory: 140Mi
+{{- end }}
+
+{{- define "dashboard_provisioner_resources" }}
+cpu: 10m
+memory: 60Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: grafana-v10
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10" )) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: grafana-v10
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: grafana
+      minAllowed:
+        {{- include "grafana_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 70m
+        memory: 280Mi
+    - containerName: dashboard-provisioner
+      minAllowed:
+        {{- include "dashboard_provisioner_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 100Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-v10
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: grafana-v10
+  template:
+    metadata:
+      labels:
+        app: grafana-v10
+        threshold.extended-monitoring.deckhouse.io/container-throttling-warning: "40"
+      annotations:
+        {{- if (dig "grafana" "customLogo" "enabled" false .Values.prometheus.internal) }}
+        checksum/custom-logo: {{ .Values.prometheus.internal.grafana.customLogo.checksum | quote }}
+        {{- end }}
+        checksum/datasources: {{ include (print $.Template.BasePath "/grafana/secret-datasources-list.yaml") . | sha256sum }}
+        checksum/dashboards-list-custom: {{ include (print $.Template.BasePath "/grafana/cm-dashboards-list-custom.yaml") . | sha256sum }}
+        checksum/alerts-channels: {{ include (print $.Template.BasePath "/grafana/grafana-alerts-channels.yaml") . | sha256sum }}
+        checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "grafana")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      serviceAccountName: grafana
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: grafana
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "grafanaV10") }}
+        env:
+        {{- if .Values.global.modules.publicDomainTemplate }}
+        - name: GF_SERVER_ROOT_URL
+          value: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}
+        {{- end }}
+        - name: GF_AUTH_BASIC_ENABLED
+          value: "false"
+        {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
+        - name: GF_AUTH_PROXY_ENABLED
+          value: "true"
+        - name: GF_AUTH_PROXY_HEADER_NAME
+          value: "X-Auth-Request-Email"
+        - name: GF_AUTH_PROXY_AUTO_SIGN_UP
+          value: "true"
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: "false"
+        - name: GF_USERS_AUTO_ASSIGN_ROLE
+          value: "true"
+        - name: GF_USERS_AUTO_ASSIGN_ORG_ROLE
+          value: "Admin"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "false"
+        {{- else }}
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
+        - name: GF_AUTH_PROXY_ENABLED
+          value: "false"
+        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+          value: "Admin"
+        {{- end }}
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_USERS_DEFAULT_THEME
+        {{- if .Values.prometheus.grafana.useDarkTheme }}
+          value: "dark"
+        {{- else }}
+          value: "light"
+        {{- end }}
+        - name: GF_PATHS_PROVISIONING
+          value: /etc/grafana/provisioning
+        - name: GF_PATHS_DATA
+          value: /var/lib/grafana/data
+        - name: GF_PATHS_PLUGINS
+          value: /etc/grafana/plugins
+        # Changing this path is required to avoid showing excessive Grafana getting started guide
+        - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+          value: "/usr/share/grafana/public/dashboards/grafana_home_dashboard.json"
+        - name: GF_SERVER_HTTP_ADDR
+          value: "127.0.0.1"
+        - name: GF_METRICS_ENABLED
+          value: "true"
+        # TODO(nabokihms): enable legacy alerting, because our operator does not work with new alerts system
+        - name: GF_ALERTING_ENABLED
+          value: "true"
+        - name: GF_UNIFIED_ALERTING_ENABLED
+          value: "false"
+        {{- if hasKey .Values.prometheus "grafana" }}
+          {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
+        - name: GF_INSTALL_PLUGINS
+          value: "{{- range $i, $v := .Values.prometheus.grafana.customPlugins }}{{- if ne $i 0 -}},{{- end -}}{{- $v -}}{{- end }}"
+          {{- end }}
+        {{- end }}
+        - name: PROMETHEUS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: prometheus-token
+              key: token
+              optional: false
+        volumeMounts:
+        - name: grafana-data
+          mountPath: /var/lib/grafana/data
+        - name: grafana-datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: grafana-alerts-channels
+          mountPath: /etc/grafana/provisioning/notifiers
+        - name: grafana-dashboard-definitions
+          mountPath: /etc/grafana/provisioning/dashboards/d8-custom.yaml
+          subPath: grafana-dashboard-definitions.yaml
+        - name: shared-dashboards-folder
+          mountPath: /etc/grafana/dashboards
+        - name: plugins
+          mountPath: /etc/grafana/plugins
+        - name: tmp
+          mountPath: /tmp
+        {{- if (dig "grafana" "customLogo" "enabled" false .Values.prometheus.internal) }}
+        - mountPath: /usr/share/grafana/public/img/deckhouse-logo.svg
+          name: whitelabel-logo
+          subPath: deckhouse-logo.svg
+        {{- end }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "grafana_resources" . | nindent 12 }}
+{{- end }}
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+      - name: dashboard-provisioner
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "grafanaDashboardProvisioner") }}
+        env:
+        - name: DEBUG_UNIX_SOCKET
+          value: /tmp/shell-operator-debug.socket
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "dashboard_provisioner_resources" . | nindent 12 }}
+{{- end }}
+
+        volumeMounts:
+        - name: grafana-data
+          mountPath: /var/lib/grafana/data
+        - name: shared-dashboards-folder
+          mountPath: /etc/grafana/dashboards
+        - name: tmp
+          mountPath: /tmp
+        # Check that dashboard provisioner uploaded all dashboards successfully
+        readinessProbe:
+          exec:
+            command:
+              - cat
+              - /tmp/ready
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          value: "0.0.0.0"
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /api/health
+            upstreams:
+            - upstream: http://127.0.0.1:3000/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: statefulsets
+                  subresource: http
+                  name: grafana
+            - upstream: http://127.0.0.1:3000/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: statefulsets
+                  subresource: prometheus-metrics
+                  name: grafana
+        ports:
+        - containerPort: 8443
+          name: https
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+        volumeMounts:
+        - name: kube-rbac-proxy-ca
+          mountPath: /etc/kube-rbac-proxy
+      volumes:
+      - name: shared-dashboards-folder
+        emptyDir: {}
+      - name: grafana-datasources
+        secret:
+          secretName: grafana-datasources
+      - name: grafana-alerts-channels
+        secret:
+          secretName: grafana-alerts-channels
+      - name: grafana-dashboard-definitions
+        configMap:
+          name: grafana-dashboard-definitions
+      - name: kube-rbac-proxy-ca
+        configMap:
+          defaultMode: 420
+          name: kube-rbac-proxy-ca.crt
+      - name: grafana-data
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+      - name: plugins
+        emptyDir: {}
+      {{- if (dig "grafana" "customLogo" "enabled" false .Values.prometheus.internal) }}
+      - name: whitelabel-logo
+        configMap:
+          defaultMode: 292
+          name: whitelabel-custom-logo
+          items:
+            - key: grafanaLogo
+              path: deckhouse-logo.svg
+      {{- end }}

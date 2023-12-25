@@ -705,7 +705,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-apiserver\", instance=~\"$instance:.*\"}[$__interval_sx4])",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-apiserver\", instance=~\"$instance:.*\"}[$__rate_interval])",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -888,7 +888,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by(verb) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "sum by(verb) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1043,7 +1043,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "exemplar": true,
           "expr": "sum by(verb, resource, subresource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__range]))",
@@ -1151,7 +1151,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by (verb) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "max by (verb) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__rate_interval])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1306,10 +1306,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "exemplar": true,
-          "expr": "max by (verb, resource, subresource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__range]))",
+          "expr": "max by (verb, resource, subresource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__rate_interval])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__range]))",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -1431,7 +1431,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (le)",
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 1,
@@ -1588,7 +1588,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "exemplar": true,
           "expr": "max by (verb, resource, subresource) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", subresource!~\"exec|log\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__range])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", subresource!~\"exec|log\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__range]))",
@@ -1713,7 +1713,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (le) / scalar(sum(rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])))",
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])) by (le) / scalar(sum(rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])))",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 1,
@@ -1802,10 +1802,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])) by (instance, le))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1916,7 +1916,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (le)",
+          "expr": "sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 1,
@@ -2001,7 +2001,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\"}[$__interval_sx4])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\"}[$__rate_interval])) by (instance, le))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -2101,7 +2101,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-scheduler\", instance=~\"$instance:.*\"}[$__interval_sx4])",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-scheduler\", instance=~\"$instance:.*\"}[$__rate_interval])",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -2281,7 +2281,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}[$__interval_sx4])",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}[$__rate_interval])",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"

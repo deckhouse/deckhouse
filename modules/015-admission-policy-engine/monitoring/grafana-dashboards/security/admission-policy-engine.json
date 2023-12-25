@@ -34,7 +34,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -337,7 +337,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "exemplar": false,
           "expr": "group(kube_namespace_labels{namespace!~\"(d8-.+|kube-.+)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy=~\"(restricted|baseline|privileged)\",label_security_deckhouse_io_pod_policy_action=~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action)\nor\nlabel_replace(group(kube_namespace_labels{namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy=~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action!~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy_action\", \"$default_action\", \"label_security_deckhouse_io_pod_policy_action\", \".*\")\nor\nlabel_replace(group(kube_namespace_labels{namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy!~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action=~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy\", \"$default_policy\", \"label_security_deckhouse_io_pod_policy\", \".*\")\nor\nlabel_replace(label_replace(group(kube_namespace_labels{namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy!~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action!~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy\", \"$default_policy\", \"label_security_deckhouse_io_pod_policy\", \".*\"), \"label_security_deckhouse_io_pod_policy_action\", \"$default_action\", \"label_security_deckhouse_io_pod_policy_action\", \".*\")",
@@ -517,7 +517,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1006,7 +1006,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1409,7 +1409,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1604,7 +1604,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1962,7 +1962,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "P0D6E4079E36703EB"
+          "uid": "$ds_prometheus"
         },
         "definition": "query_result(d8_admission_policy_engine_pss_default_action)",
         "hide": 2,
@@ -1989,7 +1989,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "P0D6E4079E36703EB"
+          "uid": "$ds_prometheus"
         },
         "definition": "query_result(d8_admission_policy_engine_pss_default_policy)",
         "hide": 2,

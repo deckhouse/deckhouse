@@ -736,7 +736,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[$__interval_sx4]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,

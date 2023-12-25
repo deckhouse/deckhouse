@@ -456,7 +456,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(deckhouse_tasks_queue_length[$__interval_sx4]) > 0",
+              "expr": "rate(deckhouse_tasks_queue_length[$__rate_interval]) > 0",
               "interval": "",
               "legendFormat": "{{ queue }}",
               "refId": "A"
@@ -830,7 +830,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(process_cpu_seconds_total{job=\"deckhouse\"}[$__interval_sx4])",
+              "expr": "rate(process_cpu_seconds_total{job=\"deckhouse\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -1384,7 +1384,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(go_memstats_mallocs_total{job=\"deckhouse\"}[$__interval_sx4])",
+              "expr": "rate(go_memstats_mallocs_total{job=\"deckhouse\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -1608,7 +1608,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (kind) (rate(deckhouse_kube_event_duration_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (kind) (rate(deckhouse_kube_event_duration_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": " {{ kind }}",
               "refId": "A"
@@ -1709,13 +1709,13 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (hook) (rate(deckhouse_module_hook_run_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (hook) (rate(deckhouse_module_hook_run_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": " {{ hook }}",
               "refId": "A"
             },
             {
-              "expr": "sum by (hook) (rate(deckhouse_glob_hook_run_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (hook) (rate(deckhouse_glob_hook_run_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": "",
               "refId": "B"
@@ -1816,7 +1816,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (hook, binding) (rate(deckhouse_kube_jq_filter_duration_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (hook, binding) (rate(deckhouse_kube_jq_filter_duration_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": "{{ hook }} - {{ binding }}",
               "refId": "A"
@@ -1919,7 +1919,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (module) (rate(deckhouse_helm_operation_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (module) (rate(deckhouse_helm_operation_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": "{{ module }}",
               "refId": "A"
@@ -2021,7 +2021,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "ceil(sum by (module) (increase(deckhouse_kubernetes_client_request_result_total[$__interval_sx4]))) > 0",
+              "expr": "ceil(sum by (module) (increase(deckhouse_kubernetes_client_request_result_total[$__rate_interval]))) > 0",
               "interval": "",
               "legendFormat": "{{ module }}",
               "refId": "A"
