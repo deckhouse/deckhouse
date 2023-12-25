@@ -39,6 +39,7 @@
  - **[deckhouse-controller]** Fix global values change and source modules validation. [#6814](https://github.com/deckhouse/deckhouse/pull/6814)
  - **[deckhouse-controller]** Create module directory with desired version only when ModuleRelease is deployed. [#6807](https://github.com/deckhouse/deckhouse/pull/6807)
  - **[deckhouse-controller]** Bump addon-operator. Change internal work with modules. Behavior of commands `deckhouse-controller module values <name>` was changed, no more top levels keys by default. To have old behavior use '-g' flag. [#6495](https://github.com/deckhouse/deckhouse/pull/6495)
+ - **[dhctl]** dhctl mirror will tag release channels images with their versions as well. [#7008](https://github.com/deckhouse/deckhouse/pull/7008)
  - **[dhctl]** mirror will validate tar bundle path more strictly. [#6981](https://github.com/deckhouse/deckhouse/pull/6981)
  - **[dhctl]** Fix for pulling older Deckhouse versions with tags instead of digests in installers. [#6932](https://github.com/deckhouse/deckhouse/pull/6932)
  - **[dhctl]** Allow missing module release channels. [#6848](https://github.com/deckhouse/deckhouse/pull/6848)
