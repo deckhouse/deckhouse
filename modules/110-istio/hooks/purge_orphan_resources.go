@@ -32,7 +32,6 @@ import (
 const (
 	istioSystemNs                = "d8-istio"
 	istioComponentsLabelSelector = "install.operator.istio.io/owning-resource-namespace=d8-istio"
-	iopCrdName                   = "istiooperators.install.istio.io"
 )
 
 var (
