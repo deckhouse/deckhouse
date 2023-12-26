@@ -92,7 +92,7 @@ spec:
 
    Если в конфигурации Deckhouse включен режим multi-tenancy (доступно только в версии Enterprise Edition), для того, чтобы дать ServiceAccount доступ в системные namespace'ы, укажите `allowAccessToSystemNamespaces: true`.
 
-3. Сгенерируйте `kube-config`, подставив свои значения переменных в начале:
+3. Подставте свои значения переменных в начале и исполните их bash:
 
    ```shell
    cluster_name=my-cluster
@@ -101,8 +101,10 @@ spec:
    file_name=kube.config
    ```
 
-   * Секция `cluster`:
-     * Если есть доступ напрямую до API-сервера, используйте его IP:
+4. Заполним секцию `cluster` в `kube-config`
+
+   Сначала нужно определится какой вариант доступа из вне к api кластера вы будете использовать и выбрать один из списка:
+   * Если есть доступ напрямую до API-сервера, используйте его IP:
        1. Получите CA кластера Kubernetes:
 
           ```shell
@@ -118,9 +120,9 @@ spec:
             --kubeconfig=$file_name
           ```
 
-     * Если прямого доступа до API-сервера нет, [включите](../../modules/150-user-authn/configuration.html#параметры) `publishAPI` с `whitelistSourceRanges` либо через отдельный Ingress-контроллер укажите адреса, только с которых будут идти запросы: с помощью опции `ingressClass` с конечным списком `SourceRange` укажите в настройках контроллера список CIDR в параметре `acceptRequestsFrom`.
+    * Если прямого доступа до API-сервера нет, [включите](../../modules/150-user-authn/configuration.html#параметры) `publishAPI` с `whitelistSourceRanges` либо через отдельный Ingress-контроллер укажите адреса, только с которых будут идти запросы: с помощью опции `ingressClass` с конечным списком `SourceRange` укажите в настройках контроллера список CIDR в параметре `acceptRequestsFrom`.
 
-     * Если используется непубличный CA:
+    * Если используется непубличный CA:
 
        1. Получите его из Secret'а с сертификатом для домена `api.%s`:
 
@@ -148,7 +150,7 @@ spec:
          --kubeconfig=$file_name
        ```
 
-   * Секция `user` с токеном из Secret'а `ServiceAccount`:
+5. Заполним секцию `user` с токеном из Secret'а `ServiceAccount`:
 
      ```shell
      kubectl config set-credentials $user_name \
@@ -156,7 +158,7 @@ spec:
        --kubeconfig=$file_name
      ```
 
-   * Секция `context` для связи:
+6. Заполним секцию `context` для связи:
 
      ```shell
      kubectl config set-context $context_name \
@@ -164,7 +166,7 @@ spec:
        --kubeconfig=$file_name
      ```
 
-   * Установите контекст по умолчанию для только что созданного kubeconfig-файла:
+7. Установим контекст по умолчанию для только что созданного kubeconfig-файла:
 
      ```shell
      kubectl config use-context $context_name --kubeconfig=$file_name
