@@ -92,7 +92,7 @@ spec:
 
    Если в конфигурации Deckhouse включен режим multi-tenancy (доступно только в версии Enterprise Edition), для того, чтобы дать ServiceAccount доступ в системные namespace'ы, укажите `allowAccessToSystemNamespaces: true`.
 
-3. Подставте свои значения переменных в начале и исполните их bash:
+3. Подставте свои значения переменных в начале и исполните их в bash на master:
 
    ```shell
    cluster_name=my-cluster
@@ -120,9 +120,9 @@ spec:
             --kubeconfig=$file_name
           ```
 
-    * Если прямого доступа до API-сервера нет, [включите](../../modules/150-user-authn/configuration.html#параметры) `publishAPI` с `whitelistSourceRanges` либо через отдельный Ingress-контроллер укажите адреса, только с которых будут идти запросы: с помощью опции `ingressClass` с конечным списком `SourceRange` укажите в настройках контроллера список CIDR в параметре `acceptRequestsFrom`.
+   * Если прямого доступа до API-сервера нет, [включите](../../modules/150-user-authn/configuration.html#параметры) `publishAPI` с `whitelistSourceRanges` либо через отдельный Ingress-контроллер укажите адреса, только с которых будут идти запросы: с помощью опции `ingressClass` с конечным списком `SourceRange` укажите в настройках контроллера список CIDR в параметре `acceptRequestsFrom`.
 
-    * Если используется непубличный CA:
+   * Если используется непубличный CA:
 
        1. Получите его из Secret'а с сертификатом для домена `api.%s`:
 
@@ -142,7 +142,7 @@ spec:
             --kubeconfig=$file_name
           ```
 
-     * Если CA публичный, просто сгенерируйте секцию с внешним доменом:
+   * Если CA публичный, просто сгенерируйте секцию с внешним доменом:
 
        ```shell
        kubectl config set-cluster $cluster_name \
