@@ -48,15 +48,13 @@ func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterRe
 		return nil, fmt.Errorf("has no spec field in GrafanaDashboardDefinition")
 	}
 
-	fmt.Println(fmt.Sprintf("XXXXXXXXXXXXXXXXXXXXXXXXXX spec: %+v", spec))
-
 	return spec["definition"], nil
 }
 
 func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	dashboardCRDs := input.Snapshots["grafana_dashboard_definitions"]
 
-	fmt.Println(fmt.Sprintf("XXXXXXXXXXXXXXXXXXXXXXXXXX %+v", dashboardCRDs))
+	fmt.Println(fmt.Sprintf("XXXXXXXXXXX RECEIVED %+v", dashboardCRDs))
 
 	if len(dashboardCRDs) == 0 {
 		return nil
