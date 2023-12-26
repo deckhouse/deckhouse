@@ -32,7 +32,7 @@
           ```
     - alert: GrafanaDashboardPanelIntervalDeprecated
       expr: |
-        grafana_dashboards_deprecated_intervals > 0
+        d8_grafana_dashboards_deprecated_intervals > 0
       labels:
         tier: cluster
         severity_level: "8"
@@ -47,7 +47,7 @@
           Outdated interval found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.interval }}`
     - alert: GrafanaDashboardAlertsDeprecated
       expr: |
-        grafana_dashboards_deprecated_alerts > 0
+        d8_grafana_dashboards_deprecated_alerts > 0
       labels:
         tier: cluster
         severity_level: "8"
