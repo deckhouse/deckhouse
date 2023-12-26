@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"unicode"
 
@@ -47,21 +48,21 @@ func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterRe
 	if !ok {
 		return nil, fmt.Errorf("has no spec field in GrafanaDashboardDefinition")
 	}
-
 	return spec["definition"], nil
 }
 
 func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
-	dashboardCRDs := input.Snapshots["grafana_dashboard_definitions"]
+	dashboardCRDItems := input.Snapshots["grafana_dashboard_definitions"]
 
-	if len(dashboardCRDs) == 0 {
+	if len(dashboardCRDItems) == 0 {
 		return nil
 	}
 
 	dashboardPanels := make(map[string][]*simplejson.Json)
 
-	for _, dashboardCRD := range dashboardCRDs {
-		dashboard := simplejson.NewFromAny(dashboardCRD)
+	for _, dashboardCRDItem := range dashboardCRDItems {
+		fmt.Println("XXXXXXXXXXXXXXXXXXXX-0", reflect.TypeOf(dashboardCRDItem))
+		dashboard := simplejson.NewFromAny(dashboardCRDItem)
 		dashboardTitle := getTitle(dashboard)
 		fmt.Println("XXXXXXXXXXXXXXXXXXXX-1", dashboardTitle)
 		rows := getRows(dashboard)
