@@ -48,11 +48,15 @@ func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterRe
 		return nil, fmt.Errorf("has no spec field in GrafanaDashboardDefinition")
 	}
 
+	fmt.Println(fmt.Sprintf("XXXXXXXXXXXXXXXXXXXXXXXXXX spec: %+v", spec))
+
 	return spec["definition"], nil
 }
 
 func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	dashboardCRDs := input.Snapshots["grafana_dashboard_definitions"]
+
+	fmt.Println(fmt.Sprintf("XXXXXXXXXXXXXXXXXXXXXXXXXX %+v", dashboardCRDs))
 
 	if len(dashboardCRDs) == 0 {
 		return nil
@@ -77,7 +81,7 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 			panelTitle := getTitle(panel)
 			intervals := evaluateDeprecatedIntervals(panel)
 			for _, interval := range intervals {
-				input.MetricsCollector.Set("grafana_dashboards_deprecated_intervals",
+				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_intervals",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),
@@ -87,7 +91,7 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 			}
 			alerts := evaluateDeprecatedAlerts(panel)
 			for _, alert := range alerts {
-				input.MetricsCollector.Set("grafana_dashboards_deprecated_alerts",
+				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_alerts",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),
@@ -97,6 +101,8 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 			}
 		}
 	}
+
+	fmt.Println(fmt.Sprintf("XXXXXXXXXXXXXXXXXXXXXXXXXX %+v", dashboardPanels))
 
 	return nil
 }
