@@ -1,0 +1,5 @@
+dhctl:
+  features:
+    - summary: Support for mirroring Deckhouse CSE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7017
+
