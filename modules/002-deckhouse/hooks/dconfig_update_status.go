@@ -70,6 +70,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			ExecuteHookOnEvents:          pointer.Bool(false),
 		},
+		{
+			Name:                         "modules",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "Module",
+			FilterFunc:                   filterModuleForState,
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
 		{
@@ -81,6 +89,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		EnableSchedulesOnStartup: true,
 	},
 }, updateModuleConfigStatuses)
+
+// filterModuleForState returns name and current state from Module object.
+func filterModuleForState(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var module v1alpha1.Module
+
+	err := sdk.FromUnstructured(unstructured, &module)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract name, spec and status.
+	return &v1alpha1.Module{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: module.Name,
+		},
+		Properties: v1alpha1.ModuleProperties{
+			State: module.Properties.State,
+		},
+	}, nil
+}
 
 // filterModuleConfigForStatus returns name, enabled flag and the current status from ModuleConfig object.
 func filterModuleConfigForStatus(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -113,11 +141,21 @@ const (
 func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 	allConfigs := snapshotToModuleConfigList(input.Snapshots["configs"])
 
+	var enabledModules map[string]struct{}
+	for _, item := range input.Snapshots["modules"] {
+		module := item.(*v1alpha1.Module)
+		if module.Properties.State == "Enabled" {
+			enabledModules[module.GetName()] = struct{}{}
+		}
+	}
+
 	bundleName := os.Getenv("DECKHOUSE_BUNDLE")
 
 	moduleNamesToSources := d8config.Service().ModuleToSourcesNames()
 	for _, cfg := range allConfigs {
-		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName, moduleNamesToSources)
+		_, moduleEnabled := enabledModules[cfg.GetName()]
+
+		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName, moduleNamesToSources, moduleEnabled)
 		sPatch := makeStatusPatch(cfg, moduleStatus)
 		if sPatch != nil {
 			input.LogEntry.Debugf(

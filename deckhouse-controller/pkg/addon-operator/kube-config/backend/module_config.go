@@ -63,14 +63,14 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 	_, _ = mcInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			mconfig := obj.(*v1alpha1.ModuleConfig)
-			mc.handleEvent(mconfig, eventC)
+			mc.handleEvent(mconfig, eventC, config.EventAdd)
 		},
 		UpdateFunc: func(prevObj interface{}, obj interface{}) {
 			mconfig := obj.(*v1alpha1.ModuleConfig)
-			mc.handleEvent(mconfig, eventC)
+			mc.handleEvent(mconfig, eventC, config.EventUpdate)
 		},
 		DeleteFunc: func(obj interface{}) {
-			mc.handleEvent(obj.(*v1alpha1.ModuleConfig), eventC)
+			mc.handleEvent(obj.(*v1alpha1.ModuleConfig), eventC, config.EventDelete)
 		},
 	})
 
@@ -79,7 +79,7 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 	}()
 }
 
-func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC chan config.Event) {
+func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC chan config.Event, op config.Op) {
 	cfg := config.NewConfig()
 
 	values, err := mc.fetchValuesFromModuleConfig(obj)
@@ -103,7 +103,7 @@ func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC cha
 			Checksum:     mcfg.Checksum(),
 		}
 	}
-	eventC <- config.Event{Key: obj.Name, Config: cfg}
+	eventC <- config.Event{Key: obj.Name, Config: cfg, Op: op}
 }
 
 func (mc ModuleConfigBackend) LoadConfig(ctx context.Context) (*config.KubeConfig, error) {
