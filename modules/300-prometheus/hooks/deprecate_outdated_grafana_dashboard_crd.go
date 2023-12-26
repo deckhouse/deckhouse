@@ -54,8 +54,6 @@ func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterRe
 func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	dashboardCRDs := input.Snapshots["grafana_dashboard_definitions"]
 
-	fmt.Println(fmt.Sprintf("XXXXXXXXXXX RECEIVED %+v", dashboardCRDs))
-
 	if len(dashboardCRDs) == 0 {
 		return nil
 	}
@@ -65,18 +63,22 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	for _, dashboardCRD := range dashboardCRDs {
 		dashboard := simplejson.NewFromAny(dashboardCRD)
 		dashboardTitle := getTitle(dashboard)
+		fmt.Println("XXXXXXXXXXXXXXXXXXXX-1", dashboardTitle)
 		rows := getRows(dashboard)
 		for _, row := range rows {
 			rowPanels := getPanels(row)
+			fmt.Println("XXXXXXXXXXXXXXXXXXXX-2", rowPanels)
 			dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], rowPanels...)
 		}
 		panels := getPanels(dashboard)
+		fmt.Println("XXXXXXXXXXXXXXXXXXXX-3", panels)
 		dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], panels...)
 	}
 
 	for dashboard := range dashboardPanels {
 		for _, panel := range dashboardPanels[dashboard] {
 			panelTitle := getTitle(panel)
+			fmt.Println("XXXXXXXXXXXXXXXXXXXX-4", panelTitle)
 			intervals := evaluateDeprecatedIntervals(panel)
 			for _, interval := range intervals {
 				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_intervals",
@@ -99,8 +101,6 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 			}
 		}
 	}
-
-	fmt.Println(fmt.Sprintf("XXXXXXXXXXXXXXXXXXXXXXXXXX %+v", dashboardPanels))
 
 	return nil
 }
