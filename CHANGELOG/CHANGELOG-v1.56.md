@@ -14,6 +14,7 @@
  - **[candi]** Add support for the `ru-central1-d` zone in Yandex Cloud. [#6652](https://github.com/deckhouse/deckhouse/pull/6652)
  - **[deckhouse]** Added annotation `release.deckhouse.io/apply-now` which allows to apply the update without waiting for time restrictions. [#6651](https://github.com/deckhouse/deckhouse/pull/6651)
  - **[deckhouse-controller]** Add new resource ModulePullOverride to pull and apply modules in the development mode. [#6781](https://github.com/deckhouse/deckhouse/pull/6781)
+ - **[dhctl]** Support for mirroring Deckhouse CSE. [#7017](https://github.com/deckhouse/deckhouse/pull/7017)
  - **[dhctl]** Mirror flag to allow source registry selection. [#6889](https://github.com/deckhouse/deckhouse/pull/6889)
  - **[dhctl]** dhctl will now resume interrupted pulls if pulled data is fresh enough. [#6810](https://github.com/deckhouse/deckhouse/pull/6810)
  - **[dhctl]** Calculate Streebog GOST checksum for tar bundle only if asked to. [#6784](https://github.com/deckhouse/deckhouse/pull/6784)
