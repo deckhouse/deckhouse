@@ -30,23 +30,21 @@ var (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        lib.Queue("monitoring"),
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // The hook relies on operatorVersionsToInstall value discovered in discovery_operator_versions_to_install.go before.
 }, versionMonitoringHook)
 
 func versionMonitoringHook(input *go_hook.HookInput) error {
-	if !input.Values.Get("istio.globalVersion").Exists() {
+	if !input.Values.Get("istio.internal.operatorVersionsToInstall").Exists() {
 		return nil
 	}
 
 	input.MetricsCollector.Expire(versionsMonitoringMetricsGroup)
-	globalVersion := input.Values.Get("istio.globalVersion").String()
-	additionalVersions := input.Values.Get("istio.additionalVersions").Array()
+	istioVersions := input.Values.Get("istio.internal.operatorVersionsToInstall").Array()
 	deprecatedVersions := input.Values.Get("istio.internal.deprecatedVersions").Array()
 	istioVersionsMap := make(map[string]struct{}, 0)
 
-	istioVersionsMap[globalVersion] = struct{}{}
-	for _, additionalVersion := range additionalVersions {
-		istioVersionsMap[additionalVersion.String()] = struct{}{}
+	for _, istioVersion := range istioVersions {
+		istioVersionsMap[istioVersion.String()] = struct{}{}
 	}
 
 	for _, deprecatedVersion := range deprecatedVersions {
