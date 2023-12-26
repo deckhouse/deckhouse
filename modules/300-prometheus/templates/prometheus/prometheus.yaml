@@ -65,6 +65,8 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
+  scrapeConfigNamespaceSelector: {}
+  scrapeConfigSelector: {}
   initContainers:
   - command:
     - sh

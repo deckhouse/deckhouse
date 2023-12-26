@@ -7,6 +7,13 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "additional-configs-for-prometheus" "main")) | nindent 2 }}
 spec:
   honorLabels: true
+  authorization:
+    credentials:
+      key: token
+      name: prometheus-token
+  scheme: HTTPS
+  tlsConfig:
+    insecureSkipVerify: true
   staticConfigs:
     - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
   relabelings:
@@ -26,6 +33,13 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "additional-configs-for-prometheus" "main")) | nindent 2 }}
 spec:
   honorLabels: true
+  authorization:
+    credentials:
+      key: token
+      name: prometheus-token
+  scheme: HTTPS
+  tlsConfig:
+    insecureSkipVerify: true
   staticConfigs:
     - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
   relabelings:
