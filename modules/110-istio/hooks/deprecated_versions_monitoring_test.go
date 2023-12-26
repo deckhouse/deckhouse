@@ -42,14 +42,8 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 	})
 
 	Context("There are no deprecated versions", func() {
-		var noDeprecatedVersions = `
-globalVersion: 1.1.1
-additionalVersions:
-- 1.2.0
-- 1.3.0
-`
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio", []byte(noDeprecatedVersions))
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.1", "1.2", "1.3"]`))
 			f.RunHook()
 		})
 		It("Hook must execute successfully", func() {
@@ -66,18 +60,13 @@ additionalVersions:
 	})
 
 	Context("There are no deprecated version installed", func() {
-		var noDeprecatedVersions = `
-globalVersion: 1.1.1
-additionalVersions:
-- 1.2.0
-- 1.3.0
-internal:
-   deprecatedVersions:
-   - version: 1.1.9
-     alertSeverity: 4
+		var deprecatedVersions = `
+- version: "1.0"
+  alertSeverity: 4
 `
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio", []byte(noDeprecatedVersions))
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.1", "1.2", "1.3"]`))
+			f.ValuesSetFromYaml("istio.internal.deprecatedVersions", []byte(deprecatedVersions))
 			f.RunHook()
 		})
 		It("Hook must execute successfully", func() {
@@ -94,18 +83,13 @@ internal:
 	})
 
 	Context("There is one deprecated version installed", func() {
-		var noDeprecatedVersions = `
-globalVersion: 1.1.1
-additionalVersions:
-- 1.2.0
-- 1.3.0
-internal:
-   deprecatedVersions:
-   - version: 1.1.1
-     alertSeverity: 4
+		var deprecatedVersions = `
+- version: "1.1"
+  alertSeverity: 4
 `
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio", []byte(noDeprecatedVersions))
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.1", "1.2", "1.3"]`))
+			f.ValuesSetFromYaml("istio.internal.deprecatedVersions", []byte(deprecatedVersions))
 			f.RunHook()
 		})
 		It("Hook must execute successfully", func() {
@@ -124,7 +108,7 @@ internal:
 				Action: "set",
 				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
-					"version":        "1.1.1",
+					"version":        "1.1",
 					"alert_severity": "4",
 				},
 			}))
@@ -132,21 +116,15 @@ internal:
 	})
 
 	Context("There are several deprecated version installed", func() {
-		var noDeprecatedVersions = `
-globalVersion: 1.1.1
-additionalVersions:
-- 1.2.0
-- 1.3.0
-internal:
-   deprecatedVersions:
-   - version: 1.2.0
-     alertSeverity: 8
-   - version: 1.3.0
-     alertSeverity: 9
-
+		var deprecatedVersions = `
+- version: "1.2"
+  alertSeverity: 8
+- version: "1.3"
+  alertSeverity: 9
 `
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio", []byte(noDeprecatedVersions))
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.1", "1.2", "1.3"]`))
+			f.ValuesSetFromYaml("istio.internal.deprecatedVersions", []byte(deprecatedVersions))
 			f.RunHook()
 		})
 		It("Hook must execute successfully", func() {
@@ -165,7 +143,7 @@ internal:
 				Action: "set",
 				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
-					"version":        "1.2.0",
+					"version":        "1.2",
 					"alert_severity": "8",
 				},
 			}))
@@ -175,7 +153,7 @@ internal:
 				Action: "set",
 				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
-					"version":        "1.3.0",
+					"version":        "1.3",
 					"alert_severity": "9",
 				},
 			}))
