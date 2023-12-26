@@ -239,7 +239,8 @@ spec:
 
 ## Пример отправки алертов в Slack с фильтром
 
-```apiVersion: deckhouse.io/v1alpha1
+```yaml
+apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
 metadata:
   name: slack
@@ -286,7 +287,8 @@ spec:
 
 ## Пример отправки алертов в opsgenie
 
-```- name: opsgenie
+```yaml
+- name: opsgenie
         opsgenieConfigs:
           - apiKey:
               key: data
