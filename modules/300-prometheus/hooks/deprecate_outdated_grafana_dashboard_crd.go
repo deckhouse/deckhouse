@@ -40,7 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, grafanaDashboardCRDsHandler)
 
 func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	definition, ok, err := unstructured.NestedString(obj.Object, "definition", "definition")
+	definition, ok, err := unstructured.NestedString(obj.Object, "spec", "definition")
 	if err != nil {
 		return nil, fmt.Errorf("cannot definition from definition of GrafanaDashboardDefinition: %v", err)
 	}
