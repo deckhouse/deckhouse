@@ -42,7 +42,7 @@ kind: GrafanaDashboardDefinition
 metadata:
   name: Test
 spec:
-  definition: {
+  definition: '{
   "annotations": {
     "list": [
       {
@@ -357,8 +357,7 @@ spec:
   "uid": "test",
   "version": 0,
   "weekStart": ""
-  }
-  folder: test
+  }'
 `, 1))
 				f.RunHook()
 			})
@@ -415,7 +414,8 @@ kind: GrafanaDashboardDefinition
 metadata:
   name: Test
 spec:
-  definition: {
+  folder: test
+  definition: '{
   "annotations": {
     "list": [
       {
@@ -460,8 +460,7 @@ spec:
   "uid": "test",
   "version": 0,
   "weekStart": ""
-  }
-  folder: test
+  }'
 `, 1))
 					f.RunHook()
 				})

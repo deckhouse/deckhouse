@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"unicode"
 
@@ -41,14 +40,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, grafanaDashboardCRDsHandler)
 
 func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
+	definition, ok, err := unstructured.NestedString(obj.Object, "definition", "definition")
 	if err != nil {
-		return nil, fmt.Errorf("cannot get spec from GrafanaDashboardDefinition: %v", err)
+		return nil, fmt.Errorf("cannot definition from definition of GrafanaDashboardDefinition: %v", err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("has no spec field in GrafanaDashboardDefinition")
+		return nil, fmt.Errorf("has no definition field inside definition of GrafanaDashboardDefinition")
 	}
-	return spec["definition"], nil
+	return definition, nil
 }
 
 func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
@@ -61,25 +60,24 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	dashboardPanels := make(map[string][]*simplejson.Json)
 
 	for _, dashboardCRDItem := range dashboardCRDItems {
-		fmt.Println("XXXXXXXXXXXXXXXXXXXX-0", reflect.TypeOf(dashboardCRDItem))
-		dashboard := simplejson.NewFromAny(dashboardCRDItem)
+		dashboardCRD := dashboardCRDItem.(string)
+		dashboard, err := simplejson.NewJson([]byte(dashboardCRD))
+		if err != nil {
+			return err
+		}
 		dashboardTitle := getTitle(dashboard)
-		fmt.Println("XXXXXXXXXXXXXXXXXXXX-1", dashboardTitle)
 		rows := getRows(dashboard)
 		for _, row := range rows {
 			rowPanels := getPanels(row)
-			fmt.Println("XXXXXXXXXXXXXXXXXXXX-2", rowPanels)
 			dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], rowPanels...)
 		}
 		panels := getPanels(dashboard)
-		fmt.Println("XXXXXXXXXXXXXXXXXXXX-3", panels)
 		dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], panels...)
 	}
 
 	for dashboard := range dashboardPanels {
 		for _, panel := range dashboardPanels[dashboard] {
 			panelTitle := getTitle(panel)
-			fmt.Println("XXXXXXXXXXXXXXXXXXXX-4", panelTitle)
 			intervals := evaluateDeprecatedIntervals(panel)
 			for _, interval := range intervals {
 				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_intervals",
