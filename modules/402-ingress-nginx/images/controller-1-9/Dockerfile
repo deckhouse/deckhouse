@@ -178,8 +178,7 @@ RUN touch /etc/nginx/opentelemetry.toml \
   && mv /etc/nginx /chroot/etc/ \
   && mv /etc/ingress-controller /chroot/etc/ 
 
-RUN cp /lib/ld-musl-* /lib/libcrypto* /lib/libssl* /lib/libz* /chroot/lib/ \
-  && echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path \
+RUN echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
