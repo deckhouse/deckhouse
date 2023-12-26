@@ -60,3 +60,13 @@ Do the following to set a custom StorageClass as default:
    ```shell
    kubectl edit mc cloud-provider-yandex
    ```
+
+## Adding CloudStatic nodes to a cluster
+
+For VMs that you want to add to the cluster as nodes, add the `node-network-cidr` key to the metadata (Edit VM -> Metadata) with a value equal to the cluster's `nodeNetworkCIDR`.
+
+You can find out the `nodeNetworkCIDR` of the cluster using the command below:
+
+```shell
+kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
+```
