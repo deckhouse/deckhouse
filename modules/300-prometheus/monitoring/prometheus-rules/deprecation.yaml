@@ -30,3 +30,34 @@
           __meta_kubernetes_endpoint_address_target_kind -> __meta_kubernetes_endpointslice_address_target_kind
           __meta_kubernetes_endpoint_address_target_name -> __meta_kubernetes_endpointslice_address_target_name
           ```
+    - alert: GrafanaDashboardPanelIntervalDeprecated
+      expr: |
+        grafana_dashboards_deprecated_intervals > 0
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        summary: Deprecated Grafana panel interval has found.
+        description: |
+          Before updating to Grafana 10, it's required to rewrite an outdated expressions that uses `$interval_rv`, `interval_sx3` or `interval_sx4` to `$__rate_interval`
+          Outdated interval found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.interval }}`
+    - alert: GrafanaDashboardAlertsDeprecated
+      expr: |
+        grafana_dashboards_deprecated_alerts > 0
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        summary: Deprecated Grafana alert has found.
+        description: |
+          Before updating to Grafana 10, it's required to migrate an outdated alerts from Grafana to the external alertmanager
+          Outdated alerts found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.alert }}`
+
