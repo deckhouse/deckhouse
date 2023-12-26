@@ -92,7 +92,7 @@ spec:
 
    Если в конфигурации Deckhouse включен режим multi-tenancy (доступно только в версии Enterprise Edition), для того, чтобы дать ServiceAccount доступ в системные namespace'ы, укажите `allowAccessToSystemNamespaces: true`.
 
-3. Подставте свои значения переменных в начале и исполните их в bash на master:
+3. Подставьте свои значения переменных в начале и исполните их в bash на master (не забудьте подставить свои значения):
 
    ```shell
    cluster_name=my-cluster
@@ -101,7 +101,7 @@ spec:
    file_name=kube.config
    ```
 
-4. Заполним секцию `cluster` в `kube-config`
+4. Сгенерируем секцию `cluster` в `kube-config`:
 
    Сначала нужно определится какой вариант доступа из вне к api кластера вы будете использовать и выбрать один из списка:
    * Если есть доступ напрямую до API-сервера, используйте его IP:
@@ -150,7 +150,7 @@ spec:
          --kubeconfig=$file_name
        ```
 
-5. Заполним секцию `user` с токеном из Secret'а `ServiceAccount`:
+5. Сгенерируем секцию `user` с токеном из Secret'а `ServiceAccount`:
 
      ```shell
      kubectl config set-credentials $user_name \
@@ -158,7 +158,7 @@ spec:
        --kubeconfig=$file_name
      ```
 
-6. Заполним секцию `context` для связи:
+6. Сгенерируем секцию `context` для связи:
 
      ```shell
      kubectl config set-context $context_name \
