@@ -178,15 +178,16 @@ RUN touch /etc/nginx/opentelemetry.toml \
   && mv /etc/nginx /chroot/etc/ \
   && mv /etc/ingress-controller /chroot/etc/ 
 
-RUN echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /etc/ld-musl-x86_64.path \
-  && setcap    cap_net_bind_service=+ep /nginx-ingress-controller \
-  && setcap -v cap_net_bind_service=+ep /nginx-ingress-controller \
+RUN cp /lib/ld-musl-* /lib/libcrypto* /lib/libssl* /lib/libz* /chroot/lib/ \
+  && echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
+  && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
-  && setcap    cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
-  && setcap -v cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
-  && setcap    cap_net_bind_service=+ep /usr/bin/dumb-init \
-  && setcap -v cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx \
+  && setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
   && ln -sf /chroot/etc/nginx /etc/nginx \
   && ln -sf /chroot/tmp/nginx /tmp/nginx \
   && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
@@ -204,11 +205,8 @@ RUN echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > 
   && mknod -m 0666 /chroot/dev/tty c 5 0 \
   && mkdir -p /chroot/modules_mount \
   && mkdir -p modules_mount \
-  && ln -s /modules_mount /chroot/modules_mount 
-# Create symlinks to redirect nginx logs to stdout and stderr docker log collector
-RUN ln -sf /dev/stdout /var/log/nginx/access.log \
-  && ln -sf /dev/stderr /var/log/nginx/error.log \
-  && ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx \
+  && ln -s /modules_mount /chroot/modules_mount
+RUN ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx \
   && echo -e "/usr/local/lib\n/usr/local/lib64" > /etc/ld.so.conf.d/local.conf \
   && ldconfig
 
