@@ -8582,7 +8582,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Cilium v1.12 Agent Metrics",
+  "title": "Cilium Agent Metrics",
   "uid": "vtuWtdumz",
   "version": 1,
   "weekStart": ""
