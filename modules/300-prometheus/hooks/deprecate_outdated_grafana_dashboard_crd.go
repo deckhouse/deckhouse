@@ -219,11 +219,7 @@ func evaluateDeprecatedAlerts(panel *simplejson.Json) []string {
 }
 
 var stablePanelTypes = []string{
-	// row is not a plugin type, but panel type also
-	"row",
-	// flant-statusmap-panel works in Grafana 10.x
-	"flant-statusmap-panel",
-	// core plugin types
+	"row", // row is not a plugin type, but panel type also
 	"alertGroups",
 	"alertlist",
 	"annolist",
