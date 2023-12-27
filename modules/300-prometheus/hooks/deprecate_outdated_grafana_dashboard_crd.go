@@ -54,6 +54,7 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	dashboardCRDItems := input.Snapshots["grafana_dashboard_definitions"]
 
 	fmt.Println("XXXX", input.ConfigValues.Get("prometheus.grafana.customPlugins").String())
+	fmt.Println("YYYY", input.ConfigValues.Get("prometheus.grafana.customPlugins").Array())
 
 	if len(dashboardCRDItems) == 0 {
 		return nil
