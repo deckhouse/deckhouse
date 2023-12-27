@@ -218,13 +218,13 @@ spec:
     {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
     {{- end }}
     {{- if .spec.tlsConfig }}
-      {{- if .spec.tlsConfig.ca }}
       {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
-      {{- $_ := unset $tlsConfig "ca" }}
-      {{- $_ = set $tlsConfig "ca" (dict "configMap" (dict "name" (printf "d8-prometheus-remote-write-ca-%s" .name) "key" "ca.crt")) }}
+      {{- if .spec.tlsConfig.ca }}
+        {{- $_ := unset $tlsConfig "ca" }}
+        {{- $_ = set $tlsConfig "ca" (dict "configMap" (dict "name" (printf "d8-prometheus-remote-write-ca-%s" .name) "key" "ca.crt")) }}
+      {{- end }}
     tlsConfig:
       {{- $tlsConfig | toYaml | nindent 6 }}
-      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
