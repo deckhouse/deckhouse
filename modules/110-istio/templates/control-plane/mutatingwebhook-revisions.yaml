@@ -23,7 +23,7 @@
   admissionReviewVersions: ["v1"]
 {{- end }}
 
-{{- range $version := (keys .Values.istio.internal.versionMap) }}
+{{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
 {{- $baseArg := (list $ $version) }}
 ---
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
