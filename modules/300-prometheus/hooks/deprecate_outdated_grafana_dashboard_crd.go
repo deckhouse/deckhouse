@@ -23,9 +23,8 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/tidwall/gjson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/modules/300-prometheus/hooks/internal/simplejson"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -43,10 +42,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	definition, ok, err := unstructured.NestedString(obj.Object, "spec", "definition")
 	if err != nil {
-		return nil, fmt.Errorf("cannot definition from definition of GrafanaDashboardDefinition: %v", err)
+		return nil, fmt.Errorf("cannot get definition from spec field of GrafanaDashboardDefinition: %v", err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("has no definition field inside definition of GrafanaDashboardDefinition")
+		return nil, fmt.Errorf("GrafanaDashboardDefinition has no definition inside of spec field")
 	}
 	return definition, nil
 }
@@ -58,27 +57,23 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	dashboardPanels := make(map[string][]*simplejson.Json)
+	dashboardPanels := make(map[string][]gjson.Result)
 
 	for _, dashboardCRDItem := range dashboardCRDItems {
-		dashboardCRD := dashboardCRDItem.(string)
-		dashboard, err := simplejson.NewJson([]byte(dashboardCRD))
-		if err != nil {
-			return err
-		}
-		dashboardTitle := getTitle(dashboard)
-		rows := getRows(dashboard)
-		for _, row := range rows {
-			rowPanels := getPanels(row)
+		dashboard := gjson.Parse(dashboardCRDItem.(string))
+		dashboardTitle := dashboard.Get("title").String()
+		dashboardRows := dashboard.Get("rows").Array()
+		for _, dashboardRow := range dashboardRows {
+			rowPanels := dashboardRow.Get("panels").Array()
 			dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], rowPanels...)
 		}
-		panels := getPanels(dashboard)
+		panels := dashboard.Get("panels").Array()
 		dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], panels...)
 	}
 
 	for dashboard := range dashboardPanels {
 		for _, panel := range dashboardPanels[dashboard] {
-			panelTitle := getTitle(panel)
+			panelTitle := panel.Get("title").String()
 			intervals := evaluateDeprecatedIntervals(panel)
 			for _, interval := range intervals {
 				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_intervals",
@@ -89,18 +84,19 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 					},
 				)
 			}
-			alerts := evaluateDeprecatedAlerts(panel)
-			for _, alert := range alerts {
+			alert := panel.Get("alert")
+			if alert.Exists() {
+				alertName := alert.Get("name").String()
 				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_alerts",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),
-						"alert":     sanitizeLabelName(alert),
+						"alert":     sanitizeLabelName(alertName),
 					},
 				)
 			}
-			panelType := getType(panel)
-			if isUnstablePanelType(panelType) {
+			panelType := panel.Get("type").String()
+			if !isStablePanelType(panelType) {
 				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_plugins",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
@@ -115,62 +111,6 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	return nil
 }
 
-func getTitle(data *simplejson.Json) string {
-	return getStringFieldValue(data, "title")
-}
-
-func getName(data *simplejson.Json) string {
-	return getStringFieldValue(data, "name")
-}
-
-func getType(data *simplejson.Json) string {
-	return getStringFieldValue(data, "type")
-}
-
-func getStringFieldValue(data *simplejson.Json, fieldName string) string {
-	value, hasValue := data.CheckGet(fieldName)
-	if !hasValue {
-		return ""
-	}
-	valueData, err := value.String()
-	if err != nil {
-		return ""
-	}
-	return valueData
-}
-
-func getPanels(data *simplejson.Json) []*simplejson.Json {
-	panels, hasPanels := data.CheckGet("panels")
-	if !hasPanels {
-		return nil
-	}
-	panelsData, err := panels.Array()
-	if err != nil {
-		return nil
-	}
-	list := make([]*simplejson.Json, 0, len(panelsData))
-	for _, panelsDataItem := range panelsData {
-		list = append(list, simplejson.NewFromAny(panelsDataItem))
-	}
-	return list
-}
-
-func getRows(data *simplejson.Json) []*simplejson.Json {
-	rows, hasRows := data.CheckGet("rows")
-	if !hasRows {
-		return nil
-	}
-	rowsData, err := rows.Array()
-	if err != nil {
-		return nil
-	}
-	list := make([]*simplejson.Json, 0, len(rowsData))
-	for _, rowsDataItem := range rowsData {
-		list = append(list, simplejson.NewFromAny(rowsDataItem))
-	}
-	return list
-}
-
 var (
 	deprecatedIntervals = []string{
 		"interval_rv",
@@ -179,20 +119,12 @@ var (
 	}
 )
 
-func evaluateDeprecatedIntervals(panel *simplejson.Json) []string {
-	targets, err := panel.Get("targets").Array()
-	if err != nil {
-		return nil
-	}
+func evaluateDeprecatedIntervals(panel gjson.Result) []string {
+	targets := panel.Get("targets").Array()
 	intervals := make([]string, 0)
 	for _, target := range targets {
-		targetData := simplejson.NewFromAny(target)
-		expr := targetData.Get("expr")
-		exprData, err := expr.String()
-		if err != nil {
-			return nil
-		}
-		if deprecatedInterval, ok := evaluateDeprecatedInterval(exprData); ok {
+		expr := target.Get("expr").String()
+		if deprecatedInterval, ok := evaluateDeprecatedInterval(expr); ok {
 			intervals = append(intervals, deprecatedInterval)
 		}
 	}
@@ -206,16 +138,6 @@ func evaluateDeprecatedInterval(expression string) (string, bool) {
 		}
 	}
 	return "", false
-}
-
-func evaluateDeprecatedAlerts(panel *simplejson.Json) []string {
-	alertNames := make([]string, 0)
-	alert, hasAlert := panel.CheckGet("alert")
-	if hasAlert {
-		name := getName(alert)
-		alertNames = append(alertNames, name)
-	}
-	return alertNames
 }
 
 var stablePanelTypes = []string{
@@ -255,13 +177,13 @@ var stablePanelTypes = []string{
 	"xychart",
 }
 
-func isUnstablePanelType(panelType string) bool {
+func isStablePanelType(panelType string) bool {
 	for _, stablePanelType := range stablePanelTypes {
 		if stablePanelType == panelType {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func sanitizeLabelName(s string) string {
