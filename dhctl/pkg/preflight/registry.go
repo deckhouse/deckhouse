@@ -68,7 +68,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	}
 	defer tun.Stop()
 
-	registryURL := &url.URL{Scheme: pc.metaConfig.Registry.Scheme, Host: pc.metaConfig.Registry.Address, Path: "/v2"}
+	registryURL := &url.URL{Scheme: pc.metaConfig.Registry.Scheme, Host: pc.metaConfig.Registry.Address, Path: "/v2/"}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
