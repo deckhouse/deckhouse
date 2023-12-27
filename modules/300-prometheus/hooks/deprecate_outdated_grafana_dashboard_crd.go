@@ -54,15 +54,11 @@ func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterRe
 func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	dashboardCRDItems := input.Snapshots["grafana_dashboard_definitions"]
 
-	fmt.Println("XXXX", input.ConfigValues.Get("prometheus.grafana.customPlugins").String())
-	fmt.Println("YYYY", input.ConfigValues.Get("prometheus.grafana.customPlugins").Array())
-	fmt.Println("ZZZZ", input.ConfigValues.Get("prometheus.internal.grafana.customPlugins").String())
-	fmt.Println("IIII", input.ConfigValues.Get("prometheus.internal.grafana.customPlugins").Array())
+	fmt.Println("XXXX", input.ConfigValues.Get("prometheus").String())
+	fmt.Println("IIII", input.ConfigValues.Get("prometheus").String())
 
-	fmt.Println("JJJJ", input.Values.Get("prometheus.grafana.customPlugins").String())
-	fmt.Println("KKKK", input.Values.Get("prometheus.grafana.customPlugins").Array())
-	fmt.Println("LLLL", input.Values.Get("prometheus.internal.grafana.customPlugins").String())
-	fmt.Println("MMMM", input.Values.Get("prometheus.internal.grafana.customPlugins").Array())
+	fmt.Println("JJJJ", input.Values.Get("prometheus").String())
+	fmt.Println("MMMM", input.Values.Get("prometheus").String())
 
 	if len(dashboardCRDItems) == 0 {
 		return nil
