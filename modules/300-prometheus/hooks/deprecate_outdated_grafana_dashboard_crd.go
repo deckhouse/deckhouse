@@ -28,8 +28,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:       "/modules/prometheus/deprecate_outdated_grafana_dashboard_crd",
-	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue: "/modules/prometheus/deprecate_outdated_grafana_dashboard_crd",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "grafana_dashboard_definitions",
@@ -53,9 +52,6 @@ func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterRe
 
 func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	dashboardCRDItems := input.Snapshots["grafana_dashboard_definitions"]
-
-	fmt.Println("XXXX", input.ConfigValues.Get("global").String())
-	fmt.Println("JJJJ", input.Values.Get("global").String())
 
 	if len(dashboardCRDItems) == 0 {
 		return nil
