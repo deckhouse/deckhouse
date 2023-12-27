@@ -285,7 +285,7 @@ spec:
   type: Internal
 ```
 
-## Пример отправки алертов в opsgenie
+## Пример отправки алертов в Opsgenie
 
 ```yaml
 - name: opsgenie

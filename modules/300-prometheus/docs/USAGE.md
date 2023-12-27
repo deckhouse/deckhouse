@@ -237,7 +237,7 @@ spec:
 
 The fields `token` in the Secret and `chatID` in the `CustomAlertmanager` custom resource must be set on your own. [Read more](https://core.telegram.org/bots) about Telegram API.
 
-## Example of sending alerts to Slack with filtres
+## Example of sending alerts to Slack with a filter
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -285,7 +285,7 @@ spec:
   type: Internal
 ```
 
-## Example of sending alerts to opsgenie
+## Example of sending alerts to Opsgenie
 
 ```yaml
 - name: opsgenie
