@@ -65,7 +65,7 @@
           Outdated alerts are found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.alert }}`
     - alert: GrafanaInstalledPluginNeedsRevision
       expr: |
-        d8_grafana_dashboards_deprecated_plugins > 1
+        d8_grafana_dashboards_deprecated_plugins > 0
       labels:
         tier: cluster
         severity_level: "8"
@@ -82,4 +82,3 @@
           Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the future
           We recommend you to migrate to the State Timeline plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/
           {{ end }}
-

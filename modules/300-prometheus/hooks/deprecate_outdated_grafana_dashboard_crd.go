@@ -100,7 +100,6 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 				)
 			}
 			panelType := getType(panel)
-			fmt.Println("XXXXXXX", panelType, isUnstablePanelType(panelType))
 			if isUnstablePanelType(panelType) {
 				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_plugins",
 					1, map[string]string{
