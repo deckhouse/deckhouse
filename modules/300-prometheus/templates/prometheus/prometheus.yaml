@@ -65,8 +65,10 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-  scrapeConfigNamespaceSelector: {}
-  scrapeConfigSelector: {}
+  scrapeConfigNamespaceSelector: null
+  scrapeConfigSelector:
+    matchLabels:
+      additional-configs-for-prometheus: main
   initContainers:
   - command:
     - sh
