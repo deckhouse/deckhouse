@@ -109,6 +109,10 @@ spec:
                       description: Disable target certificate validation.
                       type: boolean
                       x-doc-default: false
+                    ca:
+                      description: CA certificate to validate API server certificate with.
+                      type: string
+                      x-doc-default: ""
       additionalPrinterColumns: &additionalPrinterColumns
         - name: URL
           type: string
