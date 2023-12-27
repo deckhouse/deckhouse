@@ -54,11 +54,8 @@ func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterRe
 func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	dashboardCRDItems := input.Snapshots["grafana_dashboard_definitions"]
 
-	fmt.Println("XXXX", input.ConfigValues.Get("prometheus").String())
-	fmt.Println("IIII", input.ConfigValues.Get("prometheus").String())
-
-	fmt.Println("JJJJ", input.Values.Get("prometheus").String())
-	fmt.Println("MMMM", input.Values.Get("prometheus").String())
+	fmt.Println("XXXX", input.ConfigValues.Get("global").String())
+	fmt.Println("JJJJ", input.Values.Get("global").String())
 
 	if len(dashboardCRDItems) == 0 {
 		return nil
