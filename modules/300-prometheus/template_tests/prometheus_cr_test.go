@@ -142,7 +142,7 @@ scrapeInterval: 30s
 
 			rwCAConfigMap := f.KubernetesResource("ConfigMap", "d8-monitoring", "d8-prometheus-remote-write-ca-test-remote-write-custom-ca")
 			Expect(rwCAConfigMap.Exists()).To(BeTrue())
-			Expect(rwCAConfigMap.Field("ca.crt").String()).To(Equal("CRTCRTCRT"))
+			Expect(rwCAConfigMap.Field("data").String()).To(Equal(`{"ca.crt":"CRTCRTCRT"}`))
 		})
 	})
 })
