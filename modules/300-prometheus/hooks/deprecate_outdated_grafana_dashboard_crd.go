@@ -28,7 +28,8 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/prometheus/deprecate_outdated_grafana_dashboard_crd",
+	Queue:       "/modules/prometheus/deprecate_outdated_grafana_dashboard_crd",
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "grafana_dashboard_definitions",
