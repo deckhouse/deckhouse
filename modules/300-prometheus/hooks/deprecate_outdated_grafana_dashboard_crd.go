@@ -18,12 +18,13 @@ package hooks
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/tidwall/gjson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"regexp"
-	"strings"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
