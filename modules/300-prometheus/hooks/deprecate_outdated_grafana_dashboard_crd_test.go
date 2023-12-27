@@ -397,49 +397,49 @@ spec:
 				Expect(f).To(ExecuteSuccessfully())
 				m := f.MetricsCollector.CollectedMetrics()
 				Expect(m).To(HaveLen(8))
-				Expect(m[0].Name).To(Equal("d8_grafana_dashboards_deprecated_intervals"))
+				Expect(m[0].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
 				Expect(m[0].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "single_panel",
 					"interval":  "interval_rv",
 				}))
-				Expect(m[1].Name).To(Equal("d8_grafana_dashboards_deprecated_alerts"))
+				Expect(m[1].Name).To(Equal("d8_grafana_dashboards_deprecated_alert"))
 				Expect(m[1].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "single_panel",
 					"alert":     "alert_rule_inside_single_panel",
 				}))
-				Expect(m[2].Name).To(Equal("d8_grafana_dashboards_deprecated_intervals"))
+				Expect(m[2].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
 				Expect(m[2].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_single_panel",
 					"interval":  "interval_rv",
 				}))
-				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_deprecated_plugins"))
+				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
 				Expect(m[3].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_single_panel",
 					"plugin":    "unknown_plugin",
 				}))
-				Expect(m[4].Name).To(Equal("d8_grafana_dashboards_deprecated_intervals"))
+				Expect(m[4].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
 				Expect(m[4].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "panel_inside_row",
 					"interval":  "interval_sx3",
 				}))
-				Expect(m[5].Name).To(Equal("d8_grafana_dashboards_deprecated_alerts"))
+				Expect(m[5].Name).To(Equal("d8_grafana_dashboards_deprecated_alert"))
 				Expect(m[5].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "panel_inside_row",
 					"alert":     "panel_inside_row_alert_rule",
 				}))
-				Expect(m[6].Name).To(Equal("d8_grafana_dashboards_deprecated_intervals"))
+				Expect(m[6].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
 				Expect(m[6].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_panel_inside_row",
 					"interval":  "interval_sx4",
 				}))
-				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_deprecated_plugins"))
+				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
 				Expect(m[7].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_panel_inside_row",

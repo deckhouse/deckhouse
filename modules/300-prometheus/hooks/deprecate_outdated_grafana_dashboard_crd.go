@@ -76,7 +76,7 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 			panelTitle := panel.Get("title").String()
 			intervals := evaluateDeprecatedIntervals(panel)
 			for _, interval := range intervals {
-				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_intervals",
+				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_interval",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),
@@ -87,7 +87,7 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 			alert := panel.Get("alert")
 			if alert.Exists() {
 				alertName := alert.Get("name").String()
-				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_alerts",
+				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_alert",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),
@@ -97,7 +97,7 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 			}
 			panelType := panel.Get("type").String()
 			if !isStablePanelType(panelType) {
-				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_plugins",
+				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_plugin",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),
