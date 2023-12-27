@@ -38,7 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 )
 
-const validatingErrorStr = `failed calling webhook "validation.istio.io"`
+const validatingErrorStr = `failed calling webhook`
 
 type IstioOperatorCrdSnapshot struct {
 	Revision  string
