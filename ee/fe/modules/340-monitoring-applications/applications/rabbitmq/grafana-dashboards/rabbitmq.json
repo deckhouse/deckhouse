@@ -26,8 +26,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 10991,
   "graphTooltip": 1,
-  "id": 43,
-  "iteration": 1703515382368,
+  "iteration": 1703702182056,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -4532,6 +4531,6 @@
   "timezone": "browser",
   "title": "RabbitMQ",
   "uid": "Kn5xm-gZk",
-  "version": 9,
+  "version": 2,
   "weekStart": ""
 }
