@@ -1,4 +1,4 @@
-{{- range $version := (keys .Values.istio.internal.operatorVersionsToInstall) }}
+{{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
 {{- $revision := get $versionInfo "revision" }}
 ---
