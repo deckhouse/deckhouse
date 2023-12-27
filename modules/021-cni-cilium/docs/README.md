@@ -12,16 +12,15 @@ This module is responsible for providing a network between multiple nodes in a c
 3. Kernel requirements.
    * The `cni-cilium` module requires a Linux kernel version >= `4.9.17`.
    * For the `cni-cilium` module to work together with the [istio](../110-istio/), [openvpn](../500-openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/documentation/v1/modules/{% else %}..{% endif %}/350-node-local-dns/) module, a Linux kernel version >= `5.7` is required.
-4. OS versions support.
-   * Ubuntu
-     * 18.04
-     * 20.04
-     * 22.04
-   * Debian
-     * 11
-   * CentOS
-     * 7 (requires kernel from external [repo](http://elrepo.org))
-     * 8 (requires kernel from external [repo](http://elrepo.org))
+4. OS compatibility issues:
+    * Ubuntu:
+      * not working on 18.04
+      * to work on 20.04 you need to install hwe-kernel
+    * Astra Linux:
+      * does not work on the Smolensk edition
+    * CentOS:
+      * 7 (needs new kernel from [repository](http://elrepo.org))
+      * 8 (needs new kernel from [repository](http://elrepo.org))
 
 ## A note about CiliumClusterwideNetworkPolicies
 
