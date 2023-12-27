@@ -95,10 +95,10 @@ spec:
 3. Сгенерируйте `kube-config`, подставив свои значения переменных в начале:
 
    ```shell
-   cluster_name=my-cluster
-   user_name=gitlab-runner-deploy.my-cluster
-   context_name=${cluster_name}-${user_name}
-   file_name=kube.config
+   export cluster_name=my-cluster
+   export user_name=gitlab-runner-deploy.my-cluster
+   export context_name=${cluster_name}-${user_name}
+   export file_name=kube.config
    ```
 
    * Секция `cluster`:
