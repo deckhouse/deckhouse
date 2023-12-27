@@ -18,13 +18,12 @@ package hooks
 
 import (
 	"fmt"
-	"strings"
-	"unicode"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/tidwall/gjson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"regexp"
+	"strings"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -186,24 +185,8 @@ func isStablePanelType(panelType string) bool {
 	return false
 }
 
+var prometheusLabelNameRegexp = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+
 func sanitizeLabelName(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-
-	s = strings.Map(sanitizeRune, s)
-	if unicode.IsDigit(rune(s[0])) {
-		s = "key_" + s
-	}
-	if s[0] == '_' {
-		s = "key" + s
-	}
-	return strings.ToLower(s)
-}
-
-func sanitizeRune(r rune) rune {
-	if unicode.IsLetter(r) || unicode.IsDigit(r) {
-		return r
-	}
-	return '_'
+	return strings.ToLower(prometheusLabelNameRegexp.ReplaceAllString(s, "_"))
 }

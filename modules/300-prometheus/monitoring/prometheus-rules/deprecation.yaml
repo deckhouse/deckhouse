@@ -83,7 +83,6 @@
         description: |
           Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
           Possibly outdated plugins are found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.plugin }}`
-
           {{ if (eq $labels.plugin "flant-statusmap-panel") }}
           Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the future
           We recommend you to migrate to the State Timeline plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/
