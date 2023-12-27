@@ -95,10 +95,10 @@ spec:
 1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
 
    ```shell
-   CLUSTER_NAME=my-cluster
-   USER_NAME=gitlab-runner-deploy.my-cluster
-   CONTEXT_NAME=${CLUSTER_NAME}-${USER_NAME}
-   FILE_NAME=kube.config
+   export CLUSTER_NAME=my-cluster
+   export USER_NAME=gitlab-runner-deploy.my-cluster
+   export CONTEXT_NAME=${CLUSTER_NAME}-${USER_NAME}
+   export FILE_NAME=kube.config
    ```
 
 1. Сгенерируйте секцию `cluster` в файле конфигурации kubectl:
