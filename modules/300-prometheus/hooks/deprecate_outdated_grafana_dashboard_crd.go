@@ -164,7 +164,7 @@ var stablePanelTypes = []string{
 	"news",
 	"nodeGraph",
 	"piechart",
-	"stat",
+	"singlestat", "stat",
 	"state-timeline",
 	"status-history",
 	"table",
