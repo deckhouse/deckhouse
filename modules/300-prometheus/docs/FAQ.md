@@ -808,6 +808,8 @@ kind: ScrapeConfig
 metadata:
   name: example-scrape-config
   namespace: example-ns
+  labels:
+    additional-configs-for-prometheus: main
 spec:
   honorLabels: true
   staticConfigs:
