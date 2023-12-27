@@ -92,7 +92,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
 
    If the multitenancy mode is enabled in the Deckhouse configuration, you need to specify the `allowAccessToSystemNamespaces: true` parameter to give the ServiceAccount access to the system namespaces.
 
-3. Generate a `kube-config` (don't forget to substitute your values):
+3. Substitute your variable values at the beginning and execute them in bash on master (don't forget to substitute your values):
 
    ```shell
    export cluster_name=my-cluster
@@ -101,8 +101,10 @@ It may be required to give your machine static access to the Kubernetes API, e.g
    export file_name=kube.config
    ```
 
-   * The `cluster` section:
-     * If there is direct access to the API server, then use its IP address:
+4. Generate a `cluster` section in `kube-config`:
+
+   First you need to decide which option of access from outside to the cluster api you will use and choose one from the list:
+   * If there is direct access to the API server, then use its IP address:
        1. Get the CA of our Kubernetes cluster:
 
           ```shell
@@ -118,9 +120,9 @@ It may be required to give your machine static access to the Kubernetes API, e.g
             --kubeconfig=$file_name
           ```
 
-     * If there is no direct access to the API server, [enable](../../modules/150-user-authn/configuration.html#parameters) the `publishAPI` parameter containing the `whitelistSourceRanges` array. Or you can do that via a separate Ingress-controller using the `ingressClass` option with the finite `SourceRange`. That is, specify the requests' source addresses in the `acceptRequestsFrom` controller parameter.
+   * If there is no direct access to the API server, [enable](../../modules/150-user-authn/configuration.html#parameters) the `publishAPI` parameter containing the `whitelistSourceRanges` array. Or you can do that via a separate Ingress-controller using the `ingressClass` option with the finite `SourceRange`. That is, specify the requests' source addresses in the `acceptRequestsFrom` controller parameter.
 
-     * If the CA is non-public:
+   * If the CA is non-public:
 
        1. Get the CA from the secret containing the `api.%s` domain's certificate:
 
@@ -140,7 +142,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
             --kubeconfig=$file_name
           ```
 
-     * If the CA is public, generate a section with just the external domain:
+   * If the CA is public, generate a section with just the external domain:
 
        ```shell
        kubectl config set-cluster $cluster_name \
@@ -148,7 +150,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
          --kubeconfig=$file_name
        ```
 
-   * Generate the `user` section using the token from the `ServiceAccount` secret:
+5. Generate the `user` section using the token from the `ServiceAccount` secret:
 
      ```shell
      kubectl config set-credentials $user_name \
@@ -156,7 +158,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
        --kubeconfig=$file_name
      ```
 
-   * Generate the `context` to bind it all together:
+6. Generate the `context` to bind it all together:
 
      ```shell
      kubectl config set-context $context_name \
@@ -164,7 +166,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
        --kubeconfig=$file_name
      ```
 
-   * Set default context of your newly created kubeconfig file:
+7. Set default context of your newly created kubeconfig file:
 
      ```shell
      kubectl config use-context $context_name --kubeconfig=$file_name
