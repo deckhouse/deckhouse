@@ -265,6 +265,8 @@ properties:
                   properties:
                     insecureSkipVerify:
                       type: boolean
+                    ca:
+                      type: string
         default: []
         x-examples:
           -
