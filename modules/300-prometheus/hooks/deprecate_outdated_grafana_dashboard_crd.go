@@ -23,8 +23,9 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/grafana/grafana/pkg/components/simplejson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/modules/300-prometheus/hooks/internal/simplejson"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -98,6 +99,16 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 					},
 				)
 			}
+			panelType := getType(panel)
+			if isUnstablePanelType(panelType) {
+				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_plugins",
+					1, map[string]string{
+						"dashboard": sanitizeLabelName(dashboard),
+						"panel":     sanitizeLabelName(panelTitle),
+						"plugin":    panelType,
+					},
+				)
+			}
 		}
 	}
 
@@ -105,27 +116,27 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 }
 
 func getTitle(data *simplejson.Json) string {
-	title, hasTitle := data.CheckGet("title")
-	if !hasTitle {
-		return ""
-	}
-	titleData, err := title.String()
-	if err != nil {
-		return ""
-	}
-	return titleData
+	return getStringFieldValue(data, "title")
 }
 
 func getName(data *simplejson.Json) string {
-	name, hasName := data.CheckGet("name")
-	if !hasName {
+	return getStringFieldValue(data, "name")
+}
+
+func getType(data *simplejson.Json) string {
+	return getStringFieldValue(data, "type")
+}
+
+func getStringFieldValue(data *simplejson.Json, fieldName string) string {
+	value, hasValue := data.CheckGet(fieldName)
+	if !hasValue {
 		return ""
 	}
-	nameData, err := name.String()
+	valueData, err := value.String()
 	if err != nil {
 		return ""
 	}
-	return nameData
+	return valueData
 }
 
 func getPanels(data *simplejson.Json) []*simplejson.Json {
@@ -205,6 +216,56 @@ func evaluateDeprecatedAlerts(panel *simplejson.Json) []string {
 		alertNames = append(alertNames, name)
 	}
 	return alertNames
+}
+
+var stablePanelTypes = []string{
+	// row is not a plugin type, but panel type also
+	"row",
+	// flant-statusmap-panel works in Grafana 10.x
+	"flant-statusmap-panel",
+	// core plugin types
+	"alertGroups",
+	"alertlist",
+	"annolist",
+	"barchart",
+	"bargauge",
+	"candlestick",
+	"canvas",
+	"dashlist",
+	"datagrid",
+	"debug",
+	"flamegraph",
+	"gauge",
+	"geomap",
+	"gettingstarted",
+	"graph",
+	"heatmap",
+	"histogram",
+	"live",
+	"logs",
+	"news",
+	"nodeGraph",
+	"piechart",
+	"stat",
+	"state_timeline",
+	"status_history",
+	"table",
+	"table_old",
+	"text",
+	"timeseries",
+	"traces",
+	"trend",
+	"welcome",
+	"xychart",
+}
+
+func isUnstablePanelType(panelType string) bool {
+	for _, stablePanelType := range stablePanelTypes {
+		if stablePanelType == panelType {
+			return false
+		}
+	}
+	return true
 }
 
 func sanitizeLabelName(s string) string {

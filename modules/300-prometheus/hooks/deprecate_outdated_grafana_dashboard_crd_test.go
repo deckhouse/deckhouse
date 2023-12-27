@@ -68,6 +68,7 @@ spec:
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 77,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -199,6 +200,21 @@ spec:
       ],
       "title": "Single Panel",
       "type": "timeseries"
+    },
+    {
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_datasource_uid"
+          },
+          "expr": "rate(metric_name[$__interval_rv])",
+          "refId": "A"
+        }
+      ],
+      "title": "Plugin Single Panel",
+      "type": "unknown_plugin",
+      "version": 1
     },
     {
       "gridPos": {
@@ -339,6 +355,21 @@ spec:
       ],
       "title": "Panel Inside Row",
       "type": "timeseries"
+    },
+    {
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_datasource_uid"
+          },
+          "expr": "rate(metric_name[$__interval_sx4])",
+          "refId": "A"
+        }
+      ],
+      "title": "Plugin Panel Inside Row",
+      "type": "unknown_plugin",
+      "version": 1
     }
   ],
   "schemaVersion": 36,
@@ -355,7 +386,7 @@ spec:
   "timezone": "",
   "title": "Test",
   "uid": "test",
-  "version": 0,
+  "version": 1,
   "weekStart": ""
   }'
 `, 1))
@@ -365,7 +396,7 @@ spec:
 			It("Should start exposing metrics about deprecation", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				m := f.MetricsCollector.CollectedMetrics()
-				Expect(m).To(HaveLen(4))
+				Expect(m).To(HaveLen(8))
 				Expect(m[0].Name).To(Equal("d8_grafana_dashboards_deprecated_intervals"))
 				Expect(m[0].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
@@ -381,14 +412,38 @@ spec:
 				Expect(m[2].Name).To(Equal("d8_grafana_dashboards_deprecated_intervals"))
 				Expect(m[2].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
+					"panel":     "plugin_single_panel",
+					"interval":  "interval_rv",
+				}))
+				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_deprecated_plugins"))
+				Expect(m[3].Labels).To(Equal(map[string]string{
+					"dashboard": "test",
+					"panel":     "plugin_single_panel",
+					"plugin":    "unknown_plugin",
+				}))
+				Expect(m[4].Name).To(Equal("d8_grafana_dashboards_deprecated_intervals"))
+				Expect(m[4].Labels).To(Equal(map[string]string{
+					"dashboard": "test",
 					"panel":     "panel_inside_row",
 					"interval":  "interval_sx3",
 				}))
-				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_deprecated_alerts"))
-				Expect(m[3].Labels).To(Equal(map[string]string{
+				Expect(m[5].Name).To(Equal("d8_grafana_dashboards_deprecated_alerts"))
+				Expect(m[5].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "panel_inside_row",
 					"alert":     "panel_inside_row_alert_rule",
+				}))
+				Expect(m[6].Name).To(Equal("d8_grafana_dashboards_deprecated_intervals"))
+				Expect(m[6].Labels).To(Equal(map[string]string{
+					"dashboard": "test",
+					"panel":     "plugin_panel_inside_row",
+					"interval":  "interval_sx4",
+				}))
+				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_deprecated_plugins"))
+				Expect(m[7].Labels).To(Equal(map[string]string{
+					"dashboard": "test",
+					"panel":     "plugin_panel_inside_row",
+					"plugin":    "unknown_plugin",
 				}))
 			})
 
@@ -441,9 +496,363 @@ spec:
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 77,
   "links": [],
   "liveNow": false,
-  "panels": [],
+  "panels": [
+    {
+      "datasource": {},
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_datasource_uid"
+          },
+          "expr": "rate(metric_name[$__rate_interval])",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "title": "Single Panel",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {},
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_datasource_uid"
+          },
+          "expr": "rate(metric_name[$__rate_interval])",
+          "refId": "A"
+        }
+      ],
+      "title": "Plugin Single Panel",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 4,
+      "title": "Row With Panel",
+      "type": "row"
+    },
+    {
+      "datasource": {},
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_datasource_uid"
+          },
+          "expr": "rate(metric_name[$__rate_interval])",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "title": "Panel Inside Row",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_datasource_uid"
+          },
+          "expr": "rate(metric_name[$__rate_interval])",
+          "refId": "A"
+        }
+      ],
+      "title": "Plugin Panel Inside Row",
+      "type": "timeseries"
+    }
+  ],
   "schemaVersion": 36,
   "style": "dark",
   "tags": [],
@@ -458,7 +867,7 @@ spec:
   "timezone": "",
   "title": "Test",
   "uid": "test",
-  "version": 0,
+  "version": 1,
   "weekStart": ""
   }'
 `, 1))
