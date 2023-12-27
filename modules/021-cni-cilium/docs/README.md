@@ -15,7 +15,7 @@ This module is responsible for providing a network between multiple nodes in a c
 4. OS compatibility issues:
     * Ubuntu:
       * not working on 18.04
-      * to work on 20.04 you need to install hwe-kernel
+      * to work on 20.04 you need to install HWE kernel
     * CentOS:
       * 7 (needs new kernel from [repository](http://elrepo.org))
       * 8 (needs new kernel from [repository](http://elrepo.org))
