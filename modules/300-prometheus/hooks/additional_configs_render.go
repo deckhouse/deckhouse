@@ -78,6 +78,9 @@ func handleConfigRender(input *go_hook.HookInput) error {
 		}
 
 		if v, ok := data["scrapes.yaml"]; ok {
+			if len(scrapes.Bytes()) > 0 {
+				input.MetricsCollector.Set("d8_deprecated_scrape_config", 1, nil)
+			}
 			scrapes.Write(v)
 			scrapes.WriteString("\n")
 		}

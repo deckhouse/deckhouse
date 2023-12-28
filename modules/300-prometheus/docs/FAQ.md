@@ -799,3 +799,43 @@ status:
 ```
 
 Remember the special alert `DeadMansSwitch` — its presence in the cluster indicates that Prometheus is working.
+
+## How do I add additional endpoints to a scrape config?
+
+Add the label `prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"` to the namespace where the ScrapeConfig was created.
+
+Example:
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"
+```
+
+Add the ScrapeConfig with the required label `prometheus: main`:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: example-scrape-config
+  namespace: frontend
+  labels:
+    prometheus: main
+spec:
+  honorLabels: true
+  staticConfigs:
+    - targets: ['example-app.frontend.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
+  relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - targetLabel: scrape_endpoint
+      replacement: main
+    - targetLabel: job
+      replacement: kube-state-metrics
+  metricsPath: '/metrics'
+```
