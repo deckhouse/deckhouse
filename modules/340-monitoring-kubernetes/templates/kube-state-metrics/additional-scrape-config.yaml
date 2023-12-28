@@ -4,7 +4,7 @@ kind: ScrapeConfig
 metadata:
   name: kube-state-metrics-main
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "additional-configs-for-prometheus" "main")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "prometheus" "main")) | nindent 2 }}
 spec:
   honorLabels: true
   authorization:
@@ -30,7 +30,7 @@ kind: ScrapeConfig
 metadata:
   name: kube-state-metrics-self
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "additional-configs-for-prometheus" "main")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "prometheus" "main")) | nindent 2 }}
 spec:
   honorLabels: true
   authorization:

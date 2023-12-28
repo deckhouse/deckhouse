@@ -65,12 +65,6 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-  scrapeConfigNamespaceSelector:
-    matchLabels:
-      kubernetes.io/metadata.name: d8-monitoring
-  scrapeConfigSelector:
-    matchLabels:
-      additional-configs-for-prometheus: main
   initContainers:
   - command:
     - sh
@@ -173,6 +167,9 @@ spec:
   ruleNamespaceSelector:
     matchLabels:
       prometheus.deckhouse.io/rules-watcher-enabled: "true"
+  scrapeConfigNamespaceSelector:
+    matchLabels:
+      prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"
   probeNamespaceSelector:
     matchLabels:
       heritage: deckhouse
@@ -189,6 +186,9 @@ spec:
     matchLabels:
       prometheus: main
   probeSelector:
+    matchLabels:
+      prometheus: main
+  scrapeConfigSelector:
     matchLabels:
       prometheus: main
   secrets:

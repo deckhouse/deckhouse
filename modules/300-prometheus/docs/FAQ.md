@@ -802,18 +802,34 @@ Remember the special alert `DeadMansSwitch` — its presence in the cluster indi
 
 ## How do I add additional endpoints to a scrape config?
 
+Add the label `prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"` to the namespace where the ScrapeConfig was created.
+
+Example:
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"
+```
+
+Add the ScrapeConfig with the required label `prometheus: main`:
+
 ```yaml
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: ScrapeConfig
 metadata:
   name: example-scrape-config
-  namespace: d8-monitoring
+  namespace: frontend
   labels:
-    additional-configs-for-prometheus: main
+    prometheus: main
 spec:
   honorLabels: true
   staticConfigs:
-    - targets: ['example-app.example-ns.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
+    - targets: ['example-app.frontend.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
   relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
