@@ -804,7 +804,7 @@ apiVersion: monitoring.coreos.com/v1alpha1
 kind: ScrapeConfig
 metadata:
   name: example-scrape-config
-  namespace: example-ns
+  namespace: d8-monitoring
   labels:
     additional-configs-for-prometheus: main
 spec:
