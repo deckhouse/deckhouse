@@ -205,8 +205,7 @@ RUN echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > 
   && mkdir -p /chroot/modules_mount \
   && mkdir -p modules_mount \
   && ln -s /modules_mount /chroot/modules_mount
-RUN ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx \
-  && echo -e "/usr/local/lib\n/usr/local/lib64" > /etc/ld.so.conf.d/local.conf \
+RUN echo -e "/usr/local/lib\n/usr/local/lib64" > /etc/ld.so.conf.d/local.conf \
   && ldconfig
 
 RUN cd / \
