@@ -45,10 +45,7 @@ spec:
     metadata:
       labels:
         app: mimir-query-frontend
-        prometheus.deckhouse.io/custom-target: mimir-query-frontend
       annotations:
-        prometheus.deckhouse.io/port: "8080"
-        prometheus.deckhouse.io/sample-limit: "50000"
         checksum/config: {{ include (print $.Template.BasePath "/mimir-query-frontend/configmap.yaml") . | sha256sum }}
         checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
     spec:
@@ -141,9 +138,9 @@ spec:
         - name: kube-rbac-proxy-ca
           mountPath: /etc/kube-rbac-proxy
       volumes:
-      - name: mimir-query-frontend-config
+      - name: mimir-config
         configMap:
-          name: mimir-query-frontend-config
+          name: mimir-config
       - name: tmp
         emptyDir: {}
       - name: kube-rbac-proxy-ca
