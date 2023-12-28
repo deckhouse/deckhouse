@@ -65,7 +65,9 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-  scrapeConfigNamespaceSelector: null
+  scrapeConfigNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: d8-monitoring
   scrapeConfigSelector:
     matchLabels:
       additional-configs-for-prometheus: main
