@@ -65,7 +65,7 @@
         summary: Deprecated Grafana alert has found.
         description: |
           Before updating to Grafana 10, it's required to migrate an outdated alerts from Grafana to the external alertmanager (or exporter-alertmanager stack)
-          Deprecated alert rule found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.alert }}`
+          Deprecated alert rule found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.alert_rule }}`
 
 - name: d8.grafana.plugin_deprecation
   rules:
