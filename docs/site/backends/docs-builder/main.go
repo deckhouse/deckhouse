@@ -25,7 +25,6 @@ import (
 
 	"github.com/flant/docs-builder/pkg/k8s"
 
-	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
 )
 
