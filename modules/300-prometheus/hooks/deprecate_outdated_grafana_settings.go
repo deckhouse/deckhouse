@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -28,7 +27,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, grafanaSettingsHandler)
 
 func grafanaSettingsHandler(input *go_hook.HookInput) error {
-	fmt.Println("XXXXXXXXXXXX", input.Values.Get("prometheus"))
 	customPlugins := input.Values.Get("prometheus.grafana.customPlugins")
 	if customPlugins.Exists() {
 		pluginList := customPlugins.Array()
