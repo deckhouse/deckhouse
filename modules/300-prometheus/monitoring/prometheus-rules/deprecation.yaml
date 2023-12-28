@@ -30,6 +30,19 @@
           __meta_kubernetes_endpoint_address_target_kind -> __meta_kubernetes_endpointslice_address_target_kind
           __meta_kubernetes_endpoint_address_target_name -> __meta_kubernetes_endpointslice_address_target_name
           ```
+    - alert: PrometheusScapeConfigDeclarationDeprecated
+      expr: count(d8_deprecated_scrape_config) > 0
+      labels:
+        severity_level: "8"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_ignore_labels: "name"
+        summary: |-
+          AdditionalScrapeConfigs from secrets will be deprecated in soon
+        description: |-
+          Old way for describing additional scrape config via secrets will be deprecated in prometheus-operator > v0.65.1. Please use CRD ScrapeConfig instead.
+          ```https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md```
 
 - name: d8.grafana.interval_deprecation
   rules:

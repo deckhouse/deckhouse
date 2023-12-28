@@ -167,6 +167,9 @@ spec:
   ruleNamespaceSelector:
     matchLabels:
       prometheus.deckhouse.io/rules-watcher-enabled: "true"
+  scrapeConfigNamespaceSelector:
+    matchLabels:
+      prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"
   probeNamespaceSelector:
     matchLabels:
       heritage: deckhouse
@@ -183,6 +186,9 @@ spec:
     matchLabels:
       prometheus: main
   probeSelector:
+    matchLabels:
+      prometheus: main
+  scrapeConfigSelector:
     matchLabels:
       prometheus: main
   secrets:
