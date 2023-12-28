@@ -18,8 +18,8 @@ bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
 bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 
 BB_RP_CURL_COMMON_ARGS=(
-  --connect-timeout 5
-  --max-time 120
+  --connect-timeout 10
+  --max-time 300
   --retry 3
 )
 
