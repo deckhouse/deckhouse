@@ -22,7 +22,8 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/prometheus/deprecate_outdated_grafana_settings",
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:       "/modules/prometheus/deprecate_outdated_grafana_settings",
 }, grafanaSettingsHandler)
 
 func grafanaSettingsHandler(input *go_hook.HookInput) error {
