@@ -8,7 +8,8 @@ metadata:
 data:
   config.yaml: |
     multitenancy_enabled: false
-
+    activity_tracker:
+      filepath: "/tmp/metrics-activity.log"
     api:
       prometheus_http_prefix: ''
     server:

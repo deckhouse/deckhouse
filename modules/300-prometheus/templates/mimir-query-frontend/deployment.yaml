@@ -59,6 +59,12 @@ spec:
       - name: mimir-query-frontend
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "mimir") }}
+        args:
+          - "-target=query-frontend"
+          - "-config.file=/etc/mimir/config.yaml"
+          - "-config.expand-env"
+          - "-log.format=json"
+          - "-log.level=info"
         volumeMounts:
         - mountPath: /etc/mimir/config.yaml
           name: mimir-config
