@@ -322,7 +322,7 @@ jobs:
 
           echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
           cat <<EOF >Dockerfile
-          FROM spotify/scratch
+          FROM scratch
           COPY version.json version.json
           EOF
           docker build . -t "${SUSPEND_VERSION_IMAGE}"
@@ -400,7 +400,7 @@ jobs:
 
           echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
           cat <<EOF >Dockerfile
-          FROM spotify/scratch
+          FROM scratch
           COPY version.json version.json
           EOF
           docker build . -t "${SUSPEND_VERSION_IMAGE}"
@@ -478,7 +478,7 @@ jobs:
 
           echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
           cat <<EOF >Dockerfile
-          FROM spotify/scratch
+          FROM scratch
           COPY version.json version.json
           EOF
           docker build . -t "${SUSPEND_VERSION_IMAGE}"
