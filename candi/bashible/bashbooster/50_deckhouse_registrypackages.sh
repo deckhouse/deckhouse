@@ -17,12 +17,18 @@
 bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
 bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 
+BB_RP_CURL_COMMON_ARGS=(
+  --connect-timeout 5
+  --max-time 120
+  --retry 3
+)
+
 # Use d8-curl if installed, fallback to system package if not
 bb-rp-curl() {
   if command -v d8-curl > /dev/null ; then
-    d8-curl -4 --remove-on-error --parallel "$@"
+    d8-curl "${BB_RP_CURL_COMMON_ARGS[@]}" -4 --remove-on-error --parallel "$@"
   else
-    curl "$@"
+    curl "${BB_RP_CURL_COMMON_ARGS[@]}" "$@"
   fi
 }
 
@@ -62,7 +68,7 @@ bb-rp-is-fetched?() {
     AUTH="-u ${REGISTRY_AUTH}"
   fi
 
-  AUTH_HEADER="$(bb-rp-curl --retry 3 -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
+  AUTH_HEADER="$(bb-rp-curl -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
   AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< ${AUTH_HEADER} | cut -d '"' -f2)"
   AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2 | sed 's/ /+/g')"
   if [ -z ${AUTH_REALM} ]; then
@@ -70,7 +76,7 @@ bb-rp-is-fetched?() {
   fi
   # shellcheck disable=SC2086
   # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
-  bb-rp-curl --retry 3 -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
+  bb-rp-curl -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
 }
 
 # Fetch manifests from registry and save under $BB_RP_FETCHED_PACKAGES_STORE
@@ -94,7 +100,7 @@ bb-rp-fetch-manifests() {
     )
   done
 
-  bb-rp-curl --retry 3 -fsSL --create-dirs \
+  bb-rp-curl -fsSL --create-dirs \
     -H "Authorization: Bearer ${TOKEN}" \
     -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
     "${URLs[@]}"
@@ -120,7 +126,7 @@ bb-rp-fetch-blobs() {
     )
   done
 
-  bb-rp-curl --retry 3 -fsSLH "Authorization: Bearer ${TOKEN}" "${URLs[@]}"
+  bb-rp-curl -fsSLH "Authorization: Bearer ${TOKEN}" "${URLs[@]}"
 }
 
 # Fetch packages by digest
