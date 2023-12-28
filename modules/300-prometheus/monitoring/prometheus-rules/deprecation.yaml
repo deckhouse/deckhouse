@@ -51,7 +51,7 @@
 
 - name: d8.grafana.alert_rule_deprecation
   rules:
-    - alert: GrafanaDashboardAlertDeprecated
+    - alert: GrafanaDashboardAlertRulesDeprecated
       expr: |
         d8_grafana_dashboards_deprecated_alert_rule > 0
       labels:
@@ -89,9 +89,9 @@
           We recommend you to migrate to the State Timeline plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/
           {{ end }}
 
-- name: d8.grafana.settings_deprecation
+- name: d8.grafana.setting_deprecation
   rules:
-    - alert: GrafanaSettingsNeedsRevision
+    - alert: GrafanaSettingNeedsRevision
       expr: |
         d8_grafana_settings_outdated_plugin > 0
       labels:
