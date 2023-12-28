@@ -190,7 +190,6 @@ RUN echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > 
   && ln -sf /chroot/etc/nginx /etc/nginx \
   && ln -sf /chroot/tmp/nginx /tmp/nginx \
   && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
-# Create symlinks to redirect nginx logs to stdout and stderr docker log collector
   && ln -sf /chroot/var/log/nginx /var/log/nginx \
   && touch /chroot/var/log/nginx/access.log \
   && echo "" > /chroot/etc/resolv.conf \
