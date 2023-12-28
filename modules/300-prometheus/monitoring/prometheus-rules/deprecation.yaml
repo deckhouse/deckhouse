@@ -33,7 +33,7 @@
     - alert: PrometheusScapeConfigDeclarationDeprecated
       expr: count(d8_deprecated_scrape_config) > 0
       labels:
-        severity_level: "4"
+        severity_level: "8"
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
