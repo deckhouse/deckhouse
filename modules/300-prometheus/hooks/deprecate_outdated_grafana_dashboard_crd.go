@@ -84,20 +84,20 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 					},
 				)
 			}
-			alert := panel.Get("alert")
-			if alert.Exists() {
-				alertName := alert.Get("name").String()
-				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_alert",
+			alertRule := panel.Get("alert")
+			if alertRule.Exists() {
+				alertRuleName := alertRule.Get("name").String()
+				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_alert_rule",
 					1, map[string]string{
-						"dashboard": sanitizeLabelName(dashboard),
-						"panel":     sanitizeLabelName(panelTitle),
-						"alert":     sanitizeLabelName(alertName),
+						"dashboard":  sanitizeLabelName(dashboard),
+						"panel":      sanitizeLabelName(panelTitle),
+						"alert_rule": sanitizeLabelName(alertRuleName),
 					},
 				)
 			}
 			panelType := panel.Get("type").String()
 			if !isStablePanelType(panelType) {
-				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_plugin",
+				input.MetricsCollector.Set("d8_grafana_dashboards_outdated_plugin",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),

@@ -46,11 +46,11 @@ var _ = Describe("Prometheus hooks :: deprecate outdated grafana settings ::", f
 				Expect(f).To(ExecuteSuccessfully())
 				m := f.MetricsCollector.CollectedMetrics()
 				Expect(m).To(HaveLen(2))
-				Expect(m[0].Name).To(Equal("d8_grafana_settings_deprecated_plugin"))
+				Expect(m[0].Name).To(Equal("d8_grafana_settings_outdated_plugin"))
 				Expect(m[0].Labels).To(Equal(map[string]string{
 					"plugin": "agenty_flowcharting_panel",
 				}))
-				Expect(m[1].Name).To(Equal("d8_grafana_settings_deprecated_plugin"))
+				Expect(m[1].Name).To(Equal("d8_grafana_settings_outdated_plugin"))
 				Expect(m[1].Labels).To(Equal(map[string]string{
 					"plugin": "vertamedia_clickhouse_datasource",
 				}))

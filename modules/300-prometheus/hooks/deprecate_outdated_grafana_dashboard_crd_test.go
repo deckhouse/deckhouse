@@ -403,11 +403,11 @@ spec:
 					"panel":     "single_panel",
 					"interval":  "interval_rv",
 				}))
-				Expect(m[1].Name).To(Equal("d8_grafana_dashboards_deprecated_alert"))
+				Expect(m[1].Name).To(Equal("d8_grafana_dashboards_deprecated_alert_rule"))
 				Expect(m[1].Labels).To(Equal(map[string]string{
-					"dashboard": "test",
-					"panel":     "single_panel",
-					"alert":     "alert_rule_inside_single_panel",
+					"dashboard":  "test",
+					"panel":      "single_panel",
+					"alert_rule": "alert_rule_inside_single_panel",
 				}))
 				Expect(m[2].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
 				Expect(m[2].Labels).To(Equal(map[string]string{
@@ -415,7 +415,7 @@ spec:
 					"panel":     "plugin_single_panel",
 					"interval":  "interval_rv",
 				}))
-				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
+				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_outdated_plugin"))
 				Expect(m[3].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_single_panel",
@@ -427,11 +427,11 @@ spec:
 					"panel":     "panel_inside_row",
 					"interval":  "interval_sx3",
 				}))
-				Expect(m[5].Name).To(Equal("d8_grafana_dashboards_deprecated_alert"))
+				Expect(m[5].Name).To(Equal("d8_grafana_dashboards_deprecated_alert_rule"))
 				Expect(m[5].Labels).To(Equal(map[string]string{
-					"dashboard": "test",
-					"panel":     "panel_inside_row",
-					"alert":     "panel_inside_row_alert_rule",
+					"dashboard":  "test",
+					"panel":      "panel_inside_row",
+					"alert_rule": "panel_inside_row_alert_rule",
 				}))
 				Expect(m[6].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
 				Expect(m[6].Labels).To(Equal(map[string]string{
@@ -439,7 +439,7 @@ spec:
 					"panel":     "plugin_panel_inside_row",
 					"interval":  "interval_sx4",
 				}))
-				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
+				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_outdated_plugin"))
 				Expect(m[7].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_panel_inside_row",
