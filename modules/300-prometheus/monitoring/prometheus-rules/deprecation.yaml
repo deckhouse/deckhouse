@@ -65,11 +65,11 @@
         summary: Deprecated Grafana alert has found.
         description: |
           Before updating to Grafana 10, it's required to migrate an outdated alerts from Grafana to the external alertmanager
-          Outdated alerts are found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.alert }}`
+          Outdated alert rule found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.alert }}`
 
 - name: d8.grafana.plugins_deprecation
   rules:
-    - alert: GrafanaDashboardPluginDeprecated
+    - alert: GrafanaDashboardPluginNeedsRevision
       expr: |
         d8_grafana_dashboards_deprecated_plugin > 0
       labels:
@@ -82,8 +82,25 @@
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         description: |
           Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
-          Possibly outdated plugins are found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.plugin }}`
+          Possibly outdated plugin found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.plugin }}`
           {{ if (eq $labels.plugin "flant-statusmap-panel") }}
           Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the future
           We recommend you to migrate to the State Timeline plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/
           {{ end }}
+
+- name: d8.grafana.settings_deprecation
+  rules:
+    - alert: GrafanaSettingNeedsRevision
+      expr: |
+        d8_grafana_settings_deprecated_plugin > 0
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        description: |
+          Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
+          Possibly outdated plugin found listed in `prometheus` ModuleConfig section `grafana.customPlugins`: `{{ $labels.plugin }}`

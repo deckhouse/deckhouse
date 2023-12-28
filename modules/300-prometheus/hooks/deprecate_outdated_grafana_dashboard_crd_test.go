@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Prometheus hooks :: deprecate outdated grafana dashboard ::", func() {
+var _ = Describe("Prometheus hooks :: deprecate outdated grafana dashboard crd ::", func() {
 	f := HookExecutionConfigInit(`{"prometheus":{"internal":{"grafana":{}}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1", "GrafanaDashboardDefinition", false)
 

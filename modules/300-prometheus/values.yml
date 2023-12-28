@@ -1,4 +1,0 @@
-prometheus:
-  grafana:
-    customPlugins:
-      - vertamedia-clickhouse-datasource
