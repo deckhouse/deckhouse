@@ -141,7 +141,7 @@ const (
 func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 	allConfigs := snapshotToModuleConfigList(input.Snapshots["configs"])
 
-	var enabledModules map[string]struct{}
+	enabledModules := make(map[string]struct{})
 	for _, item := range input.Snapshots["modules"] {
 		module := item.(*v1alpha1.Module)
 		if module.Properties.State == "Enabled" {
