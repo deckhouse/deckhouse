@@ -86,7 +86,7 @@ bb-rp-get-token() {
     AUTH="-u ${REGISTRY_AUTH}"
   fi
 
-  AUTH_HEADER="$(curl --retry 3 -k -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
+  AUTH_HEADER="$(curl --connect-timeout 5 --max-time 120 --retry 3 -k -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
   AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< ${AUTH_HEADER} | cut -d '"' -f2)"
   AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2 | sed 's/ /+/g')"
   if [ -z ${AUTH_REALM} ]; then
@@ -96,7 +96,7 @@ bb-rp-get-token() {
 {{- /*
   # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
 */}}
-  curl --retry 3 -k -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["token"]);'
+  curl --connect-timeout 5 --max-time 120 --retry 3 -k -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["token"]);'
 }
 {{- /*
 # fetch manifest from registry and get list of digests
@@ -105,7 +105,7 @@ bb-rp-get-token() {
 bb-rp-get-digests() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token)"
-  curl --retry 3 -k -fsSL \
+  curl --connect-timeout 5 --max-time 120 --retry 3 -k -fsSL \
 			-H "Authorization: Bearer ${TOKEN}" \
 			-H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
         "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${1}" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["layers"][-1]["digest"])'
@@ -117,7 +117,7 @@ bb-rp-get-digests() {
 bb-rp-fetch-digest() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token)"
-  curl --retry 3 -k -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${1}" -o "${2}"
+  curl --connect-timeout 5 --max-time 120 --retry 3 -k -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${1}" -o "${2}"
 }
 {{- /*
 # download package digests, unpack them and run install script
