@@ -155,8 +155,6 @@ apiVersions:
                   If specified, an additional network interface will be added to the node (the latter will use it as a default route).
 
                   Also, a route for the node's internal interface will be added (it will cover the entire `nodeNetworkCIDR` subnet).
-
-                  The number of array elements must correspond to the number of `replicas`.
                 items:
                   type: string
               additionalLabels: &instanceClassAdditionalLabels

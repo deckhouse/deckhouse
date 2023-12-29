@@ -15,5 +15,79 @@
         summary: NodeGroup {{ $labels.node_group }} contains Nodes with deprecated availability zone.
         description: |
           Availability zone `ru-central1-c` is deprecated by Yandex.Cloud.
-          You should migrate your Nodes to `ru‑central1‑a` or `ru‑central1‑b` zone.
+          You should migrate your Nodes to `ru-central1-a` or `ru-central1-b` zone.
           To check which Nodes should be migrated, use `kubectl get node -l "topology.kubernetes.io/zone=ru-central1-c"` command.
+    - alert: NATInstanceWithDeprecatedAvailabilityZone
+      expr: |
+        d8_cloud_provider_yandex_nat_instance_zone_deprecated > 0
+      for: 1m
+      labels:
+        tier: cluster
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: NAT Instance `{{ $labels.name }}` is in deprecated availability zone.
+        description: |
+          Availability zone `ru-central1-c` is deprecated by Yandex.Cloud.
+          You should migrate your NAT Instance to `ru-central1-a` or `ru-central1-b` zone.
+
+          You can use the following instructions to migrate.
+
+          **IMPORTANT** The following actions are destructive changes and cause downtime (typically a few minutes, but may be longer depending on the response time of Yandex Cloud).
+
+          1. Migrate NAT Instance.
+
+              Get `providerClusterConfiguration.withNATInstance`:
+              ```
+              kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
+              ```
+
+              1. If you specified `withNATInstance.natInstanceInternalAddress` and/or `withNATInstance.internalSubnetID` in providerClusterConfiguration, you need to remove them with the following command:
+
+                  ```
+                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+                  ```
+
+              1. If you specified `withNATInstance.externalSubnetID` and/or `withNATInstance.natInstanceExternalAddress` in providerClusterConfiguration, you need to change these to the appropriate values.
+
+                  You can get address and subnetID from Yandex.Cloud console or with CLI
+
+                  Change `withNATInstance.externalSubnetID` and `withNATInstance.natInstanceExternalAddress` with the following command:
+                  ```
+                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+                  ```
+
+          1. Run dhctl converge
+
+              ```
+              kubectl -n d8-system exec -it deploy/terraform-auto-converger -- dhctl converge --kube-client-from-cluster
+              ```
+
+          1. Update route table
+
+              1. Get route table name
+
+                  ```
+                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
+                  ```
+
+              1. Get NAT Instance name:
+
+                  ```
+                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
+                  ```
+
+              1. Get NAT Instance internal IP
+
+                  ```
+                  yc compute instance list | grep -e "INTERNAL IP" -e <NAT_INSTANCE_NAME_FROM_PREVIOUS_STEP>
+                  ```
+
+              1. Update route
+
+                  ```
+                  yc vpc route-table update --name <ROUTE_TABLE_NAME_FROM_PREVIOUS_STEP> --route "destination=0.0.0.0/0,next-hop=<NAT_INSTANCE_INTERNAL_IP_FROM_PREVIOUS_STEP>"
+                  ```
