@@ -1,25 +1,11 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-promu-artifact
-from: {{ $.Images.BASE_GOLANG_18_ALPINE }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - apk add --no-cache git
-  install:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - git clone --depth 1 --branch v0.14.0 {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
-  - cd /promu
-  - go build -ldflags="-s -w" -o promu ./main.go
----
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-promu-artifact
+- artifact: prometheus/prometheus-promu-artifact
   add: /promu/promu
   to: /bin/promu
   before: install
@@ -27,7 +13,7 @@ shell:
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - mkdir /prometheus && cd /prometheus
-  - git clone -b v0.9.0 --single-branch {{ $.SOURCE_REPO }}/prometheus/pushgateway.git
+  - git clone -b v1.6.2 --single-branch {{ $.SOURCE_REPO }}/prometheus/pushgateway.git
   - cd /prometheus/pushgateway
   - /bin/promu build --prefix /prometheus/pushgateway
   - mkdir /empty
