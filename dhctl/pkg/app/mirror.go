@@ -118,7 +118,7 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&MirrorDoGOSTDigest)
 	cmd.Flag("no-pull-resume", "Do not continue last unfinished pull operation.").
 		BoolVar(&MirrorDontContinuePartialPull)
-	cmd.Flag("tls-skip-verify", "TLS certificate validation.").
+	cmd.Flag("tls-skip-verify", "Disable TLS certificate validation.").
 		BoolVar(&MirrorTLSSkipVerify)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
 		BoolVar(&MirrorInsecure)
