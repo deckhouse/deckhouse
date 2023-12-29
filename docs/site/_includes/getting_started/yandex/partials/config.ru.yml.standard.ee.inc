@@ -59,7 +59,7 @@ metadata:
   name: global
 spec:
   version: 1
-  settings: # <-- Параметры модуля из раздела "Параметры" ниже.
+  settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
       # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
