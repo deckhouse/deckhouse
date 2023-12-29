@@ -27,6 +27,9 @@ subjects:
 - kind: Group
   name: prometheus:auth
 - kind: ServiceAccount
+  name: mimir-query-frontend
+  namespace: d8-monitoring
+- kind: ServiceAccount
   name: prometheus
   namespace: d8-monitoring
 {{- if (.Values.global.enabledModules | has "upmeter") }}
