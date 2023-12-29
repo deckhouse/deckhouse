@@ -12,4 +12,3 @@
       plk_markup_format: "markdown"
       description: Nat-instance connections quota should be increased by Yandex technical support.
       summary: Yandex nat-instance connections quota utilization is above 85% over the last 5 minutes.
-
