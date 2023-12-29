@@ -23,9 +23,8 @@
   },
   "description": "Dashboard for Cilium (https://cilium.io/) metrics",
   "editable": true,
-  "gnetId": 15513,
+  "gnetId": null,
   "graphTooltip": 1,
-  "id": 36,
   "iteration": 1606309591568,
   "links": [],
   "liveNow": false,
@@ -3554,7 +3553,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\"}) by (family,status)",
+          "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -3562,28 +3561,28 @@
           "refId": "A"
         },
         {
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg",
           "refId": "B"
         },
         {
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max",
           "refId": "C"
         },
         {
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted",
           "refId": "D"
         },
         {
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted max",
@@ -5819,7 +5818,7 @@
       "aliasColors": {
         "max": "#f2c96d",
         "policy errors": "#bf1b00",
-        "policy import errors": "#bf1b00"
+        "policy change errors": "#bf1b00"
       },
       "bars": false,
       "dashLength": 10,
@@ -5883,7 +5882,7 @@
           "lines": false
         },
         {
-          "alias": "policy import errors",
+          "alias": "policy change errors",
           "yaxis": 2
         }
       ],
@@ -5913,10 +5912,10 @@
           "refId": "C"
         },
         {
-          "expr": "sum(cilium_policy_import_errors_total{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "sum(cilium_policy_change_total{job=\"cilium-agent\",pod=~\"$pod\"}, outcome=\"fail\") by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "policy import errors",
+          "legendFormat": "policy change errors",
           "refId": "D"
         }
       ],
@@ -6282,7 +6281,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(histogram_quantile(0.90, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{job=\"cilium-agent\",pod=~\"$pod\", scope!=\"total\"}[5m]))) by (scope)",
+          "expr": "avg(histogram_quantile(0.90, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{job=\"cilium-agent\", scope!=\"total\", pod=~\"$pod\"}[5m]))) by (scope)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{scope}}",
@@ -6386,7 +6385,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(histogram_quantile(0.99, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{job=\"cilium-agent\",pod=~\"$pod\", scope!=\"total\"}[5m]))) by (scope)",
+          "expr": "avg(histogram_quantile(0.99, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{job=\"cilium-agent\",scope!=\"total\", pod=~\"$pod\"}[5m]))) by (scope)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{scope}}",
@@ -7423,7 +7422,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",pod=~\"$pod\", equal=\"true\", valid=\"true\"}[5m])) by (pod, scope, action)",
+          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"true\", valid=\"true\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -7526,7 +7525,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",pod=~\"$pod\", equal=\"true\", valid=\"false\"}[5m])) by (pod, scope, action)",
+          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"true\", valid=\"false\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -7629,7 +7628,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",pod=~\"$pod\", equal=\"false\", valid=\"true\"}[5m])) by (pod, scope, action, valid)",
+          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"false\", valid=\"true\", pod=~\"$pod\"}[5m])) by (pod, scope, action, valid)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -7731,7 +7730,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",pod=~\"$pod\", equal=\"false\", valid=\"false\"}[5m])) by (pod, scope, action)",
+          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"false\", valid=\"false\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -7834,7 +7833,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"CiliumNetworkPolicy\"}[$__interval_sx4])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"CiliumNetworkPolicy\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} avg",
@@ -7941,7 +7940,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"NetworkPolicy\"}[$__interval_sx4])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"NetworkPolicy\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} avg",
@@ -8048,7 +8047,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Pod\"}[$__interval_sx4])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"Pod\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} avg",
@@ -8155,7 +8154,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Node\"}[$__interval_sx4])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"Node\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} avg",
@@ -8258,7 +8257,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Service\"}[$__interval_sx4])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"Service\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}}",
@@ -8361,7 +8360,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Endpoint\"}[$__interval_sx4])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"Endpoint\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}}",
@@ -8464,7 +8463,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Namespace\"}[$__interval_sx4])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"Namespace\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}}",
@@ -8530,7 +8529,7 @@
           "type": "prometheus",
           "uid": "P0D6E4079E36703EB"
         },
-        "definition": "label_values(kube_pod_created{pod=~\"agent.*\",namespace=\"d8-cni-cilium\"},pod)",
+        "definition": "label_values(cilium_version, pod)",
         "hide": 0,
         "includeAll": true,
         "label": null,
@@ -8538,7 +8537,7 @@
         "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_created{pod=~\"agent.*\",namespace=\"d8-cni-cilium\"},pod)",
+          "query": "label_values(cilium_version, pod)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -8582,7 +8581,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Cilium Agent Metrics",
+  "title": "Cilium Metrics",
   "uid": "vtuWtdumz",
   "version": 1,
   "weekStart": ""
