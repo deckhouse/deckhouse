@@ -111,6 +111,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - network access from the **personal computer** (section 1) via port <code>22322/TCP</code>
    - container runtime packages, such as containerd or docker, should not be installed on the node
    - `cloud-utils` package should be installed on the node
+   - in case of `CNI Cilium` make sure your nodes Linux kernel is 5.7 or newer
    {% endofftopic %}
 {%- endif %}
 </li>
