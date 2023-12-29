@@ -67,7 +67,8 @@ spec:
 
                     Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
                   x-doc-examples:
-                  - ['ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC']
+                  - 'ssh-rsa AAABBB'
+                  - 'cert-authority,principals="name" ssh-rsa BBBCCC'
                 passwordHash:
                   type: string
                   x-doc-required: true
