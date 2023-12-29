@@ -1,0 +1,15 @@
+diff --git a/pkg/frontend/downstream_roundtripper.go b/pkg/frontend/downstream_roundtripper.go
+index 921bceff5..2e847d3cb 100644
+--- a/pkg/frontend/downstream_roundtripper.go
++++ b/pkg/frontend/downstream_roundtripper.go
+@@ -32,5 +32,9 @@ func (d downstreamRoundTripper) RoundTrip(r *http.Request) (*http.Response, erro
+ 	r.URL.Host = d.downstreamURL.Host
+ 	r.URL.Path = path.Join(d.downstreamURL.Path, r.URL.Path)
+ 	r.Host = ""
+-	return http.DefaultTransport.RoundTrip(r)
++
++	tr := http.DefaultTransport.(*http.Transport).Clone()
++	tr.TLSClientConfig.InsecureSkipVerify = true
++
++	return tr.RoundTrip(r)
+ }
