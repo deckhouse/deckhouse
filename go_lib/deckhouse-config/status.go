@@ -47,7 +47,7 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string) Status {
+func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string, enabled bool) Status {
 	// Special case: unknown module name.
 	moduleType, fromSource := modulesToSource[cfg.GetName()]
 
@@ -67,7 +67,12 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
 		res := Service().ConfigValidator().Validate(cfg)
 		if res.HasError() {
-			invalidMsg := fmt.Sprintf("Ignored: %s", res.Error)
+			var prefix = "Ignored"
+			if enabled {
+				prefix = "Error"
+			}
+
+			invalidMsg := fmt.Sprintf("%s: %s", prefix, res.Error)
 			return Status{
 				State:   "N/A",
 				Version: "",
