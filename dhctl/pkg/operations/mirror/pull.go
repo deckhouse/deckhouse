@@ -31,7 +31,14 @@ import (
 
 func PullInstallers(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull installers")
-	if err := PullImageSet(mirrorCtx.RegistryAuth, layouts.Install, layouts.InstallImages, mirrorCtx.Insecure, false); err != nil {
+	if err := PullImageSet(
+		mirrorCtx.RegistryAuth,
+		layouts.Install,
+		layouts.InstallImages,
+		mirrorCtx.Insecure,
+		mirrorCtx.TLSVerification,
+		false,
+	); err != nil {
 		return err
 	}
 	log.InfoLn("✅ All required installers are pulled!")
@@ -40,7 +47,14 @@ func PullInstallers(mirrorCtx *Context, layouts *ImageLayouts) error {
 
 func PullDeckhouseReleaseChannels(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull Deckhouse release channels information")
-	if err := PullImageSet(mirrorCtx.RegistryAuth, layouts.ReleaseChannel, layouts.ReleaseChannelImages, mirrorCtx.Insecure, false); err != nil {
+	if err := PullImageSet(
+		mirrorCtx.RegistryAuth,
+		layouts.ReleaseChannel,
+		layouts.ReleaseChannelImages,
+		mirrorCtx.Insecure,
+		mirrorCtx.TLSVerification,
+		false,
+	); err != nil {
 		return err
 	}
 	log.InfoLn("✅ Deckhouse release channels are pulled!")
@@ -49,7 +63,14 @@ func PullDeckhouseReleaseChannels(mirrorCtx *Context, layouts *ImageLayouts) err
 
 func PullDeckhouseImages(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull Deckhouse, this may take a while")
-	if err := PullImageSet(mirrorCtx.RegistryAuth, layouts.Deckhouse, layouts.DeckhouseImages, mirrorCtx.Insecure, false); err != nil {
+	if err := PullImageSet(
+		mirrorCtx.RegistryAuth,
+		layouts.Deckhouse,
+		layouts.DeckhouseImages,
+		mirrorCtx.Insecure,
+		mirrorCtx.TLSVerification,
+		false,
+	); err != nil {
 		return err
 	}
 	log.InfoLn("✅ All required Deckhouse images are pulled!")
@@ -60,8 +81,7 @@ func PullImageSet(
 	authProvider authn.Authenticator,
 	targetLayout layout.Path,
 	imageSet map[string]struct{},
-	insecure bool,
-	allowMissingTags bool,
+	insecure, verifyTLS, allowMissingTags bool,
 ) error {
 	pullCount := 1
 	totalCount := len(imageSet)
@@ -111,10 +131,10 @@ func PullImageSet(
 func PullModules(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull Deckhouse modules")
 	for moduleName, moduleData := range layouts.Modules {
-		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ModuleLayout, moduleData.ModuleImages, mirrorCtx.Insecure, false); err != nil {
+		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ModuleLayout, moduleData.ModuleImages, mirrorCtx.Insecure, mirrorCtx.TLSVerification, false); err != nil {
 			return fmt.Errorf("pull %q module: %w", moduleName, err)
 		}
-		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ReleasesLayout, moduleData.ReleaseImages, mirrorCtx.Insecure, true); err != nil {
+		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ReleasesLayout, moduleData.ReleaseImages, mirrorCtx.Insecure, mirrorCtx.TLSVerification, true); err != nil {
 			return fmt.Errorf("pull %q module release information: %w", moduleName, err)
 		}
 	}
