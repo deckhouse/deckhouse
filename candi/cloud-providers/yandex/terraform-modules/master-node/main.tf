@@ -28,7 +28,7 @@ locals {
   internal_subnet = element(local.subnets, var.nodeIndex)
 
   // TODO apply external_subnet_id_from_ids to external_subnet_id directly after remove externalSubnetID
-  external_subnet_id_from_ids = length(local.external_subnet_ids) > 0 ? local.external_subnet_ids[var.nodeIndex] : null
+  external_subnet_id_from_ids = length(local.external_subnet_ids) > 0 ? element(local.external_subnet_ids, var.nodeIndex) : null
 
   external_subnet_id         = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
   assign_external_ip_address = (local.external_subnet_id == null) && (local.external_ip_address != null) ? true : false
