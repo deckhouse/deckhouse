@@ -24,6 +24,7 @@ spec:
 
     # The lvmetad service should not be used by LVM on the node.
     # So we disable the service and set the setting use_lvmetad to 0 in lvm.conf.
+    #
 
     export LVM_SUPPRESS_FD_WARNINGS=1
 
