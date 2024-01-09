@@ -54,7 +54,7 @@ func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
 func mirrorPushDeckhouseToPrivateRegistry() error {
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
-		TLSVerification:       !app.MirrorTLSSkipVerify,
+		SkipTLSVerification:   app.MirrorTLSSkipVerify,
 		RegistryHost:          app.MirrorRegistryHost,
 		RegistryPath:          app.MirrorRegistryPath,
 		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
@@ -76,7 +76,7 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		mirrorCtx.RegistryHost+mirrorCtx.RegistryPath,
 		mirrorCtx.RegistryAuth,
 		mirrorCtx.Insecure,
-		mirrorCtx.TLSVerification,
+		mirrorCtx.SkipTLSVerification,
 	); err != nil {
 		return fmt.Errorf("Registry credentials validation failure: %w", err)
 	}
@@ -101,7 +101,7 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 func mirrorPullDeckhouseToLocalFilesystem() error {
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
-		TLSVerification:       !app.MirrorTLSSkipVerify,
+		SkipTLSVerification:   app.MirrorTLSSkipVerify,
 		DoGOSTDigests:         app.MirrorDoGOSTDigest,
 		RegistryHost:          app.MirrorRegistryHost,
 		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
@@ -126,7 +126,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 		mirrorCtx.DeckhouseRegistryRepo+":rock-solid",
 		mirrorCtx.RegistryAuth,
 		mirrorCtx.Insecure,
-		mirrorCtx.TLSVerification,
+		mirrorCtx.SkipTLSVerification,
 	); err != nil {
 		return fmt.Errorf("Source registry access validation failure: %w", err)
 	}

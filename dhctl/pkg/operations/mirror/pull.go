@@ -36,7 +36,7 @@ func PullInstallers(mirrorCtx *Context, layouts *ImageLayouts) error {
 		layouts.Install,
 		layouts.InstallImages,
 		mirrorCtx.Insecure,
-		mirrorCtx.TLSVerification,
+		mirrorCtx.SkipTLSVerification,
 		false,
 	); err != nil {
 		return err
@@ -52,7 +52,7 @@ func PullDeckhouseReleaseChannels(mirrorCtx *Context, layouts *ImageLayouts) err
 		layouts.ReleaseChannel,
 		layouts.ReleaseChannelImages,
 		mirrorCtx.Insecure,
-		mirrorCtx.TLSVerification,
+		mirrorCtx.SkipTLSVerification,
 		false,
 	); err != nil {
 		return err
@@ -68,7 +68,7 @@ func PullDeckhouseImages(mirrorCtx *Context, layouts *ImageLayouts) error {
 		layouts.Deckhouse,
 		layouts.DeckhouseImages,
 		mirrorCtx.Insecure,
-		mirrorCtx.TLSVerification,
+		mirrorCtx.SkipTLSVerification,
 		false,
 	); err != nil {
 		return err
@@ -81,7 +81,7 @@ func PullImageSet(
 	authProvider authn.Authenticator,
 	targetLayout layout.Path,
 	imageSet map[string]struct{},
-	insecure, verifyTLS, allowMissingTags bool,
+	insecure, skipVerifyTLS, allowMissingTags bool,
 ) error {
 	pullCount := 1
 	totalCount := len(imageSet)
@@ -131,10 +131,10 @@ func PullImageSet(
 func PullModules(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull Deckhouse modules")
 	for moduleName, moduleData := range layouts.Modules {
-		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ModuleLayout, moduleData.ModuleImages, mirrorCtx.Insecure, mirrorCtx.TLSVerification, false); err != nil {
+		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ModuleLayout, moduleData.ModuleImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, false); err != nil {
 			return fmt.Errorf("pull %q module: %w", moduleName, err)
 		}
-		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ReleasesLayout, moduleData.ReleaseImages, mirrorCtx.Insecure, mirrorCtx.TLSVerification, true); err != nil {
+		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ReleasesLayout, moduleData.ReleaseImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, true); err != nil {
 			return fmt.Errorf("pull %q module release information: %w", moduleName, err)
 		}
 	}

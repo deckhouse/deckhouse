@@ -27,8 +27,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
-func ValidateReadAccessForImage(imageTag string, authProvider authn.Authenticator, insecure, verifyTLS bool) error {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, verifyTLS)
+func ValidateReadAccessForImage(imageTag string, authProvider authn.Authenticator, insecure, skipVerifyTLS bool) error {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 	ref, err := name.ParseReference(imageTag, nameOpts...)
 	if err != nil {
 		return fmt.Errorf("Parse registry address: %w", err)
@@ -45,8 +45,8 @@ func ValidateReadAccessForImage(imageTag string, authProvider authn.Authenticato
 	return nil
 }
 
-func ValidateWriteAccessForRepo(repo string, authProvider authn.Authenticator, insecure, verifyTLS bool) error {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, verifyTLS)
+func ValidateWriteAccessForRepo(repo string, authProvider authn.Authenticator, insecure, skipVerifyTLS bool) error {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 	ref, err := name.NewTag(repo+":dhctlWriteCheck", nameOpts...)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func ValidateWriteAccessForRepo(repo string, authProvider authn.Authenticator, i
 	return nil
 }
 
-func MakeRemoteRegistryRequestOptions(authProvider authn.Authenticator, insecure, verifyTLS bool) ([]name.Option, []remote.Option) {
+func MakeRemoteRegistryRequestOptions(authProvider authn.Authenticator, insecure, skipTLSVerification bool) ([]name.Option, []remote.Option) {
 	n, r := make([]name.Option, 0), make([]remote.Option, 0)
 	if insecure {
 		n = append(n, name.Insecure)
@@ -72,7 +72,7 @@ func MakeRemoteRegistryRequestOptions(authProvider authn.Authenticator, insecure
 	if authProvider != nil && authProvider != authn.Anonymous {
 		r = append(r, remote.WithAuth(authProvider))
 	}
-	if !verifyTLS {
+	if skipTLSVerification {
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		r = append(r, remote.WithTransport(transport))
@@ -82,5 +82,5 @@ func MakeRemoteRegistryRequestOptions(authProvider authn.Authenticator, insecure
 }
 
 func MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx *Context) ([]name.Option, []remote.Option) {
-	return MakeRemoteRegistryRequestOptions(mirrorCtx.RegistryAuth, mirrorCtx.Insecure, mirrorCtx.TLSVerification)
+	return MakeRemoteRegistryRequestOptions(mirrorCtx.RegistryAuth, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification)
 }
