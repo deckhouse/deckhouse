@@ -151,7 +151,7 @@ RUN bash -eu -c ' \
     mkdir -p ${dir}; \
     chown -R www-data.www-data ${dir}; \
   done' \
-  && mkdir -p /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run \
+  && mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run \
   && cp /etc/passwd /etc/group /chroot/etc/ \
   && cp -a /usr/* /chroot/usr/ \
   # Create opentelemetry.toml file as it doesn't present in controller_image
@@ -159,7 +159,8 @@ RUN bash -eu -c ' \
   && chown -R www-data.www-data /etc/nginx/opentelemetry.toml \
   && mkdir -p /etc/nginx/geoip \
   && cp -a /etc/nginx/* /chroot/etc/nginx/ \
-  && cp -a /lib/* /lib64/* /chroot/lib/
+  && cp -a /lib/* /chroot/lib/ \
+  && cp -a /lib64/* /chroot/lib64/
 
 COPY --from=artifact --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 
@@ -187,7 +188,8 @@ RUN setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   && setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
-  && ln -sf /chroot/etc/nginx /etc/nginx \
+  # TODO: do multistage instead of rm -rf
+  && rm -rf /etc/nginx && ln -sf /chroot/etc/nginx /etc/nginx \
   && ln -sf /chroot/tmp/nginx /tmp/nginx \
   && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
   && ln -sf /chroot/var/log/nginx /var/log/nginx \
@@ -207,7 +209,7 @@ RUN setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   && ln -s /modules_mount /chroot/modules_mount \
   && echo -e "/usr/local/lib\n/usr/local/lib64\n/modules_mount/etc/nginx/modules/otel" > /etc/ld.so.conf.d/local.conf \
   && ldconfig \
-  && cp -a /etc/ld.so.conf* /chroot/etc/
+  && cp -a /etc/ld.so.c* /chroot/etc/
 
 RUN cd / \
   && patch -p1 < /balancer-lua.patch \
