@@ -50,6 +50,7 @@ type IstioOperatorPodSnapshot struct {
 	Revision          string
 	AllowedToPunch    bool
 	CreationTimestamp time.Time
+	podStatusPhase    v1.PodPhase
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -113,6 +114,7 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 	result.CreationTimestamp = pod.CreationTimestamp.Time
+	result.podStatusPhase = pod.Status.Phase
 	if time.Now().After(pod.CreationTimestamp.Add(time.Minute*5)) && pod.Status.Phase == v1.PodRunning {
 		result.AllowedToPunch = true
 	}
@@ -128,9 +130,11 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 	for _, operatorPodRaw := range input.Snapshots["istio_operator_pods"] {
 		operatorPod := operatorPodRaw.(IstioOperatorPodSnapshot)
 		input.LogEntry.Infof("Operator_pod Name: %s, Revision: %s, AllowedToPunch: %t", operatorPod.Name, operatorPod.Revision, operatorPod.AllowedToPunch)
-		input.LogEntry.Infof("Operator_pod CreationTimestamp: %s", operatorPod.CreationTimestamp.Format(time.RFC3339))
-		input.LogEntry.Infof("Operator_pod CreationTimestamp+5m: %s", operatorPod.CreationTimestamp.Add(time.Minute*5).Format(time.RFC3339))
+		input.LogEntry.Infof("Operator_pod Name: %s, CreationTimestamp: %s", operatorPod.Name, operatorPod.CreationTimestamp.Format(time.RFC3339))
+		input.LogEntry.Infof("Operator_pod Name: %s, CreationTimestamp+5m: %s", operatorPod.Name, operatorPod.CreationTimestamp.Add(time.Minute*5).Format(time.RFC3339))
 		input.LogEntry.Infof("Current Timestamp: %s", time.Now().Format(time.RFC3339))
+		input.LogEntry.Infof("Operator_pod Name: %s, calc AllowedToPunch %t", operatorPod.Name, time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)))
+		input.LogEntry.Infof("Operator_pod Name: %s, Status", operatorPod.podStatusPhase)
 		if operatorPod.AllowedToPunch {
 			operatorPodMap[operatorPod.Revision] = operatorPod.Name
 		}
