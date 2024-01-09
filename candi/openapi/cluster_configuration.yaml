@@ -126,8 +126,9 @@ apiVersions:
       proxy:
         type: object
         description: |
-          Global proxy setup (especially for working in air-gapped environments). The parameters described in this section will be translated into the environment variables `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` for all cluster nodes and Deckhouse components.
-          This will lead to HTTP/S requests (curl, git, registry, etc.) to all resources not specified in the noProxy parameter being executed through a proxy. The `podSubnetCIDR`, `serviceSubnetCIDR` subnets and the `clusterDomain` domain are added to noProxy automatically.
+          Global proxy setup (especially for working in air-gapped environments).
+          
+          The parameters described in this section will be translated into the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` for all cluster nodes and Deckhouse components. This will lead to HTTP(S) requests (curl, git, registry, etc.) to all resources not specified in the `noProxy` parameter being executed through a proxy. The `podSubnetCIDR`, `serviceSubnetCIDR` subnets, and the `clusterDomain` domain are added to `noProxy` automatically.
 
           > **Caution!** To avoid interference with internal requests it is important to fill `noProxy` parameter with host subnets.
         additionalProperties: false
