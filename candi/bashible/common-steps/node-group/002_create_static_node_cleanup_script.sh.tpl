@@ -16,7 +16,7 @@ bb-sync-file /var/lib/bashible/cleanup_static_node.sh - << "EOF"
 #!/bin/bash
 
 if [ -z $1 ] || [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ];  then
-  >&2 echo "Needed flag isn't passed, exit without any action"
+  >&2 echo "Needed flag isn't passed, exit without any action (--yes-i-am-sane-and-i-understand-what-i-am-doing)"
   exit 1
 fi
 
