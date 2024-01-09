@@ -46,9 +46,10 @@ type IstioOperatorCrdSnapshot struct {
 }
 
 type IstioOperatorPodSnapshot struct {
-	Name           string
-	Revision       string
-	AllowedToPunch bool
+	Name              string
+	Revision          string
+	AllowedToPunch    bool
+	CreationTimestamp time.Time
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -111,11 +112,13 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	if err != nil {
 		return nil, err
 	}
+	result.CreationTimestamp = pod.CreationTimestamp.Time
 	if time.Now().After(pod.CreationTimestamp.Add(time.Minute*5)) && pod.Status.Phase == v1.PodRunning {
 		result.AllowedToPunch = true
 	}
 	result.Name = pod.Name
 	result.Revision = pod.Labels["revision"]
+
 	return result, nil
 }
 
@@ -124,6 +127,10 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 
 	for _, operatorPodRaw := range input.Snapshots["istio_operator_pods"] {
 		operatorPod := operatorPodRaw.(IstioOperatorPodSnapshot)
+		input.LogEntry.Infof("Operator_pod Name: %s, Revision: %s, AllowedToPunch: %t", operatorPod.Name, operatorPod.Revision, operatorPod.AllowedToPunch)
+		input.LogEntry.Infof("Operator_pod CreationTimestamp: %s", operatorPod.CreationTimestamp.Format(time.RFC3339))
+		input.LogEntry.Infof("Operator_pod CreationTimestamp+5m: %s", operatorPod.CreationTimestamp.Add(time.Minute*5).Format(time.RFC3339))
+		input.LogEntry.Infof("Current Timestamp: %s", time.Now().Format(time.RFC3339))
 		if operatorPod.AllowedToPunch {
 			operatorPodMap[operatorPod.Revision] = operatorPod.Name
 		}
@@ -133,6 +140,7 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 		iop := iopRaw.(IstioOperatorCrdSnapshot)
 		if iop.NeedPunch {
 			input.LogEntry.Infof("iop_rev %s needs to punch.", iop.Revision)
+			input.LogEntry.Infof("Pod name to punch is %s", operatorPodMap[iop.Revision])
 			if podName, ok := operatorPodMap[iop.Revision]; ok {
 				input.LogEntry.Infof("Pod %s is allowed to punch", podName)
 				input.PatchCollector.Delete("v1", "Pod", "d8-istio", podName, object_patch.InBackground())
