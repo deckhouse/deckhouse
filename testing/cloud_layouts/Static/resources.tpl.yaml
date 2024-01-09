@@ -20,7 +20,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
-  name: caps_id
+  name: caps-id
 spec:
   privateSSHKey: '${b64_SSH_KEY}'
   user: '${WORKER_USER}'
@@ -33,7 +33,7 @@ spec:
   address: '${WORKER_IP}'
   credentialsRef:
     kind: SSHCredentials
-    name: caps_id
+    name: caps-id
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup

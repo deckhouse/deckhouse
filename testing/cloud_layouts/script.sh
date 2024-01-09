@@ -568,7 +568,7 @@ ENDSSH
   # shellcheck disable=SC2016
   env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_USER="$ssh_user_worker" WORKER_IP="$worker_ip" \
       envsubst '${b64_SSH_KEY} ${WORKER_USER} ${WORKER_IP}' \
-      <"$cwd/resources.tpl.yaml" "$cwd/resources.yaml"
+      <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
