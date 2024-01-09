@@ -37,6 +37,7 @@
  - **[candi]** Restart kubelet after containerd restart to fix containerd.sock loose. [#6735](https://github.com/deckhouse/deckhouse/pull/6735)
  - **[cni-cilium]** Cilium version bumped to 1.14.5 [#6872](https://github.com/deckhouse/deckhouse/pull/6872)
     Cilium agents will restart, during restart some policies won't work.
+ - **[deckhouse-controller]** Fix config values for dynamically enabled modules. [#7036](https://github.com/deckhouse/deckhouse/pull/7036)
  - **[deckhouse-controller]** Fix global values change and source modules validation. [#6814](https://github.com/deckhouse/deckhouse/pull/6814)
  - **[deckhouse-controller]** Create module directory with desired version only when ModuleRelease is deployed. [#6807](https://github.com/deckhouse/deckhouse/pull/6807)
  - **[deckhouse-controller]** Bump addon-operator. Change internal work with modules. Behavior of commands `deckhouse-controller module values <name>` was changed, no more top levels keys by default. To have old behavior use '-g' flag. [#6495](https://github.com/deckhouse/deckhouse/pull/6495)
@@ -71,6 +72,8 @@
 ## Chore
 
 
+ - **[candi]** Bump patch versions of Kubernetes images: `v1.26.12`, `v1.27.9`, `v1.28.5`. [#7022](https://github.com/deckhouse/deckhouse/pull/7022)
+    Kubernetes control-plane components will restart, kubelet will restart.
  - **[candi]** Fix release requirements. [#7003](https://github.com/deckhouse/deckhouse/pull/7003)
  - **[cni-cilium]** Enabled pprof interface in cilium-agent. [#6874](https://github.com/deckhouse/deckhouse/pull/6874)
     cillium-agent pods will restart.
@@ -85,5 +88,6 @@
  - **[ingress-nginx]** Add validation for httpsPort field of the IngressNginxController CRD. [#6631](https://github.com/deckhouse/deckhouse/pull/6631)
     Ingress controller pods will restart.
  - **[linstor]** Simultaneously enabling the Linstor and SDS-DRBD modules is prohibited. [#6776](https://github.com/deckhouse/deckhouse/pull/6776)
+ - **[prometheus]** Add examples of CustomAlertmanager for Slack and Opsgenie. [#7030](https://github.com/deckhouse/deckhouse/pull/7030)
  - **[terraform-manager]** Build distroless-based terraform-manager images. [#6639](https://github.com/deckhouse/deckhouse/pull/6639)
 
