@@ -111,8 +111,7 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	if err != nil {
 		return nil, err
 	}
-
-	if pod.CreationTimestamp.After(time.Now().Add(time.Minute*5)) && pod.Status.Phase == v1.PodRunning {
+	if time.Now().After(pod.CreationTimestamp.Add(time.Minute*5)) && pod.Status.Phase == v1.PodRunning {
 		result.AllowedToPunch = true
 	}
 	result.Name = pod.Name
@@ -125,7 +124,6 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 
 	for _, operatorPodRaw := range input.Snapshots["istio_operator_pods"] {
 		operatorPod := operatorPodRaw.(IstioOperatorPodSnapshot)
-		input.LogEntry.Infof("Operator pod Name: %s, Revision: %s, AllowedToPunch: %t", operatorPod.Name, operatorPod.Revision, operatorPod.AllowedToPunch)
 		if operatorPod.AllowedToPunch {
 			operatorPodMap[operatorPod.Revision] = operatorPod.Name
 		}
@@ -133,14 +131,12 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 
 	for _, iopRaw := range input.Snapshots["istio_operators"] {
 		iop := iopRaw.(IstioOperatorCrdSnapshot)
-		input.LogEntry.Infof("iop_rev %s, need to punch: %t", iop.Revision, iop.NeedPunch)
+		input.LogEntry.Infof("iop_rev %s, needs to punch: %t", iop.Revision, iop.NeedPunch)
 		if iop.NeedPunch {
 			if podName, ok := operatorPodMap[iop.Revision]; ok {
-				input.LogEntry.Infof("Pod %s need to punch", podName)
+				input.LogEntry.Infof("Pod %s needs to punch and it's allowed", podName)
 				input.PatchCollector.Delete("v1", "Pod", "d8-istio", podName, object_patch.InBackground())
 				input.LogEntry.Infof("Pod %s deleted", podName)
-			} else {
-				input.LogEntry.Infof("get pod name for iop_rev %s not Ok", iop.Revision)
 			}
 		}
 	}
