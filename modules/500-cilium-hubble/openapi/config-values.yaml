@@ -5,6 +5,13 @@ properties:
     type: boolean
     default: false
     description: Enabled debug logging for Cilium Hubble component.
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for Hubble.
+
+      Optional. By default, the `modules.ingressClass` global value is used.
   nodeSelector:
     type: object
     additionalProperties:

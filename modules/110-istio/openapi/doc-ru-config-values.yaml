@@ -12,6 +12,11 @@ properties:
       Как поступать с запросами в сторону внешних, то есть не учтенных в mesh'е сервисов:
       - `AllowAny` — пропускать;
       - `RegistryOnly` — запрещать. В данном случае для работы с внешними сервисами потребуется регистрировать их с помощью ресурса ServiceEntry или организовывать egressgateway.
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который используется для Kiali, metadata-exporter и api-proxy.
+
+      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
   federation:
     description: Параметры федерации с другими кластерами.
     properties:
