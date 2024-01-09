@@ -24,6 +24,13 @@ properties:
       - `AllowAny` — allow.
       - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry custom resource or to organize egressgateway.
     default: AllowAny
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
+
+      Optional. By default, the `modules.ingressClass` global value is used.
   enableHTTP10:
     type: boolean
     default: false
