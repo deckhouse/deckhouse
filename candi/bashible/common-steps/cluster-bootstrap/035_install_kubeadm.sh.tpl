@@ -13,5 +13,5 @@
 # limitations under the License.
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesMajorVersion := .kubernetesVersion | toString | replace "." "" }}
-{{- $kubernetesCniVersion := "1.2.0" | replace "." "" }}
+{{- $kubernetesCniVersion := "1.4.0" | replace "." "" }}
 bb-rp-install "kubeadm:{{ index .images.registrypackages (printf "kubeadm%s" $kubernetesVersion) }}" "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) }}" "kubectl:{{ index .images.registrypackages (printf "kubectl%s" $kubernetesVersion) }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" $kubernetesMajorVersion) }}" "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) }}"
