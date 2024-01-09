@@ -123,23 +123,25 @@ spec:
   settings:
     disableLetsencrypt: true
 ---
-# [<en>] cni-flannel module settings.
-# [<en>] https://deckhouse.io/documentation/v1/modules/035-cni-flannel/configuration.html
-# [<ru>] Настройки модуля cni-flannel.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/035-cni-flannel/configuration.html
+# [<en>] cni-cilium module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
+# [<ru>] Настройки модуля cni-cilium.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: cni-flannel
+  name: cni-cilium
 spec:
   version: 1
+  # [<en>] Enable cni-cilium module
+  # [<ru>] Включить модуль cni-cilium
   enabled: true
   settings:
-    # [<en>] Flannel backend, available values are VXLAN (if your servers have L3 connectivity) and HostGW (for L2 networks).
-    # [<ru>] Режим работы flannel, допустимые значения VXLAN (если ваши сервера имеют связность L3) или HostGW (для L2-сетей).
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    podNetworkMode: VXLAN
+    # [<en>] cni-cilium module settings
+    # [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
+    # [<ru>] Настройки модуля cni-cilium
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
+    tunnelMode: VXLAN
 ---
 # [<en>] Static cluster settings.
 # [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#staticclusterconfiguration
