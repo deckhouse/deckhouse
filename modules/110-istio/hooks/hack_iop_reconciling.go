@@ -133,8 +133,10 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 		input.LogEntry.Infof("Operator_pod Name: %s, CreationTimestamp: %s", operatorPod.Name, operatorPod.CreationTimestamp.Format(time.RFC3339))
 		input.LogEntry.Infof("Operator_pod Name: %s, CreationTimestamp+5m: %s", operatorPod.Name, operatorPod.CreationTimestamp.Add(time.Minute*5).Format(time.RFC3339))
 		input.LogEntry.Infof("Current Timestamp: %s", time.Now().Format(time.RFC3339))
-		input.LogEntry.Infof("Operator_pod Name: %s, calc AllowedToPunch %t", operatorPod.Name, time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)))
-		input.LogEntry.Infof("Operator_pod Name: %s, Status", operatorPod.podStatusPhase)
+		input.LogEntry.Infof("Operator_pod Name: %s, Status %s", operatorPod.Name, operatorPod.podStatusPhase)
+		input.LogEntry.Infof("Operator_pod Name: %s, calc time in AllowedToPunch %t", operatorPod.Name, time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)))
+		input.LogEntry.Infof("Operator_pod Name: %s, calc status in AllowedToPunch %t", operatorPod.Name, operatorPod.podStatusPhase == v1.PodRunning)
+		input.LogEntry.Infof("Operator_pod Name: %s, calc AllowedToPunch %t", operatorPod.Name, time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)) && operatorPod.podStatusPhase == v1.PodRunning)
 		if operatorPod.AllowedToPunch {
 			operatorPodMap[operatorPod.Revision] = operatorPod.Name
 		}
