@@ -66,7 +66,7 @@ type KubernetesAnnotationFields struct {
 	PodNamespace   string `json:"pod_namespace,omitempty"`
 	PodNodeName    string `json:"pod_node_name,omitempty"`
 	PodOwner       string `json:"pod_owner,omitempty"`
-	NodeLabels     string `json:"node_annotation_fields,omitempty"`
+	NodeLabels     string `json:"node_labels,omitempty"`
 }
 
 // rawKubernetesLogs represents `kubernetes_logs` vector source
