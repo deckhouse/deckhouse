@@ -25,7 +25,6 @@
 040-node-manager/               @RomanenkoDenys @name212
 040-terraform-manager/          @name212
 041-ceph-csi/                   @RomanenkoDenys @name212
-041-linstor/                    @AleksZimin
 042-kube-dns/                   @nabokihms
 045-snapshot-controller/        @AleksZimin
 050-network-policy-engine/      @apolovov
