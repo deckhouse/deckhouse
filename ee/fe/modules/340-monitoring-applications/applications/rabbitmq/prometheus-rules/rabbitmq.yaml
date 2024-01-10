@@ -110,17 +110,3 @@
 
       summary: |
         No Acknowledged Messages in RabbitMQ - `{{$labels.namespace}}/{{$labels.pod}}`.
-
-  - alert: ApplicationRabbitMQReadyMessagesPossiblyNotConsumed
-    expr: sum(rate(rabbitmq_queue_messages_ready{job="rabbitmq"}[5m])) by(service, pod, queue) == sum(rate(rabbitmq_queue_messages_ready{job="rabbitmq"}[1m])) by(service, pod, queue)
-    for: 5m
-    labels:
-      severity_level: "4"
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: markdown
-      description: |
-        The RabbitMQ instance `{{$labels.namespace}}/{{$labels.pod}}` is exhibiting a potential issue where the rate of ready messages in the last 5 minutes is equal to the negative rate of ready messages in the last 1 minute. This discrepancy may suggest that messages in the queue are not being consumed as expected. Investigate the RabbitMQ queues and consumer applications to identify and address the potential message consumption issues.
-
-      summary: |
-        Possible Unconsumed Messages in RabbitMQ Queues - `{{$labels.namespace}}/{{$labels.pod}}`.
