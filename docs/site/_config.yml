@@ -124,7 +124,7 @@ defaults:
       path: "*/041-linstor"
       type: "pages"
     values:
-      featureStatus: experimental
+      featureStatus: deprecated
   - scope:
       path: "*/350-node-local-dns"
       type: "pages"

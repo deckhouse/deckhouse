@@ -1079,7 +1079,7 @@ entries:
             - title: FAQ
               url: /modules/031-ceph-csi/faq.html
         - title: linstor
-          featureStatus: experimental
+          featureStatus: deprecated
           folders:
             - title:
                 en: Description
