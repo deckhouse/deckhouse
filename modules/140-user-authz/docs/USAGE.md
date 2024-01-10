@@ -48,9 +48,9 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
 
 ### Creating a ServiceAccount for a machine and granting it access
 
-It may be required to give your machine static access to the Kubernetes API, e.g., for deploying applications from a CI system runner.
+Создание ServiceAccount с доступом к Kubernetes API может потребоваться, например, при настройке развертывания приложений через CI-системы.  
 
-1. Create a `ServiceAccount` in the `d8-service-accounts` namespace (you can change the name):
+1. Создайте ServiceAccount, например в namespace `d8-service-accounts`:
 
    ```shell
    kubectl create -f - <<EOF
@@ -71,7 +71,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
    EOF
    ```
 
-2. Grant the necessary rights to the `ServiceAccount` (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) custom resource):
+1. Дайте необходимые ServiceAccount права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
 
    ```shell
    kubectl create -f - <<EOF
@@ -86,45 +86,48 @@ It may be required to give your machine static access to the Kubernetes API, e.g
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
      # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
-     allowAccessToSystemNamespaces: true
+     allowAccessToSystemNamespaces: true      
    EOF
    ```
 
-   If the multitenancy mode is enabled in the Deckhouse configuration, you need to specify the `allowAccessToSystemNamespaces: true` parameter to give the ServiceAccount access to the system namespaces.
+   Если в конфигурации Deckhouse включен режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имен (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
-3. Substitute your variable values at the beginning and execute them in bash on master (don't forget to substitute your values):
+1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
 
    ```shell
-   export cluster_name=my-cluster
-   export user_name=gitlab-runner-deploy.my-cluster
-   export context_name=${cluster_name}-${user_name}
-   export file_name=kube.config
+   export CLUSTER_NAME=my-cluster
+   export USER_NAME=gitlab-runner-deploy.my-cluster
+   export CONTEXT_NAME=${CLUSTER_NAME}-${USER_NAME}
+   export FILE_NAME=kube.config
    ```
 
-4. Generate a `cluster` section in `kube-config`:
+1. Сгенерируйте секцию `cluster` в файле конфигурации kubectl:
 
-   First you need to decide which option of access from outside to the cluster api you will use and choose one from the list:
-   * If there is direct access to the API server, then use its IP address:
-     1. Get the CA of our Kubernetes cluster:
+   Используйте один из следующих вариантов доступа к API-серверу кластера:
+
+   * Если есть прямой доступ до API-сервера:
+     1. Получите сертификат CA кластера Kubernetes:
 
         ```shell
         kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
         ```
 
-     2. Generate a section using the API server's IP:
+     1. Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
 
         ```shell
-        kubectl config set-cluster $cluster_name --embed-certs=true \
+        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
           --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
           --certificate-authority=/tmp/ca.crt \
-          --kubeconfig=$file_name
+          --kubeconfig=$FILE_NAME
         ```
 
-   * If there is no direct access to the API server, [enable](../../modules/150-user-authn/configuration.html#parameters) the `publishAPI` parameter containing the `whitelistSourceRanges` array. Or you can do that via a separate Ingress-controller using the `ingressClass` option with the finite `SourceRange`. That is, specify the requests' source addresses in the `acceptRequestsFrom` controller parameter.
+   * Если прямого доступа до API-сервера нет, то используйте один следующих вариантов:
+      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../modules/150-user-authn/configuration.html#parameters-publishapi)), и укажите адреса с которых будут идти запросы (параметр [whitelistSourceRanges](../../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
+      * укажите адреса с которых будут идти запросы в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
-   * If the CA is non-public:
+   * Если используется непубличный CA:
 
-     1. Get the CA from the secret containing the `api.%s` domain's certificate:
+     1. Получите сертификат CA из Secret'а с сертификатом, который используется для домена `api.%s`:
 
         ```shell
         kubectl -n d8-user-authn get secrets -o json \
@@ -133,43 +136,43 @@ It may be required to give your machine static access to the Kubernetes API, e.g
           | base64 -d > /tmp/ca.crt
         ```
 
-     2. Generate a section with the external domain and CA:
+     2. Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
 
         ```shell
-        kubectl config set-cluster $cluster_name --embed-certs=true \
+        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
           --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
           --certificate-authority=/tmp/ca.crt \
-          --kubeconfig=$file_name
+          --kubeconfig=$FILE_NAME
         ```
 
-   * If the CA is public, generate a section with just the external domain:
+   * Если используется публичный CA. Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
 
      ```shell
-     kubectl config set-cluster $cluster_name \
+     kubectl config set-cluster $CLUSTER_NAME \
        --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-       --kubeconfig=$file_name
+       --kubeconfig=$FILE_NAME
      ```
 
-5. Generate the `user` section using the token from the `ServiceAccount` secret:
+1. Сгенерируйте секцию `user` с токеном из Secret'а ServiceAccount в файле конфигурации kubectl:
 
    ```shell
-   kubectl config set-credentials $user_name \
+   kubectl config set-credentials $USER_NAME \
      --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
-     --kubeconfig=$file_name
+     --kubeconfig=$FILE_NAME
    ```
 
-6. Generate the `context` to bind it all together:
+1. Сгенерируйте контекст в файле конфигурации kubectl:
 
    ```shell
-   kubectl config set-context $context_name \
-     --cluster=$cluster_name --user=$user_name \
-     --kubeconfig=$file_name
+   kubectl config set-context $CONTEXT_NAME \
+     --cluster=$CLUSTER_NAME --user=$USER_NAME \
+     --kubeconfig=$FILE_NAME
    ```
 
-7. Set default context of your newly created kubeconfig file:
+1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
 
    ```shell
-   kubectl config use-context $context_name --kubeconfig=$file_name
+   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
    ```
 
 ### How to create a user using a client certificate
