@@ -1,1 +1,0 @@
-FROM quay.io/cephcsi/cephcsi:v3.7.2@sha256:f7f8228f17cc88d7a3769489200d9fd7200c66899ecda330302329c3aff04e37
