@@ -93,3 +93,4 @@ EOF
 
 # CIS becnhmark purposes
 chmod 600 /etc/systemd/system/kubelet.service.d/10-deckhouse.conf
+chmod 600 /lib/systemd/system/kubelet.service
