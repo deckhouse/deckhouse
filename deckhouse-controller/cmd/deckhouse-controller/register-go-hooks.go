@@ -60,8 +60,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/migration"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/requirements"
-	_ "github.com/deckhouse/deckhouse/modules/041-linstor/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/041-linstor/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/042-kube-dns/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/045-snapshot-controller/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/101-cert-manager/hooks"

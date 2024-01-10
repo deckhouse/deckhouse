@@ -28,6 +28,7 @@ requirements:
   "nodesMinimalOSVersionUbuntu": "18.04" # modules/040-node-manager/requirements/check.go
   "containerdOnAllNodes": "true" # modules/040-node-manager/requirements/check.go
   "embeddedVirtualizationMustBeDisabled": "true" # modules/490-virtualization/requirements/check.go
+  "linstorMustBeDisabled": "true" # modules/041-linstor/requirements/check.go
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
 disruptions:

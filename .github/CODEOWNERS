@@ -6,7 +6,6 @@
 021-cni-cilium/             @RomanenkoDenys @apolovov
 030-cloud-provider-openstack/ @RomanenkoDenys @name212
 030-cloud-provider-vsphere/ @RomanenkoDenys
-041-linstor/                @AleksZimin
 031-local-path-provisioner/ @RomanenkoDenys @name212
 040-control-plane-manager/  @RomanenkoDenys @name212
 040-node-manager/           @RomanenkoDenys @name212
