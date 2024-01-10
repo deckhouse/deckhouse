@@ -17,6 +17,7 @@ package mirror
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -25,6 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func PullInstallers(mirrorCtx *Context, layouts *ImageLayouts) error {
@@ -64,35 +66,43 @@ func PullImageSet(
 	pullCount := 1
 	totalCount := len(imageSet)
 	for imageTag := range imageSet {
-		log.InfoF("[%d / %d] Pulling %s...\t", pullCount, totalCount, imageTag)
-
 		pullOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure)
 		ref, err := name.ParseReference(imageTag, pullOpts...)
 		if err != nil {
 			return fmt.Errorf("parse image reference %q: %w", imageTag, err)
 		}
-		img, err := remote.Image(ref, remoteOpts...)
-		if err != nil {
-			if isImageNotFoundError(err) && allowMissingTags {
-				log.WarnLn("⚠️ Not found in registry")
-				pullCount++
-				continue
+
+		err = retry.NewLoop(
+			fmt.Sprintf("[%d / %d] Pulling %s...", pullCount, totalCount, imageTag),
+			6,
+			10*time.Second,
+		).Run(func() error {
+			img, err := remote.Image(ref, remoteOpts...)
+			if err != nil {
+				if isImageNotFoundError(err) && allowMissingTags {
+					log.WarnLn("⚠️ Not found in registry")
+					return nil
+				}
+
+				return fmt.Errorf("pull image metadata: %w", err)
 			}
 
-			return fmt.Errorf("pull image %q metadata: %w", imageTag, err)
-		}
+			err = targetLayout.AppendImage(img,
+				layout.WithPlatform(v1.Platform{Architecture: "amd64", OS: "linux"}),
+				layout.WithAnnotations(map[string]string{
+					"org.opencontainers.image.ref.name": imageTag,
+					"io.deckhouse.image.short_tag":      imageTag[strings.LastIndex(imageTag, ":")+1:],
+				}),
+			)
+			if err != nil {
+				return fmt.Errorf("write image to index: %w", err)
+			}
 
-		err = targetLayout.AppendImage(img,
-			layout.WithPlatform(v1.Platform{Architecture: "amd64", OS: "linux"}),
-			layout.WithAnnotations(map[string]string{
-				"org.opencontainers.image.ref.name": imageTag,
-				"io.deckhouse.image.short_tag":      imageTag[strings.LastIndex(imageTag, ":")+1:],
-			}),
-		)
+			return nil
+		})
 		if err != nil {
 			return fmt.Errorf("pull image %q: %w", imageTag, err)
 		}
-		log.InfoLn("✅")
 		pullCount++
 	}
 	return nil

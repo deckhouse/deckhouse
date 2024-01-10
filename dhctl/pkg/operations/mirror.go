@@ -22,6 +22,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -32,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/mirror"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func MirrorDeckhouseToLocalFS(
@@ -138,7 +140,6 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 			tag := manifest.Annotations["io.deckhouse.image.short_tag"]
 			imageRef := repo + ":" + tag
 
-			log.InfoF("[%d / %d] Pushing image %s...\t", pushCount, len(indexManifest.Manifests), imageRef)
 			img, err := index.Image(manifest.Digest)
 			if err != nil {
 				return fmt.Errorf("read image: %w", err)
@@ -148,10 +149,21 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 			if err != nil {
 				return fmt.Errorf("parse oci layout reference: %w", err)
 			}
-			if err = remote.Write(ref, img, remoteOpts...); err != nil {
-				return fmt.Errorf("write %s to registry: %w", ref.String(), err)
+
+			err = retry.NewLoop(
+				fmt.Sprintf("[%d / %d] Pushing image %s...", pushCount, len(indexManifest.Manifests), imageRef),
+				20,
+				3*time.Second,
+			).Run(func() error {
+				if err = remote.Write(ref, img, remoteOpts...); err != nil {
+					return fmt.Errorf("write %s to registry: %w", ref.String(), err)
+				}
+				return nil
+			})
+			if err != nil {
+				return err
 			}
-			log.InfoLn("✅")
+
 			pushCount++
 		}
 		log.InfoF("Repo %s is mirrored ✅\n", originalRepo)
