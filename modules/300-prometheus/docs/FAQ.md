@@ -5,6 +5,7 @@ type:
 search: prometheus monitoring, prometheus custom alert, prometheus custom alerting
 ---
 
+{% raw %}
 
 ## How do I collect metrics from applications running outside of the cluster?
 
@@ -839,3 +840,5 @@ spec:
       replacement: kube-state-metrics
   metricsPath: '/metrics'
 ```
+
+{% endraw %}
