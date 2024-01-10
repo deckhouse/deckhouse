@@ -53,6 +53,8 @@ func DefineMirrorModulesFlags(cmd *kingpin.CmdClause) {
 		PlaceHolder("PASSWORD").
 		Envar(configEnvName("MIRROR_PASS")).
 		StringVar(&MirrorRegistryPassword)
+	cmd.Flag("tls-skip-verify", "TLS certificate validation.").
+		BoolVar(&MirrorTLSSkipVerify)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
 		BoolVar(&MirrorInsecure)
 

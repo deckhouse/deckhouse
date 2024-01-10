@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/mirror"
 )
 
-func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string) error {
+func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string, skipVerifyTLS bool) error {
 	src, err := loadModuleSourceFromPath(sourceYmlPath)
 	if err != nil {
 		return fmt.Errorf("Read ModuleSource: %w", err)
@@ -48,7 +48,7 @@ func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string) err
 		return fmt.Errorf("Parse dockerCfg: %w", err)
 	}
 
-	modules, err := mirror.GetExternalModulesFromRepo(src.Spec.Registry.Repo, authProvider, insecure)
+	modules, err := mirror.GetExternalModulesFromRepo(src.Spec.Registry.Repo, authProvider, insecure, skipVerifyTLS)
 	if err != nil {
 		return fmt.Errorf("Get external modules from %q: %w", src.Spec.Registry.Repo, err)
 	}
@@ -70,20 +70,20 @@ func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string) err
 			return fmt.Errorf("Create module OCI Layouts: %w", err)
 		}
 
-		moduleImageSet, releasesImageSet, err := mirror.FindExternalModuleImages(&module, authProvider, insecure)
+		moduleImageSet, releasesImageSet, err := mirror.FindExternalModuleImages(&module, authProvider, insecure, skipVerifyTLS)
 		if err != nil {
 			return fmt.Errorf("Find external module images`: %w", err)
 		}
 
 		log.InfoLn("Beginning to pull module contents")
-		err = mirror.PullImageSet(authProvider, moduleLayout, moduleImageSet, insecure, false)
+		err = mirror.PullImageSet(authProvider, moduleLayout, moduleImageSet, insecure, skipVerifyTLS, false)
 		if err != nil {
 			return fmt.Errorf("Pull images: %w", err)
 		}
 		log.InfoLn("✅ Module contents pulled successfully")
 
 		log.InfoLn("Beginning to pull module releases")
-		err = mirror.PullImageSet(authProvider, moduleReleasesLayout, releasesImageSet, insecure, false)
+		err = mirror.PullImageSet(authProvider, moduleReleasesLayout, releasesImageSet, insecure, skipVerifyTLS, false)
 		if err != nil {
 			return fmt.Errorf("Pull images: %w", err)
 		}
@@ -161,14 +161,14 @@ func PushModulesToRegistry(
 	modulesDir string,
 	registryPath string,
 	authProvider authn.Authenticator,
-	insecure bool,
+	insecure, skipVerifyTLS bool,
 ) error {
 	dirEntries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		return fmt.Errorf("Read modules directory: %w", err)
 	}
 
-	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(authProvider, insecure)
+	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 
 	for i, entry := range dirEntries {
 		if !entry.IsDir() {
@@ -190,12 +190,12 @@ func PushModulesToRegistry(
 			return fmt.Errorf("Module %s: Read OCI layout: %w", moduleName, err)
 		}
 
-		if err = pushLayoutToRepo(moduleLayout, moduleRegistryPath, authProvider, insecure); err != nil {
+		if err = pushLayoutToRepo(moduleLayout, moduleRegistryPath, authProvider, insecure, skipVerifyTLS); err != nil {
 			return fmt.Errorf("Push module to registry: %w", err)
 		}
 
 		log.InfoF("Pushing releases for module %s...\n", moduleName)
-		if err = pushLayoutToRepo(moduleReleasesLayout, moduleReleasesRegistryPath, authProvider, insecure); err != nil {
+		if err = pushLayoutToRepo(moduleReleasesLayout, moduleReleasesRegistryPath, authProvider, insecure, skipVerifyTLS); err != nil {
 			return fmt.Errorf("Push module to registry: %w", err)
 		}
 
@@ -225,9 +225,9 @@ func pushLayoutToRepo(
 	imagesLayout layout.Path,
 	registryRepo string,
 	authProvider authn.Authenticator,
-	insecure bool,
+	insecure, skipVerifyTLS bool,
 ) error {
-	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(authProvider, insecure)
+	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 
 	index, err := imagesLayout.ImageIndex()
 	if err != nil {
