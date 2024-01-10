@@ -86,7 +86,7 @@ func PullImageSet(
 	pullCount := 1
 	totalCount := len(imageSet)
 	for imageTag := range imageSet {
-		pullOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure)
+		pullOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 		ref, err := name.ParseReference(imageTag, pullOpts...)
 		if err != nil {
 			return fmt.Errorf("parse image reference %q: %w", imageTag, err)
