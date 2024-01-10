@@ -436,7 +436,7 @@ jobs:
     needs:
       - discover
       - pull_request_info
-    #if: needs.discover.outputs.run_grafana_dashboard == 'true'
+    if: needs.discover.outputs.run_grafana_dashboard == 'true'
     runs-on: ubuntu-latest
     steps:
 
