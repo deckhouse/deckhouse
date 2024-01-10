@@ -52,7 +52,7 @@ spec:
   {{- $effectiveLabels = mergeOverwrite $effectiveLabels .nodeGroup.instanceClass.additionalLabels  }}
 {{- end }}
 {{- range $k, $v := $effectiveLabels }}
-    {{ $k }}: {{ $v }}
+    {{ $k | trunc 63 }}: {{ $v | trunc 63 }}
 {{- end }}
   metadata:
     ssh-keys: "user:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}"
