@@ -578,6 +578,7 @@ module.exports.checkValidationLabels = ({ core, labels }) => {
       core.setOutput(`label_${validation_name}`, name);
     });
   core.setCommandEcho(false);
+  core.setOutput('run_grafana_dashboard', 'true');
   core.endGroup();
 };
 
