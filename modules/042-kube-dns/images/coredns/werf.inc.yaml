@@ -1,6 +1,6 @@
 ---
 artifact: {{ .ModuleName }}/coredns-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
 git:
 - add: /{{ $.ModulePath }}/modules/042-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -9,7 +9,6 @@ git:
       - '**/*'
 shell:
   install:
-    - apk add --no-cache git
     - mkdir -p /src
     - cd /src
     - git clone --depth 1 -b v1.11.1 {{ $.SOURCE_REPO }}/coredns/coredns.git .

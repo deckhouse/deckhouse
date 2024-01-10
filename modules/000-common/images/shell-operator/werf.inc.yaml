@@ -2,7 +2,7 @@
 {{- $jqVersion := "b6be13d5"}}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
@@ -30,10 +30,8 @@ docker:
   ENTRYPOINT: ["/shell-operator"]
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
-  beforeInstall:
-    - apk add --no-cache build-base gcc git autoconf automake bison flex libtool
   install:
     - git clone {{ .SOURCE_REPO }}/flant/jq.git
     - cd /jq

@@ -1,7 +1,7 @@
 {{- $falcoVersion := "0.35.1" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /falco-package
@@ -21,11 +21,8 @@ docker:
   CMD: ["/usr/bin/falco"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
-  beforeInstall:
-  - apt-get -y update
-  - apt-get install -y gcc gcc-c++ git make cmake autoconf automake pkg-config patch libtool elfutils-devel diffutils which perl-FindBin-libs clang15.0 llvm rpm-build bpftool perl-Pod-Usage
   install:
   - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git
   - mkdir -p /falco/build

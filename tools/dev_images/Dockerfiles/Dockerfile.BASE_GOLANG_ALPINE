@@ -1,0 +1,5 @@
+ARG DISTRO
+FROM $DISTRO
+RUN apk update &&\
+    apk add --no-cache bash build-base gcc git linux-headers make musl-dev patch rsync ca-certificates tzdata &&\
+    update-ca-certificates

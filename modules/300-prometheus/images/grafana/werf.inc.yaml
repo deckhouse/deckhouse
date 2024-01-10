@@ -4,7 +4,7 @@
 {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -14,14 +14,20 @@ git:
     install:
     - '**/*.patch'
 shell:
-  beforeInstall:
-  - apk add --no-cache git patch
   install:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
   - find /patches -name '*.patch' -exec git apply {} \;
+  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-deps
+  - rm -rf .yarn
+  - mv /grafana-deps/.yarn .
+  - mv /grafana-deps/package.json .
+  - mv /grafana-deps/yarn.lock .
   - git clone --depth 1 --branch v{{ $statusmapVersion }} {{ $.SOURCE_REPO }}/flant/grafana-statusmap.git /grafana-statusmap
+  - git clone --depth 1 --branch v{{ $statusmapVersion }} {{ $.SOURCE_REPO }}/flant/grafana-statusmap-deps.git /grafana-statusmap-deps
+  - mv /grafana-statusmap-deps/* /grafana-statusmap
+  - rm -rf /grafana-deps /grafana-statusmap-deps
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
 from: {{ $.Images.BASE_NODE_16_ALPINE }}
@@ -31,8 +37,6 @@ import:
   to: /usr/src/app
   before: install
 shell:
-  beforeInstall:
-  - apk add --no-cache git
   install:
   - cd /usr/src/app
   - yarn install
@@ -47,8 +51,6 @@ import:
   to: /grafana-statusmap
   before: install
 shell:
-  beforeInstall:
-  - apk add --no-cache git
   install:
   - cd /grafana-statusmap
   - yarn install
@@ -56,7 +58,7 @@ shell:
   - yarn build
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
-from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -66,9 +68,6 @@ import:
   to: /usr/src/app
   before: install
 shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get -y --no-install-recommends install git gcc musl musl-tools
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /usr/src/app
@@ -96,7 +95,7 @@ shell:
   - chmod 0700 /app/entrypoint
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
-from: {{ $.Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_UBUNTU_DEV }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana-server
@@ -134,12 +133,6 @@ git:
     install:
     - '**/*'
 shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get -y --no-install-recommends install libfontconfig curl ca-certificates openssl unzip git
-  - apt-get clean
-  - apt-get autoremove -y
-  - rm -rf /var/lib/apt/lists/*
   install:
   - |
     export PATH="/usr/share/grafana/bin:$PATH" \
@@ -182,11 +175,8 @@ shell:
 {{ $binariesList := "/usr/lib64/* /usr/lib/*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
-  beforeSetup:
-  - apt-get update
-  - apt-get install -y glibc
   install:
     - /binary_replace.sh -i "{{ $binariesList }}" -o /relocate
 ---
