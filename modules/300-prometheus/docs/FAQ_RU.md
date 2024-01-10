@@ -5,6 +5,7 @@ type:
 search: prometheus мониторинг, prometheus custom alert, prometheus кастомный алертинг
 ---
 
+{% raw %}
 
 ## Как собирать метрики с приложений, расположенных вне кластера?
 
@@ -836,3 +837,5 @@ spec:
       replacement: kube-state-metrics
   metricsPath: '/metrics'
 ```
+
+{% endraw %}
