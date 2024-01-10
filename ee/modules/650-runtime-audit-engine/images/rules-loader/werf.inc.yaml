@@ -1,34 +1,43 @@
-{{- $falcoVersion := "0.35.1" }}
+---
+artifact: tini-artifact
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+    - apk update && apk add git cmake gcc make musl-dev
+  install:
+    - git clone {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0
+    - cd /tini/
+    - export CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
+    - cmake . && make
+    - rm -rf /var/cache/apk/*
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_UBUNTU }}
+fromImage: common/shell-operator
 import:
+- artifact: tini-artifact
+  add: /tini/tini-static
+  to: /sbin/tini
+  before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
-    - usr/bin/falco
-    - usr/share/falco
-    - usr/local/lib/python3.10
-  before: setup
-- image: common/shell-operator
-  add: /shell-operator
-  to: /shell-operator
+  - usr/bin/falco
+  - usr/share/falco
+  - usr/local/lib/python3
+  - usr/local/lib64/python3
   before: setup
 git:
-  - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
-    to: /hooks
-    stageDependencies:
-      install:
-        - '**/*'
+- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+  to: /hooks
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   beforeInstall:
-    - apt update -y
-    - apt install -yq curl tini python3='3.10.6-1~22.04'
-    # cleanup
-    - apt-get clean autoclean
-    - apt-get autoremove -y
-    - rm -rf /var/lib/{apt,dpkg,cache,log}/
+  - apt-get update
+  - apt-get install python3 -y
+  - rm -rf /var/cache/apt /var/lib/apt /var/lib/rpm
 docker:
   ENV:
     SHELL_OPERATOR_HOOKS_DIR: "/hooks"
@@ -38,24 +47,26 @@ docker:
   CMD: ["start"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_UBUNTU }}
+fromImage: common/alt
 git:
 - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
-  to: /requirements.txt
+  to: /tmp/requirements.txt
   stageDependencies:
     install:
       - '**/*'
+import:
+- artifact: {{ $.ModuleName }}/falco-artifact
+  add: /falco-package
+  to: /
+  includePaths:
+  - usr/bin/
+  - usr/share/
+  before: install
 shell:
   beforeInstall:
-  - apt update -y
-  - apt install -yq curl python3='3.10.6-1~22.04' python3-pip
-  - curl -sSfL https://download.falco.org/packages/bin/x86_64/falco-{{ $falcoVersion }}-x86_64.tar.gz | tar -C /tmp -xzvf -
-  - cp -f /tmp/falco-{{ $falcoVersion }}-x86_64/usr/bin/falco /usr/bin/falco
-  - cp -rf /tmp/falco-{{ $falcoVersion }}-x86_64/usr/share/falco /usr/share/falco
-  # cleanup
-  - apt-get clean autoclean
-  - apt-get autoremove -y
-  - rm -rf /var/lib/{apt,dpkg,cache,log}/
-  - rm -rf /tmp/falco-*
+  - apt-get update
+  - apt-get install python3 pip git -y
+  - rm -rf /var/cache/apt /var/lib/apt /var/lib/rpm
   install:
-  - pip3 install -r /requirements.txt
+  - export SOURCE_REPO={{ .SOURCE_REPO }}
+  - pip3 install -r /tmp/requirements.txt
