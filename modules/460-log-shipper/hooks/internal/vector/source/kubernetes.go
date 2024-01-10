@@ -50,8 +50,9 @@ type Kubernetes struct {
 	labelSelector          string
 	namespaceLabelSelector string
 
-	annotationFields KubernetesAnnotationFields
-	globCooldownMs   int
+	annotationFields     KubernetesAnnotationFields
+	globCooldownMs       int
+	nodeAnnotationFields string
 }
 
 // KubernetesAnnotationFields are supported fields for the following vector options
@@ -65,6 +66,7 @@ type KubernetesAnnotationFields struct {
 	PodNamespace   string `json:"pod_namespace,omitempty"`
 	PodNodeName    string `json:"pod_node_name,omitempty"`
 	PodOwner       string `json:"pod_owner,omitempty"`
+	NodeLabels     string `json:"node_annotation_fields,omitempty"`
 }
 
 // rawKubernetesLogs represents `kubernetes_logs` vector source
@@ -139,6 +141,7 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 			ContainerName:  "container",
 			PodNodeName:    "node",
 			PodOwner:       "pod_owner",
+			NodeLabels:     "node_labels",
 		},
 		globCooldownMs: defaultGlobCooldownMs,
 	}
