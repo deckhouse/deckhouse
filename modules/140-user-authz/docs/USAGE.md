@@ -48,9 +48,9 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
 
 ### Creating a ServiceAccount for a machine and granting it access
 
-Создание ServiceAccount с доступом к Kubernetes API может потребоваться, например, при настройке развертывания приложений через CI-системы.  
+You may need to create a ServiceAccount with access to the Kubernetes API when, for example, an application is deployed using a CI system.    
 
-1. Создайте ServiceAccount, например в namespace `d8-service-accounts`:
+1. Create a ServiceAccount, e.g., in the `d8-service-accounts` namespace:
 
    ```shell
    kubectl create -f - <<EOF
@@ -71,7 +71,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
    EOF
    ```
 
-1. Дайте необходимые ServiceAccount права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
+1. Grant it the necessary privileges (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) custom resource):
 
    ```shell
    kubectl create -f - <<EOF
@@ -90,9 +90,9 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
    EOF
    ```
 
-   Если в конфигурации Deckhouse включен режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имен (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
+   If multitenancy is enabled in the Deckhouse configuration (the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) paameter; it is only available in Enterprise Edition), configure the namespaces the ServiceAccount has access to (the [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter).
 
-1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
+1. Set the variable values (they will be used later) by running the following commands (**insert your own values**):
 
    ```shell
    export CLUSTER_NAME=my-cluster
@@ -101,18 +101,18 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
    export FILE_NAME=kube.config
    ```
 
-1. Сгенерируйте секцию `cluster` в файле конфигурации kubectl:
+1. Generate the `cluster` section in the kubectl configuration file:
 
-   Используйте один из следующих вариантов доступа к API-серверу кластера:
+   Use one of the following options to access the cluster API server:
 
-   * Если есть прямой доступ до API-сервера:
-     1. Получите сертификат CA кластера Kubernetes:
+   * If there is direct access to the API server:
+     1. Get a Kubernetes cluster CA certificate:
 
         ```shell
         kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
         ```
 
-     1. Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
+     1. Generate the `cluster` section (the API server's IP address is used for access):
 
         ```shell
         kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
@@ -121,13 +121,13 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
           --kubeconfig=$FILE_NAME
         ```
 
-   * Если прямого доступа до API-сервера нет, то используйте один следующих вариантов:
-      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../modules/150-user-authn/configuration.html#parameters-publishapi)), и укажите адреса с которых будут идти запросы (параметр [whitelistSourceRanges](../../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
-      * укажите адреса с которых будут идти запросы в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
+   * If there is no direct access to the API server, use one of the following options:
+      * enable access to the API-server over the Ingress controller (the [publishAPI](../../modules/150-user-authn/configuration.html#parameters-publishapi) parameter) and specify the addresses from which requests originate (the [whitelistSourceRanges](../../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges) parameter);
+      * specify addresses from which requests will originate in a separate Ingress controller (the [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter).
 
-   * Если используется непубличный CA:
+   * If a non-public CA is used:
 
-     1. Получите сертификат CA из Secret'а с сертификатом, который используется для домена `api.%s`:
+     1. Get the CA certificate from the Secret with the certificate that is used for the `api.%s` domain:
 
         ```shell
         kubectl -n d8-user-authn get secrets -o json \
@@ -136,7 +136,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
           | base64 -d > /tmp/ca.crt
         ```
 
-     2. Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
+     2. Generate the `cluster` section (an external domain and a CA for access are used):
 
         ```shell
         kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
@@ -145,7 +145,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
           --kubeconfig=$FILE_NAME
         ```
 
-   * Если используется публичный CA. Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
+   * If a public CA is used. Generate the `cluster` section (an external domain is used for access):
 
      ```shell
      kubectl config set-cluster $CLUSTER_NAME \
@@ -153,7 +153,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
        --kubeconfig=$FILE_NAME
      ```
 
-1. Сгенерируйте секцию `user` с токеном из Secret'а ServiceAccount в файле конфигурации kubectl:
+1. Generate the `user` section using the token from the Secret's ServiceAccount in the kubectl configuration file:
 
    ```shell
    kubectl config set-credentials $USER_NAME \
@@ -161,7 +161,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
      --kubeconfig=$FILE_NAME
    ```
 
-1. Сгенерируйте контекст в файле конфигурации kubectl:
+1. Generate the context in the kubectl configuration file:
 
    ```shell
    kubectl config set-context $CONTEXT_NAME \
@@ -169,7 +169,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
      --kubeconfig=$FILE_NAME
    ```
 
-1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
+1. Set the generated context as the default one in the kubectl configuration file:
 
    ```shell
    kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
