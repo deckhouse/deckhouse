@@ -40,4 +40,11 @@ func TestIstioOperatorVersionRequirement(t *testing.T) {
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
+
+	t.Run("Istio is not installed on the cluster", func(t *testing.T) {
+		requirements.RemoveValue(minVersionValuesKey)
+		ok, err := requirements.CheckRequirement("istioVer", "1.16")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
 }
