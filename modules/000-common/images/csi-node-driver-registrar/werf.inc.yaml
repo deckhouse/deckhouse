@@ -9,8 +9,6 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /csi-node-driver-registrar
     to: /csi-node-driver-registrar
-    includePaths:
-      - csi-node-driver-registrar
     before: setup
 docker:
   ENTRYPOINT: ["/csi-node-driver-registrar"]
@@ -25,6 +23,9 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src
+    - go get -u golang.org/x/net@v0.17.0
+    - go get -u google.golang.org/grpc@v1.56.3
+    - go mod vendor
     - make build
     - cp bin/csi-node-driver-registrar /csi-node-driver-registrar
     - chown 64535:64535 /csi-node-driver-registrar
