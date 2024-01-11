@@ -1,0 +1,7 @@
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Disable the requirement that blocks Deckhouse updates when the built-in embedded
+        virtualization module is enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7084
+
