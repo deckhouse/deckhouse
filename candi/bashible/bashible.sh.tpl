@@ -55,7 +55,29 @@ function bb-event-error-create() {
 EOF
 }
 
+function wait_node() {
+  attempt=0
+  while true; do
+    if error=$(kubectl_exec get node $(hostname -s) 2>&1 >/dev/null); then
+      return 0
+    fi
+    errors+="\n$error"
+
+    attempt=$(( attempt + 1 ))
+    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+      >&2 echo "ERROR: Failed to check existence of node $(hostname -s) after ${MAX_RETRIES} retries."
+      exit 1
+    fi
+    if [ "$attempt" -gt "3" ]; then
+      >&2 echo -e "Failed to check existence of node $(hostname -s) ... retry in 10 seconds. Errors:$errors"
+      errors=""
+    fi
+    sleep 10
+  done
+}
+
 function annotate_node() {
+  wait_node
   attempt=0
   until kubectl_exec annotate node $(hostname -s) --overwrite ${@} 1> /dev/null; do
     attempt=$(( attempt + 1 ))
