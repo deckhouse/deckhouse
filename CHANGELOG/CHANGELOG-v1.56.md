@@ -49,6 +49,8 @@
  - **[dhctl]** Fix mirror not adding module-named tags at modules repo root. [#6782](https://github.com/deckhouse/deckhouse/pull/6782)
  - **[dhctl]** Validate passed credentials against registry prior to mirroring. [#6629](https://github.com/deckhouse/deckhouse/pull/6629)
  - **[extended-monitoring]** Fix wrong permissions for `k8s-image-availability-exporter`. [#6754](https://github.com/deckhouse/deckhouse/pull/6754)
+ - **[external-module-manager]** Fix ModuleRelease nightly cleanup. [#7108](https://github.com/deckhouse/deckhouse/pull/7108)
+ - **[external-module-manager]** Get scheme for `deckhouse` ModuleSource from the deckhouse values. [#7105](https://github.com/deckhouse/deckhouse/pull/7105)
  - **[external-module-manager]** Remove default `ModuleUpdatePolicy` for the `deckhouse` ModuleSource. [#6822](https://github.com/deckhouse/deckhouse/pull/6822)
  - **[external-module-manager]** Absent module sources are restored on Deckhouse startup. [#6607](https://github.com/deckhouse/deckhouse/pull/6607)
  - **[flant-integration]** Run hook envs_from_nodes OnBeforeHelm to prevent main queue stuck. [#6750](https://github.com/deckhouse/deckhouse/pull/6750)
