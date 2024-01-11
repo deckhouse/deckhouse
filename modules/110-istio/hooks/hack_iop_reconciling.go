@@ -126,14 +126,6 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 
 	for _, operatorPodRaw := range input.Snapshots["istio_operator_pods"] {
 		operatorPod := operatorPodRaw.(IstioOperatorPodSnapshot)
-		input.LogEntry.Infof("Operator_pod Name: %s, Revision: %s", operatorPod.Name, operatorPod.Revision)
-		input.LogEntry.Infof("Operator_pod Name: %s, Status %s", operatorPod.Name, operatorPod.Phase)
-		input.LogEntry.Infof("Operator_pod Name: %s, CreationTimestamp: %s", operatorPod.Name, operatorPod.CreationTimestamp.Format(time.RFC3339))
-		input.LogEntry.Infof("Operator_pod Name: %s, CreationTimestamp+5m: %s", operatorPod.Name, operatorPod.CreationTimestamp.Add(time.Minute*5).Format(time.RFC3339))
-		input.LogEntry.Infof("Current Timestamp: %s", time.Now().Format(time.RFC3339))
-		input.LogEntry.Infof("Operator_pod Name: %s, calc time in AllowedToPunch %t", operatorPod.Name, time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)))
-		input.LogEntry.Infof("Operator_pod Name: %s, calc status in AllowedToPunch %t", operatorPod.Name, operatorPod.Phase == v1.PodRunning)
-		input.LogEntry.Infof("Operator_pod Name: %s, calc AllowedToPunch %t", operatorPod.Name, time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)) && operatorPod.Phase == v1.PodRunning)
 		if time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)) && operatorPod.Phase == v1.PodRunning {
 			operatorPodMap[operatorPod.Revision] = operatorPod.Name
 		}
@@ -142,12 +134,11 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 	for _, iopRaw := range input.Snapshots["istio_operators"] {
 		iop := iopRaw.(IstioOperatorCrdSnapshot)
 		if iop.NeedPunch {
-			input.LogEntry.Infof("iop_rev %s needs to punch.", iop.Revision)
-			input.LogEntry.Infof("Pod name to punch is %s", operatorPodMap[iop.Revision])
+			input.LogEntry.Infof("iop with rev %s needs to punch.", iop.Revision)
 			if podName, ok := operatorPodMap[iop.Revision]; ok {
-				input.LogEntry.Infof("Pod %s is allowed to punch", podName)
+				input.LogEntry.Infof("Pod %s is allowed to punch.", podName)
 				input.PatchCollector.Delete("v1", "Pod", "d8-istio", podName, object_patch.InBackground())
-				input.LogEntry.Infof("Pod %s deleted", podName)
+				input.LogEntry.Infof("Pod %s deleted.", podName)
 			}
 		}
 	}
