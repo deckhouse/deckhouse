@@ -1467,6 +1467,8 @@ spec:
                           description: The checksum of the last applied resource.
             spec:
               type: object
+              default:
+                nodeType: Cloud
               required:
                 - nodeType
               properties:
