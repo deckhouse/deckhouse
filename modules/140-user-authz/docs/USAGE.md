@@ -48,7 +48,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
 
 ### Creating a ServiceAccount for a machine and granting it access
 
-You may need to create a ServiceAccount with access to the Kubernetes API when, for example, an application is deployed using a CI system.    
+You may need to create a ServiceAccount with access to the Kubernetes API when, for example, an application is deployed using a CI system.
 
 1. Create a ServiceAccount, e.g., in the `d8-service-accounts` namespace:
 
