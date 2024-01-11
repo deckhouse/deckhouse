@@ -1468,7 +1468,7 @@ spec:
             spec:
               type: object
               default:
-                nodeType: Cloud
+                nodeType: CloudEphemeral
               required:
                 - nodeType
               properties:
