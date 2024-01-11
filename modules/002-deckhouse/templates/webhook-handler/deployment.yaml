@@ -74,6 +74,10 @@ spec:
           value: /certs/tls.key
         - name: VALIDATING_WEBHOOK_CA
           value: /certs/ca.crt
+        {{- if not .Values.global.clusterIsBootstrapped }}
+        - name: VALIDATING_WEBHOOK_FAILURE_POLICY
+          value: Ignore
+        {{- end }}
         - name: CONVERSION_WEBHOOK_SERVICE_NAME
           value: conversion-webhook-handler
         - name: CONVERSION_WEBHOOK_CONFIGURATION_NAME
