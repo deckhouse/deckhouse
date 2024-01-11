@@ -37,6 +37,7 @@
  - **[candi]** Restart kubelet after containerd restart to fix containerd.sock loose. [#6735](https://github.com/deckhouse/deckhouse/pull/6735)
  - **[cni-cilium]** Cilium version bumped to 1.14.5 [#6872](https://github.com/deckhouse/deckhouse/pull/6872)
     Cilium agents will restart, during restart some policies won't work.
+ - **[deckhouse-controller]** Disable the requirement that blocks Deckhouse updates when the built-in embedded virtualization module is enabled. [#7084](https://github.com/deckhouse/deckhouse/pull/7084)
  - **[deckhouse-controller]** Fix config values for dynamically enabled modules. [#7036](https://github.com/deckhouse/deckhouse/pull/7036)
  - **[deckhouse-controller]** Fix global values change and source modules validation. [#6814](https://github.com/deckhouse/deckhouse/pull/6814)
  - **[deckhouse-controller]** Create module directory with desired version only when ModuleRelease is deployed. [#6807](https://github.com/deckhouse/deckhouse/pull/6807)
