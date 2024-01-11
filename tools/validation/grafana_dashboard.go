@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,10 +25,10 @@ import (
 )
 
 func RunGrafanaDashboardValidation(info *DiffInfo) (exitCode int) {
-	fmt.Printf("Run 'grafana dashboards' validation ...\n")
+	fmt.Println("Run 'grafana dashboards' validation...")
 
 	if len(info.Files) == 0 {
-		fmt.Printf("Nothing to validate, diff is empty\n")
+		fmt.Println("Nothing to validate, diff is empty.")
 		return 0
 	}
 
@@ -68,8 +68,7 @@ func RunGrafanaDashboardValidation(info *DiffInfo) (exitCode int) {
 
 func isGrafanaDashboard(fileName string) bool {
 	fileName = strings.ToLower(fileName)
-	return strings.Contains(fileName, "grafana") &&
-		strings.Contains(fileName, "dashboard") &&
+	return strings.Contains(fileName, "grafana-dashboards") &&
 		strings.HasSuffix(fileName, ".json")
 }
 

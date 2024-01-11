@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func Test_validateGrafanaDashboardFile(t *testing.T) {
+func TestValidateGrafanaDashboardFile(t *testing.T) {
 	// Dashboard with deprecated components
 	in := `
 {
