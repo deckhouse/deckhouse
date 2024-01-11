@@ -1,3 +1,7 @@
+deckhouse:
+  fixes:
+    - summary: Webhook-handler can ignore validation error during a cluster bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6980
 deckhouse-controller:
   fixes:
     - summary: >-
