@@ -86,7 +86,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 
 		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
+		m.DeckhouseConfig.ImagesRepo = strings.TrimPrefix(strings.TrimPrefix(strings.TrimRight(imagesRepo, "/"), "http://"), "https://")
 
 		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg); err != nil {
 			return nil, err
