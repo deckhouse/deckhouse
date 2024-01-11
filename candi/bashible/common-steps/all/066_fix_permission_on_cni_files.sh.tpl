@@ -13,5 +13,9 @@
 # limitations under the License.
 
 # CIS becnhmark purposes
-find /etc/cni/net.d -type f -print0 2> /dev/null | xargs -0 --no-run-if-empty chmod 600
-find /var/lib/cni/networks -type f -print0 2> /dev/null | xargs -0 --no-run-if-empty chmod 600
+if ls /etc/cni/net.d >/dev/null 2>&1; then
+  find /etc/cni/net.d -type f -print0 2> /dev/null | xargs -0 --no-run-if-empty chmod 600
+fi
+if ls /var/lib/cni/networks >/dev/null 2>&1; then
+  find /var/lib/cni/networks -type f -print0 2> /dev/null | xargs -0 --no-run-if-empty chmod 600
+fi
