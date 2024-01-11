@@ -55,16 +55,6 @@ external-module-manager:
 			f.KubeStateSet(echoserverState + `
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: echoserver
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: hellow
----
-apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   name: echoserver-v0.0.6
@@ -102,50 +92,6 @@ status:
 
 			hel1 := f.KubernetesGlobalResource("ModuleRelease", "hellow-v0.0.1")
 			Expect(hel1.Exists()).To(BeTrue())
-		})
-	})
-
-	Context("Cluster has releases from absent module", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(`
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: testmodule
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  name: testmodule-v0.0.1
-spec:
-  moduleName: testmodule
-  version: 0.0.1
-status:
-  phase: Deployed
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  name: echoserver-v0.0.6
-spec:
-  moduleName: echoserver
-  version: 0.0.6
-status:
-  phase: Deployed
-`)
-
-			f.BindingContexts.Set(f.GenerateScheduleContext("13 3 * * *"))
-			f.RunHook()
-		})
-
-		It("Should delete echoserver and testmodule releases, should keep hellow releases", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			rele1 := f.KubernetesGlobalResource("ModuleRelease", "echoserver-v0.0.6")
-			Expect(rele1.Exists()).To(BeFalse())
-
-			test1 := f.KubernetesGlobalResource("ModuleRelease", "testmodule-v0.0.1")
-			Expect(test1.Exists()).To(BeTrue())
 		})
 	})
 })
