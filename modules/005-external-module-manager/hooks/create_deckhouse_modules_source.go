@@ -91,7 +91,11 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 
 	// get scheme from values
 	scheme := strings.ToUpper(input.Values.Get("global.modulesImages.registry.scheme").String())
-	if scheme == "" {
+	switch scheme {
+	case "HTTP", "HTTPS":
+	// pass
+
+	default:
 		scheme = "HTTPS"
 	}
 
