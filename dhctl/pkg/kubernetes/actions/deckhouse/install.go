@@ -428,8 +428,17 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 						}
 					}
 
+					newManifest := manifest.(*unstructured.Unstructured)
+
+					oldManifest, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), newManifest.GetName(), metav1.GetOptions{})
+					if err != nil && !apierrors.IsNotFound(err) {
+						log.DebugF("Error getting mc: %v\n", err)
+					} else {
+						newManifest.SetResourceVersion(oldManifest.GetResourceVersion())
+					}
+
 					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
-						Update(context.TODO(), manifest.(*unstructured.Unstructured), metav1.UpdateOptions{})
+						Update(context.TODO(), newManifest, metav1.UpdateOptions{})
 					if err != nil {
 						log.InfoF("Do not updating mc: %v\n", err)
 					}
