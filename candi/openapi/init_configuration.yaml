@@ -40,6 +40,7 @@ apiVersions:
         properties:
           imagesRepo:
             type: string
+            pattern: '^(?!https?:\/\/)[0-9a-zA-Z\.\-\/\:]+$'
             description: |
               Address of a container registry with Deckhouse images.
 
