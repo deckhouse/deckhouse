@@ -243,7 +243,7 @@ spec:
   portForwarding: true
 ```
 
-### Настройка `kube-apiserver` для работы в режиме multi-tenancy
+## Настройка `kube-apiserver` для работы в режиме multi-tenancy
 
 Режим multi-tenancy, позволяющий ограничивать доступ к namespace, включается параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) модуля.
 
