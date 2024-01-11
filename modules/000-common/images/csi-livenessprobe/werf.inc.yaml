@@ -9,8 +9,6 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /livenessprobe
     to: /livenessprobe
-    includePaths:
-      - livenessprobe
     before: setup
 docker:
   ENTRYPOINT: ["/livenessprobe"]
@@ -25,6 +23,9 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src
+    - go get -u golang.org/x/net@v0.17.0
+    - go get -u google.golang.org/grpc@v1.56.3
+    - go mod vendor
     - make build
     - cp bin/livenessprobe /livenessprobe
     - chown 64535:64535 /livenessprobe
