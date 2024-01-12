@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# CIS becnhmark purposes
+# CIS becnhmark purposes (1.1.9 and 1.1.10)
 if [ -d /etc/cni/net.d ]; then
   find /etc/cni/net.d -type f -exec chmod 600 -- {} +
 fi
