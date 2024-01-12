@@ -27,7 +27,7 @@ namespace: {{ index . 1 }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: {{ $kind }}
 metadata:
-  name: {{ printf "user-authz:%s:%s" $crd.name $namePostfix }}
+  name: {{ printf "d8:user-authz:%s:%s" $crd.name $namePostfix }}
   {{- include "rbac.namespace" (list $kind $crd.namespace) | nindent 2 }}
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 roleRef:
