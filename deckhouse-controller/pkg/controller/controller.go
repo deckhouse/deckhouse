@@ -179,6 +179,7 @@ func (dml *DeckhouseController) handleModulePurge(m *models.DeckhouseModule) err
 
 func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
+		fmt.Println("11111 REGISTER MODULE", m.GetBasicModule().GetName())
 		src := dml.sourceModules[m.GetBasicModule().GetName()]
 		newModule := m.AsKubeObject(src)
 		newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
@@ -193,6 +194,8 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 			return err
 		}
 
+		fmt.Println("11111 MODULE EXISTS", len(existModule.Labels), existModule.Labels)
+
 		existModule.Properties = newModule.Properties
 		if len(existModule.Labels) == 0 {
 			newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
@@ -200,7 +203,11 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 			existModule.Labels[epochLabelKey] = epochLabelValue
 		}
 
+		fmt.Println("11111 MODULE AFTER", len(existModule.Labels), existModule.Labels)
+
 		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, existModule, v1.UpdateOptions{})
+
+		fmt.Println("11111 MODULE ERR", err)
 
 		return err
 	})
