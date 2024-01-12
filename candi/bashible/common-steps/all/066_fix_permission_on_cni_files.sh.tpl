@@ -14,7 +14,7 @@
 
 # CIS becnhmark purposes
 if [ -d /etc/cni/net.d ]; then
-  find /etc/cni/net.d -type f -print0 2> /dev/null | xargs -0 --no-run-if-empty chmod 600
+  find /etc/cni/net.d -type f -exec chmod 600 -- {} +
 fi
 if [ -d /var/lib/cni/networks ]; then
   find /var/lib/cni/networks -type f -exec chmod 600 -- {} +
