@@ -161,8 +161,6 @@ spec:
                       type: string
             spec:
               type: object
-              default:
-                nodeType: Static
               required:
                 - nodeType
               properties:
@@ -774,8 +772,6 @@ spec:
                       type: string
             spec:
               type: object
-              default:
-                nodeType: Static
               required:
                 - nodeType
               properties:
