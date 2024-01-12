@@ -596,7 +596,6 @@ spec:
                         Enable Docker maintenance from bashible.
                 kubelet:
                   type: object
-                  default: {}
                   description: |
                     Kubelet settings for nodes.
                   properties:
@@ -1199,7 +1198,6 @@ spec:
                           - required: [automatic]
                 kubelet:
                   type: object
-                  default: {}
                   description: |
                     Kubelet settings for nodes.
                   properties:
@@ -1469,8 +1467,6 @@ spec:
                           description: The checksum of the last applied resource.
             spec:
               type: object
-              default:
-                nodeType: Static
               required:
                 - nodeType
               properties:
