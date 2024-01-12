@@ -318,7 +318,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: user-authz:user
+  name: d8:user-authz:user
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_common_rules" "User" }}
@@ -327,7 +327,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: user-authz:privileged-user
+  name: d8:user-authz:privileged-user
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_common_rules" "PrivilegedUser" }}
@@ -337,7 +337,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: user-authz:editor
+  name: d8:user-authz:editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_common_rules" "Editor" }}
@@ -348,7 +348,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: user-authz:admin
+  name: d8:user-authz:admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_common_rules" "Admin" }}
@@ -360,7 +360,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: user-authz:cluster-editor
+  name: d8:user-authz:cluster-editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_common_rules" "ClusterAdmin" }}
@@ -372,7 +372,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: user-authz:cluster-admin
+  name: d8:user-authz:cluster-admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_common_rules" "ClusterAdmin" }}
@@ -386,7 +386,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: user-authz:super-admin
+  name: d8:user-authz:super-admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_super_admin_rules" . }}

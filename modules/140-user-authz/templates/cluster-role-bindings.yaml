@@ -52,7 +52,7 @@ subjects:
 
     {{- if hasKey $crd.spec "accessLevel" }}
       {{- include "rbac.check.valid.spec" (list $data.kind $crd) }}
-{{- include "rbac.binding" ( list $ $data.kind $crd ($crd.spec.accessLevel | kebabcase) (printf "user-authz:%s" ($crd.spec.accessLevel | kebabcase)) ) }}
+{{- include "rbac.binding" ( list $ $data.kind $crd ($crd.spec.accessLevel | kebabcase) (printf "d8:user-authz:%s" ($crd.spec.accessLevel | kebabcase)) ) }}
       {{- range $customClusterRole := (pluck ($crd.spec.accessLevel | untitle) $.Values.userAuthz.internal.customClusterRoles | first) }}
 {{- include "rbac.binding" ( list $ $data.kind $crd (printf "%s:custom-cluster-role:%s" ($crd.spec.accessLevel | kebabcase) $customClusterRole) $customClusterRole ) }}
       {{- end }}
@@ -60,12 +60,12 @@ subjects:
 
     {{- if hasKey $crd.spec "portForwarding" }}
       {{- if ($crd.spec.portForwarding | default false) }}
-{{- include "rbac.binding" ( list $ $data.kind $crd "port-forward" "user-authz:port-forward" ) }}
+{{- include "rbac.binding" ( list $ $data.kind $crd "port-forward" "d8:user-authz:port-forward" ) }}
       {{- end }}
     {{- end }}
 
     {{- if $crd.spec.allowScale }}
-{{- include "rbac.binding" ( list $ $data.kind $crd "scale" "user-authz:scale" ) }}
+{{- include "rbac.binding" ( list $ $data.kind $crd "scale" "d8:user-authz:scale" ) }}
     {{- end }}
 
   {{- end }}
