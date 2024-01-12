@@ -598,6 +598,7 @@ spec:
                         Enable Docker maintenance from bashible.
                 kubelet:
                   type: object
+                  default: {}
                   description: |
                     Kubelet settings for nodes.
                   properties:
@@ -1202,6 +1203,7 @@ spec:
                           - required: [automatic]
                 kubelet:
                   type: object
+                  default: {}
                   description: |
                     Kubelet settings for nodes.
                   properties:
@@ -1997,6 +1999,7 @@ spec:
                           - required: [automatic]
                 kubelet:
                   type: object
+                  default: {}
                   description: |
                     Kubelet settings for nodes.
                   properties:
