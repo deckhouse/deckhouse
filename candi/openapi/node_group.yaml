@@ -162,7 +162,7 @@ spec:
             spec:
               type: object
               default:
-                nodeType: Cloud
+                nodeType: Static
               required:
                 - nodeType
               properties:
@@ -774,7 +774,7 @@ spec:
             spec:
               type: object
               default:
-                nodeType: Cloud
+                nodeType: Static
               required:
                 - nodeType
               properties:
@@ -1472,7 +1472,7 @@ spec:
             spec:
               type: object
               default:
-                nodeType: CloudEphemeral
+                nodeType: Static
               required:
                 - nodeType
               properties:
