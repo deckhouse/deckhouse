@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Don't forget to add the requirement to release.yaml in next release
-
 package requirements
 
 import (
