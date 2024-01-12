@@ -185,7 +185,7 @@ var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 				Name:      "errored-operator",
 				Phase:     "Running",
 				Revision:  "v1x33",
-				Timestamp: time.Now().Add(time.Minute * 6),
+				Timestamp: time.Now().Add(-time.Minute * 6),
 			})))
 			f.RunHook()
 		})
@@ -206,7 +206,7 @@ var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 				Name:      "errored-operator",
 				Phase:     "Pending",
 				Revision:  "v1x33",
-				Timestamp: time.Now().Add(time.Minute * 6),
+				Timestamp: time.Now().Add(-time.Minute * 6),
 			})))
 			f.RunHook()
 		})
@@ -257,7 +257,7 @@ var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 				Name:      "errored-operator",
 				Phase:     "Running",
 				Revision:  "v1x33",
-				Timestamp: time.Now().Add(time.Minute * 6),
+				Timestamp: time.Now().Add(-time.Minute * 6),
 			}),
 			))
 			f.RunHook()
