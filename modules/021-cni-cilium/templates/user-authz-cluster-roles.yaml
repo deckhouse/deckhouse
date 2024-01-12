@@ -28,8 +28,8 @@ rules:
 - apiGroups:
   - cilium.io
   resources:
-  - ciliumclusterwidenetworkpolicies
   - ciliumnetworkpolicies
+  - ciliumclusterwidenetworkpolicies
   verbs:
   - create
   - delete
