@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"os"
+	"path"
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
@@ -27,6 +29,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -39,6 +42,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   filterDeprecatedRelease,
+		},
+		{
+			Name:                         "modules",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "Module",
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			FilterFunc:                   filterModule,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -56,8 +67,14 @@ const (
 func cleanupReleases(input *go_hook.HookInput) error {
 	snap := input.Snapshots["releases"]
 
+	externalModulesDir := os.Getenv("EXTERNAL_MODULES_DIR")
+
 	moduleReleases := make(map[string][]deprecatedRelease, 0)
 	outdatedModuleReleases := make(map[string][]deprecatedRelease, 0)
+
+	// TODO(nabokihms): Instead of subscribing to Kubernetes objects,
+	//   make it available through global values like `enabledModules`
+	availableModules := set.NewFromSnapshot(input.Snapshots["modules"])
 
 	for _, sn := range snap {
 		if sn == nil {
@@ -70,19 +87,43 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		}
 	}
 
+	// for absent modules - delete all ModuleRelease resources
+	for moduleName, releases := range moduleReleases {
+		if availableModules.Has(moduleName) {
+			continue
+		}
+
+		for _, release := range releases {
+			input.LogEntry.Infof("Cleanup release %q because module %q does not exist", release.Name, release.Module)
+			deleteModuleRelease(input, externalModulesDir, release)
+		}
+	}
+
 	// delete outdated release, keep only last 3
 	for _, releases := range outdatedModuleReleases {
 		sort.Sort(sort.Reverse(byVersion[deprecatedRelease](releases)))
 
 		if len(releases) > keepReleaseCount {
 			for i := keepReleaseCount; i < len(releases); i++ {
-				input.LogEntry.Infof("Cleanup release %q", releases[i].Name)
-				input.PatchCollector.Delete("deckhouse.io/v1alpha1", "ModuleRelease", "", releases[i].Name, object_patch.InBackground())
+				input.LogEntry.Infof("Cleanup release %q because it's outdated", releases[i].Name)
+				deleteModuleRelease(input, externalModulesDir, releases[i])
 			}
 		}
 	}
 
 	return nil
+}
+
+func deleteModuleRelease(input *go_hook.HookInput, externalModulesDir string, release deprecatedRelease) {
+	modulePath := path.Join(externalModulesDir, release.Module, "v"+release.Version.String())
+
+	err := os.RemoveAll(modulePath)
+	if err != nil {
+		input.LogEntry.Errorf("unable to remove module: %v", err)
+		return
+	}
+
+	input.PatchCollector.Delete("deckhouse.io/v1alpha1", "ModuleRelease", "", release.Name, object_patch.InBackground())
 }
 
 func filterDeprecatedRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -99,6 +140,11 @@ func filterDeprecatedRelease(obj *unstructured.Unstructured) (go_hook.FilterResu
 		Version: release.Spec.Version,
 		Phase:   release.Status.Phase,
 	}, nil
+}
+
+// returns only Disabled modules
+func filterModule(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return obj.GetName(), nil
 }
 
 type deprecatedRelease struct {
