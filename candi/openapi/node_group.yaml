@@ -2027,6 +2027,7 @@ spec:
                       description: |
                         How many rotated log files to store before deleting them.
                     resourceReservation:
+                      default: {}
                       type: object
                       oneOf:
                       - properties:
