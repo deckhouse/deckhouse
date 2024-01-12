@@ -427,7 +427,7 @@ func replacePlaceholder(text, replaceContent []byte, startPlaceholder, endPlaceh
 
 // newRoleFromClusterRoleName generates user-authz role name from ClusterRole name
 func newRoleFromClusterRoleName(name string) string {
-	return strcase.ToCamel(strings.TrimPrefix(name, "user-authz:"))
+	return strcase.ToCamel(strings.TrimPrefix(name, "d8:user-authz:"))
 }
 
 // sliceToString sorts slice of strings and return joined by comma string
