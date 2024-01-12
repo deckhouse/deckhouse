@@ -161,6 +161,8 @@ spec:
                       type: string
             spec:
               type: object
+              default:
+                nodeType: Cloud
               required:
                 - nodeType
               properties:
@@ -771,6 +773,8 @@ spec:
                       type: string
             spec:
               type: object
+              default:
+                nodeType: Cloud
               required:
                 - nodeType
               properties:
