@@ -17,7 +17,7 @@
 function Help() {
    # Display Help
    echo "Copy binaries and their libraries to a folder"
-   echo "Only one input parameter allowed (-f or -i) !!!" 
+   echo "Only one input parameter allowed (-f or -i) !!!"
    echo
    echo "Syntax: scriptTemplate [-h|f|i|o]"
    echo "options:"
@@ -26,7 +26,7 @@ function Help() {
    echo '      List of binaryes should be in double quotes, -i "/bin/chmod /bin/mount" '
    echo "o     Output directory (Default value: '/relocate')"
    echo "h     Print this help"
-   echo 
+   echo
    echo
 }
 
@@ -71,21 +71,21 @@ function relocate() {
 function relocate_item() {
   local file=$1
   local new_place="${RDIR}$(dirname ${file})"
-  
+
   mkdir -p ${new_place}
-  cp -a ${file} ${new_place}
+  cp -a --remove-destination ${file} ${new_place}
 
   # if symlink, copy original file too
   local orig_file="$(readlink -f ${file})"
   if [[ "${file}" != "${orig_file}" ]]; then
-    cp -a ${orig_file} ${new_place}
+    cp -a --remove-destination ${orig_file} ${new_place}
   fi
 }
 
 function get_binary_path () {
   local bin
   BINARY_LIST=()
-  
+
   for bin in "$@"; do
     if [[ ! -f $bin ]] || [ "${bin}" == "${RDIR}" ]; then
       continue
