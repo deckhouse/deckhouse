@@ -7,6 +7,7 @@
 {{ $ancestors := .ancestors }} {{/* A map, containing the parameter ancestors */}}
 {{ $apiVersion := .apiVersion }} {{/* A string. APIVersion of the resource of the parameter, to build the parameter HTML id (for links). Optional. */}}
 {{ $resourceName := .resourceName }} {{/* A string. The name of the resource of the parameter, to build the parameter HTML id (for links). Required. */}}
+{{ $required  := .required }} {{/* Array of the required parameters. */}}
 
 {{ $description :=  "" }}
 
@@ -60,18 +61,21 @@
     {{ end }}
   {{ end }}
 {{ end }}
-
+{{- if or (in $required $name) ( index $data "x-doc-required" ) }}
+<p class="resources__attrs required"><span class="resources__attrs_name required">{{ T "required_value_sentence" }}</span></p>
+{{- end }}
 
 {{ if reflect.IsMap $data }}
   {{ partial "openapi/format-attributes" ( dict "name" $name "attributes" $data "parent" $parent "langData" $langData "linkAnchor" $linkAnchor) }}
 {{ end }}
 
 {{ if and (reflect.IsMap $data) $data.properties }}
+  {{- $requiredParameters := $data.required }}
   <ul>
   {{ range $subParameterName, $subParameterAttributes := $data.properties }}
     {{ $subParameterLangData := index $langData.properties $subParameterName }}
 
-    {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
+    {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $requiredParameters ) }}
   {{ end }}
   </ul>
 {{ else if and (reflect.IsMap $data) $data.items }}
