@@ -248,6 +248,7 @@ RUN setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   && cp -a /etc/ld.so.conf* /chroot/etc/
 
 # Create ld.so.cache inside chroot
+RUN id && ls -lA /chroot/etc
 RUN cp /sbin/ldconfig /chroot/bin/ && unshare -R /chroot ldconfig && rm -f /chroot/bin/ldconfig
 
 RUN cd / \
